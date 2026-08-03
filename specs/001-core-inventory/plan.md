@@ -106,6 +106,18 @@ Filtering the item list by category matches on path *prefix*, so
 filtering by `"Photography"` also shows `Photography/Cameras` and
 `Photography/Lenses`.
 
+**Case handling**: matching is case-insensitive throughout (search-as-
+you-type in the picker, list filtering), always on — no setting for this,
+since it's not a real user preference, just correct behavior. To avoid
+the taxonomy accumulating near-duplicates like `"Photography/Cameras"`
+and `"photography/Cameras"` as separate-looking entries, casing is
+*canonicalized at write time*: when a category path is saved, the helper
+checks existing distinct paths case-insensitively; if one matches, the
+existing casing is reused rather than storing what the user just typed.
+First-used casing for a given path wins, permanently, with no user-facing
+mechanism to change it later (renaming a category path across all items
+that use it is a reasonable future feature, not v1).
+
 ## Architecture (MVVM)
 
 View models own `ModelContext`, not `@Query`. SwiftUI's `@Query` property

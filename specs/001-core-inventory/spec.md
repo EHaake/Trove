@@ -91,6 +91,12 @@ in scope now, but the category field being a plain string path (rather
 than, say, a hardcoded enum) is intentional so that a future feature can
 suggest or auto-fill it without a schema change.
 
+Category matching (autocomplete, filtering) is case-insensitive —
+`"photography"`, `"Photography"`, and `"PHOTOGRAPHY"` are the same
+category to the app. This isn't user-configurable; it's just correct
+behavior for a free-typed field nobody's going to capitalize consistently
+on their own.
+
 ## Key user flows
 
 ### Add an owned item
