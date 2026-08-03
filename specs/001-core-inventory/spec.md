@@ -19,9 +19,12 @@ they can reason about selling underused gear to fund new purchases.
    signal for how willing they'd be to sell it.
 3. Let a user maintain a wishlist of items they want to buy, with an
    estimated cost.
-4. Surface owned items as candidate "things you could sell" — ranked by low
-   desire-to-keep — when the user is looking at what a wishlist item would
-   cost to fund.
+4. Surface owned items with low desire-to-keep as candidate "things you
+   could sell" when the user is looking at what a wishlist item would
+   cost to fund. (v1 ranks by desire-to-keep alone; ranking that also
+   accounts for market-value trend is the eventual goal, but depends on
+   the live-market-value non-goal below — see plan.md for how v1 is
+   built to extend into that later without a rework.)
 5. The app should feel fast and uncluttered: adding an item and checking
    your overall gear value should each take only a few taps.
 6. Data syncs across the user's own devices via iCloud.
@@ -100,8 +103,11 @@ through fields they don't have handy right now.
 ### Check overall standing
 User opens the app to a home/dashboard view showing, at a glance: total
 current value of owned gear, total spent, and the delta between them.
-Ability to drill into a category to see the same numbers scoped to it
-(e.g. "what have I spent on guitars specifically").
+Items with no current value entered are excluded from that total but
+counted separately (e.g. "3 items not yet valued") so the total reads as
+a floor, not a false completeness. Ability to drill into a category to
+see the same numbers scoped to it (e.g. "what have I spent on guitars
+specifically").
 
 ### Browse/sort owned items
 List of owned items, filterable by category, sortable by desire-to-keep,
@@ -110,8 +116,11 @@ value, or purchase date.
 ### Add and review a wishlist item
 User adds a wishlist item with name, category, estimated cost. When
 viewing a wishlist item, the user can see a ranked list of owned items
-(lowest desire-to-keep first) with a running total of estimated value, to
-answer "what would I need to sell to afford this."
+with desire-to-keep of 3 or lower (lowest first, ties broken by higher
+current value), with a running total of current value, to answer "what
+would I need to sell to afford this." Items with no current value entered
+are left out of this ranking, same as they're left out of the dashboard
+total — there's nothing to rank them by yet.
 
 ## Design requirements
 
@@ -141,12 +150,15 @@ need to clear.)
       estimated cost, notes).
 - [ ] Category paths autocomplete from previously-used paths across both
       owned items and wishlist items.
-- [ ] Dashboard shows total current value, total spent, and the delta,
-      across all owned items.
+- [ ] Dashboard shows total current value (excluding un-valued items,
+      with a separate count of how many are un-valued), total spent, and
+      the delta, across all owned items.
 - [ ] Owned items list can be filtered by category and sorted by
       desire-to-keep, current value, and purchase date.
-- [ ] From a wishlist item, user can see owned items ranked by ascending
-      desire-to-keep with a running cumulative value total.
+- [ ] From a wishlist item, user can see owned items with desire-to-keep
+      ≤ 3, ranked ascending by desire-to-keep (ties broken by higher
+      current value), with a running cumulative value total. Un-valued
+      items are excluded from this ranking.
 - [ ] Data persists across app launches and syncs across the user's
       devices signed into the same iCloud account.
 - [ ] Adding an item with only the required fields (name, category, price,
@@ -159,3 +171,6 @@ need to clear.)
 - **Photos**: multiple photos per item, v1.
 - **Desire-to-keep**: defaults to 3 (neutral) when an item is created,
   rather than starting unset.
+- **Currency**: USD only in v1 (no currency picker in the UI); the
+  underlying model still records a currency code per item so international
+  support later is additive, not a migration — see plan.md.
