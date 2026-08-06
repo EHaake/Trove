@@ -42,6 +42,13 @@ they can reason about selling underused gear to fund new purchases.
 - Barcode/serial-number lookup against any external database.
 - Insurance-document export or valuation reports (may be a natural
   future feature, not v1).
+- **Light mode and additional color themes.** v1 ships as a single
+  dark theme. A light mode toggle, plus a small set of additional
+  curated color themes beyond the default, is a planned future
+  enhancement — the design's color values are already built as named
+  semantic tokens rather than hardcoded, specifically so this doesn't
+  require a redesign when it happens (see design/brief.md and
+  plan.md).
 
 ## Entities (conceptual — see plan.md for the actual data model)
 

@@ -238,3 +238,17 @@ TroveUITests/       XCTest smoke tests
 2. **Un-valued items**: excluded from the dashboard's current-value total,
    shown as a separate count instead of falling back to purchase price.
 3. **Sell-candidate tie-break**: higher current value first.
+
+## Future: theming
+
+Not v1 scope, but worth anchoring now since it affects how color gets
+implemented from the start. Light mode and additional curated color
+themes (see spec.md non-goals) mean colors should never be hardcoded
+per-view — implement them as a `Theme` abstraction (a `Color` extension
+or a small `AppTheme` type exposing named semantic colors: `background`,
+`surface`, `textPrimary`, `accentPrimary`, etc., matching the tokens in
+design/brief.md) from the very first view built, not refactored in
+later. A future theme picker becomes "swap which `Theme` instance is
+active," not a rewrite. Where a user's selected theme eventually gets
+stored is a small addition (`UserDefaults` or a lightweight settings
+model) outside the `Item`/`WishlistItem` schema — not a v1 task.
