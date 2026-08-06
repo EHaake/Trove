@@ -19,13 +19,14 @@ they can reason about selling underused gear to fund new purchases.
    signal for how willing they'd be to sell it.
 3. Let a user maintain a wishlist of items they want to buy, with an
    estimated cost.
-4. Let a user reach, via a single dedicated action from a wishlist item
-   (not shown by default), a ranked view of owned items with low
-   desire-to-keep as candidate "things you could sell" to fund it. (v1
-   ranks by desire-to-keep alone; ranking that also accounts for
-   market-value trend is the eventual goal, but depends on the
-   live-market-value non-goal below — see plan.md for how v1 is built
-   to extend into that later without a rework.)
+4. Let a user build a **Sell Plan** for a wishlist item: a persisted
+   selection of owned items with low desire-to-keep that they're
+   considering selling to fund it, reached via a single dedicated action
+   (not shown by default), showing the surplus or shortfall against the
+   item's cost. (v1 ranks candidates by desire-to-keep alone; ranking
+   that also accounts for market-value trend is the eventual goal, but
+   depends on the live-market-value non-goal below — see plan.md for how
+   v1 is built to extend into that later without a rework.)
 5. The app should feel fast and uncluttered: adding an item and checking
    your overall gear value should each take only a few taps.
 6. Data syncs across the user's own devices via iCloud.
@@ -50,6 +51,19 @@ they can reason about selling underused gear to fund new purchases.
   semantic tokens rather than hardcoded, specifically so this doesn't
   require a redesign when it happens (see design/brief.md and
   plan.md).
+- **Fetching a stock photo automatically.** v1 photos come from the
+  user's own device only. Auto-fetching a representative stock photo
+  (most useful for wishlist items, which aren't owned yet) is a planned
+  future enhancement — it needs a real third-party image API with its
+  own licensing terms, which is worth doing deliberately rather than
+  folding in casually. The `Photo` model already records where a photo
+  came from (see plan.md) so this is additive later, not a migration.
+- **Marking a Sell Plan item as actually sold**, or any transaction/sale
+  tracking. The Sell Plan (see below) is a decision-support tool for
+  v1 — it helps you decide what you'd sell, it doesn't track that you
+  did. A real "mark as sold" workflow is a natural, meaningfully bigger
+  future feature, deliberately excluded now to keep the Sell Plan
+  screen simple.
 
 ## Entities (conceptual — see plan.md for the actual data model)
 
@@ -77,6 +91,8 @@ they can reason about selling underused gear to fund new purchases.
 - Notes
 - Priority or ranking (exact mechanism TBD in plan — at minimum the user
   can order the list)
+- Sell Plan — a persisted selection of owned items the user is
+  considering selling to fund this purchase (see "The Sell Plan" below)
 
 ### Category
 - Not a separate entity the user manages directly in v1 — categories are
@@ -127,24 +143,46 @@ specifically").
 List of owned items, filterable by category, sortable by desire-to-keep,
 value, or purchase date.
 
+### Browse and manage the wishlist
+List of wishlist items, filterable by category, same as the owned-items
+list. Each row has a "See sell plan" shortcut straight to that item's
+Sell Plan, alongside opening the item itself for its own details.
+
 ### Add and review a wishlist item
 User adds a wishlist item with name, category, estimated cost. Viewing a
 wishlist item shows that item plainly — name, category, estimated cost,
 notes — with room reserved in the layout for live pricing/trend info once
 that's a real feature, even though nothing populates it yet in v1. A
-single action ("Find items to sell") leads to a separate ranked-candidates
-screen: owned items with desire-to-keep of 3 or lower (lowest first, ties
-broken by higher current value), with a running total of current value,
-answering "what would I need to sell to afford this." Items with no
-current value entered are left out of this ranking, same as they're left
-out of the dashboard total — there's nothing to rank them by yet.
+single action ("Find items to sell") leads to that item's Sell Plan.
 
-This is deliberately not shown by default on the wishlist item screen.
-The ranking is a v1 approximation of a feature meant to grow into
-something bigger once live market data exists (see non-goals); showing it
-automatically would overstate what it currently does. It's one tap away,
-not hidden, but the wishlist item's own details are what the screen leads
-with.
+### The Sell Plan
+A Sell Plan answers "what would I actually sell to afford this" for one
+wishlist item, and it's a real, persisted thing — not a list recomputed
+fresh every time you look at it. Candidates are owned items with
+desire-to-keep of 3 or lower and a current value entered (items with no
+current value are left out, same as the dashboard total — there's
+nothing to rank them by), ranked lowest desire-to-keep first, ties broken
+by higher current value.
+
+The first time a wishlist item's Sell Plan is opened, it's empty, so the
+app proposes a starting selection automatically — the top of the ranked
+list, added up until it covers the estimated cost — and that becomes the
+saved plan. From there, the user can add or remove any candidate freely;
+each change saves immediately. Rather than just a running total, the
+plan shows the **surplus or shortfall** against the wishlist item's
+cost — "$120 more than you need" or "$340 short" — since that's the
+number that's actually useful to look at.
+
+The Sell Plan is deliberately not shown by default on the wishlist
+item's own screen. It's a v1 approximation of a feature meant to grow
+into something bigger once live market data exists (see non-goals);
+showing it automatically would overstate what it currently does. It's
+one tap away, not hidden, but the wishlist item's own details are what
+the screen leads with.
+
+The Sell Plan does not track whether anything was actually sold — no
+"mark as sold," no removal from inventory, no transaction history (see
+non-goals). It's for deciding, not for bookkeeping a completed sale.
 
 ## Design requirements
 
@@ -179,13 +217,21 @@ need to clear.)
       the delta, across all owned items.
 - [ ] Owned items list can be filtered by category and sorted by
       desire-to-keep, current value, and purchase date.
+- [ ] Wishlist list can be filtered by category.
+- [ ] Each wishlist list row and the wishlist item's own detail screen
+      both offer a way to reach that item's Sell Plan.
 - [ ] Viewing a wishlist item shows the item's own details (name,
-      category, cost, notes) by default, not a ranked list.
-- [ ] From a wishlist item, a single dedicated action ("Find items to
-      sell") leads to a ranked-candidates screen: owned items with
-      desire-to-keep ≤ 3, ranked ascending by desire-to-keep (ties broken
-      by higher current value), with a running cumulative value total.
-      Un-valued items are excluded from this ranking.
+      category, cost, notes) by default, not its Sell Plan.
+- [ ] A wishlist item's Sell Plan, opened for the first time, proposes a
+      starting selection of owned items (desire-to-keep ≤ 3, ranked
+      ascending by desire-to-keep, ties broken by higher current value)
+      that together meet or exceed the estimated cost, and saves that as
+      the plan.
+- [ ] The user can add or remove any eligible owned item from the Sell
+      Plan; changes save immediately and persist across app launches.
+- [ ] The Sell Plan displays the surplus or shortfall against the
+      wishlist item's estimated cost, not just a running total.
+      Un-valued items are excluded from the candidate pool entirely.
 - [ ] Data persists across app launches and syncs across the user's
       devices signed into the same iCloud account.
 - [ ] Adding an item with only the required fields (name, category, price,

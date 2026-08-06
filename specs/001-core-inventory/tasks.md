@@ -37,12 +37,14 @@ summarized.
 - [ ] **T005** — `Condition` enum (`new/excellent/good/fair/broken`,
       `String`-backed, `Codable`, `CaseIterable`).
 - [ ] **T006** — `Photo` model (`id`, `imageData` with
-      `.externalStorage`, `sortOrder`, inverse `item` relationship).
+      `.externalStorage`, `source` — always `"device"` in v1, `sortOrder`,
+      inverse `item` relationship).
 - [ ] **T007** — `Item` model per plan.md's table, including
-      `currencyCode` (default `"USD"`) and the computed `condition`
-      property wrapping the `Condition` enum.
+      `currencyCode` (default `"USD"`), the computed `condition`
+      property wrapping the `Condition` enum, and the
+      `plannedForWishlistItems` inverse relationship.
 - [ ] **T008** — `WishlistItem` model per plan.md's table, including
-      `currencyCode`.
+      `currencyCode` and the `plannedSaleItems` relationship to `Item`.
 - [ ] **T009** — Configure `ModelContainer` in `TroveApp` with a CloudKit
       database, registering all three model types. Handle "user not
       signed into iCloud" without erroring — app still works locally.
@@ -119,43 +121,59 @@ summarized.
 
 - [ ] **T031** — `WishlistFormViewModel`: create/edit a `WishlistItem`.
 - [ ] **T032** — Unit tests for `WishlistFormViewModel`.
-- [ ] **T033** — `WishlistViewModel`: fetch/list wishlist items, manual
-      reordering via `sortOrder`.
-- [ ] **T034** — Unit tests for `WishlistViewModel`.
+- [ ] **T033** — `WishlistViewModel`: fetch/list wishlist items, filter by
+      category (same prefix/case-insensitive matching as
+      `ItemListViewModel`), manual reordering via `sortOrder`.
+- [ ] **T034** — Unit tests for `WishlistViewModel`, including the
+      category filter.
 - [ ] **T035** — `WishlistFormView`.
-- [ ] **T036** — `WishlistView`: list with reordering.
+- [ ] **T036** — `WishlistView`: list with category filter control and
+      reordering; each row includes a "See sell plan" shortcut that
+      navigates directly to that item's `SellPlanView`.
 
-## Phase 7 — Wishlist detail and sell-candidate ranking
+## Phase 7 — Wishlist detail and the Sell Plan
 
-`WishlistDetailView` and `SellCandidatesView` are deliberately separate
+`WishlistDetailView` and `SellPlanView` are deliberately separate
 screens, not one combined view: the wishlist item's own details lead, and
-the candidate ranking — a v1 approximation of a feature that's meant to
-grow into something bigger once market data exists — is one tap away via
-a button, not shown automatically. See spec.md and plan.md for the
-reasoning. The ranking logic itself (T039–T040) is the piece most worth
-over-testing regardless of which screen shows it — it's the thing a
-future trend-aware version builds on top of directly.
+the Sell Plan — a v1 approximation of a feature that's meant to grow into
+something bigger once market data exists — is one tap away via a button,
+not shown automatically. See spec.md and plan.md for the reasoning. The
+Sell Plan logic itself (T039–T040) is the piece most worth over-testing
+regardless of which screen shows it — it's the thing a future
+trend-aware version builds on top of directly, and it's also the one
+place in the app with real persisted, user-editable state beyond simple
+CRUD.
 
 - [ ] **T037** — `WishlistDetailViewModel`: load a `WishlistItem`'s own
       fields for display (name, category, estimated cost, notes). No
-      ranking logic here.
+      ranking or plan logic here.
 - [ ] **T038** — `WishlistDetailView`: plain display of the wishlist
       item's fields, with space reserved in the layout for future
       pricing/trend info, and a single "Find items to sell" button/nav
-      link to `SellCandidatesView`.
-- [ ] **T039** — `SellCandidatesViewModel`: given a `WishlistItem`, fetch
-      owned items with `desireToKeep ≤ 3` and a non-nil
-      `currentValueCents`, sort ascending by `desireToKeep` (tie-break:
-      higher current value first), compute running cumulative value
-      total.
-- [ ] **T040** — Unit tests for the ranking: empty candidate set, a tie
-      resolved correctly, un-valued items excluded, ordering correct
-      across a realistic mixed set, cumulative total is right at each
-      step.
-- [ ] **T041** — `SellCandidatesView`: ranked list with running total,
-      visually distinguishing "this is enough to cover it" once the
-      cumulative total crosses the estimated cost. Reached only by
-      navigating from `WishlistDetailView` — no other entry point.
+      link to `SellPlanView`.
+- [ ] **T039** — `SellPlanViewModel`: given a `WishlistItem`,
+      - compute the candidate pool (owned items, `desireToKeep ≤ 3`,
+        non-nil `currentValueCents`, sorted ascending by `desireToKeep`,
+        tie-break higher current value first);
+      - if `plannedSaleItems` is empty, auto-preselect by walking the
+        ranked candidates and adding until their combined value meets or
+        exceeds `estimatedCostCents`, then persist that selection
+        immediately;
+      - expose toggle methods that add/remove a candidate from
+        `plannedSaleItems` and persist on every change;
+      - compute the surplus/shortfall: sum of selected items' current
+        value minus `estimatedCostCents`.
+- [ ] **T040** — Unit tests for `SellPlanViewModel`: empty candidate pool,
+      a tie resolved correctly, un-valued items excluded from the pool,
+      auto-preselect stops at the right point and persists, toggling a
+      candidate updates both the selection and the surplus/shortfall,
+      and re-loading after a toggle reflects the persisted state rather
+      than recomputing a fresh auto-preselect.
+- [ ] **T041** — `SellPlanView`: selectable candidate list (visually
+      distinguishing selected from unselected), surplus/shortfall
+      display (not a bare total), a visual moment when the plan crosses
+      from shortfall into surplus. Reached only via `WishlistDetailView`'s
+      button or `WishlistView`'s per-row shortcut — no other entry point.
 
 ## Phase 8 — Navigation and app shell
 
@@ -164,8 +182,10 @@ future trend-aware version builds on top of directly.
 - [ ] **T043** — Add-item and add-wishlist-item entry points in the
       toolbar of their respective tabs (not buried in a menu).
 - [ ] **T044** — Manual full click-through: launch → dashboard → add item
-      → items list → item detail → wishlist → add wishlist item →
-      wishlist detail → "Find items to sell" → sell candidates.
+      → items list → item detail → wishlist → filter wishlist by
+      category → add wishlist item → wishlist detail → "Find items to
+      sell" → Sell Plan → toggle a candidate → back to wishlist list →
+      "See sell plan" shortcut reaches the same, updated plan.
 
 ## Phase 9 — Empty and loading states
 

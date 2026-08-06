@@ -31,6 +31,7 @@ CloudKit database rejects schemas that don't meet this). No
 | `photos` | `[Photo]` | to-many relationship, see below |
 | `createdAt` | `Date` | default `.now` |
 | `updatedAt` | `Date` | default `.now`, bumped on every edit |
+| `plannedForWishlistItems` | `[WishlistItem]` | inverse of `WishlistItem.plannedSaleItems` — see "Sell Plan" below |
 
 ```swift
 enum Condition: String, Codable, CaseIterable {
@@ -56,6 +57,7 @@ a computed property on `Item` that wraps/unwraps the enum.
 | `notes` | `String?` | |
 | `sortOrder` | `Int` | default `0`, user-adjustable manual ordering |
 | `createdAt` | `Date` | default `.now` |
+| `plannedSaleItems` | `[Item]` | to-many relationship — see "Sell Plan" below |
 
 ### `Photo`
 
@@ -63,6 +65,7 @@ a computed property on `Item` that wraps/unwraps the enum.
 |---|---|---|
 | `id` | `UUID` | default `UUID()` |
 | `imageData` | `Data` | `@Attribute(.externalStorage)` — see below |
+| `source` | `String` | raw value of a `PhotoSource` enum (`device`/`fetched`), default `"device"` |
 | `sortOrder` | `Int` | default `0` |
 | `item` | `Item?` | inverse of `Item.photos` |
 
@@ -71,6 +74,12 @@ the main store file and hand it to CloudKit as a `CKAsset` rather than
 inlining it — the right call for photos, which will otherwise bloat the
 local SQLite store and the sync payload. No custom file-management code
 needed; this is a built-in SwiftData attribute option.
+
+`source` exists now even though v1 only ever writes `"device"` — no
+stock-photo fetching happens yet (see spec non-goals). It's a cheap,
+additive field today and expensive to retrofit once real photos exist in
+CloudKit; adding it now means a future fetch feature is a UI/network
+addition, not a schema migration.
 
 ### Money
 
@@ -147,37 +156,57 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
   fields (name, category, price, date) up front; everything else
   (serial, location, current value, condition, photos, notes) behind a
   "more details" disclosure, per the spec's quick-add requirement.
-- **`WishlistView`** / `WishlistViewModel` — browse wishlist items.
+- **`WishlistView`** / `WishlistViewModel` — browse wishlist items,
+  filterable by category (same prefix/case-insensitive matching as
+  `ItemListViewModel`). Each row includes a "See sell plan" button that
+  jumps straight to that item's `SellPlanView`, bypassing
+  `WishlistDetailView` — a shortcut, not a replacement for the main flow.
 - **`WishlistDetailView`** / `WishlistDetailViewModel` — a plain view of
   the wishlist item itself: name, category, estimated cost, notes. Space
   is reserved in the layout for live pricing/trend info (a future
   feature — see spec non-goals), even though nothing populates it in v1.
   Includes a single button ("Find items to sell") that pushes to
-  `SellCandidatesView`. This screen does **not** show the ranked list by
-  default — see the note under `SellCandidatesView` for why.
-- **`SellCandidatesView`** / `SellCandidatesViewModel` — reached only via
-  the button on `WishlistDetailView`, not shown automatically. Owned
-  items with `desireToKeep` ≤ 3, sorted ascending by `desireToKeep`
-  (tie-break: higher current value first, so the most "fundable"
-  low-attachment item surfaces first), with a running cumulative total
-  against the wishlist item's estimated cost. **v1 ranks by
-  desire-to-keep only** — it does not (and can't yet) factor in
-  market-value trend. The full "killer feature" described in the spec —
-  surfacing an item because its desire-to-keep is low *and* its resale
-  value is currently trending high — depends on live market data, which
-  is explicitly out of scope until that data source exists (see spec
-  non-goals). Putting this behind a deliberate tap rather than on the
-  main wishlist-item screen is intentional: this is a v1 approximation of
-  a feature that's meant to grow into something bigger, and it shouldn't
-  visually dominate the screen as if it were the finished version. This
-  view is the scaffolding that feature will plug into later: the ranking
-  algorithm gains a trend signal, the UI doesn't need to change shape.
+  `SellPlanView`. This screen does **not** show the ranked list by
+  default — see the note under `SellPlanView` for why.
+- **`SellPlanView`** / `SellPlanViewModel` — "Sell Plan" is the formalized
+  name for what was internally "sell-candidate ranking"; the name (and
+  the idea that this deserves to be a persisted, concrete thing rather
+  than a disposable computed list) came out of designing the screens in
+  Claude Design, and it's a real improvement worth keeping. Reached via
+  `WishlistDetailView`'s button or `WishlistView`'s per-row shortcut, not
+  shown automatically anywhere. Behavior:
+  - Candidate pool: owned items with `desireToKeep` ≤ 3 and a non-nil
+    `currentValueCents`, ranked ascending by `desireToKeep` (tie-break:
+    higher current value first).
+  - **Selection is persisted**, via `WishlistItem.plannedSaleItems`, not
+    recomputed fresh each time. If the plan is empty (first visit),
+    auto-preselect by walking the ranked list and adding items until
+    their combined value meets or exceeds the wishlist item's estimated
+    cost, then persist that as the starting selection immediately.
+  - The user can freely toggle any candidate in or out; each toggle
+    updates `plannedSaleItems` right away — no separate save step,
+    consistent with the app's low-friction bar.
+  - Display isn't just a running total — show the **surplus or
+    shortfall** against the estimated cost ("$120 more than you need" /
+    "$340 short") so the number is directly decision-relevant.
+  - **v1 ranks by desire-to-keep only** — it does not (and can't yet)
+    factor in market-value trend. The full "killer feature" described in
+    the spec — surfacing an item because its desire-to-keep is low *and*
+    its resale value is currently trending high — depends on live market
+    data, explicitly out of scope until that data source exists (see
+    spec non-goals). This view is the scaffolding that feature plugs
+    into later: the ranking algorithm gains a trend signal, the
+    selection/persistence/surplus mechanics don't need to change shape.
+  - **Explicitly not in v1**: marking a planned item as actually sold,
+    removing it from inventory, or any transaction/sale-tracking. The
+    Sell Plan is a decision-support tool, not a sales ledger — a natural
+    future feature, deliberately excluded now to keep this screen simple.
 - **`WishlistFormView`** / `WishlistFormViewModel` — add/edit wishlist
   item.
 - **`CategoryPickerField`** — shared component (text field + autocomplete
   suggestion list), used by both item and wishlist forms.
 - **`PhotoPickerField`** — wraps `PhotosUI.PhotosPicker` for multi-photo
-  selection.
+  selection. Device photos only in v1 — see "Future: stock photos" below.
 
 ### Navigation
 
@@ -263,3 +292,14 @@ later. A future theme picker becomes "swap which `Theme` instance is
 active," not a rewrite. Where a user's selected theme eventually gets
 stored is a small addition (`UserDefaults` or a lightweight settings
 model) outside the `Item`/`WishlistItem` schema — not a v1 task.
+
+## Future: stock photos
+
+Not v1 scope. The idea: instead of only photographing an item yourself,
+fetch a representative stock photo — most useful for wishlist items,
+which you don't own yet and can't photograph. Deferred because it's a
+real third-party dependency (an image-search API) with licensing terms
+to honor (attribution, typically), not something to bolt on casually.
+`Photo.source` exists now specifically so this is additive later: a
+fetch feature adds a network call and a picker UI, not a schema change
+or a migration of existing photos.
