@@ -148,19 +148,30 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
   (serial, location, current value, condition, photos, notes) behind a
   "more details" disclosure, per the spec's quick-add requirement.
 - **`WishlistView`** / `WishlistViewModel` — browse wishlist items.
-- **`WishlistDetailView`** / `WishlistDetailViewModel` — the sell-candidate
-  ranking: owned items with `desireToKeep` ≤ 3, sorted ascending by
-  `desireToKeep` (tie-break: higher current value first, so the most
-  "fundable" low-attachment item surfaces first), with a running
-  cumulative total against the wishlist item's estimated cost. **v1 ranks
-  by desire-to-keep only** — it does not (and can't yet) factor in
+- **`WishlistDetailView`** / `WishlistDetailViewModel` — a plain view of
+  the wishlist item itself: name, category, estimated cost, notes. Space
+  is reserved in the layout for live pricing/trend info (a future
+  feature — see spec non-goals), even though nothing populates it in v1.
+  Includes a single button ("Find items to sell") that pushes to
+  `SellCandidatesView`. This screen does **not** show the ranked list by
+  default — see the note under `SellCandidatesView` for why.
+- **`SellCandidatesView`** / `SellCandidatesViewModel` — reached only via
+  the button on `WishlistDetailView`, not shown automatically. Owned
+  items with `desireToKeep` ≤ 3, sorted ascending by `desireToKeep`
+  (tie-break: higher current value first, so the most "fundable"
+  low-attachment item surfaces first), with a running cumulative total
+  against the wishlist item's estimated cost. **v1 ranks by
+  desire-to-keep only** — it does not (and can't yet) factor in
   market-value trend. The full "killer feature" described in the spec —
   surfacing an item because its desire-to-keep is low *and* its resale
   value is currently trending high — depends on live market data, which
   is explicitly out of scope until that data source exists (see spec
-  non-goals). This view is the scaffolding that feature will plug into
-  later: the ranking algorithm gains a trend signal, the UI doesn't need
-  to change shape.
+  non-goals). Putting this behind a deliberate tap rather than on the
+  main wishlist-item screen is intentional: this is a v1 approximation of
+  a feature that's meant to grow into something bigger, and it shouldn't
+  visually dominate the screen as if it were the finished version. This
+  view is the scaffolding that feature will plug into later: the ranking
+  algorithm gains a trend signal, the UI doesn't need to change shape.
 - **`WishlistFormView`** / `WishlistFormViewModel` — add/edit wishlist
   item.
 - **`CategoryPickerField`** — shared component (text field + autocomplete

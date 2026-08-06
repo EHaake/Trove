@@ -125,54 +125,68 @@ summarized.
 - [ ] **T035** — `WishlistFormView`.
 - [ ] **T036** — `WishlistView`: list with reordering.
 
-## Phase 7 — Sell-candidate ranking
+## Phase 7 — Wishlist detail and sell-candidate ranking
 
-This is the piece most worth over-testing — it's the feature the rest of
-the app exists to support, and it's the thing a future trend-aware version
-will build on top of directly.
+`WishlistDetailView` and `SellCandidatesView` are deliberately separate
+screens, not one combined view: the wishlist item's own details lead, and
+the candidate ranking — a v1 approximation of a feature that's meant to
+grow into something bigger once market data exists — is one tap away via
+a button, not shown automatically. See spec.md and plan.md for the
+reasoning. The ranking logic itself (T039–T040) is the piece most worth
+over-testing regardless of which screen shows it — it's the thing a
+future trend-aware version builds on top of directly.
 
-- [ ] **T037** — `WishlistDetailViewModel`: given a `WishlistItem`, fetch
-      owned items with `desireToKeep ≤ 3` and a non-nil `currentValueCents`,
-      sort ascending by `desireToKeep` (tie-break: higher current value
-      first), compute running cumulative value total.
-- [ ] **T038** — Unit tests for the ranking: empty candidate set, a tie
+- [ ] **T037** — `WishlistDetailViewModel`: load a `WishlistItem`'s own
+      fields for display (name, category, estimated cost, notes). No
+      ranking logic here.
+- [ ] **T038** — `WishlistDetailView`: plain display of the wishlist
+      item's fields, with space reserved in the layout for future
+      pricing/trend info, and a single "Find items to sell" button/nav
+      link to `SellCandidatesView`.
+- [ ] **T039** — `SellCandidatesViewModel`: given a `WishlistItem`, fetch
+      owned items with `desireToKeep ≤ 3` and a non-nil
+      `currentValueCents`, sort ascending by `desireToKeep` (tie-break:
+      higher current value first), compute running cumulative value
+      total.
+- [ ] **T040** — Unit tests for the ranking: empty candidate set, a tie
       resolved correctly, un-valued items excluded, ordering correct
       across a realistic mixed set, cumulative total is right at each
       step.
-- [ ] **T039** — `WishlistDetailView`: ranked list with running total,
+- [ ] **T041** — `SellCandidatesView`: ranked list with running total,
       visually distinguishing "this is enough to cover it" once the
-      cumulative total crosses the estimated cost.
+      cumulative total crosses the estimated cost. Reached only by
+      navigating from `WishlistDetailView` — no other entry point.
 
 ## Phase 8 — Navigation and app shell
 
-- [ ] **T040** — Root `TabView` (Dashboard / Items / Wishlist), each tab
+- [ ] **T042** — Root `TabView` (Dashboard / Items / Wishlist), each tab
       a `NavigationStack`.
-- [ ] **T041** — Add-item and add-wishlist-item entry points in the
+- [ ] **T043** — Add-item and add-wishlist-item entry points in the
       toolbar of their respective tabs (not buried in a menu).
-- [ ] **T042** — Manual full click-through: launch → dashboard → add item
+- [ ] **T044** — Manual full click-through: launch → dashboard → add item
       → items list → item detail → wishlist → add wishlist item →
-      wishlist detail ranking.
+      wishlist detail → "Find items to sell" → sell candidates.
 
 ## Phase 9 — Empty and loading states
 
-- [ ] **T043** — Empty state for the items list (no items yet — should
+- [ ] **T045** — Empty state for the items list (no items yet — should
       point at the add action, not just say "no items").
-- [ ] **T044** — Empty state for the wishlist.
-- [ ] **T045** — Empty/zero state for the dashboard when there's no data
+- [ ] **T046** — Empty state for the wishlist.
+- [ ] **T047** — Empty/zero state for the dashboard when there's no data
       yet.
 
 ## Phase 10 — Sync and device verification (manual)
 
-- [ ] **T046** — Manual: run the app on two simulators (or a simulator
+- [ ] **T048** — Manual: run the app on two simulators (or a simulator
       and a device) signed into the same iCloud account; confirm an item
       added on one appears on the other. Not automated — see plan.md's
       testing strategy.
-- [ ] **T047** — Manual: confirm the app behaves reasonably when the
+- [ ] **T049** — Manual: confirm the app behaves reasonably when the
       simulator/device is not signed into iCloud at all.
 
 ## Phase 11 — UI smoke test
 
-- [ ] **T048** — One `XCUIApplication` test: launch the app, add an item
+- [ ] **T050** — One `XCUIApplication` test: launch the app, add an item
       through the quick-add flow, confirm it appears in the items list.
 
 ---
@@ -185,7 +199,10 @@ hand it to Claude Code with something like:
 > Read CLAUDE.md and specs/001-core-inventory/{spec,plan,tasks}.md, then
 > begin implementing starting at T001. For Phase 0 and Phase 1, stop for
 > review after each individual task. From Phase 2 onward, stop after each
-> phase instead of after each task.
+> phase instead of after each task. When building views from Phase 4
+> onward, match the screens in design/screens/ and use the exact values
+> in design/tokens.md — implement colors via a semantic Theme abstraction
+> (see plan.md's "Future: theming" section), never hardcoded per-view.
 
 The tighter cadence for Phases 0–1 is deliberate: mistakes in project
 scaffolding or the data model (a wrong deployment target, a schema that

@@ -19,12 +19,13 @@ they can reason about selling underused gear to fund new purchases.
    signal for how willing they'd be to sell it.
 3. Let a user maintain a wishlist of items they want to buy, with an
    estimated cost.
-4. Surface owned items with low desire-to-keep as candidate "things you
-   could sell" when the user is looking at what a wishlist item would
-   cost to fund. (v1 ranks by desire-to-keep alone; ranking that also
-   accounts for market-value trend is the eventual goal, but depends on
-   the live-market-value non-goal below — see plan.md for how v1 is
-   built to extend into that later without a rework.)
+4. Let a user reach, via a single dedicated action from a wishlist item
+   (not shown by default), a ranked view of owned items with low
+   desire-to-keep as candidate "things you could sell" to fund it. (v1
+   ranks by desire-to-keep alone; ranking that also accounts for
+   market-value trend is the eventual goal, but depends on the
+   live-market-value non-goal below — see plan.md for how v1 is built
+   to extend into that later without a rework.)
 5. The app should feel fast and uncluttered: adding an item and checking
    your overall gear value should each take only a few taps.
 6. Data syncs across the user's own devices via iCloud.
@@ -127,13 +128,23 @@ List of owned items, filterable by category, sortable by desire-to-keep,
 value, or purchase date.
 
 ### Add and review a wishlist item
-User adds a wishlist item with name, category, estimated cost. When
-viewing a wishlist item, the user can see a ranked list of owned items
-with desire-to-keep of 3 or lower (lowest first, ties broken by higher
-current value), with a running total of current value, to answer "what
-would I need to sell to afford this." Items with no current value entered
-are left out of this ranking, same as they're left out of the dashboard
-total — there's nothing to rank them by yet.
+User adds a wishlist item with name, category, estimated cost. Viewing a
+wishlist item shows that item plainly — name, category, estimated cost,
+notes — with room reserved in the layout for live pricing/trend info once
+that's a real feature, even though nothing populates it yet in v1. A
+single action ("Find items to sell") leads to a separate ranked-candidates
+screen: owned items with desire-to-keep of 3 or lower (lowest first, ties
+broken by higher current value), with a running total of current value,
+answering "what would I need to sell to afford this." Items with no
+current value entered are left out of this ranking, same as they're left
+out of the dashboard total — there's nothing to rank them by yet.
+
+This is deliberately not shown by default on the wishlist item screen.
+The ranking is a v1 approximation of a feature meant to grow into
+something bigger once live market data exists (see non-goals); showing it
+automatically would overstate what it currently does. It's one tap away,
+not hidden, but the wishlist item's own details are what the screen leads
+with.
 
 ## Design requirements
 
@@ -168,10 +179,13 @@ need to clear.)
       the delta, across all owned items.
 - [ ] Owned items list can be filtered by category and sorted by
       desire-to-keep, current value, and purchase date.
-- [ ] From a wishlist item, user can see owned items with desire-to-keep
-      ≤ 3, ranked ascending by desire-to-keep (ties broken by higher
-      current value), with a running cumulative value total. Un-valued
-      items are excluded from this ranking.
+- [ ] Viewing a wishlist item shows the item's own details (name,
+      category, cost, notes) by default, not a ranked list.
+- [ ] From a wishlist item, a single dedicated action ("Find items to
+      sell") leads to a ranked-candidates screen: owned items with
+      desire-to-keep ≤ 3, ranked ascending by desire-to-keep (ties broken
+      by higher current value), with a running cumulative value total.
+      Un-valued items are excluded from this ranking.
 - [ ] Data persists across app launches and syncs across the user's
       devices signed into the same iCloud account.
 - [ ] Adding an item with only the required fields (name, category, price,

@@ -93,14 +93,24 @@ screen needs, this is the visual/layout brief for each:
    disclosure. This is a frequently-used screen and needs to feel quick,
    not like filling out a form.
 5. **Wishlist list** — wanted items with estimated cost.
-6. **Wishlist detail (sell-candidate ranking)** — the core "killer
-   feature" screen: a ranked list of owned items (low desire-to-keep
-   first) with a running cumulative value total against the wishlist
-   item's cost. Worth a visual moment when the running total crosses the
-   target — this is the payoff screen of the whole app's premise.
-7. **Add/edit wishlist item form** — simpler than the item form: name,
+6. **Wishlist detail** — a plain, quiet view of the wishlist item itself:
+   name, category, estimated cost, notes. Reserve visual space for
+   pricing/trend info that doesn't exist yet (a future feature) rather
+   than designing as if this is the finished screen. One clear action
+   ("Find items to sell") leads to the candidates screen below — this
+   should read as a single deliberate button, not a dominant module on
+   the page.
+7. **Sell candidates** — reached only via the button on Wishlist detail,
+   not shown by default. This is the core "killer feature" screen in its
+   v1 form: a ranked list of owned items (low desire-to-keep first) with
+   a running cumulative value total against the wishlist item's cost.
+   Worth a visual moment when the running total crosses the target — this
+   is the payoff screen of the whole app's premise, but it earns that
+   treatment on its own screen, not by crowding out the wishlist item's
+   own details.
+8. **Add/edit wishlist item form** — simpler than the item form: name,
    category, estimated cost, notes.
-8. **Empty states** — items list, wishlist, and dashboard with no data
+9. **Empty states** — items list, wishlist, and dashboard with no data
    yet. Should point at the add action, not just say "nothing here."
 
 ## Voice
