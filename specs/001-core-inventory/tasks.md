@@ -17,7 +17,7 @@ summarized.
 
 ## Phase 0 — Project scaffolding (one-time)
 
-- [ ] **T001** — Create the Xcode project: App target `Trove`, SwiftUI
+- [x] **T001** — Create the Xcode project: App target `Trove`, SwiftUI
       lifecycle, iOS 26.0 minimum deployment, plain `.xcodeproj` (no
       XcodeGen/Tuist). *Verify: project opens and builds an empty app in
       the simulator.*
