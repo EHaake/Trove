@@ -17,13 +17,20 @@ summarized.
 
 ## Phase 0 — Project scaffolding (one-time)
 
-- [x] **T001** — Create the Xcode project: App target `Trove`, SwiftUI
+- [ ] **T001** — Create the Xcode project: App target `Trove`, SwiftUI
       lifecycle, iOS 26.0 minimum deployment, plain `.xcodeproj` (no
       XcodeGen/Tuist). *Verify: project opens and builds an empty app in
       the simulator.*
-- [ ] **T002** — Add iCloud capability and a CloudKit container to the
-      target's Signing & Capabilities. *Verify: capability appears in
-      Xcode's signing pane; no build errors.*
+- [ ] ~~T002~~ — **Deferred, not skipped.** Add iCloud capability and a
+      CloudKit container to the target's Signing & Capabilities. Blocked:
+      creating a new CloudKit container requires Certificates,
+      Identifiers & Profiles access, which needs an active paid Apple
+      Developer Program membership (a Personal Team can build/run
+      locally, but can't provision a new container) — see plan.md's
+      CloudKit section. Not a scope change; picking this back up once the
+      membership is renewed, ideally before Phase 10 or before actual
+      App Store prep, whichever comes first. T009 below proceeds without
+      it for now.
 - [ ] **T003** — Add a `TroveTests` target (Swift Testing) and a
       `TroveUITests` target (XCTest). *Verify: an empty placeholder test
       in each target runs green via `xcodebuild test`.*
@@ -45,11 +52,13 @@ summarized.
       `plannedForWishlistItems` inverse relationship.
 - [ ] **T008** — `WishlistItem` model per plan.md's table, including
       `currencyCode` and the `plannedSaleItems` relationship to `Item`.
-- [ ] **T009** — Configure `ModelContainer` in `TroveApp` with a CloudKit
-      database, registering all three model types. Handle "user not
-      signed into iCloud" without erroring — app still works locally.
-      *Verify: app launches in the simulator without a CloudKit-related
-      crash, signed in or not.*
+- [ ] **T009** — Configure `ModelContainer` in `TroveApp`, registering
+      all three model types. **Local-only for now** (no CloudKit
+      database) since T002 is deferred — the schema was built
+      CloudKit-compatible from the start specifically so this is a small,
+      contained swap later (add the CloudKit database configuration and
+      the "not signed into iCloud" handling) rather than a migration.
+      *Verify: app launches in the simulator without errors.*
 - [ ] **T010** — Unit tests: creating each model type via an in-memory
       `ModelContainer` produces the expected defaults (`desireToKeep ==
       3`, `currencyCode == "USD"`, etc). *Verify: `xcodebuild test`
@@ -199,6 +208,11 @@ CRUD.
       yet.
 
 ## Phase 10 — Sync and device verification (manual)
+
+**Blocked pending Developer Program renewal**, same as T002 — nothing
+here is verifiable until CloudKit is actually turned on. Revisit T002
+first (swap `TroveApp`'s `ModelContainer` back to a CloudKit
+configuration), then come back to this phase.
 
 - [ ] **T048** — Manual: run the app on two simulators (or a simulator
       and a device) signed into the same iCloud account; confirm an item
