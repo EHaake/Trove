@@ -7,7 +7,15 @@ first, explicitly, in its own commit.
 
 ## What this project is
 
-<!-- Fill in once we've written the first spec. One paragraph. -->
+**Trove** — *Your Gear, Valued*. A personal gear inventory app for
+hobbyists who own valuable equipment (cameras/lenses, guitars/amps,
+audiophile gear) and regularly buy and sell within their hobby. Core loop: track what you own and what you paid for it,
+track what you want to buy next, and use the gap between current value and
+original cost to plan sales that fund future purchases. Design quality —
+visual polish and low-friction interaction — is a primary requirement, not
+a nice-to-have. A likely future extension is pulling live/estimated resale
+values from marketplaces (eBay, Reverb, Facebook Marketplace); the initial
+data model should not preclude that, but it is not in scope for v1.
 
 ## Platform
 
@@ -16,7 +24,7 @@ first, explicitly, in its own commit.
 - **UI framework**: SwiftUI only. No UIKit except where a SwiftUI API gap
   forces a `UIViewRepresentable` wrapper — and treat that as a flagged
   exception, not a default.
-- **Language**: Swift 6, strict concurrency mode on.
+- **Language**: Swift 6, default (non-strict) concurrency mode.
 - **Project management**: plain `.xcodeproj`, managed through Xcode itself.
   See "Project file safety" below.
 
@@ -87,6 +95,25 @@ After any implementation task, Claude Code must:
 
 A task is not complete until steps 1–2 are green. Do not weaken, skip, or
 delete a test to make it pass — if a test seems wrong, flag it and ask.
+
+## Git conventions
+
+- **One branch per spec, not per task or phase.** When starting work on
+  a spec (e.g. `specs/001-core-inventory/`), create and switch to a
+  branch named after that spec's folder (e.g. `001-core-inventory`)
+  before making any changes. Commit into that branch as work proceeds.
+  Do not create additional branches per task or phase within a spec —
+  that's finer-grained than useful here.
+- **Never commit directly to `main`.** All implementation work happens
+  on a spec branch.
+- Once every task in a spec's `tasks.md` is complete and verified, push
+  the branch and open a pull request against `main` — summarizing what
+  was built, referencing the spec. Wait for explicit confirmation before
+  merging; opening the PR is not the same as merging it.
+- Keep the default `Co-Authored-By: Claude` attribution on commits and
+  PR descriptions — don't strip it. It's accurate and worth keeping for
+  a project meant to demonstrate an AI-assisted workflow.
+- Never force-push.
 
 ## Commits
 
