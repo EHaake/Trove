@@ -155,25 +155,28 @@ CRUD.
       - compute the candidate pool (owned items, `desireToKeep ≤ 3`,
         non-nil `currentValueCents`, sorted ascending by `desireToKeep`,
         tie-break higher current value first);
-      - if `plannedSaleItems` is empty, auto-preselect by walking the
-        ranked candidates and adding until their combined value meets or
-        exceeds `estimatedCostCents`, then persist that selection
-        immediately;
+      - load the existing selection from `plannedSaleItems` — starts
+        empty on first visit, **no auto-selection**;
       - expose toggle methods that add/remove a candidate from
         `plannedSaleItems` and persist on every change;
-      - compute the surplus/shortfall: sum of selected items' current
-        value minus `estimatedCostCents`.
+      - expose the selected items' combined current value and the
+        wishlist item's `estimatedCostCents` as two separate figures for
+        the view to compare, rather than a single pre-computed
+        surplus/shortfall value with baked-in framing.
 - [ ] **T040** — Unit tests for `SellPlanViewModel`: empty candidate pool,
       a tie resolved correctly, un-valued items excluded from the pool,
-      auto-preselect stops at the right point and persists, toggling a
-      candidate updates both the selection and the surplus/shortfall,
-      and re-loading after a toggle reflects the persisted state rather
-      than recomputing a fresh auto-preselect.
+      the plan starts with nothing selected on first load, toggling a
+      candidate updates the persisted selection and the selected-value
+      figure, and re-loading after a toggle reflects the persisted
+      selection rather than resetting.
 - [ ] **T041** — `SellPlanView`: selectable candidate list (visually
-      distinguishing selected from unselected), surplus/shortfall
-      display (not a bare total), a visual moment when the plan crosses
-      from shortfall into surplus. Reached only via `WishlistDetailView`'s
-      button or `WishlistView`'s per-row shortcut — no other entry point.
+      distinguishing selected from unselected), the selected total shown
+      alongside the estimated cost as two comparable figures. A quiet
+      color distinction between "meets or exceeds" and "doesn't" is fine;
+      no copy nudging the user to select more ("keep going," "check
+      another item," or similar) — this is advisory, not a target to
+      complete. Reached only via `WishlistDetailView`'s button or
+      `WishlistView`'s per-row shortcut — no other entry point.
 
 ## Phase 8 — Navigation and app shell
 

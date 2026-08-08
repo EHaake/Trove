@@ -105,15 +105,22 @@ screen needs, this is the visual/layout brief for each:
    page.
 7. **Sell Plan** — reached only via the button on Wishlist detail or the
    wishlist list's shortcut, not shown by default. This is the core
-   "killer feature" screen in its v1 form: a ranked, *selectable* list of
-   owned items (low desire-to-keep first) — items are checked in or out
-   of the plan, not just displayed — showing the surplus or shortfall
-   against the wishlist item's cost, not a bare total. The plan persists,
-   so returning to this screen later shows the same selection, not a
-   fresh computation. Worth a visual moment when the plan crosses from
-   shortfall to surplus — this is the payoff screen of the whole app's
-   premise, but it earns that treatment on its own screen, not by
-   crowding out the wishlist item's own details.
+   feature screen in its v1 form: a ranked, *selectable* list of owned
+   items (low desire-to-keep first) — items are checked in or out of the
+   plan, not just displayed. Starts with nothing selected; the plan
+   persists once the user starts choosing, so returning to this screen
+   later shows the same selection, not a fresh computation.
+
+   **This is advisory, not a goal to complete.** Show the selected
+   items' combined value next to the wishlist item's cost as two
+   figures the user can compare — a quiet color distinction between
+   "meets or exceeds" and "doesn't" is fine, but no copy that nudges the
+   user toward covering the gap. Specifically avoid anything like "keep
+   going," "check another item," "you need $X more," or a celebratory
+   treatment for crossing into surplus — that framing implies the user
+   is supposed to fully fund the purchase from a sale, which isn't the
+   point. The point is showing good sell candidates for a purchase that
+   might make sense right now, nothing more prescriptive than that.
 8. **Add/edit wishlist item form** — simpler than the item form: name,
    category, estimated cost, notes.
 9. **Empty states** — items list, wishlist, and dashboard with no data

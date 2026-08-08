@@ -174,29 +174,44 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
   than a disposable computed list) came out of designing the screens in
   Claude Design, and it's a real improvement worth keeping. Reached via
   `WishlistDetailView`'s button or `WishlistView`'s per-row shortcut, not
-  shown automatically anywhere. Behavior:
+  shown automatically anywhere.
+
+  **This is advisory, not goal-directed** — worth stating plainly because
+  it shapes the behavior below. The feature answers "is this a
+  reasonable time to buy, and what would make the most sense to sell if
+  I did," not "prove you can fully cover this purchase from a sale."
+  An earlier version of this spec had the plan auto-select candidates
+  until their value met the wishlist item's cost, and displayed the
+  result as a "surplus or shortfall" — that framing implicitly told the
+  user they were supposed to close the gap, which was never the intent
+  and got caught only after seeing it rendered in Claude Design. Behavior:
+
   - Candidate pool: owned items with `desireToKeep` ≤ 3 and a non-nil
     `currentValueCents`, ranked ascending by `desireToKeep` (tie-break:
     higher current value first).
   - **Selection is persisted**, via `WishlistItem.plannedSaleItems`, not
-    recomputed fresh each time. If the plan is empty (first visit),
-    auto-preselect by walking the ranked list and adding items until
-    their combined value meets or exceeds the wishlist item's estimated
-    cost, then persist that as the starting selection immediately.
+    recomputed fresh each time — but it **starts empty** and stays that
+    way until the user actively selects something. No auto-selection, no
+    target to reach.
   - The user can freely toggle any candidate in or out; each toggle
     updates `plannedSaleItems` right away — no separate save step,
     consistent with the app's low-friction bar.
-  - Display isn't just a running total — show the **surplus or
-    shortfall** against the estimated cost ("$120 more than you need" /
-    "$340 short") so the number is directly decision-relevant.
+  - Display the selected items' combined value alongside the wishlist
+    item's estimated cost as two comparable figures. A quiet color
+    distinction (e.g. one tone once selected value meets or exceeds the
+    cost, another when it doesn't) is fine — but no accompanying copy
+    that nudges toward covering the gap ("keep going," "check another
+    item," or similar). The comparison is information the user
+    interprets themselves, not an instruction.
   - **v1 ranks by desire-to-keep only** — it does not (and can't yet)
-    factor in market-value trend. The full "killer feature" described in
-    the spec — surfacing an item because its desire-to-keep is low *and*
-    its resale value is currently trending high — depends on live market
-    data, explicitly out of scope until that data source exists (see
-    spec non-goals). This view is the scaffolding that feature plugs
-    into later: the ranking algorithm gains a trend signal, the
-    selection/persistence/surplus mechanics don't need to change shape.
+    factor in market-value trend. The full feature described in the
+    spec — surfacing an item because its desire-to-keep is low *and*
+    its resale value is currently trending high, at a moment when the
+    wishlist item itself is trending favorably to buy — depends on live
+    market data, explicitly out of scope until that data source exists
+    (see spec non-goals). This view is the scaffolding that feature
+    plugs into later: the ranking algorithm gains a trend signal, the
+    selection/persistence mechanics don't need to change shape.
   - **Explicitly not in v1**: marking a planned item as actually sold,
     removing it from inventory, or any transaction/sale-tracking. The
     Sell Plan is a decision-support tool, not a sales ledger — a natural

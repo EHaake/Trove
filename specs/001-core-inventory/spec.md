@@ -19,14 +19,16 @@ they can reason about selling underused gear to fund new purchases.
    signal for how willing they'd be to sell it.
 3. Let a user maintain a wishlist of items they want to buy, with an
    estimated cost.
-4. Let a user build a **Sell Plan** for a wishlist item: a persisted
-   selection of owned items with low desire-to-keep that they're
-   considering selling to fund it, reached via a single dedicated action
-   (not shown by default), showing the surplus or shortfall against the
-   item's cost. (v1 ranks candidates by desire-to-keep alone; ranking
-   that also accounts for market-value trend is the eventual goal, but
-   depends on the live-market-value non-goal below — see plan.md for how
-   v1 is built to extend into that later without a rework.)
+4. Let a user build a **Sell Plan** for a wishlist item: an advisory,
+   persisted shortlist of owned items with low desire-to-keep that
+   they're weighing selling, reached via a single dedicated action (not
+   shown by default). The point is to answer "is this a reasonable time
+   to buy, and what would make the most sense to sell if I did" — not to
+   pressure the user into covering the item's full cost. (v1 ranks
+   candidates by desire-to-keep alone; ranking that also accounts for
+   market-value trend is the eventual goal, but depends on the
+   live-market-value non-goal below — see plan.md for how v1 is built to
+   extend into that later without a rework.)
 5. The app should feel fast and uncluttered: adding an item and checking
    your overall gear value should each take only a few taps.
 6. Data syncs across the user's own devices via iCloud.
@@ -156,22 +158,31 @@ that's a real feature, even though nothing populates it yet in v1. A
 single action ("Find items to sell") leads to that item's Sell Plan.
 
 ### The Sell Plan
-A Sell Plan answers "what would I actually sell to afford this" for one
-wishlist item, and it's a real, persisted thing — not a list recomputed
-fresh every time you look at it. Candidates are owned items with
-desire-to-keep of 3 or lower and a current value entered (items with no
-current value are left out, same as the dashboard total — there's
-nothing to rank them by), ranked lowest desire-to-keep first, ties broken
-by higher current value.
+The Sell Plan is advisory, not a target to hit. The question it answers
+isn't "do I have enough to fully cover this" — it's "is now a reasonable
+time to buy, and if I did sell something toward it, what would make the
+most sense." Framing it as a completion goal (full cost covered, or
+explicitly falling short) implies the user is supposed to fund the whole
+purchase from a sale, which was never the intent — someone might sell one
+item they don't mind parting with and still pay for the rest themselves.
 
-The first time a wishlist item's Sell Plan is opened, it's empty, so the
-app proposes a starting selection automatically — the top of the ranked
-list, added up until it covers the estimated cost — and that becomes the
-saved plan. From there, the user can add or remove any candidate freely;
-each change saves immediately. Rather than just a running total, the
-plan shows the **surplus or shortfall** against the wishlist item's
-cost — "$120 more than you need" or "$340 short" — since that's the
-number that's actually useful to look at.
+It's a real, persisted thing — not a list recomputed fresh every time
+you look at it. Candidates are owned items with desire-to-keep of 3 or
+lower and a current value entered (items with no current value are left
+out, same as the dashboard total — there's nothing to rank them by),
+ranked lowest desire-to-keep first, ties broken by higher current value.
+
+The Sell Plan starts empty. It does not auto-select items or try to
+reach the wishlist item's cost — that would be the completion-target
+behavior this feature is explicitly not. The user adds or removes any
+candidate freely, from a list that's just showing them their best
+options; each change saves immediately. The screen shows the selected
+items' combined value alongside the wishlist item's estimated cost, so
+the user can see for themselves how they compare — a quiet color cue
+(e.g. one tone once selected value meets or exceeds the cost, another
+when it doesn't) is fine, but there's no accompanying text urging the
+user toward covering the gap ("keep going," "check another item," or
+similar). The comparison is information, not an instruction.
 
 The Sell Plan is deliberately not shown by default on the wishlist
 item's own screen. It's a v1 approximation of a feature meant to grow
@@ -222,16 +233,19 @@ need to clear.)
       both offer a way to reach that item's Sell Plan.
 - [ ] Viewing a wishlist item shows the item's own details (name,
       category, cost, notes) by default, not its Sell Plan.
-- [ ] A wishlist item's Sell Plan, opened for the first time, proposes a
-      starting selection of owned items (desire-to-keep ≤ 3, ranked
-      ascending by desire-to-keep, ties broken by higher current value)
-      that together meet or exceed the estimated cost, and saves that as
-      the plan.
+- [ ] A wishlist item's Sell Plan, opened for the first time, shows the
+      ranked candidate pool (owned items, desire-to-keep ≤ 3, valued,
+      ranked ascending by desire-to-keep, ties broken by higher current
+      value) with nothing pre-selected — no automatic selection toward
+      covering the estimated cost.
 - [ ] The user can add or remove any eligible owned item from the Sell
       Plan; changes save immediately and persist across app launches.
-- [ ] The Sell Plan displays the surplus or shortfall against the
-      wishlist item's estimated cost, not just a running total.
-      Un-valued items are excluded from the candidate pool entirely.
+- [ ] The Sell Plan shows the selected items' combined value alongside
+      the wishlist item's estimated cost. A quiet color distinction
+      between "meets or exceeds the cost" and "doesn't" is acceptable;
+      no text prompts the user to select more or otherwise implies
+      they're expected to cover the full cost. Un-valued items are
+      excluded from the candidate pool entirely.
 - [ ] Data persists across app launches and syncs across the user's
       devices signed into the same iCloud account.
 - [ ] Adding an item with only the required fields (name, category, price,
