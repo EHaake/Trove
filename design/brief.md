@@ -121,6 +121,14 @@ screen needs, this is the visual/layout brief for each:
    is supposed to fully fund the purchase from a sale, which isn't the
    point. The point is showing good sell candidates for a purchase that
    might make sense right now, nothing more prescriptive than that.
+
+   **One future-proofing note**: v1 ranks candidates by desire-to-keep
+   only, but a later version will likely add a per-item trend signal
+   (roughly: "this item's resale value is currently trending up," shown
+   as a small indicator on the row — an arrow or similar, not a chart).
+   Nothing needs to be built now, but leave each candidate row with a
+   little room — don't design it so tightly that adding one small
+   indicator later means redoing the row layout.
 8. **Add/edit wishlist item form** — simpler than the item form: name,
    category, estimated cost, notes.
 9. **Empty states** — items list, wishlist, and dashboard with no data
