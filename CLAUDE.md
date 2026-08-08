@@ -106,10 +106,13 @@ delete a test to make it pass — if a test seems wrong, flag it and ask.
   that's finer-grained than useful here.
 - **Never commit directly to `main`.** All implementation work happens
   on a spec branch.
-- Once every task in a spec's `tasks.md` is complete and verified, push
-  the branch and open a pull request against `main` — summarizing what
-  was built, referencing the spec. Wait for explicit confirmation before
-  merging; opening the PR is not the same as merging it.
+- Opening the pull request early, as a **draft**, right after the branch
+  is pushed, is fine and even encouraged — it gives a running diff to
+  review on GitHub alongside each phase, separate from your own summary.
+  What matters is that it stays in draft, unmerged, until every task in
+  the spec's `tasks.md` is complete and verified — only then mark it
+  "Ready for review" and merge. Never merge partway through a spec, even
+  if an individual phase looks done.
 - Keep the default `Co-Authored-By: Claude` attribution on commits and
   PR descriptions — don't strip it. It's accurate and worth keeping for
   a project meant to demonstrate an AI-assisted workflow.
