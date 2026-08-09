@@ -10,6 +10,7 @@ import SwiftUI
 struct ItemFormView: View {
     @State private var viewModel: ItemFormViewModel
     @State private var showsMoreDetails = false
+    @State private var showsDatePicker = false
 
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -107,17 +108,66 @@ struct ItemFormView: View {
                 .overlay(fieldBorder(isInvalid: viewModel.validationErrors.contains(.priceNegative)))
             }
 
-            VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
-                Text("Date bought").monoLabel()
-                DatePicker("", selection: $viewModel.purchaseDate, displayedComponents: .date)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                    .tint(theme.colors.accentBrass)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, theme.metrics.fieldPaddingVertical - 3)
-                    .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
-                    .background(fieldBackground)
-                    .overlay(fieldBorder(isInvalid: false))
+            dateField
+        }
+    }
+
+    /// A plain button wearing the same chrome as every other field, with the
+    /// real picker in a popover behind it. A native `.compact` DatePicker
+    /// brings its own grey chip, which reads as a system control dropped into
+    /// the middle of the form.
+    ///
+    /// Two digits each, locale-ordered: Design's "14/03/19" is that format in
+    /// a day-first locale, and this renders "03/14/19" in a month-first one —
+    /// same compactness, right order for whoever's reading it.
+    private var dateField: some View {
+        VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
+            Text("Date bought").monoLabel()
+
+            Button {
+                showsDatePicker = true
+            } label: {
+                HStack(spacing: 8) {
+                    Text(
+                        viewModel.purchaseDate,
+                        format: .dateTime.day(.twoDigits).month(.twoDigits).year(.twoDigits)
+                    )
+                    .font(theme.typography.monoValue)
+                    .foregroundStyle(theme.colors.textPrimary)
+
+                    Spacer(minLength: 0)
+
+                    // The mock's small square outline. A flat graphic mark
+                    // rather than an SF calendar glyph, per the brief.
+                    RoundedRectangle(cornerRadius: 1)
+                        .strokeBorder(theme.colors.textLabel, lineWidth: theme.metrics.hairline)
+                        .frame(width: 15, height: 15)
+                }
+                .padding(.vertical, theme.metrics.fieldPaddingVertical)
+                .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
+                .background(fieldBackground)
+                .overlay(fieldBorder(isInvalid: false))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Date bought")
+            .accessibilityValue(viewModel.purchaseDate.formatted(date: .long, time: .omitted))
+            .popover(isPresented: $showsDatePicker) {
+                DatePicker(
+                    "Date bought",
+                    selection: $viewModel.purchaseDate,
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .tint(theme.colors.accentBrass)
+                // A graphical picker reports a tiny ideal width, and the
+                // popover honours it — without a floor the calendar collapses
+                // into an unusable vertical sliver.
+                .frame(minWidth: 320, minHeight: 350)
+                .padding(theme.metrics.cardPadding)
+                // Without this a popover becomes a full sheet on iPhone, which
+                // is far heavier than picking a date warrants.
+                .presentationCompactAdaptation(.popover)
             }
         }
     }
