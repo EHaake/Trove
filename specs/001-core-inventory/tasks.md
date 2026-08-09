@@ -116,7 +116,7 @@ later phase depends on this being right, and a wrong shape here is
 expensive to unwind once a dozen views are already reading from it
 directly rather than through the abstraction.
 
-- [ ] **T021** — `CategoryPickerField`: text field + autocomplete
+- [x] **T021** — `CategoryPickerField`: text field + autocomplete
       suggestions, backed by the Phase 2 helper. *Verify: manual check in
       a SwiftUI preview.*
 - [ ] **T022** — `PhotoPickerField`: wraps `PhotosUI.PhotosPicker` for

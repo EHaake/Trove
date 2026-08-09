@@ -25,6 +25,11 @@ struct TroveApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(\.theme, .dark)
+                // v1 is dark-only (spec.md defers light mode), and pinning the
+                // scheme keeps system-drawn chrome — keyboards, pickers,
+                // selection — matching the palette instead of fighting it.
+                .preferredColorScheme(.dark)
         }
         .modelContainer(modelContainer)
     }
