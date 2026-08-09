@@ -72,6 +72,21 @@ struct CategoryPathHelper {
         return labels
     }
 
+    /// The trailing segments of a path, for meta lines that show a category
+    /// inline beside other content.
+    ///
+    /// Design's meta lines are always two parts ("LEICA · CAMERAS"), and a
+    /// deeper path rendered in full just truncates mid-word in a list row.
+    /// The trailing segments are the specific ones anyway — "Guitars ·
+    /// Electric" says more in a row than "Music · Guitars · Ele…".
+    ///
+    /// Unlike `displayLabels(for:)` this needs no collision handling: a row
+    /// shows one item's own category, not a set to tell apart.
+    static func trailingSegments(of path: String, limit: Int = 2) -> [String] {
+        let segments = path.split(separator: "/").map(String.init)
+        return Array(segments.suffix(limit))
+    }
+
     private static func suffix(of path: String, segments count: Int) -> String {
         path.split(separator: "/").map(String.init).suffix(count).joined(separator: "/")
     }

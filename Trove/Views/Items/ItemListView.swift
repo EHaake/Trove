@@ -20,7 +20,11 @@ struct ItemListView: View {
         ZStack {
             theme.colors.background.ignoresSafeArea()
 
-            ScrollView {
+            // Title, summary and filter chips stay put; only the rows move.
+            // Standing layout rule in plan.md — the wishlist follows it too.
+            // Losing the running total and the active filter the moment you
+            // scroll is what it's there to prevent.
+            VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
                     header
                         .padding(.horizontal, theme.metrics.screenGutter)
@@ -28,7 +32,11 @@ struct ItemListView: View {
                     // Full-bleed so chips scroll off the edge rather than
                     // stopping at the gutter; the gutter moves inside instead.
                     categoryChips
+                }
+                .padding(.vertical, theme.metrics.sectionGap)
+                .background(theme.colors.background)
 
+                ScrollView {
                     Group {
                         if viewModel.isEmpty {
                             emptyState
@@ -44,8 +52,8 @@ struct ItemListView: View {
                         }
                     }
                     .padding(.horizontal, theme.metrics.screenGutter)
+                    .padding(.bottom, theme.metrics.sectionGap)
                 }
-                .padding(.vertical, theme.metrics.sectionGap)
             }
         }
         .navigationBarTitleDisplayMode(.inline)

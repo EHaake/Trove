@@ -48,10 +48,29 @@ struct CategoryPickerField: View {
             textField
 
             if !matches.isEmpty {
-                FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
-                    ForEach(matches, id: \.self, content: chip)
+                // One scrolling row, matching the item list's filter chips.
+                // Wrapping made the field's height jump around as the user
+                // typed and the match count changed.
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(matches, id: \.self) { path in
+                                chip(path).id(path)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .scrollClipDisabled()
+                    // Editing an existing item opens with its category already
+                    // set, and alphabetically that chip is often off to the
+                    // right — where a single row hides it and wrapping didn't.
+                    .onAppear {
+                        guard let selected = matches.first(where: {
+                            $0.caseInsensitiveCompare(categoryPath) == .orderedSame
+                        }) else { return }
+                        proxy.scrollTo(selected, anchor: .center)
+                    }
                 }
-                .padding(.top, 2)
             }
         }
     }

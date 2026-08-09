@@ -234,6 +234,40 @@ struct CategoryDisplayLabelTests {
     }
 }
 
+/// Inline meta lines cap at the trailing segments, which is what stops a
+/// three-level path truncating mid-word in a list row.
+@Suite("Category meta-line segments")
+struct CategoryTrailingSegmentTests {
+    @Test func keepsAShortPathWhole() {
+        #expect(CategoryPathHelper.trailingSegments(of: "Photography/Cameras") == ["Photography", "Cameras"])
+        #expect(CategoryPathHelper.trailingSegments(of: "Accessories") == ["Accessories"])
+    }
+
+    /// The case that was truncating: "MUSIC · GUITARS · ELE…".
+    @Test func dropsTheLeadingSegmentsOfADeepPath() {
+        #expect(CategoryPathHelper.trailingSegments(of: "Music/Guitars/Electric") == ["Guitars", "Electric"])
+    }
+
+    @Test func keepsOnlyTheTrailingTwoOfAVeryDeepPath() {
+        #expect(
+            CategoryPathHelper.trailingSegments(of: "Home/Studio/Music/Guitars/Electric")
+                == ["Guitars", "Electric"]
+        )
+    }
+
+    @Test func handlesAnEmptyPath() {
+        #expect(CategoryPathHelper.trailingSegments(of: "").isEmpty)
+    }
+
+    @Test func honoursACustomLimit() {
+        #expect(CategoryPathHelper.trailingSegments(of: "Music/Guitars/Electric", limit: 1) == ["Electric"])
+        #expect(
+            CategoryPathHelper.trailingSegments(of: "Music/Guitars/Electric", limit: 5)
+                == ["Music", "Guitars", "Electric"]
+        )
+    }
+}
+
 /// The ordering rule tested directly, where the input order is ours to choose.
 /// Going through a `ModelContext` can't pin this down: `FetchDescriptor`
 /// promises no ordering, so an integration test asserts against whatever

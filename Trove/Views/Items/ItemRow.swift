@@ -62,8 +62,12 @@ struct ItemRow: View {
     /// is no brand in the schema and guessing one from the name would be
     /// wrong as often as right, so this shows the category path's own
     /// segments, which keeps the rhythm and says something true.
+    ///
+    /// Capped at the trailing two: a three-level path rendered in full only
+    /// truncates mid-word here, and the specific end of the path is the
+    /// informative part. The detail screen shows the whole thing.
     private var categoryLine: some View {
-        Text(item.categorySegments.joined(separator: " · "))
+        Text(CategoryPathHelper.trailingSegments(of: item.categoryPath).joined(separator: " · "))
             .monoLabel()
             .lineLimit(1)
     }
