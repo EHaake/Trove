@@ -34,7 +34,7 @@ summarized.
 - [x] **T003** — Add a `TroveTests` target (Swift Testing) and a
       `TroveUITests` target (XCTest). *Verify: an empty placeholder test
       in each target runs green via `xcodebuild test`.*
-- [ ] **T004** — Create the folder structure from plan.md
+- [x] **T004** — Create the folder structure from plan.md
       (`App/`, `Models/`, `ViewModels/`, `Views/{Dashboard,Items,
       Wishlist,Shared}/`, `Extensions/`). *Verify: folders exist and are
       reflected as groups in Xcode.*
