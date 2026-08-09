@@ -216,9 +216,12 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
   user they were supposed to close the gap, which was never the intent
   and got caught only after seeing it rendered in Claude Design. Behavior:
 
-  - Candidate pool: owned items with `desireToKeep` ≤ 3 and a non-nil
-    `currentValueCents`, ranked ascending by `desireToKeep` (tie-break:
-    higher current value first).
+  - Candidate pool: owned items where `DesireLevel.isSellCandidate` is
+    true (built at T023 specifically to mirror this `desireToKeep ≤ 3`
+    threshold in exactly one place, so the item list/detail UI and this
+    filter can't independently drift) and a non-nil `currentValueCents`,
+    ranked ascending by `desireToKeep` (tie-break: higher current value
+    first). Use the shared predicate here, don't re-derive the threshold.
   - **Selection is persisted**, via `WishlistItem.plannedSaleItems`, not
     recomputed fresh each time — but it **starts empty** and stays that
     way until the user actively selects something. No auto-selection, no
