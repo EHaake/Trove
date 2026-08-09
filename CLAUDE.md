@@ -25,6 +25,15 @@ data model should not preclude that, but it is not in scope for v1.
   forces a `UIViewRepresentable` wrapper — and treat that as a flagged
   exception, not a default.
 - **Language**: Swift 6, default (non-strict) concurrency mode.
+  `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` project-wide is intentional
+  — it's what makes MVVM view-model access convenient without hand
+  annotation. One forced exception: `TroveUITests` overrides this to
+  `nonisolated`, because `XCTestCase`'s designated initializers are
+  `nonisolated` and a `MainActor`-isolated subclass can't override them.
+  `TroveTests` (Swift Testing, plain structs) doesn't hit this and keeps
+  the `MainActor` default deliberately. Individual UI test methods opt
+  into `@MainActor` where `XCUIApplication` needs it, per Apple's own
+  template pattern.
 - **Project management**: plain `.xcodeproj`, managed through Xcode itself.
   See "Project file safety" below.
 
@@ -106,10 +115,13 @@ delete a test to make it pass — if a test seems wrong, flag it and ask.
   that's finer-grained than useful here.
 - **Never commit directly to `main`.** All implementation work happens
   on a spec branch.
-- Once every task in a spec's `tasks.md` is complete and verified, push
-  the branch and open a pull request against `main` — summarizing what
-  was built, referencing the spec. Wait for explicit confirmation before
-  merging; opening the PR is not the same as merging it.
+- Opening the pull request early, as a **draft**, right after the branch
+  is pushed, is fine and even encouraged — it gives a running diff to
+  review on GitHub alongside each phase, separate from your own summary.
+  What matters is that it stays in draft, unmerged, until every task in
+  the spec's `tasks.md` is complete and verified — only then mark it
+  "Ready for review" and merge. Never merge partway through a spec, even
+  if an individual phase looks done.
 - Keep the default `Co-Authored-By: Claude` attribution on commits and
   PR descriptions — don't strip it. It's accurate and worth keeping for
   a project meant to demonstrate an AI-assisted workflow.
