@@ -143,7 +143,17 @@ specifically").
 
 ### Browse/sort owned items
 List of owned items, filterable by category, sortable by desire-to-keep,
-value, or purchase date.
+value, or purchase date. Category filter chips are a single horizontally
+scrolling row, not a wrapping grid — vertical space above the list stays
+fixed regardless of how many distinct categories are in use.
+
+Chip labels show the category path's last segment alone (`Electric`, not
+`Music/Guitars/Electric`) when that segment is unique across the current
+set of categories. If two different paths would otherwise show the same
+leaf label (e.g. `Music/Amps` and `Audio/Amps` both ending in "Amps"),
+both expand to their last two segments instead, just enough to tell them
+apart. This is a label-only rule — filtering still matches on the full
+path prefix as before; only what's displayed on the chip changes.
 
 ### Browse and manage the wishlist
 List of wishlist items, filterable by category, same as the owned-items
