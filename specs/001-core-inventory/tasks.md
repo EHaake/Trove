@@ -74,18 +74,18 @@ change gets checked immediately rather than at T002-resumption time.
 
 ## Phase 2 — Shared utilities
 
-- [ ] **T011** — `Int+Currency` extension: cents → formatted currency
+- [x] **T011** — `Int+Currency` extension: cents → formatted currency
       string, given a `currencyCode`.
-- [ ] **T012** — Unit tests for currency formatting (zero, negative if
+- [x] **T012** — Unit tests for currency formatting (zero, negative if
       applicable, typical values).
-- [ ] **T013** — Category-path helper: given a `ModelContext`, fetch
+- [x] **T013** — Category-path helper: given a `ModelContext`, fetch
       distinct `categoryPath` values across `Item` and `WishlistItem`;
       a filter function that matches by prefix, case-insensitively,
       against user-typed input; a canonicalization function that, given
       a newly-typed path, returns the existing casing if a
       case-insensitive match exists among current paths, or the
       as-typed string otherwise. Called on save, not on every keystroke.
-- [ ] **T014** — Unit tests for the category-path helper: dedup,
+- [x] **T014** — Unit tests for the category-path helper: dedup,
       case-insensitive prefix filtering, empty input, and
       canonicalization specifically (typing an existing path with
       different casing reuses the stored casing; a genuinely new path is
