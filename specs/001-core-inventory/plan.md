@@ -301,19 +301,36 @@ schema constraints already reflected in the data model above:
 ## File structure
 
 ```
+Trove.xcodeproj/     PBXFileSystemSynchronizedRootGroup — files under
+                      Trove/ join the target automatically, no project
+                      file edits needed for new files (see T001)
+Config/
+  Info.plist          Must live outside Trove/ — anything inside the
+                      synchronized Trove/ folder is also copied as a
+                      bundle resource, which collides with the
+                      auto-generated Info.plist if it's placed there
+                      (found at T022)
 Trove/
-  App/            TroveApp.swift, ModelContainer setup
-  Models/         Item.swift, WishlistItem.swift, Photo.swift, Condition.swift
-  ViewModels/      one file per view model listed above
+  App/                TroveApp.swift, ModelContainer setup
+  Fonts/              Archivo, IBM Plex Sans/Mono .ttf files — also
+                      auto-included as bundle resources via the
+                      synchronized group, which is what UIAppFonts needs
+  Models/             Item.swift, WishlistItem.swift, Photo.swift, Condition.swift
+  ViewModels/          one file per view model listed above
   Views/
     Dashboard/
     Items/
     Wishlist/
-    Shared/        CategoryPickerField, PhotoPickerField, formatting helpers
-  Extensions/      Int+Currency.swift, etc.
-TroveTests/         Swift Testing, one file per view model
-TroveUITests/       XCTest smoke tests
+    Shared/            CategoryPickerField, PhotoPickerField, formatting helpers
+  Extensions/          Int+Currency.swift, Image+Data.swift (the flagged
+                      UIKit bridge — see Platform section in CLAUDE.md), etc.
+TroveTests/           Swift Testing, one file per view model
+TroveUITests/         XCTest smoke tests
 ```
+
+This diverges from the original plan in two small, discovered-during-
+implementation ways (`Config/` existing at all, `Fonts/` as a subfolder)
+— both are corrections to reality, not scope changes.
 
 ## Resolved decisions
 
