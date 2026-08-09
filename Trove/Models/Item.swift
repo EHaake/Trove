@@ -57,8 +57,13 @@ final class Item {
     /// Bumped on every edit by the view models that own mutation.
     var updatedAt: Date = Date.now
 
-    // The `plannedForWishlistItems` inverse lands in T008, along with the
-    // WishlistItem type it refers to.
+    /// Every Sell Plan this item currently appears on. Optional for the same
+    /// CloudKit reason as `photos`.
+    ///
+    /// `.nullify`, never `.cascade`: removing an item from a Sell Plan — or
+    /// deleting the wishlist item entirely — must not touch the owned gear.
+    @Relationship(deleteRule: .nullify, inverse: \WishlistItem.plannedSaleItems)
+    var plannedForWishlistItems: [WishlistItem]? = []
 
     var condition: Condition {
         get { Condition(rawValue: conditionRawValue) ?? .excellent }

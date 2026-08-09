@@ -18,15 +18,12 @@ import Testing
 /// This caught `Item.photos` declared as `[Photo]` instead of `[Photo]?`.
 @Suite("CloudKit schema compatibility")
 struct CloudKitSchemaTests {
-    /// Every `@Model` type in the app. Add new models here as they land.
-    static let models: [any PersistentModel.Type] = [Item.self, Photo.self]
-
     @Test func schemaMeetsCloudKitRequirements() throws {
         let url = URL.temporaryDirectory.appending(path: "cloudkit-schema-\(UUID().uuidString).store")
         defer { try? FileManager.default.removeItem(at: url) }
 
         let configuration = ModelConfiguration(
-            schema: Schema(Self.models),
+            schema: TroveSchema.schema,
             url: url,
             cloudKitDatabase: .private("iCloud.com.erikhaake.trove")
         )
@@ -34,6 +31,6 @@ struct CloudKitSchemaTests {
         // A violation throws SwiftDataError.loadIssueModelContainer, which
         // carries no detail. The actionable message — which model and which
         // property — is in the CoreData error logged just above the failure.
-        _ = try ModelContainer(for: Schema(Self.models), configurations: configuration)
+        _ = try ModelContainer(for: TroveSchema.schema, configurations: configuration)
     }
 }

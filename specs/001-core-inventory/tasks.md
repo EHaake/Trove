@@ -17,7 +17,7 @@ summarized.
 
 ## Phase 0 — Project scaffolding (one-time)
 
-- [ ] **T001** — Create the Xcode project: App target `Trove`, SwiftUI
+- [x] **T001** — Create the Xcode project: App target `Trove`, SwiftUI
       lifecycle, iOS 26.0 minimum deployment, plain `.xcodeproj` (no
       XcodeGen/Tuist). *Verify: project opens and builds an empty app in
       the simulator.*
@@ -31,35 +31,35 @@ summarized.
       membership is renewed, ideally before Phase 10 or before actual
       App Store prep, whichever comes first. T009 below proceeds without
       it for now.
-- [ ] **T003** — Add a `TroveTests` target (Swift Testing) and a
+- [x] **T003** — Add a `TroveTests` target (Swift Testing) and a
       `TroveUITests` target (XCTest). *Verify: an empty placeholder test
       in each target runs green via `xcodebuild test`.*
-- [ ] **T004** — Create the folder structure from plan.md
+- [x] **T004** — Create the folder structure from plan.md
       (`App/`, `Models/`, `ViewModels/`, `Views/{Dashboard,Items,
       Wishlist,Shared}/`, `Extensions/`). *Verify: folders exist and are
       reflected as groups in Xcode.*
 
 ## Phase 1 — Data models
 
-- [ ] **T005** — `Condition` enum (`new/excellent/good/fair/broken`,
+- [x] **T005** — `Condition` enum (`new/excellent/good/fair/broken`,
       `String`-backed, `Codable`, `CaseIterable`).
-- [ ] **T006** — `Photo` model (`id`, `imageData` with
+- [x] **T006** — `Photo` model (`id`, `imageData` with
       `.externalStorage`, `source` — always `"device"` in v1, `sortOrder`,
       inverse `item` relationship).
-- [ ] **T007** — `Item` model per plan.md's table, including
+- [x] **T007** — `Item` model per plan.md's table, including
       `currencyCode` (default `"USD"`), the computed `condition`
       property wrapping the `Condition` enum, and the
       `plannedForWishlistItems` inverse relationship.
-- [ ] **T008** — `WishlistItem` model per plan.md's table, including
+- [x] **T008** — `WishlistItem` model per plan.md's table, including
       `currencyCode` and the `plannedSaleItems` relationship to `Item`.
-- [ ] **T009** — Configure `ModelContainer` in `TroveApp`, registering
+- [x] **T009** — Configure `ModelContainer` in `TroveApp`, registering
       all three model types. **Local-only for now** (no CloudKit
       database) since T002 is deferred — the schema was built
       CloudKit-compatible from the start specifically so this is a small,
       contained swap later (add the CloudKit database configuration and
       the "not signed into iCloud" handling) rather than a migration.
       *Verify: app launches in the simulator without errors.*
-- [ ] **T010** — Unit tests: creating each model type via an in-memory
+- [x] **T010** — Unit tests: creating each model type via an in-memory
       `ModelContainer` produces the expected defaults (`desireToKeep ==
       3`, `currencyCode == "USD"`, etc). *Verify: `xcodebuild test`
       green.*
