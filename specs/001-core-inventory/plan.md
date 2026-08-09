@@ -25,7 +25,7 @@ CloudKit database rejects schemas that don't meet this). No
 | `purchaseLocation` | `String?` | |
 | `currentValueCents` | `Int?` | nil = "not yet estimated"; see Dashboard below |
 | `desireToKeep` | `Int` | default `3`, valid range 1–5 enforced in the view model, not the schema |
-| `condition` | `String` | raw value of `Condition` enum, default `Condition.excellent.rawValue` |
+| `conditionRawValue` | `String` | stored; raw value of `Condition` enum, default `Condition.excellent.rawValue` |
 | `conditionNotes` | `String?` | |
 | `notes` | `String?` | |
 | `photos` | `[Photo]` | to-many relationship, see below |
@@ -42,8 +42,22 @@ enum Condition: String, Codable, CaseIterable {
 Stored as a raw `String` rather than a native enum attribute — SwiftData
 can model enums directly, but keeping it a plain `String` with a Swift-side
 wrapper is the more conservative choice for CloudKit schema stability if
-we ever add a case later. `condition` is exposed to the rest of the app via
-a computed property on `Item` that wraps/unwraps the enum.
+we ever add a case later.
+
+**Naming convention for every enum-backed field in this schema**: the
+persisted SwiftData attribute takes the `RawValue` suffix
+(`conditionRawValue`); the clean, unsuffixed name (`condition`) is a
+computed property on `Item` that wraps/unwraps the enum and is what the
+rest of the app actually reads and writes. This is deliberate, not
+arbitrary — it means the ergonomic name is reserved for the type-safe
+accessor, so a view model reaching for `item.condition` gets a `Condition`
+back, not a raw string it has to re-parse. The tradeoff: `FetchDescriptor`
+predicates and sort descriptors can only see stored properties, so any
+future filtering or sorting by condition has to reference
+`conditionRawValue` directly, not `condition`. Not a v1 concern — nothing
+in `tasks.md` sorts or filters by condition — but worth remembering if
+that changes later. Apply this same pattern to any future enum-backed
+field without re-deriving it each time.
 
 ### `WishlistItem`
 
@@ -65,7 +79,7 @@ a computed property on `Item` that wraps/unwraps the enum.
 |---|---|---|
 | `id` | `UUID` | default `UUID()` |
 | `imageData` | `Data` | `@Attribute(.externalStorage)` — see below |
-| `source` | `String` | raw value of a `PhotoSource` enum (`device`/`fetched`), default `"device"` |
+| `sourceRawValue` | `String` | stored; raw value of a `PhotoSource` enum (`device`/`fetched`), default `"device"` |
 | `sortOrder` | `Int` | default `0` |
 | `item` | `Item?` | inverse of `Item.photos` |
 
@@ -74,6 +88,10 @@ the main store file and hand it to CloudKit as a `CKAsset` rather than
 inlining it — the right call for photos, which will otherwise bloat the
 local SQLite store and the sync payload. No custom file-management code
 needed; this is a built-in SwiftData attribute option.
+
+Same `RawValue`-suffix convention as `Item.condition` above: the
+persisted attribute is `sourceRawValue`, and `source: PhotoSource` is the
+computed, app-facing accessor on `Photo`.
 
 `source` exists now even though v1 only ever writes `"device"` — no
 stock-photo fetching happens yet (see spec non-goals). It's a cheap,
