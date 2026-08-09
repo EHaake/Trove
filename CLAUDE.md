@@ -21,9 +21,14 @@ data model should not preclude that, but it is not in scope for v1.
 
 - **Target**: iOS 26.0+ only. No back-compat shims, no `@available` branching
   for older OS versions.
-- **UI framework**: SwiftUI only. No UIKit except where a SwiftUI API gap
-  forces a `UIViewRepresentable` wrapper — and treat that as a flagged
-  exception, not a default.
+- **UI framework**: SwiftUI only. No UIKit except where a genuine SwiftUI
+  API gap forces it — either a `UIViewRepresentable` wrapper, or a narrow
+  bridge/decode utility confined to one file (e.g. `UIImage(data:)` as
+  the only path from `Data` to a SwiftUI `Image`, since `Image` has no
+  `Data`-based initializer of its own). Either shape is a flagged
+  exception, not a default: it should be visibly called out when it
+  happens, confined to the smallest file that needs it, and never used
+  as a shortcut past a SwiftUI API that does exist.
 - **Language**: Swift 6, default (non-strict) concurrency mode.
   `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` project-wide is intentional
   — it's what makes MVVM view-model access convenient without hand
