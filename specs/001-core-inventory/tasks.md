@@ -107,6 +107,15 @@ change gets checked immediately rather than at T002-resumption time.
 
 ## Phase 4 — Item CRUD: views
 
+**Not a separate numbered task, but genuinely foundational**: the
+`Theme` abstraction (plan.md's "Future: theming" section — semantic
+color/type tokens from `design/tokens.md`, never hardcoded per-view)
+lands here, inside T021, since it's the first view built. Worth the same
+weight as `TroveSchema.swift` in Phase 1 — every subsequent view in every
+later phase depends on this being right, and a wrong shape here is
+expensive to unwind once a dozen views are already reading from it
+directly rather than through the abstraction.
+
 - [ ] **T021** — `CategoryPickerField`: text field + autocomplete
       suggestions, backed by the Phase 2 helper. *Verify: manual check in
       a SwiftUI preview.*
