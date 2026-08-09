@@ -338,6 +338,19 @@ active," not a rewrite. Where a user's selected theme eventually gets
 stored is a small addition (`UserDefaults` or a lightweight settings
 model) outside the `Item`/`WishlistItem` schema — not a v1 task.
 
+## Known v1 limitation: no Dynamic Type
+
+`ThemeTypography`'s sizes are fixed points, matching tokens.md's scale
+exactly — deliberate, but it means text doesn't grow with the user's
+system text-size setting, a real accessibility gap for anyone who relies
+on that. Not being fixed now because addressing it properly means
+rethinking the type scale as Dynamic-Type-relative rather than swapping
+one file, which is more scope than this pass warrants. Worth a real
+accessibility pass before wide distribution — flagging here so it isn't
+forgotten — a known, deliberate v1 trade-off rather than an oversight,
+in the same spirit as `TroveApp`'s fatalError-on-store-failure decision
+(discussed with Claude Code at T009, not otherwise written down here).
+
 ## Future: stock photos
 
 Not v1 scope. The idea: instead of only photographing an item yourself,

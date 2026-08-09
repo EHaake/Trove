@@ -119,6 +119,19 @@ directly rather than through the abstraction.
 - [x] **T021** — `CategoryPickerField`: text field + autocomplete
       suggestions, backed by the Phase 2 helper. *Verify: manual check in
       a SwiftUI preview.*
+
+      **Pending action item, not blocking, discovered during T021**: Archivo
+and IBM Plex (Sans + Mono) aren't in the repo yet, so every screen is
+currently rendering on system-font fallback —
+`ThemeTypography.customFontsInstalled = false`. Correct size, weight, and
+rhythm; wrong character. Both are free (SIL OFL, already license-checked
+in design/brief.md), available from Google Fonts. Download the weights
+tokens.md specifies (Archivo 600; IBM Plex Sans 400/500/600; IBM Plex
+Mono 400/500), get the `.ttf` files into the repo, then have Claude Code
+wire up `UIAppFonts` and flip the constant. Worth doing before judging
+any Phase 4 screen visually — until then, "looks a little off" may just
+be this, not a real design deviation.
+
 - [ ] **T022** — `PhotoPickerField`: wraps `PhotosUI.PhotosPicker` for
       multi-photo selection, returns `[Photo]`.
 - [ ] **T023** — `ItemFormView`: required fields up front, optional
