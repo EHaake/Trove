@@ -52,7 +52,24 @@ struct CategoryPathHelper {
         let wishlistRecords = try modelContext.fetch(FetchDescriptor<WishlistItem>())
             .map { (path: $0.categoryPath, createdAt: $0.createdAt) }
 
-        let chronological = (itemRecords + wishlistRecords)
+        return Self.distinctPathsPreferringEarliestCasing(itemRecords + wishlistRecords)
+    }
+
+    /// The ordering rule itself, as a pure function over `(path, createdAt)`
+    /// pairs: distinct paths, case-insensitively, each keeping the casing of
+    /// the earliest-created record that used it.
+    ///
+    /// Split out from the fetching deliberately. Driving this through the
+    /// `ModelContext` can't prove the rule holds, because `FetchDescriptor`
+    /// makes no ordering guarantee — a test that inserts records in one order
+    /// and expects them back in another passes or fails on whatever SwiftData
+    /// happens to do, not on this comparator. Taking the records as an argument
+    /// lets a test hand over a deliberately unsorted list and get a
+    /// deterministic answer.
+    static func distinctPathsPreferringEarliestCasing(
+        _ records: [(path: String, createdAt: Date)]
+    ) -> [String] {
+        let chronological = records
             .filter { !$0.path.isEmpty }
             .sorted { $0.createdAt < $1.createdAt }
 

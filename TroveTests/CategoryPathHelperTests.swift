@@ -123,10 +123,102 @@ struct CategoryPathHelperTests {
         #expect(try helper.canonicalize("PHOTOGRAPHY/CAMERAS") == "Photography/Cameras")
     }
 
+    /// The helper concatenates items before wishlist items before sorting, so
+    /// dropping the sort would hand every casing contest to whichever entity
+    /// comes first in that concatenation. Here the earlier record is the
+    /// wishlist item, which loses unless creation time genuinely decides it.
+    @Test func canonicalizeLetsAnEarlierWishlistItemBeatALaterItem() throws {
+        let context = try makeInMemoryContext()
+
+        let wishlistItem = WishlistItem(categoryPath: "Photography/Lenses")
+        wishlistItem.createdAt = Date(timeIntervalSince1970: 1_000)
+        context.insert(wishlistItem)
+
+        let item = Item(categoryPath: "photography/lenses")
+        item.createdAt = Date(timeIntervalSince1970: 2_000)
+        context.insert(item)
+        try context.save()
+
+        let helper = CategoryPathHelper(modelContext: context)
+
+        #expect(try helper.canonicalize("PHOTOGRAPHY/LENSES") == "Photography/Lenses")
+    }
+
     @Test func emptyInputCanonicalizesToItself() throws {
         let context = try makeInMemoryContext()
         let helper = CategoryPathHelper(modelContext: context)
 
         #expect(try helper.canonicalize("") == "")
+    }
+}
+
+/// The ordering rule tested directly, where the input order is ours to choose.
+/// Going through a `ModelContext` can't pin this down: `FetchDescriptor`
+/// promises no ordering, so an integration test asserts against whatever
+/// SwiftData happens to return rather than against the comparator.
+@Suite("Earliest-casing-wins rule")
+struct EarliestCasingRuleTests {
+    private typealias Record = (path: String, createdAt: Date)
+
+    private func record(_ path: String, at seconds: TimeInterval) -> Record {
+        (path: path, createdAt: Date(timeIntervalSince1970: seconds))
+    }
+
+    /// The input is deliberately newest-first, so returning the earliest
+    /// casing requires actually sorting rather than taking what arrives first.
+    @Test func earliestCasingWinsWhenInputArrivesNewestFirst() {
+        let result = CategoryPathHelper.distinctPathsPreferringEarliestCasing([
+            record("photography/cameras", at: 2_000),
+            record("Photography/Cameras", at: 1_000),
+        ])
+
+        #expect(result == ["Photography/Cameras"])
+    }
+
+    @Test func earliestCasingWinsWhenInputArrivesOldestFirst() {
+        let result = CategoryPathHelper.distinctPathsPreferringEarliestCasing([
+            record("Photography/Cameras", at: 1_000),
+            record("photography/cameras", at: 2_000),
+        ])
+
+        #expect(result == ["Photography/Cameras"])
+    }
+
+    /// Three casings, shuffled, with the winner buried in the middle.
+    @Test func earliestCasingWinsAmongSeveralCompetingCasings() {
+        let result = CategoryPathHelper.distinctPathsPreferringEarliestCasing([
+            record("PHOTOGRAPHY/CAMERAS", at: 3_000),
+            record("Photography/Cameras", at: 1_000),
+            record("photography/cameras", at: 2_000),
+        ])
+
+        #expect(result == ["Photography/Cameras"])
+    }
+
+    /// Distinct paths come back in creation order, not input order — that's
+    /// what makes `allCategoryPaths()`'s alphabetical sort the only thing
+    /// deciding display order.
+    @Test func distinctPathsComeBackInCreationOrder() {
+        let result = CategoryPathHelper.distinctPathsPreferringEarliestCasing([
+            record("Music/Guitars", at: 3_000),
+            record("Photography/Cameras", at: 1_000),
+            record("Photography/Lenses", at: 2_000),
+        ])
+
+        #expect(result == ["Photography/Cameras", "Photography/Lenses", "Music/Guitars"])
+    }
+
+    @Test func emptyPathsAreDropped() {
+        let result = CategoryPathHelper.distinctPathsPreferringEarliestCasing([
+            record("", at: 1_000),
+            record("Music/Guitars", at: 2_000),
+            record("", at: 3_000),
+        ])
+
+        #expect(result == ["Music/Guitars"])
+    }
+
+    @Test func noRecordsYieldsNoPaths() {
+        #expect(CategoryPathHelper.distinctPathsPreferringEarliestCasing([]).isEmpty)
     }
 }
