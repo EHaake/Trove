@@ -29,8 +29,8 @@ final class Photo {
 
     var sortOrder: Int = 0
 
-    // The `item` back-reference to `Item` lands in T007, along with the `Item`
-    // type it refers to and the `@Relationship(inverse:)` declaration there.
+    /// Inverse of `Item.photos`, which owns the `@Relationship` declaration.
+    var item: Item?
 
     var source: PhotoSource {
         get { PhotoSource(rawValue: sourceRawValue) ?? .device }

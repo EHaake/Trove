@@ -46,7 +46,7 @@ summarized.
 - [x] **T006** — `Photo` model (`id`, `imageData` with
       `.externalStorage`, `source` — always `"device"` in v1, `sortOrder`,
       inverse `item` relationship).
-- [ ] **T007** — `Item` model per plan.md's table, including
+- [x] **T007** — `Item` model per plan.md's table, including
       `currencyCode` (default `"USD"`), the computed `condition`
       property wrapping the `Condition` enum, and the
       `plannedForWishlistItems` inverse relationship.
