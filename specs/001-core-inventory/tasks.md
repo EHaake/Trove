@@ -93,17 +93,17 @@ change gets checked immediately rather than at T002-resumption time.
 
 ## Phase 3 — Item CRUD: view models
 
-- [ ] **T015** — `ItemFormViewModel`: create/edit an `Item`; validates
+- [x] **T015** — `ItemFormViewModel`: create/edit an `Item`; validates
       required fields (name, category, price, date) and clamps
       `desireToKeep` to 1–5.
-- [ ] **T016** — Unit tests for `ItemFormViewModel` (valid create, invalid
+- [x] **T016** — Unit tests for `ItemFormViewModel` (valid create, invalid
       create rejected, edit updates `updatedAt`, defaults applied).
-- [ ] **T017** — `ItemListViewModel`: fetch all items; filter by category
+- [x] **T017** — `ItemListViewModel`: fetch all items; filter by category
       prefix; sort by desire-to-keep, current value, or purchase date.
-- [ ] **T018** — Unit tests for `ItemListViewModel` (each sort order,
+- [x] **T018** — Unit tests for `ItemListViewModel` (each sort order,
       filter behavior, empty state).
-- [ ] **T019** — `ItemDetailViewModel`: load a single item, delete it.
-- [ ] **T020** — Unit tests for `ItemDetailViewModel`.
+- [x] **T019** — `ItemDetailViewModel`: load a single item, delete it.
+- [x] **T020** — Unit tests for `ItemDetailViewModel`.
 
 ## Phase 4 — Item CRUD: views
 

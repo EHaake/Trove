@@ -28,9 +28,19 @@ struct CategoryPathHelper {
     /// Known paths whose start matches `prefix`, case-insensitively — for
     /// autocomplete as the user types. An empty prefix returns every path.
     func suggestions(matching prefix: String) throws -> [String] {
-        let all = try allCategoryPaths()
-        guard !prefix.isEmpty else { return all }
-        return all.filter { $0.range(of: prefix, options: [.caseInsensitive, .anchored]) != nil }
+        try allCategoryPaths().filter { Self.path($0, matchesPrefix: prefix) }
+    }
+
+    /// The one definition of "this category path matches what the user typed":
+    /// prefix, case-insensitive, empty matches everything. Filtering by
+    /// `"Photography"` therefore also turns up `Photography/Cameras`.
+    ///
+    /// Shared so autocomplete and the item/wishlist list filters can't drift
+    /// into disagreeing about what matches.
+    static func path(_ path: String, matchesPrefix prefix: String) -> Bool {
+        let prefix = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prefix.isEmpty else { return true }
+        return path.range(of: prefix, options: [.caseInsensitive, .anchored]) != nil
     }
 
     /// Given a newly-typed path, returns the existing casing if a

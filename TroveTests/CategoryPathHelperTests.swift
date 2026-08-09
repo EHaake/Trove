@@ -3,12 +3,6 @@ import SwiftData
 import Testing
 @testable import Trove
 
-private func makeInMemoryContext() throws -> ModelContext {
-    let configuration = ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
-    let container = try ModelContainer(for: TroveSchema.schema, configurations: configuration)
-    return ModelContext(container)
-}
-
 @Suite("CategoryPathHelper")
 struct CategoryPathHelperTests {
     @Test func returnsNoPathsWhenNothingExists() throws {
