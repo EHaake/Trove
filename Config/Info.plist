@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Partial Info.plist: GENERATE_INFOPLIST_FILE stays on and merges the usual
+	  generated keys on top of this. It exists only because array-valued keys
+	  can't be expressed as INFOPLIST_KEY_* build settings — the generator
+	  ignores them silently, as UIBackgroundModes proved during T002.
+
+	  Names are bare filenames, not "Fonts/…": the synchronized group flattens
+	  resources into the bundle root. Verified against the built .app.
+
+	  It lives in Config/ rather than Trove/ because anything inside the
+	  synchronized folder is also copied as a resource, and a second Info.plist
+	  collides with the generated one:
+	    error: Multiple commands produce '…/Trove.app/Info.plist'
+	-->
+	<key>UIAppFonts</key>
+	<array>
+		<string>Archivo-SemiBold.ttf</string>
+		<string>IBMPlexSans-Regular.ttf</string>
+		<string>IBMPlexSans-Medium.ttf</string>
+		<string>IBMPlexSans-SemiBold.ttf</string>
+		<string>IBMPlexMono-Regular.ttf</string>
+	</array>
+</dict>
+</plist>

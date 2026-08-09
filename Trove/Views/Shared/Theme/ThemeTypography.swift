@@ -9,11 +9,25 @@ enum FontFamily: Sendable {
     /// IBM Plex Mono — money, serial numbers, dates, all-caps labels.
     case mono
 
-    var postScriptName: String {
+    /// The actual face for a weight, rather than one face with `.weight()`
+    /// applied on top — that synthesizes an approximation instead of using the
+    /// drawn one, which is the whole reason for shipping separate files.
+    func postScriptName(for weight: Font.Weight) -> String {
         switch self {
-        case .display: "Archivo-SemiBold"
-        case .body: "IBMPlexSans-Regular"
-        case .mono: "IBMPlexMono-Regular"
+        case .display:
+            // tokens.md specifies Archivo 600 only.
+            "Archivo-SemiBold"
+        case .body:
+            switch weight {
+            case .semibold: "IBMPlexSans-SemiBold"
+            case .medium: "IBMPlexSans-Medium"
+            default: "IBMPlexSans-Regular"
+            }
+        case .mono:
+            // tokens.md asks for mono 400/500, but IBMPlexMono-Medium.ttf
+            // isn't in Trove/Fonts — so medium resolves to regular for now.
+            // Add the file, extend this switch, and list it in UIAppFonts.
+            "IBMPlexMono-Regular"
         }
     }
 
@@ -31,14 +45,14 @@ enum FontFamily: Sendable {
 /// Named type roles. Views ask for `theme.typography.rowTitle`, never for a
 /// point size.
 struct ThemeTypography: Sendable {
-    /// Archivo and IBM Plex are both SIL Open Font License, so embedding them
-    /// needs no licensing step — but the files aren't in the repo yet, so
-    /// nothing can reference them.
+    /// The faces in `Trove/Fonts/` are registered through `UIAppFonts` in
+    /// `Trove/Info.plist`. `FontRegistrationTests` asserts every name this
+    /// type asks for is actually registered, because `Font.custom` falls back
+    /// to the system font silently when it isn't — a typo'd PostScript name
+    /// looks like nothing happened.
     ///
-    /// To switch over: add the `.ttf` files under `Trove/`, list them in the
-    /// target's `UIAppFonts`, and flip this to `true`. Nothing else changes —
-    /// that's the point of routing every size through this one type.
-    static let customFontsInstalled = false
+    /// Set to `false` to render the whole app on system faces.
+    static let customFontsInstalled = true
 
     let screenTitle: Font
     let heroFigure: Font
@@ -55,6 +69,17 @@ struct ThemeTypography: Sendable {
     /// All-caps section and field labels. Pair with `ThemeMetrics.monoLabelTracking`.
     let monoLabel: Font
 
+    /// Every PostScript name the app can ask for. `UIAppFonts` has to list a
+    /// file for each of these, and `FontRegistrationTests` checks that it does.
+    static let requiredPostScriptNames: [String] = [
+        FontFamily.display.postScriptName(for: .semibold),
+        FontFamily.body.postScriptName(for: .regular),
+        FontFamily.body.postScriptName(for: .medium),
+        FontFamily.body.postScriptName(for: .semibold),
+        FontFamily.mono.postScriptName(for: .regular),
+        FontFamily.mono.postScriptName(for: .medium),
+    ]
+
     static func font(
         _ family: FontFamily,
         size: CGFloat,
@@ -63,7 +88,7 @@ struct ThemeTypography: Sendable {
         guard customFontsInstalled else {
             return .system(size: size, weight: weight, design: family.systemFallbackDesign)
         }
-        return .custom(family.postScriptName, fixedSize: size).weight(weight)
+        return .custom(family.postScriptName(for: weight), fixedSize: size)
     }
 }
 
