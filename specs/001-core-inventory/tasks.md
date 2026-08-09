@@ -41,9 +41,9 @@ summarized.
 
 ## Phase 1 — Data models
 
-- [ ] **T005** — `Condition` enum (`new/excellent/good/fair/broken`,
+- [x] **T005** — `Condition` enum (`new/excellent/good/fair/broken`,
       `String`-backed, `Codable`, `CaseIterable`).
-- [ ] **T006** — `Photo` model (`id`, `imageData` with
+- [x] **T006** — `Photo` model (`id`, `imageData` with
       `.externalStorage`, `source` — always `"device"` in v1, `sortOrder`,
       inverse `item` relationship).
 - [ ] **T007** — `Item` model per plan.md's table, including
