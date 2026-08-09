@@ -12,6 +12,7 @@ struct ContentView: View {
 
     @State private var categoryPath = ""
     @State private var suggestions: [String] = []
+    @State private var photos: [Photo] = []
 
     var body: some View {
         ZStack {
@@ -26,6 +27,8 @@ struct ContentView: View {
                     suggestions: suggestions,
                     categoryPath: $categoryPath
                 )
+
+                PhotoPickerField(photos: $photos)
 
                 Spacer()
             }

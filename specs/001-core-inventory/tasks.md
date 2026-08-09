@@ -132,7 +132,7 @@ wire up `UIAppFonts` and flip the constant. Worth doing before judging
 any Phase 4 screen visually — until then, "looks a little off" may just
 be this, not a real design deviation.
 
-- [ ] **T022** — `PhotoPickerField`: wraps `PhotosUI.PhotosPicker` for
+- [x] **T022** — `PhotoPickerField`: wraps `PhotosUI.PhotosPicker` for
       multi-photo selection, returns `[Photo]`.
 - [ ] **T023** — `ItemFormView`: required fields up front, optional
       fields behind a "more details" disclosure. Used for both add and
