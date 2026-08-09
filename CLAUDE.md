@@ -25,6 +25,15 @@ data model should not preclude that, but it is not in scope for v1.
   forces a `UIViewRepresentable` wrapper — and treat that as a flagged
   exception, not a default.
 - **Language**: Swift 6, default (non-strict) concurrency mode.
+  `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` project-wide is intentional
+  — it's what makes MVVM view-model access convenient without hand
+  annotation. One forced exception: `TroveUITests` overrides this to
+  `nonisolated`, because `XCTestCase`'s designated initializers are
+  `nonisolated` and a `MainActor`-isolated subclass can't override them.
+  `TroveTests` (Swift Testing, plain structs) doesn't hit this and keeps
+  the `MainActor` default deliberately. Individual UI test methods opt
+  into `@MainActor` where `XCUIApplication` needs it, per Apple's own
+  template pattern.
 - **Project management**: plain `.xcodeproj`, managed through Xcode itself.
   See "Project file safety" below.
 
