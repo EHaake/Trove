@@ -146,6 +146,94 @@ struct CategoryPathHelperTests {
     }
 }
 
+/// Chip labels: leaf-only where that's unambiguous, widened where it isn't.
+/// Display only — filtering still matches the full path prefix.
+@Suite("Category chip labels")
+struct CategoryDisplayLabelTests {
+    @Test func showsJustTheLeafWhenItIsUnique() {
+        let labels = CategoryPathHelper.displayLabels(for: [
+            "Photography/Cameras",
+            "Photography/Lenses",
+            "Music/Amps",
+        ])
+
+        #expect(labels["Photography/Cameras"] == "Cameras")
+        #expect(labels["Photography/Lenses"] == "Lenses")
+        #expect(labels["Music/Amps"] == "Amps")
+    }
+
+    /// The case the rule exists for.
+    @Test func widensBothSidesOfALeafCollision() {
+        let labels = CategoryPathHelper.displayLabels(for: ["Music/Amps", "Audio/Amps"])
+
+        #expect(labels["Music/Amps"] == "Music/Amps")
+        #expect(labels["Audio/Amps"] == "Audio/Amps")
+    }
+
+    /// Widening is per-path: a collision between two paths shouldn't lengthen
+    /// the labels of paths that were never ambiguous.
+    @Test func leavesUnaffectedPathsAtTheirLeaf() {
+        let labels = CategoryPathHelper.displayLabels(for: [
+            "Music/Amps",
+            "Audio/Amps",
+            "Photography/Cameras",
+        ])
+
+        #expect(labels["Photography/Cameras"] == "Cameras")
+        #expect(labels["Music/Amps"] == "Music/Amps")
+    }
+
+    @Test func showsTheLeafOfADeepPath() {
+        let labels = CategoryPathHelper.displayLabels(for: [
+            "Music/Guitars/Electric",
+            "Music/Guitars/Acoustic",
+        ])
+
+        #expect(labels["Music/Guitars/Electric"] == "Electric")
+        #expect(labels["Music/Guitars/Acoustic"] == "Acoustic")
+    }
+
+    /// spec.md's own three-level example, colliding at the leaf: last two
+    /// segments is enough to tell them apart without the full path.
+    @Test func widensADeepPathToTwoSegments() {
+        let labels = CategoryPathHelper.displayLabels(for: [
+            "Music/Guitars/Acoustic",
+            "Music/Basses/Acoustic",
+        ])
+
+        #expect(labels["Music/Guitars/Acoustic"] == "Guitars/Acoustic")
+        #expect(labels["Music/Basses/Acoustic"] == "Basses/Acoustic")
+    }
+
+    /// Two segments isn't always enough. Rather than showing the same chip
+    /// twice, these fall back to the full path, which is unique by definition.
+    @Test func fallsBackToTheFullPathWhenTwoSegmentsStillCollide() {
+        let labels = CategoryPathHelper.displayLabels(for: [
+            "Studio/Music/Amps",
+            "Home/Music/Amps",
+        ])
+
+        #expect(labels["Studio/Music/Amps"] == "Studio/Music/Amps")
+        #expect(labels["Home/Music/Amps"] == "Home/Music/Amps")
+    }
+
+    @Test func labelsEveryPathExactlyOnce() {
+        let paths = ["Photography/Cameras", "Music/Amps", "Audio/Amps", "Accessories"]
+        let labels = CategoryPathHelper.displayLabels(for: paths)
+
+        #expect(labels.count == paths.count)
+        #expect(Set(labels.values).count == paths.count)
+    }
+
+    @Test func handlesASingleSegmentPath() {
+        #expect(CategoryPathHelper.displayLabels(for: ["Accessories"])["Accessories"] == "Accessories")
+    }
+
+    @Test func handlesNoPaths() {
+        #expect(CategoryPathHelper.displayLabels(for: []).isEmpty)
+    }
+}
+
 /// The ordering rule tested directly, where the input order is ours to choose.
 /// Going through a `ModelContext` can't pin this down: `FetchDescriptor`
 /// promises no ordering, so an integration test asserts against whatever

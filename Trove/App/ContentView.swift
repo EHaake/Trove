@@ -29,6 +29,8 @@ struct ContentView: View {
             ("Fender Blues Junior IV", "Music/Amps", 69_000, 54_000, 2),
             ("Squier Classic Vibe 50s", "Music/Guitars/Electric", 34_900, 38_000, 1),
             ("Sennheiser HD 600", "Audio/Headphones", 39_900, nil, 3),
+            // Collides with Music/Amps at the leaf, so both chips widen.
+            ("Schiit Vali 2++", "Audio/Amps", 14_900, 12_000, 3),
         ]
 
         for (name, path, paid, worth, desire) in samples {

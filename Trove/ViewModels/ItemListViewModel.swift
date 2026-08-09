@@ -42,6 +42,10 @@ final class ItemListViewModel {
     /// hide the means of choosing another.
     private(set) var categoryOptions: [String] = []
 
+    /// Short chip labels keyed by path — leaf-only where unambiguous. Computed
+    /// once per load rather than per render.
+    private(set) var categoryLabels: [String: String] = [:]
+
     var isEmpty: Bool { items.isEmpty }
 
     /// Combined current value of the items on screen, so the header total
@@ -71,10 +75,12 @@ final class ItemListViewModel {
                 .filter { CategoryPathHelper.path($0.categoryPath, matchesPrefix: categoryFilter) }
                 .sorted(by: isOrderedBefore)
             categoryOptions = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []
+            categoryLabels = CategoryPathHelper.displayLabels(for: categoryOptions)
         } catch {
             loadFailureMessage = error.localizedDescription
             items = []
             categoryOptions = []
+            categoryLabels = [:]
         }
     }
 

@@ -22,19 +22,25 @@ struct ItemListView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
                     header
+                        .padding(.horizontal, theme.metrics.screenGutter)
+
+                    // Full-bleed so chips scroll off the edge rather than
+                    // stopping at the gutter; the gutter moves inside instead.
                     categoryChips
 
-                    if viewModel.isEmpty {
-                        emptyState
-                    } else {
-                        LazyVStack(spacing: theme.metrics.listRowGap) {
-                            ForEach(viewModel.items, id: \.id) { item in
-                                ItemRow(item: item)
+                    Group {
+                        if viewModel.isEmpty {
+                            emptyState
+                        } else {
+                            LazyVStack(spacing: theme.metrics.listRowGap) {
+                                ForEach(viewModel.items, id: \.id) { item in
+                                    ItemRow(item: item)
+                                }
                             }
                         }
                     }
+                    .padding(.horizontal, theme.metrics.screenGutter)
                 }
-                .padding(.horizontal, theme.metrics.screenGutter)
                 .padding(.vertical, theme.metrics.sectionGap)
             }
         }
@@ -108,12 +114,16 @@ struct ItemListView: View {
     // MARK: - Filter
 
     private var categoryChips: some View {
-        FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
-            chip(label: "All", path: "")
-            ForEach(viewModel.categoryOptions, id: \.self) { path in
-                chip(label: path, path: path)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                chip(label: "All", path: "")
+                ForEach(viewModel.categoryOptions, id: \.self) { path in
+                    chip(label: viewModel.categoryLabels[path] ?? path, path: path)
+                }
             }
+            .padding(.horizontal, theme.metrics.screenGutter)
         }
+        .scrollClipDisabled()
     }
 
     private func chip(label: String, path: String) -> some View {

@@ -31,6 +31,51 @@ struct CategoryPathHelper {
         try allCategoryPaths().filter { Self.path($0, matchesPrefix: prefix) }
     }
 
+    /// Short labels for a set of category paths, keyed by path.
+    ///
+    /// A path shows its leaf alone — "Cameras" for `Photography/Cameras` —
+    /// which is what the filter chips in `design/screens/` do. Where two paths
+    /// share a leaf ("Music/Amps" and "Audio/Amps") both widen to their last
+    /// two segments, since a chip reading "Amps" twice tells the user nothing.
+    /// Widening is per-path: unaffected paths keep their leaf.
+    ///
+    /// Display only. Filtering still matches on the full path prefix, so a
+    /// chip labelled "Cameras" filters by `Photography/Cameras`.
+    static func displayLabels(for paths: [String]) -> [String: String] {
+        var labels: [String: String] = [:]
+
+        for path in paths {
+            let segments = path.split(separator: "/").map(String.init)
+            guard !segments.isEmpty else {
+                labels[path] = path
+                continue
+            }
+
+            // Widen a segment at a time until nothing else would show the same
+            // label. Falls through to the full path, which is unique by
+            // construction — `paths` holds distinct paths.
+            let widest = min(2, segments.count)
+            var chosen = path
+            for depth in 1...widest {
+                let candidate = segments.suffix(depth).joined(separator: "/")
+                let clashes = paths.contains { other in
+                    other != path && Self.suffix(of: other, segments: depth).caseInsensitiveCompare(candidate) == .orderedSame
+                }
+                if !clashes {
+                    chosen = candidate
+                    break
+                }
+            }
+            labels[path] = chosen
+        }
+
+        return labels
+    }
+
+    private static func suffix(of path: String, segments count: Int) -> String {
+        path.split(separator: "/").map(String.init).suffix(count).joined(separator: "/")
+    }
+
     /// The one definition of "this category path matches what the user typed":
     /// prefix, case-insensitive, empty matches everything. Filtering by
     /// `"Photography"` therefore also turns up `Photography/Cameras`.
