@@ -16,6 +16,10 @@ struct CategoryPickerField: View {
     var placeholder: String = "Photography/Cameras"
     let suggestions: [String]
     @Binding var categoryPath: String
+    /// Draws the same rust border the other required fields use when a save
+    /// was rejected. Without it a form can name category as missing while the
+    /// field itself looks perfectly fine.
+    var isInvalid: Bool = false
 
     @Environment(\.theme) private var theme
     @FocusState private var isFocused: Bool
@@ -73,11 +77,15 @@ struct CategoryPickerField: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .strokeBorder(
-                    isFocused ? theme.colors.accentBrass : theme.colors.divider,
-                    lineWidth: theme.metrics.hairline
-                )
+                .strokeBorder(borderColor, lineWidth: theme.metrics.hairline)
         )
+    }
+
+    /// Focus wins over the invalid state — once the user is fixing the field,
+    /// telling them it's still wrong is noise.
+    private var borderColor: Color {
+        if isFocused { return theme.colors.accentBrass }
+        return isInvalid ? theme.colors.accentRust : theme.colors.divider
     }
 
     private func chip(_ path: String) -> some View {

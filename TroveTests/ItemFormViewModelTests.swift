@@ -181,6 +181,35 @@ struct ItemFormViewModelCreateTests {
     }
 }
 
+@Suite("ItemFormViewModel — category suggestions")
+struct ItemFormViewModelSuggestionTests {
+    @Test func startsWithNoSuggestions() throws {
+        let context = try makeInMemoryContext()
+        #expect(ItemFormViewModel(modelContext: context).categorySuggestions.isEmpty)
+    }
+
+    @Test func loadsPathsAlreadyInUseAcrossBothEntities() throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(categoryPath: "Photography/Cameras"))
+        context.insert(WishlistItem(categoryPath: "Music/Amps"))
+        try context.save()
+
+        let viewModel = ItemFormViewModel(modelContext: context)
+        viewModel.loadCategorySuggestions()
+
+        #expect(viewModel.categorySuggestions == ["Music/Amps", "Photography/Cameras"])
+    }
+
+    @Test func staysEmptyWhenNothingHasACategoryYet() throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemFormViewModel(modelContext: context)
+
+        viewModel.loadCategorySuggestions()
+
+        #expect(viewModel.categorySuggestions.isEmpty)
+    }
+}
+
 @Suite("ItemFormViewModel — desire-to-keep clamping")
 struct ItemFormViewModelClampingTests {
     @Test func defaultsToNeutral() throws {

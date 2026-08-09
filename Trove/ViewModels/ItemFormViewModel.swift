@@ -48,6 +48,10 @@ final class ItemFormViewModel {
     private(set) var validationErrors: Set<ValidationError> = []
     private(set) var saveFailureMessage: String?
 
+    /// Category paths already in use, for the picker's autocomplete. Fetched
+    /// here rather than by the field so the view stays free of store access.
+    private(set) var categorySuggestions: [String] = []
+
     private let modelContext: ModelContext
     private let editingItem: Item?
 
@@ -59,6 +63,11 @@ final class ItemFormViewModel {
         if let item {
             populate(from: item)
         }
+    }
+
+    func loadCategorySuggestions() {
+        let helper = CategoryPathHelper(modelContext: modelContext)
+        categorySuggestions = (try? helper.allCategoryPaths()) ?? []
     }
 
     /// Validates, then creates or updates. Returns whether anything was

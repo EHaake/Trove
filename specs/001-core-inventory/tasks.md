@@ -134,7 +134,7 @@ be this, not a real design deviation.
 
 - [x] **T022** — `PhotoPickerField`: wraps `PhotosUI.PhotosPicker` for
       multi-photo selection, returns `[Photo]`.
-- [ ] **T023** — `ItemFormView`: required fields up front, optional
+- [x] **T023** — `ItemFormView`: required fields up front, optional
       fields behind a "more details" disclosure. Used for both add and
       edit.
 - [ ] **T024** — `ItemListView`: list with filter and sort controls, using
