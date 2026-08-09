@@ -141,7 +141,7 @@ be this, not a real design deviation.
       `ItemListViewModel`.
 - [x] **T025** — `ItemDetailView`: displays an item, links to edit
       (reuses `ItemFormView`), delete with confirmation.
-- [ ] **T026** — Manual verification: add an item end-to-end in the
+- [x] **T026** — Manual verification: add an item end-to-end in the
       simulator (quick-add path and full-detail path), edit it, delete
       it.
 

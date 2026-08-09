@@ -91,6 +91,26 @@ struct ItemFormViewModelCreateTests {
         #expect(viewModel.validationErrors.contains(.currentValueNegative))
     }
 
+    /// A blank price field isn't "zero dollars typed" — it's untouched. It
+    /// still saves as zero, but the field has to start empty or the digits the
+    /// user types append to a pre-filled 0.
+    @Test func startsWithNoPriceEntered() throws {
+        let context = try makeInMemoryContext()
+        #expect(ItemFormViewModel(modelContext: context).purchasePrice == nil)
+    }
+
+    @Test func savesABlankPriceAsZero() throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemFormViewModel(modelContext: context)
+        viewModel.name = "Hand-me-down amp"
+        viewModel.categoryPath = "Music/Amps"
+
+        #expect(viewModel.save())
+
+        let item = try #require(try context.fetch(FetchDescriptor<Item>()).first)
+        #expect(item.purchasePriceCents == 0)
+    }
+
     /// A gift or a hand-me-down is a real thing to own.
     @Test func acceptsAZeroPrice() throws {
         let context = try makeInMemoryContext()

@@ -8,6 +8,7 @@ import SwiftUI
 /// here — adding an unasked-for feature quietly is worse than the gap.
 struct ItemListView: View {
     @State private var viewModel: ItemListViewModel
+    @State private var isAddingItem = false
 
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
@@ -56,10 +57,19 @@ struct ItemListView: View {
                 }
             }
         }
+        .overlay(alignment: .bottomTrailing) { addButton }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .navigationBar)
         .navigationDestination(for: UUID.self) { itemID in
             ItemDetailView(modelContext: modelContext, itemID: itemID)
+        }
+        // Owned here rather than by a parent so dismissing the form can
+        // refetch — a new item has to appear without the user leaving and
+        // coming back.
+        .sheet(isPresented: $isAddingItem, onDismiss: viewModel.load) {
+            NavigationStack {
+                ItemFormView(modelContext: modelContext)
+            }
         }
         // Values can change on the detail screen — an edit, or the dial — so
         // the list refetches whenever it comes back into view.
@@ -126,6 +136,26 @@ struct ItemListView: View {
             )
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+    }
+
+    /// Design puts the add action in the tab bar, which doesn't exist until
+    /// T042 — this floating button stands in for it and may well move there.
+    /// It's here rather than in the harness so the list can reload when the
+    /// form closes.
+    private var addButton: some View {
+        Button {
+            isAddingItem = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(theme.colors.background)
+                .frame(width: 56, height: 56)
+                .background(Circle().fill(theme.colors.accentBrass))
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, theme.metrics.screenGutter)
+        .padding(.bottom, theme.metrics.sectionGap)
+        .accessibilityLabel("Add item")
     }
 
     // MARK: - Filter

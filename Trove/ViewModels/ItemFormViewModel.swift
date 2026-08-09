@@ -20,7 +20,12 @@ final class ItemFormViewModel {
 
     var name: String = ""
     var categoryPath: String = ""
-    var purchasePrice: Decimal = 0
+    /// Optional so a new form starts blank rather than pre-filled with `0`.
+    /// A pre-filled zero can't be typed over — the digits append to it, so
+    /// every new item began "$0…" until the user deleted the zero, which is at
+    /// odds with the quick-add bar the spec sets. Blank still saves as zero;
+    /// a gift is a real thing to own.
+    var purchasePrice: Decimal?
     var purchaseDate: Date = .now
     var serialNumber: String = ""
     var purchaseLocation: String = ""
@@ -81,7 +86,7 @@ final class ItemFormViewModel {
         let item = editingItem ?? Item()
         item.name = Self.trimmed(name)
         item.categoryPath = canonicalCategoryPath()
-        item.purchasePriceCents = Self.cents(from: purchasePrice)
+        item.purchasePriceCents = Self.cents(from: purchasePrice ?? 0)
         item.purchaseDate = purchaseDate
         item.serialNumber = Self.nilIfBlank(serialNumber)
         item.purchaseLocation = Self.nilIfBlank(purchaseLocation)
@@ -127,7 +132,7 @@ final class ItemFormViewModel {
         var errors: Set<ValidationError> = []
         if Self.trimmed(name).isEmpty { errors.insert(.nameMissing) }
         if Self.trimmed(categoryPath).isEmpty { errors.insert(.categoryMissing) }
-        if purchasePrice < 0 { errors.insert(.priceNegative) }
+        if let purchasePrice, purchasePrice < 0 { errors.insert(.priceNegative) }
         if let currentValue, currentValue < 0 { errors.insert(.currentValueNegative) }
         return errors
     }

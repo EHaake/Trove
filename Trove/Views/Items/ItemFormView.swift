@@ -96,7 +96,11 @@ struct ItemFormView: View {
                     Text("$")
                         .font(theme.typography.monoValue)
                         .foregroundStyle(theme.colors.textQuiet)
-                    TextField("0", value: $viewModel.purchasePrice, format: .number)
+                    TextField(
+                        "0",
+                        value: $viewModel.purchasePrice,
+                        format: .number.precision(.fractionLength(0...2))
+                    )
                         .font(theme.typography.monoValue)
                         .foregroundStyle(theme.colors.textPrimary)
                         .tint(theme.colors.accentBrass)
@@ -221,6 +225,10 @@ struct ItemFormView: View {
                         .font(.system(size: 15, weight: .regular))
                         .foregroundStyle(theme.colors.accentBrass)
                 }
+                // Without this only the glyph reliably takes the tap — the
+                // label and the gap between them don't, so the row looks
+                // tappable across its width and mostly isn't.
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(showsMoreDetails ? "Hide more details" : "Show more details")
