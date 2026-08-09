@@ -45,6 +45,17 @@ struct FontRegistrationTests {
         #expect(Set([display, body, mono]).count == 3)
     }
 
+    /// Mono ships 400 and 500 per tokens.md. This collapsed to a single face
+    /// for a while when IBMPlexMono-Medium.ttf was missing, and the only
+    /// symptom was `monoValue` and `monoLabel` rendering slightly light —
+    /// invisible unless you were looking for it.
+    @Test func monoWeightsResolveToDistinctFaces() {
+        let regular = FontFamily.mono.postScriptName(for: .regular)
+        let medium = FontFamily.mono.postScriptName(for: .medium)
+
+        #expect(regular != medium)
+    }
+
     /// Body weights have to be distinct faces, not one face plus a synthesized
     /// weight — that's why separate files ship.
     @Test func bodyWeightsResolveToDistinctFaces() {

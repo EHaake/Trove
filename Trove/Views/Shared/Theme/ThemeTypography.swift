@@ -24,10 +24,10 @@ enum FontFamily: Sendable {
             default: "IBMPlexSans-Regular"
             }
         case .mono:
-            // tokens.md asks for mono 400/500, but IBMPlexMono-Medium.ttf
-            // isn't in Trove/Fonts — so medium resolves to regular for now.
-            // Add the file, extend this switch, and list it in UIAppFonts.
-            "IBMPlexMono-Regular"
+            switch weight {
+            case .medium: "IBMPlexMono-Medium"
+            default: "IBMPlexMono-Regular"
+            }
         }
     }
 
