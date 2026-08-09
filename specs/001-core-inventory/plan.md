@@ -6,10 +6,22 @@
 
 ## Data model (SwiftData)
 
-Three model types. All properties are optional or carry a default value —
-required for SwiftData's CloudKit sync (`ModelConfiguration` with a
-CloudKit database rejects schemas that don't meet this). No
-`@Attribute(.unique)` anywhere, for the same reason.
+Three model types. Two separate CloudKit constraints, easy to conflate —
+this plan previously did, and it took until T007 to surface: scalar
+properties need *either* to be optional *or* carry a default value, but
+**every to-many relationship must be optional regardless of anything
+else** — `[Photo]?`, not `[Photo]`, even though an empty array might feel
+like a reasonable "default." Nil and empty mean the same thing at the
+call site (`photos ?? []`). No `@Attribute(.unique)` anywhere, for the
+same general CloudKit-schema-rejects-this reason.
+
+This is no longer just an assertion in this document — `CloudKitSchemaTests.swift`
+builds a real `ModelContainer` against a CloudKit `ModelConfiguration`
+for the current schema and asserts it validates, with no entitlement,
+account, or network required to run it. Every future model or
+relationship added to this schema gets checked by `xcodebuild test`
+immediately, not discovered later when T002 resumes with real data
+already in the store.
 
 ### `Item`
 
@@ -28,10 +40,10 @@ CloudKit database rejects schemas that don't meet this). No
 | `conditionRawValue` | `String` | stored; raw value of `Condition` enum, default `Condition.excellent.rawValue` |
 | `conditionNotes` | `String?` | |
 | `notes` | `String?` | |
-| `photos` | `[Photo]` | to-many relationship, see below |
+| `photos` | `[Photo]?` | to-many relationship, see below — optional array, CloudKit requires all relationships to be optional; nil and empty both mean "no photos," read via `photos ?? []` |
 | `createdAt` | `Date` | default `.now` |
 | `updatedAt` | `Date` | default `.now`, bumped on every edit |
-| `plannedForWishlistItems` | `[WishlistItem]` | inverse of `WishlistItem.plannedSaleItems` — see "Sell Plan" below |
+| `plannedForWishlistItems` | `[WishlistItem]?` | inverse of `WishlistItem.plannedSaleItems` — see "Sell Plan" below; optional for the same CloudKit reason |
 
 ```swift
 enum Condition: String, Codable, CaseIterable {
@@ -71,7 +83,7 @@ field without re-deriving it each time.
 | `notes` | `String?` | |
 | `sortOrder` | `Int` | default `0`, user-adjustable manual ordering |
 | `createdAt` | `Date` | default `.now` |
-| `plannedSaleItems` | `[Item]` | to-many relationship — see "Sell Plan" below |
+| `plannedSaleItems` | `[Item]?` | to-many relationship — see "Sell Plan" below; optional for the same CloudKit reason as `Item.photos` |
 
 ### `Photo`
 

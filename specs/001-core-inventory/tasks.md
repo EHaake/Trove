@@ -17,7 +17,7 @@ summarized.
 
 ## Phase 0 — Project scaffolding (one-time)
 
-- [x] **T001** — Create the Xcode project: App target `Trove`, SwiftUI
+- [ ] **T001** — Create the Xcode project: App target `Trove`, SwiftUI
       lifecycle, iOS 26.0 minimum deployment, plain `.xcodeproj` (no
       XcodeGen/Tuist). *Verify: project opens and builds an empty app in
       the simulator.*
@@ -31,22 +31,22 @@ summarized.
       membership is renewed, ideally before Phase 10 or before actual
       App Store prep, whichever comes first. T009 below proceeds without
       it for now.
-- [x] **T003** — Add a `TroveTests` target (Swift Testing) and a
+- [ ] **T003** — Add a `TroveTests` target (Swift Testing) and a
       `TroveUITests` target (XCTest). *Verify: an empty placeholder test
       in each target runs green via `xcodebuild test`.*
-- [x] **T004** — Create the folder structure from plan.md
+- [ ] **T004** — Create the folder structure from plan.md
       (`App/`, `Models/`, `ViewModels/`, `Views/{Dashboard,Items,
       Wishlist,Shared}/`, `Extensions/`). *Verify: folders exist and are
       reflected as groups in Xcode.*
 
 ## Phase 1 — Data models
 
-- [x] **T005** — `Condition` enum (`new/excellent/good/fair/broken`,
+- [ ] **T005** — `Condition` enum (`new/excellent/good/fair/broken`,
       `String`-backed, `Codable`, `CaseIterable`).
-- [x] **T006** — `Photo` model (`id`, `imageData` with
+- [ ] **T006** — `Photo` model (`id`, `imageData` with
       `.externalStorage`, `source` — always `"device"` in v1, `sortOrder`,
       inverse `item` relationship).
-- [x] **T007** — `Item` model per plan.md's table, including
+- [ ] **T007** — `Item` model per plan.md's table, including
       `currencyCode` (default `"USD"`), the computed `condition`
       property wrapping the `Condition` enum, and the
       `plannedForWishlistItems` inverse relationship.
@@ -63,6 +63,14 @@ summarized.
       `ModelContainer` produces the expected defaults (`desireToKeep ==
       3`, `currencyCode == "USD"`, etc). *Verify: `xcodebuild test`
       green.*
+
+**Not a numbered task, added during T007, worth being on the record**:
+`CloudKitSchemaTests.swift` — asserts the schema actually validates
+against a CloudKit `ModelConfiguration`, rather than plan.md just
+asserting it in prose. This is what caught the `[Photo]` vs `[Photo]?`
+bug (see plan.md's Data model intro). Runs as part of `xcodebuild test`
+going forward with no entitlement or network needed; every future model
+change gets checked immediately rather than at T002-resumption time.
 
 ## Phase 2 — Shared utilities
 
