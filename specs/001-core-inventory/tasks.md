@@ -139,7 +139,7 @@ be this, not a real design deviation.
       edit.
 - [x] **T024** — `ItemListView`: list with filter and sort controls, using
       `ItemListViewModel`.
-- [ ] **T025** — `ItemDetailView`: displays an item, links to edit
+- [x] **T025** — `ItemDetailView`: displays an item, links to edit
       (reuses `ItemFormView`), delete with confirmation.
 - [ ] **T026** — Manual verification: add an item end-to-end in the
       simulator (quick-add path and full-detail path), edit it, delete

@@ -10,6 +10,7 @@ struct ItemListView: View {
     @State private var viewModel: ItemListViewModel
 
     @Environment(\.theme) private var theme
+    @Environment(\.modelContext) private var modelContext
 
     init(modelContext: ModelContext) {
         _viewModel = State(initialValue: ItemListViewModel(modelContext: modelContext))
@@ -34,7 +35,10 @@ struct ItemListView: View {
                         } else {
                             LazyVStack(spacing: theme.metrics.listRowGap) {
                                 ForEach(viewModel.items, id: \.id) { item in
-                                    ItemRow(item: item)
+                                    NavigationLink(value: item.id) {
+                                        ItemRow(item: item)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }
@@ -46,6 +50,11 @@ struct ItemListView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .navigationBar)
+        .navigationDestination(for: UUID.self) { itemID in
+            ItemDetailView(modelContext: modelContext, itemID: itemID)
+        }
+        // Values can change on the detail screen — an edit, or the dial — so
+        // the list refetches whenever it comes back into view.
         .onAppear { viewModel.load() }
     }
 
