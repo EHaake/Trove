@@ -15,4 +15,27 @@ extension Int {
         let amount = Decimal(self) / 100
         return amount.formatted(.currency(code: currencyCode).locale(Locale(identifier: "en_US")))
     }
+
+    /// The same figure without cents, which is how every money value is drawn
+    /// in `design/screens/` — "$3,450", never "$3,450.00".
+    ///
+    /// Not only a style choice: at these magnitudes the cents are noise, and
+    /// they cost enough width to wrap a list row onto two lines.
+    func formattedAsWholeCurrency(currencyCode: String) -> String {
+        let amount = Decimal(self) / 100
+        return amount.formatted(
+            .currency(code: currencyCode)
+                .precision(.fractionLength(0))
+                .locale(Locale(identifier: "en_US"))
+        )
+    }
+
+    /// A signed whole-dollar difference with no currency symbol, as Design
+    /// writes it beside a value: "+550 vs paid", "−150 vs paid". Uses a real
+    /// minus sign rather than a hyphen.
+    var formattedAsSignedWholeAmount: String {
+        let whole = abs(self) / 100
+        let magnitude = whole.formatted(.number.grouping(.automatic).locale(Locale(identifier: "en_US")))
+        return "\(self < 0 ? "−" : "+")\(magnitude)"
+    }
 }

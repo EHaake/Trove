@@ -70,6 +70,18 @@ final class Item {
         set { conditionRawValue = newValue.rawValue }
     }
 
+    /// What the item is worth now against what it cost, or `nil` while it
+    /// hasn't been valued — which is not the same as having broken even.
+    var valueDeltaCents: Int? {
+        guard let currentValueCents else { return nil }
+        return currentValueCents - purchasePriceCents
+    }
+
+    /// The category path split for display, e.g. `["Photography", "Cameras"]`.
+    var categorySegments: [String] {
+        categoryPath.split(separator: "/").map(String.init)
+    }
+
     init(
         name: String = "",
         categoryPath: String = "",

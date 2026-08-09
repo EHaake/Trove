@@ -95,7 +95,7 @@ struct DesireDial: View {
     private var numerals: some View {
         VStack(spacing: 1) {
             Text("\(level.rawValue)")
-                .font(theme.typography.dialNumeral)
+                .font(theme.typography.dialNumeral(diameter: diameter))
                 .foregroundStyle(valueColor)
             if showsScale {
                 Text("of \(DesireLevel.allCases.count)")

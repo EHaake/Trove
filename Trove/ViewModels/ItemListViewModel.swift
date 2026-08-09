@@ -19,6 +19,16 @@ final class ItemListViewModel {
         case desireToKeep
 
         var id: String { rawValue }
+
+        /// What the sort control calls this. Here rather than in the view so
+        /// the list and any future control can't disagree.
+        var label: String {
+            switch self {
+            case .purchaseDate: "Date"
+            case .currentValue: "Value"
+            case .desireToKeep: "Desire"
+            }
+        }
     }
 
     var categoryFilter: String = ""
@@ -27,7 +37,25 @@ final class ItemListViewModel {
     private(set) var items: [Item] = []
     private(set) var loadFailureMessage: String?
 
+    /// Every category path in use, for the filter chips. Includes paths whose
+    /// items the current filter excludes — otherwise choosing one filter would
+    /// hide the means of choosing another.
+    private(set) var categoryOptions: [String] = []
+
     var isEmpty: Bool { items.isEmpty }
+
+    /// Combined current value of the items on screen, so the header total
+    /// tracks the filter. Un-valued items contribute nothing rather than
+    /// counting as zero — the same floor-not-total rule as the dashboard.
+    var totalCurrentValueCents: Int {
+        items.compactMap(\.currentValueCents).reduce(0, +)
+    }
+
+    /// How many of the items on screen have no value entered, so the header
+    /// can be honest that the total above is a floor.
+    var unvaluedCount: Int {
+        items.count { $0.currentValueCents == nil }
+    }
 
     private let modelContext: ModelContext
 
@@ -42,9 +70,11 @@ final class ItemListViewModel {
             items = all
                 .filter { CategoryPathHelper.path($0.categoryPath, matchesPrefix: categoryFilter) }
                 .sorted(by: isOrderedBefore)
+            categoryOptions = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []
         } catch {
             loadFailureMessage = error.localizedDescription
             items = []
+            categoryOptions = []
         }
     }
 

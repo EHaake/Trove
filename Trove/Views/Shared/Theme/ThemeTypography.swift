@@ -57,7 +57,6 @@ struct ThemeTypography: Sendable {
     let screenTitle: Font
     let heroFigure: Font
     let heroFigureSecondary: Font
-    let dialNumeral: Font
     let formInput: Font
     let rowTitle: Font
     let body: Font
@@ -68,6 +67,14 @@ struct ThemeTypography: Sendable {
     let monoMeta: Font
     /// All-caps section and field labels. Pair with `ThemeMetrics.monoLabelTracking`.
     let monoLabel: Font
+
+    /// The dial's numeral, sized from the dial itself.
+    ///
+    /// One fixed size can't serve a 40pt dial in a list row and a 130pt one on
+    /// the detail screen — at 26pt the numeral all but fills the small one.
+    func dialNumeral(diameter: CGFloat) -> Font {
+        Self.font(.display, size: max(diameter * 0.30, 11), weight: .semibold)
+    }
 
     /// Every PostScript name the app can ask for. `UIAppFonts` has to list a
     /// file for each of these, and `FontRegistrationTests` checks that it does.
@@ -101,7 +108,6 @@ extension ThemeTypography {
         screenTitle: font(.display, size: 30, weight: .semibold),
         heroFigure: font(.display, size: 34, weight: .semibold),
         heroFigureSecondary: font(.display, size: 26, weight: .semibold),
-        dialNumeral: font(.display, size: 26, weight: .semibold),
         formInput: font(.body, size: 19),
         rowTitle: font(.body, size: 15, weight: .medium),
         body: font(.body, size: 13.5),

@@ -11,25 +11,36 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            ItemFormView(modelContext: modelContext)
+            ItemListView(modelContext: modelContext)
         }
         .task { seedCategoriesIfNeeded() }
     }
 
-    /// Gives the category picker something to autocomplete against on a fresh
-    /// install. Harness-only; it goes away with this view at T042.
+    /// Sample gear so the list, filters and totals have something real to show
+    /// on a fresh install. Harness-only; it goes away with this view at T042.
     private func seedCategoriesIfNeeded() {
-        let helper = CategoryPathHelper(modelContext: modelContext)
-        guard (try? helper.allCategoryPaths())?.isEmpty ?? true else { return }
+        let existing = (try? modelContext.fetch(FetchDescriptor<Item>())) ?? []
+        guard existing.isEmpty else { return }
 
-        for path in [
-            "Photography/Cameras",
-            "Photography/Lenses",
-            "Music/Guitars/Electric",
-            "Music/Amps",
-            "Audio/Headphones",
-        ] {
-            modelContext.insert(Item(name: "Sample", categoryPath: path))
+        let samples: [(String, String, Int, Int?, Int)] = [
+            ("Leica M6 (0.72x)", "Photography/Cameras", 290_000, 345_000, 5),
+            ("Hasselblad 500C/M", "Photography/Cameras", 125_000, 178_000, 5),
+            ("Nikon 105mm f/2.5 Ai-S", "Photography/Lenses", 24_000, 31_000, 4),
+            ("Fender Blues Junior IV", "Music/Amps", 69_000, 54_000, 2),
+            ("Squier Classic Vibe 50s", "Music/Guitars/Electric", 34_900, 38_000, 1),
+            ("Sennheiser HD 600", "Audio/Headphones", 39_900, nil, 3),
+        ]
+
+        for (name, path, paid, worth, desire) in samples {
+            modelContext.insert(
+                Item(
+                    name: name,
+                    categoryPath: path,
+                    purchasePriceCents: paid,
+                    currentValueCents: worth,
+                    desireToKeep: desire
+                )
+            )
         }
         try? modelContext.save()
     }

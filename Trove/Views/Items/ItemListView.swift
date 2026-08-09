@@ -1,0 +1,182 @@
+import SwiftData
+import SwiftUI
+
+/// Browse owned gear, per `design/screens/Trove Item List.png`.
+///
+/// Design also shows a search field over name/brand/serial. It isn't in
+/// spec.md's acceptance criteria or in `ItemListViewModel`, so it isn't built
+/// here — adding an unasked-for feature quietly is worse than the gap.
+struct ItemListView: View {
+    @State private var viewModel: ItemListViewModel
+
+    @Environment(\.theme) private var theme
+
+    init(modelContext: ModelContext) {
+        _viewModel = State(initialValue: ItemListViewModel(modelContext: modelContext))
+    }
+
+    var body: some View {
+        ZStack {
+            theme.colors.background.ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
+                    header
+                    categoryChips
+
+                    if viewModel.isEmpty {
+                        emptyState
+                    } else {
+                        LazyVStack(spacing: theme.metrics.listRowGap) {
+                            ForEach(viewModel.items, id: \.id) { item in
+                                ItemRow(item: item)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, theme.metrics.screenGutter)
+                .padding(.vertical, theme.metrics.sectionGap)
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarVisibility(.hidden, for: .navigationBar)
+        .onAppear { viewModel.load() }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Items")
+                    .font(theme.typography.screenTitle)
+                    .foregroundStyle(theme.colors.textPrimary)
+                Text(summaryLine).monoLabel()
+            }
+
+            Spacer()
+
+            sortControl
+        }
+    }
+
+    /// Design's "34 ITEMS · $18,420", plus a count of what the total leaves
+    /// out. Items with no value entered aren't worth zero, so saying how many
+    /// there are keeps the figure honest as a floor.
+    private var summaryLine: String {
+        let count = viewModel.items.count
+        var parts = ["\(count) \(count == 1 ? "item" : "items")"]
+        parts.append(viewModel.totalCurrentValueCents.formattedAsWholeCurrency(currencyCode: "USD"))
+        if viewModel.unvaluedCount > 0 {
+            parts.append("\(viewModel.unvaluedCount) unvalued")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private var sortControl: some View {
+        Menu {
+            ForEach(ItemListViewModel.SortOrder.allCases) { order in
+                Button {
+                    viewModel.sortOrder = order
+                    viewModel.load()
+                } label: {
+                    if viewModel.sortOrder == order {
+                        Label(order.label, systemImage: "checkmark")
+                    } else {
+                        Text(order.label)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "line.3.horizontal.decrease")
+                    .font(.system(size: 12, weight: .medium))
+                Text(viewModel.sortOrder.label)
+                    .font(theme.typography.body)
+            }
+            .foregroundStyle(theme.colors.textBody)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
+                    .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
+            )
+        }
+        .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+    }
+
+    // MARK: - Filter
+
+    private var categoryChips: some View {
+        FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
+            chip(label: "All", path: "")
+            ForEach(viewModel.categoryOptions, id: \.self) { path in
+                chip(label: path, path: path)
+            }
+        }
+    }
+
+    private func chip(label: String, path: String) -> some View {
+        let isSelected = viewModel.categoryFilter == path
+
+        return Button {
+            viewModel.categoryFilter = path
+            viewModel.load()
+        } label: {
+            Text(label)
+                .font(theme.typography.secondary)
+                .foregroundStyle(isSelected ? theme.colors.accentBrass : theme.colors.textBody)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .background(
+                    Capsule().fill(isSelected ? theme.colors.accentBrassTint : Color.clear)
+                )
+                .overlay(
+                    Capsule().strokeBorder(
+                        isSelected ? theme.colors.accentBrass : theme.colors.divider,
+                        lineWidth: theme.metrics.hairline
+                    )
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    // MARK: - Empty
+
+    /// Placeholder until T045, which gives this real design attention and
+    /// points at the add action rather than just reporting absence.
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(viewModel.categoryFilter.isEmpty ? "Nothing here yet" : "Nothing in this category")
+                .font(theme.typography.rowTitle)
+                .foregroundStyle(theme.colors.textBody)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, theme.metrics.sectionGap)
+    }
+}
+
+#Preview {
+    let container = try! ModelContainer(
+        for: TroveSchema.schema,
+        configurations: ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
+    )
+    let context = ModelContext(container)
+    for item in [
+        Item(name: "Leica M6 (0.72x)", categoryPath: "Photography/Cameras",
+             purchasePriceCents: 290_000, currentValueCents: 345_000, desireToKeep: 5),
+        Item(name: "Fender Blues Junior IV", categoryPath: "Music/Amps",
+             purchasePriceCents: 69_000, currentValueCents: 54_000, desireToKeep: 2),
+        Item(name: "Squier Classic Vibe 50s", categoryPath: "Music/Guitars/Electric",
+             purchasePriceCents: 38_000, desireToKeep: 1),
+    ] {
+        context.insert(item)
+    }
+
+    return NavigationStack {
+        ItemListView(modelContext: context)
+    }
+    .environment(\.theme, .dark)
+    .preferredColorScheme(.dark)
+}

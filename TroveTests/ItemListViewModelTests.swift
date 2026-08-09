@@ -139,6 +139,96 @@ struct ItemListViewModelFilterTests {
     }
 }
 
+@Suite("ItemListViewModel — header figures")
+struct ItemListViewModelSummaryTests {
+    @Test func totalsOnlyTheItemsOnScreen() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica", category: "Photography/Cameras", valueCents: 345_000, into: context)
+        insertItem("Telecaster", category: "Music/Guitars", valueCents: 129_900, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.categoryFilter = "Photography"
+        viewModel.load()
+
+        #expect(viewModel.totalCurrentValueCents == 345_000)
+    }
+
+    /// Un-valued items aren't worth zero, they're unknown — the same rule the
+    /// dashboard uses, so the two screens can't contradict each other.
+    @Test func excludesUnvaluedItemsFromTheTotalAndCountsThemInstead() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Valued", valueCents: 50_000, into: context)
+        insertItem("Unvalued", valueCents: nil, into: context)
+        insertItem("Also unvalued", valueCents: nil, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.load()
+
+        #expect(viewModel.totalCurrentValueCents == 50_000)
+        #expect(viewModel.unvaluedCount == 2)
+    }
+
+    @Test func totalsNothingWhenTheListIsEmpty() throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.load()
+
+        #expect(viewModel.totalCurrentValueCents == 0)
+        #expect(viewModel.unvaluedCount == 0)
+    }
+
+    /// The chips have to keep offering every category, including ones the
+    /// current filter excludes — otherwise picking one filter removes the
+    /// means of picking another.
+    @Test func offersEveryCategoryEvenWhileFiltered() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica", category: "Photography/Cameras", into: context)
+        insertItem("Telecaster", category: "Music/Guitars", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.categoryFilter = "Photography"
+        viewModel.load()
+
+        #expect(viewModel.items.count == 1)
+        #expect(viewModel.categoryOptions == ["Music/Guitars", "Photography/Cameras"])
+    }
+
+    @Test func everySortOrderHasADistinctLabel() {
+        let labels = ItemListViewModel.SortOrder.allCases.map(\.label)
+        #expect(Set(labels).count == labels.count)
+        #expect(labels.allSatisfy { !$0.isEmpty })
+    }
+}
+
+@Suite("Item value delta")
+struct ItemValueDeltaTests {
+    @Test func isTheGainOverWhatWasPaid() {
+        let item = Item(purchasePriceCents: 290_000, currentValueCents: 345_000)
+        #expect(item.valueDeltaCents == 55_000)
+    }
+
+    @Test func isNegativeWhenWorthLessThanPaid() {
+        let item = Item(purchasePriceCents: 69_000, currentValueCents: 54_000)
+        #expect(item.valueDeltaCents == -15_000)
+    }
+
+    /// Unvalued is not break-even. A zero here would render as "±$0 vs paid",
+    /// which claims something the user never said.
+    @Test func isUnknownWhileTheItemIsUnvalued() {
+        let item = Item(purchasePriceCents: 69_000, currentValueCents: nil)
+        #expect(item.valueDeltaCents == nil)
+    }
+
+    @Test func splitsTheCategoryPathIntoSegments() {
+        #expect(Item(categoryPath: "Music/Guitars/Electric").categorySegments == ["Music", "Guitars", "Electric"])
+        #expect(Item(categoryPath: "Accessories").categorySegments == ["Accessories"])
+        #expect(Item(categoryPath: "").categorySegments.isEmpty)
+    }
+}
+
 @Suite("ItemListViewModel — sorting")
 struct ItemListViewModelSortTests {
     @Test func defaultsToNewestPurchaseFirst() throws {

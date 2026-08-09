@@ -1,0 +1,126 @@
+import SwiftUI
+
+/// One item in the list, per `design/screens/Trove Item List.png`: thumbnail,
+/// name, category, what it's worth against what it cost, and the desire dial
+/// small and quiet on the right.
+struct ItemRow: View {
+    let item: Item
+
+    @Environment(\.theme) private var theme
+
+    private let thumbnailSide: CGFloat = 72
+
+    var body: some View {
+        HStack(spacing: theme.metrics.cardPadding) {
+            thumbnail
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(item.name)
+                    .font(theme.typography.rowTitle)
+                    .foregroundStyle(theme.colors.textPrimary)
+                    .lineLimit(1)
+
+                categoryLine
+
+                valueLine
+            }
+
+            Spacer(minLength: 0)
+
+            // Read-only here; the brief asks for the dial small and quiet in
+            // list contexts, editable on the form and detail screens.
+            DesireDial(value: .constant(item.desireToKeep), diameter: 36)
+        }
+        .padding(theme.metrics.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
+                .fill(theme.colors.surface)
+        )
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var thumbnail: some View {
+        let first = PhotoSelection.inDisplayOrder(item.photos ?? []).first
+
+        Group {
+            if let first, let image = Image(imageData: first.imageData) {
+                image.resizable().scaledToFill()
+            } else {
+                ZStack {
+                    theme.colors.surfaceInset
+                    Text("Photo").monoLabel(color: theme.colors.textInactive)
+                }
+            }
+        }
+        .frame(width: thumbnailSide, height: thumbnailSide)
+        .clipShape(RoundedRectangle(cornerRadius: theme.metrics.thumbnailRadius))
+    }
+
+    /// Design's meta line reads "LEICA · CAMERAS" — brand then category. There
+    /// is no brand in the schema and guessing one from the name would be
+    /// wrong as often as right, so this shows the category path's own
+    /// segments, which keeps the rhythm and says something true.
+    private var categoryLine: some View {
+        Text(item.categorySegments.joined(separator: " · "))
+            .monoLabel()
+            .lineLimit(1)
+    }
+
+    private var valueLine: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            if let currentValueCents = item.currentValueCents {
+                Text(currentValueCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))
+                    .font(theme.typography.monoValue)
+                    .foregroundStyle(theme.colors.textPrimary)
+                    .lineLimit(1)
+
+                if let delta = item.valueDeltaCents {
+                    Text("\(delta.formattedAsSignedWholeAmount) vs paid")
+                        .font(theme.typography.monoMeta)
+                        .foregroundStyle(delta < 0 ? theme.colors.accentRustText : theme.colors.accentMossText)
+                        .lineLimit(1)
+                        .layoutPriority(-1)
+                }
+            } else {
+                // Design never drew this case, but most items start here: a
+                // value is optional at creation. Saying so plainly beats
+                // showing $0, which would read as worthless.
+                Text("Not yet valued")
+                    .font(theme.typography.monoMeta)
+                    .foregroundStyle(theme.colors.textQuiet)
+            }
+        }
+    }
+}
+
+#Preview {
+    ZStack {
+        Theme.dark.colors.background.ignoresSafeArea()
+        VStack(spacing: 10) {
+            ItemRow(item: Item(
+                name: "Leica M6 (0.72x)",
+                categoryPath: "Photography/Cameras",
+                purchasePriceCents: 290_000,
+                currentValueCents: 345_000,
+                desireToKeep: 5
+            ))
+            ItemRow(item: Item(
+                name: "Fender Blues Junior IV",
+                categoryPath: "Music/Amps",
+                purchasePriceCents: 69_000,
+                currentValueCents: 54_000,
+                desireToKeep: 2
+            ))
+            ItemRow(item: Item(
+                name: "Squier Classic Vibe 50s",
+                categoryPath: "Music/Guitars/Electric",
+                purchasePriceCents: 38_000,
+                desireToKeep: 1
+            ))
+        }
+        .padding(Theme.dark.metrics.screenGutter)
+    }
+    .environment(\.theme, .dark)
+}

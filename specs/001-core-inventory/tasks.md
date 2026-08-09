@@ -137,7 +137,7 @@ be this, not a real design deviation.
 - [x] **T023** — `ItemFormView`: required fields up front, optional
       fields behind a "more details" disclosure. Used for both add and
       edit.
-- [ ] **T024** — `ItemListView`: list with filter and sort controls, using
+- [x] **T024** — `ItemListView`: list with filter and sort controls, using
       `ItemListViewModel`.
 - [ ] **T025** — `ItemDetailView`: displays an item, links to edit
       (reuses `ItemFormView`), delete with confirmation.
