@@ -263,6 +263,14 @@ a `NavigationStack`. A prominent add button is available from Items and
 Wishlist tabs (toolbar, not buried in a menu), consistent with the
 quick-add requirement.
 
+**List screens keep their header fixed.** On `ItemListView` (and
+`WishlistView` once built, for the same reason), the title, any summary
+line, and the category filter chip row stay in place — only the row
+content beneath scrolls independently. Found at T025 review: everything
+was originally one scrolling unit, so the filter chips disappeared along
+with the list on scroll. Apply this as a standing layout rule for any
+future list-style screen, not a one-off fix.
+
 ## Dashboard value calculation
 
 Items where `currentValueCents` hasn't been set are **excluded** from the
