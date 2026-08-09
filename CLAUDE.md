@@ -59,7 +59,24 @@ data model should not preclude that, but it is not in scope for v1.
   `XCUIApplication`.
 - Every view model gets unit tests covering its intent methods and state
   transitions, using fakes/mocks for injected dependencies — no networking
-  or disk I/O in unit tests.
+  or disk I/O in unit tests. This rule is scoped to view-model tests
+  specifically, where the point is faking the dependency rather than
+  hitting it for real. It doesn't extend to tests that are themselves
+  verifying an infrastructure claim that can't be checked any other way —
+  see the CloudKit schema-validation exception below.
+- **Any architectural compatibility claim stated in `plan.md` — "this
+  schema is CloudKit-compatible" being the motivating example — should
+  have an automated test that actually verifies it, not just a sentence
+  asserting it.** `specs/001-core-inventory/plan.md`'s Data model section
+  makes this concrete: `CloudKitSchemaTests.swift` builds a real
+  `ModelContainer` against a CloudKit `ModelConfiguration` and asserts it
+  validates, needing no entitlement, account, or network to run. It does
+  real disk I/O by necessity — CloudKit's validator can't run against an
+  in-memory store — which is a deliberate, narrow exception to the rule
+  above, not a loophole. Apply the same instinct going forward: if a plan
+  document claims something is true about how the system is built, prefer
+  writing the test that would catch it being false over writing the
+  sentence and trusting it.
 - A task is not "done" until its tests exist and `xcodebuild test` passes.
   Claude Code should run the test command itself and show the result, not
   assert completion from reading the code.
