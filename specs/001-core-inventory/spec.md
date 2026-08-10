@@ -278,7 +278,9 @@ need to clear.)
       owned items and wishlist items.
 - [ ] Dashboard shows total current value (excluding un-valued items,
       with a separate count of how many are un-valued), total spent, and
-      the delta, across all owned items.
+      the delta — all three scoped to the same valued items, so the
+      delta is never silently wrong by an un-valued item's purchase
+      price.
 - [ ] Owned items list can be filtered by category, sorted by
       desire-to-keep/current value/purchase date, and searched by name
       or serial number.

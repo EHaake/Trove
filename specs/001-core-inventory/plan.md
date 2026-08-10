@@ -177,7 +177,16 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
 ### Screens / view models
 
 - **`DashboardView`** / `DashboardViewModel` — total current value, total
-  spent, delta; category breakdown.
+  spent, delta; category breakdown, drillable — tapping a category with
+  subcategories narrows the same view to that scope (Photography opens
+  onto Cameras/Lenses), not a new screen per level. A leaf category
+  (nothing beneath it) is currently a dead end; **planned for T042/T043**
+  once the real `TabView` exists: tapping a leaf jumps to the Items tab
+  pre-filtered to that category. Same underlying capability the deferred
+  "Value →" action needs (jumping to Items filtered to un-valued items,
+  see the design-deviations note in tasks.md's Phase 5 section) — build
+  both together once cross-tab navigation is real, not against the
+  temporary two-tab stand-in Phase 5 uses to unblock testing.
 - **`ItemListView`** / `ItemListViewModel` — browse/filter/sort/search
   owned items. Search matches name or serial number, case-insensitive,
   combined with (not replacing) the category filter — both narrow the
@@ -284,12 +293,17 @@ future list-style screen, not a one-off fix.
 
 ## Dashboard value calculation
 
-Items where `currentValueCents` hasn't been set are **excluded** from the
-"total current value" figure — the dashboard shows that total alongside a
-separate count/link ("3 items not yet valued") so the user knows the
-total is a floor, not a complete picture, and has an obvious next action.
-"Total spent" always includes every item, since `purchasePriceCents` is
-required at creation.
+All three headline figures — current value, total spent, and the delta
+between them — must scope over the same set of items, or the delta is
+silently wrong. Items where `currentValueCents` hasn't been set are
+**excluded from all three**, not just current value: an un-valued item's
+`purchasePriceCents` counted in "spent" while its worth is excluded from
+"current value" understates the gain (or overstates the loss) by exactly
+that item's purchase price. The dashboard shows a separate count/link
+("3 items not yet valued") alongside the three figures, so the user
+knows they're a floor over the valued subset, not a complete picture —
+and the callout explaining this should say so explicitly (something like
+"left out of every figure above"), not imply only one figure is affected.
 
 ## CloudKit sync
 

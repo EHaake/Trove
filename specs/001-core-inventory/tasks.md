@@ -227,9 +227,16 @@ CRUD.
       `WishlistView`'s per-row shortcut — no other entry point.
 
 ## Phase 8 — Navigation and app shell
-
+ 
 - [ ] **T042** — Root `TabView` (Dashboard / Items / Wishlist), each tab
-      a `NavigationStack`.
+      a `NavigationStack`. Once this exists, wire the two deep-links
+      deferred from Phase 5: tapping a leaf category in the dashboard's
+      breakdown jumps to the Items tab pre-filtered to that category, and
+      the "Value →" callout jumps to Items pre-filtered to un-valued
+      items. Both need `ItemListViewModel`'s existing `categoryFilter`
+      (or an equivalent un-valued flag) set from outside the view itself
+      — a cross-tab navigation concern that couldn't exist before this
+      task, not new filtering logic.
 - [ ] **T043** — Add-item and add-wishlist-item entry points in the
       toolbar of their respective tabs (not buried in a menu).
 - [ ] **T044** — Manual full click-through: launch → dashboard → add item
