@@ -149,13 +149,24 @@ than a full breadcrumb:
   one long one. This is a label-only rule: filtering and storage always
   use the full path underneath.
 - **Arrow breadcrumb for an already-set value.** Where a *complete*
-  category path is displayed as a read-out — the add/edit form's field
-  once a category is chosen, and anywhere else a full path is shown
-  rather than a short chip — render it as segments joined by a
-  right-arrow icon (`Music › Guitars › Electric`) rather than literal
-  slashes. This is display-only; the underlying value is still the
-  slash-delimited string, and any text field the user actually types
-  into still takes and shows literal `/` while being edited.
+  category path is displayed as a navigable read-out — specifically the
+  add/edit form's field once a category is chosen — render it as
+  segments joined by a right-arrow icon (`Music › Guitars › Electric`)
+  rather than literal slashes. This is display-only; the underlying
+  value is still the slash-delimited string, and any text field the
+  user actually types into still takes and shows literal `/` while
+  being edited.
+
+  **This does not apply to the item list row or item detail screen's
+  meta line** (`MUSIC · GUITARS · HOLLOWBODY`). That's a different kind
+  of display — a stylistic, all-caps mono tag deliberately echoing the
+  brief's `LEICA · CAMERAS` convention, not a navigable breadcrumb — and
+  keeps its middot separator, showing the last two segments per the
+  truncation rule discussed elsewhere in this doc. Two different jobs:
+  the form field is showing a hierarchy the user is choosing through;
+  the meta line is a compact label matching Design's typographic
+  language. Don't unify them just because both happen to touch category
+  segments.
 
 ## Key user flows
 
