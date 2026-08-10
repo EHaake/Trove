@@ -44,10 +44,13 @@ struct ItemDetailView: View {
                 }
             }
         }
-        .confirmationDialog(
+        // An alert rather than a confirmation dialog: presented from a toolbar
+        // button, the dialog renders as an anchored popover that drops the
+        // cancel button entirely, leaving "Delete" as the only thing to press
+        // on a destructive, irreversible action.
+        .alert(
             "Delete \(viewModel.item?.name ?? "this item")?",
-            isPresented: $isConfirmingDelete,
-            titleVisibility: .visible
+            isPresented: $isConfirmingDelete
         ) {
             Button("Delete", role: .destructive) {
                 if viewModel.delete() { dismiss() }

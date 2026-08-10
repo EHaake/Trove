@@ -28,6 +28,7 @@ struct ItemFormViewModelCreateTests {
         let viewModel = ItemFormViewModel(modelContext: context)
         viewModel.name = "Fender Telecaster"
         viewModel.categoryPath = "Music/Guitars"
+        viewModel.purchasePrice = 0
 
         #expect(viewModel.save())
 
@@ -85,30 +86,49 @@ struct ItemFormViewModelCreateTests {
         let viewModel = ItemFormViewModel(modelContext: context)
         viewModel.name = "Fender Telecaster"
         viewModel.categoryPath = "Music/Guitars"
+        viewModel.purchasePrice = 0
         viewModel.currentValue = -5
 
         #expect(viewModel.save() == false)
         #expect(viewModel.validationErrors.contains(.currentValueNegative))
     }
 
-    /// A blank price field isn't "zero dollars typed" — it's untouched. It
-    /// still saves as zero, but the field has to start empty or the digits the
-    /// user types append to a pre-filled 0.
+    /// The field starts empty rather than pre-filled with 0, or the digits the
+    /// user types append to that zero. See `rejectsABlankPrice` for what
+    /// leaving it empty then means.
     @Test func startsWithNoPriceEntered() throws {
         let context = try makeInMemoryContext()
         #expect(ItemFormViewModel(modelContext: context).purchasePrice == nil)
     }
 
-    @Test func savesABlankPriceAsZero() throws {
+    /// Price is required, so an untouched field is rejected rather than
+    /// quietly stored as zero. That's the whole reason a deliberate zero and a
+    /// blank field are different states.
+    @Test func rejectsABlankPrice() throws {
         let context = try makeInMemoryContext()
         let viewModel = ItemFormViewModel(modelContext: context)
         viewModel.name = "Hand-me-down amp"
         viewModel.categoryPath = "Music/Amps"
 
-        #expect(viewModel.save())
+        #expect(viewModel.save() == false)
+        #expect(viewModel.validationErrors.contains(.priceMissing))
+        #expect(try context.fetch(FetchDescriptor<Item>()).isEmpty)
+    }
 
-        let item = try #require(try context.fetch(FetchDescriptor<Item>()).first)
-        #expect(item.purchasePriceCents == 0)
+    /// Blank and zero must not collapse into each other: one is an unanswered
+    /// required field, the other is an answer.
+    @Test func distinguishesABlankPriceFromADeliberateZero() throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemFormViewModel(modelContext: context)
+        viewModel.name = "Hand-me-down amp"
+        viewModel.categoryPath = "Music/Amps"
+
+        #expect(viewModel.save() == false)
+
+        viewModel.purchasePrice = 0
+
+        #expect(viewModel.save())
+        #expect(viewModel.validationErrors.isEmpty)
     }
 
     /// A gift or a hand-me-down is a real thing to own.
@@ -142,6 +162,7 @@ struct ItemFormViewModelCreateTests {
 
         viewModel.name = "Fender Telecaster"
         viewModel.categoryPath = "Music/Guitars"
+        viewModel.purchasePrice = 0
 
         #expect(viewModel.save())
         #expect(viewModel.validationErrors.isEmpty)
@@ -152,6 +173,7 @@ struct ItemFormViewModelCreateTests {
         let viewModel = ItemFormViewModel(modelContext: context)
         viewModel.name = "  Fender Telecaster  "
         viewModel.categoryPath = "  Music/Guitars  "
+        viewModel.purchasePrice = 0
 
         #expect(viewModel.save())
 
@@ -167,6 +189,7 @@ struct ItemFormViewModelCreateTests {
         let viewModel = ItemFormViewModel(modelContext: context)
         viewModel.name = "Fender Telecaster"
         viewModel.categoryPath = "Music/Guitars"
+        viewModel.purchasePrice = 0
         viewModel.serialNumber = "   "
         viewModel.purchaseLocation = ""
         viewModel.conditionNotes = ""
@@ -191,6 +214,7 @@ struct ItemFormViewModelCreateTests {
         let viewModel = ItemFormViewModel(modelContext: context)
         viewModel.name = "Leica M6"
         viewModel.categoryPath = "photography/cameras"
+        viewModel.purchasePrice = 0
 
         #expect(viewModel.save())
 
@@ -252,6 +276,7 @@ struct ItemFormViewModelClampingTests {
         let viewModel = ItemFormViewModel(modelContext: context)
         viewModel.name = "Fender Telecaster"
         viewModel.categoryPath = "Music/Guitars"
+        viewModel.purchasePrice = 0
         viewModel.desireToKeep = 42
 
         #expect(viewModel.save())

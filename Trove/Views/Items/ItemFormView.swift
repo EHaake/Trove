@@ -109,7 +109,8 @@ struct ItemFormView: View {
                 .padding(.vertical, theme.metrics.fieldPaddingVertical)
                 .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
                 .background(fieldBackground)
-                .overlay(fieldBorder(isInvalid: viewModel.validationErrors.contains(.priceNegative)))
+                .overlay(fieldBorder(isInvalid: viewModel.validationErrors.contains(.priceNegative)
+                    || viewModel.validationErrors.contains(.priceMissing)))
             }
 
             dateField
@@ -351,6 +352,7 @@ struct ItemFormView: View {
         var missing: [String] = []
         if errors.contains(.nameMissing) { missing.append("name") }
         if errors.contains(.categoryMissing) { missing.append("category") }
+        if errors.contains(.priceMissing) { missing.append("a price") }
         if errors.contains(.priceNegative) { missing.append("a price of zero or more") }
         if errors.contains(.currentValueNegative) { missing.append("a value of zero or more") }
 

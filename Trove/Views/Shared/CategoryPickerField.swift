@@ -24,6 +24,11 @@ struct CategoryPickerField: View {
     @Environment(\.theme) private var theme
     @FocusState private var isFocused: Bool
 
+    /// Separate from `isFocused` on purpose. The text field only exists while
+    /// editing, and focus can't be given to a view that isn't in the hierarchy
+    /// yet — setting `isFocused` from the read-out silently did nothing.
+    @State private var isEditingPath = false
+
     /// Filtered through the same rule the item and wishlist list filters use,
     /// so "matches what I typed" means one thing across the app.
     ///
@@ -37,6 +42,17 @@ struct CategoryPickerField: View {
         return suggestions.filter { CategoryPathHelper.path($0, matchesPrefix: categoryPath) }
     }
 
+    /// The same leaf-with-disambiguation rule the item list's filter chips
+    /// use, so a category is labelled identically wherever it appears.
+    ///
+    /// Computed over every suggestion rather than the filtered subset: a label
+    /// that widened from "Amps" to "Music/Amps" as the user typed — because
+    /// the colliding path dropped out of the matches — would be worse than
+    /// either form on its own.
+    private var chipLabels: [String: String] {
+        CategoryPathHelper.displayLabels(for: suggestions)
+    }
+
     private var isExactMatch: Bool {
         suggestions.contains { $0.caseInsensitiveCompare(categoryPath) == .orderedSame }
     }
@@ -45,7 +61,13 @@ struct CategoryPickerField: View {
         VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
             Text(label).monoLabel()
 
-            textField
+            // A set value reads back as a breadcrumb; typing gets the real
+            // field, slashes and all. Tapping the read-out returns to editing.
+            if showsReadOut {
+                readOut
+            } else {
+                textField
+            }
 
             if !matches.isEmpty {
                 // One scrolling row, matching the item list's filter chips.
@@ -73,6 +95,46 @@ struct CategoryPickerField: View {
                 }
             }
         }
+        // Hand focus over once the field actually exists. Lives on the
+        // container, which survives the swap, rather than on the field.
+        .onChange(of: isEditingPath) { _, isEditing in
+            guard isEditing else { return }
+            isFocused = true
+        }
+        // Finishing edits returns to the breadcrumb.
+        .onChange(of: isFocused) { _, focused in
+            guard !focused else { return }
+            isEditingPath = false
+        }
+    }
+
+    private var showsReadOut: Bool {
+        !isEditingPath && !categoryPath.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private var readOut: some View {
+        Button {
+            isEditingPath = true
+        } label: {
+            CategoryPathLabel(path: categoryPath)
+                .font(theme.typography.formInput)
+                .foregroundStyle(theme.colors.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, theme.metrics.fieldPaddingVertical)
+                .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
+                .background(
+                    RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
+                        .fill(theme.colors.surface)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
+                        .strokeBorder(borderColor, lineWidth: theme.metrics.hairline)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(label), \(categoryPath.split(separator: "/").joined(separator: ", "))")
+        .accessibilityHint("Edit")
     }
 
     private var textField: some View {
@@ -113,8 +175,12 @@ struct CategoryPickerField: View {
         return Button {
             categoryPath = path
             isFocused = false
+            isEditingPath = false
         } label: {
-            Text(path)
+            CategoryPathLabel(
+                path: chipLabels[path] ?? path,
+                separatorColor: isSelected ? theme.colors.accentBrass : theme.colors.textQuiet
+            )
                 .font(theme.typography.secondary)
                 .foregroundStyle(isSelected ? theme.colors.accentBrass : theme.colors.textBody)
                 .padding(.horizontal, 14)

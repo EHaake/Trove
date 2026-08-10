@@ -12,6 +12,10 @@ final class ItemFormViewModel {
     enum ValidationError: Hashable {
         case nameMissing
         case categoryMissing
+        /// Left blank. Distinct from `priceNegative`, and distinct from a
+        /// deliberate zero — price is a required field, so "untouched" has to
+        /// be rejected even though "free" is a legitimate answer.
+        case priceMissing
         case priceNegative
         case currentValueNegative
     }
@@ -23,8 +27,12 @@ final class ItemFormViewModel {
     /// Optional so a new form starts blank rather than pre-filled with `0`.
     /// A pre-filled zero can't be typed over — the digits append to it, so
     /// every new item began "$0…" until the user deleted the zero, which is at
-    /// odds with the quick-add bar the spec sets. Blank still saves as zero;
-    /// a gift is a real thing to own.
+    /// odds with the quick-add bar the spec sets.
+    ///
+    /// Blank is rejected rather than quietly saved as zero: price is required
+    /// alongside name, category and date. A typed `0` still saves, because a
+    /// gift is a real thing to own — the difference is deliberate zero versus
+    /// untouched field.
     var purchasePrice: Decimal?
     var purchaseDate: Date = .now
     var serialNumber: String = ""
@@ -132,7 +140,11 @@ final class ItemFormViewModel {
         var errors: Set<ValidationError> = []
         if Self.trimmed(name).isEmpty { errors.insert(.nameMissing) }
         if Self.trimmed(categoryPath).isEmpty { errors.insert(.categoryMissing) }
-        if let purchasePrice, purchasePrice < 0 { errors.insert(.priceNegative) }
+        if let purchasePrice {
+            if purchasePrice < 0 { errors.insert(.priceNegative) }
+        } else {
+            errors.insert(.priceMissing)
+        }
         if let currentValue, currentValue < 0 { errors.insert(.currentValueNegative) }
         return errors
     }

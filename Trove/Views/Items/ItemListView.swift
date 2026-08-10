@@ -34,7 +34,11 @@ struct ItemListView: View {
                     // stopping at the gutter; the gutter moves inside instead.
                     categoryChips
                 }
-                .padding(.vertical, theme.metrics.sectionGap)
+                .padding(.top, theme.metrics.sectionGap)
+                // Only as much space as sits between two rows. A full section
+                // gap here on top of each card's own padding read as a hole
+                // between the chips and the list.
+                .padding(.bottom, theme.metrics.listRowGap)
                 .background(theme.colors.background)
 
                 ScrollView {
@@ -180,7 +184,10 @@ struct ItemListView: View {
             viewModel.categoryFilter = path
             viewModel.load()
         } label: {
-            Text(label)
+            CategoryPathLabel(
+                path: label,
+                separatorColor: isSelected ? theme.colors.accentBrass : theme.colors.textQuiet
+            )
                 .font(theme.typography.secondary)
                 .foregroundStyle(isSelected ? theme.colors.accentBrass : theme.colors.textBody)
                 .padding(.horizontal, 14)
