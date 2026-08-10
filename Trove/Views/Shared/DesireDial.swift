@@ -5,7 +5,7 @@ import SwiftUI
 ///
 /// A thin arc and a numeral, deliberately not a knob: the brief rules out
 /// rendered materials, bevels and shadows. It sweeps rust at 1 through to
-/// brass at 5, so the colour carries the meaning as much as the number does.
+/// moss at 5, so the colour carries the meaning as much as the number does.
 ///
 /// Set `isInteractive` for the form and detail screens, where the brief calls
 /// for tap-or-drag editing; list rows show it small and static.
