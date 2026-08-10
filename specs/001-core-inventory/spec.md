@@ -188,17 +188,20 @@ specifically").
 
 ### Browse/sort owned items
 List of owned items, filterable by category, sortable by desire-to-keep,
-value, or purchase date. Category filter chips are a single horizontally
+value, or purchase date, and searchable by name or serial number. Search
+sits below the header and above the category filter chip row, matching
+Design's layout. Category filter chips are a single horizontally
 scrolling row, not a wrapping grid — vertical space above the list stays
 fixed regardless of how many distinct categories are in use. The header
-(title, summary line, filter chips) stays fixed in place; only the item
-rows beneath it scroll. Chip label text follows the leaf-with-
-disambiguation rule in the Categories section above.
+(title, summary line, search field, filter chips) stays fixed in place;
+only the item rows beneath it scroll. Chip label text follows the leaf-
+with-disambiguation rule in the Categories section above.
 
 ### Browse and manage the wishlist
-List of wishlist items, filterable by category, same as the owned-items
-list. Each row has a "See sell plan" shortcut straight to that item's
-Sell Plan, alongside opening the item itself for its own details.
+List of wishlist items, filterable by category and searchable by name,
+same treatment as the owned-items list. Each row has a "See sell plan"
+shortcut straight to that item's Sell Plan, alongside opening the item
+itself for its own details.
 
 ### Add and review a wishlist item
 User adds a wishlist item with name, category, estimated cost. Viewing a
@@ -276,9 +279,10 @@ need to clear.)
 - [ ] Dashboard shows total current value (excluding un-valued items,
       with a separate count of how many are un-valued), total spent, and
       the delta, across all owned items.
-- [ ] Owned items list can be filtered by category and sorted by
-      desire-to-keep, current value, and purchase date.
-- [ ] Wishlist list can be filtered by category.
+- [ ] Owned items list can be filtered by category, sorted by
+      desire-to-keep/current value/purchase date, and searched by name
+      or serial number.
+- [ ] Wishlist list can be filtered by category and searched by name.
 - [ ] Each wishlist list row and the wishlist item's own detail screen
       both offer a way to reach that item's Sell Plan.
 - [ ] Viewing a wishlist item shows the item's own details (name,

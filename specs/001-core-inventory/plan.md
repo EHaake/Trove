@@ -178,18 +178,21 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
 
 - **`DashboardView`** / `DashboardViewModel` — total current value, total
   spent, delta; category breakdown.
-- **`ItemListView`** / `ItemListViewModel` — browse/filter/sort owned
-  items.
+- **`ItemListView`** / `ItemListViewModel` — browse/filter/sort/search
+  owned items. Search matches name or serial number, case-insensitive,
+  combined with (not replacing) the category filter — both narrow the
+  same result set.
 - **`ItemDetailView`** / `ItemDetailViewModel` — view a single item, edit,
   delete.
 - **`ItemFormView`** / `ItemFormViewModel` — shared add/edit form. Required
   fields (name, category, price, date) up front; everything else
   (serial, location, current value, condition, photos, notes) behind a
   "more details" disclosure, per the spec's quick-add requirement.
-- **`WishlistView`** / `WishlistViewModel` — browse wishlist items,
-  filterable by category (same prefix/case-insensitive matching as
-  `ItemListViewModel`). Each row includes a "See sell plan" button that
-  jumps straight to that item's `SellPlanView`, bypassing
+- **`WishlistView`** / `WishlistViewModel` — browse/filter/search
+  wishlist items, filterable by category (same prefix/case-insensitive
+  matching as `ItemListViewModel`) and searchable by name, same
+  treatment as the item list. Each row includes a "See sell plan" button
+  that jumps straight to that item's `SellPlanView`, bypassing
   `WishlistDetailView` — a shortcut, not a replacement for the main flow.
 - **`WishlistDetailView`** / `WishlistDetailViewModel` — a plain view of
   the wishlist item itself: name, category, estimated cost, notes. Space
