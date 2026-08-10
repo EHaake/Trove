@@ -55,6 +55,15 @@ struct ThemeTypography: Sendable {
     static let customFontsInstalled = true
 
     let screenTitle: Font
+    /// The dashboard's total, and only that. tokens.md caps hero figures at 34
+    /// but calls out "larger for the dashboard's primary total"; measured off
+    /// Design's mock it's about double the secondary figures beside it.
+    let heroFigureDashboard: Font
+    /// The `$` on that total, drawn smaller and raised rather than scaled with
+    /// the digits — at 68pt a full-size currency symbol swamps the number.
+    let heroFigureSymbol: Font
+    /// The app's name in the dashboard header, letterspaced.
+    let wordmark: Font
     let heroFigure: Font
     let heroFigureSecondary: Font
     let formInput: Font
@@ -106,6 +115,9 @@ extension ThemeTypography {
     /// per-screen as those screens get built.
     static let standard = ThemeTypography(
         screenTitle: font(.display, size: 30, weight: .semibold),
+        heroFigureDashboard: font(.display, size: 68, weight: .semibold),
+        heroFigureSymbol: font(.display, size: 28, weight: .semibold),
+        wordmark: font(.display, size: 20, weight: .semibold),
         heroFigure: font(.display, size: 34, weight: .semibold),
         heroFigureSecondary: font(.display, size: 26, weight: .semibold),
         formInput: font(.body, size: 19),

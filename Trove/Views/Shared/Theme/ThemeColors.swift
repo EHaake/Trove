@@ -23,9 +23,12 @@ struct ThemeColors: Sendable {
     let textDisabled: Color
     let textInactive: Color
 
-    /// Primary accent — value figures, CTAs, the desire dial's "keep" end.
+    /// Primary accent — value figures and CTAs.
     let accentBrass: Color
     let accentBrassHover: Color
+    /// Brass held back for repeated marks that would shout in full strength —
+    /// the dashboard ruler's minor ticks, where only the majors are at full.
+    let accentBrassDim: Color
     /// Background wash for selected rows and chips.
     let accentBrassTint: Color
 
@@ -43,6 +46,15 @@ struct ThemeColors: Sendable {
 
     /// The desire dial's middle of range, between rust and moss.
     let dialMidpoint: Color
+
+    /// The neutral the dashboard's breakdown falls back to once the three
+    /// accents are spent — "everything else", not a category of its own.
+    let categoryNeutral: Color
+
+    /// Swatches for the dashboard's category breakdown, in assignment order.
+    /// Three accents to tell the largest categories apart, then
+    /// `categoryNeutral` for the tail, matching Design's mock.
+    var categorySwatches: [Color] { [accentBrass, accentRust, accentMoss] }
 }
 
 extension ThemeColors {
@@ -66,6 +78,7 @@ extension ThemeColors {
 
         accentBrass: Color(hex: "#C79A56"),
         accentBrassHover: Color(hex: "#DDB877"),
+        accentBrassDim: Color(hex: "#746140"),
         accentBrassTint: Color(hex: "#C79A56", opacity: 0.12),
 
         accentMoss: Color(hex: "#52634F"),
@@ -80,6 +93,8 @@ extension ThemeColors {
         // ramp and left everything up to 4 in orange; #75774A fixed the hue
         // cliff but sat too dark and grey to read as anything but green's
         // neighbour. See `design/tokens.md` for the measurements.
-        dialMidpoint: Color(hex: "#8F8C38")
+        dialMidpoint: Color(hex: "#8F8C38"),
+
+        categoryNeutral: Color(hex: "#6B6C6F")
     )
 }

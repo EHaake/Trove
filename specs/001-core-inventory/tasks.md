@@ -147,14 +147,23 @@ be this, not a real design deviation.
 
 ## Phase 5 — Dashboard
 
-- [ ] **T027** — `DashboardViewModel`: total current value (excluding
+- [x] **T027** — `DashboardViewModel`: total current value (excluding
       un-valued items), count of un-valued items, total spent, delta,
-      category breakdown.
-- [ ] **T028** — Unit tests for `DashboardViewModel`, including the
-      un-valued-exclusion behavior specifically.
-- [ ] **T029** — `DashboardView`.
-- [ ] **T030** — Manual verification: dashboard numbers match a small set
-      of manually-entered test items.
+      category breakdown. Scopable, so spec.md's "drill into a category to
+      see the same numbers scoped to it" is this same type with a
+      `scope`, not a second screen that could drift from it.
+- [x] **T028** — Unit tests for `DashboardViewModel`, including the
+      un-valued-exclusion behavior specifically. Note that exclusion
+      applies to **spend as well as value**: counting what un-valued items
+      cost while leaving their worth out understates the gain by exactly
+      their purchase price, which can flip a collection that's up into
+      reading as a loss. Mutation-verified.
+- [x] **T029** — `DashboardView`.
+- [x] **T030** — Manual verification: dashboard numbers match a small set
+      of manually-entered test items. Every figure checked against an
+      independent calculation of the seed data — total, spend, gain,
+      un-valued count, and all four category rows with their shares — at
+      both the root scope and drilled into Photography.
 
 ## Phase 6 — Wishlist CRUD
 

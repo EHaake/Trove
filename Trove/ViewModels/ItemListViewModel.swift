@@ -80,7 +80,10 @@ final class ItemListViewModel {
         do {
             let all = try modelContext.fetch(FetchDescriptor<Item>())
             items = all
-                .filter { CategoryPathHelper.path($0.categoryPath, matchesPrefix: categoryFilter) }
+                // `isWithin`, not `matchesPrefix`: a chip is a category that
+                // exists, so "Music/Amps" must not also match
+                // "Music/Amplifiers". The typing rule stays in the picker.
+                .filter { CategoryPathHelper.path($0.categoryPath, isWithin: categoryFilter) }
                 // Design's field says "name, brand, serial"; there is no brand
                 // in the schema, same gap `ItemRow`'s meta line works around.
                 .filter { SearchMatching.matches(query: searchText, in: [$0.name, $0.serialNumber]) }

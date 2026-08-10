@@ -27,6 +27,26 @@ struct ThemeMetrics: Sendable {
     /// at 2×) rather than derived from padding — Design drew it shorter than a
     /// form field, which is what keeps the fixed header from eating the list.
     let searchFieldHeight: CGFloat
+
+    /// The dashboard's ruler, all measured off `Trove Dashboard.png` at 2×:
+    /// 4px-wide ticks on a 10px pitch, 28/14/12px tall for major, minor and
+    /// spent.
+    let rulerTickWidth: CGFloat
+    let rulerTickSpacing: CGFloat
+    let rulerMajorTickHeight: CGFloat
+    let rulerMinorTickHeight: CGFloat
+    let rulerSpentTickHeight: CGFloat
+    /// The stacked proportion bar above the category rows, and the gap Design
+    /// leaves between its segments.
+    let stackedBarHeight: CGFloat
+    let stackedBarSegmentGap: CGFloat
+    /// The colour tick at the head of each breakdown row.
+    let categorySwatchWidth: CGFloat
+    /// The accent stripe down the side of a callout card.
+    let calloutEdgeWidth: CGFloat
+    /// Letter-spacing on the dashboard's TROVE wordmark, which is set much
+    /// wider than the all-caps mono labels.
+    let wordmarkTracking: CGFloat
     /// Between the search box and the category chip row beneath it. Tighter
     /// than a section gap: the two are one filter control, not two sections.
     let controlRowGap: CGFloat
@@ -71,6 +91,16 @@ extension ThemeMetrics {
         fieldPaddingHorizontal: 14,
         hairline: 1,
         searchFieldHeight: 40,
+        rulerTickWidth: 2,
+        rulerTickSpacing: 3,
+        rulerMajorTickHeight: 14,
+        rulerMinorTickHeight: 7,
+        rulerSpentTickHeight: 6,
+        stackedBarHeight: 6,
+        stackedBarSegmentGap: 2,
+        categorySwatchWidth: 3,
+        calloutEdgeWidth: 2,
+        wordmarkTracking: 5,
         controlRowGap: 16,
         sellPlanRowPaddingVertical: 15,
         sellPlanRowPaddingHorizontal: 14,

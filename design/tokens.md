@@ -35,6 +35,8 @@ screen) — not part of the app itself.
 | `accentRust` | `#9C4A34` | sell-candidate/low-desire accent — strokes/borders/fills only |
 | `accentRustText` | `#B8674F` | rust as *text* — same contrast reasoning as `accentMossText` |
 | `dialMidpoint` | `#8F8C38` | desire dial's middle-of-range color (between rust and moss) |
+| `accentBrassDim` | `#746140` | held-back brass for repeated marks — the dashboard ruler's minor ticks |
+| `categoryNeutral` | `#6B6C6F` | dashboard breakdown's "everything else" swatch, past the three accents |
 
 The rust/moss "text-safe lift" pair is a real accessibility catch, not a
 stylistic choice — worth preserving exactly, not simplifying to one

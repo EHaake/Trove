@@ -1,5 +1,19 @@
 import Foundation
 
+enum Currency {
+    /// The currency symbol on its own.
+    ///
+    /// Derived by formatting zero and dropping everything numeric, rather than
+    /// read off the locale: `Locale.currencySymbol` only answers for the
+    /// locale's *own* currency, which would quietly return "$" for any code
+    /// once the multi-currency groundwork in the schema gets used.
+    static func symbol(for currencyCode: String) -> String {
+        let zero = 0.formattedAsWholeCurrency(currencyCode: currencyCode)
+        let stripped = zero.filter { !$0.isNumber && !$0.isWhitespace && $0 != "." && $0 != "," }
+        return stripped.isEmpty ? currencyCode : stripped
+    }
+}
+
 extension Int {
     /// Formats this value, interpreted as minor currency units (cents), as a
     /// localized currency string — e.g. `129_900` with `"USD"` formats as
@@ -28,6 +42,21 @@ extension Int {
                 .precision(.fractionLength(0))
                 .locale(Locale(identifier: "en_US"))
         )
+    }
+
+    /// Grouped whole units with no currency symbol at all — for the
+    /// dashboard's total, where Design draws the symbol separately at a
+    /// smaller size and raised, so it can't come baked into the digits.
+    var formattedAsWholeAmount: String {
+        (abs(self) / 100).formatted(.number.grouping(.automatic).locale(Locale(identifier: "en_US")))
+    }
+
+    /// A signed whole amount *with* the symbol — the dashboard's GAIN reads
+    /// "+$1,515", where an item row's delta reads "+550 vs paid". Different
+    /// enough to need both, close enough to be worth saying why.
+    func formattedAsSignedWholeCurrency(currencyCode: String) -> String {
+        let magnitude = abs(self).formattedAsWholeCurrency(currencyCode: currencyCode)
+        return "\(self < 0 ? "−" : "+")\(magnitude)"
     }
 
     /// A signed whole-dollar difference with no currency symbol, as Design

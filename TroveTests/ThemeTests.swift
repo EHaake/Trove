@@ -53,6 +53,8 @@ struct ThemeColorTokenTests {
         #expect(rgba(colors.accentRust) == (0x9C, 0x4A, 0x34, 1.0))
         #expect(rgba(colors.accentRustText) == (0xB8, 0x67, 0x4F, 1.0))
         #expect(rgba(colors.dialMidpoint) == (0x8F, 0x8C, 0x38, 1.0))
+        #expect(rgba(colors.accentBrassDim) == (0x74, 0x61, 0x40, 1.0))
+        #expect(rgba(colors.categoryNeutral) == (0x6B, 0x6C, 0x6F, 1.0))
     }
 
     /// tokens.md is explicit that the text-safe lifts are an accessibility fix,

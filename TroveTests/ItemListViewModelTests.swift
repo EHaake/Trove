@@ -73,16 +73,37 @@ struct ItemListViewModelFilterTests {
         #expect(viewModel.items.allSatisfy { $0.categoryPath.hasPrefix("Photography") })
     }
 
-    @Test func filtersCaseInsensitively() throws {
+    @Test(arguments: ["PHOTOGRAPHY", "photography", "PHOTOGRAPHY/CAMERAS", "photography/cameras"])
+    func filtersCaseInsensitively(filter: String) throws {
         let context = try makeInMemoryContext()
         insertItem("Leica M6", category: "Photography/Cameras", into: context)
         try context.save()
 
         let viewModel = ItemListViewModel(modelContext: context)
-        viewModel.categoryFilter = "PHOTOGRAPHY/cam"
+        viewModel.categoryFilter = filter
         viewModel.load()
 
-        #expect(viewModel.items.count == 1)
+        #expect(viewModel.items.count == 1, "filter \(filter) matched nothing")
+    }
+
+    /// A chip's filter is always a category that exists, never something
+    /// half-typed, so a partial segment shouldn't match. This used to: the
+    /// filter shared the autocomplete rule, which meant selecting "Music/Amps"
+    /// also pulled in "Music/Amplifiers".
+    @Test func doesNotMatchAPartialSegment() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", category: "Photography/Cameras", into: context)
+        insertItem("Blues Junior", category: "Music/Amplifiers", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.categoryFilter = "Photography/Cam"
+        viewModel.load()
+        #expect(viewModel.items.isEmpty)
+
+        viewModel.categoryFilter = "Music/Amps"
+        viewModel.load()
+        #expect(viewModel.items.isEmpty)
     }
 
     /// Prefix, not substring — a filter has to match from the start of the path.

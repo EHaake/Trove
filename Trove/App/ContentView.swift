@@ -9,11 +9,34 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
 
+    /// Seeding has to finish before any screen loads, or the first one to
+    /// appear fetches an empty store and shows an empty state over real data.
+    /// A `.task` on the container loses that race.
+    @State private var hasSeeded = false
+
     var body: some View {
-        NavigationStack {
-            ItemListView(modelContext: modelContext)
+        // Two stacks side by side stands in for the real tab bar (T042) — the
+        // dashboard's drill-down and the item list both need their own
+        // navigation, and neither should push onto the other's.
+        Group {
+            if hasSeeded {
+                TabView {
+                    Tab("Overview", systemImage: "circle.circle") {
+                        NavigationStack { DashboardView(modelContext: modelContext) }
+                    }
+                    Tab("Items", systemImage: "square") {
+                        NavigationStack { ItemListView(modelContext: modelContext) }
+                    }
+                }
+            } else {
+                Color.clear
+            }
         }
-        .task { seedCategoriesIfNeeded() }
+        .onAppear {
+            guard !hasSeeded else { return }
+            seedCategoriesIfNeeded()
+            hasSeeded = true
+        }
     }
 
     /// Sample gear so the list, filters and totals have something real to show
@@ -31,6 +54,10 @@ struct ContentView: View {
             ("Sennheiser HD 600", "Audio/Headphones", 39_900, nil, 3),
             // Collides with Music/Amps at the leaf, so both chips widen.
             ("Schiit Vali 2++", "Audio/Amps", 14_900, 12_000, 3),
+            // A fourth top-level category, so the dashboard breakdown runs off
+            // the end of the three accent swatches onto the neutral, and one
+            // filed with no sub-category, which can't be drilled into.
+            ("Peak Design Everyday", "Accessories", 22_000, 16_000, 4),
         ]
 
         for (name, path, paid, worth, desire) in samples {

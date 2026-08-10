@@ -91,16 +91,55 @@ struct CategoryPathHelper {
         path.split(separator: "/").map(String.init).suffix(count).joined(separator: "/")
     }
 
-    /// The one definition of "this category path matches what the user typed":
-    /// prefix, case-insensitive, empty matches everything. Filtering by
-    /// `"Photography"` therefore also turns up `Photography/Cameras`.
+    /// "This path starts with what the user has typed so far" — the rule for
+    /// **autocomplete**, where the prefix is a fragment mid-word. Typing
+    /// `"Photo"` turns up `Photography/Cameras`, which is the whole point.
     ///
-    /// Shared so autocomplete and the item/wishlist list filters can't drift
-    /// into disagreeing about what matches.
+    /// Not the rule for filtering: see `path(_:isWithin:)`.
     static func path(_ path: String, matchesPrefix prefix: String) -> Bool {
         let prefix = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prefix.isEmpty else { return true }
         return path.range(of: prefix, options: [.caseInsensitive, .anchored]) != nil
+    }
+
+    /// "This path sits inside that category" — the rule for **filtering and
+    /// scoping**, where the category is one that already exists rather than
+    /// something half-typed. Empty scope means everything.
+    ///
+    /// Deliberately stricter than `path(_:matchesPrefix:)`. A partial-segment
+    /// prefix is right for autocomplete and wrong here: selecting `Audio`
+    /// would otherwise sweep in `Audiophile`, and a chip for `Music/Amps`
+    /// would pull in `Music/Amplifiers` — the filter quietly showing items
+    /// from a category the user didn't pick. So the match has to end where a
+    /// segment ends.
+    ///
+    /// The two rules were one rule until the dashboard needed to scope by
+    /// category and the difference stopped being academic.
+    static func path(_ path: String, isWithin scope: String) -> Bool {
+        let scope = scope.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !scope.isEmpty else { return true }
+        guard let matched = path.range(of: scope, options: [.caseInsensitive, .anchored]) else {
+            return false
+        }
+
+        let remainder = path[matched.upperBound...]
+        return remainder.isEmpty || remainder.hasPrefix("/")
+    }
+
+    /// The child category of `scope` that a path belongs to — the grouping the
+    /// dashboard's breakdown rows are built from.
+    ///
+    /// Under the empty scope that's the path's first segment; under
+    /// `Photography` it's `Photography/Cameras`. A path that *is* the scope, or
+    /// has nothing below it, groups under itself, so an item filed directly at
+    /// `Accessories` still gets a row rather than vanishing.
+    static func categoryGroupKey(for path: String, under scope: String) -> String {
+        let scope = scope.trimmingCharacters(in: .whitespacesAndNewlines)
+        let segments = path.split(separator: "/").map(String.init)
+        let depth = scope.isEmpty ? 0 : scope.split(separator: "/").count
+
+        guard segments.count > depth else { return path }
+        return segments.prefix(depth + 1).joined(separator: "/")
     }
 
     /// Given a newly-typed path, returns the existing casing if a

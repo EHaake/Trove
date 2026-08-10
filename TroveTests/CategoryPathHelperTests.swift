@@ -338,3 +338,74 @@ struct EarliestCasingRuleTests {
         #expect(CategoryPathHelper.distinctPathsPreferringEarliestCasing([]).isEmpty)
     }
 }
+
+/// Two rules that used to be one. Autocomplete matches a fragment mid-word;
+/// a filter matches whole categories. Conflating them meant selecting "Audio"
+/// quietly swept in "Audiophile" — the list showing items from a category the
+/// user hadn't picked, with nothing on screen to explain why.
+@Suite("Category scoping vs autocomplete")
+struct CategoryScopeTests {
+    // MARK: - Filtering: whole segments only
+
+    @Test func aPathIsWithinItsOwnCategory() {
+        #expect(CategoryPathHelper.path("Photography/Cameras", isWithin: "Photography"))
+        #expect(CategoryPathHelper.path("Photography/Cameras", isWithin: "Photography/Cameras"))
+    }
+
+    @Test func anEmptyScopeHoldsEverything() {
+        #expect(CategoryPathHelper.path("Anything/At/All", isWithin: ""))
+        #expect(CategoryPathHelper.path("Anything/At/All", isWithin: "   "))
+    }
+
+    @Test func scopingIgnoresCase() {
+        #expect(CategoryPathHelper.path("Photography/Cameras", isWithin: "PHOTOGRAPHY"))
+        #expect(CategoryPathHelper.path("photography/cameras", isWithin: "Photography"))
+    }
+
+    /// The bug this rule exists for, in both the shapes it takes.
+    @Test(arguments: [
+        ("Audiophile/Magazines", "Audio"),
+        ("Music/Amplifiers", "Music/Amps"),
+        ("Photography2/Cameras", "Photography"),
+    ])
+    func aScopeStopsAtASegmentBoundary(path: String, scope: String) {
+        #expect(CategoryPathHelper.path(path, isWithin: scope) == false)
+    }
+
+    @Test func aSiblingCategoryIsNotWithinScope() {
+        #expect(CategoryPathHelper.path("Music/Guitars", isWithin: "Photography") == false)
+    }
+
+    // MARK: - Autocomplete: fragments are the point
+
+    /// The same inputs the filter rejects, which autocomplete must accept —
+    /// this is why they can't be one function.
+    @Test func typingAFragmentStillSuggestsTheFullPath() {
+        #expect(CategoryPathHelper.path("Photography/Cameras", matchesPrefix: "Photo"))
+        #expect(CategoryPathHelper.path("Audiophile/Magazines", matchesPrefix: "Audio"))
+    }
+
+    // MARK: - Grouping
+
+    @Test func groupsByFirstSegmentAtTheTopLevel() {
+        #expect(CategoryPathHelper.categoryGroupKey(for: "Photography/Cameras", under: "") == "Photography")
+        #expect(CategoryPathHelper.categoryGroupKey(for: "Music/Guitars/Electric", under: "") == "Music")
+    }
+
+    @Test func groupsByTheNextSegmentDownWhenScoped() {
+        #expect(
+            CategoryPathHelper.categoryGroupKey(for: "Music/Guitars/Electric", under: "Music")
+                == "Music/Guitars"
+        )
+        #expect(
+            CategoryPathHelper.categoryGroupKey(for: "Music/Guitars/Electric", under: "Music/Guitars")
+                == "Music/Guitars/Electric"
+        )
+    }
+
+    /// An item filed straight at the scope's own level still needs a row.
+    @Test func aPathWithNothingBelowTheScopeGroupsUnderItself() {
+        #expect(CategoryPathHelper.categoryGroupKey(for: "Accessories", under: "") == "Accessories")
+        #expect(CategoryPathHelper.categoryGroupKey(for: "Music", under: "Music") == "Music")
+    }
+}
