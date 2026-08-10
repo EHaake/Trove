@@ -66,6 +66,14 @@ they can reason about selling underused gear to fund new purchases.
   did. A real "mark as sold" workflow is a natural, meaningfully bigger
   future feature, deliberately excluded now to keep the Sell Plan
   screen simple.
+- **Color-coded categories.** Top-level categories (`Photography`,
+  `Music`, etc.) getting a distinct color, shown wherever that
+  category's chips appear, is a real future enhancement — a curated
+  palette that harmonizes with the existing theme, user-selectable or
+  auto-assigned on first use of a new top-level category. Deferred
+  because it's a real design decision (palette selection) as much as an
+  engineering one, and deserves a deliberate pass rather than an
+  incidental one.
 
 ## Entities (conceptual — see plan.md for the actual data model)
 
@@ -123,6 +131,32 @@ category to the app. This isn't user-configurable; it's just correct
 behavior for a free-typed field nobody's going to capitalize consistently
 on their own.
 
+### Displaying a category path
+
+Two rules, applied everywhere a category path is shown as a chip or a
+compact label — the item list's filter chips, the add/edit form's
+suggestion chips, and anywhere else a path appears as a short tag rather
+than a full breadcrumb:
+
+- **Leaf label, with disambiguation.** Show only the path's last segment
+  (`Electric`, not `Music/Guitars/Electric`) when that segment is unique
+  across the current category set. If two different paths would
+  otherwise show the same leaf (`Music/Amps` and `Audio/Amps` both
+  ending in "Amps"), both expand to their last two segments instead —
+  just enough to disambiguate, not the whole path. If two segments still
+  collide (a deeper hierarchy where even that isn't enough), fall back
+  to the full path — showing two identical-looking chips is worse than
+  one long one. This is a label-only rule: filtering and storage always
+  use the full path underneath.
+- **Arrow breadcrumb for an already-set value.** Where a *complete*
+  category path is displayed as a read-out — the add/edit form's field
+  once a category is chosen, and anywhere else a full path is shown
+  rather than a short chip — render it as segments joined by a
+  right-arrow icon (`Music › Guitars › Electric`) rather than literal
+  slashes. This is display-only; the underlying value is still the
+  slash-delimited string, and any text field the user actually types
+  into still takes and shows literal `/` while being edited.
+
 ## Key user flows
 
 ### Add an owned item
@@ -145,15 +179,10 @@ specifically").
 List of owned items, filterable by category, sortable by desire-to-keep,
 value, or purchase date. Category filter chips are a single horizontally
 scrolling row, not a wrapping grid — vertical space above the list stays
-fixed regardless of how many distinct categories are in use.
-
-Chip labels show the category path's last segment alone (`Electric`, not
-`Music/Guitars/Electric`) when that segment is unique across the current
-set of categories. If two different paths would otherwise show the same
-leaf label (e.g. `Music/Amps` and `Audio/Amps` both ending in "Amps"),
-both expand to their last two segments instead, just enough to tell them
-apart. This is a label-only rule — filtering still matches on the full
-path prefix as before; only what's displayed on the chip changes.
+fixed regardless of how many distinct categories are in use. The header
+(title, summary line, filter chips) stays fixed in place; only the item
+rows beneath it scroll. Chip label text follows the leaf-with-
+disambiguation rule in the Categories section above.
 
 ### Browse and manage the wishlist
 List of wishlist items, filterable by category, same as the owned-items
