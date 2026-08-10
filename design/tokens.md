@@ -34,14 +34,31 @@ screen) — not part of the app itself.
 | `accentMossText` | `#7E9679` | moss as *text* — the spec value fails contrast on `surface`, this lift value is text-safe |
 | `accentRust` | `#9C4A34` | sell-candidate/low-desire accent — strokes/borders/fills only |
 | `accentRustText` | `#B8674F` | rust as *text* — same contrast reasoning as `accentMossText` |
-| `dialMidpoint` | `#A87C4A` | desire dial's middle-of-range color (between rust and brass) |
+| `dialMidpoint` | `#75774A` | desire dial's middle-of-range color (between rust and moss) |
 
 The rust/moss "text-safe lift" pair is a real accessibility catch, not a
 stylistic choice — worth preserving exactly, not simplifying to one
 color per accent. Implement as two properties per accent (e.g.
 `accentRust` for shapes, `accentRustText` for any place that color
 renders as text) so it's not accidentally used the wrong way in a given
-context.
+context. Measured on `surface`: `accentRust` 2.7:1 and `accentMoss`
+2.6:1 both fail, while the lifts reach 4.0:1 and 5.1:1.
+`DesireDialColorTests` computes these rather than trusting the names.
+
+### The desire dial's ramp
+
+The dial runs `accentRust` (1, "ready to sell") → `dialMidpoint` (3) →
+`accentMoss` (5, "absolutely keeping it"), with 2 and 4 as perceptual
+midpoints of the neighbouring pair. Brass held the "keep" end originally
+and no longer appears on the dial at all — it's the app's money colour,
+and spending it on a rating diluted that.
+
+`dialMidpoint` was retuned from `#A87C4A` to `#75774A` when that change
+landed. The old value was the midpoint of a rust→brass ramp; against
+moss it left stops 1–4 all sitting in orange and put the entire hue
+change into one 68° jump between 4 and 5. The new value spreads it:
+13° → 28° → 63° → 79° → 111°, so 4 reads as a dim green rather than
+khaki. Verified against rendered simulator pixels, not just computed.
 
 ## Typography
 

@@ -30,12 +30,21 @@ struct SearchMatchingTests {
         #expect(SearchMatching.matches(query: query, in: ["Leica M6"]))
     }
 
-    /// Gear names are full of them — Røde, Sennheiser's umlauts, Beyerdynamic
-    /// listings that spell it either way. Typing the plain letter should find
-    /// the accented one.
-    @Test func ignoresDiacritics() {
-        #expect(SearchMatching.matches(query: "rode", in: ["Røde NT1"]))
-        #expect(SearchMatching.matches(query: "Røde", in: ["Rode NT1"]))
+    /// Gear names are full of them, and half the listings you copy a name from
+    /// drop the accents. Typing the plain letter finds the accented one.
+    @Test func ignoresDecomposableDiacritics() {
+        #expect(SearchMatching.matches(query: "voigtlander", in: ["Voigtländer Nokton 50mm"]))
+        #expect(SearchMatching.matches(query: "Voigtländer", in: ["Voigtlander Nokton 50mm"]))
+    }
+
+    /// The boundary of that, pinned so it isn't rediscovered as a bug: `ø` is
+    /// its own letter in Unicode rather than an accented `o`, so no amount of
+    /// diacritic folding turns "rode" into "Røde". Typing any part of the name
+    /// as written still finds it.
+    @Test func doesNotFoldLettersThatMerelyLookAccented() {
+        #expect(SearchMatching.matches(query: "rode", in: ["Røde NT1"]) == false)
+        #expect(SearchMatching.matches(query: "røde", in: ["Røde NT1"]))
+        #expect(SearchMatching.matches(query: "NT1", in: ["Røde NT1"]))
     }
 
     @Test func searchesEveryFieldGiven() {

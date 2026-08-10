@@ -40,8 +40,8 @@ screens against dark for now.
 | `surface` | `#201F1D` (approx, adjust as needed) | cards, list rows |
 | `textPrimary` | `#F2EDE4` | warm ivory, primary text |
 | `textSecondary` | ~60% opacity of `textPrimary` | secondary/meta text |
-| `accentBrass` | `#C79A56` | primary accent — value figures, CTAs, the desire dial's "keep" end |
-| `accentMoss` | `#52634F` | secondary accent — positive/upward movement |
+| `accentBrass` | `#C79A56` | primary accent — value figures, CTAs |
+| `accentMoss` | `#52634F` | secondary accent — positive/upward movement, the desire dial's "keep" end |
 | `accentRust` | `#9C4A34` | the desire dial's "sell" end, low-desire flags |
 | `divider` | `#3A3B3E` | hairlines, borders |
 
@@ -67,7 +67,11 @@ Three roles:
 Replaces a plain 1–5 star rating everywhere it would otherwise appear
 (item cards, item detail, the sell-candidate ranking list). A simple arc
 gauge — thin stroke, flat fill, no gradient — sweeping from `accentRust`
-(1, "ready to sell") to `accentBrass` (5, "absolutely keeping it"). This
+(1, "ready to sell") through `dialMidpoint` to `accentMoss` (5,
+"absolutely keeping it"). The brief originally put `accentBrass` at the
+"keep" end; it moved to moss so brass stays the app's money colour
+rather than doubling as a rating. See tokens.md for the ramp and the
+midpoint retune that came with it. This
 is the one recurring, distinctive, *functional* piece of visual identity
 for the app — it should show up small and quiet in list contexts, larger
 and directly editable (drag or tap-to-set) in the item form and detail

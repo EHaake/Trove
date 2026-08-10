@@ -41,7 +41,7 @@ struct ThemeColors: Sendable {
     /// The contrast-safe lift of `accentRust`, for when rust has to be text.
     let accentRustText: Color
 
-    /// The desire dial's middle of range, between rust and brass.
+    /// The desire dial's middle of range, between rust and moss.
     let dialMidpoint: Color
 }
 
@@ -74,6 +74,10 @@ extension ThemeColors {
         accentRust: Color(hex: "#9C4A34"),
         accentRustText: Color(hex: "#B8674F"),
 
-        dialMidpoint: Color(hex: "#A87C4A")
+        // Retuned when the dial's "keep" end moved from brass to moss. The
+        // old #A87C4A was the midpoint of a rust→brass ramp, so against moss
+        // it left every stop up to 4 in orange and put the entire hue change
+        // into one 68° jump at 4→5. See `design/tokens.md`.
+        dialMidpoint: Color(hex: "#75774A")
     )
 }

@@ -21,7 +21,12 @@ enum SearchMatching {
     ///
     /// `localizedStandardContains` is case- *and* diacritic-insensitive, which
     /// is what someone typing "leica" into a search box expects, and what lets
-    /// "rode" find a Røde microphone.
+    /// "voigtlander" find a Voigtländer.
+    ///
+    /// Folding only reaches accents that decompose, so "rode" does not find a
+    /// Røde — `ø` is its own letter, not an accented `o`. Pinned in
+    /// `SearchMatchingTests` so it reads as a known edge of the rule rather
+    /// than turning up later as a bug report.
     static func matches(query: String, in fields: [String?]) -> Bool {
         let query = normalized(query)
         guard !query.isEmpty else { return true }

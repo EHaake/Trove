@@ -52,7 +52,7 @@ struct ThemeColorTokenTests {
         #expect(rgba(colors.accentMossText) == (0x7E, 0x96, 0x79, 1.0))
         #expect(rgba(colors.accentRust) == (0x9C, 0x4A, 0x34, 1.0))
         #expect(rgba(colors.accentRustText) == (0xB8, 0x67, 0x4F, 1.0))
-        #expect(rgba(colors.dialMidpoint) == (0xA8, 0x7C, 0x4A, 1.0))
+        #expect(rgba(colors.dialMidpoint) == (0x75, 0x77, 0x4A, 1.0))
     }
 
     /// tokens.md is explicit that the text-safe lifts are an accessibility fix,
@@ -111,9 +111,15 @@ struct NoHardcodedColorsTests {
         return files
     }
 
+    /// The leading `\b` matters: without it this matched any identifier ending
+    /// in "Color(" — `DesireDial.arcColor(for:in:)`, or a plain
+    /// `.foregroundColor(theme.colors.x)` — and reported them as literals.
+    /// `Color(` still has to be flagged wherever it's genuinely constructed,
+    /// which the word boundary leaves intact: the character before it is
+    /// always a space, dot or paren in real calls.
     @Test func noViewConstructsAColorDirectly() throws {
         let names = Self.systemColorNames.joined(separator: "|")
-        let constructed = try Regex(#"Color\("#)
+        let constructed = try Regex(#"\bColor\("#)
         let named = try Regex(#"Color\.(\#(names))\b"#)
 
         var violations: [String] = []
