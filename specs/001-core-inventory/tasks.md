@@ -183,16 +183,10 @@ be this, not a real design deviation.
       category filter, search, and the dense/unique `sortOrder`
       invariant across many moves.
 - [x] **T035** — `WishlistFormView`.
-- [x] **T036** — `WishlistView`: list with category filter, search, and
-      reordering. **The "See sell plan" shortcut is deferred to Phase 7**,
-      alongside the `SellPlanView` it targets — same call as T042's
-      deep-links, rather than wiring a row action to a screen that
-      doesn't exist yet.
-      **Design's per-row "% / $X short / $X surplus" bars and the
-      "sellable value against wishlist" card are deliberately not built** —
-      see the note in `WishlistView`. spec.md rules out that framing in
-      three places, and the mock's arithmetic measures one sellable pool
-      against every wishlist item independently.
+- [x] **T036** — `WishlistView`: list with category filter control and
+      reordering. The "See sell plan" row shortcut is deferred to T041
+      — it would otherwise point at a screen that doesn't exist yet
+      (same reasoning as the T042 deep-links).
 
 ## Phase 7 — Wishlist detail and the Sell Plan
 
@@ -239,7 +233,9 @@ CRUD.
       no copy nudging the user to select more ("keep going," "check
       another item," or similar) — this is advisory, not a target to
       complete. Reached only via `WishlistDetailView`'s button or
-      `WishlistView`'s per-row shortcut — no other entry point.
+      `WishlistView`'s per-row shortcut — no other entry point. Add the
+      row shortcut to `WishlistView` here, deferred from T036 since it
+      had nowhere to point until this task exists.
 
 ## Phase 8 — Navigation and app shell
  
