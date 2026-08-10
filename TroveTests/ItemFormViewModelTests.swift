@@ -390,18 +390,18 @@ struct ItemFormViewModelMoneyTests {
         ("0.5", 50),
     ])
     func convertsDecimalAmountsToCents(input: String, expected: Int) {
-        #expect(ItemFormViewModel.cents(from: Decimal(string: input)!) == expected)
+        #expect(Money.cents(from: Decimal(string: input)!) == expected)
     }
 
     /// A third decimal place rounds to the nearest cent rather than truncating.
     @Test(arguments: [("1.005", 101), ("1.004", 100), ("1.006", 101)])
     func roundsSubCentAmounts(input: String, expected: Int) {
-        #expect(ItemFormViewModel.cents(from: Decimal(string: input)!) == expected)
+        #expect(Money.cents(from: Decimal(string: input)!) == expected)
     }
 
     @Test func centsRoundTripBackToTheSameAmount() {
         let amount = Decimal(string: "1299.99")!
-        let cents = ItemFormViewModel.cents(from: amount)
-        #expect(ItemFormViewModel.amount(fromCents: cents) == amount)
+        let cents = Money.cents(from: amount)
+        #expect(Money.amount(fromCents: cents) == amount)
     }
 }

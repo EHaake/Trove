@@ -94,11 +94,11 @@ final class ItemFormViewModel {
         let item = editingItem ?? Item()
         item.name = Self.trimmed(name)
         item.categoryPath = canonicalCategoryPath()
-        item.purchasePriceCents = Self.cents(from: purchasePrice ?? 0)
+        item.purchasePriceCents = Money.cents(from: purchasePrice ?? 0)
         item.purchaseDate = purchaseDate
         item.serialNumber = Self.nilIfBlank(serialNumber)
         item.purchaseLocation = Self.nilIfBlank(purchaseLocation)
-        item.currentValueCents = currentValue.map(Self.cents(from:))
+        item.currentValueCents = currentValue.map(Money.cents(from:))
         item.desireToKeep = desireToKeep
         item.condition = condition
         item.conditionNotes = Self.nilIfBlank(conditionNotes)
@@ -117,21 +117,6 @@ final class ItemFormViewModel {
             saveFailureMessage = error.localizedDescription
             return false
         }
-    }
-
-    // MARK: - Conversion
-
-    /// Rounds to the nearest cent rather than truncating, so a stray third
-    /// decimal doesn't quietly lose the user a penny.
-    static func cents(from amount: Decimal) -> Int {
-        var scaled = amount * 100
-        var rounded = Decimal()
-        NSDecimalRound(&rounded, &scaled, 0, .plain)
-        return NSDecimalNumber(decimal: rounded).intValue
-    }
-
-    static func amount(fromCents cents: Int) -> Decimal {
-        Decimal(cents) / 100
     }
 
     // MARK: - Private
@@ -160,11 +145,11 @@ final class ItemFormViewModel {
     private func populate(from item: Item) {
         name = item.name
         categoryPath = item.categoryPath
-        purchasePrice = Self.amount(fromCents: item.purchasePriceCents)
+        purchasePrice = Money.amount(fromCents: item.purchasePriceCents)
         purchaseDate = item.purchaseDate
         serialNumber = item.serialNumber ?? ""
         purchaseLocation = item.purchaseLocation ?? ""
-        currentValue = item.currentValueCents.map(Self.amount(fromCents:))
+        currentValue = item.currentValueCents.map(Money.amount(fromCents:))
         desireToKeep = item.desireToKeep
         condition = item.condition
         conditionNotes = item.conditionNotes ?? ""

@@ -27,6 +27,9 @@ struct ContentView: View {
                     Tab("Items", systemImage: "square") {
                         NavigationStack { ItemListView(modelContext: modelContext) }
                     }
+                    Tab("Wishlist", systemImage: "circle.dashed") {
+                        NavigationStack { WishlistView(modelContext: modelContext) }
+                    }
                 }
             } else {
                 Color.clear
@@ -71,6 +74,26 @@ struct ContentView: View {
                 )
             )
         }
+
+        let wanted: [(String, String, Int, String?)] = [
+            ("Leica Summicron 35mm f/2 (v4)", "Photography/Lenses", 240_000, "v4 only, no haze"),
+            ("Vox AC15 Custom", "Music/Amps", 105_000, nil),
+            ("Hasselblad 80mm f/2.8 CF", "Photography/Lenses", 95_000, nil),
+            ("Focal Clear MG", "Audio/Headphones", 149_000, "Open-back, used is fine"),
+        ]
+
+        for (index, entry) in wanted.enumerated() {
+            modelContext.insert(
+                WishlistItem(
+                    name: entry.0,
+                    categoryPath: entry.1,
+                    estimatedCostCents: entry.2,
+                    notes: entry.3,
+                    sortOrder: index
+                )
+            )
+        }
+
         try? modelContext.save()
     }
 }

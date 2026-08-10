@@ -88,7 +88,12 @@ final class ItemListViewModel {
                 // in the schema, same gap `ItemRow`'s meta line works around.
                 .filter { SearchMatching.matches(query: searchText, in: [$0.name, $0.serialNumber]) }
                 .sorted(by: isOrderedBefore)
-            categoryOptions = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []
+            // Built from the unfiltered fetch, so the chips stay put as the
+            // filter changes — and from owned items only, so the row doesn't
+            // offer categories that only wishlist entries sit in.
+            categoryOptions = CategoryPathHelper.sortedDistinctPaths(
+                all.map { (path: $0.categoryPath, createdAt: $0.createdAt) }
+            )
             categoryLabels = CategoryPathHelper.displayLabels(for: categoryOptions)
         } catch {
             loadFailureMessage = error.localizedDescription

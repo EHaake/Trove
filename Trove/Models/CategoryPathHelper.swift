@@ -22,7 +22,22 @@ struct CategoryPathHelper {
     /// first wins — matching the canonicalization rule below, so a path never
     /// appears to change casing depending on who's asking.
     func allCategoryPaths() throws -> [String] {
-        try canonicalPaths().sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+        Self.sortedDistinctPaths(try allRecords())
+    }
+
+    /// The distinct paths a single screen's own rows use, for its filter chips.
+    ///
+    /// Deliberately not `allCategoryPaths()`. Autocomplete spans both entities
+    /// because a path established anywhere should be offered everywhere — that's
+    /// an acceptance criterion. Filter chips are the opposite: a chip on the
+    /// wishlist for a category only owned gear sits in leads to an empty list,
+    /// and with a short wishlist most of the row ends up doing that.
+    ///
+    /// Pass the screen's **unfiltered** rows, so choosing one chip never
+    /// removes the means of choosing another.
+    static func sortedDistinctPaths(_ records: [(path: String, createdAt: Date)]) -> [String] {
+        distinctPathsPreferringEarliestCasing(records)
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
     /// Known paths whose start matches `prefix`, case-insensitively — for
@@ -156,12 +171,15 @@ struct CategoryPathHelper {
     /// Every distinct path in use, case-insensitively, keeping whichever
     /// casing was attached to the earliest-created record using that path.
     private func canonicalPaths() throws -> [String] {
+        Self.distinctPathsPreferringEarliestCasing(try allRecords())
+    }
+
+    private func allRecords() throws -> [(path: String, createdAt: Date)] {
         let itemRecords = try modelContext.fetch(FetchDescriptor<Item>())
             .map { (path: $0.categoryPath, createdAt: $0.createdAt) }
         let wishlistRecords = try modelContext.fetch(FetchDescriptor<WishlistItem>())
             .map { (path: $0.categoryPath, createdAt: $0.createdAt) }
-
-        return Self.distinctPathsPreferringEarliestCasing(itemRecords + wishlistRecords)
+        return itemRecords + wishlistRecords
     }
 
     /// The ordering rule itself, as a pure function over `(path, createdAt)`

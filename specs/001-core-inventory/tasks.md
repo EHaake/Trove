@@ -167,17 +167,32 @@ be this, not a real design deviation.
 
 ## Phase 6 — Wishlist CRUD
 
-- [ ] **T031** — `WishlistFormViewModel`: create/edit a `WishlistItem`.
-- [ ] **T032** — Unit tests for `WishlistFormViewModel`.
-- [ ] **T033** — `WishlistViewModel`: fetch/list wishlist items, filter by
-      category (same prefix/case-insensitive matching as
-      `ItemListViewModel`), manual reordering via `sortOrder`.
-- [ ] **T034** — Unit tests for `WishlistViewModel`, including the
-      category filter.
-- [ ] **T035** — `WishlistFormView`.
-- [ ] **T036** — `WishlistView`: list with category filter control and
-      reordering; each row includes a "See sell plan" shortcut that
-      navigates directly to that item's `SellPlanView`.
+- [x] **T031** — `WishlistFormViewModel`: create/edit a `WishlistItem`.
+      Blank estimated cost is rejected rather than saved as $0, matching
+      the item form's purchase price. New entries append to the manual
+      order by taking the highest `sortOrder` in use, not by counting
+      rows — counting reuses a position after a deletion.
+- [x] **T032** — Unit tests for `WishlistFormViewModel`.
+- [x] **T033** — `WishlistViewModel`: fetch/list wishlist items, filter by
+      category (same matching as `ItemListViewModel`), search by name,
+      manual reordering via `sortOrder`. Reordering is offered only
+      against the whole list in its own order — a drag on a filtered or
+      cost-sorted list would renumber the visible rows and silently
+      reshuffle the rest.
+- [x] **T034** — Unit tests for `WishlistViewModel`, including the
+      category filter, search, and the dense/unique `sortOrder`
+      invariant across many moves.
+- [x] **T035** — `WishlistFormView`.
+- [x] **T036** — `WishlistView`: list with category filter, search, and
+      reordering. **The "See sell plan" shortcut is deferred to Phase 7**,
+      alongside the `SellPlanView` it targets — same call as T042's
+      deep-links, rather than wiring a row action to a screen that
+      doesn't exist yet.
+      **Design's per-row "% / $X short / $X surplus" bars and the
+      "sellable value against wishlist" card are deliberately not built** —
+      see the note in `WishlistView`. spec.md rules out that framing in
+      three places, and the mock's arithmetic measures one sellable pool
+      against every wishlist item independently.
 
 ## Phase 7 — Wishlist detail and the Sell Plan
 
