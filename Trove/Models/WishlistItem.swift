@@ -24,6 +24,16 @@ final class WishlistItem {
 
     var createdAt: Date = Date.now
 
+    /// Optional for the same CloudKit reason as `Item.photos` — read it as
+    /// `photos ?? []`.
+    ///
+    /// `.cascade` here, `.nullify` for `plannedSaleItems` below, and the
+    /// contrast is the point: a photo of something you wanted has no life once
+    /// the wishlist entry is gone, whereas the gear on its Sell Plan very much
+    /// does.
+    @Relationship(deleteRule: .cascade, inverse: \Photo.wishlistItem)
+    var photos: [Photo]? = []
+
     /// The Sell Plan: owned items the user is weighing selling to fund this
     /// purchase. Persisted rather than recomputed, starts empty, and never
     /// auto-populated — see spec.md on why this is advisory rather than a
@@ -42,6 +52,7 @@ final class WishlistItem {
         currencyCode: String = "USD",
         notes: String? = nil,
         sortOrder: Int = 0,
+        photos: [Photo]? = [],
         plannedSaleItems: [Item]? = []
     ) {
         self.name = name
@@ -50,6 +61,7 @@ final class WishlistItem {
         self.currencyCode = currencyCode
         self.notes = notes
         self.sortOrder = sortOrder
+        self.photos = photos
         self.plannedSaleItems = plannedSaleItems
         self.createdAt = .now
     }

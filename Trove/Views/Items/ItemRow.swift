@@ -8,11 +8,9 @@ struct ItemRow: View {
 
     @Environment(\.theme) private var theme
 
-    private let thumbnailSide: CGFloat = 72
-
     var body: some View {
         HStack(spacing: theme.metrics.cardPadding) {
-            thumbnail
+            RowThumbnail(photos: item.photos ?? [])
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(item.name)
@@ -38,24 +36,6 @@ struct ItemRow: View {
                 .fill(theme.colors.surface)
         )
         .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder
-    private var thumbnail: some View {
-        let first = PhotoSelection.inDisplayOrder(item.photos ?? []).first
-
-        Group {
-            if let first, let image = Image(imageData: first.imageData) {
-                image.resizable().scaledToFill()
-            } else {
-                ZStack {
-                    theme.colors.surfaceInset
-                    Text("Photo").monoLabel(color: theme.colors.textInactive)
-                }
-            }
-        }
-        .frame(width: thumbnailSide, height: thumbnailSide)
-        .clipShape(RoundedRectangle(cornerRadius: theme.metrics.thumbnailRadius))
     }
 
     /// Design's meta line reads "LEICA · CAMERAS" — brand then category. There

@@ -32,6 +32,17 @@ final class Photo {
     /// Inverse of `Item.photos`, which owns the `@Relationship` declaration.
     var item: Item?
 
+    /// Inverse of `WishlistItem.photos`, declared the same way on that side.
+    ///
+    /// A photo belongs to at most one of `item` or `wishlistItem`, never both.
+    /// SwiftData can't express "exactly one of these two", so what actually
+    /// holds the line is that each form only ever writes its own side —
+    /// `PhotoOwnershipTests` is what keeps that true rather than a comment.
+    /// Two independently-optional relationships is what lets one `Photo` type
+    /// serve both entities without a shared parent protocol or the polymorphic
+    /// relationship SwiftData doesn't really support.
+    var wishlistItem: WishlistItem?
+
     var source: PhotoSource {
         get { PhotoSource(rawValue: sourceRawValue) ?? .device }
         set { sourceRawValue = newValue.rawValue }

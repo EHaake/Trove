@@ -273,6 +273,8 @@ private struct WishlistRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: theme.metrics.cardPadding) {
+            RowThumbnail(photos: item.photos ?? [])
+
             VStack(alignment: .leading, spacing: 5) {
                 Text(item.name)
                     .font(theme.typography.rowTitle)

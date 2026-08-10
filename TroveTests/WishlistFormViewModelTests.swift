@@ -228,4 +228,55 @@ struct WishlistFormSaveTests {
         #expect(Set(presets).count == presets.count)
         #expect(presets == presets.sorted())
     }
+
+    // MARK: - Photos
+
+    /// Reopening an item for edit has to bring its photos back, or saving any
+    /// other field would silently clear them — `save()` assigns the whole set.
+    @Test func editingLoadsTheExistingPhotosAndKeepsThemOnSave() throws {
+        let context = try makeInMemoryContext()
+        let existing = WishlistItem(name: "Summicron 35mm f/2", categoryPath: "Photography/Lenses")
+        context.insert(existing)
+        existing.photos = PhotoSelection.appending([Data([0x01]), Data([0x02])], to: [])
+        try context.save()
+
+        let viewModel = WishlistFormViewModel(modelContext: context, editing: existing)
+        #expect(viewModel.photos.count == 2)
+
+        viewModel.estimatedCost = 2_400
+        #expect(viewModel.save())
+
+        #expect(existing.photos?.count == 2)
+    }
+
+    @Test func removingEveryPhotoInTheFormEmptiesTheItem() throws {
+        let context = try makeInMemoryContext()
+        let existing = WishlistItem(name: "Summicron 35mm f/2", categoryPath: "Photography/Lenses")
+        context.insert(existing)
+        existing.photos = PhotoSelection.appending([Data([0x01])], to: [])
+        try context.save()
+
+        let viewModel = WishlistFormViewModel(modelContext: context, editing: existing)
+        viewModel.photos = []
+        #expect(viewModel.save())
+
+        #expect(existing.photos?.isEmpty == true)
+    }
+
+    /// Photos are optional, matching owned items — spec.md's entity list says
+    /// "multiple photos supported", not "at least one", and the acceptance
+    /// criteria agree.
+    @Test func aWishlistItemSavesWithNoPhotosAtAll() throws {
+        let context = try makeInMemoryContext()
+        let viewModel = WishlistFormViewModel(modelContext: context)
+        viewModel.name = "Vox AC15 Custom"
+        viewModel.categoryPath = "Music/Amps"
+        viewModel.estimatedCost = 1_050
+
+        #expect(viewModel.save())
+        #expect(viewModel.validationErrors.isEmpty)
+
+        let saved = try #require(try context.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(saved.photos?.isEmpty == true)
+    }
 }

@@ -34,6 +34,11 @@ final class WishlistFormViewModel {
     var estimatedCost: Decimal?
     var notes: String = ""
 
+    /// Same `PhotoPickerField` binding the item form uses. A wanted item's
+    /// photo is usually a listing shot or a reference image rather than a
+    /// picture of something owned, which changes nothing about how it's stored.
+    var photos: [Photo] = []
+
     private(set) var validationErrors: Set<ValidationError> = []
     private(set) var saveFailureMessage: String?
     private(set) var categorySuggestions: [String] = []
@@ -74,6 +79,10 @@ final class WishlistFormViewModel {
         item.categoryPath = canonicalCategoryPath()
         item.estimatedCostCents = Money.cents(from: estimatedCost ?? 0)
         item.notes = Self.nilIfBlank(notes)
+        // Assigning the whole set, not appending: SwiftData sets each photo's
+        // `wishlistItem` inverse from this side, and anything the user removed
+        // in the picker drops out of the relationship here.
+        item.photos = photos
 
         if editingItem == nil {
             // New entries go to the end of the manual order. Fetching the max
@@ -122,6 +131,7 @@ final class WishlistFormViewModel {
         categoryPath = item.categoryPath
         estimatedCost = Money.amount(fromCents: item.estimatedCostCents)
         notes = item.notes ?? ""
+        photos = item.photos ?? []
     }
 
     private static func trimmed(_ value: String) -> String {

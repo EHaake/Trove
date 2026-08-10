@@ -3,10 +3,13 @@ import SwiftUI
 
 /// Add or edit a wishlist item, following
 /// `design/screens/Trove Wishlist Form.png`: what you want, its category, what
-/// you think it'll cost, and notes.
+/// you think it'll cost, photos, and notes.
 ///
-/// Shorter than the item form and with no disclosure — there are only four
-/// fields, and none of them is optional enough to hide.
+/// Shorter than the item form and with no disclosure — there are only five
+/// fields, and none of them is optional enough to hide. Design drew this
+/// screen without a photo field; spec.md has since brought wishlist photos
+/// into scope, and they use the same `PhotoPickerField` the item form does
+/// rather than a second, wishlist-shaped one.
 struct WishlistFormView: View {
     @State private var viewModel: WishlistFormViewModel
 
@@ -35,6 +38,10 @@ struct WishlistFormView: View {
                             isInvalid: viewModel.validationErrors.contains(.categoryMissing)
                         )
                         costField
+                        // After the required trio, before notes — the same
+                        // order the item form uses among its optional fields,
+                        // since the two sit one tab apart.
+                        PhotoPickerField(photos: $viewModel.photos)
                         notesField
                     }
                     .padding(.horizontal, theme.metrics.screenGutter)

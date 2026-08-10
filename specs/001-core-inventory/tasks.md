@@ -187,6 +187,23 @@ be this, not a real design deviation.
       reordering. The "See sell plan" row shortcut is deferred to T041
       — it would otherwise point at a screen that doesn't exist yet
       (same reasoning as the T042 deep-links).
+- [x] **T036a** — Wishlist photos, added to scope after Phase 6 and
+      before Phase 7. `Photo` gains a second optional inverse
+      (`wishlistItem`) alongside `item`, `WishlistItem` gains
+      `photos: [Photo]?` (`.cascade`, deliberately unlike
+      `plannedSaleItems`' `.nullify`), and `WishlistFormView` reuses the
+      same `PhotoPickerField` the item form already uses rather than
+      growing a second one. Nothing enforces "one parent, never both" at
+      the schema level — SwiftData can't express it — so
+      `PhotoOwnershipTests` is what holds the line instead of a comment.
+- [x] **T036b** — `RowThumbnail`: the reserved photo slot both list
+      screens now use, replacing `ItemRow`'s inline version so the two
+      can't drift. Empty rows draw a flat placeholder rather than
+      collapsing, per plan.md's standing rule. The claim is checked by
+      rendering the view and measuring it, not by eye —
+      `RowThumbnailTests` also pins that the thumbnail is the user's
+      first photo by `sortOrder`, which a row reading `photos.first`
+      would get wrong only intermittently.
 
 ## Phase 7 — Wishlist detail and the Sell Plan
 
@@ -202,12 +219,14 @@ place in the app with real persisted, user-editable state beyond simple
 CRUD.
 
 - [ ] **T037** — `WishlistDetailViewModel`: load a `WishlistItem`'s own
-      fields for display (name, category, estimated cost, notes). No
-      ranking or plan logic here.
+      fields for display (name, category, estimated cost, notes,
+      photos). No ranking or plan logic here.
 - [ ] **T038** — `WishlistDetailView`: plain display of the wishlist
       item's fields, with space reserved in the layout for future
       pricing/trend info, and a single "Find items to sell" button/nav
-      link to `SellPlanView`.
+      link to `SellPlanView`. Photos follow `ItemDetailView`'s
+      shrink-the-hero rule, not the list rows' reserved-slot rule — see
+      plan.md on why those are two answers to different questions.
 - [ ] **T039** — `SellPlanViewModel`: given a `WishlistItem`,
       - compute the candidate pool (owned items, `desireToKeep ≤ 3`,
         non-nil `currentValueCents`, sorted ascending by `desireToKeep`,
