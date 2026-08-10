@@ -63,6 +63,15 @@ actually useful once the app is in daily use.
 - **`007-auto-categorization`** — Suggest a category path from a photo
   instead of typing it. The category field being a plain string path
   (not a fixed enum) since `001` is what keeps this a pure addition.
+- **`008-category-colors`** — A curated, theme-harmonizing palette applied
+  to top-level categories only (`Photography`, `Music`, etc. — not every
+  leaf), user-selectable when a new top-level category is first used, or
+  auto-assigned if they don't choose. Came up during `001`'s Phase 4
+  review as a way to make leaf-only chip labels ("Electric," "Hollowbody")
+  less ambiguous at a glance; deferred because picking the palette is a
+  real design decision on par with the original brief, not an
+  incidental engineering one — worth a deliberate Claude Design pass,
+  not a guess.
 
 ## Working convention
 
