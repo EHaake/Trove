@@ -81,6 +81,7 @@ field without re-deriving it each time.
 | `estimatedCostCents` | `Int` | default `0` |
 | `currencyCode` | `String` | ISO 4217 code, default `"USD"` |
 | `notes` | `String?` | |
+| `photos` | `[Photo]?` | to-many relationship, same optionality reason as `Item.photos` |
 | `sortOrder` | `Int` | default `0`, user-adjustable manual ordering |
 | `createdAt` | `Date` | default `.now` |
 | `plannedSaleItems` | `[Item]?` | to-many relationship — see "Sell Plan" below; optional for the same CloudKit reason as `Item.photos` |
@@ -94,6 +95,13 @@ field without re-deriving it each time.
 | `sourceRawValue` | `String` | stored; raw value of a `PhotoSource` enum (`device`/`fetched`), default `"device"` |
 | `sortOrder` | `Int` | default `0` |
 | `item` | `Item?` | inverse of `Item.photos` |
+| `wishlistItem` | `WishlistItem?` | inverse of `WishlistItem.photos` |
+
+A `Photo` belongs to at most one of `item` or `wishlistItem`, never both —
+enforced by which form created it, not a schema-level constraint. Both
+relationships being independently optional is what makes one `Photo`
+type work for both entities without a shared parent protocol or a
+polymorphic relationship SwiftData doesn't really support.
 
 `@Attribute(.externalStorage)` tells SwiftData to store the blob outside
 the main store file and hand it to CloudKit as a `CKAsset` rather than
@@ -262,11 +270,13 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
     Sell Plan is a decision-support tool, not a sales ledger — a natural
     future feature, deliberately excluded now to keep this screen simple.
 - **`WishlistFormView`** / `WishlistFormViewModel` — add/edit wishlist
-  item.
+  item, including `PhotoPickerField` — same shared component `ItemFormView`
+  uses, now bound to `WishlistItem.photos` instead of `Item.photos`.
 - **`CategoryPickerField`** — shared component (text field + autocomplete
   suggestion list), used by both item and wishlist forms.
 - **`PhotoPickerField`** — wraps `PhotosUI.PhotosPicker` for multi-photo
-  selection. Device photos only in v1 — see "Future: stock photos" below.
+  selection, shared between `ItemFormView` and `WishlistFormView`. Device
+  photos only in v1 — see "Future: stock photos" below.
 
 ### Navigation
 
@@ -290,6 +300,21 @@ content beneath scrolls independently. Found at T025 review: everything
 was originally one scrolling unit, so the filter chips disappeared along
 with the list on scroll. Apply this as a standing layout rule for any
 future list-style screen, not a one-off fix.
+
+**List rows always reserve a thumbnail slot; detail screens don't.**
+Two different answers to "no photo exists" for two different scales.
+List rows (`ItemListView`, `WishlistView`) show a small, consistent
+placeholder — matching the flat/graphic icon language from the design
+brief, not a blank grey box — when an item has no photo, so every row in
+a scroll keeps the same width and rhythm regardless of which items
+happen to have images. A row that's sometimes text-only and sometimes
+has a thumbnail reads as visually broken in a scrolling list. Detail
+screens are the opposite call, already made at T025: `ItemDetailView`'s
+hero shrinks from 240pt to 108pt rather than showing an empty photo area
+at full size, because a large empty rectangle is a worse look than a
+smaller one — the placeholder-vs-shrink tradeoff flips once the empty
+space gets big enough to dominate the screen. Both are deliberate; don't
+unify them just because they're both "no photo" states.
 
 ## Dashboard value calculation
 

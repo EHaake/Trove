@@ -91,7 +91,7 @@ they can reason about selling underused gear to fund new purchases.
   sell); defaults to 3 on creation
 - Condition — one of New / Excellent / Good / Fair / Broken, plus a
   free-text condition notes field for specifics
-- Photo(s) — multiple photos supported, at least one
+- Photo(s) — multiple photos supported
 - Notes (free text)
 
 ### Wishlist Item
@@ -99,6 +99,7 @@ they can reason about selling underused gear to fund new purchases.
 - Category path (same system as owned items)
 - Estimated cost
 - Notes
+- Photo(s) — multiple photos supported, same treatment as owned items
 - Priority or ranking (exact mechanism TBD in plan — at minimum the user
   can order the list)
 - Sell Plan — a persisted selection of owned items the user is
@@ -273,7 +274,7 @@ need to clear.)
       notes.
 - [ ] User can edit and delete an owned item.
 - [ ] User can create, edit, and delete a wishlist item (name, category,
-      estimated cost, notes).
+      estimated cost, notes, photos).
 - [ ] Category paths autocomplete from previously-used paths across both
       owned items and wishlist items.
 - [ ] Dashboard shows total current value (excluding un-valued items,
