@@ -25,10 +25,7 @@ struct DesireDial: View {
 
     private var level: DesireLevel { DesireLevel(clamping: value) }
 
-    /// 1 sits at the very start of the arc, 5 at the very end.
-    private var progress: CGFloat {
-        CGFloat(level.rawValue - 1) / CGFloat(DesireLevel.allCases.count - 1)
-    }
+    private var progress: CGFloat { CGFloat(Self.progress(for: level)) }
 
     private var lineWidth: CGFloat { max(diameter * 0.035, 2) }
 
@@ -74,12 +71,16 @@ struct DesireDial: View {
 
     /// Marks the current point on the scale. At value 1 it sits at the arc's
     /// start, which is why the filled arc can legitimately have zero length.
+    ///
+    /// Offsets straight up and then rotates, rather than being `.position`ed:
+    /// the rotation is what makes the knob travel *along* the arc between
+    /// values instead of cutting the chord across it.
     private var knob: some View {
         Circle()
             .fill(arcColor)
             .frame(width: lineWidth * 2.2, height: lineWidth * 2.2)
-            .offset(y: -(diameter - lineWidth) / 2)
-            .rotationEffect(startAngle + Angle.degrees(sweep.degrees * Double(progress)) + .degrees(90))
+            .offset(y: -Self.arcRadius(diameter: diameter))
+            .rotationEffect(Self.angle(for: level, startAngle: startAngle, sweep: sweep) + .degrees(90))
             .animation(.snappy(duration: 0.2), value: value)
     }
 
@@ -150,6 +151,49 @@ struct DesireDial: View {
         case .keepingForNow: mid.mix(with: high, by: 0.5)
         case .absolutelyKeeping: high
         }
+    }
+
+    // MARK: - Geometry
+
+    /// 1 sits at the very start of the arc, 5 at the very end.
+    static func progress(for level: DesireLevel) -> Double {
+        Double(level.rawValue - 1) / Double(DesireLevel.allCases.count - 1)
+    }
+
+    /// The arc's centreline radius.
+    ///
+    /// `Circle()` inscribes itself in its frame and `stroke` centres the line
+    /// on that path, so the arc runs at exactly half the diameter with the
+    /// stroke spreading either side of it. The knob offset by
+    /// `(diameter - lineWidth) / 2` instead, which parked it half a
+    /// stroke-width inboard at every value — subtle enough to look
+    /// deliberate, obvious once you rest on one dial.
+    static func arcRadius(diameter: CGFloat) -> CGFloat { diameter / 2 }
+
+    /// Where a level sits on the dial, as a screen bearing measured clockwise
+    /// from 3 o'clock — the same convention the trimmed `Circle` is drawn in
+    /// and `value(at:)` reads back.
+    static func angle(for level: DesireLevel, startAngle: Angle, sweep: Angle) -> Angle {
+        .degrees(startAngle.degrees + sweep.degrees * progress(for: level))
+    }
+
+    /// The knob's centre in the dial's own coordinate space.
+    ///
+    /// Exists so the placement can be tested as the exact inverse of
+    /// `value(at:centre:startAngle:sweep:)`: a knob that doesn't sit where a
+    /// tap on it would read is the whole class of bug here.
+    static func knobCentre(
+        for level: DesireLevel,
+        diameter: CGFloat,
+        startAngle: Angle,
+        sweep: Angle
+    ) -> CGPoint {
+        let bearing = angle(for: level, startAngle: startAngle, sweep: sweep).radians
+        let radius = arcRadius(diameter: diameter)
+        return CGPoint(
+            x: diameter / 2 + radius * cos(bearing),
+            y: diameter / 2 + radius * sin(bearing)
+        )
     }
 
     // MARK: - Touch mapping

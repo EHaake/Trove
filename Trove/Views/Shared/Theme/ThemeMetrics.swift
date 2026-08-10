@@ -45,6 +45,17 @@ struct ThemeMetrics: Sendable {
 }
 
 extension ThemeMetrics {
+    /// How far list rows sit in from the screen edge — less than the gutter,
+    /// by exactly the card's own padding.
+    ///
+    /// Cards reach closer to the edge than the header block does, while the
+    /// text *inside* a card still lines up with the title above it. Derived
+    /// rather than written as `8` so it survives either token changing, and
+    /// so it can't be mistaken for a spacing value of its own.
+    var listRowInset: CGFloat { screenGutter - cardPadding }
+}
+
+extension ThemeMetrics {
     static let standard = ThemeMetrics(
         screenGutter: 24,
         cardPadding: 16,

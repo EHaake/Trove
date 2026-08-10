@@ -87,6 +87,66 @@ struct DesireDialTests {
 
         #expect(near == far)
     }
+
+    // MARK: - Knob placement
+
+    /// The knob shipped half a stroke-width inboard of the arc at every
+    /// value, because it offset by `(diameter - lineWidth) / 2` while the arc
+    /// runs at `diameter / 2`. Reads as the dot floating just below the line
+    /// it's supposed to be riding.
+    @Test(arguments: [36.0, 62.0, 116.0, 130.0] as [CGFloat])
+    func theKnobSitsOnTheArcNotInsideIt(diameter: CGFloat) {
+        let centre = CGPoint(x: diameter / 2, y: diameter / 2)
+
+        for level in DesireLevel.allCases {
+            let knob = DesireDial.knobCentre(
+                for: level,
+                diameter: diameter,
+                startAngle: startAngle,
+                sweep: sweep
+            )
+            let radius = hypot(knob.x - centre.x, knob.y - centre.y)
+            #expect(
+                abs(radius - diameter / 2) < 0.001,
+                "level \(level.rawValue) sits at r=\(radius), arc is at r=\(diameter / 2)"
+            )
+        }
+    }
+
+    /// The other half of the contract, and the one that catches an angle
+    /// error rather than a radius one: tapping the knob has to read back as
+    /// the value the knob is showing.
+    @Test(arguments: DesireLevel.allCases)
+    func tappingTheKnobReadsBackItsOwnValue(level: DesireLevel) {
+        let diameter: CGFloat = 116
+        let knob = DesireDial.knobCentre(
+            for: level,
+            diameter: diameter,
+            startAngle: startAngle,
+            sweep: sweep
+        )
+        let readBack = DesireDial.value(
+            at: knob,
+            centre: CGPoint(x: diameter / 2, y: diameter / 2),
+            startAngle: startAngle,
+            sweep: sweep
+        )
+
+        #expect(readBack == level.rawValue)
+    }
+
+    /// Anchors the ends against the arc's own drawing: 1 at the start of the
+    /// sweep, 5 at the end of it.
+    @Test func theEndsOfTheScaleSitAtTheEndsOfTheSweep() {
+        // Degrees with a tolerance rather than `Angle ==`: the sweep is
+        // reached by multiplying through a fraction, so the last stop lands a
+        // few ulps off the sum however correct the arithmetic is.
+        let start = DesireDial.angle(for: .readyToSell, startAngle: startAngle, sweep: sweep)
+        let end = DesireDial.angle(for: .absolutelyKeeping, startAngle: startAngle, sweep: sweep)
+
+        #expect(abs(start.degrees - startAngle.degrees) < 0.001)
+        #expect(abs(end.degrees - (startAngle + sweep).degrees) < 0.001)
+    }
 }
 
 /// The dial's colour ramp, and the contrast claim underneath it.
@@ -131,6 +191,83 @@ struct DesireDialColorTests {
             #expect(DesireDial.arcColor(for: level, in: colors) != colors.accentBrass)
             #expect(DesireDial.numeralColor(for: level, in: colors) != colors.accentBrass)
         }
+    }
+
+    /// Not being *equal* to brass isn't enough — the midpoint is a yellow, and
+    /// pushing it yellow enough to separate from moss walks it straight at
+    /// brass. The rule that keeps both true at once: no stop may be closer to
+    /// the money colour than it is to its own neighbours on the dial.
+    ///
+    /// Caught a real candidate during the retune that measured 0.058 from
+    /// brass against 0.12 between stops — a "3" that read as a price.
+    @Test func noStopIsMoreConfusableWithBrassThanWithItsNeighbours() {
+        let toBrass = DesireLevel.allCases
+            .map { perceptualDistance(DesireDial.arcColor(for: $0, in: colors), colors.accentBrass) }
+            .min() ?? 0
+
+        #expect(
+            toBrass >= smallestGapBetweenStops,
+            "closest stop sits \(toBrass) from brass, stops are \(smallestGapBetweenStops) apart"
+        )
+    }
+
+    /// The complaint this ramp was retuned for: 3 read as a near-neighbour of
+    /// 4 and 5 rather than as its own colour. Adjacent stops measured 0.062,
+    /// 0.063, 0.043, 0.042 apart — the top half of the scale separated barely
+    /// two-thirds as well as the bottom.
+    ///
+    /// The floor sits above what that ramp managed and below what this one
+    /// does, so it fails on the version that prompted the complaint.
+    @Test func noTwoAdjacentLevelsLookAlike() {
+        #expect(
+            smallestGapBetweenStops > 0.06,
+            "closest pair of levels measures \(smallestGapBetweenStops) apart"
+        )
+    }
+
+    /// Evenness, separately from magnitude: one generous gap doesn't excuse a
+    /// cramped one elsewhere, which is exactly how the first rust→moss
+    /// attempt failed.
+    @Test func theStopsAreSpacedEvenly() {
+        let gaps = adjacentGaps
+        let widest = gaps.max() ?? 0
+        let narrowest = gaps.min() ?? 0
+
+        #expect(widest / narrowest < 1.5, "gaps between stops: \(gaps)")
+    }
+
+    private var adjacentGaps: [Double] {
+        let stops = DesireLevel.allCases.map { DesireDial.arcColor(for: $0, in: colors) }
+        return (0..<stops.count - 1).map { perceptualDistance(stops[$0], stops[$0 + 1]) }
+    }
+
+    private var smallestGapBetweenStops: Double { adjacentGaps.min() ?? 0 }
+
+    /// Oklab ΔE. Euclidean distance in a space built so that equal steps look
+    /// like equal steps — which HSV hue degrees emphatically are not, the
+    /// reason "the hues are evenly spaced" was a misleading way to check this
+    /// ramp in the first place.
+    private func perceptualDistance(_ first: Color, _ second: Color) -> Double {
+        let a = oklab(first)
+        let b = oklab(second)
+        return sqrt(pow(a.0 - b.0, 2) + pow(a.1 - b.1, 2) + pow(a.2 - b.2, 2))
+    }
+
+    private func oklab(_ color: Color) -> (Double, Double, Double) {
+        let resolved = color.resolve(in: EnvironmentValues())
+        let r = Double(resolved.linearRed)
+        let g = Double(resolved.linearGreen)
+        let b = Double(resolved.linearBlue)
+
+        let l = cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+        let m = cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+        let s = cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+
+        return (
+            0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+            1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+            0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+        )
     }
 
     @Test func theMidpointSitsAtTheMiddleOfTheScale() {

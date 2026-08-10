@@ -34,7 +34,7 @@ screen) — not part of the app itself.
 | `accentMossText` | `#7E9679` | moss as *text* — the spec value fails contrast on `surface`, this lift value is text-safe |
 | `accentRust` | `#9C4A34` | sell-candidate/low-desire accent — strokes/borders/fills only |
 | `accentRustText` | `#B8674F` | rust as *text* — same contrast reasoning as `accentMossText` |
-| `dialMidpoint` | `#75774A` | desire dial's middle-of-range color (between rust and moss) |
+| `dialMidpoint` | `#8F8C38` | desire dial's middle-of-range color (between rust and moss) |
 
 The rust/moss "text-safe lift" pair is a real accessibility catch, not a
 stylistic choice — worth preserving exactly, not simplifying to one
@@ -53,12 +53,29 @@ midpoints of the neighbouring pair. Brass held the "keep" end originally
 and no longer appears on the dial at all — it's the app's money colour,
 and spending it on a rating diluted that.
 
-`dialMidpoint` was retuned from `#A87C4A` to `#75774A` when that change
-landed. The old value was the midpoint of a rust→brass ramp; against
-moss it left stops 1–4 all sitting in orange and put the entire hue
-change into one 68° jump between 4 and 5. The new value spreads it:
-13° → 28° → 63° → 79° → 111°, so 4 reads as a dim green rather than
-khaki. Verified against rendered simulator pixels, not just computed.
+`dialMidpoint` was retuned twice as that change settled, both times by
+searching an Oklab model of the ramp rather than picking a hex by eye.
+The model reproduces SwiftUI's `.perceptual` mix exactly — it predicted
+the rendered arc colours to the byte, checked against simulator pixels.
+
+- `#A87C4A` was the midpoint of the old rust→brass ramp. Against moss it
+  left stops 1–4 all in orange and put the whole hue change into one 68°
+  jump between 4 and 5.
+- `#75774A` fixed the cliff but sat too dark and grey (sat 0.38, val
+  0.47) to read as anything but green's neighbour — 3, 4 and 5 bunched
+  up. Measured in Oklab ΔE, adjacent stops were 0.062 / 0.063 / **0.043**
+  / 0.042 apart: the top half of the scale separated barely two-thirds as
+  well as the bottom.
+- `#8F8C38` is a yellow-gold (sat 0.61, val 0.56). Adjacent stops now
+  measure 0.088 / 0.086 / 0.084 / 0.082 — even, and roughly double the
+  tightest gap before.
+
+One constraint worth keeping if it's ever retuned again: pushing the
+midpoint yellow walks it toward `accentBrass`, which is also a yellow.
+A candidate measured 0.058 from brass while its own stops were 0.12
+apart — a "3" that read as a price. The rule the search enforces, and
+`DesireDialColorTests` checks, is that no stop may sit closer to the
+money colour than to its own neighbours on the dial.
 
 ## Typography
 

@@ -42,8 +42,9 @@ struct ItemListView: View {
                 .background(theme.colors.background)
 
                 ScrollView {
-                    // Rows run edge to edge; each card keeps its own padding,
-                    // so the content inside still clears the screen sides.
+                    // Rows sit inside the gutter by their own card padding, so
+                    // a row's text lines up with the title above it while the
+                    // card still reaches nearer the edge than the header does.
                     if viewModel.isEmpty {
                         emptyState
                             .padding(.horizontal, theme.metrics.screenGutter)
@@ -57,6 +58,7 @@ struct ItemListView: View {
                                 .buttonStyle(.plain)
                             }
                         }
+                        .padding(.horizontal, theme.metrics.listRowInset)
                         .padding(.bottom, theme.metrics.sectionGap)
                     }
                 }

@@ -74,10 +74,12 @@ extension ThemeColors {
         accentRust: Color(hex: "#9C4A34"),
         accentRustText: Color(hex: "#B8674F"),
 
-        // Retuned when the dial's "keep" end moved from brass to moss. The
-        // old #A87C4A was the midpoint of a rust→brass ramp, so against moss
-        // it left every stop up to 4 in orange and put the entire hue change
-        // into one 68° jump at 4→5. See `design/tokens.md`.
-        dialMidpoint: Color(hex: "#75774A")
+        // Retuned twice since the dial's "keep" end moved from brass to moss,
+        // both times by searching an Oklab model of the ramp rather than
+        // picking a hex by eye. #A87C4A was the middle of the old rust→brass
+        // ramp and left everything up to 4 in orange; #75774A fixed the hue
+        // cliff but sat too dark and grey to read as anything but green's
+        // neighbour. See `design/tokens.md` for the measurements.
+        dialMidpoint: Color(hex: "#8F8C38")
     )
 }
