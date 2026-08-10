@@ -32,17 +32,8 @@ struct DesireDial: View {
 
     private var lineWidth: CGFloat { max(diameter * 0.035, 2) }
 
-    /// Rust through brass, with tokens.md's midpoint as the middle stop, so
-    /// intermediate values aren't just one of the three named colours.
-    private var valueColor: Color {
-        switch level {
-        case .readyToSell: theme.colors.accentRust
-        case .wouldLetItGo: theme.colors.accentRust.mix(with: theme.colors.dialMidpoint, by: 0.5)
-        case .undecided: theme.colors.dialMidpoint
-        case .keepingForNow: theme.colors.dialMidpoint.mix(with: theme.colors.accentBrass, by: 0.5)
-        case .absolutelyKeeping: theme.colors.accentBrass
-        }
-    }
+    private var arcColor: Color { Self.arcColor(for: level, in: theme.colors) }
+    private var numeralColor: Color { Self.numeralColor(for: level, in: theme.colors) }
 
     var body: some View {
         ZStack {
@@ -76,7 +67,7 @@ struct DesireDial: View {
     private var filledArc: some View {
         Circle()
             .trim(from: 0, to: (sweep.degrees / 360) * progress)
-            .stroke(valueColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+            .stroke(arcColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
             .rotationEffect(startAngle)
             .animation(.snappy(duration: 0.2), value: value)
     }
@@ -85,7 +76,7 @@ struct DesireDial: View {
     /// start, which is why the filled arc can legitimately have zero length.
     private var knob: some View {
         Circle()
-            .fill(valueColor)
+            .fill(arcColor)
             .frame(width: lineWidth * 2.2, height: lineWidth * 2.2)
             .offset(y: -(diameter - lineWidth) / 2)
             .rotationEffect(startAngle + Angle.degrees(sweep.degrees * Double(progress)) + .degrees(90))
@@ -96,7 +87,7 @@ struct DesireDial: View {
         VStack(spacing: 1) {
             Text("\(level.rawValue)")
                 .font(theme.typography.dialNumeral(diameter: diameter))
-                .foregroundStyle(valueColor)
+                .foregroundStyle(numeralColor)
             if showsScale {
                 Text("of \(DesireLevel.allCases.count)")
                     .monoLabel(color: theme.colors.textQuiet)
@@ -118,6 +109,50 @@ struct DesireDial: View {
                 if newValue != value { value = newValue }
             }
     }
+
+    // MARK: - Colour ramp
+
+    /// The arc and knob: rust at 1, through tokens.md's `dialMidpoint`, to
+    /// moss at 5. Sell at one end, keep at the other, with the midpoint
+    /// keeping the intermediate values from being just one of the three
+    /// named colours.
+    ///
+    /// Brass used to hold the "keep" end, which put the app's primary accent
+    /// — the colour of every value figure and CTA — on a rating rather than
+    /// on money. Moss says "settled, growing, staying put" and leaves brass
+    /// to mean what it means everywhere else.
+    static func arcColor(for level: DesireLevel, in colors: ThemeColors) -> Color {
+        ramp(level, low: colors.accentRust, mid: colors.dialMidpoint, high: colors.accentMoss)
+    }
+
+    /// The numeral. Same ramp, but built from the text-safe lifts at both
+    /// ends, because this one renders as type.
+    ///
+    /// tokens.md is explicit that `accentRust`/`accentMoss` are for strokes
+    /// and fills only — as text on `surface` they measure 2.7:1 and 2.6:1.
+    /// The dial drew its numeral in the shape colour until moss arrived,
+    /// which made the "1" a real contrast failure; `DesireDialColorTests`
+    /// now measures every stop rather than trusting the token names.
+    static func numeralColor(for level: DesireLevel, in colors: ThemeColors) -> Color {
+        ramp(level, low: colors.accentRustText, mid: colors.dialMidpoint, high: colors.accentMossText)
+    }
+
+    private static func ramp(
+        _ level: DesireLevel,
+        low: Color,
+        mid: Color,
+        high: Color
+    ) -> Color {
+        switch level {
+        case .readyToSell: low
+        case .wouldLetItGo: low.mix(with: mid, by: 0.5)
+        case .undecided: mid
+        case .keepingForNow: mid.mix(with: high, by: 0.5)
+        case .absolutelyKeeping: high
+        }
+    }
+
+    // MARK: - Touch mapping
 
     /// Maps a touch point onto 1–5 by its angle around the centre.
     ///

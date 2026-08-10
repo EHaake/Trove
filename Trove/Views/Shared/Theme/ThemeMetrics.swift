@@ -23,6 +23,14 @@ struct ThemeMetrics: Sendable {
     let fieldPaddingHorizontal: CGFloat
     let hairline: CGFloat
 
+    /// The list screens' search box. Measured off `Trove Item List.png` (79px
+    /// at 2×) rather than derived from padding — Design drew it shorter than a
+    /// form field, which is what keeps the fixed header from eating the list.
+    let searchFieldHeight: CGFloat
+    /// Between the search box and the category chip row beneath it. Tighter
+    /// than a section gap: the two are one filter control, not two sections.
+    let controlRowGap: CGFloat
+
     /// tokens.md calls these out individually because the Sell Plan row is the
     /// one layout with a future trend indicator to leave room for.
     let sellPlanRowPaddingVertical: CGFloat
@@ -51,6 +59,8 @@ extension ThemeMetrics {
         fieldPaddingVertical: 14,
         fieldPaddingHorizontal: 14,
         hairline: 1,
+        searchFieldHeight: 40,
+        controlRowGap: 16,
         sellPlanRowPaddingVertical: 15,
         sellPlanRowPaddingHorizontal: 14,
         sellPlanRowInternalGap: 12,

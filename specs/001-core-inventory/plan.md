@@ -266,14 +266,13 @@ a `NavigationStack`. A prominent add button is available from Items and
 Wishlist tabs (toolbar, not buried in a menu), consistent with the
 quick-add requirement.
 
-**Design's build includes a fourth "More" tab; v1 does not.** Likely
-intended as a future home for settings-shaped features this project has
-already been building toward (a theme picker via the `Theme` abstraction,
-multi-currency via the unused `currencyCode` field) — but that's an
-inference, not confirmed with Design. Deliberately not built now: a tab
-leading to an empty or near-empty screen is worse than no tab at all.
-Add it when an actual feature needs it (`004-themes` in `specs/
-ROADMAP.md` is the most likely trigger), not preemptively.
+**Design's build includes a fourth "More" tab; v1 does not.** Confirmed
+with Design: it's a layout-balance placeholder for the four-tab bar, not
+a screen that was ever designed — no intended destination, not even a
+loose one. Deliberately not built now: a tab leading nowhere is worse
+than no tab at all. Add it when an actual feature needs it (`004-themes`
+in `specs/ROADMAP.md` is the most likely trigger, given the theming and
+multi-currency groundwork already in this schema), not preemptively.
 
 **List screens keep their header fixed.** On `ItemListView` (and
 `WishlistView` once built, for the same reason), the title, any summary

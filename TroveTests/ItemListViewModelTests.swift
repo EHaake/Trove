@@ -8,6 +8,7 @@ private func insertItem(
     category: String = "Music/Guitars",
     desire: Int = 3,
     valueCents: Int? = nil,
+    serial: String? = nil,
     purchasedAt seconds: TimeInterval = 0,
     into context: ModelContext
 ) {
@@ -16,6 +17,7 @@ private func insertItem(
             name: name,
             categoryPath: category,
             purchaseDate: Date(timeIntervalSince1970: seconds),
+            serialNumber: serial,
             currentValueCents: valueCents,
             desireToKeep: desire
         )
@@ -136,6 +138,176 @@ struct ItemListViewModelFilterTests {
         viewModel.load()
 
         #expect(viewModel.items.count == 1)
+    }
+}
+
+@Suite("ItemListViewModel — search")
+struct ItemListViewModelSearchTests {
+    @Test func matchesOnName() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", into: context)
+        insertItem("Telecaster", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.searchText = "leica"
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Leica M6"])
+    }
+
+    /// The other field Design's placeholder promises. A serial is the one
+    /// thing you'd search for that isn't in the name.
+    @Test func matchesOnSerialNumber() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", serial: "2842156", into: context)
+        insertItem("Telecaster", serial: "US20114477", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.searchText = "201144"
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Telecaster"])
+    }
+
+    @Test func ignoresCase() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Hasselblad 500C/M", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        for query in ["HASSELBLAD", "hasselblad", "HaSsElBlAd"] {
+            viewModel.searchText = query
+            viewModel.load()
+            #expect(viewModel.items.count == 1, "query \(query) found nothing")
+        }
+    }
+
+    @Test(arguments: ["", " ", "   "])
+    func aBlankQueryLeavesTheListWhole(query: String) throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", into: context)
+        insertItem("Telecaster", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.searchText = query
+        viewModel.load()
+
+        #expect(viewModel.items.count == 2)
+    }
+
+    /// The load-bearing one. spec.md says search and the category filter
+    /// combine rather than replace, so this fails in both directions: the
+    /// off-category match catches an accidental `||`, and the in-category
+    /// non-match catches the search filter being dropped altogether.
+    @Test func combinesWithTheCategoryFilterRatherThanReplacingIt() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", category: "Photography/Cameras", into: context)
+        insertItem("Leicaphone", category: "Audio/Headphones", into: context)
+        insertItem("Nikon FM2", category: "Photography/Cameras", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.categoryFilter = "Photography"
+        viewModel.searchText = "Leica"
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Leica M6"])
+    }
+
+    @Test func searchAndSortApplyTogether() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Nikon 105mm", desire: 2, into: context)
+        insertItem("Nikon FM2", desire: 5, into: context)
+        insertItem("Telecaster", desire: 4, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.searchText = "nikon"
+        viewModel.sortOrder = .desireToKeep
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Nikon FM2", "Nikon 105mm"])
+    }
+
+    /// Both controls narrow the same set, so the header figure has to follow
+    /// the query too — a total counting rows that aren't on screen is worse
+    /// than no total.
+    @Test func theHeaderTotalFollowsTheQuery() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", valueCents: 345_000, into: context)
+        insertItem("Telecaster", valueCents: 129_900, into: context)
+        insertItem("Leica Q3", valueCents: nil, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.searchText = "leica"
+        viewModel.load()
+
+        #expect(viewModel.totalCurrentValueCents == 345_000)
+        #expect(viewModel.unvaluedCount == 1)
+    }
+
+    /// The chips sit directly under the field. Typing a query that excludes a
+    /// whole category must not make its chip vanish mid-keystroke.
+    @Test func keepsEveryCategoryChipWhileSearching() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", category: "Photography/Cameras", into: context)
+        insertItem("Telecaster", category: "Music/Guitars", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.searchText = "leica"
+        viewModel.load()
+
+        #expect(viewModel.items.count == 1)
+        #expect(viewModel.categoryOptions == ["Music/Guitars", "Photography/Cameras"])
+    }
+
+    @Test func clearingTheQueryRestoresEverything() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", into: context)
+        insertItem("Telecaster", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.searchText = "leica"
+        viewModel.load()
+        #expect(viewModel.items.count == 1)
+
+        viewModel.searchText = ""
+        viewModel.load()
+        #expect(viewModel.items.count == 2)
+    }
+
+    @Test func aQueryMatchingNothingYieldsAnEmptyList() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.searchText = "hasselblad"
+        viewModel.load()
+
+        #expect(viewModel.items.isEmpty)
+        #expect(viewModel.isEmpty)
+    }
+
+    /// Most items have no serial recorded. Searching must skip them rather
+    /// than treating the absent field as a match for anything.
+    @Test func itemsWithoutASerialAreSimplyNotMatchedByIt() throws {
+        let context = try makeInMemoryContext()
+        insertItem("No serial", serial: nil, into: context)
+        insertItem("Has serial", serial: "ABC123", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.searchText = "ABC123"
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Has serial"])
     }
 }
 

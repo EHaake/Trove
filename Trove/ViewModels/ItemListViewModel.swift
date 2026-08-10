@@ -2,10 +2,11 @@ import Foundation
 import Observation
 import SwiftData
 
-/// Browse, filter and sort owned items.
+/// Browse, filter, search and sort owned items.
 ///
-/// `categoryFilter` and `sortOrder` are plain properties so the view can bind
-/// controls straight to them; nothing recomputes until `load()` is called.
+/// `categoryFilter`, `searchText` and `sortOrder` are plain properties so the
+/// view can bind controls straight to them; nothing recomputes until `load()`
+/// is called.
 /// That keeps the reload point explicit and the type trivially testable,
 /// rather than hiding fetches inside property observers.
 @Observable
@@ -32,14 +33,21 @@ final class ItemListViewModel {
     }
 
     var categoryFilter: String = ""
+
+    /// Free text over name and serial number. Narrows the same set the
+    /// category filter narrows rather than replacing it — spec.md is explicit
+    /// that the two combine, so a category chip stays in force while typing.
+    var searchText: String = ""
+
     var sortOrder: SortOrder = .purchaseDate
 
     private(set) var items: [Item] = []
     private(set) var loadFailureMessage: String?
 
     /// Every category path in use, for the filter chips. Includes paths whose
-    /// items the current filter excludes — otherwise choosing one filter would
-    /// hide the means of choosing another.
+    /// items the current filter or search excludes — otherwise choosing one
+    /// filter would hide the means of choosing another, and typing a query
+    /// would dissolve the chip row underneath the field.
     private(set) var categoryOptions: [String] = []
 
     /// Short chip labels keyed by path — leaf-only where unambiguous. Computed
@@ -73,6 +81,9 @@ final class ItemListViewModel {
             let all = try modelContext.fetch(FetchDescriptor<Item>())
             items = all
                 .filter { CategoryPathHelper.path($0.categoryPath, matchesPrefix: categoryFilter) }
+                // Design's field says "name, brand, serial"; there is no brand
+                // in the schema, same gap `ItemRow`'s meta line works around.
+                .filter { SearchMatching.matches(query: searchText, in: [$0.name, $0.serialNumber]) }
                 .sorted(by: isOrderedBefore)
             categoryOptions = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []
             categoryLabels = CategoryPathHelper.displayLabels(for: categoryOptions)

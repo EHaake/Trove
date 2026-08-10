@@ -2,10 +2,6 @@ import SwiftData
 import SwiftUI
 
 /// Browse owned gear, per `design/screens/Trove Item List.png`.
-///
-/// Design also shows a search field over name/brand/serial. It isn't in
-/// spec.md's acceptance criteria or in `ItemListViewModel`, so it isn't built
-/// here — adding an unasked-for feature quietly is worse than the gap.
 struct ItemListView: View {
     @State private var viewModel: ItemListViewModel
     @State private var isAddingItem = false
@@ -21,13 +17,17 @@ struct ItemListView: View {
         ZStack {
             theme.colors.background.ignoresSafeArea()
 
-            // Title, summary and filter chips stay put; only the rows move.
-            // Standing layout rule in plan.md — the wishlist follows it too.
-            // Losing the running total and the active filter the moment you
-            // scroll is what it's there to prevent.
+            // Title, summary, search and filter chips stay put; only the rows
+            // move. Standing layout rule in plan.md — the wishlist follows it
+            // too. Losing the running total, the query and the active filter
+            // the moment you scroll is what it's there to prevent.
             VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
+                VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
                     header
+                        .padding(.horizontal, theme.metrics.screenGutter)
+                        .padding(.bottom, theme.metrics.sectionGap - theme.metrics.controlRowGap)
+
+                    SearchField(placeholder: "Search name or serial", text: $viewModel.searchText)
                         .padding(.horizontal, theme.metrics.screenGutter)
 
                     // Full-bleed so chips scroll off the edge rather than
@@ -42,22 +42,23 @@ struct ItemListView: View {
                 .background(theme.colors.background)
 
                 ScrollView {
-                    Group {
-                        if viewModel.isEmpty {
-                            emptyState
-                        } else {
-                            LazyVStack(spacing: theme.metrics.listRowGap) {
-                                ForEach(viewModel.items, id: \.id) { item in
-                                    NavigationLink(value: item.id) {
-                                        ItemRow(item: item)
-                                    }
-                                    .buttonStyle(.plain)
+                    // Rows run edge to edge; each card keeps its own padding,
+                    // so the content inside still clears the screen sides.
+                    if viewModel.isEmpty {
+                        emptyState
+                            .padding(.horizontal, theme.metrics.screenGutter)
+                            .padding(.bottom, theme.metrics.sectionGap)
+                    } else {
+                        LazyVStack(spacing: theme.metrics.listRowGap) {
+                            ForEach(viewModel.items, id: \.id) { item in
+                                NavigationLink(value: item.id) {
+                                    ItemRow(item: item)
                                 }
+                                .buttonStyle(.plain)
                             }
                         }
+                        .padding(.bottom, theme.metrics.sectionGap)
                     }
-                    .padding(.horizontal, theme.metrics.screenGutter)
-                    .padding(.bottom, theme.metrics.sectionGap)
                 }
             }
         }
@@ -78,6 +79,10 @@ struct ItemListView: View {
         // Values can change on the detail screen — an edit, or the dial — so
         // the list refetches whenever it comes back into view.
         .onAppear { viewModel.load() }
+        // Per keystroke. A refetch-and-filter over a personal inventory is
+        // cheap enough that debouncing would only add latency to typing;
+        // revisit if the store ever holds thousands of items.
+        .onChange(of: viewModel.searchText) { viewModel.load() }
     }
 
     // MARK: - Header
@@ -212,12 +217,22 @@ struct ItemListView: View {
     /// points at the add action rather than just reporting absence.
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(viewModel.categoryFilter.isEmpty ? "Nothing here yet" : "Nothing in this category")
+            Text(emptyStateMessage)
                 .font(theme.typography.rowTitle)
                 .foregroundStyle(theme.colors.textBody)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, theme.metrics.sectionGap)
+    }
+
+    /// Search is named first: it's the narrower of the two, and the one the
+    /// user just typed. "Nothing in this category" under a query they can see
+    /// in the field would point at the wrong control.
+    private var emptyStateMessage: String {
+        if !SearchMatching.normalized(viewModel.searchText).isEmpty {
+            return "Nothing matches that"
+        }
+        return viewModel.categoryFilter.isEmpty ? "Nothing here yet" : "Nothing in this category"
     }
 }
 
