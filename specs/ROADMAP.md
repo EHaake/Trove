@@ -71,7 +71,13 @@ actually useful once the app is in daily use.
   less ambiguous at a glance; deferred because picking the palette is a
   real design decision on par with the original brief, not an
   incidental engineering one — worth a deliberate Claude Design pass,
-  not a guess.
+  not a guess. **Validated, not just proposed**: Phase 5's dashboard
+  category breakdown, rendered with color-coded mock data, looked good
+  enough to prompt reconsidering the deferral outright — held to v2
+  anyway since the mock data's category count was favorable and a real
+  palette needs to work across whatever range a real collection has, but
+  worth treating as a strong early candidate once `001` ships, not a
+  backlog afterthought.
 
 ## Working convention
 
