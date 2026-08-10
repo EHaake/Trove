@@ -82,6 +82,17 @@ data model should not preclude that, but it is not in scope for v1.
   document claims something is true about how the system is built, prefer
   writing the test that would catch it being false over writing the
   sentence and trusting it.
+- **This isn't only for schema claims — visual/design correctness is
+  testable too, not just eyeballed.** The desire dial's color ramp
+  (`specs/001-core-inventory/plan.md`, signature element) is guarded by
+  two mutation-verified tests: no adjacent level reads as visually
+  confusable with its neighbor (a minimum perceptual-distance floor), and
+  no level reads as confusable with `accentBrass` (which sits nearby as
+  the price figure's color). Found via an Oklab model checked against
+  actual rendered pixels, not picked by eye. Same principle as the
+  CloudKit test, different domain: a claim like "these five colors are
+  each distinguishable" is exactly as testable as "this schema validates"
+  — write the test, don't just render it and glance.
 - A task is not "done" until its tests exist and `xcodebuild test` passes.
   Claude Code should run the test command itself and show the result, not
   assert completion from reading the code.
