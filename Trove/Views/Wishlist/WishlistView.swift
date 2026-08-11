@@ -19,6 +19,7 @@ struct WishlistView: View {
     @State private var viewModel: WishlistViewModel
     @State private var isAddingItem = false
     @State private var selectedItemID: UUID?
+    @State private var sellPlanRoute: SellPlanRoute?
     @State private var isReordering = false
 
     @Environment(\.theme) private var theme
@@ -62,6 +63,9 @@ struct WishlistView: View {
         // two stacks can't be confused about which entity an id belongs to.
         .navigationDestination(item: $selectedItemID) { itemID in
             WishlistDetailView(modelContext: modelContext, itemID: itemID)
+        }
+        .navigationDestination(item: $sellPlanRoute) { route in
+            SellPlanView(modelContext: modelContext, wishlistItemID: route.wishlistItemID)
         }
         .sheet(isPresented: $isAddingItem, onDismiss: viewModel.load) {
             NavigationStack { WishlistFormView(modelContext: modelContext) }
@@ -154,7 +158,9 @@ struct WishlistView: View {
     private var rows: some View {
         List {
             ForEach(viewModel.items, id: \.id) { item in
-                WishlistRow(item: item)
+                WishlistRow(item: item) {
+                    sellPlanRoute = SellPlanRoute(wishlistItemID: item.id)
+                }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(
@@ -277,10 +283,25 @@ struct WishlistView: View {
 /// One wishlist row: what it is, its category, and what it's expected to cost.
 private struct WishlistRow: View {
     let item: WishlistItem
+    let showSellPlan: () -> Void
 
     @Environment(\.theme) private var theme
 
     var body: some View {
+        VStack(spacing: theme.metrics.cardPadding) {
+            details
+            Divider().overlay(theme.colors.divider)
+            sellPlanShortcut
+        }
+        .padding(theme.metrics.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
+                .fill(theme.colors.surface)
+        )
+    }
+
+    private var details: some View {
         HStack(alignment: .top, spacing: theme.metrics.cardPadding) {
             RowThumbnail(photos: item.photos ?? [])
 
@@ -319,13 +340,30 @@ private struct WishlistRow: View {
                 DesireGauge(value: .constant(item.desireToOwn))
             }
         }
-        .padding(theme.metrics.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
         .accessibilityElement(children: .combine)
+    }
+
+    /// Design puts this at the row's bottom-right, under a divider, paired with
+    /// a "$990 short" figure on the left. The figure is gone — spec.md rules
+    /// out that framing, and the mock's arithmetic measured one sellable pool
+    /// against every row at once — so the shortcut sits alone.
+    ///
+    /// Its own `Button` inside a row that already navigates to the item: taps
+    /// on it reach here rather than opening the detail screen.
+    private var sellPlanShortcut: some View {
+        Button(action: showSellPlan) {
+            HStack(spacing: 6) {
+                Spacer(minLength: 0)
+                Text("See sell plan")
+                    .font(theme.typography.secondary)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .foregroundStyle(theme.colors.accentBrass)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("See sell plan for \(item.name)")
     }
 }
 
@@ -337,7 +375,7 @@ private struct WishlistRow: View {
     let context = ModelContext(container)
     for (index, wanted) in [
         WishlistItem(name: "Leica Summicron 35mm f/2 (v4)", categoryPath: "Photography/Lenses",
-                     estimatedCostCents: 240_000, notes: "v4 only"),
+                     estimatedCostCents: 240_000, notes: "v4 only", desireToOwn: 3),
         WishlistItem(name: "Vox AC15 Custom", categoryPath: "Music/Amps",
                      estimatedCostCents: 105_000),
         WishlistItem(name: "Hasselblad 80mm f/2.8 CF", categoryPath: "Photography/Lenses",

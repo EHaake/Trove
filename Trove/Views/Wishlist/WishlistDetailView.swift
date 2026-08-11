@@ -13,6 +13,7 @@ struct WishlistDetailView: View {
     @State private var selectedPhotoIndex = 0
     @State private var isEditing = false
     @State private var isConfirmingDelete = false
+    @State private var sellPlanRoute: SellPlanRoute?
 
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -64,6 +65,9 @@ struct WishlistDetailView: View {
         } message: {
             Text("Its photos go too. Anything on its sell plan stays where it is.")
         }
+        .navigationDestination(item: $sellPlanRoute) { route in
+            SellPlanView(modelContext: modelContext, wishlistItemID: route.wishlistItemID)
+        }
         .onAppear(perform: viewModel.load)
     }
 
@@ -92,6 +96,7 @@ struct WishlistDetailView: View {
                 }
 
                 marketPricePlaceholder
+                findItemsToSell(for: item)
             }
             .padding(.horizontal, theme.metrics.screenGutter)
             .padding(.bottom, theme.metrics.sectionGap)
@@ -209,6 +214,36 @@ struct WishlistDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    // MARK: - Sell Plan
+
+    /// The one action on this screen, and deliberately the only route to the
+    /// Sell Plan besides the wishlist row's shortcut.
+    ///
+    /// A single button rather than the plan rendered inline: plan.md is
+    /// explicit that showing it automatically would overstate what it currently
+    /// does. The label names the task ("find items to sell"), not a target —
+    /// nothing here says how much is needed or how close the user is.
+    private func findItemsToSell(for item: WishlistItem) -> some View {
+        Button {
+            sellPlanRoute = SellPlanRoute(wishlistItemID: item.id)
+        } label: {
+            HStack(spacing: 8) {
+                Text("Find items to sell")
+                    .font(theme.typography.rowTitle)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 13, weight: .medium))
+            }
+            .foregroundStyle(theme.colors.background)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .background(
+                RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
+                    .fill(theme.colors.accentBrass)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Reserved

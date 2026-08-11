@@ -337,7 +337,7 @@ CRUD.
       `ModelTests`' `itemsSurviveASaveAndRefetch` had the same flaw and
       is fixed alongside — its name made the claim its body didn't test.
 
-- [ ] **T041** — `SellPlanView`: selectable candidate list (visually
+- [x] **T041** — `SellPlanView`: selectable candidate list (visually
       distinguishing selected from unselected), the selected total shown
       alongside the estimated cost as two comparable figures. A quiet
       color distinction between "meets or exceeds" and "doesn't" is fine;
@@ -347,6 +347,35 @@ CRUD.
       `WishlistView`'s per-row shortcut — no other entry point. Add the
       row shortcut to `WishlistView` here, deferred from T036 since it
       had nowhere to point until this task exists.
+
+      Two of the mock's elements are not built, both flagged rather than
+      quietly dropped. **"Mark 3 for sale"** is the sale-tracking action
+      spec.md and plan.md both rule out of v1 in as many words, and it
+      implies a commit step that doesn't exist — every toggle already
+      persists on its own. **"Nothing is listed or sold until you say
+      so"** is reassurance about that button; without it, the line
+      answers a question the screen never raises while implying listing
+      and selling are things this app does. The mock's two-figure card
+      is exactly right and is kept as drawn.
+
+      Design's row meta reads "GUITARS · DESIRE 1" beside a dial already
+      showing 1 — the same value twice in two notations. The meta line
+      carries the category alone, matching `ItemRow`, which pairs a
+      category meta line with a separate dial for that reason.
+
+      Both deferred affordances land here: the detail screen's "Find
+      items to sell" button and the wishlist row's "See sell plan"
+      shortcut. `SellPlanRoute` is a named type rather than a bare
+      `UUID` because the wishlist stack already pushes items by id —
+      "open this item" and "open this item's sell plan" carry the same
+      value and mean different things.
+
+**Phase 7 complete.** Verified on device end to end: both entry points
+reach the plan, the shortcut wins over the row's own tap, ranking is
+desire 1→2→3 with the un-valued item correctly absent, and a selection
+made on one visit is still there after leaving and returning by the
+other route — the persisted-not-recomputed claim, checked against the
+store rather than the screen.
 
 ## Phase 8 — Navigation and app shell
 
