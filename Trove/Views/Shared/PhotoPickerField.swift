@@ -110,7 +110,18 @@ struct PhotoPickerField: View {
     }
 
     private var addTile: some View {
-        PhotosPicker(
+        // `PhotosPicker`'s label builder is `@Sendable`, so reading the
+        // MainActor-isolated `theme` inside it warns. Read the four values
+        // here, on the main actor, and let the closure capture plain
+        // `Sendable` colours and lengths instead — the alternative is
+        // annotating around a shared component, which is a bigger change than
+        // the problem.
+        let plusColor = theme.colors.textLabel
+        let borderColor = theme.colors.divider
+        let radius = theme.metrics.thumbnailRadius
+        let hairline = theme.metrics.hairline
+
+        return PhotosPicker(
             selection: $pickerItems,
             selectionBehavior: .ordered,
             matching: .images,
@@ -118,13 +129,13 @@ struct PhotoPickerField: View {
         ) {
             Image(systemName: "plus")
                 .font(.system(size: 15, weight: .regular))
-                .foregroundStyle(theme.colors.textLabel)
+                .foregroundStyle(plusColor)
                 .frame(width: thumbnailSize.width, height: thumbnailSize.height)
                 .overlay(
-                    RoundedRectangle(cornerRadius: theme.metrics.thumbnailRadius)
+                    RoundedRectangle(cornerRadius: radius)
                         .strokeBorder(
-                            theme.colors.divider,
-                            style: StrokeStyle(lineWidth: theme.metrics.hairline, dash: [4, 3])
+                            borderColor,
+                            style: StrokeStyle(lineWidth: hairline, dash: [4, 3])
                         )
                 )
         }
