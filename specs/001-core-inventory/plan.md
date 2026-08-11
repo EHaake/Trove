@@ -192,10 +192,13 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
   (nothing beneath it) is currently a dead end; **planned for T042/T043**
   once the real `TabView` exists: tapping a leaf jumps to the Items tab
   pre-filtered to that category. Same underlying capability the deferred
-  "Value →" action needs (jumping to Items filtered to un-valued items,
-  see the design-deviations note in tasks.md's Phase 5 section) — build
-  both together once cross-tab navigation is real, not against the
-  temporary two-tab stand-in Phase 5 uses to unblock testing.
+  "Value →" action needs (jumping to Items tab filtered to un-valued
+  items) — build both together once cross-tab navigation is real, not
+  against the temporary two-tab stand-in Phase 5 uses to unblock
+  testing. Refinement decided at Phase 7 review: if exactly one item is
+  un-valued, "Value →" jumps straight to that item's detail screen
+  instead of a filtered list of one — fewer taps for the common case,
+  same destination logic as tapping any other single item.
 - **`ItemListView`** / `ItemListViewModel` — browse/filter/sort/search
   owned items. Search matches name or serial number, case-insensitive,
   combined with (not replacing) the category filter — both narrow the
