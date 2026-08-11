@@ -117,9 +117,11 @@ screen needs, this is the visual/layout brief for each:
    disclosure. This is a frequently-used screen and needs to feel quick,
    not like filling out a form.
 5. **Wishlist list** — wanted items with estimated cost, filterable by
-   category (same treatment as the item list's filter). Each row
-   includes a quiet "See sell plan" shortcut straight to that item's
-   Sell Plan — this was your own instinct, worth keeping.
+   category (same treatment as the item list's filter). No per-row Sell
+   Plan shortcut — an earlier version had one, but a control repeated
+   identically on every row read as noise and overemphasized a feature
+   meant to stay quietly available rather than prominent. Reachable only
+   from the wishlist item's own detail screen.
 6. **Wishlist detail** — a plain, quiet view of the wishlist item itself:
    name, category, estimated cost, notes. Reserve visual space for
    pricing/trend info that doesn't exist yet (a future feature) rather
