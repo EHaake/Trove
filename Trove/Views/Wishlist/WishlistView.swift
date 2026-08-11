@@ -327,11 +327,13 @@ private struct WishlistRow: View {
 
             Spacer(minLength: 0)
 
-            // Cost, then the gauge directly under it, then the shortcut pinned
-            // to the bottom — the corner the gauge used to hold. The thumbnail
-            // still sets the row's height, so all three fit without the row
-            // growing past it.
-            VStack(alignment: .trailing, spacing: 6) {
+            // Cost, gauge, shortcut — one field gap between each, rather than
+            // grouping the first two and pushing the third to the bottom with
+            // a spacer. Three readings of the same item deserve the same
+            // spacing; the uneven version read as two things and an orphan.
+            // The thumbnail still sets the row's height, so the column has
+            // room to spare.
+            VStack(alignment: .trailing, spacing: theme.metrics.fieldGap) {
                 Text(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))
                     .font(theme.typography.monoValue)
                     .foregroundStyle(theme.colors.textPrimary)
@@ -339,8 +341,6 @@ private struct WishlistRow: View {
                     .accessibilityLabel("Estimated cost \(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))")
 
                 DesireGauge(value: .constant(item.desireToOwn))
-
-                Spacer(minLength: theme.metrics.fieldGap)
 
                 sellPlanShortcut
             }
@@ -360,12 +360,16 @@ private struct WishlistRow: View {
 
     /// The way through to this item's sell plan.
     ///
-    /// **Drawn as a control, not a reading.** It now sits in the corner that
-    /// has only ever held passive readouts — the item list's dial, and this
-    /// row's own gauge until a moment ago — so bare brass text there would
-    /// read as one more figure. The bordered capsule and chevron are the app's
-    /// existing button language, borrowed from the sort control and the filter
-    /// chips, and it's the only bordered thing in the row.
+    /// Plain brass text and an arrow — the treatment the full-width strip used
+    /// before this moved into the column, without the capsule that stood here
+    /// briefly.
+    ///
+    /// Set semibold, which the strip didn't need. Down here colour alone
+    /// can't mark this as a control: the gauge sitting directly above ends on
+    /// `accentBrass`, the very same value as this text, so brass reads as
+    /// continuous with it rather than as the app's action colour. At regular
+    /// weight it was also the lightest text in the row. The weight is what
+    /// separates it from the readouts; the arrow says where it goes.
     ///
     /// "Sell plan" rather than Design's "See sell plan": the column is beside a
     /// truncating title, and the shorter label keeps roughly the cost's width
@@ -377,23 +381,18 @@ private struct WishlistRow: View {
     /// arrangement as the full-width version, which behaved correctly.
     private var sellPlanShortcut: some View {
         Button(action: showSellPlan) {
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 Text("Sell plan")
-                    .font(theme.typography.secondary)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(theme.typography.secondary.weight(.semibold))
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 11, weight: .semibold))
             }
             .foregroundStyle(theme.colors.accentBrass)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .overlay(
-                Capsule().strokeBorder(theme.colors.accentBrass, lineWidth: theme.metrics.hairline)
-            )
-            // Hit area pushed past the capsule on every side. A negative inset
-            // grows the tappable region without moving anything, which matters
-            // more here than it did in the full-width strip: the target went
-            // from the row's whole width to a pill of about 80×26.
-            .contentShape(Capsule().inset(by: -8))
+            // Hit area pushed well past the text on every side. A negative
+            // inset grows the tappable region without moving anything, which
+            // matters more now there's no capsule padding to sit in: what's
+            // drawn is only about 75×16.
+            .contentShape(Rectangle().inset(by: -12))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("See sell plan for \(item.name)")
