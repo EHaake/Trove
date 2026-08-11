@@ -253,9 +253,19 @@ trend-aware version builds on top of directly, and it's also the one
 place in the app with real persisted, user-editable state beyond simple
 CRUD.
 
-- [ ] **T037** — `WishlistDetailViewModel`: load a `WishlistItem`'s own
+- [x] **T037** — `WishlistDetailViewModel`: load a `WishlistItem`'s own
       fields for display (name, category, estimated cost, notes,
       photos). No ranking or plan logic here.
+
+      Holds the id and re-fetches, like `ItemDetailViewModel` — an entry
+      deleted on another device then reads as absent rather than as a
+      stale reference, which is the case the guard actually pins. Photo
+      ordering, category splitting and the desire-level clamp live here
+      rather than in the view: they're correctness rules, not layout.
+      Phase 7 lists no separate unit-test task for this view model, but
+      CLAUDE.md requires one regardless, so the tests land here — four
+      guards mutation-verified (cached load, unsorted photos, unclamped
+      level, empty-string notes).
 - [ ] **T038** — `WishlistDetailView`: plain display of the wishlist
       item's fields, with space reserved in the layout for future
       pricing/trend info, and a single "Find items to sell" button/nav
