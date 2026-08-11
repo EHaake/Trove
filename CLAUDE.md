@@ -93,6 +93,19 @@ data model should not preclude that, but it is not in scope for v1.
   CloudKit test, different domain: a claim like "these five colors are
   each distinguishable" is exactly as testable as "this schema validates"
   — write the test, don't just render it and glance.
+- **A passing test is not evidence it can fail.** Three separate times in
+  this project a test has been correct-looking, correctly named, green,
+  and verifying nothing: a tie-break test that couldn't detect its own
+  rule being deleted (`FetchDescriptor` doesn't return insertion order),
+  a persistence test that refetched on the same `ModelContext` (which
+  hands back objects carrying unsaved changes, so `save()` could be
+  removed and it still passed), and a color-literal guard whose pattern
+  was so broad it fired on legitimate helpers. For any test guarding a
+  rule that matters, break the rule deliberately and confirm the test
+  goes red — and when one turns out to be false-passing, audit for the
+  same *shape* elsewhere rather than fixing the single instance. If a
+  test can't be made to fail, delete it or restructure what it tests;
+  leaving it reads as coverage that isn't there.
 - A task is not "done" until its tests exist and `xcodebuild test` passes.
   Claude Code should run the test command itself and show the result, not
   assert completion from reading the code.
