@@ -44,9 +44,9 @@ final class WishlistDetailViewModel {
     ///
     /// Sorted here rather than at the call site: the relationship comes back
     /// unordered from SwiftData, so this is a correctness rule rather than a
-    /// layout choice, and CLAUDE.md keeps those out of views. (`ItemDetailView`
-    /// still sorts inline — worth aligning when that screen is next touched,
-    /// not worth a drive-by change now.)
+    /// layout choice, and CLAUDE.md keeps those out of views. `ItemDetailViewModel`
+    /// exposes the same property for the same reason — the two are checked
+    /// against each other in `ItemDetailViewModelTests`.
     var photos: [Photo] {
         PhotoSelection.inDisplayOrder(item?.photos ?? [])
     }

@@ -32,6 +32,18 @@ final class ItemDetailViewModel {
         hasLoaded = true
     }
 
+    /// The item's photos in the user's own order.
+    ///
+    /// Sorted here rather than at the call site: the relationship comes back
+    /// unordered from SwiftData, so this is a correctness rule rather than a
+    /// layout choice, and CLAUDE.md keeps those out of views. `ItemDetailView`
+    /// applied `PhotoSelection.inDisplayOrder` inline until
+    /// `WishlistDetailViewModel` put the same rule in a view model — one job in
+    /// two places, the shape of bug this build has hit more than once.
+    var photos: [Photo] {
+        PhotoSelection.inDisplayOrder(item?.photos ?? [])
+    }
+
     /// Deletes the loaded item. Its photos go with it, by the cascade rule on
     /// `Item.photos`; any Sell Plan referencing it just drops the reference.
     @discardableResult

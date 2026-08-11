@@ -66,7 +66,7 @@ struct ItemDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
                 PhotoCarousel(
-                    photos: PhotoSelection.inDisplayOrder(item.photos ?? []),
+                    photos: viewModel.photos,
                     selectedIndex: $selectedPhotoIndex
                 )
 

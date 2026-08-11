@@ -138,4 +138,68 @@ struct ItemDetailViewModelTests {
         viewModel.load()
         #expect(viewModel.item == nil)
     }
+
+    // MARK: - Display
+
+    /// `ItemDetailView` sorted its photos inline until this moved here, which
+    /// left the same rule in two places — the shape of bug that already bit
+    /// this build twice (`matchesPrefix` serving filtering, `allCategoryPaths`
+    /// serving filter chips). The relationship comes back unordered from
+    /// SwiftData, so an unsorted carousel shows a different lead photo between
+    /// launches.
+    @Test func photosComeBackInTheUsersOwnOrder() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Leica M6", categoryPath: "Photography/Cameras")
+        context.insert(item)
+        let first = Photo(imageData: Data([0x01]), sortOrder: 0)
+        let second = Photo(imageData: Data([0x02]), sortOrder: 1)
+        let third = Photo(imageData: Data([0x03]), sortOrder: 2)
+        context.insert(first)
+        context.insert(second)
+        context.insert(third)
+        // Deliberately attached out of order.
+        item.photos = [third, first, second]
+        try context.save()
+
+        let viewModel = ItemDetailViewModel(modelContext: context, itemID: item.id)
+        viewModel.load()
+
+        #expect(viewModel.photos.map(\.sortOrder) == [0, 1, 2])
+        #expect(viewModel.photos.map(\.imageData) == [Data([0x01]), Data([0x02]), Data([0x03])])
+    }
+
+    @Test func photosAreEmptyWhenNothingIsLoaded() throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemDetailViewModel(modelContext: context, itemID: UUID())
+
+        #expect(viewModel.photos.isEmpty)
+        viewModel.load()
+        #expect(viewModel.photos.isEmpty)
+    }
+
+    /// Both detail screens have to answer this the same way, since they're the
+    /// same rule — which is the point of it living in a view model at all.
+    @Test func bothDetailScreensOrderPhotosAlike() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Leica M6", categoryPath: "Photography/Cameras")
+        let wanted = WishlistItem(name: "Summicron 35mm f/2", categoryPath: "Photography/Lenses")
+        context.insert(item)
+        context.insert(wanted)
+
+        for parent in 0..<2 {
+            let photos = (0..<3).map { Photo(imageData: Data([UInt8($0)]), sortOrder: 2 - $0) }
+            photos.forEach(context.insert)
+            if parent == 0 { item.photos = photos } else { wanted.photos = photos }
+        }
+        try context.save()
+
+        let itemModel = ItemDetailViewModel(modelContext: context, itemID: item.id)
+        let wishlistModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id)
+        itemModel.load()
+        wishlistModel.load()
+
+        #expect(itemModel.photos.map(\.sortOrder) == [0, 1, 2])
+        #expect(wishlistModel.photos.map(\.sortOrder) == [0, 1, 2])
+        #expect(itemModel.photos.map(\.imageData) == wishlistModel.photos.map(\.imageData))
+    }
 }
