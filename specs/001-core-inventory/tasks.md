@@ -149,53 +149,96 @@ be this, not a real design deviation.
 
 - [x] **T027** — `DashboardViewModel`: total current value (excluding
       un-valued items), count of un-valued items, total spent, delta,
-      category breakdown.
+      category breakdown. Scopable, so spec.md's "drill into a category to
+      see the same numbers scoped to it" is this same type with a
+      `scope`, not a second screen that could drift from it.
 - [x] **T028** — Unit tests for `DashboardViewModel`, including the
-      un-valued-exclusion behavior specifically.
+      un-valued-exclusion behavior specifically. Note that exclusion
+      applies to **spend as well as value**: counting what un-valued items
+      cost while leaving their worth out understates the gain by exactly
+      their purchase price, which can flip a collection that's up into
+      reading as a loss. Mutation-verified.
 - [x] **T029** — `DashboardView`.
 - [x] **T030** — Manual verification: dashboard numbers match a small set
-      of manually-entered test items.
+      of manually-entered test items. Every figure checked against an
+      independent calculation of the seed data — total, spend, gain,
+      un-valued count, and all four category rows with their shares — at
+      both the root scope and drilled into Photography.
 
 ## Phase 6 — Wishlist CRUD
 
 - [x] **T031** — `WishlistFormViewModel`: create/edit a `WishlistItem`.
+      Blank estimated cost is rejected rather than saved as $0, matching
+      the item form's purchase price. New entries append to the manual
+      order by taking the highest `sortOrder` in use, not by counting
+      rows — counting reuses a position after a deletion.
 - [x] **T032** — Unit tests for `WishlistFormViewModel`.
 - [x] **T033** — `WishlistViewModel`: fetch/list wishlist items, filter by
-      category (same prefix/case-insensitive matching as
-      `ItemListViewModel`), manual reordering via `sortOrder`.
+      category (same matching as `ItemListViewModel`), search by name,
+      manual reordering via `sortOrder`. Reordering is offered only
+      against the whole list in its own order — a drag on a filtered or
+      cost-sorted list would renumber the visible rows and silently
+      reshuffle the rest.
 - [x] **T034** — Unit tests for `WishlistViewModel`, including the
-      category filter.
+      category filter, search, and the dense/unique `sortOrder`
+      invariant across many moves.
 - [x] **T035** — `WishlistFormView`.
 - [x] **T036** — `WishlistView`: list with category filter control and
       reordering. The "See sell plan" row shortcut is deferred to T041
       — it would otherwise point at a screen that doesn't exist yet
       (same reasoning as the T042 deep-links).
+- [x] **T036a** — Wishlist photos, added to scope after Phase 6 and
+      before Phase 7. `Photo` gains a second optional inverse
+      (`wishlistItem`) alongside `item`, `WishlistItem` gains
+      `photos: [Photo]?` (`.cascade`, deliberately unlike
+      `plannedSaleItems`' `.nullify`), and `WishlistFormView` reuses the
+      same `PhotoPickerField` the item form already uses rather than
+      growing a second one. Nothing enforces "one parent, never both" at
+      the schema level — SwiftData can't express it — so
+      `PhotoOwnershipTests` is what holds the line instead of a comment.
+- [x] **T036b** — `RowThumbnail`: the reserved photo slot both list
+      screens now use, replacing `ItemRow`'s inline version so the two
+      can't drift. Empty rows draw a flat placeholder rather than
+      collapsing, per plan.md's standing rule. The claim is checked by
+      rendering the view and measuring it, not by eye —
+      `RowThumbnailTests` also pins that the thumbnail is the user's
+      first photo by `sortOrder`, which a row reading `photos.first`
+      would get wrong only intermittently.
+- [x] **T036c** — `desireToOwn` and `DesireGauge`, added to scope after
+      Phase 6 and before Phase 7, same handling as T036a/T036b above.
+      `WishlistItem` gains `desireToOwn` (`Int`, default `2`, clamped
+      1–3 in the view model), rendered by a new `DesireGauge` — three
+      sheared-parallelogram segments, empty tracks left visible,
+      brightness ramping across the filled ones, labeled
+      "Someday"/"Soon"/"Next" in the form and detail view and unlabeled
+      in list rows. Not a recolored `DesireDial`: see plan.md's
+      `DesireGauge` entry for why two distinct controls beat two
+      near-identical ones meaning different things. Doing this before
+      Phase 7 rather than after means `WishlistDetailView` (T038) gets
+      built against the final `WishlistItem` shape instead of being
+      revisited.
 
-**Added scope, before Phase 7 starts, not renumbered** (same handling as
-the wishlist-photos addition): `WishlistItem` gains `desireToOwn` (`Int`,
-default `2`, clamped 1–3 in the view model), and a new `DesireGauge`
-component renders it — three sheared-parallelogram segments, empty
-tracks visible, brightness ramping across the filled segments, labeled
-"Someday"/"Soon"/"Next" in the form and detail view and unlabeled in
-list rows. Display-only: it must not affect wishlist ordering. See
-plan.md's `DesireGauge` entry for the full rationale and the required
-perceptual-distinguishability test. Doing this before Phase 7 rather
-than after means `WishlistDetailView` (T038) gets built against the
-final `WishlistItem` shape instead of being revisited.
+      Display-only, and `DesireToOwnOrderingTests` pins that from both
+      sides: neither sort order consults the rating, and no sort option
+      is named for it. Adding a rating to a list and deliberately not
+      sorting by it is the unusual choice, so it's the one a later
+      change is most likely to "fix".
 
-**Landed.** The three fill tones are `accentBrassDim`, a perceptual
-half-mix of it with `accentBrass`, and `accentBrass` — held between the
-existing tokens rather than reaching for `accentBrassHover`, which is a
-state token rather than a brightness step. Chosen by searching the Oklab
-model, not by eye. Measured off pixels sampled from the gauge rendered
-at its 14×10pt row size: adjacent tones 0.109 and 0.108 apart, the
-dimmest 0.162 from the empty track, against the 0.06 floor
-`DesireDialColorTests` holds the dial's stops to. The perceptual model
-now lives once in `TestSupport` and serves both the dial (palette
-tokens) and the gauge (sampled pixels), so the two sets of thresholds
-stay comparable. `DesireToOwnOrderingTests` pins the display-only rule
-from both sides: neither sort order consults the rating, and no sort
-option is named for it.
+      The three fill tones are `accentBrassDim`, a perceptual half-mix
+      of it with `accentBrass`, and `accentBrass` — held between the
+      existing tokens rather than reaching for `accentBrassHover`, which
+      is a state token rather than a brightness step. Chosen by
+      searching the Oklab model, not by eye. Per CLAUDE.md's
+      design-correctness rule they're then measured off pixels sampled
+      from the gauge rendered at its 14×10pt row size, not off the
+      palette: adjacent tones land 0.109 and 0.108 apart and the dimmest
+      sits 0.162 from the empty track, against the 0.06 floor
+      `DesireDialColorTests` holds the dial's stops to. A separate guard
+      distinguishes "sampled the card instead of the fill" from a
+      genuine collapse, since both otherwise report zero. The Oklab
+      model now lives once in `TestSupport` and serves both the dial
+      (palette tokens) and the gauge (sampled pixels), so their
+      thresholds stay comparable rather than drifting as two copies.
 
 ## Phase 7 — Wishlist detail and the Sell Plan
 
@@ -211,12 +254,14 @@ place in the app with real persisted, user-editable state beyond simple
 CRUD.
 
 - [ ] **T037** — `WishlistDetailViewModel`: load a `WishlistItem`'s own
-      fields for display (name, category, estimated cost, notes). No
-      ranking or plan logic here.
+      fields for display (name, category, estimated cost, notes,
+      photos). No ranking or plan logic here.
 - [ ] **T038** — `WishlistDetailView`: plain display of the wishlist
       item's fields, with space reserved in the layout for future
       pricing/trend info, and a single "Find items to sell" button/nav
-      link to `SellPlanView`.
+      link to `SellPlanView`. Photos follow `ItemDetailView`'s
+      shrink-the-hero rule, not the list rows' reserved-slot rule — see
+      plan.md on why those are two answers to different questions.
 - [ ] **T039** — `SellPlanViewModel`: given a `WishlistItem`,
       - compute the candidate pool (owned items, `desireToKeep ≤ 3`,
         non-nil `currentValueCents`, sorted ascending by `desireToKeep`,
