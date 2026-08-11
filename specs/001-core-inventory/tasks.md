@@ -21,7 +21,7 @@ summarized.
       lifecycle, iOS 26.0 minimum deployment, plain `.xcodeproj` (no
       XcodeGen/Tuist). *Verify: project opens and builds an empty app in
       the simulator.*
-- [x] ~~T002~~ — **Deferred, not skipped.** Add iCloud capability and a
+- [ ] ~~T002~~ — **Deferred, not skipped.** Add iCloud capability and a
       CloudKit container to the target's Signing & Capabilities. Blocked:
       creating a new CloudKit container requires Certificates,
       Identifiers & Profiles access, which needs an active paid Apple
