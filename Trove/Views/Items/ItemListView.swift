@@ -8,6 +8,7 @@ struct ItemListView: View {
 
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
+    @Environment(AppRouter.self) private var router
 
     init(modelContext: ModelContext) {
         _viewModel = State(initialValue: ItemListViewModel(modelContext: modelContext))
@@ -80,7 +81,17 @@ struct ItemListView: View {
         }
         // Values can change on the detail screen — an edit, or the dial — so
         // the list refetches whenever it comes back into view.
-        .onAppear { viewModel.load() }
+        // Applied here rather than written into the view model by the router:
+        // navigation asks, the screen decides how to show it.
+        .onAppear {
+            apply(router.itemsRequest)
+            viewModel.load()
+        }
+        .onChange(of: router.itemsRequest) { _, request in
+            guard request != nil else { return }
+            apply(request)
+            viewModel.load()
+        }
         // Per keystroke. A refetch-and-filter over a personal inventory is
         // cheap enough that debouncing would only add latency to typing;
         // revisit if the store ever holds thousands of items.
@@ -171,9 +182,34 @@ struct ItemListView: View {
 
     // MARK: - Filter
 
+    /// Takes a request from another tab and turns it into this screen's own
+    /// filter state, then clears it so a later re-appearance doesn't re-narrow
+    /// a list the user has since changed.
+    private func apply(_ request: AppRouter.ItemsRequest?) {
+        guard let request else { return }
+
+        // Whichever narrowing was asked for replaces the others, rather than
+        // stacking on top of whatever happened to be set — arriving from the
+        // dashboard should show what the dashboard pointed at, not that
+        // intersected with a filter left over from last time.
+        viewModel.searchText = ""
+        switch request {
+        case .category(let path):
+            viewModel.categoryFilter = path
+            viewModel.showsOnlyUnvalued = false
+        case .unvalued:
+            viewModel.categoryFilter = ""
+            viewModel.showsOnlyUnvalued = true
+        }
+        router.clearItemsRequest()
+    }
+
     private var categoryChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
+                if viewModel.showsOnlyUnvalued {
+                    unvaluedChip
+                }
                 chip(label: "All", path: "")
                 ForEach(viewModel.categoryOptions, id: \.self) { path in
                     chip(label: viewModel.categoryLabels[path] ?? path, path: path)
@@ -184,11 +220,41 @@ struct ItemListView: View {
         .scrollClipDisabled()
     }
 
+    /// The un-valued filter's own chip. It has no off-switch anywhere else —
+    /// it arrives from the dashboard rather than from a control on this screen
+    /// — and a filter the user can't see or clear is worse than one they can't
+    /// set. Shown only while it's on, and tapping it clears it.
+    private var unvaluedChip: some View {
+        Button {
+            viewModel.showsOnlyUnvalued = false
+            viewModel.load()
+        } label: {
+            HStack(spacing: 6) {
+                Text("Not yet valued")
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .font(theme.typography.secondary)
+            .foregroundStyle(theme.colors.accentRustText)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(Capsule().fill(theme.colors.surface))
+            .overlay(
+                Capsule().strokeBorder(theme.colors.accentRust, lineWidth: theme.metrics.hairline)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Clear the not-yet-valued filter")
+    }
+
     private func chip(label: String, path: String) -> some View {
-        let isSelected = viewModel.categoryFilter == path
+        let isSelected = viewModel.categoryFilter == path && !viewModel.showsOnlyUnvalued
 
         return Button {
             viewModel.categoryFilter = path
+            // Picking any category chip — "All" included — steps out of the
+            // un-valued view, so "All" always means all.
+            viewModel.showsOnlyUnvalued = false
             viewModel.load()
         } label: {
             CategoryPathLabel(

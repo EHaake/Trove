@@ -404,3 +404,85 @@ struct DashboardScopeTests {
         #expect(viewModel.totalCurrentValueCents == 20_000)
     }
 }
+
+/// Where the "Value →" callout goes, decided here rather than in the view so
+/// the count-versus-destination rule is testable.
+@Suite("Dashboard — the un-valued destination")
+struct UnvaluedDestinationTests {
+    @Test func thereIsNoDestinationWhenEverythingIsValued() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Valued", valueCents: 20_000, into: context)
+        try context.save()
+
+        let viewModel = DashboardViewModel(modelContext: context)
+        viewModel.load()
+
+        #expect(viewModel.unvaluedCount == 0)
+        #expect(viewModel.unvaluedDestination == .none)
+    }
+
+    /// The refinement from the Phase 7 review: a filtered list holding one row
+    /// costs a tap to get through and ends up where this goes directly.
+    @Test func oneUnvaluedItemGoesStraightToThatItem() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Valued", valueCents: 20_000, into: context)
+        let unvalued = Item(name: "Not yet valued", categoryPath: "Music/Amps")
+        context.insert(unvalued)
+        try context.save()
+
+        let viewModel = DashboardViewModel(modelContext: context)
+        viewModel.load()
+
+        #expect(viewModel.unvaluedCount == 1)
+        #expect(viewModel.unvaluedDestination == .item(unvalued.id))
+    }
+
+    @Test func twoOrMoreGoToTheFilteredList() throws {
+        let context = try makeInMemoryContext()
+        insertItem("First", into: context)
+        insertItem("Second", into: context)
+        try context.save()
+
+        let viewModel = DashboardViewModel(modelContext: context)
+        viewModel.load()
+
+        #expect(viewModel.unvaluedDestination == .filteredList)
+    }
+
+    /// Scoped dashboards get the same treatment, and the id has to be the
+    /// un-valued item *inside the scope* — not whichever one the whole
+    /// collection happens to have.
+    @Test func aScopedDashboardNamesItsOwnSoleUnvaluedItem() throws {
+        let context = try makeInMemoryContext()
+        let inScope = Item(name: "Un-valued lens", categoryPath: "Photography/Lenses")
+        let elsewhere = Item(name: "Un-valued amp", categoryPath: "Music/Amps")
+        context.insert(inScope)
+        context.insert(elsewhere)
+        try context.save()
+
+        let viewModel = DashboardViewModel(modelContext: context, scope: "Photography")
+        viewModel.load()
+
+        #expect(viewModel.unvaluedCount == 1)
+        #expect(viewModel.unvaluedDestination == .item(inScope.id))
+    }
+
+    /// Valuing the last one has to retire the destination, or the callout
+    /// would keep pointing at an item that no longer belongs there.
+    @Test func theDestinationFollowsTheDataOnReload() throws {
+        let context = try makeInMemoryContext()
+        let unvalued = Item(name: "Not yet valued", categoryPath: "Music/Amps")
+        context.insert(unvalued)
+        try context.save()
+
+        let viewModel = DashboardViewModel(modelContext: context)
+        viewModel.load()
+        #expect(viewModel.unvaluedDestination == .item(unvalued.id))
+
+        unvalued.currentValueCents = 15_000
+        try context.save()
+        viewModel.load()
+
+        #expect(viewModel.unvaluedDestination == .none)
+    }
+}

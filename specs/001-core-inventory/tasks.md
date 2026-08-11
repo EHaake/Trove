@@ -379,7 +379,7 @@ store rather than the screen.
 
 ## Phase 8 — Navigation and app shell
 
-- [ ] **T042** — Root `TabView` (Dashboard / Items / Wishlist), each tab
+- [x] **T042** — Root `TabView` (Dashboard / Items / Wishlist), each tab
       a `NavigationStack`. Once this exists, wire the two deep-links
       deferred from Phase 5: tapping a leaf category in the dashboard's
       breakdown jumps to the Items tab pre-filtered to that category, and
@@ -388,6 +388,34 @@ store rather than the screen.
       (or an equivalent un-valued flag) set from outside the view itself
       — a cross-tab navigation concern that couldn't exist before this
       task, not new filtering logic.
+
+      **Refinement decided at the Phase 7 review**: "Value →" checks the
+      un-valued count first. If exactly one item is un-valued it jumps
+      straight to that item's detail screen rather than to a filtered
+      list holding one row — fewer taps for the common case, and the
+      same destination tapping that row would have reached anyway. Two
+      or more still land on the filtered list. See plan.md's
+      `DashboardView` entry.
+
+      `AppRouter` carries both, holding `[UUID]` rather than a
+      `NavigationPath` so it stays free of SwiftUI per CLAUDE.md. It
+      publishes a *request* rather than writing into
+      `ItemListViewModel`: navigation asks, the screen decides how to
+      show it, and the list clears the request once applied so a later
+      return doesn't silently re-narrow a list the user has changed
+      since.
+
+      The un-valued filter is the only one with no control of its own on
+      the list, so the chip row grows a dismissible "Not yet valued"
+      chip while it's on — a filter the user can't see or clear is worse
+      than one they can't set. Any category chip, "All" included, also
+      steps out of it, so "All" always means all.
+
+      Verified on device: one un-valued item goes straight to that
+      item's screen; adding a second sends the same action to the
+      filtered list with the chip showing "2 ITEMS · $0 · 2 UNVALUED";
+      the leaf-category row lands on Items filtered, popping whatever
+      was already pushed there.
 - [ ] **T043** — Add-item and add-wishlist-item entry points in the
       toolbar of their respective tabs (not buried in a menu).
 - [ ] **T044** — Manual full click-through: launch → dashboard → add item

@@ -59,11 +59,42 @@ final class DashboardViewModel {
     private(set) var breakdown: [CategorySlice] = []
     private(set) var loadFailureMessage: String?
 
+    /// The only un-valued item, when there is exactly one.
+    ///
+    /// Held so `unvaluedDestination` can name it. Not exposed directly: the
+    /// count and the id together are one decision, and splitting them invites
+    /// a caller to check one and use the other.
+    private var soleUnvaluedItemID: UUID?
+
     private let modelContext: ModelContext
 
     init(modelContext: ModelContext, scope: String = "") {
         self.modelContext = modelContext
         self.scope = scope
+    }
+
+    /// Where the "Value →" callout should go.
+    ///
+    /// A single un-valued item goes straight to its own screen rather than to a
+    /// filtered list holding one row — that list costs a tap to get through and
+    /// ends up in the same place. Decided at the Phase 7 review; plan.md's
+    /// `DashboardView` entry records it.
+    ///
+    /// One value rather than a count plus an id, so a caller can't check the
+    /// count and then use a stale id.
+    enum UnvaluedDestination: Hashable {
+        /// Nothing is un-valued, so the callout isn't shown at all.
+        case none
+        case item(UUID)
+        case filteredList
+    }
+
+    var unvaluedDestination: UnvaluedDestination {
+        switch unvaluedCount {
+        case 0: .none
+        case 1: soleUnvaluedItemID.map(UnvaluedDestination.item) ?? .filteredList
+        default: .filteredList
+        }
     }
 
     var totalItemCount: Int { valuedCount + unvaluedCount }
@@ -109,14 +140,17 @@ final class DashboardViewModel {
             totalCurrentValueCents = 0
             totalSpentCents = 0
             breakdown = []
+            soleUnvaluedItemID = nil
         }
     }
 
     private func apply(_ items: [Item]) {
         let valued = items.filter { $0.currentValueCents != nil }
+        let unvalued = items.filter { $0.currentValueCents == nil }
 
         valuedCount = valued.count
-        unvaluedCount = items.count - valued.count
+        unvaluedCount = unvalued.count
+        soleUnvaluedItemID = unvalued.count == 1 ? unvalued.first?.id : nil
         totalCurrentValueCents = valued.compactMap(\.currentValueCents).reduce(0, +)
         totalSpentCents = valued.reduce(0) { $0 + $1.purchasePriceCents }
         breakdown = makeBreakdown(items)

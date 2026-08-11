@@ -556,3 +556,118 @@ struct ItemListViewModelSortTests {
         #expect(viewModel.items.map(\.name) == ["Leica M6", "Nikon FM2"])
     }
 }
+
+/// The un-valued filter, which arrives from the dashboard rather than from a
+/// control on the list itself.
+@Suite("ItemListViewModel — the un-valued filter")
+struct ItemListUnvaluedFilterTests {
+    private func insert(_ name: String, value: Int?, category: String = "Music/Amps", into context: ModelContext) {
+        context.insert(Item(name: name, categoryPath: category, currentValueCents: value))
+    }
+
+    @Test func offIsTheDefaultAndShowsEverything() throws {
+        let context = try makeInMemoryContext()
+        insert("Valued", value: 20_000, into: context)
+        insert("Not valued", value: nil, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.load()
+
+        #expect(viewModel.showsOnlyUnvalued == false)
+        #expect(viewModel.items.count == 2)
+    }
+
+    @Test func onNarrowsToItemsWithNoValue() throws {
+        let context = try makeInMemoryContext()
+        insert("Valued", value: 20_000, into: context)
+        insert("Not valued", value: nil, into: context)
+        insert("Also not valued", value: nil, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.showsOnlyUnvalued = true
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name).sorted() == ["Also not valued", "Not valued"])
+    }
+
+    /// A deliberate zero is a value. Only "never entered" is un-valued — the
+    /// same distinction the dashboard total draws.
+    @Test func aZeroValueIsValued() throws {
+        let context = try makeInMemoryContext()
+        insert("Free but valued", value: 0, into: context)
+        insert("Not valued", value: nil, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.showsOnlyUnvalued = true
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Not valued"])
+    }
+
+    /// Every narrowing applies to the same set — the rule search and the
+    /// category filter already follow.
+    @Test func combinesWithTheCategoryFilterRatherThanReplacingIt() throws {
+        let context = try makeInMemoryContext()
+        insert("Un-valued amp", value: nil, category: "Music/Amps", into: context)
+        insert("Un-valued lens", value: nil, category: "Photography/Lenses", into: context)
+        insert("Valued amp", value: 20_000, category: "Music/Amps", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.showsOnlyUnvalued = true
+        viewModel.categoryFilter = "Music/Amps"
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Un-valued amp"])
+    }
+
+    @Test func combinesWithSearchToo() throws {
+        let context = try makeInMemoryContext()
+        insert("Un-valued amp", value: nil, into: context)
+        insert("Un-valued lens", value: nil, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.showsOnlyUnvalued = true
+        viewModel.searchText = "lens"
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Un-valued lens"])
+    }
+
+    /// The header total is a floor over what's on screen. Filtered to
+    /// un-valued items there is nothing to total, and every row is counted as
+    /// missing — the figure has to stay honest rather than read as $0 of value.
+    @Test func theHeaderTotalStaysHonestWhileFiltered() throws {
+        let context = try makeInMemoryContext()
+        insert("Valued", value: 20_000, into: context)
+        insert("Not valued", value: nil, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.showsOnlyUnvalued = true
+        viewModel.load()
+
+        #expect(viewModel.totalCurrentValueCents == 0)
+        #expect(viewModel.unvaluedCount == 1)
+        #expect(viewModel.items.count == 1)
+    }
+
+    /// The chips are built from the unfiltered fetch, so turning this on can't
+    /// dissolve the row the user needs to get back out of it.
+    @Test func theCategoryChipsSurviveTheFilter() throws {
+        let context = try makeInMemoryContext()
+        insert("Valued amp", value: 20_000, category: "Music/Amps", into: context)
+        insert("Un-valued lens", value: nil, category: "Photography/Lenses", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.showsOnlyUnvalued = true
+        viewModel.load()
+
+        #expect(viewModel.categoryOptions == ["Music/Amps", "Photography/Lenses"])
+    }
+}

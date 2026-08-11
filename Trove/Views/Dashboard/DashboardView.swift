@@ -14,6 +14,7 @@ struct DashboardView: View {
 
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
+    @Environment(AppRouter.self) private var router
 
     init(modelContext: ModelContext, scope: String = "") {
         _viewModel = State(initialValue: DashboardViewModel(modelContext: modelContext, scope: scope))
@@ -180,33 +181,57 @@ struct DashboardView: View {
     /// mock, which distinguishes it from the figures card above by outlining
     /// it rather than raising it. The rust edge is the attention mark.
     ///
-    /// Design pairs it with a "Value →" action. Not built: it would have to
-    /// open the item list filtered to un-valued items, and neither that filter
-    /// nor cross-tab navigation exists before T042/T043. A link going nowhere
-    /// is worse than the gap — same call as the fourth tab.
+    /// Design's "Value →" action is wired at last: it had nowhere to point
+    /// until the real `TabView` existed. One un-valued item goes straight to
+    /// that item; two or more go to the list narrowed to them.
     private var unvaluedCallout: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("\(viewModel.unvaluedCount) \(viewModel.unvaluedCount == 1 ? "item" : "items") not yet valued")
-                .font(theme.typography.rowTitle)
-                .foregroundStyle(theme.colors.textPrimary)
-            Text("They're left out of every figure above.")
-                .font(theme.typography.body)
-                .foregroundStyle(theme.colors.textQuiet)
-                .fixedSize(horizontal: false, vertical: true)
+        Button(action: followUnvaluedCallout) {
+            HStack(alignment: .top, spacing: theme.metrics.cardPadding) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(viewModel.unvaluedCount) \(viewModel.unvaluedCount == 1 ? "item" : "items") not yet valued")
+                        .font(theme.typography.rowTitle)
+                        .foregroundStyle(theme.colors.textPrimary)
+                    Text("They're left out of every figure above.")
+                        .font(theme.typography.body)
+                        .foregroundStyle(theme.colors.textQuiet)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                HStack(spacing: 6) {
+                    Text("Value").monoLabel(color: theme.colors.accentBrass)
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(theme.colors.accentBrass)
+                }
+            }
+            .padding(theme.metrics.cardPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .leading) {
+                Rectangle()
+                    .fill(theme.colors.accentRust)
+                    .frame(width: theme.metrics.calloutEdgeWidth)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
+                    .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
         }
-        .padding(theme.metrics.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .leading) {
-            Rectangle()
-                .fill(theme.colors.accentRust)
-                .frame(width: theme.metrics.calloutEdgeWidth)
-        }
-        .overlay(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .accessibilityHint(viewModel.unvaluedCount == 1
+                           ? "Opens the item so you can value it"
+                           : "Shows the items that still need a value")
+    }
+
+    private func followUnvaluedCallout() {
+        switch viewModel.unvaluedDestination {
+        case .none: break
+        case .item(let id): router.showItem(id)
+        case .filteredList: router.showUnvaluedItems()
+        }
     }
 
     // MARK: - Breakdown
@@ -280,10 +305,13 @@ struct DashboardView: View {
         return index < swatches.count ? swatches[index] : theme.colors.categoryNeutral
     }
 
-    /// A row is only a link when there's a level beneath it. The alternative —
-    /// a disabled `NavigationLink` — dims its whole content, which reads as
-    /// "this data is unavailable" when the figures are perfectly real and it's
-    /// only the drill-down that has nowhere to go.
+    /// A row with a level beneath it drills further into the dashboard; a leaf
+    /// leaves the dashboard entirely for the Items tab, narrowed to it.
+    ///
+    /// Until T042 a leaf rendered as plain content, because the only
+    /// alternative — a disabled `NavigationLink` — dims its whole content,
+    /// which reads as "this data is unavailable" when the figures are real and
+    /// it's only the destination that was missing. Now it has one.
     @ViewBuilder
     private func breakdownRow(_ slice: DashboardViewModel.CategorySlice, swatch: Color) -> some View {
         if slice.canDrillIn {
@@ -292,7 +320,13 @@ struct DashboardView: View {
             }
             .buttonStyle(.plain)
         } else {
-            breakdownRowContent(slice, swatch: swatch)
+            Button {
+                router.showItems(inCategory: slice.path)
+            } label: {
+                breakdownRowContent(slice, swatch: swatch)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows this category in Items")
         }
     }
 

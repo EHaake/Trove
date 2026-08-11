@@ -1,13 +1,20 @@
 import SwiftData
 import SwiftUI
 
-/// Placeholder shell, replaced by the real root `TabView` in T042.
+/// The app's root: three tabs, each its own `NavigationStack`.
 ///
-/// Until then it hosts whichever Phase 4 screen was built last, so each one
-/// can be checked against `design/screens/` on a real device rather than only
-/// in a preview.
+/// Three, not four. A Sell Plan tab came up at the Phase 7 review and is
+/// deferred to its own spec (`009-sell-plan-list` in ROADMAP.md) — it's a new,
+/// undesigned screen rather than a rearrangement of these.
+///
+/// Separate stacks matter: the dashboard drills into scoped copies of itself
+/// and the item list pushes item detail, and neither should end up on the
+/// other's stack. `AppRouter` is what lets the dashboard's two actions land in
+/// the Items tab without either screen reaching into the other.
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+
+    @State private var router = AppRouter()
 
     /// Seeding has to finish before any screen loads, or the first one to
     /// appear fetches an empty store and shows an empty state over real data.
@@ -15,19 +22,18 @@ struct ContentView: View {
     @State private var hasSeeded = false
 
     var body: some View {
-        // Two stacks side by side stands in for the real tab bar (T042) — the
-        // dashboard's drill-down and the item list both need their own
-        // navigation, and neither should push onto the other's.
         Group {
             if hasSeeded {
-                TabView {
-                    Tab("Overview", systemImage: "circle.circle") {
+                TabView(selection: $router.selectedTab) {
+                    Tab("Overview", systemImage: "circle.circle", value: AppRouter.Tab.overview) {
                         NavigationStack { DashboardView(modelContext: modelContext) }
                     }
-                    Tab("Items", systemImage: "square") {
-                        NavigationStack { ItemListView(modelContext: modelContext) }
+                    Tab("Items", systemImage: "square", value: AppRouter.Tab.items) {
+                        NavigationStack(path: $router.itemsPath) {
+                            ItemListView(modelContext: modelContext)
+                        }
                     }
-                    Tab("Wishlist", systemImage: "circle.dashed") {
+                    Tab("Wishlist", systemImage: "circle.dashed", value: AppRouter.Tab.wishlist) {
                         NavigationStack { WishlistView(modelContext: modelContext) }
                     }
                 }
@@ -35,6 +41,7 @@ struct ContentView: View {
                 Color.clear
             }
         }
+        .environment(router)
         .onAppear {
             guard !hasSeeded else { return }
             seedCategoriesIfNeeded()
@@ -43,7 +50,12 @@ struct ContentView: View {
     }
 
     /// Sample gear so the list, filters and totals have something real to show
-    /// on a fresh install. Harness-only; it goes away with this view at T042.
+    /// on a fresh install.
+    ///
+    /// Still here after T042 replaced the harness around it: there's no
+    /// onboarding or import yet, so a fresh install with an empty store can't
+    /// exercise any of these screens. Goes away when T045's empty states give
+    /// a real first-run experience to land on.
     private func seedCategoriesIfNeeded() {
         let existing = (try? modelContext.fetch(FetchDescriptor<Item>())) ?? []
         guard existing.isEmpty else { return }
@@ -75,11 +87,11 @@ struct ContentView: View {
             )
         }
 
-        let wanted: [(String, String, Int, String?)] = [
-            ("Leica Summicron 35mm f/2 (v4)", "Photography/Lenses", 240_000, "v4 only, no haze"),
-            ("Vox AC15 Custom", "Music/Amps", 105_000, nil),
-            ("Hasselblad 80mm f/2.8 CF", "Photography/Lenses", 95_000, nil),
-            ("Focal Clear MG", "Audio/Headphones", 149_000, "Open-back, used is fine"),
+        let wanted: [(String, String, Int, String?, Int)] = [
+            ("Leica Summicron 35mm f/2 (v4)", "Photography/Lenses", 240_000, "v4 only, no haze", 3),
+            ("Vox AC15 Custom", "Music/Amps", 105_000, nil, 1),
+            ("Hasselblad 80mm f/2.8 CF", "Photography/Lenses", 95_000, nil, 2),
+            ("Focal Clear MG", "Audio/Headphones", 149_000, "Open-back, used is fine", 2),
         ]
 
         for (index, entry) in wanted.enumerated() {
@@ -89,6 +101,7 @@ struct ContentView: View {
                     categoryPath: entry.1,
                     estimatedCostCents: entry.2,
                     notes: entry.3,
+                    desireToOwn: entry.4,
                     sortOrder: index
                 )
             )

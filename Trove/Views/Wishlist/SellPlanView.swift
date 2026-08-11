@@ -84,7 +84,7 @@ struct SellPlanView: View {
     /// no third figure here — the comparison is the user's to make.
     private func figures(for wanted: WishlistItem) -> some View {
         HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(spacing: 6) {
                 Text("Selected").monoLabel()
                 Text(viewModel.selectedValueCents.formattedAsWholeCurrency(currencyCode: wanted.currencyCode))
                     .font(theme.typography.heroFigure)
@@ -92,24 +92,33 @@ struct SellPlanView: View {
                 Text("\(viewModel.selectedCount) of \(viewModel.candidates.count) items")
                     .monoLabel(color: theme.colors.textQuiet)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity)
 
             Rectangle()
                 .fill(theme.colors.divider)
                 .frame(width: theme.metrics.hairline)
                 .padding(.vertical, 4)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(spacing: 6) {
                 Text("Estimated cost").monoLabel()
                 Text(viewModel.estimatedCostCents.formattedAsWholeCurrency(currencyCode: wanted.currencyCode))
                     .font(theme.typography.heroFigureSecondary)
                     .foregroundStyle(theme.colors.textPrimary)
                 Text("Your estimate").monoLabel(color: theme.colors.textQuiet)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, theme.metrics.cardPadding)
+            .frame(maxWidth: .infinity)
         }
-        .padding(theme.metrics.cardPadding)
+        // The divider is a `Rectangle` with only its width fixed, so it grows
+        // to whatever height it's offered — and this header isn't inside a
+        // scroll view, so it was offered plenty and stretched the card with it.
+        // Sizing the row to its content puts the divider back to spanning the
+        // text rather than setting the card's height.
+        .fixedSize(horizontal: false, vertical: true)
+        // Tighter above and below than the card's own padding: the two figures
+        // are one comparison read across the divider, and the extra height was
+        // pushing the candidate list further down than it earned.
+        .padding(.vertical, 12)
+        .padding(.horizontal, theme.metrics.cardPadding)
         .background(
             RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
                 .fill(theme.colors.surface)

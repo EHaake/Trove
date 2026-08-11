@@ -39,6 +39,16 @@ final class ItemListViewModel {
     /// that the two combine, so a category chip stays in force while typing.
     var searchText: String = ""
 
+    /// Narrows to items with no value entered — the destination of the
+    /// dashboard's "Value →" callout.
+    ///
+    /// Combines with the category filter and search the same way they combine
+    /// with each other: every active narrowing applies to the same set. Set
+    /// from outside via `AppRouter`, and the only filter with no control of its
+    /// own in the header, so the chip row grows a dismissible chip while it's on
+    /// — a filter the user can't see or clear is worse than one they can't set.
+    var showsOnlyUnvalued: Bool = false
+
     var sortOrder: SortOrder = .purchaseDate
 
     private(set) var items: [Item] = []
@@ -87,6 +97,7 @@ final class ItemListViewModel {
                 // Design's field says "name, brand, serial"; there is no brand
                 // in the schema, same gap `ItemRow`'s meta line works around.
                 .filter { SearchMatching.matches(query: searchText, in: [$0.name, $0.serialNumber]) }
+                .filter { !showsOnlyUnvalued || $0.currentValueCents == nil }
                 .sorted(by: isOrderedBefore)
             // Built from the unfiltered fetch, so the chips stay put as the
             // filter changes — and from owned items only, so the row doesn't
