@@ -295,10 +295,20 @@ private struct WishlistRow: View {
 
             Spacer(minLength: 0)
 
-            Text(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))
-                .font(theme.typography.monoValue)
-                .foregroundStyle(theme.colors.textPrimary)
-                .lineLimit(1)
+            // Cost leads at the top, the gauge sits quietly at the bottom —
+            // the brief puts it in the row's lower-right, unlabeled. The
+            // thumbnail sets the row's height, so this column has the space
+            // for both without the row growing.
+            VStack(alignment: .trailing, spacing: 0) {
+                Text(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))
+                    .font(theme.typography.monoValue)
+                    .foregroundStyle(theme.colors.textPrimary)
+                    .lineLimit(1)
+
+                Spacer(minLength: theme.metrics.fieldGap)
+
+                DesireGauge(value: .constant(item.desireToOwn))
+            }
         }
         .padding(theme.metrics.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)

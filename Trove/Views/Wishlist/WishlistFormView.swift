@@ -38,6 +38,7 @@ struct WishlistFormView: View {
                             isInvalid: viewModel.validationErrors.contains(.categoryMissing)
                         )
                         costField
+                        desireField
                         // After the required trio, before notes — the same
                         // order the item form uses among its optional fields,
                         // since the two sit one tab apart.
@@ -149,6 +150,26 @@ struct WishlistFormView: View {
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
             }
+        }
+    }
+
+    /// Labeled here, unlabeled in list rows — this is where the user sets the
+    /// value and learns what the three levels mean, so the word carries its
+    /// weight; repeating it down every row of a scrolling list wouldn't.
+    private var desireField: some View {
+        VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
+            Text("How much do you want it").monoLabel()
+            DesireGauge(
+                value: $viewModel.desireToOwn,
+                segmentSize: CGSize(width: 30, height: 18),
+                showsLabel: true,
+                isInteractive: true
+            )
+            .padding(.vertical, theme.metrics.fieldPaddingVertical)
+            .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(fieldBackground)
+            .overlay(fieldBorder(isInvalid: false))
         }
     }
 

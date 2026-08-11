@@ -279,4 +279,64 @@ struct WishlistFormSaveTests {
         let saved = try #require(try context.fetch(FetchDescriptor<WishlistItem>()).first)
         #expect(saved.photos?.isEmpty == true)
     }
+
+    // MARK: - Desire to own
+
+    /// "Soon", not "Someday": an entry someone bothered to type is already
+    /// past someday, and starting everything at the top would make the rating
+    /// useless for telling entries apart.
+    @Test func newItemsDefaultToTheMiddleOfTheScale() throws {
+        let context = try makeInMemoryContext()
+        let viewModel = WishlistFormViewModel(modelContext: context)
+        #expect(viewModel.desireToOwn == 2)
+
+        viewModel.name = "Vox AC15 Custom"
+        viewModel.categoryPath = "Music/Amps"
+        viewModel.estimatedCost = 1_050
+        #expect(viewModel.save())
+
+        let saved = try #require(try context.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(saved.desireToOwn == 2)
+        #expect(DesireToOwnLevel(clamping: saved.desireToOwn) == .soon)
+    }
+
+    /// Clamped on assignment, not at save time, so a control bound straight to
+    /// this can't drive it out of range mid-edit — same as the item form's
+    /// `desireToKeep`.
+    @Test(arguments: [(-40, 1), (0, 1), (1, 1), (2, 2), (3, 3), (4, 3), (99, 3)])
+    func clampsOnAssignmentRatherThanOnSave(assigned: Int, expected: Int) throws {
+        let viewModel = WishlistFormViewModel(modelContext: try makeInMemoryContext())
+        viewModel.desireToOwn = assigned
+
+        #expect(viewModel.desireToOwn == expected)
+    }
+
+    @Test func roundTripsThroughAnEdit() throws {
+        let context = try makeInMemoryContext()
+        let existing = WishlistItem(name: "Summicron 35mm f/2", categoryPath: "Photography/Lenses")
+        context.insert(existing)
+        existing.desireToOwn = 3
+        try context.save()
+
+        let viewModel = WishlistFormViewModel(modelContext: context, editing: existing)
+        #expect(viewModel.desireToOwn == 3)
+
+        viewModel.desireToOwn = 1
+        #expect(viewModel.save())
+        #expect(existing.desireToOwn == 1)
+    }
+
+    /// A value stored outside the range — by an import, or a build that
+    /// predates the clamp — has to come back into it when the form loads.
+    @Test func loadingAnOutOfRangeStoredValueClampsIt() throws {
+        let context = try makeInMemoryContext()
+        let existing = WishlistItem(name: "Vox AC15 Custom", categoryPath: "Music/Amps")
+        context.insert(existing)
+        existing.desireToOwn = 9
+        try context.save()
+
+        let viewModel = WishlistFormViewModel(modelContext: context, editing: existing)
+
+        #expect(viewModel.desireToOwn == 3)
+    }
 }

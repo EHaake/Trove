@@ -345,3 +345,90 @@ struct CategoryChipScopeTests {
         #expect(form.categorySuggestions == ["Music/Amps", "Photography/Cameras"])
     }
 }
+
+/// spec.md is explicit that desire-to-own is display-only: manual `sortOrder`
+/// stays the single ordering. Two competing ordering systems where one silently
+/// overrides the other is worse than one the user controls, and three coarse
+/// tiers would produce mostly-ties anyway.
+///
+/// Worth pinning rather than assuming. Adding a rating to a list and *not*
+/// sorting by it is the unusual choice, so it's the one a later change is
+/// likely to "fix".
+@Suite("Desire to own never reorders the wishlist")
+struct DesireToOwnOrderingTests {
+    private func insertRated(
+        _ name: String,
+        desire: Int,
+        order: Int,
+        into context: ModelContext
+    ) {
+        let wanted = WishlistItem(name: name, categoryPath: "Music/Amps", sortOrder: order)
+        wanted.desireToOwn = desire
+        context.insert(wanted)
+    }
+
+    /// The rating runs opposite the manual order here, so anything sorting by
+    /// it — ascending or descending — reverses the list.
+    @Test func theManualOrderWinsOverTheRating() throws {
+        let context = try makeInMemoryContext()
+        insertRated("First", desire: 1, order: 0, into: context)
+        insertRated("Second", desire: 2, order: 1, into: context)
+        insertRated("Third", desire: 3, order: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["First", "Second", "Third"])
+    }
+
+    @Test func theCostOrderIsUnaffectedByTheRatingToo() throws {
+        let context = try makeInMemoryContext()
+        let cheapButWanted = WishlistItem(
+            name: "Cheap", categoryPath: "Music/Amps", estimatedCostCents: 5_000, sortOrder: 0
+        )
+        cheapButWanted.desireToOwn = 3
+        let dearButNot = WishlistItem(
+            name: "Dear", categoryPath: "Music/Amps", estimatedCostCents: 240_000, sortOrder: 1
+        )
+        dearButNot.desireToOwn = 1
+        context.insert(cheapButWanted)
+        context.insert(dearButNot)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .cost
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Dear", "Cheap"])
+    }
+
+    /// Changing a rating must not move a row. Same list, same items, ratings
+    /// rewritten between two loads.
+    @Test func rewritingEveryRatingLeavesTheOrderWhereItWas() throws {
+        let context = try makeInMemoryContext()
+        insertRated("Alpha", desire: 2, order: 0, into: context)
+        insertRated("Bravo", desire: 2, order: 1, into: context)
+        insertRated("Charlie", desire: 2, order: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.load()
+        let before = viewModel.items.map(\.name)
+
+        for (item, desire) in zip(viewModel.items, [3, 1, 2]) {
+            item.desireToOwn = desire
+        }
+        try context.save()
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == before)
+    }
+
+    /// The structural half: no sort option is *named* for the rating either,
+    /// so it can't be reached from the sort control.
+    @Test func theSortControlOffersNoRatingOption() {
+        #expect(WishlistViewModel.SortOrder.allCases.count == 2)
+        #expect(Set(WishlistViewModel.SortOrder.allCases.map(\.rawValue)) == ["manual", "cost"])
+    }
+}

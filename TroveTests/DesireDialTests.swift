@@ -243,31 +243,11 @@ struct DesireDialColorTests {
 
     private var smallestGapBetweenStops: Double { adjacentGaps.min() ?? 0 }
 
-    /// Oklab ΔE. Euclidean distance in a space built so that equal steps look
-    /// like equal steps — which HSV hue degrees emphatically are not, the
-    /// reason "the hues are evenly spaced" was a misleading way to check this
-    /// ramp in the first place.
+    /// Oklab ΔE, from the shared model in `TestSupport` — the gauge's tones are
+    /// measured against the same one, so the two sets of thresholds mean the
+    /// same thing.
     private func perceptualDistance(_ first: Color, _ second: Color) -> Double {
-        let a = oklab(first)
-        let b = oklab(second)
-        return sqrt(pow(a.0 - b.0, 2) + pow(a.1 - b.1, 2) + pow(a.2 - b.2, 2))
-    }
-
-    private func oklab(_ color: Color) -> (Double, Double, Double) {
-        let resolved = color.resolve(in: EnvironmentValues())
-        let r = Double(resolved.linearRed)
-        let g = Double(resolved.linearGreen)
-        let b = Double(resolved.linearBlue)
-
-        let l = cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
-        let m = cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
-        let s = cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
-
-        return (
-            0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
-            1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
-            0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
-        )
+        Perceptual.distance(first, second)
     }
 
     @Test func theMidpointSitsAtTheMiddleOfTheScale() {

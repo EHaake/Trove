@@ -183,6 +183,20 @@ perceptual-distinguishability test. Doing this before Phase 7 rather
 than after means `WishlistDetailView` (T038) gets built against the
 final `WishlistItem` shape instead of being revisited.
 
+**Landed.** The three fill tones are `accentBrassDim`, a perceptual
+half-mix of it with `accentBrass`, and `accentBrass` — held between the
+existing tokens rather than reaching for `accentBrassHover`, which is a
+state token rather than a brightness step. Chosen by searching the Oklab
+model, not by eye. Measured off pixels sampled from the gauge rendered
+at its 14×10pt row size: adjacent tones 0.109 and 0.108 apart, the
+dimmest 0.162 from the empty track, against the 0.06 floor
+`DesireDialColorTests` holds the dial's stops to. The perceptual model
+now lives once in `TestSupport` and serves both the dial (palette
+tokens) and the gauge (sampled pixels), so the two sets of thresholds
+stay comparable. `DesireToOwnOrderingTests` pins the display-only rule
+from both sides: neither sort order consults the rating, and no sort
+option is named for it.
+
 ## Phase 7 — Wishlist detail and the Sell Plan
 
 `WishlistDetailView` and `SellPlanView` are deliberately separate

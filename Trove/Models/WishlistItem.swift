@@ -19,6 +19,17 @@ final class WishlistItem {
 
     var notes: String?
 
+    /// 1 ("Someday") to 3 ("Next"). Like `Item.desireToKeep`, the valid range
+    /// is enforced in the view model rather than the schema.
+    ///
+    /// Defaults to 2 — a wishlist entry someone bothered to type is already
+    /// past "someday", and starting everything at the top would make the
+    /// rating meaningless as a way to tell entries apart.
+    ///
+    /// Display only. It never reorders the wishlist: `sortOrder` below stays
+    /// the single ordering, per spec.md.
+    var desireToOwn: Int = 2
+
     /// User-adjustable manual ordering of the wishlist.
     var sortOrder: Int = 0
 
@@ -51,6 +62,7 @@ final class WishlistItem {
         estimatedCostCents: Int = 0,
         currencyCode: String = "USD",
         notes: String? = nil,
+        desireToOwn: Int = 2,
         sortOrder: Int = 0,
         photos: [Photo]? = [],
         plannedSaleItems: [Item]? = []
@@ -60,6 +72,7 @@ final class WishlistItem {
         self.estimatedCostCents = estimatedCostCents
         self.currencyCode = currencyCode
         self.notes = notes
+        self.desireToOwn = desireToOwn
         self.sortOrder = sortOrder
         self.photos = photos
         self.plannedSaleItems = plannedSaleItems

@@ -29,6 +29,8 @@ final class WishlistFormViewModel {
     /// suggestions would be harder to hit than a stable one.
     static let costPresets: [Decimal] = [250, 500, 1_000, 2_500]
 
+    static let desireToOwnRange = 1...3
+
     var name: String = ""
     var categoryPath: String = ""
     var estimatedCost: Decimal?
@@ -38,6 +40,22 @@ final class WishlistFormViewModel {
     /// photo is usually a listing shot or a reference image rather than a
     /// picture of something owned, which changes nothing about how it's stored.
     var photos: [Photo] = []
+
+    private var storedDesireToOwn = 2
+
+    /// Clamped on assignment rather than at save time, the same as the item
+    /// form's `desireToKeep`: the invariant then holds for anything reading it
+    /// mid-edit, and a control bound straight to this can't drive it out of
+    /// range.
+    var desireToOwn: Int {
+        get { storedDesireToOwn }
+        set {
+            storedDesireToOwn = min(
+                max(newValue, Self.desireToOwnRange.lowerBound),
+                Self.desireToOwnRange.upperBound
+            )
+        }
+    }
 
     private(set) var validationErrors: Set<ValidationError> = []
     private(set) var saveFailureMessage: String?
@@ -79,6 +97,7 @@ final class WishlistFormViewModel {
         item.categoryPath = canonicalCategoryPath()
         item.estimatedCostCents = Money.cents(from: estimatedCost ?? 0)
         item.notes = Self.nilIfBlank(notes)
+        item.desireToOwn = desireToOwn
         // Assigning the whole set, not appending: SwiftData sets each photo's
         // `wishlistItem` inverse from this side, and anything the user removed
         // in the picker drops out of the relationship here.
@@ -132,6 +151,7 @@ final class WishlistFormViewModel {
         estimatedCost = Money.amount(fromCents: item.estimatedCostCents)
         notes = item.notes ?? ""
         photos = item.photos ?? []
+        desireToOwn = item.desireToOwn
     }
 
     private static func trimmed(_ value: String) -> String {
