@@ -78,6 +78,30 @@ actually useful once the app is in daily use.
   palette needs to work across whatever range a real collection has, but
   worth treating as a strong early candidate once `001` ships, not a
   backlog afterthought.
+- **`009-sell-plan-list`** — A dedicated view of every wishlist item that
+  currently has an active Sell Plan (a non-empty `plannedSaleItems`
+  selection) — no new persisted entity, just a new lens on data that
+  already exists. Surfaced via a card on the Dashboard ("N active sell
+  plans"), reusing the cross-tab deep-link mechanism `001`'s `T042`
+  already builds for the leaf-category and un-valued-items jumps.
+  Deliberately *not* a fourth tab — a tab competing with Dashboard/
+  Items/Wishlist for permanent attention should represent a genuinely
+  distinct place to be, not a filtered slice of data already reachable
+  elsewhere; a Dashboard card or a Wishlist-tab filter both deliver the
+  same value more cheaply. Came up during `001`'s Phase 7 review, in the
+  same conversation that resolved what the mock's placeholder fourth tab
+  should actually become (see the Navigation note in `001`'s `plan.md`).
+  Rows are card-sized, not compact-list-sized, given how much they need
+  to show: thumbnail, name, category, the selected-value-vs-cost
+  comparison with the same quiet color cue `SellPlanView` itself uses,
+  and a selection count ("3 of 5 candidates selected"). Tapping a row
+  goes straight into that item's existing `SellPlanView` — no new detail
+  screen needed, only a new entry point into one that already exists.
+  Deferred rather than folded into `001` because, unlike the wishlist-
+  photos and desire-gauge additions, it's a genuinely new, undesigned
+  screen that doesn't block or get blocked by anything already in
+  flight — it deserves a real Claude Design pass rather than an
+  improvised layout, the same reasoning that held `008` to v2.
 
 ## Working convention
 
