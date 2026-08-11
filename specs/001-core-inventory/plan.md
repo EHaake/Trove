@@ -250,6 +250,13 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
   - The user can freely toggle any candidate in or out; each toggle
     updates `plannedSaleItems` right away — no separate save step,
     consistent with the app's low-friction bar.
+  - **A selected item that stops qualifying stays in the list** (decided
+    at T039): raising an item's desire-to-keep above the threshold, or
+    clearing its current value, removes it from the candidate pool but
+    not from a plan that already selected it. Dropping it would strand
+    the selection — still counted in the total, with no row to switch it
+    off from. Eligibility governs what can be *added*, not what stays
+    visible once chosen.
   - Display the selected items' combined value alongside the wishlist
     item's estimated cost as two comparable figures. A quiet color
     distinction (e.g. one tone once selected value meets or exceeds the
