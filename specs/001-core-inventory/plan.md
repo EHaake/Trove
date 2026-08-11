@@ -82,6 +82,7 @@ field without re-deriving it each time.
 | `currencyCode` | `String` | ISO 4217 code, default `"USD"` |
 | `notes` | `String?` | |
 | `photos` | `[Photo]?` | to-many relationship, same optionality reason as `Item.photos` |
+| `desireToOwn` | `Int` | default `2`, valid range 1–3 enforced in the view model, not the schema — same pattern as `Item.desireToKeep` |
 | `sortOrder` | `Int` | default `0`, user-adjustable manual ordering |
 | `createdAt` | `Date` | default `.now` |
 | `plannedSaleItems` | `[Item]?` | to-many relationship — see "Sell Plan" below; optional for the same CloudKit reason as `Item.photos` |
@@ -271,7 +272,29 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
     future feature, deliberately excluded now to keep this screen simple.
 - **`WishlistFormView`** / `WishlistFormViewModel` — add/edit wishlist
   item, including `PhotoPickerField` — same shared component `ItemFormView`
-  uses, now bound to `WishlistItem.photos` instead of `Item.photos`.
+  uses, now bound to `WishlistItem.photos` instead of `Item.photos` — and
+  an editable, labeled `DesireGauge` for `desireToOwn`.
+- **`DesireGauge`** — the wishlist counterpart to `DesireDial`, and
+  deliberately *not* the same control. Three parallelogram segments
+  (slight consistent shear, flat fill, hard edges — no gradient, per the
+  design brief's flat/graphic constraint) in a horizontal row, filled
+  left to right by `desireToOwn`. Unfilled segments stay visible as dim
+  empty tracks, so it reads as a scale with a reading on it rather than
+  a tally of marks. The three filled tones ramp within the gauge —
+  segment 1 dimmest brass, 2 medium, 3 brightest — so count and
+  brightness reinforce each other and the brightest tone appears only at
+  "Next". Labeled ("Someday"/"Soon"/"Next") in the form and detail
+  screen, unlabeled in list rows.
+
+  Why not reuse `DesireDial`: the dial's rust→moss sweep encodes a
+  keep/sell axis, which has no meaning for something you don't own yet —
+  a "1" on a wishlist means low priority, not "get rid of this." Two
+  near-identical dials meaning structurally different things would read
+  worse than two clearly different controls. Per `CLAUDE.md`'s
+  design-correctness rule, the three fill states need a test asserting
+  they're perceptually distinguishable at their *rendered row size*,
+  validated against sampled pixels — the same Oklab approach used for the
+  dial's ramp, not an eyeball check.
 - **`CategoryPickerField`** — shared component (text field + autocomplete
   suggestion list), used by both item and wishlist forms.
 - **`PhotoPickerField`** — wraps `PhotosUI.PhotosPicker` for multi-photo

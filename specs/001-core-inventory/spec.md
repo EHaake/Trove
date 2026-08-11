@@ -100,6 +100,12 @@ they can reason about selling underused gear to fund new purchases.
 - Estimated cost
 - Notes
 - Photo(s) — multiple photos supported, same treatment as owned items
+- Desire-to-own rating, 1–3 (1 = "Someday", 2 = "Soon", 3 = "Next");
+  defaults to 2 on creation. Deliberately coarser than owned items'
+  1–5 desire-to-keep — three levels is about the resolution people
+  actually have about their own wants, and it keeps the two ratings
+  from reading as the same measurement pointed in opposite directions.
+  Display-only: it does not sort or reorder the wishlist (see below).
 - Priority or ranking (exact mechanism TBD in plan — at minimum the user
   can order the list)
 - Sell Plan — a persisted selection of owned items the user is
@@ -204,6 +210,20 @@ same treatment as the owned-items list. Each row has a "See sell plan"
 shortcut straight to that item's Sell Plan, alongside opening the item
 itself for its own details.
 
+Each row shows the item's desire-to-own rating as a small three-segment
+gauge, unlabeled — the gauge alone, no "Someday"/"Soon"/"Next" text and
+no legend, since repeating a static word down every row of a scrolling
+list is noise. The words appear in the add/edit form and the wishlist
+item's detail screen, which is where the user sets the value and learns
+what the three levels mean.
+
+The rating never reorders the list. Manual `sortOrder` (drag to reorder)
+stays the only ordering — two competing ordering systems where one
+silently overrides the other is worse than one the user controls, and
+three coarse tiers would produce mostly-ties anyway. Consistent with the
+Sell Plan's principle: show the information, let the user decide what to
+do with it.
+
 ### Add and review a wishlist item
 User adds a wishlist item with name, category, estimated cost. Viewing a
 wishlist item shows that item plainly — name, category, estimated cost,
@@ -274,7 +294,11 @@ need to clear.)
       notes.
 - [ ] User can edit and delete an owned item.
 - [ ] User can create, edit, and delete a wishlist item (name, category,
-      estimated cost, notes, photos).
+      estimated cost, notes, photos, desire-to-own rating).
+- [ ] Desire-to-own defaults to 2 ("Soon") on creation, is settable 1–3
+      in the add/edit form, and renders as an unlabeled three-segment
+      gauge in wishlist rows and a labeled one in the form and detail
+      screen. It does not affect list ordering.
 - [ ] Category paths autocomplete from previously-used paths across both
       owned items and wishlist items.
 - [ ] Dashboard shows total current value (excluding un-valued items,

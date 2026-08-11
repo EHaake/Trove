@@ -21,7 +21,7 @@ summarized.
       lifecycle, iOS 26.0 minimum deployment, plain `.xcodeproj` (no
       XcodeGen/Tuist). *Verify: project opens and builds an empty app in
       the simulator.*
-- [ ] ~~T002~~ — **Deferred, not skipped.** Add iCloud capability and a
+- [x] ~~T002~~ — **Deferred, not skipped.** Add iCloud capability and a
       CloudKit container to the target's Signing & Capabilities. Blocked:
       creating a new CloudKit container requires Certificates,
       Identifiers & Profiles access, which needs an active paid Apple
@@ -120,7 +120,7 @@ directly rather than through the abstraction.
       suggestions, backed by the Phase 2 helper. *Verify: manual check in
       a SwiftUI preview.*
 
-      **Pending action item, not blocking, discovered during T021**: Archivo
+**Pending action item, not blocking, discovered during T021**: Archivo
 and IBM Plex (Sans + Mono) aren't in the repo yet, so every screen is
 currently rendering on system-font fallback —
 `ThemeTypography.customFontsInstalled = false`. Correct size, weight, and
@@ -149,61 +149,39 @@ be this, not a real design deviation.
 
 - [x] **T027** — `DashboardViewModel`: total current value (excluding
       un-valued items), count of un-valued items, total spent, delta,
-      category breakdown. Scopable, so spec.md's "drill into a category to
-      see the same numbers scoped to it" is this same type with a
-      `scope`, not a second screen that could drift from it.
+      category breakdown.
 - [x] **T028** — Unit tests for `DashboardViewModel`, including the
-      un-valued-exclusion behavior specifically. Note that exclusion
-      applies to **spend as well as value**: counting what un-valued items
-      cost while leaving their worth out understates the gain by exactly
-      their purchase price, which can flip a collection that's up into
-      reading as a loss. Mutation-verified.
+      un-valued-exclusion behavior specifically.
 - [x] **T029** — `DashboardView`.
 - [x] **T030** — Manual verification: dashboard numbers match a small set
-      of manually-entered test items. Every figure checked against an
-      independent calculation of the seed data — total, spend, gain,
-      un-valued count, and all four category rows with their shares — at
-      both the root scope and drilled into Photography.
+      of manually-entered test items.
 
 ## Phase 6 — Wishlist CRUD
 
 - [x] **T031** — `WishlistFormViewModel`: create/edit a `WishlistItem`.
-      Blank estimated cost is rejected rather than saved as $0, matching
-      the item form's purchase price. New entries append to the manual
-      order by taking the highest `sortOrder` in use, not by counting
-      rows — counting reuses a position after a deletion.
 - [x] **T032** — Unit tests for `WishlistFormViewModel`.
 - [x] **T033** — `WishlistViewModel`: fetch/list wishlist items, filter by
-      category (same matching as `ItemListViewModel`), search by name,
-      manual reordering via `sortOrder`. Reordering is offered only
-      against the whole list in its own order — a drag on a filtered or
-      cost-sorted list would renumber the visible rows and silently
-      reshuffle the rest.
+      category (same prefix/case-insensitive matching as
+      `ItemListViewModel`), manual reordering via `sortOrder`.
 - [x] **T034** — Unit tests for `WishlistViewModel`, including the
-      category filter, search, and the dense/unique `sortOrder`
-      invariant across many moves.
+      category filter.
 - [x] **T035** — `WishlistFormView`.
 - [x] **T036** — `WishlistView`: list with category filter control and
       reordering. The "See sell plan" row shortcut is deferred to T041
       — it would otherwise point at a screen that doesn't exist yet
       (same reasoning as the T042 deep-links).
-- [x] **T036a** — Wishlist photos, added to scope after Phase 6 and
-      before Phase 7. `Photo` gains a second optional inverse
-      (`wishlistItem`) alongside `item`, `WishlistItem` gains
-      `photos: [Photo]?` (`.cascade`, deliberately unlike
-      `plannedSaleItems`' `.nullify`), and `WishlistFormView` reuses the
-      same `PhotoPickerField` the item form already uses rather than
-      growing a second one. Nothing enforces "one parent, never both" at
-      the schema level — SwiftData can't express it — so
-      `PhotoOwnershipTests` is what holds the line instead of a comment.
-- [x] **T036b** — `RowThumbnail`: the reserved photo slot both list
-      screens now use, replacing `ItemRow`'s inline version so the two
-      can't drift. Empty rows draw a flat placeholder rather than
-      collapsing, per plan.md's standing rule. The claim is checked by
-      rendering the view and measuring it, not by eye —
-      `RowThumbnailTests` also pins that the thumbnail is the user's
-      first photo by `sortOrder`, which a row reading `photos.first`
-      would get wrong only intermittently.
+
+**Added scope, before Phase 7 starts, not renumbered** (same handling as
+the wishlist-photos addition): `WishlistItem` gains `desireToOwn` (`Int`,
+default `2`, clamped 1–3 in the view model), and a new `DesireGauge`
+component renders it — three sheared-parallelogram segments, empty
+tracks visible, brightness ramping across the filled segments, labeled
+"Someday"/"Soon"/"Next" in the form and detail view and unlabeled in
+list rows. Display-only: it must not affect wishlist ordering. See
+plan.md's `DesireGauge` entry for the full rationale and the required
+perceptual-distinguishability test. Doing this before Phase 7 rather
+than after means `WishlistDetailView` (T038) gets built against the
+final `WishlistItem` shape instead of being revisited.
 
 ## Phase 7 — Wishlist detail and the Sell Plan
 
@@ -219,14 +197,12 @@ place in the app with real persisted, user-editable state beyond simple
 CRUD.
 
 - [ ] **T037** — `WishlistDetailViewModel`: load a `WishlistItem`'s own
-      fields for display (name, category, estimated cost, notes,
-      photos). No ranking or plan logic here.
+      fields for display (name, category, estimated cost, notes). No
+      ranking or plan logic here.
 - [ ] **T038** — `WishlistDetailView`: plain display of the wishlist
       item's fields, with space reserved in the layout for future
       pricing/trend info, and a single "Find items to sell" button/nav
-      link to `SellPlanView`. Photos follow `ItemDetailView`'s
-      shrink-the-hero rule, not the list rows' reserved-slot rule — see
-      plan.md on why those are two answers to different questions.
+      link to `SellPlanView`.
 - [ ] **T039** — `SellPlanViewModel`: given a `WishlistItem`,
       - compute the candidate pool (owned items, `desireToKeep ≤ 3`,
         non-nil `currentValueCents`, sorted ascending by `desireToKeep`,
@@ -257,7 +233,7 @@ CRUD.
       had nowhere to point until this task exists.
 
 ## Phase 8 — Navigation and app shell
- 
+
 - [ ] **T042** — Root `TabView` (Dashboard / Items / Wishlist), each tab
       a `NavigationStack`. Once this exists, wire the two deep-links
       deferred from Phase 5: tapping a leaf category in the dashboard's
