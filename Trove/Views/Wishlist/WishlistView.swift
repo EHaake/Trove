@@ -18,7 +18,7 @@ import SwiftUI
 struct WishlistView: View {
     @State private var viewModel: WishlistViewModel
     @State private var isAddingItem = false
-    @State private var editingItem: WishlistItem?
+    @State private var selectedItemID: UUID?
     @State private var isReordering = false
 
     @Environment(\.theme) private var theme
@@ -58,12 +58,16 @@ struct WishlistView: View {
         .overlay(alignment: .bottomTrailing) { addButton }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .navigationBar)
+        // A separate destination type from the item list's bare `UUID`, so the
+        // two stacks can't be confused about which entity an id belongs to.
+        .navigationDestination(item: $selectedItemID) { itemID in
+            WishlistDetailView(modelContext: modelContext, itemID: itemID)
+        }
         .sheet(isPresented: $isAddingItem, onDismiss: viewModel.load) {
             NavigationStack { WishlistFormView(modelContext: modelContext) }
         }
-        .sheet(item: $editingItem, onDismiss: viewModel.load) { item in
-            NavigationStack { WishlistFormView(modelContext: modelContext, editing: item) }
-        }
+        // Values can change on the detail screen — an edit, the gauge, or a
+        // deletion — so the list refetches whenever it comes back into view.
         .onAppear(perform: viewModel.load)
         .onChange(of: viewModel.searchText) { viewModel.load() }
     }
@@ -160,7 +164,12 @@ struct WishlistView: View {
                         trailing: theme.metrics.listRowInset
                     ))
                     .contentShape(Rectangle())
-                    .onTapGesture { editingItem = item }
+                    // Opens the item, not the form. Tapping a row used to jump
+                    // straight to editing because there was nowhere else to
+                    // go; now that the detail screen exists it's the row's
+                    // destination, and editing is one step further in — the
+                    // same shape as the item list.
+                    .onTapGesture { selectedItemID = item.id }
             }
             .onMove { source, destination in
                 viewModel.move(fromOffsets: source, toOffset: destination)

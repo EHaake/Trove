@@ -266,12 +266,34 @@ CRUD.
       CLAUDE.md requires one regardless, so the tests land here — four
       guards mutation-verified (cached load, unsorted photos, unclamped
       level, empty-string notes).
-- [ ] **T038** — `WishlistDetailView`: plain display of the wishlist
+- [x] **T038** — `WishlistDetailView`: plain display of the wishlist
       item's fields, with space reserved in the layout for future
       pricing/trend info, and a single "Find items to sell" button/nav
       link to `SellPlanView`. Photos follow `ItemDetailView`'s
       shrink-the-hero rule, not the list rows' reserved-slot rule — see
       plan.md on why those are two answers to different questions.
+
+      **The "Find items to sell" button is deferred to T041**, the same
+      call as `WishlistView`'s row shortcut and T042's deep-links: it
+      would otherwise be a control that looks tappable and isn't. Its
+      space sits at the end of the scroll, after the market-price block.
+      Everything else on the screen is built.
+
+      Three things Design's mock predates, resolved against the newer
+      documents rather than the drawing. Its "Priority · Next up" row
+      becomes the labeled `DesireGauge` (the brief asks for the gauge
+      labeled in the detail view, and a plain row saying the same thing
+      in different words invites the two to disagree); it has no photo
+      area, so the shrink-the-hero carousel is added; and its Edit and
+      Delete toolbar buttons are kept, which is what `delete()` on the
+      view model is for — plan.md's "a single button" is about the route
+      to the Sell Plan, not the screen's total button count.
+
+      `PhotoCarousel` moved from inside `ItemDetailView` to `Views/
+      Shared/` rather than being copied, and tapping a wishlist row now
+      opens the item instead of jumping straight to the edit form — the
+      same shape as the item list, and what makes this screen reachable
+      at all.
 - [ ] **T039** — `SellPlanViewModel`: given a `WishlistItem`,
       - compute the candidate pool (owned items, `desireToKeep ≤ 3`,
         non-nil `currentValueCents`, sorted ascending by `desireToKeep`,

@@ -195,6 +195,98 @@ struct WishlistDetailViewModelTests {
         #expect(viewModel.hasNotes)
     }
 
+    // MARK: - Delete
+
+    @Test func deleteRemovesTheItemFromTheStore() throws {
+        let context = try makeInMemoryContext()
+        let wanted = insert(into: context)
+        try context.save()
+
+        let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id)
+        viewModel.load()
+
+        #expect(viewModel.delete())
+        #expect(viewModel.item == nil)
+        #expect(try context.fetch(FetchDescriptor<WishlistItem>()).isEmpty)
+    }
+
+    @Test func deleteLeavesOtherWishlistItemsAlone() throws {
+        let context = try makeInMemoryContext()
+        let wanted = insert(into: context)
+        _ = insert("Vox AC15 Custom", category: "Music/Amps", into: context)
+        try context.save()
+
+        let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id)
+        viewModel.load()
+        #expect(viewModel.delete())
+
+        let survivors = try context.fetch(FetchDescriptor<WishlistItem>())
+        #expect(survivors.count == 1)
+        #expect(survivors.first?.name == "Vox AC15 Custom")
+    }
+
+    @Test func deleteDoesNothingWhenNothingIsLoaded() throws {
+        let context = try makeInMemoryContext()
+        _ = insert(into: context)
+        try context.save()
+
+        let viewModel = WishlistDetailViewModel(modelContext: context, itemID: UUID())
+        viewModel.load()
+
+        #expect(viewModel.delete() == false)
+        #expect(try context.fetch(FetchDescriptor<WishlistItem>()).count == 1)
+    }
+
+    @Test func deletingTakesItsPhotosWithIt() throws {
+        let context = try makeInMemoryContext()
+        let wanted = insert(into: context)
+        let photo = Photo(imageData: Data([0x01]))
+        context.insert(photo)
+        wanted.photos = [photo]
+        try context.save()
+
+        let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id)
+        viewModel.load()
+        #expect(viewModel.delete())
+
+        #expect(try context.fetch(FetchDescriptor<Photo>()).isEmpty)
+    }
+
+    /// The distinction the two delete rules exist for, exercised through the
+    /// screen that actually offers the action: abandoning something you wanted
+    /// must never delete gear you own. The alert says as much, so it had
+    /// better be true.
+    @Test func deletingLeavesTheSellPlanGearAlone() throws {
+        let context = try makeInMemoryContext()
+        let wanted = insert(into: context)
+        let owned = Item(name: "Fender Telecaster", categoryPath: "Music/Guitars")
+        context.insert(owned)
+        wanted.plannedSaleItems = [owned]
+        try context.save()
+
+        let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id)
+        viewModel.load()
+        #expect(viewModel.delete())
+
+        let survivors = try context.fetch(FetchDescriptor<Item>())
+        #expect(survivors.count == 1)
+        #expect(survivors.first?.name == "Fender Telecaster")
+    }
+
+    @Test func loadAfterDeleteFindsNothing() throws {
+        let context = try makeInMemoryContext()
+        let wanted = insert(into: context)
+        try context.save()
+
+        let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id)
+        viewModel.load()
+        #expect(viewModel.delete())
+
+        viewModel.load()
+        #expect(viewModel.item == nil)
+        #expect(viewModel.hasLoaded)
+    }
+
     // MARK: - Scope
 
     /// plan.md keeps the Sell Plan a deliberate tap away rather than something

@@ -18,6 +18,7 @@ import SwiftData
 @Observable
 final class WishlistDetailViewModel {
     private(set) var item: WishlistItem?
+    private(set) var deleteFailureMessage: String?
 
     /// Distinguishes "not loaded yet" from "loaded, and it's gone".
     private(set) var hasLoaded = false
@@ -36,6 +37,28 @@ final class WishlistDetailViewModel {
         descriptor.fetchLimit = 1
         item = try? modelContext.fetch(descriptor).first
         hasLoaded = true
+    }
+
+    /// Deletes the loaded item.
+    ///
+    /// Its photos go with it, by the cascade rule on `WishlistItem.photos`.
+    /// Whatever sits on its Sell Plan does **not** — that's `.nullify`, and the
+    /// distinction is the whole reason the two rules differ: abandoning
+    /// something you wanted must never delete gear you own.
+    @discardableResult
+    func delete() -> Bool {
+        deleteFailureMessage = nil
+        guard let item else { return false }
+
+        modelContext.delete(item)
+        do {
+            try modelContext.save()
+            self.item = nil
+            return true
+        } catch {
+            deleteFailureMessage = error.localizedDescription
+            return false
+        }
     }
 
     // MARK: - Display
