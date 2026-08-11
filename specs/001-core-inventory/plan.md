@@ -212,9 +212,12 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
 - **`WishlistView`** / `WishlistViewModel` — browse/filter/search
   wishlist items, filterable by category (same prefix/case-insensitive
   matching as `ItemListViewModel`) and searchable by name, same
-  treatment as the item list. Each row includes a "See sell plan" button
-  that jumps straight to that item's `SellPlanView`, bypassing
-  `WishlistDetailView` — a shortcut, not a replacement for the main flow.
+  treatment as the item list. No per-row Sell Plan shortcut — tried at
+  T036/T041, removed after review: a control repeated identically on
+  every row read as visual noise and pushed the Sell Plan toward the
+  screen's foreground, which is exactly what the "not shown by default"
+  design in spec.md is trying to avoid. Reachable only via
+  `WishlistDetailView`'s button.
 - **`WishlistDetailView`** / `WishlistDetailViewModel` — a plain view of
   the wishlist item itself: name, category, estimated cost, notes. Space
   is reserved in the layout for live pricing/trend info (a future
@@ -227,8 +230,9 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
   the idea that this deserves to be a persisted, concrete thing rather
   than a disposable computed list) came out of designing the screens in
   Claude Design, and it's a real improvement worth keeping. Reached via
-  `WishlistDetailView`'s button or `WishlistView`'s per-row shortcut, not
-  shown automatically anywhere.
+  `WishlistDetailView`'s button, not shown automatically anywhere. A
+  per-row shortcut on `WishlistView` was tried and removed — see that
+  entry above.
 
   **This is advisory, not goal-directed** — worth stating plainly because
   it shapes the behavior below. The feature answers "is this a

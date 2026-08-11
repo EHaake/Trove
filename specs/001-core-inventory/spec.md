@@ -206,9 +206,7 @@ with-disambiguation rule in the Categories section above.
 
 ### Browse and manage the wishlist
 List of wishlist items, filterable by category and searchable by name,
-same treatment as the owned-items list. Each row has a "See sell plan"
-shortcut straight to that item's Sell Plan, alongside opening the item
-itself for its own details.
+same treatment as the owned-items list.
 
 Each row shows the item's desire-to-own rating as a small three-segment
 gauge, unlabeled — the gauge alone, no "Someday"/"Soon"/"Next" text and
@@ -265,6 +263,17 @@ showing it automatically would overstate what it currently does. It's
 one tap away, not hidden, but the wishlist item's own details are what
 the screen leads with.
 
+**Reached only from the wishlist item's detail screen — not from the
+list rows.** A per-row shortcut was built and tried; removed after
+review because a CTA repeated on every row is a stronger, more constant
+push toward the Sell Plan than even the goal-completion framing that
+got removed from the screen itself — the same over-prominence problem
+in a different form. One extra tap versus a shortcut is the right
+trade for a feature that's meant to stay quietly available, not
+prominent. A future dashboard-level view of active plans
+(`009-sell-plan-list` in `specs/ROADMAP.md`) is the intended way to
+survey plans in bulk, once it exists.
+
 The Sell Plan does not track whether anything was actually sold — no
 "mark as sold," no removal from inventory, no transaction history (see
 non-goals). It's for deciding, not for bookkeeping a completed sale.
@@ -310,8 +319,9 @@ need to clear.)
       desire-to-keep/current value/purchase date, and searched by name
       or serial number.
 - [ ] Wishlist list can be filtered by category and searched by name.
-- [ ] Each wishlist list row and the wishlist item's own detail screen
-      both offer a way to reach that item's Sell Plan.
+- [ ] The wishlist item's own detail screen offers a way to reach that
+      item's Sell Plan. List rows do not carry their own shortcut — see
+      the Sell Plan section for why.
 - [ ] Viewing a wishlist item shows the item's own details (name,
       category, cost, notes) by default, not its Sell Plan.
 - [ ] A wishlist item's Sell Plan, opened for the first time, shows the
