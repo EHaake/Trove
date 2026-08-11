@@ -186,6 +186,12 @@ struct WishlistView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        // Room to scroll the last row clear of the floating add button. It
+        // always overlapped the bottom row, but the row's trailing corner used
+        // to hold a gauge — something to read past. Now it holds the sell-plan
+        // button, and a control you can't reach without scrolling first is a
+        // different matter.
+        .contentMargins(.bottom, 76, for: .scrollContent)
         .environment(\.editMode, .constant(isReordering ? .active : .inactive))
     }
 
@@ -287,21 +293,17 @@ private struct WishlistRow: View {
 
     @Environment(\.theme) private var theme
 
+    /// Everything lives in one row, with the trailing column carrying all three
+    /// of the item's own readings top to bottom: cost, how much it's wanted,
+    /// and the way through to its sell plan.
+    ///
+    /// The shortcut used to sit in a full-width strip under a divider, as
+    /// Design drew it — but Design paired it there with a "$990 short" figure
+    /// that spec.md rules out, and once that came off the strip was one short
+    /// label and a lot of empty width. Folding it into the column the cost
+    /// already occupies took the row from ~155pt to ~104pt, which is most of a
+    /// row back per screen.
     var body: some View {
-        VStack(spacing: theme.metrics.cardPadding) {
-            details
-            Divider().overlay(theme.colors.divider)
-            sellPlanShortcut
-        }
-        .padding(theme.metrics.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
-    }
-
-    private var details: some View {
         HStack(alignment: .top, spacing: theme.metrics.cardPadding) {
             RowThumbnail(photos: item.photos ?? [])
 
@@ -325,45 +327,77 @@ private struct WishlistRow: View {
 
             Spacer(minLength: 0)
 
-            // Cost leads at the top, the gauge sits quietly at the bottom —
-            // the brief puts it in the row's lower-right, unlabeled. The
-            // thumbnail sets the row's height, so this column has the space
-            // for both without the row growing.
-            VStack(alignment: .trailing, spacing: 0) {
+            // Cost, then the gauge directly under it, then the shortcut pinned
+            // to the bottom — the corner the gauge used to hold. The thumbnail
+            // still sets the row's height, so all three fit without the row
+            // growing past it.
+            VStack(alignment: .trailing, spacing: 6) {
                 Text(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))
                     .font(theme.typography.monoValue)
                     .foregroundStyle(theme.colors.textPrimary)
                     .lineLimit(1)
+                    .accessibilityLabel("Estimated cost \(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))")
+
+                DesireGauge(value: .constant(item.desireToOwn))
 
                 Spacer(minLength: theme.metrics.fieldGap)
 
-                DesireGauge(value: .constant(item.desireToOwn))
+                sellPlanShortcut
             }
         }
-        .accessibilityElement(children: .combine)
+        // Deliberately not `.accessibilityElement(children: .combine)`, which
+        // the row used to carry: combining swallows the sell-plan button into
+        // one long description and leaves no way to reach it. Read as separate
+        // elements, the row is name, category, notes, cost, the gauge's own
+        // label, then the button.
+        .padding(theme.metrics.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
+                .fill(theme.colors.surface)
+        )
     }
 
-    /// Design puts this at the row's bottom-right, under a divider, paired with
-    /// a "$990 short" figure on the left. The figure is gone — spec.md rules
-    /// out that framing, and the mock's arithmetic measured one sellable pool
-    /// against every row at once — so the shortcut sits alone.
+    /// The way through to this item's sell plan.
     ///
-    /// Its own `Button` inside a row that already navigates to the item: taps
-    /// on it reach here rather than opening the detail screen.
+    /// **Drawn as a control, not a reading.** It now sits in the corner that
+    /// has only ever held passive readouts — the item list's dial, and this
+    /// row's own gauge until a moment ago — so bare brass text there would
+    /// read as one more figure. The bordered capsule and chevron are the app's
+    /// existing button language, borrowed from the sort control and the filter
+    /// chips, and it's the only bordered thing in the row.
+    ///
+    /// "Sell plan" rather than Design's "See sell plan": the column is beside a
+    /// truncating title, and the shorter label keeps roughly the cost's width
+    /// instead of eating into the name. The full phrasing survives as the
+    /// accessibility label, where nothing is competing for space.
+    ///
+    /// Its own `Button` inside a row that already navigates to the item, so
+    /// taps here reach the sell plan rather than opening the item — the same
+    /// arrangement as the full-width version, which behaved correctly.
     private var sellPlanShortcut: some View {
         Button(action: showSellPlan) {
-            HStack(spacing: 6) {
-                Spacer(minLength: 0)
-                Text("See sell plan")
+            HStack(spacing: 4) {
+                Text("Sell plan")
                     .font(theme.typography.secondary)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 11, weight: .medium))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
             }
             .foregroundStyle(theme.colors.accentBrass)
-            .contentShape(Rectangle())
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .overlay(
+                Capsule().strokeBorder(theme.colors.accentBrass, lineWidth: theme.metrics.hairline)
+            )
+            // Hit area pushed past the capsule on every side. A negative inset
+            // grows the tappable region without moving anything, which matters
+            // more here than it did in the full-width strip: the target went
+            // from the row's whole width to a pill of about 80×26.
+            .contentShape(Capsule().inset(by: -8))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("See sell plan for \(item.name)")
+        .accessibilityAddTraits(.isButton)
     }
 }
 
