@@ -294,7 +294,7 @@ CRUD.
       opens the item instead of jumping straight to the edit form — the
       same shape as the item list, and what makes this screen reachable
       at all.
-- [ ] **T039** — `SellPlanViewModel`: given a `WishlistItem`,
+- [x] **T039** — `SellPlanViewModel`: given a `WishlistItem`,
       - compute the candidate pool (owned items, `desireToKeep ≤ 3`,
         non-nil `currentValueCents`, sorted ascending by `desireToKeep`,
         tie-break higher current value first);
@@ -306,12 +306,37 @@ CRUD.
         wishlist item's `estimatedCostCents` as two separate figures for
         the view to compare, rather than a single pre-computed
         surplus/shortfall value with baked-in framing.
-- [ ] **T040** — Unit tests for `SellPlanViewModel`: empty candidate pool,
+- [x] **T040** — Unit tests for `SellPlanViewModel`: empty candidate pool,
       a tie resolved correctly, un-valued items excluded from the pool,
       the plan starts with nothing selected on first load, toggling a
       candidate updates the persisted selection and the selected-value
       figure, and re-loading after a toggle reflects the persisted
       selection rather than resetting.
+      Two decisions the plan didn't cover, both flagged rather than
+      folded in silently. A selected item can drift out of the pool —
+      raise its desire-to-keep, or clear its value — so the list carries
+      anything currently selected even once it stops qualifying;
+      otherwise it's stranded, still counted with no row to switch it
+      off from. And the colour cue spec.md permits is exposed as a
+      boolean (`selectedValueMeetsCost`), not a figure: a tone needs a
+      side, not a distance.
+
+      `SellPlanFramingTests` scans the source for surplus/shortfall/
+      remaining-style names, the same technique as
+      `NoHardcodedColorsTests`. A behavioural test can show what the type
+      does; only a scan shows what it declines to offer, and the way that
+      framing comes back is someone adding a computed property because it
+      reads tidier at the call site.
+
+      **Mutation testing found a false-passing test here**: the
+      "persists on every change" checks refetched on the same
+      `ModelContext`, which returns objects carrying unsaved changes, so
+      they passed with `save()` removed. Now checked through a second
+      context over the same container, plus `hasChanges`.
+      `makeInMemoryContainer()` in `TestSupport` exists for that.
+      `ModelTests`' `itemsSurviveASaveAndRefetch` had the same flaw and
+      is fixed alongside — its name made the claim its body didn't test.
+
 - [ ] **T041** — `SellPlanView`: selectable candidate list (visually
       distinguishing selected from unselected), the selected total shown
       alongside the estimated cost as two comparable figures. A quiet

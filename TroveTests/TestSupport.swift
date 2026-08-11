@@ -8,9 +8,21 @@ import SwiftUI
 /// semantics, no disk, no CloudKit. Each call is an isolated store, so tests
 /// can't leak state into one another.
 func makeInMemoryContext() throws -> ModelContext {
+    ModelContext(try makeInMemoryContainer())
+}
+
+/// The container behind `makeInMemoryContext()`, for tests that need a *second*
+/// context over the same store.
+///
+/// Worth having because a same-context refetch is not a persistence check:
+/// `ModelContext.fetch` returns objects carrying unsaved changes, so a test
+/// that toggles something and refetches passes whether or not `save()` was
+/// called. Mutation testing caught exactly that in the Sell Plan's
+/// "persists on every change" tests — they read as persistence checks and
+/// weren't. A second context sees only what actually reached the store.
+func makeInMemoryContainer() throws -> ModelContainer {
     let configuration = ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
-    let container = try ModelContainer(for: TroveSchema.schema, configurations: configuration)
-    return ModelContext(container)
+    return try ModelContainer(for: TroveSchema.schema, configurations: configuration)
 }
 
 /// The perceptual colour model the design-correctness tests measure against.

@@ -209,8 +209,13 @@ struct ModelRelationshipTests {
 
 @Suite("Persistence")
 struct PersistenceTests {
+    /// Refetched through a second context, so "survives a save" is what's
+    /// actually being tested. On the same context this passed with the `save()`
+    /// removed — `fetch` returns objects carrying unsaved changes — which the
+    /// Sell Plan's mutation run surfaced as a general pattern, not a one-off.
     @Test func itemsSurviveASaveAndRefetch() throws {
-        let context = try makeInMemoryContext()
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
         let item = Item(
             name: "Fender Telecaster",
             categoryPath: "Music/Guitars/Electric",
@@ -222,7 +227,7 @@ struct PersistenceTests {
         context.insert(item)
         try context.save()
 
-        let fetched = try context.fetch(FetchDescriptor<Item>())
+        let fetched = try ModelContext(container).fetch(FetchDescriptor<Item>())
         #expect(fetched.count == 1)
         #expect(fetched.first?.name == "Fender Telecaster")
         #expect(fetched.first?.categoryPath == "Music/Guitars/Electric")
