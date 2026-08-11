@@ -40,8 +40,8 @@ screens against dark for now.
 | `surface` | `#201F1D` (approx, adjust as needed) | cards, list rows |
 | `textPrimary` | `#F2EDE4` | warm ivory, primary text |
 | `textSecondary` | ~60% opacity of `textPrimary` | secondary/meta text |
-| `accentBrass` | `#C79A56` | primary accent — value figures, CTAs |
-| `accentMoss` | `#52634F` | secondary accent — positive/upward movement, the desire dial's "keep" end |
+| `accentBrass` | `#C79A56` | primary accent — value figures, CTAs, the desire gauge's fill ramp. **Not** the desire dial's "keep" end — see the signature-element section below and `tokens.md` |
+| `accentMoss` | `#52634F` | secondary accent — positive/upward movement, and the desire dial's "keep" end |
 | `accentRust` | `#9C4A34` | the desire dial's "sell" end, low-desire flags |
 | `divider` | `#3A3B3E` | hairlines, borders |
 
@@ -68,14 +68,34 @@ Replaces a plain 1–5 star rating everywhere it would otherwise appear
 (item cards, item detail, the sell-candidate ranking list). A simple arc
 gauge — thin stroke, flat fill, no gradient — sweeping from `accentRust`
 (1, "ready to sell") through `dialMidpoint` to `accentMoss` (5,
-"absolutely keeping it"). The brief originally put `accentBrass` at the
-"keep" end; it moved to moss so brass stays the app's money colour
-rather than doubling as a rating. See tokens.md for the ramp and the
-midpoint retune that came with it. This
-is the one recurring, distinctive, *functional* piece of visual identity
-for the app — it should show up small and quiet in list contexts, larger
-and directly editable (drag or tap-to-set) in the item form and detail
-view.
+"absolutely keeping it"). This is the one recurring, distinctive,
+*functional* piece of visual identity for the app — it should show up
+small and quiet in list contexts, larger and directly editable (drag or
+tap-to-set) in the item form and detail view.
+
+(The "keep" end shipped as moss rather than brass: brass sits next to the
+dial as the price figure's color, and the two were confusable. See
+`tokens.md` for the measured ramp and the guards that pin it.)
+
+## Companion element: the desire gauge (wishlist)
+
+Wishlist items carry their own rating — desire-to-*own*, 1–3, shown as a
+three-segment gauge rather than a dial. Deliberately a different control,
+not a recolored dial: the dial's rust→moss sweep encodes a keep/sell
+axis that means nothing for something you don't own yet, and two
+near-identical dials meaning structurally different things would read
+worse than two clearly distinct ones.
+
+Three parallelogram segments in a row — a slight, consistent shear so it
+doesn't read as a plain progress bar — filled left to right. Flat fills,
+hard edges, no gradient, same constraint as everything else here.
+Unfilled segments remain visible as dim empty tracks so it reads as a
+scale with a reading on it, not a count of marks. The filled tones ramp
+within the gauge (segment 1 dimmest brass, 2 medium, 3 brightest), so
+segment count and brightness reinforce each other and the brightest tone
+appears only at the top level. Labeled "Someday" / "Soon" / "Next" in
+the form and detail view; unlabeled in list rows, where it sits in the
+row's lower-right.
 
 ## Screens to design
 
