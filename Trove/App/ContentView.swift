@@ -13,6 +13,7 @@ import SwiftUI
 /// the Items tab without either screen reaching into the other.
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.theme) private var theme
 
     @State private var router = AppRouter()
 
@@ -24,19 +25,28 @@ struct ContentView: View {
     var body: some View {
         Group {
             if hasSeeded {
+                // Design's three marks, not SF Symbols: a tachometer for the
+                // dashboard, a 2×2 grid for items, and three ramping bars for
+                // the wishlist that echo `DesireGauge` on purpose. Each is a
+                // single template-rendered glyph, so the tint below draws both
+                // states and there's no separate selected variant to keep in
+                // step with this one.
                 TabView(selection: $router.selectedTab) {
-                    Tab("Overview", systemImage: "circle.circle", value: AppRouter.Tab.overview) {
+                    Tab("Overview", image: "TabDashboard", value: AppRouter.Tab.overview) {
                         NavigationStack { DashboardView(modelContext: modelContext) }
                     }
-                    Tab("Items", systemImage: "square", value: AppRouter.Tab.items) {
+                    Tab("Items", image: "TabItems", value: AppRouter.Tab.items) {
                         NavigationStack(path: $router.itemsPath) {
                             ItemListView(modelContext: modelContext)
                         }
                     }
-                    Tab("Wishlist", systemImage: "circle.dashed", value: AppRouter.Tab.wishlist) {
+                    Tab("Wishlist", image: "TabWishlist", value: AppRouter.Tab.wishlist) {
                         NavigationStack { WishlistView(modelContext: modelContext) }
                     }
                 }
+                // The selected tab was drawing in the system blue, which is the
+                // one thing on screen that isn't from `tokens.md`.
+                .tint(theme.colors.accentBrass)
             } else {
                 Color.clear
             }

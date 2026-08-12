@@ -440,10 +440,72 @@ the screen.
       to dodge the button, reasoning from T024-era logic that the
       overlap was a bug; plan.md's Navigation section now says
       otherwise, in as many words, so it doesn't get re-fixed.
-- [ ] **T044** — Manual full click-through: launch → dashboard → add item
+- [x] **T044** — Manual full click-through: launch → dashboard → add item
       → items list → item detail → wishlist → filter wishlist by
       category → add wishlist item → wishlist detail → "Find items to
       sell" → Sell Plan → toggle a candidate.
+
+      Walked on an iPhone 17 Pro simulator. Every step on the path
+      worked, including the pieces that only exist between screens: the
+      dashboard's leaf drill-in switches tabs and arrives filtered, both
+      lists refetch on return so a dial change made on a detail screen
+      shows on the row behind it, the un-valued "Value →" link with
+      exactly one candidate lands on that item rather than a list of
+      one, per-tab navigation stacks stay independent, and a Sell Plan
+      selection survives leaving and re-entering.
+
+      **Found and fixed: the category field dropped every character
+      after the first.** `CategoryPickerField` swaps a breadcrumb
+      read-out in for the text field once a path is set, and the swap
+      condition didn't account for focus. An empty field shows the text
+      field — there's no breadcrumb yet — so tapping it focuses that
+      directly and never sets `isEditingPath`; the first keystroke made
+      the path non-empty, the read-out took over, and SwiftUI tore the
+      focused field out mid-word. Typing "Photography/Cameras" left
+      "P". That broke the field's whole reason for existing, since
+      typing is the only way to make a category that doesn't exist yet
+      — the chips can only offer paths already in use.
+
+      The rule is now a tested static, `showsReadOut(isEditingPath:
+      isFocused:categoryPath:)`, and a focused field is never swapped
+      out. `CategoryPickerFieldTests` types a path one character at a
+      time and asserts the field survives each one; mutation-verified by
+      dropping `isFocused` from the guard, which fails first at "P" —
+      the same character the device stopped at.
+
+      Three more findings, raised at review and approved as fixes:
+
+      - **The active filter chip was off-screen when the Items tab was
+        reached from a dashboard drill-in.** The filter applied and the
+        chip lit up brass, both past the right edge, so the list looked
+        narrowed for no reason a user could see. `ItemListView`'s chip
+        row now uses the same `ScrollViewReader`/`scrollTo(anchor:
+        .center)` treatment `CategoryPickerField` already had. Scoped to
+        deep-links only — a chip the user tapped themselves is already
+        where they can see it, so moving it would be motion for nothing.
+      - **Wishlist detail printed estimated cost twice**, once as the
+        headline and again in the details table to the cent ("$1,000.00"
+        under "$1,000"). The row is gone; whole dollars is the app-wide
+        convention and the card was already using it. Same reasoning
+        already written above that table for why there's no "Priority"
+        row.
+      - **The tab bar was drawing in the system blue** — the one thing
+        on screen not from `tokens.md`. Now tinted `accentBrass`, and
+        the three placeholder SF Symbols are replaced by Design's marks
+        (`design/icons/`): a tachometer for the dashboard, a 2×2 grid
+        for items, and three ramping bars for the wishlist that echo
+        `DesireGauge` on purpose — the bars' opacity ramp survives
+        template rendering, so they read as the same language as the
+        gauges in the rows below them.
+
+      The icons are template-rendered single glyphs, so the tint draws
+      both states and there's no selected variant to keep in step.
+      `TabIconTests` guards them, because both ways they can break are
+      silent and look identical: a misnamed asset draws an empty slot,
+      and a lost template intent draws the glyph in its authored black,
+      invisible on `background`. Same failure shape as
+      `FontRegistrationTests`, so the same treatment. Both checks
+      mutation-verified.
 
 ## Phase 9 — Empty and loading states
 

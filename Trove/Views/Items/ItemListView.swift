@@ -6,6 +6,17 @@ struct ItemListView: View {
     @State private var viewModel: ItemListViewModel
     @State private var isAddingItem = false
 
+    /// The chip the next layout pass should bring into view.
+    ///
+    /// Set only when a filter arrives from another tab, never when the user
+    /// taps a chip themselves — their finger already put it where they can see
+    /// it, and sliding it out from under them would be motion for nothing.
+    @State private var chipToReveal: String?
+
+    /// The un-valued chip's scroll id. Not a category path, so it can't
+    /// collide with one — no real path is empty *and* prefixed like this.
+    private static let unvaluedChipID = "\u{0}unvalued"
+
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(AppRouter.self) private var router
@@ -188,27 +199,53 @@ struct ItemListView: View {
         case .category(let path):
             viewModel.categoryFilter = path
             viewModel.showsOnlyUnvalued = false
+            chipToReveal = path
         case .unvalued:
             viewModel.categoryFilter = ""
             viewModel.showsOnlyUnvalued = true
+            chipToReveal = Self.unvaluedChipID
         }
         router.clearItemsRequest()
     }
 
+    /// The same `ScrollViewReader` treatment `CategoryPickerField` already
+    /// uses, for the same reason: a single scrolling row hides any chip far
+    /// enough along it, and alphabetically the interesting one usually is.
+    ///
+    /// Arriving from a dashboard drill-in was the case that made it necessary.
+    /// The filter applied correctly and the chip lit up brass, both off the
+    /// right edge — so the list looked narrowed for no reason a user could
+    /// see. Same principle the un-valued chip is built on: a filter you can't
+    /// see is worse than one you can't set. Found at T044.
     private var categoryChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                if viewModel.showsOnlyUnvalued {
-                    unvaluedChip
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    if viewModel.showsOnlyUnvalued {
+                        unvaluedChip.id(Self.unvaluedChipID)
+                    }
+                    chip(label: "All", path: "").id("")
+                    ForEach(viewModel.categoryOptions, id: \.self) { path in
+                        chip(label: viewModel.categoryLabels[path] ?? path, path: path)
+                            .id(path)
+                    }
                 }
-                chip(label: "All", path: "")
-                ForEach(viewModel.categoryOptions, id: \.self) { path in
-                    chip(label: viewModel.categoryLabels[path] ?? path, path: path)
-                }
+                .padding(.horizontal, theme.metrics.screenGutter)
             }
-            .padding(.horizontal, theme.metrics.screenGutter)
+            .scrollClipDisabled()
+            // Both hooks, because the request can land either before this row
+            // exists (arriving on a tab that hasn't been shown yet) or while
+            // it's already on screen. Whichever fires second finds the pending
+            // chip already cleared.
+            .onAppear { reveal(using: proxy) }
+            .onChange(of: chipToReveal) { reveal(using: proxy) }
         }
-        .scrollClipDisabled()
+    }
+
+    private func reveal(using proxy: ScrollViewProxy) {
+        guard let chipToReveal else { return }
+        proxy.scrollTo(chipToReveal, anchor: .center)
+        self.chipToReveal = nil
     }
 
     /// The un-valued filter's own chip. It has no off-switch anywhere else —

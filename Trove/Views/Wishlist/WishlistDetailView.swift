@@ -178,11 +178,17 @@ struct WishlistDetailView: View {
 
     /// No "Priority" row — the gauge above says it, and saying it twice in
     /// different words invites them to disagree.
+    ///
+    /// No "Estimated cost" row either, for the same reason plus a sharper one:
+    /// the card above already carries the figure as the screen's headline, and
+    /// this row was printing it a second time to the cent ("$1,000.00" under
+    /// "$1,000"). Whole dollars is the convention everywhere else in the app,
+    /// so the row wasn't adding precision anyone asked for — just a second
+    /// number to reconcile against the first. Found at T044.
     @ViewBuilder
     private func details(for item: WishlistItem) -> some View {
         let rows: [(String, String)] = [
             ("Category", viewModel.categorySegments.joined(separator: " · ")),
-            ("Estimated cost", item.estimatedCostCents.formattedAsCurrency(currencyCode: item.currencyCode)),
             ("Added", item.createdAt.formatted(date: .abbreviated, time: .omitted)),
         ].filter { !$0.1.isEmpty }
 
