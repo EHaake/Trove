@@ -109,7 +109,29 @@ struct CategoryPickerField: View {
     }
 
     private var showsReadOut: Bool {
-        !isEditingPath && !categoryPath.trimmingCharacters(in: .whitespaces).isEmpty
+        Self.showsReadOut(
+            isEditingPath: isEditingPath,
+            isFocused: isFocused,
+            categoryPath: categoryPath
+        )
+    }
+
+    /// Whether the breadcrumb shows in place of the text field.
+    ///
+    /// `isFocused` is the part that isn't obvious, and leaving it out was a
+    /// real bug that T044's click-through caught. An empty field shows the
+    /// *text field* — there's no breadcrumb to render — so tapping it focuses
+    /// the field directly and never goes through `isEditingPath`. The first
+    /// character then made the path non-empty, this flipped to `true`, and
+    /// SwiftUI tore the focused field out from under the user mid-word. Every
+    /// keystroke after the first went nowhere, which broke the one thing this
+    /// field exists for: typing a category that doesn't exist yet.
+    ///
+    /// A focused field is never swapped out. Static and separate so the rule
+    /// can be tested, since the bug is in the rule rather than in the drawing.
+    static func showsReadOut(isEditingPath: Bool, isFocused: Bool, categoryPath: String) -> Bool {
+        guard !isEditingPath, !isFocused else { return false }
+        return !categoryPath.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     private var readOut: some View {

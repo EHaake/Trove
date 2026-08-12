@@ -440,10 +440,46 @@ the screen.
       to dodge the button, reasoning from T024-era logic that the
       overlap was a bug; plan.md's Navigation section now says
       otherwise, in as many words, so it doesn't get re-fixed.
-- [ ] **T044** — Manual full click-through: launch → dashboard → add item
+- [x] **T044** — Manual full click-through: launch → dashboard → add item
       → items list → item detail → wishlist → filter wishlist by
       category → add wishlist item → wishlist detail → "Find items to
       sell" → Sell Plan → toggle a candidate.
+
+      Walked on an iPhone 17 Pro simulator. Every step on the path
+      worked, including the pieces that only exist across screens: the
+      dashboard's leaf drill-in switches tabs and arrives filtered, both
+      lists refetch on return so a dial change made on a detail screen
+      is visible on the row behind it, the un-valued "Value →" link with
+      exactly one candidate lands on that item rather than a list of
+      one, per-tab navigation stacks stay independent, and a Sell Plan
+      selection survives leaving and re-entering the screen.
+
+      **Found and fixed: the category field dropped every character
+      after the first.** `CategoryPickerField` swaps a breadcrumb
+      read-out in for the text field once a path is set, and the swap
+      condition didn't account for focus. An empty field shows the text
+      field — there's no breadcrumb yet — so tapping it focuses that
+      directly and never sets `isEditingPath`; the first keystroke made
+      the path non-empty, the read-out took over, and SwiftUI tore the
+      focused field out mid-word. Typing "Photography/Cameras" left
+      "P". That broke the field's whole reason for existing, since
+      typing is the only way to create a category that doesn't exist
+      yet — the chips can only offer paths already in use.
+
+      The rule is now a tested static, `showsReadOut(isEditingPath:
+      isFocused:categoryPath:)`, with a focused field never swapped out.
+      `CategoryPickerFieldTests` types a path one character at a time
+      and asserts the field survives each one; mutation-verified by
+      dropping `isFocused` from the guard, which fails first at "P" —
+      the same character the device stopped at.
+
+      Three findings left open for review rather than fixed here, since
+      each is a judgement call rather than a defect: the active filter
+      chip is scrolled off-screen when the Items tab is reached from a
+      dashboard drill-in, so the list looks narrowed for no visible
+      reason; the tab bar uses the system blue tint and three
+      placeholder SF Symbols against an otherwise warm palette; and the
+      wishlist detail screen prints estimated cost twice.
 
 ## Phase 9 — Empty and loading states
 
