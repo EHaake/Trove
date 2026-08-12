@@ -338,6 +338,17 @@ to enable. This is a deliberate reversal of an earlier T043 attempt that
 added scroll margin specifically to avoid the overlap — don't reintroduce
 it.
 
+**Tab bar tint and icons were never specified — a gap, not a deviation.**
+Found at T044: the tab bar ships with the system default blue selection
+tint and three placeholder SF Symbols against an otherwise entirely
+brass-and-rust palette. Neither `plan.md` nor `design/brief.md` ever
+addressed this, since the original three-tab structure only got settled
+well after the initial screen designs. Tint is a one-line fix
+(`accentBrass`, matching everything else). Icons need a real Claude
+Design pass — three flat/graphic marks for Dashboard/Items/Wishlist,
+consistent with the dial/gauge/`AddButton` visual language — not
+engineering guesswork at SF Symbol names.
+
 **Design's build includes a fourth "More" tab; v1 does not.** Confirmed
 with Design: it's a layout-balance placeholder for the four-tab bar, not
 a screen that was ever designed — no intended destination, not even a

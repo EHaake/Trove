@@ -440,54 +440,48 @@ the screen.
       to dodge the button, reasoning from T024-era logic that the
       overlap was a bug; plan.md's Navigation section now says
       otherwise, in as many words, so it doesn't get re-fixed.
-- [x] **T044** — Manual full click-through: launch → dashboard → add item
+- [ ] **T044** — Manual full click-through: launch → dashboard → add item
       → items list → item detail → wishlist → filter wishlist by
       category → add wishlist item → wishlist detail → "Find items to
       sell" → Sell Plan → toggle a candidate.
 
-      Walked on an iPhone 17 Pro simulator. Every step on the path
-      worked, including the pieces that only exist across screens: the
-      dashboard's leaf drill-in switches tabs and arrives filtered, both
-      lists refetch on return so a dial change made on a detail screen
-      is visible on the row behind it, the un-valued "Value →" link with
-      exactly one candidate lands on that item rather than a list of
-      one, per-tab navigation stacks stay independent, and a Sell Plan
-      selection survives leaving and re-entering the screen.
-
-      **Found and fixed: the category field dropped every character
-      after the first.** `CategoryPickerField` swaps a breadcrumb
-      read-out in for the text field once a path is set, and the swap
-      condition didn't account for focus. An empty field shows the text
-      field — there's no breadcrumb yet — so tapping it focuses that
-      directly and never sets `isEditingPath`; the first keystroke made
-      the path non-empty, the read-out took over, and SwiftUI tore the
-      focused field out mid-word. Typing "Photography/Cameras" left
-      "P". That broke the field's whole reason for existing, since
-      typing is the only way to create a category that doesn't exist
-      yet — the chips can only offer paths already in use.
-
-      The rule is now a tested static, `showsReadOut(isEditingPath:
-      isFocused:categoryPath:)`, with a focused field never swapped out.
-      `CategoryPickerFieldTests` types a path one character at a time
-      and asserts the field survives each one; mutation-verified by
-      dropping `isFocused` from the guard, which fails first at "P" —
-      the same character the device stopped at.
-
-      Three findings left open for review rather than fixed here, since
-      each is a judgement call rather than a defect: the active filter
-      chip is scrolled off-screen when the Items tab is reached from a
-      dashboard drill-in, so the list looks narrowed for no visible
-      reason; the tab bar uses the system blue tint and three
-      placeholder SF Symbols against an otherwise warm palette; and the
-      wishlist detail screen prints estimated cost twice.
-
 ## Phase 9 — Empty and loading states
 
-- [ ] **T045** — Empty state for the items list (no items yet — should
-      point at the add action, not just say "no items").
-- [ ] **T046** — Empty state for the wishlist.
+- [ ] **T045** — Empty state for the items list: two distinct cases, not
+      one. **Truly empty** (no items exist yet) points at the add
+      action — an icon, a line like "No gear yet," a way to add. **Empty
+      because search or the category filter matched nothing** is a
+      different situation needing different words — nudge toward
+      clearing the search/filter, not toward adding an item that
+      probably already exists. The filtered-empty case has some ad hoc
+      treatment already ("nikon" + Amps → "Nothing matches that",
+      verified during the search work) — confirm it gets the same real
+      design attention as the truly-empty case, not leftover copy from
+      wiring the filter.
+- [ ] **T046** — Empty state for the wishlist. Same two-case split as
+      T045 (truly empty vs. search/filter matched nothing) — unlike
+      Items, the filtered-empty case here hasn't been verified at all.
 - [ ] **T047** — Empty/zero state for the dashboard when there's no data
-      yet.
+      yet. Bigger than it looks now that Phase 5 exists: with zero items,
+      the category breakdown has nothing to break down, the tick gauge
+      (a derived percentage, not decoration, since its Phase 5 rework)
+      has nothing to derive a percentage of, and the "Value →" callout
+      has nothing to link to. Each needs an explicit answer, not an
+      assumption that the normal layout degrades gracefully on its own.
+- [ ] **T047a** — New: empty state for `SellPlanView`'s candidate pool.
+      Not covered anywhere before this — T040 already handles "empty
+      candidate pool" as a tested business-logic case, but no task ever
+      specified what the *screen* shows when it happens. Should follow
+      the same invitation-to-act voice as the other empty states: name
+      what would make an item eligible (desire-to-keep ≤ 3, a current
+      value entered) rather than a bare "no candidates."
+- [ ] **T047b** — Decide and document: does v1 need any loading states
+      at all? All data is local SwiftData for v1, and local fetches are
+      near-instant, so there may be nothing to design here — but that
+      should be a stated decision in plan.md, not a silent gap in a
+      phase whose own name promises it. Revisit once CloudKit sync
+      (Phase 10, currently blocked) can introduce real network latency
+      a screen might need to show waiting for.
 
 ## Phase 10 — Sync and device verification (manual)
 
