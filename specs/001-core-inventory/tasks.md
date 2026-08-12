@@ -184,9 +184,7 @@ be this, not a real design deviation.
       invariant across many moves.
 - [x] **T035** — `WishlistFormView`.
 - [x] **T036** — `WishlistView`: list with category filter control and
-      reordering. The "See sell plan" row shortcut is deferred to T041
-      — it would otherwise point at a screen that doesn't exist yet
-      (same reasoning as the T042 deep-links).
+      reordering.
 - [x] **T036a** — Wishlist photos, added to scope after Phase 6 and
       before Phase 7. `Photo` gains a second optional inverse
       (`wishlistItem`) alongside `item`, `WishlistItem` gains
@@ -274,10 +272,10 @@ CRUD.
       plan.md on why those are two answers to different questions.
 
       **The "Find items to sell" button is deferred to T041**, the same
-      call as `WishlistView`'s row shortcut and T042's deep-links: it
-      would otherwise be a control that looks tappable and isn't. Its
-      space sits at the end of the scroll, after the market-price block.
-      Everything else on the screen is built.
+      call as T042's deep-links: it would otherwise be a control that
+      looks tappable and isn't. Its space sits at the end of the scroll,
+      after the market-price block. Everything else on the screen is
+      built.
 
       Three things Design's mock predates, resolved against the newer
       documents rather than the drawing. Its "Priority · Next up" row
@@ -343,10 +341,12 @@ CRUD.
       color distinction between "meets or exceeds" and "doesn't" is fine;
       no copy nudging the user to select more ("keep going," "check
       another item," or similar) — this is advisory, not a target to
-      complete. Reached only via `WishlistDetailView`'s button or
-      `WishlistView`'s per-row shortcut — no other entry point. Add the
-      row shortcut to `WishlistView` here, deferred from T036 since it
-      had nowhere to point until this task exists.
+      complete. Reached via `WishlistDetailView`'s button — no other
+      entry point. A per-row shortcut on `WishlistView` was drawn by
+      Design, built here, and removed after seeing it: a CTA repeated
+      down every row pushes harder toward the Sell Plan than the
+      goal-completion framing already cut from the plan screen itself,
+      which is the same over-prominence in another form. See spec.md.
 
       Two of the mock's elements are not built, both flagged rather than
       quietly dropped. **"Mark 3 for sale"** is the sale-tracking action
@@ -363,19 +363,18 @@ CRUD.
       carries the category alone, matching `ItemRow`, which pairs a
       category meta line with a separate dial for that reason.
 
-      Both deferred affordances land here: the detail screen's "Find
-      items to sell" button and the wishlist row's "See sell plan"
-      shortcut. `SellPlanRoute` is a named type rather than a bare
-      `UUID` because the wishlist stack already pushes items by id —
-      "open this item" and "open this item's sell plan" carry the same
-      value and mean different things.
+      The affordance deferred from T038 lands here: the detail screen's
+      "Find items to sell" button. `SellPlanRoute` is a named type
+      rather than a bare `UUID` because the wishlist stack already
+      pushes items by id — "open this item" and "open this item's sell
+      plan" carry the same value and mean different things.
 
-**Phase 7 complete.** Verified on device end to end: both entry points
-reach the plan, the shortcut wins over the row's own tap, ranking is
-desire 1→2→3 with the un-valued item correctly absent, and a selection
-made on one visit is still there after leaving and returning by the
-other route — the persisted-not-recomputed claim, checked against the
-store rather than the screen.
+**Phase 7 complete.** Verified on device end to end: the detail
+screen's button reaches the plan, ranking is desire 1→2→3 with the
+un-valued item correctly absent, and a selection made on one visit is
+still there after leaving and coming back — the
+persisted-not-recomputed claim, checked against the store rather than
+the screen.
 
 ## Phase 8 — Navigation and app shell
 
@@ -421,8 +420,7 @@ store rather than the screen.
 - [ ] **T044** — Manual full click-through: launch → dashboard → add item
       → items list → item detail → wishlist → filter wishlist by
       category → add wishlist item → wishlist detail → "Find items to
-      sell" → Sell Plan → toggle a candidate → back to wishlist list →
-      "See sell plan" shortcut reaches the same, updated plan.
+      sell" → Sell Plan → toggle a candidate.
 
 ## Phase 9 — Empty and loading states
 

@@ -19,7 +19,6 @@ struct WishlistView: View {
     @State private var viewModel: WishlistViewModel
     @State private var isAddingItem = false
     @State private var selectedItemID: UUID?
-    @State private var sellPlanRoute: SellPlanRoute?
     @State private var isReordering = false
 
     @Environment(\.theme) private var theme
@@ -59,13 +58,11 @@ struct WishlistView: View {
         .overlay(alignment: .bottomTrailing) { addButton }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .navigationBar)
-        // A separate destination type from the item list's bare `UUID`, so the
-        // two stacks can't be confused about which entity an id belongs to.
+        // The item's own screen is the only thing this list pushes. The Sell
+        // Plan is reached from there, not from here — `WishlistDetailView`
+        // declares that destination.
         .navigationDestination(item: $selectedItemID) { itemID in
             WishlistDetailView(modelContext: modelContext, itemID: itemID)
-        }
-        .navigationDestination(item: $sellPlanRoute) { route in
-            SellPlanView(modelContext: modelContext, wishlistItemID: route.wishlistItemID)
         }
         .sheet(isPresented: $isAddingItem, onDismiss: viewModel.load) {
             NavigationStack { WishlistFormView(modelContext: modelContext) }
@@ -158,9 +155,7 @@ struct WishlistView: View {
     private var rows: some View {
         List {
             ForEach(viewModel.items, id: \.id) { item in
-                WishlistRow(item: item) {
-                    sellPlanRoute = SellPlanRoute(wishlistItemID: item.id)
-                }
+                WishlistRow(item: item)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(
@@ -186,11 +181,11 @@ struct WishlistView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        // Room to scroll the last row clear of the floating add button. It
-        // always overlapped the bottom row, but the row's trailing corner used
-        // to hold a gauge — something to read past. Now it holds the sell-plan
-        // button, and a control you can't reach without scrolling first is a
-        // different matter.
+        // Room to scroll the last row clear of the floating add button, which
+        // otherwise sits over its lower-right corner. Added while that corner
+        // held a button and kept now that it's back to the gauge: a reading
+        // half-covered by a floating control is still worth avoiding, and the
+        // item list's own list already leaves comparable room at the bottom.
         .contentMargins(.bottom, 76, for: .scrollContent)
         .environment(\.editMode, .constant(isReordering ? .active : .inactive))
     }
@@ -287,22 +282,19 @@ struct WishlistView: View {
 }
 
 /// One wishlist row: what it is, its category, and what it's expected to cost.
+///
+/// **No per-row Sell Plan shortcut.** One was drawn by Design, built, and
+/// removed after seeing it: a CTA repeated down every row pushes harder toward
+/// the Sell Plan than the goal-completion framing that was already cut from
+/// the plan screen itself — the same over-prominence in another form. The plan
+/// is reached from `WishlistDetailView`'s button alone, one tap further in,
+/// which is the right trade for something meant to stay quietly available.
+/// See spec.md's Sell Plan section.
 private struct WishlistRow: View {
     let item: WishlistItem
-    let showSellPlan: () -> Void
 
     @Environment(\.theme) private var theme
 
-    /// Everything lives in one row, with the trailing column carrying all three
-    /// of the item's own readings top to bottom: cost, how much it's wanted,
-    /// and the way through to its sell plan.
-    ///
-    /// The shortcut used to sit in a full-width strip under a divider, as
-    /// Design drew it — but Design paired it there with a "$990 short" figure
-    /// that spec.md rules out, and once that came off the strip was one short
-    /// label and a lot of empty width. Folding it into the column the cost
-    /// already occupies took the row from ~155pt to ~104pt, which is most of a
-    /// row back per screen.
     var body: some View {
         HStack(alignment: .top, spacing: theme.metrics.cardPadding) {
             RowThumbnail(photos: item.photos ?? [])
@@ -327,76 +319,32 @@ private struct WishlistRow: View {
 
             Spacer(minLength: 0)
 
-            // Cost, gauge, shortcut — one field gap between each, rather than
-            // grouping the first two and pushing the third to the bottom with
-            // a spacer. Three readings of the same item deserve the same
-            // spacing; the uneven version read as two things and an orphan.
-            // The thumbnail still sets the row's height, so the column has
-            // room to spare.
-            VStack(alignment: .trailing, spacing: theme.metrics.fieldGap) {
+            // Cost leads at the top, the gauge sits quietly at the bottom —
+            // the brief puts it in the row's lower-right, unlabeled. The
+            // thumbnail sets the row's height, so this column has the space
+            // for both without the row growing.
+            VStack(alignment: .trailing, spacing: 0) {
                 Text(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))
                     .font(theme.typography.monoValue)
                     .foregroundStyle(theme.colors.textPrimary)
                     .lineLimit(1)
                     .accessibilityLabel("Estimated cost \(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))")
 
-                DesireGauge(value: .constant(item.desireToOwn))
+                Spacer(minLength: theme.metrics.fieldGap)
 
-                sellPlanShortcut
+                DesireGauge(value: .constant(item.desireToOwn))
             }
         }
-        // Deliberately not `.accessibilityElement(children: .combine)`, which
-        // the row used to carry: combining swallows the sell-plan button into
-        // one long description and leaves no way to reach it. Read as separate
-        // elements, the row is name, category, notes, cost, the gauge's own
-        // label, then the button.
+        // One element again. It was split apart while the row held a button,
+        // which combining would have swallowed; with nothing to reach in here,
+        // a single description reads better than five fragments.
+        .accessibilityElement(children: .combine)
         .padding(theme.metrics.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
                 .fill(theme.colors.surface)
         )
-    }
-
-    /// The way through to this item's sell plan.
-    ///
-    /// Plain brass text and an arrow — the treatment the full-width strip used
-    /// before this moved into the column, without the capsule that stood here
-    /// briefly.
-    ///
-    /// Set semibold, which the strip didn't need. Down here colour alone
-    /// can't mark this as a control: the gauge sitting directly above ends on
-    /// `accentBrass`, the very same value as this text, so brass reads as
-    /// continuous with it rather than as the app's action colour. At regular
-    /// weight it was also the lightest text in the row. The weight is what
-    /// separates it from the readouts; the arrow says where it goes.
-    ///
-    /// "Sell plan" rather than Design's "See sell plan": the column is beside a
-    /// truncating title, and the shorter label keeps roughly the cost's width
-    /// instead of eating into the name. The full phrasing survives as the
-    /// accessibility label, where nothing is competing for space.
-    ///
-    /// Its own `Button` inside a row that already navigates to the item, so
-    /// taps here reach the sell plan rather than opening the item — the same
-    /// arrangement as the full-width version, which behaved correctly.
-    private var sellPlanShortcut: some View {
-        Button(action: showSellPlan) {
-            HStack(spacing: 6) {
-                Text("Sell plan")
-                    .font(theme.typography.secondary.weight(.semibold))
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 11, weight: .semibold))
-            }
-            .foregroundStyle(theme.colors.accentBrass)
-            // Hit area pushed well past the text on every side. A negative
-            // inset grows the tappable region without moving anything, which
-            // matters more now there's no capsule padding to sit in: what's
-            // drawn is only about 75×16.
-            .contentShape(Rectangle().inset(by: -12))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("See sell plan for \(item.name)")
-        .accessibilityAddTraits(.isButton)
     }
 }
 
