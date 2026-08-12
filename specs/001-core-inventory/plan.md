@@ -318,9 +318,25 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
 ### Navigation
 
 `TabView` with three tabs — **Dashboard**, **Items**, **Wishlist** — each
-a `NavigationStack`. A prominent add button is available from Items and
-Wishlist tabs (toolbar, not buried in a menu), consistent with the
-quick-add requirement.
+a `NavigationStack`. A floating circular add button — Design's brass
+disc treatment, shared as one `AddButton` component rather than two
+copies — sits bottom-right on both the Items and Wishlist tabs, not in
+the header or nav bar. This is the permanent v1 design, not a stand-in:
+easier to reach one-handed than a top-corner toolbar button, which is
+worth more than exactly matching Design's five-tab mock (where the
+button sits in a centre tab slot that doesn't exist in our three-tab
+layout — the floating treatment is the part worth keeping, the position
+adapts to the tab count we actually have).
+
+List content scrolls all the way to the bottom of the screen, uncapped
+by any artificial margin — the floating button (and the system tab bar
+itself) is *meant* to overlay the last row or two when scrolled fully
+down. That overlap is what lets iOS 26's translucent "glass" material
+actually show content refracting underneath it; adding a bottom margin
+to keep content clear of the button would defeat the effect it's there
+to enable. This is a deliberate reversal of an earlier T043 attempt that
+added scroll margin specifically to avoid the overlap — don't reintroduce
+it.
 
 **Design's build includes a fourth "More" tab; v1 does not.** Confirmed
 with Design: it's a layout-balance placeholder for the four-tab bar, not
