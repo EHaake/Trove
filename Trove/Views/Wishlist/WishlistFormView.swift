@@ -85,6 +85,9 @@ struct WishlistFormView: View {
             .foregroundStyle(theme.colors.textPrimary)
             .tint(theme.colors.accentBrass)
             .autocorrectionDisabled()
+            // A `prompt:` takes the placeholder slot and leaves the title
+            // unused, so without this the field is named after the example.
+            .accessibilityLabel("What do you want")
             .padding(.vertical, theme.metrics.fieldPaddingVertical)
             .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
             .background(fieldBackground)
@@ -111,6 +114,7 @@ struct WishlistFormView: View {
                 .foregroundStyle(theme.colors.accentBrass)
                 .tint(theme.colors.accentBrass)
                 .keyboardType(.decimalPad)
+                .accessibilityLabel("Estimated cost")
             }
             .padding(.vertical, theme.metrics.fieldPaddingVertical)
             .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
@@ -187,6 +191,7 @@ struct WishlistFormView: View {
             .font(theme.typography.body)
             .foregroundStyle(theme.colors.textPrimary)
             .tint(theme.colors.accentBrass)
+            .accessibilityLabel("Notes")
             .padding(.vertical, theme.metrics.fieldPaddingVertical)
             .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
             .background(fieldBackground)

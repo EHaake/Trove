@@ -702,6 +702,27 @@ configuration), then come back to this phase.
       made them findable from the test, but it was a real defect
       independent of that.
 
+      **Audited the rest, and the pattern was everywhere.** Nine of the
+      app's twelve text fields had no accessibility label — the three
+      fixed above plus current value, estimated cost, the wishlist's
+      name and notes, the search field, and all four optional fields
+      behind "more details", which shared one helper. Those last are
+      the worst: their placeholders are hints, not names, so a VoiceOver
+      user reached the serial-number field and heard "If it has one".
+      The search field loses its placeholder the moment anything is
+      typed, leaving a field that announces its contents with no name at
+      all.
+
+      `testEveryFormFieldIsNamedForVoiceOver` walks both forms — with
+      the disclosure open, since that's where four of them hide — and
+      asserts every field has a non-empty label. **Checked against the
+      live accessibility hierarchy rather than the source**: a regex
+      pairing `prompt:` with `.accessibilityLabel` would pass on code
+      that has them in different views and fail on anything named a
+      different way. This asks the question VoiceOver asks.
+      Mutation-verified by dropping the shared helper's label, which
+      fails naming all four fields.
+
 ---
 
 ## Handoff note

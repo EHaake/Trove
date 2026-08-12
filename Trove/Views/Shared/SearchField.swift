@@ -39,6 +39,10 @@ struct SearchField: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .submitLabel(.search)
+            // The placeholder covers an empty field, and then disappears the
+            // moment anything is typed — leaving a field announcing its
+            // contents with no name attached.
+            .accessibilityLabel(placeholder)
 
             // Not in the mock, which only ever drew the empty state. Getting
             // back to the full list otherwise means holding backspace.

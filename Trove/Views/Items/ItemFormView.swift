@@ -269,6 +269,7 @@ struct ItemFormView: View {
                     .foregroundStyle(theme.colors.textPrimary)
                     .tint(theme.colors.accentBrass)
                     .keyboardType(.decimalPad)
+                    .accessibilityLabel("Current value")
                 }
             }
 
@@ -280,16 +281,18 @@ struct ItemFormView: View {
             }
 
             labelledField("Condition notes") {
-                plainTextField("Any specifics", text: $viewModel.conditionNotes)
+                plainTextField("Any specifics", label: "Condition notes", text: $viewModel.conditionNotes)
             }
             labelledField("Serial number") {
-                plainTextField("If it has one", text: $viewModel.serialNumber, isMono: true)
+                plainTextField("If it has one", label: "Serial number",
+                               text: $viewModel.serialNumber, isMono: true)
             }
             labelledField("Bought from") {
-                plainTextField("Reverb, a shop, a person", text: $viewModel.purchaseLocation)
+                plainTextField("Reverb, a shop, a person", label: "Bought from",
+                               text: $viewModel.purchaseLocation)
             }
             labelledField("Notes") {
-                plainTextField("Anything worth remembering", text: $viewModel.notes)
+                plainTextField("Anything worth remembering", label: "Notes", text: $viewModel.notes)
             }
         }
         .transition(.opacity.combined(with: .move(edge: .top)))
@@ -401,8 +404,14 @@ struct ItemFormView: View {
         }
     }
 
+    /// - Parameters:
+    ///   - label: what the field *is*, for VoiceOver. Separate from the prompt
+    ///     on purpose: these prompts are hints, not names. "If it has one"
+    ///     tells someone nothing about a serial number, and it's the only thing
+    ///     they'd hear without this.
     private func plainTextField(
         _ prompt: String,
+        label: String,
         text: Binding<String>,
         isMono: Bool = false
     ) -> some View {
@@ -415,6 +424,7 @@ struct ItemFormView: View {
         .foregroundStyle(theme.colors.textPrimary)
         .tint(theme.colors.accentBrass)
         .autocorrectionDisabled()
+        .accessibilityLabel(label)
     }
 }
 

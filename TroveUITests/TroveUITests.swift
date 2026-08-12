@@ -88,6 +88,76 @@ final class TroveUITests: XCTestCase {
         )
     }
 
+    /// Every text field on both forms is named.
+    ///
+    /// Supplying a `prompt:` to a SwiftUI `TextField` moves the title into the
+    /// placeholder slot and leaves the field with no accessibility label — so
+    /// VoiceOver reads the example value as though it were the field's name.
+    /// "Leica M6" is not what that field is called, and "If it has one" says
+    /// nothing at all about serial numbers. The `value:`/`format:` initialiser
+    /// does the same thing with its title.
+    ///
+    /// Nine of the app's twelve text fields had this. Three were fixed at T050
+    /// only because the smoke test needed to find them, which is the reason
+    /// this test exists: the defect is invisible on screen, and the next field
+    /// anyone adds will have it too unless something checks.
+    ///
+    /// **Asserted against the live accessibility hierarchy, not the source.** A
+    /// regex looking for `prompt:` near `.accessibilityLabel` would pass on
+    /// code that pairs them in the wrong order or in different views, and fail
+    /// on anything that gets its name a different way. This asks the same
+    /// question VoiceOver does.
+    @MainActor
+    func testEveryFormFieldIsNamedForVoiceOver() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Items"].tap()
+        app.buttons["Add item"].tap()
+        XCTAssertTrue(app.textFields["Name"].waitForExistence(timeout: 5))
+        // The optional fields live behind the disclosure, so they aren't in the
+        // hierarchy until it's open — and they're the worst offenders.
+        app.buttons["Show more details"].tap()
+        assertEveryTextFieldIsNamed(in: app, screen: "the item form")
+
+        app.buttons["Cancel"].tap()
+        app.buttons["Wishlist"].tap()
+        app.buttons["Add wanted item"].tap()
+        XCTAssertTrue(app.textFields["What do you want"].waitForExistence(timeout: 5))
+        assertEveryTextFieldIsNamed(in: app, screen: "the wishlist form")
+    }
+
+    @MainActor
+    private func assertEveryTextFieldIsNamed(
+        in app: XCUIApplication,
+        screen: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let fields = app.textFields.allElementsBoundByIndex
+        XCTAssertFalse(
+            fields.isEmpty,
+            "Found no text fields on \(screen) — this assertion would pass over nothing.",
+            file: file,
+            line: line
+        )
+
+        let unnamed = fields
+            .filter { $0.label.trimmingCharacters(in: .whitespaces).isEmpty }
+            .map { "placeholder \"\($0.placeholderValue ?? "")\"" }
+
+        XCTAssertTrue(
+            unnamed.isEmpty,
+            """
+            \(unnamed.count) field(s) on \(screen) have no accessibility label, \
+            so VoiceOver reads their placeholder as the field's name: \
+            \(unnamed.joined(separator: ", "))
+            """,
+            file: file,
+            line: line
+        )
+    }
+
     /// The half of the category field that a unit test can't reach: it swaps a
     /// breadcrumb read-out in for the text field once a path is set, and until
     /// T044 that swap fired on the *first* keystroke and destroyed the focused
