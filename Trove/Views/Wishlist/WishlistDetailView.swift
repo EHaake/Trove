@@ -37,11 +37,12 @@ struct WishlistDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("Edit") { isEditing = true }
-                    .foregroundStyle(theme.colors.textBody)
-                Button("Delete", role: .destructive) { isConfirmingDelete = true }
-                    .foregroundStyle(theme.colors.accentRustText)
+            ToolbarItem(placement: .topBarTrailing) {
+                DetailOverflowMenu(
+                    noun: "wanted item",
+                    edit: { isEditing = true },
+                    delete: { isConfirmingDelete = true }
+                )
             }
         }
         .sheet(isPresented: $isEditing, onDismiss: viewModel.load) {

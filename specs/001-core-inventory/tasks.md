@@ -611,6 +611,45 @@ the screen.
       downloaded" rather than "nothing added" — and today those are the
       same screen. The empty states above are what would be wrong.
 
+      **Two review fixes, applied after approval.** "Not yet valued" is
+      now the only phrasing for the fact that something has no current
+      value — the dashboard's headline and its breakdown rows had each
+      invented their own ("Not yet known", "Not valued"), which read
+      across screens as three different states. `UnvaluedCopyTests`
+      scans the view sources so a fourth can't appear, and checks the
+      canonical phrase is still in use, so deleting all four wouldn't
+      quietly satisfy it.
+
+      And `SellPlanViewModel.emptyReason`'s precedence is now pinned
+      rather than implicit in the order of two `guard`s. The reasons
+      overlap: with nothing rated low enough, it's also trivially true
+      that nothing rated low enough has a value, so `everythingIsAKeeper`
+      and `nothingValued` both describe that collection. Desire wins —
+      someone unwilling to part with anything doesn't have a pricing
+      problem, and sending them off to value things wouldn't put a row
+      on the screen. `SellPlanEmptyReasonTests` covers the overlap the
+      way `ListEmptyReasonTests` covers the list screens'.
+
+## Phase 9a — Detail screen chrome
+
+- [x] **T047c** — `DetailOverflowMenu`: one shared circular "..." button
+      opening a `Menu` with Edit and Delete, replacing the permanent
+      `Edit` `Delete` pair on both detail screens. Delete carries the
+      menu's `.destructive` role, which is the only signal a menu row
+      has and so isn't decorative.
+
+      Two always-visible words in the nav bar — one of them destructive,
+      a thumb-width from the other — read as dated against the rest of
+      the app's iOS 26 treatment: the floating `AddButton`, the
+      translucent tab bar, the circular back chevron this now sits
+      opposite and matches.
+
+      Changes only how Edit and Delete are *reached*. Each screen keeps
+      its own edit sheet and its own delete confirmation, including
+      `WishlistDetailView`'s alert about the cascade/nullify asymmetry
+      ("Anything on its sell plan stays where it is") — verified
+      unchanged on device on both screens.
+
 ## Phase 10 — Sync and device verification (manual)
 
 **Blocked pending Developer Program renewal**, same as T002 — nothing

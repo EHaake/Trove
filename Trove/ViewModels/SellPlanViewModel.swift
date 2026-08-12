@@ -95,12 +95,23 @@ final class SellPlanViewModel {
     private(set) var ownedCount = 0
     private(set) var lowDesireCount = 0
 
+    /// **The cases overlap, and the order below is the answer.** With nothing
+    /// rated low enough, it's also trivially true that nothing rated low enough
+    /// has a value — so `everythingIsAKeeper` and `nothingValued` both describe
+    /// that collection, and one of them has to win.
+    ///
+    /// Desire wins, because it's the more fundamental miss: someone unwilling
+    /// to part with anything doesn't have a pricing problem, and telling them
+    /// to go and value things would send them off to do work that changes
+    /// nothing. The reverse reading — "nothing has a value" to someone who
+    /// never said they'd sell — is advice for a situation they aren't in.
+    ///
+    /// `SellPlanEmptyReasonTests` pins this the way `ListEmptyReasonTests`
+    /// pins the list screens' precedence, rather than leaving it implicit in
+    /// the order of two `guard`s.
     var emptyReason: EmptyReason? {
         guard candidates.isEmpty else { return nil }
         guard ownedCount > 0 else { return .nothingOwned }
-        // Nothing rated low enough is the more fundamental miss: with no
-        // willing-to-sell gear at all, whether any of it has a value doesn't
-        // come into it yet.
         guard lowDesireCount > 0 else { return .everythingIsAKeeper }
         // Something is rated low enough, so the only reason it isn't here is
         // the value — every low-desire item is missing one.

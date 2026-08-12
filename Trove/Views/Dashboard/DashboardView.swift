@@ -131,10 +131,10 @@ struct DashboardView: View {
 
                 ValueRuler(fraction: viewModel.valuedShare)
             } else {
-                Text("Not yet known")
+                Text("Not yet valued")
                     .font(theme.typography.heroFigureSecondary)
                     .foregroundStyle(theme.colors.textInactive)
-                    .accessibilityLabel("Current value not yet known")
+                    .accessibilityLabel("Current value not yet valued")
             }
         }
     }
@@ -388,7 +388,7 @@ struct DashboardView: View {
                     .foregroundStyle(theme.colors.textPrimary)
                     .lineLimit(1)
             } else {
-                Text("Not valued").monoLabel(color: theme.colors.textInactive)
+                Text("Not yet valued").monoLabel(color: theme.colors.textInactive)
             }
         }
         .padding(.vertical, 13)
