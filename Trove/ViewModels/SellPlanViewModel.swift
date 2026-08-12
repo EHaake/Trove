@@ -74,6 +74,39 @@ final class SellPlanViewModel {
 
     var isEmpty: Bool { candidates.isEmpty }
 
+    /// Why the pool is empty, so the screen can name the missing half rather
+    /// than reciting both rules at someone who only needs one.
+    ///
+    /// Qualifying takes two things — desire-to-keep of 3 or lower, and a
+    /// current value — and which one is missing decides what the user should go
+    /// and do. This was already promised in prose on `SellPlanView`'s empty
+    /// state ("says which, since the two have different fixes") and never
+    /// actually implemented; T047a is where the code caught up with the
+    /// comment.
+    enum EmptyReason: Equatable {
+        /// No owned gear at all.
+        case nothingOwned
+        /// Everything is rated 4 or 5 — nothing the user is relaxed about.
+        case everythingIsAKeeper
+        /// Willing to part with things, but none of them has a value yet.
+        case nothingValued
+    }
+
+    private(set) var ownedCount = 0
+    private(set) var lowDesireCount = 0
+
+    var emptyReason: EmptyReason? {
+        guard candidates.isEmpty else { return nil }
+        guard ownedCount > 0 else { return .nothingOwned }
+        // Nothing rated low enough is the more fundamental miss: with no
+        // willing-to-sell gear at all, whether any of it has a value doesn't
+        // come into it yet.
+        guard lowDesireCount > 0 else { return .everythingIsAKeeper }
+        // Something is rated low enough, so the only reason it isn't here is
+        // the value — every low-desire item is missing one.
+        return .nothingValued
+    }
+
     // MARK: - Loading
 
     func load() {
@@ -91,9 +124,13 @@ final class SellPlanViewModel {
             selectedIDs = Set(planned.map(\.id))
 
             let owned = try modelContext.fetch(FetchDescriptor<Item>())
+            ownedCount = owned.count
+            lowDesireCount = owned.count { DesireLevel(clamping: $0.desireToKeep).isSellCandidate }
             candidates = Self.candidates(from: owned, alreadySelected: selectedIDs)
         } catch {
             loadFailureMessage = error.localizedDescription
+            ownedCount = 0
+            lowDesireCount = 0
             candidates = []
             selectedIDs = []
             wishlistItem = nil

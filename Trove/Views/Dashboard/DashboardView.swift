@@ -26,24 +26,39 @@ struct DashboardView: View {
         ZStack {
             theme.colors.background.ignoresSafeArea()
 
-            ScrollView {
+            // The empty state skips the scroll view entirely: there's nothing to
+            // scroll, and a centred block only reads as centred if it has the
+            // whole screen under the header to centre within. Inside the
+            // scroll, it sized to its own content and sat a third of the way
+            // down. Same shape as the two list screens.
+            if viewModel.isEmpty {
                 VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
                     header
-
-                    if viewModel.isEmpty {
-                        emptyState
-                    } else {
+                        .padding(.horizontal, theme.metrics.screenGutter)
+                        .padding(.top, theme.metrics.sectionGap)
+                    emptyState
+                }
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
+                        header
                         headline
-                        spentAndGain
+                        // Both figures cover valued items only, so with nothing
+                        // valued this card is "$0 spent, $0 gain" — two false
+                        // statements where the honest answer is that there's
+                        // nothing to compare yet. The callout below says so.
+                        if viewModel.hasAnyValues {
+                            spentAndGain
+                        }
                         if viewModel.unvaluedCount > 0 {
                             unvaluedCallout
                         }
                         breakdown
                     }
+                    .padding(.horizontal, theme.metrics.screenGutter)
+                    .padding(.top, theme.metrics.sectionGap)
+                    .padding(.bottom, theme.metrics.sectionGap)
                 }
-                .padding(.horizontal, theme.metrics.screenGutter)
-                .padding(.top, theme.metrics.sectionGap)
-                .padding(.bottom, theme.metrics.sectionGap)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -90,25 +105,37 @@ struct DashboardView: View {
 
     // MARK: - Headline figure
 
+    /// With nothing valued there is no figure to print, and "$0" would be a
+    /// claim rather than a gap — the same distinction `ItemRow` and the sort
+    /// order already make between un-valued and worthless. The ruler goes with
+    /// it: it measures how much of the total is accounted for, and a 0% reading
+    /// under a non-figure is an instrument pointing at nothing.
     private var headline: some View {
         VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
             Text("Current value").monoLabel()
 
-            HStack(alignment: .top, spacing: 4) {
-                Text(verbatim: Currency.symbol(for: "USD"))
-                    .font(theme.typography.heroFigureSymbol)
-                    .foregroundStyle(theme.colors.accentBrass)
-                    .padding(.top, 10)
+            if viewModel.hasAnyValues {
+                HStack(alignment: .top, spacing: 4) {
+                    Text(verbatim: Currency.symbol(for: "USD"))
+                        .font(theme.typography.heroFigureSymbol)
+                        .foregroundStyle(theme.colors.accentBrass)
+                        .padding(.top, 10)
 
-                Text(viewModel.totalCurrentValueCents.formattedAsWholeAmount)
-                    .font(theme.typography.heroFigureDashboard)
-                    .foregroundStyle(theme.colors.accentBrass)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
+                    Text(viewModel.totalCurrentValueCents.formattedAsWholeAmount)
+                        .font(theme.typography.heroFigureDashboard)
+                        .foregroundStyle(theme.colors.accentBrass)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
+                .accessibilityElement(children: .combine)
+
+                ValueRuler(fraction: viewModel.valuedShare)
+            } else {
+                Text("Not yet known")
+                    .font(theme.typography.heroFigureSecondary)
+                    .foregroundStyle(theme.colors.textInactive)
+                    .accessibilityLabel("Current value not yet known")
             }
-            .accessibilityElement(children: .combine)
-
-            ValueRuler(fraction: viewModel.valuedShare)
         }
     }
 
@@ -244,7 +271,13 @@ struct DashboardView: View {
                 orderControl
             }
 
-            stackedBar
+            // Every segment's width is its share of the total value, so with no
+            // values the bar is a blank track under a heading promising a
+            // proportion. The rows below still carry real information — how
+            // many items sit where — so only the bar goes.
+            if viewModel.hasAnyValues {
+                stackedBar
+            }
 
             VStack(spacing: 0) {
                 ForEach(Array(viewModel.breakdown.enumerated()), id: \.element.id) { index, slice in
@@ -349,10 +382,14 @@ struct DashboardView: View {
 
             Spacer(minLength: 0)
 
-            Text(slice.currentValueCents.formattedAsWholeCurrency(currencyCode: "USD"))
-                .font(theme.typography.monoValue)
-                .foregroundStyle(theme.colors.textPrimary)
-                .lineLimit(1)
+            if slice.hasAnyValues {
+                Text(slice.currentValueCents.formattedAsWholeCurrency(currencyCode: "USD"))
+                    .font(theme.typography.monoValue)
+                    .foregroundStyle(theme.colors.textPrimary)
+                    .lineLimit(1)
+            } else {
+                Text("Not valued").monoLabel(color: theme.colors.textInactive)
+            }
         }
         .padding(.vertical, 13)
         .contentShape(Rectangle())
@@ -362,9 +399,14 @@ struct DashboardView: View {
     /// Design's "14 items · 45%", plus this category's own un-valued count
     /// when it has one — the percentage is a share of value, so a category
     /// carrying un-valued items reads lower than it really is.
+    ///
+    /// The percentage drops out entirely when nothing is valued — every row
+    /// would read "0%", which looks like a measurement and isn't one.
     private func rowMeta(_ slice: DashboardViewModel.CategorySlice) -> String {
         var parts = ["\(slice.itemCount) \(slice.itemCount == 1 ? "item" : "items")"]
-        parts.append("\(Int((viewModel.valueShare(of: slice) * 100).rounded()))%")
+        if viewModel.hasAnyValues {
+            parts.append("\(Int((viewModel.valueShare(of: slice) * 100).rounded()))%")
+        }
         if slice.unvaluedCount > 0 {
             parts.append("\(slice.unvaluedCount) unvalued")
         }
@@ -373,15 +415,40 @@ struct DashboardView: View {
 
     // MARK: - Empty
 
-    /// Placeholder until T045, same as the item list's.
+    /// Two states, and only the first gets an action.
+    ///
+    /// At the root, nothing tracked means nothing anywhere, so this is the
+    /// app's first-run screen and the brief asks it to point at adding. The add
+    /// form lives on the Items tab, so it goes through `AppRouter` rather than
+    /// growing a second entry point here.
+    ///
+    /// A scoped dashboard is a different situation: the user drilled into a
+    /// category from a row that had items in it, so an empty one means they've
+    /// since been deleted or refiled. There's nothing to invite — adding an
+    /// item wouldn't put it in this category — so it explains and stops.
+    ///
+    /// **Neither is where the dashboard's zero state actually bites.** With no
+    /// items the whole figure stack is replaced by this, so the breakdown,
+    /// ruler and callout never render at all. The state that degrades is items
+    /// with no *values*, which is handled up in `headline`, `breakdown` and
+    /// `spentAndGain` rather than here — see plan.md's Empty states section.
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(isRoot ? "Nothing tracked yet" : "Nothing in this category")
-                .font(theme.typography.rowTitle)
-                .foregroundStyle(theme.colors.textBody)
+        Group {
+            if isRoot {
+                EmptyStateView(
+                    mark: .asset("TabDashboard"),
+                    headline: "Nothing tracked yet",
+                    detail: "Add your first piece of gear and this fills in: what it's worth, what you paid, and how it splits by category.",
+                    action: .init(label: "Add an item", isProminent: true) { router.startAddingItem() }
+                )
+            } else {
+                EmptyStateView(
+                    mark: .system("tray"),
+                    headline: "Nothing in this category",
+                    detail: "Everything filed here has been moved or removed."
+                )
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, theme.metrics.sectionGap)
     }
 }
 

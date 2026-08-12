@@ -394,6 +394,137 @@ knows they're a floor over the valued subset, not a complete picture —
 and the callout explaining this should say so explicitly (something like
 "left out of every figure above"), not imply only one figure is affected.
 
+## Empty states
+
+`design/brief.md` sets the voice: **"an invitation to act, not an
+apology."** Nothing here says sorry, and every case that has something
+the user could do offers it as a button rather than describing it and
+leaving them to find the control.
+
+One shared `EmptyStateView` draws all of them — mark, headline, one
+supporting line, optional action — because they are the same shape and
+should read as the same idea. It is **centred**, which nothing else in
+the app is: content pinned top-left on an otherwise blank screen reads
+as a screen that failed to finish loading, while a centred block reads
+as a state someone designed.
+
+Marks follow the reason, not the screen. A filter that found nothing
+gets a magnifying glass or the filter glyph; a screen that is genuinely
+empty gets that screen's own tab icon, so "there is nothing here" and
+"you are on the Items tab" are said by the same mark.
+
+### List screens: four cases, not one
+
+An empty collection and an over-narrow filter want opposite
+invitations, and telling someone with forty items to "add your first
+piece" because they mistyped a search reads as the app having lost
+their collection. `ListEmptyReason` decides which case applies; it is
+**derived in the view models, not the views** — it is a rule about the
+data, the same call already made for `ItemDetailViewModel`'s photo
+sort.
+
+| Case | Says | Offers |
+|---|---|---|
+| `nothingAdded` | the screen's own purpose | add (filled brass) |
+| `searchMatchedNothing` | quotes the query back, names what's searched | clear search |
+| `categoryMatchedNothing` | the rest is still there | show all |
+| `everythingIsValued` | totals are complete | show all |
+
+Precedence is tested: `nothingAdded` outranks everything, because a
+filter can't be the reason a collection of zero is empty and offering
+to clear a search that would reveal nothing is a dead end. Search comes
+next, being the narrowing the user typed most recently.
+
+**`everythingIsValued` is a success, not a dead end**, and it is why
+this is four cases rather than three. It is what you land on after
+valuing the last item from the dashboard's "Value →" callout — the
+callout working as intended. Before T045 it fell through to the
+truly-empty copy and reported the collection as empty.
+
+The wishlist has three of the four: nothing on it is owned, so there is
+no un-valued filter. It shares the rule so the two screens can't drift
+apart on the cases they do share, and shares none of the copy — "no
+gear yet" is the wrong sentence on a screen that never holds gear.
+
+### Dashboard: the zero state isn't where it bites
+
+With no items the entire figure stack is replaced by one empty state,
+so the breakdown, the ruler and the callout never render at all. The
+state that actually degrades is **items with no values** — reachable
+the moment someone adds their first few pieces and hasn't priced them.
+Every derived figure is then zero, and the screen reads "$0" over a
+breakdown where each row is worth "$0 · 0%": a collection reported as
+worthless rather than un-priced, which is exactly the claim the rest of
+this document is careful never to make.
+
+`isEmpty` doesn't cover it — there *is* data, it just has no money in
+it — so `hasAnyValues` gates the money-derived parts:
+
+- **Headline** — "Not yet known" instead of `$0`. Same distinction the
+  item rows and the value sort already draw between un-valued and
+  worthless.
+- **Ruler** — hidden. It measures how much of the total is accounted
+  for; a 0% reading under a non-figure is an instrument pointing at
+  nothing.
+- **Spent / gain** — hidden. Both cover valued items only, so with
+  nothing valued the card is two false statements.
+- **Stacked bar** — hidden. Every segment's width is a share of total
+  value, so it degrades to a blank track under a heading promising a
+  proportion.
+- **Breakdown rows** — kept. Item counts and un-valued counts are real
+  information. The percentage drops out (every row would read "0%",
+  which looks like a measurement and isn't one), and a row with nothing
+  priced reads "Not valued" rather than "$0" — decided per row, not per
+  screen, so a category nobody has priced says so even on a dashboard
+  full of figures.
+- **"Value →" callout** — unchanged, and the one part that was already
+  safe: it renders only when `unvaluedCount > 0`, so it never has
+  nothing to link to.
+
+The root empty state points at adding, per the brief. The form lives on
+the Items tab, so it goes through `AppRouter.startAddingItem()` rather
+than growing a second entry point — landing someone on another empty
+screen with its own button would be pointing at a pointer. A **scoped**
+dashboard is a different situation: the user drilled in from a row that
+had items in it, so an empty one means they've since been deleted or
+refiled. Adding an item wouldn't file it here, so it explains and
+stops.
+
+### Sell Plan: name the half that's missing
+
+Qualifying takes two things — desire-to-keep of 3 or lower, and a
+current value — and which one is missing decides what the user should
+go and do. Reciting both rules to someone missing only one is noise, so
+`SellPlanViewModel.emptyReason` distinguishes `nothingOwned`,
+`everythingIsAKeeper` and `nothingValued`. (The screen's own comment
+promised this before T047a; the code hadn't caught up.)
+
+None of the three offers a button. What each asks for happens on
+another screen — rate something lower, or go and value it — and there
+is no single item to send the user to. Naming the rule is the
+invitation.
+
+## Loading states: v1 has none, deliberately
+
+**Decision: v1 ships no loading states, and this is a stated choice
+rather than an omission.**
+
+Every read in v1 is a synchronous `ModelContext.fetch` against a local
+store. There is no await, so there is no window in which a screen could
+show a spinner — a loading state would have to be rendered and removed
+within the same layout pass, which means it would never actually be
+seen. Building one would add a state that can only be reached by
+faking it.
+
+This changes when Phase 10 turns CloudKit on. Sync introduces real
+latency and a genuine unknown-yet state on first launch on a new
+device, where the store is empty because it hasn't downloaded rather
+than because the user has added nothing — and those two are the same
+screen today. **Revisit this section then**, together with T002: the
+empty states above are the ones that would be wrong, since each
+confidently tells a user with a full collection on another device that
+they have nothing.
+
 ## CloudKit sync
 
 `ModelContainer` is configured with a CloudKit database

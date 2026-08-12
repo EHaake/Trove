@@ -509,41 +509,107 @@ the screen.
 
 ## Phase 9 — Empty and loading states
 
-- [ ] **T045** — Empty state for the items list: two distinct cases, not
+- [x] **T045** — Empty state for the items list: two distinct cases, not
       one. **Truly empty** (no items exist yet) points at the add
       action — an icon, a line like "No gear yet," a way to add. **Empty
       because search or the category filter matched nothing** is a
       different situation needing different words — nudge toward
       clearing the search/filter, not toward adding an item that
-      probably already exists. The filtered-empty case has some ad hoc
-      treatment already ("nikon" + Amps → "Nothing matches that",
-      verified during the search work) — confirm it gets the same real
-      design attention as the truly-empty case, not leftover copy from
-      wiring the filter.
-- [ ] **T046** — Empty state for the wishlist. Same two-case split as
+      probably already exists.
+
+      Landed as **four** cases, not two. The third was already there in
+      ad hoc form (search and category were distinguished from each
+      other, just not designed). The fourth was missing entirely: the
+      un-valued filter has no case of its own, so emptying it fell
+      through to the truly-empty copy. That's reachable, and it's the
+      *success* path — value the last item from the dashboard's
+      "Value →" callout and the list you're standing in empties. It
+      read "Nothing here yet" to someone who had just finished valuing
+      their whole collection. Now "Everything has a value".
+
+      Which case applies is `ListEmptyReason`, derived in the view
+      models — it's a rule about the data, not layout, same call as
+      `ItemDetailViewModel`'s photo sort. Precedence is tested and
+      mutation-verified: an empty collection outranks every filter,
+      because offering to clear a search that would reveal nothing is a
+      dead end.
+
+      Also gone on a first run: the search field, the chips and the
+      sort control. Controls for narrowing a list need a list to narrow,
+      and a lone "All" chip over a search field over nothing made the
+      screen look like it had lost something rather than not started.
+- [x] **T046** — Empty state for the wishlist. Same two-case split as
       T045 (truly empty vs. search/filter matched nothing) — unlike
       Items, the filtered-empty case here hasn't been verified at all.
-- [ ] **T047** — Empty/zero state for the dashboard when there's no data
+
+      Three of the four: there's no un-valued filter on a wishlist,
+      since nothing on it is owned. Shares `ListEmptyReason` so the two
+      screens can't drift on the cases they do share, and shares none of
+      the copy — "no gear yet" is the wrong sentence on a screen that
+      never holds gear. The never-verified filtered case now has a test
+      and was walked on device.
+- [x] **T047** — Empty/zero state for the dashboard when there's no data
       yet. Bigger than it looks now that Phase 5 exists: with zero items,
       the category breakdown has nothing to break down, the tick gauge
       (a derived percentage, not decoration, since its Phase 5 rework)
       has nothing to derive a percentage of, and the "Value →" callout
       has nothing to link to. Each needs an explicit answer, not an
       assumption that the normal layout degrades gracefully on its own.
-- [ ] **T047a** — New: empty state for `SellPlanView`'s candidate pool.
+
+      **All three turned out to be moot at zero items** — the whole
+      figure stack is replaced by the empty state, so none of them
+      renders. The state that actually degrades is **items with no
+      values**, reachable as soon as someone adds their first few pieces
+      and hasn't priced them: every derived figure is zero, so the
+      screen read "$0" over a breakdown where each row was "$0 · 0%" —
+      a collection reported as worthless rather than un-priced, the one
+      claim this app is otherwise careful never to make.
+
+      `hasAnyValues` now gates the money-derived parts. Headline reads
+      "Not yet known"; ruler, spent/gain card and stacked bar are
+      hidden; breakdown rows keep their counts, drop the percentage, and
+      say "Not valued" instead of "$0" — decided per row, so a category
+      nobody has priced says so even on a dashboard full of figures. The
+      callout was the one part already safe, and is unchanged.
+
+      The root empty state points at adding through
+      `AppRouter.startAddingItem()`, since the form lives on the Items
+      tab. A scoped dashboard gets no action: the user drilled in from a
+      row that had items, so an empty one means they've been deleted or
+      refiled, and adding wouldn't file anything here.
+
+      **The sample-data seeding is gone**, as its own comment said it
+      would be at T045 — a first run now lands on a real empty state
+      instead of eight fabricated items.
+- [x] **T047a** — New: empty state for `SellPlanView`'s candidate pool.
       Not covered anywhere before this — T040 already handles "empty
       candidate pool" as a tested business-logic case, but no task ever
       specified what the *screen* shows when it happens. Should follow
       the same invitation-to-act voice as the other empty states: name
       what would make an item eligible (desire-to-keep ≤ 3, a current
       value entered) rather than a bare "no candidates."
-- [ ] **T047b** — Decide and document: does v1 need any loading states
+
+      Three reasons rather than one, because qualifying takes two things
+      and which one is missing decides what the user should go and do.
+      The screen's own comment already promised this ("says which, since
+      the two have different fixes") and the code had never done it.
+      None of the three offers a button: what each asks for happens on
+      another screen, and there's no single item to send the user to.
+- [x] **T047b** — Decide and document: does v1 need any loading states
       at all? All data is local SwiftData for v1, and local fetches are
       near-instant, so there may be nothing to design here — but that
       should be a stated decision in plan.md, not a silent gap in a
       phase whose own name promises it. Revisit once CloudKit sync
       (Phase 10, currently blocked) can introduce real network latency
       a screen might need to show waiting for.
+
+      **Decision: none, deliberately.** Every read is a synchronous
+      fetch against a local store — there's no await, so no window in
+      which a spinner could be seen. Written into plan.md as its own
+      section, with the Phase 10 trigger: sync introduces a genuine
+      unknown-yet state on a new device, where an empty store means "not
+      downloaded" rather than "nothing added" — and today those are the
+      same screen. The empty states above are what would be wrong.
 
 ## Phase 10 — Sync and device verification (manual)
 

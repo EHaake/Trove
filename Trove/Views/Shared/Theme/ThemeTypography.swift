@@ -67,6 +67,14 @@ struct ThemeTypography: Sendable {
     let heroFigure: Font
     let heroFigureSecondary: Font
     let formInput: Font
+    /// The headline on an empty state.
+    ///
+    /// No new size: it reuses tokens.md's 19pt step (the form-input row) on the
+    /// display face at semibold, which is the difference between a heading and
+    /// a field. `screenTitle` would be wrong on the list screens, where the
+    /// fixed header above is already carrying a 30pt title and a second one
+    /// under it reads as two screens stacked.
+    let emptyStateTitle: Font
     let rowTitle: Font
     let body: Font
     let secondary: Font
@@ -121,6 +129,7 @@ extension ThemeTypography {
         heroFigure: font(.display, size: 34, weight: .semibold),
         heroFigureSecondary: font(.display, size: 26, weight: .semibold),
         formInput: font(.body, size: 19),
+        emptyStateTitle: font(.display, size: 19, weight: .semibold),
         rowTitle: font(.body, size: 15, weight: .medium),
         body: font(.body, size: 13.5),
         secondary: font(.body, size: 12.5),

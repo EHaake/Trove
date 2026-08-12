@@ -30,6 +30,11 @@ final class DashboardViewModel {
 
         var id: String { path }
         var valueDeltaCents: Int { currentValueCents - spentCents }
+
+        /// Whether any member of this row has a value. `currentValueCents` sums
+        /// the valued ones, so a row with none sums to zero — and printing "$0"
+        /// against a category that just hasn't been priced says it's worthless.
+        var hasAnyValues: Bool { itemCount > unvaluedCount }
     }
 
     /// Design's "BY VALUE" control on the breakdown header.
@@ -100,6 +105,20 @@ final class DashboardViewModel {
     var totalItemCount: Int { valuedCount + unvaluedCount }
     var isEmpty: Bool { totalItemCount == 0 }
     var categoryCount: Int { breakdown.count }
+
+    /// Whether anything here has a value yet.
+    ///
+    /// The state this exists for is items with no values — reachable the moment
+    /// someone adds their first few pieces and hasn't priced them, and the one
+    /// place this screen degrades badly. Every figure it derives is zero, so the
+    /// dashboard reads "$0" over a category breakdown where each row is worth
+    /// "$0 · 0%": a collection reported as worthless rather than un-priced,
+    /// which is exactly the claim the rest of this type is careful never to
+    /// make (see `valueDeltaCents`).
+    ///
+    /// `isEmpty` doesn't cover it — there *is* data, it just has no money in it
+    /// — so the screen gates its money-derived parts on this instead.
+    var hasAnyValues: Bool { valuedCount > 0 }
 
     /// Worth now against what was paid.
     ///

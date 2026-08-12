@@ -38,18 +38,23 @@ struct WishlistView: View {
                         .padding(.horizontal, theme.metrics.screenGutter)
                         .padding(.bottom, theme.metrics.sectionGap - theme.metrics.controlRowGap)
 
-                    SearchField(placeholder: "Search wishlist", text: $viewModel.searchText)
-                        .padding(.horizontal, theme.metrics.screenGutter)
+                    // Controls for narrowing a list need a list to narrow.
+                    // On a first run they were a search field over nothing and
+                    // a lone "All" chip, both of which made the screen look
+                    // like it had lost something rather than not started yet.
+                    if viewModel.totalCount > 0 {
+                        SearchField(placeholder: "Search wishlist", text: $viewModel.searchText)
+                            .padding(.horizontal, theme.metrics.screenGutter)
 
-                    categoryChips
+                        categoryChips
+                    }
                 }
                 .padding(.top, theme.metrics.sectionGap)
                 .padding(.bottom, theme.metrics.listRowGap)
                 .background(theme.colors.background)
 
-                if viewModel.isEmpty {
-                    emptyState
-                    Spacer(minLength: 0)
+                if let reason = viewModel.emptyReason {
+                    emptyState(reason)
                 } else {
                     rows
                 }
@@ -92,10 +97,13 @@ struct WishlistView: View {
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 8) {
-                sortControl
-                if viewModel.canReorder || isReordering {
-                    reorderToggle
+            // Nothing to sort or reorder on an empty list.
+            if viewModel.totalCount > 0 {
+                VStack(alignment: .trailing, spacing: 8) {
+                    sortControl
+                    if viewModel.canReorder || isReordering {
+                        reorderToggle
+                    }
                 }
             }
         }
@@ -251,23 +259,47 @@ struct WishlistView: View {
 
     // MARK: - Empty
 
-    /// Placeholder until T045, same as the item list's.
-    private var emptyState: some View {
-        Text(emptyStateMessage)
-            .font(theme.typography.rowTitle)
-            .foregroundStyle(theme.colors.textBody)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, theme.metrics.screenGutter)
-            .padding(.vertical, theme.metrics.sectionGap)
-    }
+    /// Three of the four cases the item list has — there's no un-valued filter
+    /// here, since nothing on a wishlist is owned yet. The shared
+    /// `ListEmptyReason` is still what decides which, so the two screens can't
+    /// end up disagreeing about what "empty" means.
+    ///
+    /// The copy differs from the item list's throughout, because the wishlist
+    /// is about wanting rather than owning and "no gear yet" would be the wrong
+    /// sentence on a screen that never holds gear.
+    @ViewBuilder
+    private func emptyState(_ reason: ListEmptyReason) -> some View {
+        switch reason {
+        case .nothingAdded, .everythingIsValued:
+            EmptyStateView(
+                mark: .asset("TabWishlist"),
+                headline: "Nothing on the list yet",
+                detail: "Keep track of what you're after, and Trove can work out which gear could fund it.",
+                action: .init(label: "Add something you want", isProminent: true) { isAddingItem = true }
+            )
 
-    private var emptyStateMessage: String {
-        if !SearchMatching.normalized(viewModel.searchText).isEmpty {
-            return "Nothing matches that"
+        case .searchMatchedNothing(let query):
+            EmptyStateView(
+                mark: .system("magnifyingglass"),
+                headline: "No matches for \u{201C}\(query)\u{201D}",
+                detail: "Only names are searched here.",
+                action: .init(label: "Clear search") {
+                    viewModel.searchText = ""
+                    viewModel.load()
+                }
+            )
+
+        case .categoryMatchedNothing:
+            EmptyStateView(
+                mark: .system("line.3.horizontal.decrease"),
+                headline: "Nothing in this category",
+                detail: "The rest of your list is still here — the filter is just narrow.",
+                action: .init(label: "Show the whole list") {
+                    viewModel.categoryFilter = ""
+                    viewModel.load()
+                }
+            )
         }
-        return viewModel.categoryFilter.isEmpty
-            ? "Nothing on the wishlist yet"
-            : "Nothing in this category"
     }
 }
 

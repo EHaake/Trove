@@ -42,7 +42,24 @@ final class WishlistViewModel {
         self.modelContext = modelContext
     }
 
+    /// Wanted items before any narrowing — see `ItemListViewModel.totalCount`.
+    private(set) var totalCount = 0
+
     var isEmpty: Bool { items.isEmpty }
+
+    /// Which empty state applies, or `nil` when there's something to show.
+    ///
+    /// Never `.everythingIsValued`: the wishlist has no un-valued filter, since
+    /// nothing on it is owned yet. The shared rule is still what decides, so
+    /// the two lists can't drift apart on the cases they do share.
+    var emptyReason: ListEmptyReason? {
+        ListEmptyReason.reason(
+            totalCount: totalCount,
+            visibleCount: items.count,
+            searchText: searchText,
+            categoryFilter: categoryFilter
+        )
+    }
 
     /// Design's "4 WANTED · $4,740" — everything currently on screen, so the
     /// figure tracks the filter the same way the item list's total does.
@@ -64,6 +81,7 @@ final class WishlistViewModel {
         loadFailureMessage = nil
         do {
             let all = try modelContext.fetch(FetchDescriptor<WishlistItem>())
+            totalCount = all.count
             items = all
                 .filter { CategoryPathHelper.path($0.categoryPath, isWithin: categoryFilter) }
                 // Name only. A wishlist item has no serial number — it isn't
@@ -80,6 +98,7 @@ final class WishlistViewModel {
             categoryLabels = CategoryPathHelper.displayLabels(for: categoryOptions)
         } catch {
             loadFailureMessage = error.localizedDescription
+            totalCount = 0
             items = []
             categoryOptions = []
             categoryLabels = [:]

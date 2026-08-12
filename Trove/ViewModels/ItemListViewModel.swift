@@ -64,7 +64,23 @@ final class ItemListViewModel {
     /// once per load rather than per render.
     private(set) var categoryLabels: [String: String] = [:]
 
+    /// Owned items before any narrowing. Held so an empty list can tell an
+    /// empty collection apart from a filter that excluded everything — the two
+    /// need opposite invitations.
+    private(set) var totalCount = 0
+
     var isEmpty: Bool { items.isEmpty }
+
+    /// Which empty state applies, or `nil` when there's something to show.
+    var emptyReason: ListEmptyReason? {
+        ListEmptyReason.reason(
+            totalCount: totalCount,
+            visibleCount: items.count,
+            searchText: searchText,
+            categoryFilter: categoryFilter,
+            showsOnlyUnvalued: showsOnlyUnvalued
+        )
+    }
 
     /// Combined current value of the items on screen, so the header total
     /// tracks the filter. Un-valued items contribute nothing rather than
@@ -89,6 +105,7 @@ final class ItemListViewModel {
         loadFailureMessage = nil
         do {
             let all = try modelContext.fetch(FetchDescriptor<Item>())
+            totalCount = all.count
             items = all
                 // `isWithin`, not `matchesPrefix`: a chip is a category that
                 // exists, so "Music/Amps" must not also match
@@ -108,6 +125,7 @@ final class ItemListViewModel {
             categoryLabels = CategoryPathHelper.displayLabels(for: categoryOptions)
         } catch {
             loadFailureMessage = error.localizedDescription
+            totalCount = 0
             items = []
             categoryOptions = []
             categoryLabels = [:]

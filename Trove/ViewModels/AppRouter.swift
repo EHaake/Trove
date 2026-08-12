@@ -38,6 +38,16 @@ final class AppRouter {
 
     private(set) var itemsRequest: ItemsRequest?
 
+    /// Set when another screen has asked for the add-item form. `ItemListView`
+    /// owns that sheet — it has to, so dismissing it can refetch the list — so
+    /// this is how the dashboard's empty state reaches it.
+    ///
+    /// A flag the destination clears, rather than an `ItemsRequest` case: the
+    /// requests narrow a list that's already showing, while this opens
+    /// something on top of it. Folding them together would mean every caller
+    /// reading "request" had to know which kind it got.
+    private(set) var wantsAddItemForm = false
+
     // MARK: - Intents
 
     /// Show the Items tab narrowed to one category.
@@ -64,6 +74,26 @@ final class AppRouter {
         itemsRequest = nil
         selectedTab = .items
         itemsPath = [id]
+    }
+
+    /// Open the add-item form, from wherever the user is.
+    ///
+    /// The dashboard's first-run empty state is the only caller: `design/brief.md`
+    /// asks empty states to point at the add action, and landing someone on a
+    /// second empty screen with its own button would be pointing at a pointer.
+    /// Clears any pending narrowing for the same reason `showItem` does —
+    /// arriving at a filtered list you never asked for is worse than arriving
+    /// at all of them.
+    func startAddingItem() {
+        itemsRequest = nil
+        wantsAddItemForm = true
+        popToItemsRoot()
+    }
+
+    /// Called by `ItemListView` once the form is open, so returning to the tab
+    /// later doesn't reopen it.
+    func clearAddItemRequest() {
+        wantsAddItemForm = false
     }
 
     /// Called by `ItemListView` once it has applied the request, so a later

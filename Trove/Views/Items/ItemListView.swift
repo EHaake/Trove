@@ -39,12 +39,18 @@ struct ItemListView: View {
                         .padding(.horizontal, theme.metrics.screenGutter)
                         .padding(.bottom, theme.metrics.sectionGap - theme.metrics.controlRowGap)
 
-                    SearchField(placeholder: "Search name or serial", text: $viewModel.searchText)
-                        .padding(.horizontal, theme.metrics.screenGutter)
+                    // Controls for narrowing a list need a list to narrow. On a
+                    // first run they were a search field over nothing and a
+                    // lone "All" chip, both of which made the screen look like
+                    // it had lost something rather than not started yet.
+                    if viewModel.totalCount > 0 {
+                        SearchField(placeholder: "Search name or serial", text: $viewModel.searchText)
+                            .padding(.horizontal, theme.metrics.screenGutter)
 
-                    // Full-bleed so chips scroll off the edge rather than
-                    // stopping at the gutter; the gutter moves inside instead.
-                    categoryChips
+                        // Full-bleed so chips scroll off the edge rather than
+                        // stopping at the gutter; the gutter moves inside.
+                        categoryChips
+                    }
                 }
                 .padding(.top, theme.metrics.sectionGap)
                 // Only as much space as sits between two rows. A full section
@@ -53,15 +59,17 @@ struct ItemListView: View {
                 .padding(.bottom, theme.metrics.listRowGap)
                 .background(theme.colors.background)
 
-                ScrollView {
-                    // Rows sit inside the gutter by their own card padding, so
-                    // a row's text lines up with the title above it while the
-                    // card still reaches nearer the edge than the header does.
-                    if viewModel.isEmpty {
-                        emptyState
-                            .padding(.horizontal, theme.metrics.screenGutter)
-                            .padding(.bottom, theme.metrics.sectionGap)
-                    } else {
+                // Outside the scroll view on purpose: there's nothing to
+                // scroll, and a centred block only reads as centred if it
+                // takes the whole space the rows would have.
+                if let reason = viewModel.emptyReason {
+                    emptyState(reason)
+                } else {
+                    ScrollView {
+                        // Rows sit inside the gutter by their own card padding,
+                        // so a row's text lines up with the title above it
+                        // while the card still reaches nearer the edge than the
+                        // header does.
                         LazyVStack(spacing: theme.metrics.listRowGap) {
                             ForEach(viewModel.items, id: \.id) { item in
                                 NavigationLink(value: item.id) {
@@ -74,9 +82,7 @@ struct ItemListView: View {
                         // No bottom padding: the rows run right to the edge of
                         // the scroll, so the tab bar and the add button sit
                         // over the last one or two. Same rule the wishlist
-                        // follows — see plan.md's Navigation section. The
-                        // empty state above keeps its padding, having nothing
-                        // for the glass to refract either way.
+                        // follows — see plan.md's Navigation section.
                     }
                 }
             }
@@ -107,6 +113,7 @@ struct ItemListView: View {
         // navigation asks, the screen decides how to show it.
         .onAppear {
             apply(router.itemsRequest)
+            applyAddItemRequest()
             viewModel.load()
         }
         .onChange(of: router.itemsRequest) { _, request in
@@ -114,6 +121,9 @@ struct ItemListView: View {
             apply(request)
             viewModel.load()
         }
+        // The dashboard's first-run empty state asks for the form; this tab is
+        // where it lives.
+        .onChange(of: router.wantsAddItemForm) { applyAddItemRequest() }
         // Per keystroke. A refetch-and-filter over a personal inventory is
         // cheap enough that debouncing would only add latency to typing;
         // revisit if the store ever holds thousands of items.
@@ -133,7 +143,10 @@ struct ItemListView: View {
 
             Spacer()
 
-            sortControl
+            // Nothing to sort on an empty list.
+            if viewModel.totalCount > 0 {
+                sortControl
+            }
         }
     }
 
@@ -242,6 +255,12 @@ struct ItemListView: View {
         }
     }
 
+    private func applyAddItemRequest() {
+        guard router.wantsAddItemForm else { return }
+        isAddingItem = true
+        router.clearAddItemRequest()
+    }
+
     private func reveal(using proxy: ScrollViewProxy) {
         guard let chipToReveal else { return }
         proxy.scrollTo(chipToReveal, anchor: .center)
@@ -309,26 +328,59 @@ struct ItemListView: View {
 
     // MARK: - Empty
 
-    /// Placeholder until T045, which gives this real design attention and
-    /// points at the add action rather than just reporting absence.
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(emptyStateMessage)
-                .font(theme.typography.rowTitle)
-                .foregroundStyle(theme.colors.textBody)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, theme.metrics.sectionGap)
-    }
+    /// Four states, not one. Which applies is `ItemListViewModel`'s call; this
+    /// only decides how each one looks and reads.
+    ///
+    /// Every case that was caused by a narrowing offers to undo that narrowing,
+    /// rather than describing the situation and leaving the user to find the
+    /// control that got them there. The un-valued case is the odd one and the
+    /// reason the fourth state exists: it's what you land on after valuing the
+    /// last item from the dashboard's callout, so it's a result, not a dead
+    /// end, and reading "no gear yet" there was flatly wrong.
+    @ViewBuilder
+    private func emptyState(_ reason: ListEmptyReason) -> some View {
+        switch reason {
+        case .nothingAdded:
+            EmptyStateView(
+                mark: .asset("TabItems"),
+                headline: "No gear yet",
+                detail: "Add what you own and Trove tracks what you paid against what it's worth now.",
+                action: .init(label: "Add an item", isProminent: true) { isAddingItem = true }
+            )
 
-    /// Search is named first: it's the narrower of the two, and the one the
-    /// user just typed. "Nothing in this category" under a query they can see
-    /// in the field would point at the wrong control.
-    private var emptyStateMessage: String {
-        if !SearchMatching.normalized(viewModel.searchText).isEmpty {
-            return "Nothing matches that"
+        case .searchMatchedNothing(let query):
+            EmptyStateView(
+                mark: .system("magnifyingglass"),
+                headline: "No matches for \u{201C}\(query)\u{201D}",
+                detail: "Names and serial numbers are what's searched.",
+                action: .init(label: "Clear search") {
+                    viewModel.searchText = ""
+                    viewModel.load()
+                }
+            )
+
+        case .categoryMatchedNothing:
+            EmptyStateView(
+                mark: .system("line.3.horizontal.decrease"),
+                headline: "Nothing in this category",
+                detail: "Everything else is still here — the filter is just narrow.",
+                action: .init(label: "Show all items") {
+                    viewModel.categoryFilter = ""
+                    viewModel.load()
+                }
+            )
+
+        case .everythingIsValued:
+            EmptyStateView(
+                mark: .system("checkmark.circle"),
+                headline: "Everything has a value",
+                detail: "Nothing is left out of your totals. They're as complete as the values you've entered.",
+                action: .init(label: "Show all items") {
+                    viewModel.showsOnlyUnvalued = false
+                    viewModel.load()
+                }
+            )
         }
-        return viewModel.categoryFilter.isEmpty ? "Nothing here yet" : "Nothing in this category"
     }
 }
 

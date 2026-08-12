@@ -57,9 +57,8 @@ struct SellPlanView: View {
             .padding(.bottom, theme.metrics.listRowGap)
             .background(theme.colors.background)
 
-            if viewModel.isEmpty {
-                emptyState
-                Spacer(minLength: 0)
+            if let reason = viewModel.emptyReason {
+                emptyState(reason)
             } else {
                 candidateList
             }
@@ -158,33 +157,46 @@ struct SellPlanView: View {
         }
     }
 
-    /// Reachable with a real collection: everything rated 4–5, or nothing
-    /// valued yet. Says which, since the two have different fixes.
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Nothing to suggest yet")
-                .font(theme.typography.rowTitle)
-                .foregroundStyle(theme.colors.textBody)
-            Text("Candidates are things you've rated 3 or lower on desire to keep, with a current value entered.")
-                .font(theme.typography.body)
-                .foregroundStyle(theme.colors.textQuiet)
-                .fixedSize(horizontal: false, vertical: true)
+    /// Reachable with a real collection, and which way decides what to say —
+    /// qualifying takes a desire-to-keep of 3 or lower *and* a current value,
+    /// so reciting both rules to someone missing only one is noise.
+    ///
+    /// No action button on any of them, unlike the list screens. What each one
+    /// asks for happens on a different screen — rate something lower, or go and
+    /// value it — and there's no single item to send the user to. Naming the
+    /// rule is the invitation; the toolbar behind this screen is the way back.
+    @ViewBuilder
+    private func emptyState(_ reason: SellPlanViewModel.EmptyReason) -> some View {
+        switch reason {
+        case .nothingOwned:
+            EmptyStateView(
+                mark: .asset("TabItems"),
+                headline: "Nothing to sell yet",
+                detail: "Add the gear you own and anything you'd part with turns up here."
+            )
+
+        case .everythingIsAKeeper:
+            EmptyStateView(
+                mark: .system("lock"),
+                headline: "Everything's a keeper",
+                detail: "Sell plans draw from gear you've rated 3 or lower on desire to keep. Nothing is, right now."
+            )
+
+        case .nothingValued:
+            EmptyStateView(
+                mark: .system("questionmark.circle"),
+                headline: "Nothing has a value yet",
+                detail: "There's gear you'd part with, but a plan needs to know what it's worth. Add current values and it'll fill in."
+            )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, theme.metrics.screenGutter)
-        .padding(.vertical, theme.metrics.sectionGap)
     }
 
     private var missingItem: some View {
-        VStack(spacing: 8) {
-            Text("This item is gone")
-                .font(theme.typography.rowTitle)
-                .foregroundStyle(theme.colors.textPrimary)
-            Text("It was removed somewhere else.")
-                .font(theme.typography.body)
-                .foregroundStyle(theme.colors.textQuiet)
-        }
-        .padding(theme.metrics.screenGutter)
+        EmptyStateView(
+            mark: .system("tray"),
+            headline: "This item is gone",
+            detail: "It was removed somewhere else."
+        )
     }
 }
 
