@@ -1,21 +1,21 @@
 import SwiftUI
 
-/// The add action in a list screen's header.
+/// The add action on a list screen — Design's raised brass disc, floating over
+/// the content at the bottom-right.
 ///
-/// Design draws this as a raised brass circle centred in a five-slot tab bar
-/// (Overview · Items · **+** · Wishlist · More). v1 ships three tabs and no
-/// More tab, so that centre slot doesn't exist — a "+" between Items and
-/// Wishlist would be the second of four positions rather than a centre — and
-/// plan.md asks for the add action in each tab's toolbar instead.
+/// **This is the permanent v1 design, not a stand-in.** Design draws the disc
+/// in the centre slot of a five-tab bar (Overview · Items · **+** · Wishlist ·
+/// More); v1 ships three tabs and no More, so that centre slot doesn't exist.
+/// The treatment is the part worth keeping — the position adapts to the tab
+/// count we actually have, and bottom-right beats a top-corner toolbar button
+/// for one-handed reach. See plan.md's Navigation section.
 ///
-/// This keeps Design's treatment and moves its position: the same brass disc
-/// and dark glyph, in the screen's own header beside the sort control. Both
-/// list screens draw their title in content with the navigation bar hidden, so
-/// that header row *is* the toolbar here.
+/// It briefly moved into each screen's header during T043, on a reading of
+/// "toolbar" that plan.md has since replaced. What survived that attempt is
+/// this being one shared component rather than two copies.
 ///
-/// It replaced a floating overlay button that stood in until the real tab bar
-/// existed. Worth being rid of: the overlay sat on top of the last row, which
-/// is why the wishlist needed bottom scroll margin to see past it.
+/// Positioning is the caller's: this is just the disc, so each screen states
+/// its own `.overlay(alignment: .bottomTrailing)` and insets.
 struct AddButton: View {
     /// What the button adds, for VoiceOver — "Add item", "Add wanted item".
     let label: String
@@ -26,9 +26,9 @@ struct AddButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "plus")
-                .font(.system(size: 18, weight: .medium))
+                .font(.system(size: 22, weight: .medium))
                 .foregroundStyle(theme.colors.background)
-                .frame(width: 44, height: 44)
+                .frame(width: 56, height: 56)
                 .background(Circle().fill(theme.colors.accentBrass))
         }
         .buttonStyle(.plain)

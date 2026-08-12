@@ -60,10 +60,22 @@ struct ItemListView: View {
                             }
                         }
                         .padding(.horizontal, theme.metrics.listRowInset)
-                        .padding(.bottom, theme.metrics.sectionGap)
+                        // No bottom padding: the rows run right to the edge of
+                        // the scroll, so the tab bar and the add button sit
+                        // over the last one or two. Same rule the wishlist
+                        // follows — see plan.md's Navigation section. The
+                        // empty state above keeps its padding, having nothing
+                        // for the glass to refract either way.
                     }
                 }
             }
+        }
+        // Floats over the rows on purpose — see plan.md's Navigation section.
+        // The list scrolls right to the bottom underneath it.
+        .overlay(alignment: .bottomTrailing) {
+            AddButton(label: "Add item") { isAddingItem = true }
+                .padding(.trailing, theme.metrics.screenGutter)
+                .padding(.bottom, theme.metrics.sectionGap)
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .navigationBar)
@@ -99,30 +111,18 @@ struct ItemListView: View {
 
     // MARK: - Header
 
-    /// Title and controls share the top row; the summary gets the one below it,
-    /// to itself.
-    ///
-    /// It used to sit beside the controls, which was fine until the add button
-    /// joined them — between the two, "8 ITEMS · $6,740 · 1 UNVALUED" no longer
-    /// fit and wrapped with a separator dangling at the end of the first line.
-    /// The full width is cheaper than shortening a line that's already earning
-    /// its place.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("Items")
                     .font(theme.typography.screenTitle)
                     .foregroundStyle(theme.colors.textPrimary)
-
-                Spacer()
-
-                HStack(spacing: 10) {
-                    sortControl
-                    AddButton(label: "Add item") { isAddingItem = true }
-                }
+                Text(summaryLine).monoLabel()
             }
 
-            Text(summaryLine).monoLabel()
+            Spacer()
+
+            sortControl
         }
     }
 

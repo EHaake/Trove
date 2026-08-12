@@ -418,27 +418,28 @@ the screen.
 - [x] **T043** — Add-item and add-wishlist-item entry points in the
       toolbar of their respective tabs (not buried in a menu).
 
-      Design draws the add action as a raised brass circle in the centre
-      slot of a five-tab bar (Overview · Items · **+** · Wishlist ·
-      More). v1 has three tabs and no More, so that centre doesn't
-      exist — a "+" between Items and Wishlist would be the second of
-      four positions — and plan.md asks for it in each tab's toolbar
-      anyway. `AddButton` keeps Design's treatment and moves its
-      position: same brass disc and dark glyph, in the screen's own
-      header beside the sort control. Both list screens draw their title
-      in content with the navigation bar hidden, so that header row is
-      the toolbar here.
+      Landed as one shared `AddButton` — Design's raised brass disc —
+      floating bottom-right on both list screens, which plan.md now
+      records as the permanent v1 design rather than a stand-in. Design
+      puts that disc in the centre slot of a five-tab bar (Overview ·
+      Items · **+** · Wishlist · More); v1 has three tabs and no More,
+      so the treatment carries over and the position adapts.
 
-      It replaces the floating overlay that stood in from T024. Worth
-      being rid of on its own: the overlay sat on top of the last row,
-      which is what the wishlist's bottom scroll margin was widened for
-      — now back to an ordinary section gap.
+      Built first into each screen's header on a "toolbar" reading of
+      this task, then reverted: the header move forced both title blocks
+      to be restructured to fit, and bottom-right is easier to reach
+      one-handed. The one thing kept from that attempt is the button
+      being a single shared component instead of two copies. Both
+      headers are back to their pre-T043 shape.
 
-      Both headers were restructured to fit it. The summary line moved
-      out of the title block and onto its own full-width row, because
-      between the sort control and the new button "8 ITEMS · $6,740 ·
-      1 UNVALUED" no longer fit and wrapped with a separator dangling at
-      the end of the first line.
+      **List content is uncapped at the bottom on purpose.** No scroll
+      margin, no trailing padding on the rows — the add button and the
+      system tab bar are *meant* to sit over the last row or two when
+      scrolled fully down, because that overlap is what gives iOS 26's
+      glass material something to refract. An earlier pass added margin
+      to dodge the button, reasoning from T024-era logic that the
+      overlap was a bug; plan.md's Navigation section now says
+      otherwise, in as many words, so it doesn't get re-fixed.
 - [ ] **T044** — Manual full click-through: launch → dashboard → add item
       → items list → item detail → wishlist → filter wishlist by
       category → add wishlist item → wishlist detail → "Find items to

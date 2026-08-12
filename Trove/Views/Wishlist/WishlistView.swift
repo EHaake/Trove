@@ -55,6 +55,13 @@ struct WishlistView: View {
                 }
             }
         }
+        // Floats over the rows on purpose — see plan.md's Navigation section.
+        // The list scrolls right to the bottom underneath it.
+        .overlay(alignment: .bottomTrailing) {
+            AddButton(label: "Add wanted item") { isAddingItem = true }
+                .padding(.trailing, theme.metrics.screenGutter)
+                .padding(.bottom, theme.metrics.sectionGap)
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .navigationBar)
         // The item's own screen is the only thing this list pushes. The Sell
@@ -74,29 +81,23 @@ struct WishlistView: View {
 
     // MARK: - Header
 
-    /// Same shape as the item list's: title and controls on the top row, the
-    /// summary given the full width below. See that one for why.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top) {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("Wishlist")
                     .font(theme.typography.screenTitle)
                     .foregroundStyle(theme.colors.textPrimary)
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 8) {
-                    HStack(spacing: 10) {
-                        sortControl
-                        AddButton(label: "Add wanted item") { isAddingItem = true }
-                    }
-                    if viewModel.canReorder || isReordering {
-                        reorderToggle
-                    }
-                }
+                Text(summaryLine).monoLabel()
             }
 
-            Text(summaryLine).monoLabel()
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 8) {
+                sortControl
+                if viewModel.canReorder || isReordering {
+                    reorderToggle
+                }
+            }
         }
     }
 
@@ -186,11 +187,12 @@ struct WishlistView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        // Ordinary breathing room at the end of the list. It was 76pt of
-        // clearance for the floating add button until T043 moved that into the
-        // header; with nothing overlapping the last row any more, a section
-        // gap is all it needs — the same as the item list's own bottom padding.
-        .contentMargins(.bottom, theme.metrics.sectionGap, for: .scrollContent)
+        // No bottom margin, deliberately. The add button and the tab bar are
+        // meant to sit over the last row or two when scrolled fully down —
+        // that overlap is what gives iOS 26's glass material something to
+        // refract. A margin here would buy clearance at the cost of the
+        // effect it exists to enable. plan.md says so explicitly, because
+        // this was once "fixed" the other way.
         .environment(\.editMode, .constant(isReordering ? .active : .inactive))
     }
 
