@@ -204,7 +204,9 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
   combined with (not replacing) the category filter — both narrow the
   same result set.
 - **`ItemDetailView`** / `ItemDetailViewModel` — view a single item, edit,
-  delete.
+  delete. Edit/Delete are reached via a single circular "..." button
+  opening a `Menu` — see the `DetailOverflowMenu` note under
+  `WishlistDetailView` below for the shared component and reasoning.
 - **`ItemFormView`** / `ItemFormViewModel` — shared add/edit form. Required
   fields (name, category, price, date) up front; everything else
   (serial, location, current value, condition, photos, notes) behind a
@@ -225,6 +227,17 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
   Includes a single button ("Find items to sell") that pushes to
   `SellPlanView`. This screen does **not** show the ranked list by
   default — see the note under `SellPlanView` for why.
+
+  Edit and Delete also live here (and on `ItemDetailView`), reached via
+  `DetailOverflowMenu` — one shared circular "..." button opening a
+  `Menu`, Delete styled with the menu's `.destructive` role. Replaces an
+  earlier permanent Edit/Delete button pair, which read as dated against
+  the rest of the app's iOS 26 treatment (the floating `AddButton`, the
+  translucent tab bar). One component rather than two copies, matching
+  every other shared-UI decision in this build. This changes only how
+  Edit/Delete are *reached* — the delete confirmation flow, including
+  `WishlistDetailView`'s alert explaining the cascade/nullify asymmetry,
+  is unchanged.
 - **`SellPlanView`** / `SellPlanViewModel` — "Sell Plan" is the formalized
   name for what was internally "sell-candidate ranking"; the name (and
   the idea that this deserves to be a persisted, concrete thing rather
