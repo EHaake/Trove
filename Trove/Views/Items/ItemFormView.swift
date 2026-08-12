@@ -81,6 +81,11 @@ struct ItemFormView: View {
             .foregroundStyle(theme.colors.textPrimary)
             .tint(theme.colors.accentBrass)
             .autocorrectionDisabled()
+            // Supplying a `prompt:` replaces the title as the placeholder and
+            // leaves the field with no accessibility label at all — VoiceOver
+            // reads the sample value, "Leica M6", as if it were the field's
+            // name. The visible "Name" above is a separate `Text`.
+            .accessibilityLabel("Name")
             .padding(.vertical, theme.metrics.fieldPaddingVertical)
             .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
             .background(fieldBackground)
@@ -105,6 +110,10 @@ struct ItemFormView: View {
                         .foregroundStyle(theme.colors.textPrimary)
                         .tint(theme.colors.accentBrass)
                         .keyboardType(.decimalPad)
+                        // Without this the field's accessibility label is its
+                        // placeholder, "0" — the visible "Price paid" above is
+                        // a separate `Text`, so nothing connects the two.
+                        .accessibilityLabel("Price paid")
                 }
                 .padding(.vertical, theme.metrics.fieldPaddingVertical)
                 .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)

@@ -172,6 +172,11 @@ struct CategoryPickerField: View {
         .textInputAutocapitalization(.words)
         .autocorrectionDisabled()
         .submitLabel(.done)
+        // The `prompt:` above takes the placeholder slot, which leaves the
+        // field with no accessibility label — VoiceOver would read the example
+        // path as though it were the field's name. The read-out already sets
+        // its own; this is the editing half.
+        .accessibilityLabel(label)
         .padding(.vertical, theme.metrics.fieldPaddingVertical)
         .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
         .background(

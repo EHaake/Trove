@@ -666,8 +666,41 @@ configuration), then come back to this phase.
 
 ## Phase 11 — UI smoke test
 
-- [ ] **T050** — One `XCUIApplication` test: launch the app, add an item
+- [x] **T050** — One `XCUIApplication` test: launch the app, add an item
       through the quick-add flow, confirm it appears in the items list.
+
+      Three tests, not one — the second and third earned their place:
+
+      - **The smoke test itself.** Launch → Items → the floating add
+        button → fill name, category and price → save → the row is in
+        the list. Mutation-verified by disconnecting the save button's
+        action, which fails it with the right message.
+      - **`testAppLaunches`**, kept from the placeholder. Costs four
+        seconds and distinguishes "the app won't start" from "the add
+        flow is broken" when both would otherwise fail together.
+      - **Typing a whole category path.** `CategoryPickerFieldTests`
+        pins the rule that broke at T044; this pins that the rule is
+        still attached to a field a person can type into. Different
+        failure modes — only one of them involves a keyboard, and it's
+        the one that shipped.
+
+      **Runs against an in-memory store**, via a `-uiTesting` launch
+      argument `TroveApp` reads. A UI test whose starting state is
+      whatever the last run left behind passes or fails for reasons
+      nobody in the test can see. A test-only branch in shipping code is
+      worth being uneasy about, so it's one flag, read in one place, that
+      can only lose data and never expose it. Isolation confirmed by
+      running the suite twice back to back — the smoke test asserts the
+      first-run dashboard before adding anything, so persisted data
+      would fail the second run.
+
+      **Found on the way: three form fields had no accessibility label.**
+      Supplying a `prompt:` to a SwiftUI `TextField` takes the
+      placeholder slot and leaves the title unused, so name, category and
+      price were reading their example values to VoiceOver — "Leica M6"
+      as though it were the field's name. Fixed on all three; it's what
+      made them findable from the test, but it was a real defect
+      independent of that.
 
 ---
 
