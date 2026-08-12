@@ -65,7 +65,6 @@ struct ItemListView: View {
                 }
             }
         }
-        .overlay(alignment: .bottomTrailing) { addButton }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .navigationBar)
         .navigationDestination(for: UUID.self) { itemID in
@@ -100,18 +99,30 @@ struct ItemListView: View {
 
     // MARK: - Header
 
+    /// Title and controls share the top row; the summary gets the one below it,
+    /// to itself.
+    ///
+    /// It used to sit beside the controls, which was fine until the add button
+    /// joined them — between the two, "8 ITEMS · $6,740 · 1 UNVALUED" no longer
+    /// fit and wrapped with a separator dangling at the end of the first line.
+    /// The full width is cheaper than shortening a line that's already earning
+    /// its place.
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
                 Text("Items")
                     .font(theme.typography.screenTitle)
                     .foregroundStyle(theme.colors.textPrimary)
-                Text(summaryLine).monoLabel()
+
+                Spacer()
+
+                HStack(spacing: 10) {
+                    sortControl
+                    AddButton(label: "Add item") { isAddingItem = true }
+                }
             }
 
-            Spacer()
-
-            sortControl
+            Text(summaryLine).monoLabel()
         }
     }
 
@@ -158,26 +169,6 @@ struct ItemListView: View {
             )
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
-    }
-
-    /// Design puts the add action in the tab bar, which doesn't exist until
-    /// T042 — this floating button stands in for it and may well move there.
-    /// It's here rather than in the harness so the list can reload when the
-    /// form closes.
-    private var addButton: some View {
-        Button {
-            isAddingItem = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .medium))
-                .foregroundStyle(theme.colors.background)
-                .frame(width: 56, height: 56)
-                .background(Circle().fill(theme.colors.accentBrass))
-        }
-        .buttonStyle(.plain)
-        .padding(.trailing, theme.metrics.screenGutter)
-        .padding(.bottom, theme.metrics.sectionGap)
-        .accessibilityLabel("Add item")
     }
 
     // MARK: - Filter

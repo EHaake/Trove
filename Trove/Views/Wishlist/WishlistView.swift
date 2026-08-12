@@ -55,7 +55,6 @@ struct WishlistView: View {
                 }
             }
         }
-        .overlay(alignment: .bottomTrailing) { addButton }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .navigationBar)
         // The item's own screen is the only thing this list pushes. The Sell
@@ -75,23 +74,29 @@ struct WishlistView: View {
 
     // MARK: - Header
 
+    /// Same shape as the item list's: title and controls on the top row, the
+    /// summary given the full width below. See that one for why.
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top) {
                 Text("Wishlist")
                     .font(theme.typography.screenTitle)
                     .foregroundStyle(theme.colors.textPrimary)
-                Text(summaryLine).monoLabel()
-            }
 
-            Spacer()
+                Spacer()
 
-            VStack(alignment: .trailing, spacing: 8) {
-                sortControl
-                if viewModel.canReorder || isReordering {
-                    reorderToggle
+                VStack(alignment: .trailing, spacing: 8) {
+                    HStack(spacing: 10) {
+                        sortControl
+                        AddButton(label: "Add wanted item") { isAddingItem = true }
+                    }
+                    if viewModel.canReorder || isReordering {
+                        reorderToggle
+                    }
                 }
             }
+
+            Text(summaryLine).monoLabel()
         }
     }
 
@@ -181,12 +186,11 @@ struct WishlistView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        // Room to scroll the last row clear of the floating add button, which
-        // otherwise sits over its lower-right corner. Added while that corner
-        // held a button and kept now that it's back to the gauge: a reading
-        // half-covered by a floating control is still worth avoiding, and the
-        // item list's own list already leaves comparable room at the bottom.
-        .contentMargins(.bottom, 76, for: .scrollContent)
+        // Ordinary breathing room at the end of the list. It was 76pt of
+        // clearance for the floating add button until T043 moved that into the
+        // header; with nothing overlapping the last row any more, a section
+        // gap is all it needs — the same as the item list's own bottom padding.
+        .contentMargins(.bottom, theme.metrics.sectionGap, for: .scrollContent)
         .environment(\.editMode, .constant(isReordering ? .active : .inactive))
     }
 
@@ -243,23 +247,7 @@ struct WishlistView: View {
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
-    // MARK: - Add / empty
-
-    private var addButton: some View {
-        Button {
-            isAddingItem = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .medium))
-                .foregroundStyle(theme.colors.background)
-                .frame(width: 56, height: 56)
-                .background(Circle().fill(theme.colors.accentBrass))
-        }
-        .buttonStyle(.plain)
-        .padding(.trailing, theme.metrics.screenGutter)
-        .padding(.bottom, theme.metrics.sectionGap)
-        .accessibilityLabel("Add wanted item")
-    }
+    // MARK: - Empty
 
     /// Placeholder until T045, same as the item list's.
     private var emptyState: some View {

@@ -415,8 +415,30 @@ the screen.
       filtered list with the chip showing "2 ITEMS · $0 · 2 UNVALUED";
       the leaf-category row lands on Items filtered, popping whatever
       was already pushed there.
-- [ ] **T043** — Add-item and add-wishlist-item entry points in the
+- [x] **T043** — Add-item and add-wishlist-item entry points in the
       toolbar of their respective tabs (not buried in a menu).
+
+      Design draws the add action as a raised brass circle in the centre
+      slot of a five-tab bar (Overview · Items · **+** · Wishlist ·
+      More). v1 has three tabs and no More, so that centre doesn't
+      exist — a "+" between Items and Wishlist would be the second of
+      four positions — and plan.md asks for it in each tab's toolbar
+      anyway. `AddButton` keeps Design's treatment and moves its
+      position: same brass disc and dark glyph, in the screen's own
+      header beside the sort control. Both list screens draw their title
+      in content with the navigation bar hidden, so that header row is
+      the toolbar here.
+
+      It replaces the floating overlay that stood in from T024. Worth
+      being rid of on its own: the overlay sat on top of the last row,
+      which is what the wishlist's bottom scroll margin was widened for
+      — now back to an ordinary section gap.
+
+      Both headers were restructured to fit it. The summary line moved
+      out of the title block and onto its own full-width row, because
+      between the sort control and the new button "8 ITEMS · $6,740 ·
+      1 UNVALUED" no longer fit and wrapped with a separator dangling at
+      the end of the first line.
 - [ ] **T044** — Manual full click-through: launch → dashboard → add item
       → items list → item detail → wishlist → filter wishlist by
       category → add wishlist item → wishlist detail → "Find items to
