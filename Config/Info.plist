@@ -16,6 +16,17 @@
 	  collides with the generated one:
 	    error: Multiple commands produce '…/Trove.app/Info.plist'
 	-->
+	<!--
+	  CloudKit's other half. SwiftData syncs by way of
+	  NSPersistentCloudKitContainer, which learns about changes made on another
+	  device from a silent push; without this background mode those pushes are
+	  dropped and the app only notices on the next foreground. The matching
+	  aps-environment key is in Trove.entitlements.
+	-->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Archivo-SemiBold.ttf</string>

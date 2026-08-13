@@ -538,22 +538,75 @@ empty states above are the ones that would be wrong, since each
 confidently tells a user with a full collection on another device that
 they have nothing.
 
+**T002 has since landed and sync is live, so this is now due rather than
+anticipated.** It was not folded into T002 — five screens' empty states
+and a new not-yet-loaded state is a phase of its own, not a container
+swap. Nothing above has been changed yet.
+
 ## CloudKit sync
 
-`ModelContainer` is configured with a CloudKit database
-(`.automatic`/private database — no sharing in v1, per spec's
-single-user non-goal). Practical requirements this imposes, beyond the
-schema constraints already reflected in the data model above:
+`ModelContainer` is configured with the app's private CloudKit database
+— no sharing in v1, per spec's single-user non-goal. Built by
+`TroveStore`, which exists so the decisions below are testable; a
+container assembled inline in `TroveApp.init` isn't.
 
-- Requires an iCloud capability + CloudKit container added in the Xcode
-  project's Signing & Capabilities.
-- Works in development against your own iCloud account on the free tier;
-  no paid Apple Developer Program membership needed for this stage.
-  (You'll need that membership regardless once we're preparing an actual
-  App Store submission — not a v1 blocker.)
-- The app should handle "user not signed into iCloud" gracefully (data
-  still works locally; sync just doesn't happen) rather than treating it
-  as an error state.
+**Correction to what this section used to say:** the free tier it
+referred to is CloudKit's *storage* tier, not free provisioning. A
+Personal Team can't create a CloudKit container at all — T002 was
+blocked on the paid membership from the start, not merely at App Store
+prep. Fixed here so the next reader doesn't plan around it.
+
+Three configurations, one per launch shape:
+
+| Mode | Store | `cloudKitDatabase` | When |
+|---|---|---|---|
+| `.cloudKit` | on disk | `.private("iCloud.com.erikhaake.trove")` | every real launch |
+| `.localOnly` | same file on disk | `.none` | only when `.cloudKit` won't load |
+| `.ephemeral` | in memory | `.none` | `-uiTesting` only |
+
+`cloudKitDatabase` is spelled out in all three because its default is
+`.automatic` — "sync if the app carries an iCloud entitlement" — and the
+app now does. Inherited, that default would have `.localOnly` retry the
+configuration that just failed, and would point UI tests at a real
+iCloud container.
+
+**Not signed into iCloud is handled by not asking.**
+`NSPersistentCloudKitContainer`, which SwiftData sets up underneath a
+`cloudKitDatabase:` configuration, loads its local store with or without
+an account and picks one up when it appears. Gating the configuration on
+`CKContainer.accountStatus()` — the obvious reading of "handle the
+signed-out case" — would *create* the failure it looks like it prevents:
+launch before signing in, and you'd be unsynced until you happened to
+relaunch. So `.cloudKit` is unconditional.
+
+**Falling back is for CloudKit's own failures**, not the user's: an
+entitlement a provisioning profile no longer carries, a container this
+build can't reach. Those say nothing about the collection on disk, so
+`.localOnly` opens the same store file and only sync is lost. Safe
+rather than bug-hiding because the one CloudKit failure that *should* be
+loud — a schema breaking CloudKit's rules — is caught by
+`CloudKitSchemaTests` long before launch.
+
+Two requirements live outside the Swift sources, and both fail silently:
+
+- `Trove/Trove.entitlements` — the iCloud container and `aps-environment`.
+  An identifier that disagrees with `TroveStore` builds, launches, and
+  never syncs.
+- `Config/Info.plist` — `UIBackgroundModes: [remote-notification]`, which
+  is what lets the silent pushes that carry other devices' changes
+  arrive. It has to be in the partial plist because
+  `INFOPLIST_KEY_UIBackgroundModes` is ignored by the Info.plist
+  generator without warning.
+
+`TroveStoreTests` compares both against the app, since neither is
+reachable from a compiler error.
+
+**Still open, and not part of T002:** the app has nowhere to *say* any
+of this. `TroveStore.mode` records that sync dropped out and nothing
+reads it, and both form screens still promise "Saves to your library on
+this device" — true only while signed out. Deciding what v1 shows, if
+anything, is its own piece of work; see Loading states above, which
+comes due at the same time and for the same reason.
 
 ## Testing strategy
 

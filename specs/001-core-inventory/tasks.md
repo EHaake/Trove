@@ -21,16 +21,27 @@ summarized.
       lifecycle, iOS 26.0 minimum deployment, plain `.xcodeproj` (no
       XcodeGen/Tuist). *Verify: project opens and builds an empty app in
       the simulator.*
-- [ ] ~~T002~~ — **Deferred, not skipped.** Add iCloud capability and a
-      CloudKit container to the target's Signing & Capabilities. Blocked:
-      creating a new CloudKit container requires Certificates,
-      Identifiers & Profiles access, which needs an active paid Apple
-      Developer Program membership (a Personal Team can build/run
-      locally, but can't provision a new container) — see plan.md's
-      CloudKit section. Not a scope change; picking this back up once the
-      membership is renewed, ideally before Phase 10 or before actual
-      App Store prep, whichever comes first. T009 below proceeds without
-      it for now.
+- [x] **T002** — Add iCloud capability and a CloudKit container to the
+      target's Signing & Capabilities. *Was deferred, not skipped*, from
+      2026-08-08 to 2026-08-12: creating a CloudKit container needs
+      Certificates, Identifiers & Profiles access, which needs an active
+      paid Apple Developer Program membership (a Personal Team can
+      build/run locally but can't provision a container). Completed once
+      the membership was renewed, in two halves:
+      - **In Xcode (by hand):** iCloud + CloudKit capability on container
+        `iCloud.com.erikhaake.trove`, wiring `CODE_SIGN_ENTITLEMENTS` to
+        the already-committed `Trove/Trove.entitlements`.
+      - **In code:** `TroveStore` replaces T009's inline local-only
+        container — three configurations (CloudKit / local-only /
+        in-memory), an unconditional CloudKit ask, and a fallback that
+        keeps the same store file when CloudKit won't load. Plus
+        `UIBackgroundModes: [remote-notification]` in `Config/Info.plist`,
+        the second half flagged by the T002-blocked commit and the thing
+        that lets other devices' changes arrive by push rather than at
+        next foreground. `TroveStoreTests` (11 tests) covers the
+        decisions; all nine rules were mutation-verified red.
+      *Verify: `xcodebuild build` and `xcodebuild test` green — 434 tests
+      in 67 suites, plus 4 UI tests.*
 - [x] **T003** — Add a `TroveTests` target (Swift Testing) and a
       `TroveUITests` target (XCTest). *Verify: an empty placeholder test
       in each target runs green via `xcodebuild test`.*
@@ -59,6 +70,8 @@ summarized.
       contained swap later (add the CloudKit database configuration and
       the "not signed into iCloud" handling) rather than a migration.
       *Verify: app launches in the simulator without errors.*
+      **Swapped at T002, and it was the contained swap this predicted** —
+      no migration, no model change, no view touched.
 - [x] **T010** — Unit tests: creating each model type via an in-memory
       `ModelContainer` produces the expected defaults (`desireToKeep ==
       3`, `currencyCode == "USD"`, etc). *Verify: `xcodebuild test`
@@ -652,17 +665,39 @@ the screen.
 
 ## Phase 10 — Sync and device verification (manual)
 
-**Blocked pending Developer Program renewal**, same as T002 — nothing
-here is verifiable until CloudKit is actually turned on. Revisit T002
-first (swap `TroveApp`'s `ModelContainer` back to a CloudKit
-configuration), then come back to this phase.
+**Unblocked as of 2026-08-12** — the Developer Program membership is
+renewed and T002 is done, so sync is live and both of these are now
+runnable. Both are yours to run: they need real iCloud accounts on real
+devices, which is exactly why plan.md's testing strategy leaves them
+manual.
 
 - [ ] **T048** — Manual: run the app on two simulators (or a simulator
       and a device) signed into the same iCloud account; confirm an item
       added on one appears on the other. Not automated — see plan.md's
       testing strategy.
 - [ ] **T049** — Manual: confirm the app behaves reasonably when the
-      simulator/device is not signed into iCloud at all.
+      simulator/device is not signed into iCloud at all. Expectation to
+      check against: everything works, nothing mentions iCloud, and no
+      error appears — `TroveStore` never asks about the account, so a
+      signed-out launch takes the same path as a signed-in one. What it
+      *won't* do is tell the user sync isn't happening, which is the open
+      question below rather than a bug in this task.
+
+**Open, and deliberately not part of T002 — needs your call.** Turning
+sync on made two things due that a container swap shouldn't decide:
+
+- **plan.md's Loading states section comes due.** Its own text says to
+  revisit it "together with T002". An empty screen now means either
+  "you own nothing" or "your collection hasn't downloaded to this device
+  yet", and every empty state from Phase 9 confidently asserts the
+  first. That's five screens of copy plus a new not-yet-loaded state —
+  a phase, not a task.
+- **Nothing in the app says sync is off.** `TroveStore.mode` records a
+  fallback to local-only and no one reads it; both form screens still
+  say "Saves to your library on this device", which is true only while
+  signed out. Making that line honest means observing account status —
+  an injected protocol, an `@Observable` monitor, and a decision about
+  where in a three-tab app with no settings screen it belongs.
 
 ## Phase 11 — UI smoke test
 

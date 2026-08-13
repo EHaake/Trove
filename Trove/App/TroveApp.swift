@@ -3,7 +3,7 @@ import SwiftUI
 
 @main
 struct TroveApp: App {
-    private let modelContainer: ModelContainer
+    private let store: TroveStore
 
     /// Set by the UI test target so each run starts from a genuinely fresh
     /// install rather than whatever the last run left in the simulator.
@@ -23,23 +23,18 @@ struct TroveApp: App {
 
     init() {
         do {
-            // Local-only: no `cloudKitDatabase:` argument, because T002 is
-            // deferred pending a paid Developer Program membership. The schema
-            // already satisfies CloudKit's rules (CloudKitSchemaTests proves
-            // it), so enabling sync later means adding the configuration here
-            // and handling the not-signed-in case — not a migration.
-            modelContainer = try ModelContainer(
-                for: TroveSchema.schema,
-                configurations: ModelConfiguration(
-                    schema: TroveSchema.schema,
-                    isStoredInMemoryOnly: Self.isUITesting
-                )
-            )
+            // Which of the three configurations this is, and what happens when
+            // CloudKit won't load, lives in `TroveStore` — the decisions are
+            // worth testing, and a `ModelContainer` built inline in an `App`
+            // initialiser can't be.
+            store = try TroveStore.make(isUITesting: Self.isUITesting)
         } catch {
-            // Nothing sensible to fall back to: an in-memory store would look
-            // like the app silently forgetting the user's collection, which is
-            // worse than failing loudly. Revisit if this ever shows up in the
-            // wild.
+            // Reachable only once the CloudKit configuration has already
+            // failed and been retried without it, so the remaining causes are
+            // about the disk rather than about sync. There's genuinely nothing
+            // left to fall back to: an in-memory store would look like the app
+            // silently forgetting the user's collection, which is worse than
+            // failing loudly.
             fatalError("Could not create the model container: \(error)")
         }
     }
@@ -53,6 +48,6 @@ struct TroveApp: App {
                 // selection — matching the palette instead of fighting it.
                 .preferredColorScheme(.dark)
         }
-        .modelContainer(modelContainer)
+        .modelContainer(store.container)
     }
 }
