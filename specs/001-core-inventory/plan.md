@@ -517,31 +517,31 @@ another screen — rate something lower, or go and value it — and there
 is no single item to send the user to. Naming the rule is the
 invitation.
 
-## Loading states: v1 has none, deliberately
+## Loading states: still none — but a new empty-state case exists now
 
-**Decision: v1 ships no loading states, and this is a stated choice
-rather than an omission.**
+**Decision: v1 still ships no traditional loading spinner, and that part
+of the original reasoning hasn't changed.** Every read remains a
+synchronous `ModelContext.fetch` against the local store; there's still
+no `await` in that path, so there's still no window a spinner could
+occupy. CloudKit sync happens underneath, asynchronously, but the *UI*
+never blocks waiting for it — it just reads whatever's in the local
+store at the moment of the fetch, synced or not.
 
-Every read in v1 is a synchronous `ModelContext.fetch` against a local
-store. There is no await, so there is no window in which a screen could
-show a spinner — a loading state would have to be rendered and removed
-within the same layout pass, which means it would never actually be
-seen. Building one would add a state that can only be reached by
-faking it.
-
-This changes when Phase 10 turns CloudKit on. Sync introduces real
-latency and a genuine unknown-yet state on first launch on a new
-device, where the store is empty because it hasn't downloaded rather
-than because the user has added nothing — and those two are the same
-screen today. **Revisit this section then**, together with T002: the
-empty states above are the ones that would be wrong, since each
-confidently tells a user with a full collection on another device that
-they have nothing.
-
-**T002 has since landed and sync is live, so this is now due rather than
-anticipated.** It was not folded into T002 — five screens' empty states
-and a new not-yet-loaded state is a phase of its own, not a container
-swap. Nothing above has been changed yet.
+**What does change: local data being visibly, correctly empty and local
+data being *not yet downloaded* are no longer the same situation, and
+`T048` proved the gap between them can be minutes wide, not a
+theoretical edge case.** Phase 9's empty states were all written and
+tested before sync was live, and every one of them asserts "you own
+nothing" with full confidence — which is only trustworthy once the
+device has actually finished its first CloudKit import. Phase 12
+(`specs/001-core-inventory/tasks.md`) closes this: a sync-import-status
+observable (`T051`) feeds a new `stillSyncing` case into the existing
+empty-state reasoning (`T053`–`T054`), so a device mid-import shows
+"still catching up" rather than a confident, possibly-false "nothing
+here." This is closer to a *qualifier* on the existing empty states than
+a new loading mechanism — the screens still render synchronously and
+instantly, they just have a third thing to say now, alongside "genuinely
+empty" and "filtered to nothing."
 
 ## CloudKit sync
 
@@ -601,12 +601,19 @@ Two requirements live outside the Swift sources, and both fail silently:
 `TroveStoreTests` compares both against the app, since neither is
 reachable from a compiler error.
 
-**Still open, and not part of T002:** the app has nowhere to *say* any
-of this. `TroveStore.mode` records that sync dropped out and nothing
-reads it, and both form screens still promise "Saves to your library on
-this device" — true only while signed out. Deciding what v1 shows, if
-anything, is its own piece of work; see Loading states above, which
-comes due at the same time and for the same reason.
+**Resolved into concrete scope.** The honest-copy half is `T049a`:
+`ItemFormView`/`WishlistFormView` read `TroveStore.mode` directly — no
+new infrastructure needed, the property already existed and simply
+wasn't being read anywhere — and show copy matching whichever mode is
+actually active, rather than always claiming device-only storage. The
+fuller, persistent sync-status *indicator* stays a genuinely open
+question: it needs a real decision about where it lives in a three-tab
+app with no settings screen, and unlike the empty states, it isn't a
+correctness bug — the app not proactively announcing sync status is a
+missing nicety, not something actively false. Worth revisiting once a
+settings surface exists for another reason (`004-themes` in
+`specs/ROADMAP.md` is the likely trigger), rather than inventing a home
+for it now.
 
 ## Testing strategy
 

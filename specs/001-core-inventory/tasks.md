@@ -671,11 +671,19 @@ runnable. Both are yours to run: they need real iCloud accounts on real
 devices, which is exactly why plan.md's testing strategy leaves them
 manual.
 
-- [ ] **T048** — Manual: run the app on two simulators (or a simulator
+- [x] **T048** — Manual: run the app on two simulators (or a simulator
       and a device) signed into the same iCloud account; confirm an item
       added on one appears on the other. Not automated — see plan.md's
       testing strategy.
-- [ ] **T049** — Manual: confirm the app behaves reasonably when the
+
+      Run on a physical device + a simulator. An item added on the
+      device appeared on the simulator after signing in and relaunching
+      — but it took several minutes, not seconds. Worth treating as real
+      evidence, not a hypothetical: this is the exact window `T049a`/
+      Phase 12 below exist for. A screen that confidently says "no gear
+      yet" during a wait this long would be actively misleading, not
+      just imprecise.
+- [x] **T049** — Manual: confirm the app behaves reasonably when the
       simulator/device is not signed into iCloud at all. Expectation to
       check against: everything works, nothing mentions iCloud, and no
       error appears — `TroveStore` never asks about the account, so a
@@ -683,21 +691,29 @@ manual.
       *won't* do is tell the user sync isn't happening, which is the open
       question below rather than a bug in this task.
 
-**Open, and deliberately not part of T002 — needs your call.** Turning
+      Confirmed on a simulator never signed into iCloud: normal
+      operation throughout, nothing mentions an account, no error
+      surfaced anywhere.
+- [ ] **T049a** — Small, immediate fix for the smaller of the two open
+      items below: `ItemFormView`/`WishlistFormView`'s caption currently
+      hardcodes "Saves to your library on this device," which is now
+      false in the common case. Read the already-existing `TroveStore.mode`
+      (no new infrastructure needed) and show accurate copy per mode —
+      something like "Saves to your library and syncs across your
+      devices" for `.cloudKit`, the original line for `.localOnly`. The
+      fuller sync-status *indicator* (a persistent, visible affordance
+      showing live status) stays deferred — see plan.md's CloudKit sync
+      section — since it needs a real decision about where it lives in a
+      three-tab app with no settings screen, and isn't a correctness bug
+      the way the empty states are.
+
+**Resolved.** Both open items below are now scoped: `T049a` above for
+the small copy fix, Phase 12 for the larger empty-states work. Turning
 sync on made two things due that a container swap shouldn't decide:
 
-- **plan.md's Loading states section comes due.** Its own text says to
-  revisit it "together with T002". An empty screen now means either
-  "you own nothing" or "your collection hasn't downloaded to this device
-  yet", and every empty state from Phase 9 confidently asserts the
-  first. That's five screens of copy plus a new not-yet-loaded state —
-  a phase, not a task.
-- **Nothing in the app says sync is off.** `TroveStore.mode` records a
-  fallback to local-only and no one reads it; both form screens still
-  say "Saves to your library on this device", which is true only while
-  signed out. Making that line honest means observing account status —
-  an injected protocol, an `@Observable` monitor, and a decision about
-  where in a three-tab app with no settings screen it belongs.
+- ~~**plan.md's Loading states section comes due.**~~ Now Phase 12.
+- ~~**Nothing in the app says sync is off.**~~ Now `T049a` (the honest
+  copy) plus a deferred future decision (the fuller indicator).
 
 ## Phase 11 — UI smoke test
 
@@ -757,6 +773,52 @@ sync on made two things due that a container swap shouldn't decide:
       different way. This asks the question VoiceOver asks.
       Mutation-verified by dropping the shared helper's label, which
       fails naming all four fields.
+
+## Phase 12 — Sync-aware empty states
+
+Empty states from Phase 9 were all written before sync was live, and
+every one of them currently asserts "you own nothing" with total
+confidence. That's now wrong in a specific, real window: a device that's
+signed in but hasn't finished its *first* CloudKit import yet looks
+identical to a device that's genuinely empty, and `T048` just confirmed
+that window can run several minutes long. This phase closes that gap —
+see plan.md's "Loading states" section for the full design reasoning.
+
+- [ ] **T051** — A sync-import-status observable (name TBD by whoever
+      builds it) distinguishing "haven't heard from CloudKit yet,"
+      "import in progress," and "caught up" — likely via
+      `NSPersistentCloudKitContainer`'s event notifications, but verify
+      the exact mechanism against the framework rather than assuming;
+      this is genuinely new territory for this codebase. Injected the
+      same way `TroveStore` already is, so it's fakeable in tests rather
+      than requiring a real CloudKit round-trip to test against.
+- [ ] **T052** — Unit tests for T051, using fake/injected signals rather
+      than a real CloudKit container — this status can't be produced by
+      a real account in a unit test, so the fake *is* the test surface.
+- [ ] **T053** — Extend the empty-state reasoning (`ListEmptyReason` or
+      a parallel concept) with a `stillSyncing` case: applies when
+      CloudKit is active, the initial import hasn't completed, and local
+      data currently looks empty. Decide and test its precedence against
+      the existing cases — my instinct is it should outrank
+      `nothingAdded` (a confident wrong claim is worse than an honest
+      uncertain one) but the filtered-empty cases (`searchMatchedNothing`,
+      `categoryMatchedNothing`) are less clearly wrong to show even
+      mid-sync, since an incomplete search result isn't a new kind of
+      lie the way "you own nothing" is. Flag if that reasoning doesn't
+      hold up once it's actually built.
+- [ ] **T054** — Wire `stillSyncing` into all four places an empty state
+      can currently mislead: Items list, Wishlist list, Dashboard, and
+      the Sell Plan (which depends on `Item` data existing locally, so
+      it inherits the same risk). Copy for this case is necessarily
+      different in kind from the others — there's nothing to click, it's
+      a "still catching up" message, not an invitation to act — so it
+      doesn't need to force-fit the existing voice principle, just avoid
+      contradicting it (no apology, no false urgency).
+- [ ] **T055** — Manual: on a device signed into an account with existing
+      data elsewhere, confirm the `stillSyncing` state actually appears
+      during the real sync window rather than the old false-empty state.
+      `T048` already demonstrated the window is long enough to observe
+      directly — no need to simulate it.
 
 ---
 
