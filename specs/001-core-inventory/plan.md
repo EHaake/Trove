@@ -604,37 +604,19 @@ appear, per the `T019`/`T037` pattern — walking back to a list and back
 into a detail screen already gets a fresh read, so pull-to-refresh there
 would duplicate a path that already exists rather than close a real gap.
 
-> **Blocked as written — `.refreshable` does not work with `ScrollView`.**
-> Measured at T056 on iOS 26, not inferred: with a deliberately slowed
-> refresh action, a pull produces no refresh control and the action never
-> runs, whether the modifier sits on an ancestor or directly on the
-> `ScrollView`. The same synthetic gesture against a `List` holds the
-> pulled-down position for the full duration of the action, so the
-> gesture and the action are both fine — the container is what decides.
-> All three tab roots are `ScrollView`, so the one-line wiring this
-> section describes compiles, tests green, and does nothing.
->
-> Three ways forward, none of them the one-liner:
-> 1. **A custom pull-to-refresh modifier** built on scroll geometry,
->    applied to the existing `ScrollView`s. Contained — one shared file,
->    no change to any screen's layout — but it is new UI mechanics rather
->    than wiring, and it reimplements an affordance UIKit gives away.
-> 2. **Convert the list screens to `List`.** Native gesture, no custom
->    code, but it is a visual redesign against `design/screens/`: `List`
->    brings its own row insets, separators, backgrounds, and disclosure
->    chevrons on `NavigationLink`. The dashboard doesn't fit the model at
->    all — its scroll holds a figure stack, a ruler and a breakdown, not
->    rows.
-> 3. **Drop it.** The gap pull-to-refresh was meant to close is already
->    narrower than it looks: Phase 12 refetches on every landed import,
->    and every screen refetches on appear, so switching tabs or leaving
->    and returning is a refresh. What's left uncovered is a remote change
->    arriving while a screen sits open and untouched — which is the case
->    this section already argues Trove rarely has.
->
-> Unresolved pending that decision. Nothing was shipped: wiring
-> `.refreshable` up anyway would have left a gesture that animates
-> nothing behind a test asserting it was connected.
+As built, and worth recording because it was first reported here as
+impossible: pull-to-refresh works on these `ScrollView`s exactly as the
+platform documents. The gesture, the indicator and the action were all
+confirmed on device at T056.
+
+**The false negative is the part worth keeping.** `load()` is
+synchronous, so a refresh finishes within a frame — the spinner is gone
+before any screenshot can catch it, and "no spinner" was read as "no
+refresh". The action had never been instrumented. Printing from inside
+the action settled it in one pull, and slowing the action to twenty-five
+seconds made the indicator plainly visible in Trove's own layout. Two
+lessons: verify the mechanism, not the artefact; and a platform API with
+years of history is the least likely thing in the room to be broken.
 
 **On the precedence question tasks.md raised:** the conclusion holds,
 the stated reason doesn't. "No matches for *hasselblad*" mid-import is

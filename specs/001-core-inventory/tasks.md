@@ -957,34 +957,40 @@ is a bigger change than this phase.
 
 ## Phase 12a — Pull to refresh
 
-- [ ] **T056** — `.refreshable` on `ItemListView`, `WishlistView` and
+- [x] **T056** — `.refreshable` on `ItemListView`, `WishlistView` and
       `DashboardView`, each calling straight into its own existing
       `load()`. Deliberately not on the detail screens, which already
       refetch by id on appear. See plan.md's CloudKit sync section.
 
-      **Blocked, and not for a reason the task could have anticipated:
-      `.refreshable` does nothing on a `ScrollView`.** All three tab
-      roots are `ScrollView`s, so the wiring compiles and a wiring test
-      goes green while a pull does nothing at all.
+      Works exactly as specified — one modifier per screen, no new fetch
+      logic. Confirmed on device: gesture, indicator and action.
 
-      Measured rather than inferred. With the refresh action slowed to
-      four seconds, a pull produced no refresh control and never ran the
-      action — with the modifier on an ancestor *and* directly on the
-      `ScrollView`. The same synthetic gesture against a `List` held the
-      pulled-down position for the full four seconds, which rules out
-      both the gesture and the action and leaves the container.
+      **First reported here as blocked, wrongly, and that's worth
+      keeping.** `load()` is synchronous, so a refresh finishes within a
+      frame; the spinner was gone before any screenshot could catch it,
+      and "no spinner" got read as "no refresh". A `List` was tried as a
+      control, appeared to work — it holds its offset for the duration of
+      an action — and that seemed to confirm a platform limitation that
+      doesn't exist.
 
-      **Nothing was shipped.** A `.refreshable` that animates nothing,
-      guarded by a test asserting the three screens are wired, is the
-      false-coverage shape CLAUDE.md keeps calling out — the test would
-      have been green, mutation-verified, and meaningless.
+      What actually settled it, in order: a `print` inside the action
+      (fires on the first pull, in the real `ItemListView`, with a single
+      row); a bare `NavigationStack` + `ScrollView` probe outside all of
+      this app's chrome (works); the same probe with the hidden toolbar
+      and the ZStack/fixed-header shape (works); and finally the action
+      slowed to twenty-five seconds, which made the indicator plainly
+      visible between the chips and the first row.
 
-      Three ways forward, written up with their costs in plan.md: a
-      custom scroll-geometry refresh modifier, converting the list
-      screens to `List` (a visual redesign, and a poor fit for the
-      dashboard), or dropping it on the grounds that Phase 12's
-      import-driven refetch plus refetch-on-appear already covers most
-      of the gap. Needs your call before anything is built.
+      The lesson for next time is the cheap one: instrument the mechanism
+      rather than photographing the artefact. A missing spinner and a
+      missing action look identical and mean opposite things.
+
+      One real caveat, unrelated to the above: the empty states aren't
+      inside a `ScrollView` — they were deliberately moved out at Phase 9
+      so they'd centre properly — so there's nothing to pull on a screen
+      showing "Catching up with iCloud". Phase 12's import-driven refetch
+      covers that screen, so it isn't a gap, but it does mean the gesture
+      is unavailable exactly where someone might reach for it.
 
 ---
 

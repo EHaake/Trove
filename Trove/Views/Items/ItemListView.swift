@@ -134,6 +134,11 @@ struct ItemListView: View {
         // show, and nothing else tells it — the view models fetch on appear
         // and hold an array rather than observing the store.
         .onChange(of: viewModel.completedImports) { viewModel.load() }
+        // Pull to refresh, per plan.md's CloudKit sync section: the user says
+        // when a screen should look again, rather than the screen watching the
+        // store continuously. Straight into the same load() everything else
+        // calls — no second fetch path to keep in step with this one.
+        .refreshable { viewModel.load() }
     }
 
     // MARK: - Header
