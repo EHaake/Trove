@@ -955,6 +955,37 @@ is a bigger change than this phase.
       following within a few seconds as caught up — but it needs a clock,
       so it isn't worth building against a risk that may not exist.
 
+## Phase 12a — Pull to refresh
+
+- [ ] **T056** — `.refreshable` on `ItemListView`, `WishlistView` and
+      `DashboardView`, each calling straight into its own existing
+      `load()`. Deliberately not on the detail screens, which already
+      refetch by id on appear. See plan.md's CloudKit sync section.
+
+      **Blocked, and not for a reason the task could have anticipated:
+      `.refreshable` does nothing on a `ScrollView`.** All three tab
+      roots are `ScrollView`s, so the wiring compiles and a wiring test
+      goes green while a pull does nothing at all.
+
+      Measured rather than inferred. With the refresh action slowed to
+      four seconds, a pull produced no refresh control and never ran the
+      action — with the modifier on an ancestor *and* directly on the
+      `ScrollView`. The same synthetic gesture against a `List` held the
+      pulled-down position for the full four seconds, which rules out
+      both the gesture and the action and leaves the container.
+
+      **Nothing was shipped.** A `.refreshable` that animates nothing,
+      guarded by a test asserting the three screens are wired, is the
+      false-coverage shape CLAUDE.md keeps calling out — the test would
+      have been green, mutation-verified, and meaningless.
+
+      Three ways forward, written up with their costs in plan.md: a
+      custom scroll-geometry refresh modifier, converting the list
+      screens to `List` (a visual redesign, and a poor fit for the
+      dashboard), or dropping it on the grounds that Phase 12's
+      import-driven refetch plus refetch-on-appear already covers most
+      of the gap. Needs your call before anything is built.
+
 ---
 
 ## Handoff note
