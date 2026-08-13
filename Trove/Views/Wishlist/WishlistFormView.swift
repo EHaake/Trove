@@ -15,6 +15,7 @@ struct WishlistFormView: View {
 
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.storageMode) private var storageMode
 
     init(modelContext: ModelContext, editing item: WishlistItem? = nil) {
         _viewModel = State(
@@ -231,7 +232,7 @@ struct WishlistFormView: View {
     /// describes the wrong direction — a wishlist item *has* a sell plan, it
     /// doesn't appear in other items'. This says what's true instead.
     private var saveCaption: String {
-        validationSummary ?? "Saves to your wishlist on this device"
+        validationSummary ?? SaveCaption.text(for: storageMode, noun: "wishlist")
     }
 
     private var validationSummary: String? {

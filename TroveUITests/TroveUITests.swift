@@ -158,6 +158,43 @@ final class TroveUITests: XCTestCase {
         )
     }
 
+    /// The save bar's caption reflects the store the app is actually running
+    /// on, rather than the environment default.
+    ///
+    /// `SaveCaptionTests` pins what each mode says and `SaveCaptionWiringTests`
+    /// pins that the views ask — and both stay green if `TroveApp` never
+    /// injects the mode, because `EnvironmentValues` would just hand back its
+    /// `.cloudKit` default and the syncing copy would look correct.
+    ///
+    /// This is the one test that can tell the difference: `-uiTesting` runs on
+    /// the in-memory store, so the *right* answer here is the device-only
+    /// wording. Seeing the iCloud line means the wiring is missing.
+    @MainActor
+    func testTheSaveCaptionReflectsTheStoreTheAppIsActuallyUsing() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Items"].tap()
+        app.buttons["Add item"].tap()
+        XCTAssertTrue(app.textFields["Name"].waitForExistence(timeout: 5))
+
+        let deviceOnly = app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS[c] 'on this device'"))
+            .firstMatch
+        XCTAssertTrue(
+            deviceOnly.waitForExistence(timeout: 5),
+            "The save caption doesn't match the in-memory store this run uses"
+        )
+
+        let mentionsICloud = app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS[c] 'iCloud'"))
+            .firstMatch
+        XCTAssertFalse(
+            mentionsICloud.exists,
+            "A UI-test run promised iCloud sync — TroveApp isn't injecting the storage mode"
+        )
+    }
+
     /// The half of the category field that a unit test can't reach: it swaps a
     /// breadcrumb read-out in for the text field once a path is set, and until
     /// T044 that swap fired on the *first* keystroke and destroyed the focused

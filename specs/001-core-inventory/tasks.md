@@ -694,7 +694,7 @@ manual.
       Confirmed on a simulator never signed into iCloud: normal
       operation throughout, nothing mentions an account, no error
       surfaced anywhere.
-- [ ] **T049a** — Small, immediate fix for the smaller of the two open
+- [x] **T049a** — Small, immediate fix for the smaller of the two open
       items below: `ItemFormView`/`WishlistFormView`'s caption currently
       hardcodes "Saves to your library on this device," which is now
       false in the common case. Read the already-existing `TroveStore.mode`
@@ -706,6 +706,26 @@ manual.
       section — since it needs a real decision about where it lives in a
       three-tab app with no settings screen, and isn't a correctness bug
       the way the empty states are.
+
+      `SaveCaption` maps mode → copy, injected as `\.storageMode` the
+      same way `\.theme` is. **Wording deviates from the suggestion
+      above, deliberately:** `.cloudKit` means the *container* is
+      configured for sync, not that anyone is signed in — `TroveStore`
+      never asks, and T049 confirmed a signed-out launch takes the
+      identical path. "Syncs across your devices" would therefore be
+      false for exactly the people T049 was about. Shipped copy is
+      "Saves to your library, iCloud if signed in," which is true in
+      both cases; `.localOnly` keeps the original line.
+
+      A width check came out of building it: the caption has no
+      `lineLimit`, so copy that outgrows the gutters wraps and silently
+      changes the save bar's height. The first wording did, and the test
+      caught it before the simulator did. Verified after the fact on
+      device — 313pt against a predicted 315pt, so the arithmetic is
+      trustworthy. *Verify: 440 tests in 69 suites, plus 5 UI tests. All
+      four rules mutation-verified red, including a UI test that catches
+      `TroveApp` not injecting the mode at all — which every unit test
+      here would happily survive.*
 
 **Resolved.** Both open items below are now scoped: `T049a` above for
 the small copy fix, Phase 12 for the larger empty-states work. Turning

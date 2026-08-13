@@ -43,6 +43,9 @@ struct TroveApp: App {
         WindowGroup {
             ContentView()
                 .environment(\.theme, .dark)
+                // What the store actually turned out to be, for the views
+                // that say so out loud — the save bars' captions (T049a).
+                .environment(\.storageMode, store.mode)
                 // v1 is dark-only (spec.md defers light mode), and pinning the
                 // scheme keeps system-drawn chrome — keyboards, pickers,
                 // selection — matching the palette instead of fighting it.

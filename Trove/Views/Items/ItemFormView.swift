@@ -14,6 +14,7 @@ struct ItemFormView: View {
 
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.storageMode) private var storageMode
 
     init(modelContext: ModelContext, editing item: Item? = nil) {
         _viewModel = State(initialValue: ItemFormViewModel(modelContext: modelContext, editing: item))
@@ -354,7 +355,7 @@ struct ItemFormView: View {
     /// Design's caption says where the item goes. When something's missing,
     /// that slot says what instead of adding a second message somewhere else.
     private var saveCaption: String {
-        validationSummary ?? "Saves to your library on this device"
+        validationSummary ?? SaveCaption.text(for: storageMode, noun: "library")
     }
 
     private var validationSummary: String? {
