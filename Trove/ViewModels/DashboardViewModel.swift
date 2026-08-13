@@ -73,9 +73,12 @@ final class DashboardViewModel {
 
     private let modelContext: ModelContext
 
-    init(modelContext: ModelContext, scope: String = "") {
+    private let syncMonitor: SyncMonitor
+
+    init(modelContext: ModelContext, scope: String = "", syncMonitor: SyncMonitor = .notSyncing) {
         self.modelContext = modelContext
         self.scope = scope
+        self.syncMonitor = syncMonitor
     }
 
     /// Where the "Value →" callout should go.
@@ -104,6 +107,19 @@ final class DashboardViewModel {
 
     var totalItemCount: Int { valuedCount + unvaluedCount }
     var isEmpty: Bool { totalItemCount == 0 }
+
+    /// Empty, but not necessarily empty — this device may still be receiving
+    /// the collection (T053).
+    ///
+    /// The dashboard is the worst of the four places to get this wrong, since
+    /// it's the launch tab: it's the first thing a new device shows, and
+    /// during the first import it would otherwise open on "Nothing tracked
+    /// yet" over a collection of two hundred.
+    var isStillSyncing: Bool { isEmpty && syncMonitor.mayStillBeImporting }
+
+    /// Bumped each time an import lands, so the screen can refetch — see
+    /// `SyncMonitor.completedImports`.
+    var completedImports: Int { syncMonitor.completedImports }
     var categoryCount: Int { breakdown.count }
 
     /// Whether anything here has a value yet.

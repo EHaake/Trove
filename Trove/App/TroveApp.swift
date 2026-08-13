@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct TroveApp: App {
     private let store: TroveStore
+    private let syncMonitor: SyncMonitor
 
     /// Set by the UI test target so each run starts from a genuinely fresh
     /// install rather than whatever the last run left in the simulator.
@@ -28,6 +29,10 @@ struct TroveApp: App {
             // worth testing, and a `ModelContainer` built inline in an `App`
             // initialiser can't be.
             store = try TroveStore.make(isUITesting: Self.isUITesting)
+            // Built from the mode rather than independently: a store with no
+            // CloudKit mirror has nothing to wait for, and the monitor is
+            // what keeps every empty state from having to know that.
+            syncMonitor = SyncMonitor(mode: store.mode)
         } catch {
             // Reachable only once the CloudKit configuration has already
             // failed and been retried without it, so the remaining causes are
@@ -46,6 +51,10 @@ struct TroveApp: App {
                 // What the store actually turned out to be, for the views
                 // that say so out loud — the save bars' captions (T049a).
                 .environment(\.storageMode, store.mode)
+                // How far along this device's copy is, for the empty states
+                // that would otherwise claim an unfinished import is an empty
+                // collection (Phase 12).
+                .environment(syncMonitor)
                 // v1 is dark-only (spec.md defers light mode), and pinning the
                 // scheme keeps system-drawn chrome — keyboards, pickers,
                 // selection — matching the palette instead of fighting it.

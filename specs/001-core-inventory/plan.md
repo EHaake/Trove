@@ -543,6 +543,64 @@ a new loading mechanism — the screens still render synchronously and
 instantly, they just have a third thing to say now, alongside "genuinely
 empty" and "filtered to nothing."
 
+### As built (Phase 12)
+
+`SyncMonitor` reduces `NSPersistentCloudKitContainer`'s event stream to
+one question — `mayStillBeImporting` — and four screens ask it.
+**Reaching past SwiftData to the Core Data container underneath is a
+flagged layering exception**, in the same spirit as the `UIImage` ones:
+SwiftData publishes nothing about sync progress, and the events are the
+only source. Confined to one function, and verified against a real
+launch rather than assumed.
+
+Two findings from building it changed the design:
+
+- **`.unavailable` had to exist.** On a device with no iCloud account,
+  setup completes with `succeeded == false` and *no import event ever
+  follows*. A state machine that only left "working" on a successful
+  import would have left every signed-out device saying "still catching
+  up" forever — a worse and more permanent version of the bug being
+  fixed. Observed, not anticipated.
+- **`.caughtUp` is absorbing; `.unavailable` isn't.** Routine syncs run
+  for the life of the app, and if each one reopened the question, a list
+  that's empty because it *is* empty would keep flashing "catching up"
+  at its owner. An account can be signed into without relaunching,
+  though, so a failure is never final.
+
+**The screens had to be told to look again.** Nothing in this app
+observes the store — each view model fetches on appear and holds an
+array, which was fine when the only writer was the user in front of it.
+With sync on, an import landing under an open screen changes nothing
+until that screen is navigated away from and back. Left alone, Phase 12
+would have replaced a false "you own nothing" during the import with a
+false "you own nothing" straight after it. `SyncMonitor.completedImports`
+counts landed imports and the four screens refetch on the count.
+
+That is deliberately the narrow fix. **The general problem remains: a
+change made on another device doesn't appear in an already-open screen.**
+It wants a decision about whether view models observe the store instead
+of fetching, which is a larger change than this phase — recorded in
+tasks.md under Phase 12.
+
+**On the precedence question tasks.md raised:** the conclusion holds,
+the stated reason doesn't. "No matches for *hasselblad*" mid-import is
+the same kind of claim as "you own nothing," not a lesser one — both
+assert absence over a collection the app hasn't finished receiving. The
+filtered cases still win, for two better reasons: they're feedback on
+something the user typed a second ago, and replacing that with a message
+about iCloud leaves them unsure the search even ran; and
+`categoryMatchedNothing` is close to unreachable mid-import anyway,
+since the chips are built from items already fetched. What they get
+instead is `ListEmptyReason.stillArrivingNote` appended — the narrower
+claim keeps its context and stops being stated as final.
+
+`everythingIsValued` is *not* treated as a filtered case, because it
+isn't feedback on a narrowing — it's a success claim about the whole
+collection, and congratulating someone on a complete set of values that
+covers a third of their gear is precisely this phase's failure. The Sell
+Plan goes further: `stillSyncing` outranks all three of its reasons, none
+of which is user-typed.
+
 ## CloudKit sync
 
 `ModelContainer` is configured with the app's private CloudKit database

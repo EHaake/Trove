@@ -36,9 +36,12 @@ final class SellPlanViewModel {
     private let modelContext: ModelContext
     private let wishlistItemID: UUID
 
-    init(modelContext: ModelContext, wishlistItemID: UUID) {
+    private let syncMonitor: SyncMonitor
+
+    init(modelContext: ModelContext, wishlistItemID: UUID, syncMonitor: SyncMonitor = .notSyncing) {
         self.modelContext = modelContext
         self.wishlistItemID = wishlistItemID
+        self.syncMonitor = syncMonitor
     }
 
     // MARK: - The two figures
@@ -90,9 +93,16 @@ final class SellPlanViewModel {
         case everythingIsAKeeper
         /// Willing to part with things, but none of them has a value yet.
         case nothingValued
+        /// The owned items this screen reasons over may not all have arrived
+        /// yet — see `ListEmptyReason.stillSyncing`.
+        case stillSyncing
     }
 
     private(set) var ownedCount = 0
+
+    /// Bumped each time an import lands, so the screen can refetch — see
+    /// `SyncMonitor.completedImports`.
+    var completedImports: Int { syncMonitor.completedImports }
     private(set) var lowDesireCount = 0
 
     /// **The cases overlap, and the order below is the answer.** With nothing
@@ -111,6 +121,13 @@ final class SellPlanViewModel {
     /// the order of two `guard`s.
     var emptyReason: EmptyReason? {
         guard candidates.isEmpty else { return nil }
+        // Outranks all three, unlike the list screens where the filtered cases
+        // win: none of these is feedback on something the user just typed —
+        // each is a claim about the whole collection, and mid-import this
+        // screen hasn't seen the whole collection. "Everything is a keeper" is
+        // as wrong as "you own nothing" when the low-desire items are the ones
+        // still in flight.
+        guard !syncMonitor.mayStillBeImporting else { return .stillSyncing }
         guard ownedCount > 0 else { return .nothingOwned }
         guard lowDesireCount > 0 else { return .everythingIsAKeeper }
         // Something is rated low enough, so the only reason it isn't here is

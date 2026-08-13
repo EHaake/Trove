@@ -78,7 +78,8 @@ final class ItemListViewModel {
             visibleCount: items.count,
             searchText: searchText,
             categoryFilter: categoryFilter,
-            showsOnlyUnvalued: showsOnlyUnvalued
+            showsOnlyUnvalued: showsOnlyUnvalued,
+            mayStillBeImporting: syncMonitor.mayStillBeImporting
         )
     }
 
@@ -97,9 +98,23 @@ final class ItemListViewModel {
 
     private let modelContext: ModelContext
 
-    init(modelContext: ModelContext) {
+    private let syncMonitor: SyncMonitor
+
+    /// - Parameter syncMonitor: defaults to a store with no mirror, so tests
+    ///   and previews get the settled behaviour unless they ask otherwise.
+    init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
         self.modelContext = modelContext
+        self.syncMonitor = syncMonitor
     }
+
+    /// Whether this device might still be receiving the collection. Read by
+    /// the empty states, and by the note appended to the ones that survive
+    /// mid-import.
+    var mayStillBeImporting: Bool { syncMonitor.mayStillBeImporting }
+
+    /// Bumped each time an import lands, so the screen can refetch — see
+    /// `SyncMonitor.completedImports`.
+    var completedImports: Int { syncMonitor.completedImports }
 
     func load() {
         loadFailureMessage = nil

@@ -38,9 +38,19 @@ final class WishlistViewModel {
 
     private let modelContext: ModelContext
 
-    init(modelContext: ModelContext) {
+    private let syncMonitor: SyncMonitor
+
+    init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
         self.modelContext = modelContext
+        self.syncMonitor = syncMonitor
     }
+
+    /// See `ItemListViewModel.mayStillBeImporting`.
+    var mayStillBeImporting: Bool { syncMonitor.mayStillBeImporting }
+
+    /// Bumped each time an import lands, so the screen can refetch — see
+    /// `SyncMonitor.completedImports`.
+    var completedImports: Int { syncMonitor.completedImports }
 
     /// Wanted items before any narrowing — see `ItemListViewModel.totalCount`.
     private(set) var totalCount = 0
@@ -57,7 +67,8 @@ final class WishlistViewModel {
             totalCount: totalCount,
             visibleCount: items.count,
             searchText: searchText,
-            categoryFilter: categoryFilter
+            categoryFilter: categoryFilter,
+            mayStillBeImporting: syncMonitor.mayStillBeImporting
         )
     }
 

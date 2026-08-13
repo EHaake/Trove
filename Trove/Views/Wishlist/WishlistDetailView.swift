@@ -18,6 +18,7 @@ struct WishlistDetailView: View {
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(SyncMonitor.self) private var syncMonitor
 
     init(modelContext: ModelContext, itemID: UUID) {
         _viewModel = State(
@@ -67,7 +68,11 @@ struct WishlistDetailView: View {
             Text("Its photos go too. Anything on its sell plan stays where it is.")
         }
         .navigationDestination(item: $sellPlanRoute) { route in
-            SellPlanView(modelContext: modelContext, wishlistItemID: route.wishlistItemID)
+            SellPlanView(
+                modelContext: modelContext,
+                wishlistItemID: route.wishlistItemID,
+                syncMonitor: syncMonitor
+            )
         }
         .onAppear(perform: viewModel.load)
     }
@@ -334,5 +339,6 @@ struct WishlistDetailView: View {
         WishlistDetailView(modelContext: context, itemID: wanted.id)
     }
     .environment(\.theme, .dark)
+    .environment(SyncMonitor.notSyncing)
     .preferredColorScheme(.dark)
 }

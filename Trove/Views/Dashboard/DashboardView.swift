@@ -16,8 +16,13 @@ struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppRouter.self) private var router
 
-    init(modelContext: ModelContext, scope: String = "") {
-        _viewModel = State(initialValue: DashboardViewModel(modelContext: modelContext, scope: scope))
+    private let syncMonitor: SyncMonitor
+
+    init(modelContext: ModelContext, scope: String = "", syncMonitor: SyncMonitor = .notSyncing) {
+        self.syncMonitor = syncMonitor
+        _viewModel = State(
+            initialValue: DashboardViewModel(modelContext: modelContext, scope: scope, syncMonitor: syncMonitor)
+        )
     }
 
     private var isRoot: Bool { viewModel.scope.isEmpty }
@@ -64,11 +69,15 @@ struct DashboardView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(isRoot ? .hidden : .automatic, for: .navigationBar)
         .navigationDestination(for: DashboardScope.self) { destination in
-            DashboardView(modelContext: modelContext, scope: destination.path)
+            DashboardView(modelContext: modelContext, scope: destination.path, syncMonitor: syncMonitor)
         }
         // Values change on the item screens, so the figures refetch whenever
         // this comes back into view.
         .onAppear(perform: viewModel.load)
+        // An import landing while this screen is open changes what it should
+        // show, and nothing else tells it — the view models fetch on appear
+        // and hold an array rather than observing the store.
+        .onChange(of: viewModel.completedImports) { viewModel.load() }
     }
 
     // MARK: - Header
@@ -434,7 +443,18 @@ struct DashboardView: View {
     /// `spentAndGain` rather than here — see plan.md's Empty states section.
     private var emptyState: some View {
         Group {
-            if isRoot {
+            // Ahead of both, because this is the launch tab: on a new device
+            // it's the first screen anyone sees, and "Nothing tracked yet" is
+            // the wrong greeting for someone whose two hundred items are
+            // three minutes from arriving. Scoped copies inherit it — a
+            // category that looks emptied might just not be here yet.
+            if viewModel.isStillSyncing {
+                EmptyStateView(
+                    mark: .stillSyncing,
+                    headline: "Catching up with iCloud",
+                    detail: "Your collection is on its way to this device. The figures fill in as it arrives."
+                )
+            } else if isRoot {
                 EmptyStateView(
                     mark: .asset("TabDashboard"),
                     headline: "Nothing tracked yet",

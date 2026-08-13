@@ -14,6 +14,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.theme) private var theme
+    @Environment(SyncMonitor.self) private var syncMonitor
 
     @State private var router = AppRouter()
 
@@ -25,15 +26,15 @@ struct ContentView: View {
         // selected variant to keep in step with this one.
         TabView(selection: $router.selectedTab) {
             Tab("Overview", image: "TabDashboard", value: AppRouter.Tab.overview) {
-                NavigationStack { DashboardView(modelContext: modelContext) }
+                NavigationStack { DashboardView(modelContext: modelContext, syncMonitor: syncMonitor) }
             }
             Tab("Items", image: "TabItems", value: AppRouter.Tab.items) {
                 NavigationStack(path: $router.itemsPath) {
-                    ItemListView(modelContext: modelContext)
+                    ItemListView(modelContext: modelContext, syncMonitor: syncMonitor)
                 }
             }
             Tab("Wishlist", image: "TabWishlist", value: AppRouter.Tab.wishlist) {
-                NavigationStack { WishlistView(modelContext: modelContext) }
+                NavigationStack { WishlistView(modelContext: modelContext, syncMonitor: syncMonitor) }
             }
         }
         // The selected tab was drawing in the system blue, which is the one
@@ -46,5 +47,6 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environment(\.theme, .dark)
+        .environment(SyncMonitor.notSyncing)
         .modelContainer(for: TroveSchema.models, inMemory: true)
 }

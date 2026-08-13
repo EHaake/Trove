@@ -21,8 +21,10 @@ struct ItemListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppRouter.self) private var router
 
-    init(modelContext: ModelContext) {
-        _viewModel = State(initialValue: ItemListViewModel(modelContext: modelContext))
+    init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
+        _viewModel = State(
+            initialValue: ItemListViewModel(modelContext: modelContext, syncMonitor: syncMonitor)
+        )
     }
 
     var body: some View {
@@ -128,6 +130,10 @@ struct ItemListView: View {
         // cheap enough that debouncing would only add latency to typing;
         // revisit if the store ever holds thousands of items.
         .onChange(of: viewModel.searchText) { viewModel.load() }
+        // An import landing while this screen is open changes what it should
+        // show, and nothing else tells it — the view models fetch on appear
+        // and hold an array rather than observing the store.
+        .onChange(of: viewModel.completedImports) { viewModel.load() }
     }
 
     // MARK: - Header
@@ -331,12 +337,24 @@ struct ItemListView: View {
     /// Four states, not one. Which applies is `ItemListViewModel`'s call; this
     /// only decides how each one looks and reads.
     ///
+    /// The filtered empty states survive an in-progress import rather than
+    /// being replaced by it — they're feedback on what the user just typed —
+    /// so they say so instead of stating a narrower absence as final. See
+    /// `ListEmptyReason.reason`'s precedence note.
+    private func detail(_ base: String) -> String {
+        ListEmptyReason.detail(base, mayStillBeImporting: viewModel.mayStillBeImporting)
+    }
+
     /// Every case that was caused by a narrowing offers to undo that narrowing,
     /// rather than describing the situation and leaving the user to find the
     /// control that got them there. The un-valued case is the odd one and the
-    /// reason the fourth state exists: it's what you land on after valuing the
-    /// last item from the dashboard's callout, so it's a result, not a dead
-    /// end, and reading "no gear yet" there was flatly wrong.
+    /// reason it exists at all: it's what you land on after valuing the last
+    /// item from the dashboard's callout, so it's a result, not a dead end, and
+    /// reading "no gear yet" there was flatly wrong.
+    ///
+    /// `stillSyncing` is the one state with no action, because there isn't one
+    /// — nothing here is the user's to fix, and offering a button would imply
+    /// otherwise.
     @ViewBuilder
     private func emptyState(_ reason: ListEmptyReason) -> some View {
         switch reason {
@@ -348,11 +366,18 @@ struct ItemListView: View {
                 action: .init(label: "Add an item", isProminent: true) { isAddingItem = true }
             )
 
+        case .stillSyncing:
+            EmptyStateView(
+                mark: .stillSyncing,
+                headline: "Catching up with iCloud",
+                detail: "Your gear is on its way to this device. It'll appear here as it arrives."
+            )
+
         case .searchMatchedNothing(let query):
             EmptyStateView(
                 mark: .system("magnifyingglass"),
                 headline: "No matches for \u{201C}\(query)\u{201D}",
-                detail: "Names and serial numbers are what's searched.",
+                detail: detail("Names and serial numbers are what's searched."),
                 action: .init(label: "Clear search") {
                     viewModel.searchText = ""
                     viewModel.load()
@@ -363,7 +388,7 @@ struct ItemListView: View {
             EmptyStateView(
                 mark: .system("line.3.horizontal.decrease"),
                 headline: "Nothing in this category",
-                detail: "Everything else is still here — the filter is just narrow.",
+                detail: detail("Everything else is still here — the filter is just narrow."),
                 action: .init(label: "Show all items") {
                     viewModel.categoryFilter = ""
                     viewModel.load()

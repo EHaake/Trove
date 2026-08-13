@@ -24,9 +24,13 @@ struct SellPlanView: View {
 
     @Environment(\.theme) private var theme
 
-    init(modelContext: ModelContext, wishlistItemID: UUID) {
+    init(modelContext: ModelContext, wishlistItemID: UUID, syncMonitor: SyncMonitor = .notSyncing) {
         _viewModel = State(
-            initialValue: SellPlanViewModel(modelContext: modelContext, wishlistItemID: wishlistItemID)
+            initialValue: SellPlanViewModel(
+                modelContext: modelContext,
+                wishlistItemID: wishlistItemID,
+                syncMonitor: syncMonitor
+            )
         )
     }
 
@@ -43,6 +47,10 @@ struct SellPlanView: View {
         .navigationTitle("Sell plan")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: viewModel.load)
+        // An import landing while this screen is open changes what it should
+        // show, and nothing else tells it — the view models fetch on appear
+        // and hold an array rather than observing the store.
+        .onChange(of: viewModel.completedImports) { viewModel.load() }
     }
 
     private func content(for wanted: WishlistItem) -> some View {
@@ -168,6 +176,13 @@ struct SellPlanView: View {
     @ViewBuilder
     private func emptyState(_ reason: SellPlanViewModel.EmptyReason) -> some View {
         switch reason {
+        case .stillSyncing:
+            EmptyStateView(
+                mark: .stillSyncing,
+                headline: "Catching up with iCloud",
+                detail: "Your gear is on its way to this device. Anything you'd part with turns up here as it arrives."
+            )
+
         case .nothingOwned:
             EmptyStateView(
                 mark: .asset("TabItems"),

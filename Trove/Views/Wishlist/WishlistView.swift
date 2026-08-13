@@ -24,8 +24,10 @@ struct WishlistView: View {
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
 
-    init(modelContext: ModelContext) {
-        _viewModel = State(initialValue: WishlistViewModel(modelContext: modelContext))
+    init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
+        _viewModel = State(
+            initialValue: WishlistViewModel(modelContext: modelContext, syncMonitor: syncMonitor)
+        )
     }
 
     var body: some View {
@@ -81,6 +83,10 @@ struct WishlistView: View {
         // Values can change on the detail screen — an edit, the gauge, or a
         // deletion — so the list refetches whenever it comes back into view.
         .onAppear(perform: viewModel.load)
+        // An import landing while this screen is open changes what it should
+        // show, and nothing else tells it — the view models fetch on appear
+        // and hold an array rather than observing the store.
+        .onChange(of: viewModel.completedImports) { viewModel.load() }
         .onChange(of: viewModel.searchText) { viewModel.load() }
     }
 
@@ -259,10 +265,17 @@ struct WishlistView: View {
 
     // MARK: - Empty
 
-    /// Three of the four cases the item list has — there's no un-valued filter
-    /// here, since nothing on a wishlist is owned yet. The shared
-    /// `ListEmptyReason` is still what decides which, so the two screens can't
-    /// end up disagreeing about what "empty" means.
+    /// See `ItemListView.detail(_:)` — the filtered cases keep their context
+    /// mid-import and say they may be incomplete, rather than being replaced.
+    private func detail(_ base: String) -> String {
+        ListEmptyReason.detail(base, mayStillBeImporting: viewModel.mayStillBeImporting)
+    }
+
+    /// Every case the item list has except the un-valued one, which can't
+    /// arise here — nothing on a wishlist is owned yet, so nothing on it has a
+    /// value to be missing. The shared `ListEmptyReason` is still what decides
+    /// which, so the two screens can't end up disagreeing about what "empty"
+    /// means.
     ///
     /// The copy differs from the item list's throughout, because the wishlist
     /// is about wanting rather than owning and "no gear yet" would be the wrong
@@ -270,6 +283,13 @@ struct WishlistView: View {
     @ViewBuilder
     private func emptyState(_ reason: ListEmptyReason) -> some View {
         switch reason {
+        case .stillSyncing:
+            EmptyStateView(
+                mark: .stillSyncing,
+                headline: "Catching up with iCloud",
+                detail: "Your list is on its way to this device. It'll appear here as it arrives."
+            )
+
         case .nothingAdded, .everythingIsValued:
             EmptyStateView(
                 mark: .asset("TabWishlist"),
@@ -282,7 +302,7 @@ struct WishlistView: View {
             EmptyStateView(
                 mark: .system("magnifyingglass"),
                 headline: "No matches for \u{201C}\(query)\u{201D}",
-                detail: "Only names are searched here.",
+                detail: detail("Only names are searched here."),
                 action: .init(label: "Clear search") {
                     viewModel.searchText = ""
                     viewModel.load()
@@ -293,7 +313,7 @@ struct WishlistView: View {
             EmptyStateView(
                 mark: .system("line.3.horizontal.decrease"),
                 headline: "Nothing in this category",
-                detail: "The rest of your list is still here — the filter is just narrow.",
+                detail: detail("The rest of your list is still here — the filter is just narrow."),
                 action: .init(label: "Show the whole list") {
                     viewModel.categoryFilter = ""
                     viewModel.load()
@@ -392,5 +412,6 @@ private struct WishlistRow: View {
         WishlistView(modelContext: context)
     }
     .environment(\.theme, .dark)
+    .environment(SyncMonitor.notSyncing)
     .preferredColorScheme(.dark)
 }

@@ -804,7 +804,7 @@ identical to a device that's genuinely empty, and `T048` just confirmed
 that window can run several minutes long. This phase closes that gap —
 see plan.md's "Loading states" section for the full design reasoning.
 
-- [ ] **T051** — A sync-import-status observable (name TBD by whoever
+- [x] **T051** — A sync-import-status observable (name TBD by whoever
       builds it) distinguishing "haven't heard from CloudKit yet,"
       "import in progress," and "caught up" — likely via
       `NSPersistentCloudKitContainer`'s event notifications, but verify
@@ -812,10 +812,32 @@ see plan.md's "Loading states" section for the full design reasoning.
       this is genuinely new territory for this codebase. Injected the
       same way `TroveStore` already is, so it's fakeable in tests rather
       than requiring a real CloudKit round-trip to test against.
-- [ ] **T052** — Unit tests for T051, using fake/injected signals rather
+
+      `SyncMonitor` + `SyncPhase`. **Verified rather than assumed**, with
+      a throwaway probe wired into a real launch and read off the console
+      (deleted afterwards). Three things it settled:
+      - `NSPersistentCloudKitContainer.eventChangedNotification` *does*
+        fire for a container SwiftData created. That was the load-bearing
+        assumption for the whole phase.
+      - Events arrive in pairs — in-flight (`endDate == nil`) then
+        finished — and `succeeded` reads `false` on the in-flight one, so
+        it means nothing until `endDate` is set.
+      - **A fourth state was needed.** On a device with no account, setup
+        finishes *failed* and no import event ever follows. Three states
+        would have left every signed-out device saying "still catching
+        up" forever. `.unavailable` came from that observation.
+
+      Reaching past SwiftData to Core Data's container is a flagged
+      layering exception, confined to one function — SwiftData publishes
+      nothing about sync progress.
+- [x] **T052** — Unit tests for T051, using fake/injected signals rather
       than a real CloudKit container — this status can't be produced by
       a real account in a unit test, so the fake *is* the test surface.
-- [ ] **T053** — Extend the empty-state reasoning (`ListEmptyReason` or
+
+      `SyncEvent` is that surface: the real event type has no public
+      initialiser, so the state machine is written against a local struct
+      and the mapping kept to one function.
+- [x] **T053** — Extend the empty-state reasoning (`ListEmptyReason` or
       a parallel concept) with a `stillSyncing` case: applies when
       CloudKit is active, the initial import hasn't completed, and local
       data currently looks empty. Decide and test its precedence against
@@ -826,7 +848,33 @@ see plan.md's "Loading states" section for the full design reasoning.
       mid-sync, since an incomplete search result isn't a new kind of
       lie the way "you own nothing" is. Flag if that reasoning doesn't
       hold up once it's actually built.
-- [ ] **T054** — Wire `stillSyncing` into all four places an empty state
+
+      **The conclusion holds; the stated reason doesn't.** "No matches
+      for *hasselblad*" mid-import is the same kind of claim as "you own
+      nothing," not a lesser one — both assert absence over a collection
+      the app hasn't finished receiving, and if the Hasselblad is among
+      the items still in flight, both are false. The filtered cases still
+      win, for two better reasons: they're feedback on something typed a
+      second ago, and replacing that with a message about iCloud leaves
+      the user unsure the search even ran; and `categoryMatchedNothing`
+      is close to unreachable mid-import anyway, since the chips are
+      built from items already fetched — a category can't be offered
+      until something in it has arrived.
+
+      Since the claim really is false, though, it doesn't go unqualified:
+      the surviving cases get `stillArrivingNote` appended, so the
+      narrower claim keeps its context and stops being stated as final.
+
+      One case moved off your list: `everythingIsValued` is treated as a
+      whole-collection claim, not a filtered one, so `stillSyncing`
+      outranks it. It isn't feedback on a narrowing — it's a *success*
+      message, and congratulating someone on a complete set of values
+      covering a third of their gear is exactly this phase's failure. The
+      Sell Plan goes further still: `stillSyncing` outranks all three of
+      its reasons, none of which is user-typed. "Everything's a keeper"
+      is as wrong as "nothing to sell yet" when the low-desire items are
+      the ones still arriving.
+- [x] **T054** — Wire `stillSyncing` into all four places an empty state
       can currently mislead: Items list, Wishlist list, Dashboard, and
       the Sell Plan (which depends on `Item` data existing locally, so
       it inherits the same risk). Copy for this case is necessarily
@@ -834,11 +882,78 @@ see plan.md's "Loading states" section for the full design reasoning.
       a "still catching up" message, not an invitation to act — so it
       doesn't need to force-fit the existing voice principle, just avoid
       contradicting it (no apology, no false urgency).
+
+      "Catching up with iCloud" on all four, each naming what's arriving
+      in its own screen's terms. No action button — there's nothing to
+      press and nothing to fix — which is the one empty state in the app
+      without one, and the reason `EmptyStateView.Action` was already
+      optional.
+
+      The plumbing was the larger half: `SyncMonitor` is created in
+      `TroveApp` from the store's mode, put in the environment, and
+      handed down through `ContentView` to the three tab roots, plus the
+      two nested screens that can also be empty — the scoped dashboard
+      and the Sell Plan pushed from wishlist detail. Both of those are
+      easy to miss, so a wiring test reads the source for them: the
+      default is `SyncMonitor.notSyncing`, which fails silently by never
+      showing the new state at all.
+
+      **The copy promises "it'll appear here as it arrives," and that
+      turned out not to be true without more work.** The view models
+      fetch on appear and hold an array — they don't observe the store —
+      so a screen open through the import window would have sat on
+      "Catching up with iCloud," reached `caughtUp`, and switched to "No
+      gear yet" over a store that had just filled with two hundred items.
+      The same false claim as before, moved later. `SyncMonitor` counts
+      landed imports and all four screens refetch on the count, which is
+      also why it's a count rather than a flag: a long first import
+      arrives in several passes.
+
+      This is narrower than live sync generally — see the note under
+      Phase 12's heading.
+**Found while building T054, not fixed here.** The app has never
+refreshed on remote changes — every screen fetches on appear and holds
+its results. T048 saw this directly: the synced item only showed up
+*after relaunching*. Phase 12 fixes it only for the case it's about (an
+import landing while an empty screen is open); an edit made on another
+device while you're looking at the item list still won't appear until
+you navigate away and back. Worth its own task, and it wants a decision
+about whether view models observe the store rather than fetching, which
+is a bigger change than this phase.
+
 - [ ] **T055** — Manual: on a device signed into an account with existing
       data elsewhere, confirm the `stillSyncing` state actually appears
       during the real sync window rather than the old false-empty state.
       `T048` already demonstrated the window is long enough to observe
       directly — no need to simulate it.
+
+      **Two checks, and the second is the one that matters more.** I could
+      verify the signed-*out* path myself — T051's probe recorded it, and
+      it's covered by tests — but not the signed-in one, because signing
+      a simulator into iCloud means entering your Apple Account password,
+      which isn't mine to type.
+
+      1. *The state appears.* Delete and reinstall on a device signed
+         into the account that has data. All four screens should read
+         "Catching up with iCloud" rather than "No gear yet" / "Nothing
+         tracked yet", and should fill in as items arrive.
+      2. *The state goes away when there's nothing to import.* Sign in on
+         a device with an account that is **genuinely empty**, and confirm
+         the screens settle to "No gear yet" instead of sitting on
+         "Catching up with iCloud."
+
+      Check 2 is the falsifiable question in the design. `SyncMonitor`
+      treats a *successful setup* as "the mirror is running, data may
+      still be coming" and waits for an import event to declare it caught
+      up. That's right if `NSPersistentCloudKitContainer` posts an import
+      event even when there's nothing to fetch — which I believe it does,
+      since it always runs a fetch pass after setup, but couldn't observe
+      without an account. If it doesn't, a signed-in user with an empty
+      collection sees "Catching up with iCloud" forever, and the first-run
+      experience on a new account is the case that breaks. The fix if so
+      is small and contained — treat a successful setup with no import
+      following within a few seconds as caught up — but it needs a clock,
+      so it isn't worth building against a risk that may not exist.
 
 ---
 

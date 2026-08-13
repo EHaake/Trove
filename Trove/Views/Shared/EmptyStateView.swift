@@ -25,6 +25,14 @@ struct EmptyStateView: View {
         /// "this screen is empty" rather than "this filter found nothing" —
         /// the screen's own mark says which screen you're on.
         case asset(String)
+
+        /// The mark all four "catching up with iCloud" states share.
+        ///
+        /// Named once because `Image(systemName:)` draws nothing at all for a
+        /// symbol that doesn't exist — the same silent failure `TabIconTests`
+        /// exists for — and four copies of a string is four chances to get it
+        /// wrong. `EmptyStateMarkTests` checks this one resolves.
+        static let stillSyncing = Mark.system("icloud.and.arrow.down")
     }
 
     struct Action {
