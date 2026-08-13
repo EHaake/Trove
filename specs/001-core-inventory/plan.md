@@ -791,6 +791,20 @@ forgotten — a known, deliberate v1 trade-off rather than an oversight,
 in the same spirit as `TroveApp`'s fatalError-on-store-failure decision
 (discussed with Claude Code at T009, not otherwise written down here).
 
+## Known v1 limitation: pull-to-refresh unreachable during `stillSyncing`
+
+`T056`'s empty states live outside the `ScrollView` (a deliberate Phase 9
+choice, for proper vertical centering), so there's nothing to pull on a
+screen showing "Catching up with iCloud" — exactly the moment someone
+might reach for it. Accepted rather than fixed: `stillSyncing` already
+updates itself the instant `SyncMonitor.completedImports` changes, so
+nothing is functionally lost, only a manual option is missing during
+what's expected to be a rare, short-lived screen. Reworking Phase 9's
+centering decision to close this would cost more than the gap is worth.
+Same category of trade-off as Dynamic Type above — worth revisiting if
+`stillSyncing` turns out to be seen more often than expected in practice,
+not before.
+
 ## Future: stock photos
 
 Not v1 scope. The idea: instead of only photographing an item yourself,
