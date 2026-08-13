@@ -576,11 +576,33 @@ would have replaced a false "you own nothing" during the import with a
 false "you own nothing" straight after it. `SyncMonitor.completedImports`
 counts landed imports and the four screens refetch on the count.
 
-That is deliberately the narrow fix. **The general problem remains: a
-change made on another device doesn't appear in an already-open screen.**
-It wants a decision about whether view models observe the store instead
-of fetching, which is a larger change than this phase — recorded in
-tasks.md under Phase 12.
+That is deliberately the narrow fix. **The general problem — a change
+made on another device doesn't appear in an already-open screen — is
+resolved too, deliberately not with full reactive observation.**
+Considered and rejected: view models observing the store directly would
+mean every screen watching for remote changes continuously, which is
+real new architecture for a problem this app rarely has — Trove is a
+single person's collection, used sequentially across their own devices,
+not several screens open at once expecting to agree in real time. That
+framing came from actually confirming it rather than assuming it.
+
+The resolution is pull-to-refresh — `.refreshable` on the three
+tab-root screens (`ItemListView`, `WishlistView`, `DashboardView`),
+calling straight into the same `load()` each already has. This isn't a
+lesser fix chosen for expedience; it's the more consistent one. Phase
+3 already established the rule this app follows for reloading —
+nothing refetches until asked, no hidden fetches in property observers
+— and full reactive observation would have quietly broken that rule the
+moment CloudKit entered the picture. Pull-to-refresh keeps the same
+explicit-intent shape spec.md has held throughout: the user decides when
+a screen should look again, the same way they decide when to filter, sort,
+or search.
+
+**Deliberately not on detail screens** (`ItemDetailView`,
+`WishlistDetailView`, `SellPlanView`). Each already refetches by id on
+appear, per the `T019`/`T037` pattern — walking back to a list and back
+into a detail screen already gets a fresh read, so pull-to-refresh there
+would duplicate a path that already exists rather than close a real gap.
 
 **On the precedence question tasks.md raised:** the conclusion holds,
 the stated reason doesn't. "No matches for *hasselblad*" mid-import is
