@@ -106,6 +106,35 @@ data model should not preclude that, but it is not in scope for v1.
   same *shape* elsewhere rather than fixing the single instance. If a
   test can't be made to fail, delete it or restructure what it tests;
   leaving it reads as coverage that isn't there.
+- **UI tests need a controlled starting state, and a narrow test-only
+  branch in shipping code is an acceptable way to get one.** A UI test
+  whose starting data is whatever the simulator happened to have left
+  over from a previous run is the same defect as an unfalsifiable test,
+  arriving from the other direction — the result is indeterminate rather
+  than guaranteed, but either way a pass or fail doesn't mean what it
+  claims to. `T050`'s `-uiTesting` launch argument (swaps the store to
+  in-memory) is the pattern: read exactly once at startup, and its only
+  possible effect is *losing* data for that one launch, never exposing
+  or corrupting real persisted data — bounded enough that the test-only
+  branch is worth the unease it should still provoke. Confirm isolation
+  actually holds by running the suite twice back to back, don't assume
+  the flag does what it's supposed to.
+- **When checking whether a mechanism fired, instrument the mechanism —
+  don't inspect an artifact that might not reliably show it.** `T056`'s
+  pull-to-refresh was reported as broken on `ScrollView` — a platform
+  capability with years of history — because a synchronous action
+  completes within a single frame, so its spinner is gone before any
+  screenshot can catch it. "No visible spinner" and "the action never
+  fired" look identical and mean opposite things; only one of them is
+  true. What actually settled it was a `print` inside the action itself.
+  The control test made it worse, not better: comparing against `List`
+  seemed to confirm the finding, but `List` and `ScrollView` differ in
+  how they *render* a completed refresh, not in whether `.refreshable`
+  fires — the comparison wasn't isolating the variable it claimed to.
+  Two things follow: verify a claim about behavior with a probe on the
+  behavior itself, not a visual proxy for it; and a long-standing
+  platform API is the least likely thing in the room to be broken —
+  suspect the newest, most custom code first.
 - A task is not "done" until its tests exist and `xcodebuild test` passes.
   Claude Code should run the test command itself and show the result, not
   assert completion from reading the code.
