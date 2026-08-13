@@ -50,6 +50,21 @@ on. Current status: proceeding with the personal name
 (`com.erikhaake.trove`) for Trove specifically; the studio name is a
 parallel, non-blocking exploration, picked up in its own chat.
 
+**On the App Store "Seller" name specifically**: decided not to pursue
+this. Showing a studio name there instead of a personal legal name
+requires enrolling with Apple as an Organization, which requires being
+an actual legal entity (LLC or corp — Apple explicitly does not accept
+DBAs or trade names for this) plus a D-U-N-S number and a verification
+call. Not worth forming a company purely to change a display string;
+the threshold for revisiting this is real revenue or a real business
+reason, not branding preference. This doesn't affect the studio name's
+other uses — bundle ID prefixes for future apps, informal branding,
+a portfolio site — none of which need Apple's involvement at all, since
+Apple never verifies that a bundle ID's reverse-DNS prefix corresponds
+to anything real. Trove and any near-term future apps ship under the
+personal Apple Developer account regardless of what the studio name
+ends up being.
+
 ## Process and tooling notes
 
 - **Git routing**: edits to `CLAUDE.md`, `specs/ROADMAP.md`, and this
