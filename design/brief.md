@@ -40,8 +40,8 @@ screens against dark for now.
 | `surface` | `#201F1D` (approx, adjust as needed) | cards, list rows |
 | `textPrimary` | `#F2EDE4` | warm ivory, primary text |
 | `textSecondary` | ~60% opacity of `textPrimary` | secondary/meta text |
-| `accentBrass` | `#C79A56` | primary accent — value figures, CTAs, the desire dial's "keep" end |
-| `accentMoss` | `#52634F` | secondary accent — positive/upward movement |
+| `accentBrass` | `#C79A56` | primary accent — value figures, CTAs, the desire gauge's fill ramp. **Not** the desire dial's "keep" end — see the signature-element section below and `tokens.md` |
+| `accentMoss` | `#52634F` | secondary accent — positive/upward movement, and the desire dial's "keep" end |
 | `accentRust` | `#9C4A34` | the desire dial's "sell" end, low-desire flags |
 | `divider` | `#3A3B3E` | hairlines, borders |
 
@@ -67,11 +67,35 @@ Three roles:
 Replaces a plain 1–5 star rating everywhere it would otherwise appear
 (item cards, item detail, the sell-candidate ranking list). A simple arc
 gauge — thin stroke, flat fill, no gradient — sweeping from `accentRust`
-(1, "ready to sell") to `accentBrass` (5, "absolutely keeping it"). This
-is the one recurring, distinctive, *functional* piece of visual identity
-for the app — it should show up small and quiet in list contexts, larger
-and directly editable (drag or tap-to-set) in the item form and detail
-view.
+(1, "ready to sell") through `dialMidpoint` to `accentMoss` (5,
+"absolutely keeping it"). This is the one recurring, distinctive,
+*functional* piece of visual identity for the app — it should show up
+small and quiet in list contexts, larger and directly editable (drag or
+tap-to-set) in the item form and detail view.
+
+(The "keep" end shipped as moss rather than brass: brass sits next to the
+dial as the price figure's color, and the two were confusable. See
+`tokens.md` for the measured ramp and the guards that pin it.)
+
+## Companion element: the desire gauge (wishlist)
+
+Wishlist items carry their own rating — desire-to-*own*, 1–3, shown as a
+three-segment gauge rather than a dial. Deliberately a different control,
+not a recolored dial: the dial's rust→moss sweep encodes a keep/sell
+axis that means nothing for something you don't own yet, and two
+near-identical dials meaning structurally different things would read
+worse than two clearly distinct ones.
+
+Three parallelogram segments in a row — a slight, consistent shear so it
+doesn't read as a plain progress bar — filled left to right. Flat fills,
+hard edges, no gradient, same constraint as everything else here.
+Unfilled segments remain visible as dim empty tracks so it reads as a
+scale with a reading on it, not a count of marks. The filled tones ramp
+within the gauge (segment 1 dimmest brass, 2 medium, 3 brightest), so
+segment count and brightness reinforce each other and the brightest tone
+appears only at the top level. Labeled "Someday" / "Soon" / "Next" in
+the form and detail view; unlabeled in list rows, where it sits in the
+row's lower-right.
 
 ## Screens to design
 
@@ -93,9 +117,11 @@ screen needs, this is the visual/layout brief for each:
    disclosure. This is a frequently-used screen and needs to feel quick,
    not like filling out a form.
 5. **Wishlist list** — wanted items with estimated cost, filterable by
-   category (same treatment as the item list's filter). Each row
-   includes a quiet "See sell plan" shortcut straight to that item's
-   Sell Plan — this was your own instinct, worth keeping.
+   category (same treatment as the item list's filter). No per-row Sell
+   Plan shortcut — an earlier version had one, but a control repeated
+   identically on every row read as noise and overemphasized a feature
+   meant to stay quietly available rather than prominent. Reachable only
+   from the wishlist item's own detail screen.
 6. **Wishlist detail** — a plain, quiet view of the wishlist item itself:
    name, category, estimated cost, notes. Reserve visual space for
    pricing/trend info that doesn't exist yet (a future feature) rather

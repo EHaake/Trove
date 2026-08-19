@@ -234,3 +234,32 @@ expensive to unwind once other work is layered on top. Everything from
 Phase 2 on is comparatively cheap to fix after the fact, so batching
 review by phase is fine there — and from T021 onward you'll be watching
 it happen live in the iOS Simulator pane anyway.
+
+## Model and effort per phase
+
+Model/effort isn't something Claude Code sets from reading this file —
+it's a manual switch (`/model` or `/effort`) you make yourself at each
+phase-boundary checkpoint, since that's already a natural pause point.
+This table is the reference for what to switch to at each one:
+
+| Phase | Model / effort | Why |
+|---|---|---|
+| 0 — Project scaffolding | Opus 5, xhigh | Foundational; a wrong deployment target or project setup mistake is expensive to unwind later. |
+| 1 — Data models | Opus 5, xhigh | CloudKit schema constraints are exactly the "gotcha you only know from experience" category — worth the extra effort. |
+| 2 — Shared utilities | Sonnet 5, high | Well-specified, mechanical. |
+| 3 — Item CRUD: view models | Sonnet 5, high | Well-specified, mechanical. |
+| 4 — Item CRUD: views | Sonnet 5, high | Building against a provided screenshot and detailed task description — little for extra "expertise" to add. |
+| 5 — Dashboard | Sonnet 5, high | Same as above. |
+| 6 — Wishlist CRUD | Sonnet 5, high | Same as above. |
+| 7 — Wishlist detail and the Sell Plan | Opus 5, xhigh | The densest logic in the app — persistence, ranking, toggle semantics — and the piece most worth over-testing. |
+| 8 — Navigation and app shell | Sonnet 5, high | Mechanical wiring. |
+| 9 — Empty and loading states | Sonnet 5, high | Mechanical. |
+| 10 — Sync and device verification | Sonnet 5, high | Manual verification steps, not code generation. |
+| 11 — UI smoke test | Sonnet 5, high | One straightforward `XCUIApplication` test. |
+
+You're on Pro and a light user otherwise, so there's real headroom for
+this — but Claude Code sessions can burn a weekly cap faster than normal
+chat, especially at xhigh across a multi-day build. Watch the usage
+indicator in Claude Code as you go; if it's tightening faster than
+expected partway through, lean harder toward Sonnet for anything short
+of Phase 1/Phase 7-level risk rather than treating this table as fixed.
