@@ -91,3 +91,15 @@ ends up being.
   a fresh chat for this project, make sure the Trove project's knowledge
   base has current versions of all files first — it's a manual-upload
   snapshot, not a live sync to the repo.
+- **Working across two machines (desktop and laptop)**: the first
+  concrete incident of this — a laptop `main` diverged from `origin/main`
+  after a long desktop-only stretch, caught only when a push was
+  rejected. Fixed cleanly with `git pull --no-rebase` since the two
+  histories touched different parts of the same files, but the standing
+  habit going forward is to check *before* editing, not after a rejected
+  push: `git fetch && git status` on whichever machine is in use, before
+  touching any file, every time work resumes there. Non-destructive,
+  cheap, and would have caught this before any new content was written
+  against a stale base rather than after. Worth running against both
+  active branches (`main` and whatever spec branch is current) if a
+  session is expected to touch both.
