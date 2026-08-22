@@ -103,3 +103,22 @@ ends up being.
   against a stale base rather than after. Worth running against both
   active branches (`main` and whatever spec branch is current) if a
   session is expected to touch both.
+- **The collaboration workflow moved from ad hoc to a formal skill.**
+  What started as a hand-written "Collaboration workflow" section in
+  `CLAUDE.md` (routine tasks proceed, real decisions get a subagent
+  check, the person is looped in only for infeasibility or a
+  direction-changing unknown) was generalized into a portable
+  `spec-driven-development` skill and a `skeptical-reviewer` subagent,
+  installed once at the user level
+  (`~/.claude/skills/spec-driven-development/`,
+  `~/.claude/agents/skeptical-reviewer.md`) so every project gets it
+  automatically rather than needing its own copy. `CLAUDE.md`'s section
+  is meant to shrink to a short pointer to the installed skill once that
+  swap actually lands. A second instance of the machine-sync gap noted
+  above surfaced while confirming this: the section briefly looked
+  missing entirely when reviewed from the desktop, which simply hadn't
+  pulled the laptop's earlier push yet — not a lost commit, the same
+  class of incident happening again from the other direction. A
+  `.github/PULL_REQUEST_TEMPLATE.md`, built for the companion
+  `spec-driven-development-template` repo, was retrofitted into this
+  repo around the same time.
