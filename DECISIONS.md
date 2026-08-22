@@ -91,3 +91,20 @@ ends up being.
   a fresh chat for this project, make sure the Trove project's knowledge
   base has current versions of all files first — it's a manual-upload
   snapshot, not a live sync to the repo.
+- **The collaboration workflow moved from ad hoc to a formal skill.**
+  What started as a hand-written "Collaboration workflow" section in
+  `CLAUDE.md` (routine tasks proceed, real decisions get a subagent
+  check, the person is looped in only for infeasibility or a
+  direction-changing unknown) was generalized into a portable
+  `spec-driven-development` skill and a `skeptical-reviewer` subagent,
+  installed once at the user level
+  (`~/.claude/skills/spec-driven-development/`,
+  `~/.claude/agents/skeptical-reviewer.md`) so every project gets it
+  automatically rather than needing its own copy. `CLAUDE.md`'s section
+  was replaced with a short pointer to the installed skill. It was found
+  missing entirely on a later revisit — the original commit apparently
+  never landed — and re-added at that point as the pointer rather than
+  the original full text, since the skill now exists to carry the
+  substance. A `.github/PULL_REQUEST_TEMPLATE.md`, built for the
+  companion `spec-driven-development-template` repo, was retrofitted
+  into this repo at the same time.
