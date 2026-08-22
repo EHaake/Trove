@@ -91,6 +91,18 @@ ends up being.
   a fresh chat for this project, make sure the Trove project's knowledge
   base has current versions of all files first — it's a manual-upload
   snapshot, not a live sync to the repo.
+- **Working across two machines (desktop and laptop)**: the first
+  concrete incident of this — a laptop `main` diverged from `origin/main`
+  after a long desktop-only stretch, caught only when a push was
+  rejected. Fixed cleanly with `git pull --no-rebase` since the two
+  histories touched different parts of the same files, but the standing
+  habit going forward is to check *before* editing, not after a rejected
+  push: `git fetch && git status` on whichever machine is in use, before
+  touching any file, every time work resumes there. Non-destructive,
+  cheap, and would have caught this before any new content was written
+  against a stale base rather than after. Worth running against both
+  active branches (`main` and whatever spec branch is current) if a
+  session is expected to touch both.
 - **The collaboration workflow moved from ad hoc to a formal skill.**
   What started as a hand-written "Collaboration workflow" section in
   `CLAUDE.md` (routine tasks proceed, real decisions get a subagent
@@ -101,10 +113,12 @@ ends up being.
   (`~/.claude/skills/spec-driven-development/`,
   `~/.claude/agents/skeptical-reviewer.md`) so every project gets it
   automatically rather than needing its own copy. `CLAUDE.md`'s section
-  was replaced with a short pointer to the installed skill. It was found
-  missing entirely on a later revisit — the original commit apparently
-  never landed — and re-added at that point as the pointer rather than
-  the original full text, since the skill now exists to carry the
-  substance. A `.github/PULL_REQUEST_TEMPLATE.md`, built for the
-  companion `spec-driven-development-template` repo, was retrofitted
-  into this repo at the same time.
+  is meant to shrink to a short pointer to the installed skill once that
+  swap actually lands. A second instance of the machine-sync gap noted
+  above surfaced while confirming this: the section briefly looked
+  missing entirely when reviewed from the desktop, which simply hadn't
+  pulled the laptop's earlier push yet — not a lost commit, the same
+  class of incident happening again from the other direction. A
+  `.github/PULL_REQUEST_TEMPLATE.md`, built for the companion
+  `spec-driven-development-template` repo, was retrofitted into this
+  repo around the same time.

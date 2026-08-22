@@ -169,6 +169,49 @@ Do not begin implementation on a feature without an approved spec and plan
 in that feature's directory. When resuming a session, check
 `specs/<feature>/tasks.md` for the current state before doing anything else.
 
+## Collaboration workflow
+
+The person is heavily involved in design — specs and plans get iterated
+on together, in depth, before implementation starts, and that's where
+real design decisions belong. During implementation itself, the person
+does not touch code directly, and most tasks should proceed without
+looping them in; constant check-ins defeat the point of working this way.
+
+Self-assess before starting any task:
+
+- **Well-specified and mechanical** (matches an established pattern
+  already in the codebase, or in spec.md/plan.md, with no real judgment
+  call involved) → proceed normally.
+- **A real decision, but not existential** → resolve it without
+  escalating. Use Plan Mode to research and propose an approach before
+  touching any files, and invoke the `skeptical-reviewer` subagent
+  (`~/.claude/agents/skeptical-reviewer.md`) on the plan before
+  proceeding. Most real decisions encountered during implementation
+  belong here — a design-polish call, a moderate scope question, an
+  ordinary tradeoff with no clearly-correct answer but no lasting
+  consequence either. This is a materially lower bar than "ask the
+  person"; resolving it is the default, not escalating it.
+- **Stop and ask the person directly** — only when one of two things is
+  true:
+  1. **An aspect of the design or a feature in spec.md/plan.md turns out
+     to be infeasible, or needs substantial rework to actually build.**
+     (The `.refreshable`-on-`ScrollView` investigation, if it had turned
+     out to be a genuine platform limitation rather than a flawed
+     verification method, would have been exactly this.)
+  2. **A previously-unknown consideration surfaces where deciding it
+     either way would materially change the project's direction** — not
+     an implementation detail with an obviously-reasonable default, but
+     a genuine fork where the paths actually diverge enough to be worth
+     the person's input. (The empty-state gap discovered once CloudKit
+     sync went live — Phase 12 — is the precedent: a real design
+     question that only existed because of what implementation revealed,
+     not something resolvable by pattern-matching to what's already
+     decided.)
+
+  Use judgment on the boundary, but err toward resolving it rather than
+  asking. Escalating too often defeats spec-driven development as
+  thoroughly as escalating too rarely.
+
 ## Verification
 
 After any implementation task, Claude Code must:
