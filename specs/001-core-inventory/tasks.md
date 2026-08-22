@@ -921,7 +921,7 @@ you navigate away and back. Worth its own task, and it wants a decision
 about whether view models observe the store rather than fetching, which
 is a bigger change than this phase.
 
-- [ ] **T055** — Manual: on a device signed into an account with existing
+- [x] **T055** — Manual: on a device signed into an account with existing
       data elsewhere, confirm the `stillSyncing` state actually appears
       during the real sync window rather than the old false-empty state.
       `T048` already demonstrated the window is long enough to observe
