@@ -612,8 +612,11 @@ into a detail screen already gets a fresh read, so pull-to-refresh there
 would duplicate a path that already exists rather than close a real gap.
 
 As built, and worth recording because it was first reported here as
-impossible: pull-to-refresh works on these `ScrollView`s exactly as the
-platform documents. The gesture, the indicator and the action were all
+impossible: pull-to-refresh works on these containers exactly as the
+platform documents — and "these containers" is two `ScrollView`s
+(`ItemListView`, `DashboardView`) plus one `List` (`WishlistView`, a
+`List` since T036 for drag reordering; the investigation's own "all
+three are `ScrollView`s" line was wrong). The gesture, the indicator and the action were all
 confirmed on device at T056.
 
 **The false negative is the part worth keeping.** `load()` is
@@ -800,7 +803,7 @@ in the same spirit as `TroveApp`'s fatalError-on-store-failure decision
 
 ## Known v1 limitation: pull-to-refresh unreachable on any empty state
 
-`T056`'s empty states live outside the `ScrollView` (a deliberate Phase 9
+`T056`'s empty states live outside the scrollable container (a deliberate Phase 9
 choice, for proper vertical centering), so there's nothing to pull on a
 screen showing "Catching up with iCloud" — exactly the moment someone
 might reach for it. **It applies to every empty state, not just that

@@ -1002,11 +1002,21 @@ is a bigger change than this phase.
       missing action look identical and mean opposite things.
 
       One real caveat, unrelated to the above: the empty states aren't
-      inside a `ScrollView` — they were deliberately moved out at Phase 9
-      so they'd centre properly — so there's nothing to pull on a screen
-      showing "Catching up with iCloud". Phase 12's import-driven refetch
-      covers that screen, so it isn't a gap, but it does mean the gesture
-      is unavailable exactly where someone might reach for it.
+      inside the scrollable container — they were deliberately moved out
+      at Phase 9 so they'd centre properly — so there's nothing to pull
+      on a screen showing "Catching up with iCloud". Phase 12's
+      import-driven refetch covers that screen, so it isn't a gap, but it
+      does mean the gesture is unavailable exactly where someone might
+      reach for it.
+
+      A correction found at sign-off: this investigation kept saying "all
+      three tab roots are `ScrollView`s", and that was never true —
+      `WishlistView` has been a `List` since T036 (drag reordering is a
+      `List` capability). Which means the first, wrong "blocked"
+      conclusion contained its own refutation all along: `.refreshable`
+      was wired on a `List` the whole time, and one pull on the Wishlist
+      tab would have shown the gesture working. The container facts are
+      now recorded correctly here and in ROADMAP's `010` entry.
 
 ## Pre-merge review — findings
 
@@ -1067,13 +1077,40 @@ constraint is about copy on the screen.
       copy** ("rated 3 or lower"), independent of
       `DesireLevel.isSellCandidate`, which plan.md insists is the single
       source. Change the rule and the sentence goes quietly false.
-- [ ] **Wishlist swipe-delete bypasses the view model and the
-      confirmation.** It calls `modelContext.delete` straight from the
-      view — business logic in a view, untested — and cascades the photos
+- [x] **Wishlist swipe-delete bypasses the view model and the
+      confirmation.** It called `modelContext.delete` straight from the
+      view — business logic in a view, untested — and cascaded the photos
       instantly, where the same action from the detail screen sits behind
-      an alert explaining the cascade. Swipe-without-confirmation is a
-      normal iOS idiom, so this is a consistency and MVVM question rather
-      than a defect.
+      an alert explaining the cascade.
+
+      **Resolved at sign-off, with the framing corrected in review:**
+      swipe-then-tap is a legitimate platform two-step on its own (Mail,
+      Reminders), so "no confirmation" overstated it — the real gap was
+      narrower: this was the one delete path that never *said* anything,
+      where every other one states the cascade/nullify asymmetry before
+      committing. Fixed by making the swipe present the detail screen's
+      alert, word for word, from a shared `WishlistDeleteCopy` both
+      screens read — so the two routes to the same deletion can't drift
+      the way the "not yet valued" copy once did. The deletion itself
+      moved into `WishlistViewModel.delete(id:)` (the MVVM half), covered
+      by `WishlistDeletionTests` including the cascade/nullify pair and a
+      second-context persistence check; `DeletionGuardTests` pins the
+      structure — no view deletes from the store directly (the desire
+      dials' write-through *saves* remain a documented exception), both
+      screens read the shared copy, and the message keeps both halves of
+      the asymmetry. All four guards mutation-verified red; the alert
+      confirmed on device. The cost is one extra tap on the swipe path;
+      if that grates, the Mail-style alternative — instant delete with
+      undo — is recorded under `010` as the direction that would earn it.
+
+      Also corrected while here, because this finding exposed it: the
+      `010` ROADMAP entry claimed Trove's rows are "deliberately
+      `ScrollView`-based" and swipe-delete would need `List` conversion.
+      Half wrong — `WishlistView` has been a `List` since its first
+      commit (`d530f42`, T036, because spec-required drag reordering is a
+      `List` capability), which is exactly why it already *had*
+      swipe-to-delete. `ItemListView` and `DashboardView` are the
+      `ScrollView`s. The entry is rewritten with the true facts.
 - [ ] **Coverage gaps in the design-correctness guards.** The dial's ramp
       is checked at palette-token level while the gauge's is checked
       against rendered pixels; the two are equivalent today only because

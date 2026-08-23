@@ -21,6 +21,13 @@ struct WishlistView: View {
     @State private var selectedItemID: UUID?
     @State private var isReordering = false
 
+    /// The row a swipe (or the edit-mode minus) has asked to delete, held
+    /// until the alert resolves it. The swipe-then-tap gesture is a fine
+    /// two-step on its own; what it can't do is *say* anything — and every
+    /// other delete path in the app states the cascade/nullify asymmetry
+    /// before committing, so this one does too.
+    @State private var pendingDeletion: WishlistItem?
+
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
 
@@ -92,6 +99,25 @@ struct WishlistView: View {
         // store continuously. Straight into the same load() everything else
         // calls — no second fetch path to keep in step with this one.
         .refreshable { viewModel.load() }
+        // The same alert, word for word, that the detail screen shows for the
+        // same action — both read from WishlistDeleteCopy, so they can't
+        // drift. An alert rather than a confirmation dialog for the same
+        // reason the detail screens chose one.
+        .alert(
+            WishlistDeleteCopy.title(for: pendingDeletion?.name ?? "this item"),
+            isPresented: Binding(
+                get: { pendingDeletion != nil },
+                set: { if !$0 { pendingDeletion = nil } }
+            ),
+            presenting: pendingDeletion
+        ) { item in
+            Button(WishlistDeleteCopy.confirm, role: .destructive) {
+                viewModel.delete(id: item.id)
+            }
+            Button(WishlistDeleteCopy.cancel, role: .cancel) {}
+        } message: { _ in
+            Text(WishlistDeleteCopy.message)
+        }
         .onChange(of: viewModel.searchText) { viewModel.load() }
     }
 
@@ -201,7 +227,7 @@ struct WishlistView: View {
                 viewModel.move(fromOffsets: source, toOffset: destination)
             }
             .onDelete { offsets in
-                delete(at: offsets)
+                requestDeletion(at: offsets)
             }
         }
         .listStyle(.plain)
@@ -215,12 +241,11 @@ struct WishlistView: View {
         .environment(\.editMode, .constant(isReordering ? .active : .inactive))
     }
 
-    private func delete(at offsets: IndexSet) {
-        for index in offsets where viewModel.items.indices.contains(index) {
-            modelContext.delete(viewModel.items[index])
-        }
-        try? modelContext.save()
-        viewModel.load()
+    /// Swipe and the edit-mode minus both hand over a single index; the alert
+    /// takes it from there. Nothing is deleted here — the view model owns that.
+    private func requestDeletion(at offsets: IndexSet) {
+        guard let index = offsets.first, viewModel.items.indices.contains(index) else { return }
+        pendingDeletion = viewModel.items[index]
     }
 
     // MARK: - Filter

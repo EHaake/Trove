@@ -297,50 +297,115 @@ need to clear.)
 
 ## Acceptance criteria
 
-- [ ] User can create an owned item with name, category path, purchase
+Signed off by Erik, 2026-08-22, against the pre-merge review. Each
+criterion cites the tests that demonstrate it; where the evidence is a
+human attestation rather than a test, it says whose and of what.
+
+- [x] User can create an owned item with name, category path, purchase
       price, and purchase date; can optionally add serial number,
       purchase location, current value, desire rating, condition, photo,
       notes.
-- [ ] User can edit and delete an owned item.
-- [ ] User can create, edit, and delete a wishlist item (name, category,
+      *`ItemFormViewModelTests` (`savesAValidItem`,
+      `appliesModelDefaultsToFieldsLeftAlone`,
+      `storesBlankOptionalFieldsAsNil`); end to end,
+      `TroveUITests.testAddingAnItemThroughQuickAddPutsItInTheList`.*
+- [x] User can edit and delete an owned item.
+      *`ItemDetailViewModelTests` (`deleteRemovesTheItemFromTheStore`,
+      `deletingAnItemTakesItsPhotosWithIt`); edits via
+      `ItemFormViewModelTests.canonicalizesTheCategoryPathOnSave` and
+      `PhotoRemovalTests.removingAPhotoWhileEditingAnItemDeletesIt`.*
+- [x] User can create, edit, and delete a wishlist item (name, category,
       estimated cost, notes, photos, desire-to-own rating).
-- [ ] Desire-to-own defaults to 2 ("Soon") on creation, is settable 1–3
+      *`WishlistFormViewModelTests` (`createsAWishlistItem`,
+      `editingUpdatesInPlaceRatherThanInserting`);
+      `WishlistDetailViewModelTests.deleteRemovesTheItemFromTheStore`;
+      the list's swipe route, `WishlistDeletionTests`.*
+- [x] Desire-to-own defaults to 2 ("Soon") on creation, is settable 1–3
       in the add/edit form, and renders as an unlabeled three-segment
       gauge in wishlist rows and a labeled one in the form and detail
       screen. It does not affect list ordering.
-- [ ] Category paths autocomplete from previously-used paths across both
+      *Rule: `WishlistFormViewModelTests`
+      (`newItemsDefaultToTheMiddleOfTheScale`,
+      `clampsOnAssignmentRatherThanOnSave`) and `WishlistViewModelTests`
+      (`theManualOrderWinsOverTheRating`,
+      `theSortControlOffersNoRatingOption`). Presentation confirmed by
+      Erik at sign-off — rows deliberately unlabeled; the first-encounter
+      legibility observation is recorded under ROADMAP `010`, not
+      changed here.*
+- [x] Category paths autocomplete from previously-used paths across both
       owned items and wishlist items.
-- [ ] Dashboard shows total current value (excluding un-valued items,
+      *`CategoryPathHelperTests.dedupsAcrossItemsAndWishlistItems`;
+      `WishlistFormViewModelTests.suggestsCategoriesFromOwnedItemsAndWishlistItemsAlike`.*
+- [x] Dashboard shows total current value (excluding un-valued items,
       with a separate count of how many are un-valued), total spent, and
       the delta — all three scoped to the same valued items, so the
       delta is never silently wrong by an un-valued item's purchase
       price.
-- [ ] Owned items list can be filtered by category, sorted by
+      *`DashboardViewModelTests` (`theThreeHeadlineFiguresAlwaysReconcile`,
+      `excludesUnvaluedItemsFromTheTotalAndCountsThemInstead`,
+      `spendExcludesUnvaluedItemsToo`).*
+- [x] Owned items list can be filtered by category, sorted by
       desire-to-keep/current value/purchase date, and searched by name
       or serial number.
-- [ ] Wishlist list can be filtered by category and searched by name.
-- [ ] The wishlist item's own detail screen offers a way to reach that
+      *`ItemListViewModelTests` (`filtersByCategoryPrefix`,
+      `matchesOnName`, `matchesOnSerialNumber`, the three sort tests,
+      `filteringAndSortingApplyTogether`).*
+- [x] Wishlist list can be filtered by category and searched by name.
+      *`WishlistViewModelTests` (`aFilterStopsAtASegmentBoundary`,
+      `matchesOnName`).*
+- [x] The wishlist item's own detail screen offers a way to reach that
       item's Sell Plan. List rows do not carry their own shortcut — see
       the Sell Plan section for why.
-- [ ] Viewing a wishlist item shows the item's own details (name,
+      *Erik, at sign-off: confirmed on device — the detail screen offers
+      the route and rows carry none. No automated guard exists for the
+      absence; the comments describing it were themselves corrected in
+      the pre-merge review, which is why this one is an attestation.*
+- [x] Viewing a wishlist item shows the item's own details (name,
       category, cost, notes) by default, not its Sell Plan.
-- [ ] A wishlist item's Sell Plan, opened for the first time, shows the
+      *`WishlistDetailViewModelTests.loadingDoesNotTouchTheSellPlan`.*
+- [x] A wishlist item's Sell Plan, opened for the first time, shows the
       ranked candidate pool (owned items, desire-to-keep ≤ 3, valued,
       ranked ascending by desire-to-keep, ties broken by higher current
       value) with nothing pre-selected — no automatic selection toward
       covering the estimated cost.
-- [ ] The user can add or remove any eligible owned item from the Sell
+      *`SellPlanViewModelTests` (`ranksLeastWantedFirst`,
+      `breaksTiesByHigherValueFirst`, `leavesOutItemsWithNoValueEntered`,
+      `startsWithNothingSelected`,
+      `doesNotPreselectEvenWhenOneItemWouldCoverTheCost`).*
+- [x] The user can add or remove any eligible owned item from the Sell
       Plan; changes save immediately and persist across app launches.
-- [ ] The Sell Plan shows the selected items' combined value alongside
+      *`SellPlanViewModelTests`
+      (`eachToggleIsPersistedWithoutASeparateSaveStep`,
+      `reloadingReflectsThePersistedSelection`), both through a second
+      `ModelContext` so they measure the store, not the context. A real
+      quit-and-relaunch, and the selection syncing over iCloud, verified
+      by Erik at sign-off.*
+- [x] The Sell Plan shows the selected items' combined value alongside
       the wishlist item's estimated cost. A quiet color distinction
       between "meets or exceeds the cost" and "doesn't" is acceptable;
       no text prompts the user to select more or otherwise implies
       they're expected to cover the full cost. Un-valued items are
       excluded from the candidate pool entirely.
-- [ ] Data persists across app launches and syncs across the user's
+      *`SellPlanViewModelTests` (`theTwoFiguresAreReportedSeparately`,
+      `theColourCueTurnsOverAtTheEstimate`,
+      `anEmptySelectionNeverReadsAsMeetingTheCost`,
+      `theViewModelOffersNoSurplusOrShortfallFigure`,
+      `theScreenShowsNoCopyFramingItAsAGapToClose`,
+      `leavesOutItemsWithNoValueEntered`).*
+- [x] Data persists across app launches and syncs across the user's
       devices signed into the same iCloud account.
-- [ ] Adding an item with only the required fields (name, category, price,
+      *Local: `ModelTests.itemsSurviveASaveAndRefetch`. Cross-device:
+      `T048` (an item added on one device appears on the other) and
+      `T055` (first-import and empty-account behaviour), both run by
+      Erik on real devices — results recorded in tasks.md — and
+      re-confirmed at sign-off.*
+- [x] Adding an item with only the required fields (name, category, price,
       date) takes no more than a few taps/screens from the dashboard.
+      *Route documented by
+      `TroveUITests.testAddingAnItemThroughQuickAddPutsItInTheList`:
+      Items tab → floating add → three fields → save — three taps and
+      two screens from the dashboard. Confirmed acceptable by Erik at
+      sign-off.*
 
 ## Resolved decisions
 

@@ -113,16 +113,38 @@ actually useful once the app is in daily use.
   scope beyond swipe-to-delete is still open, to be settled in the
   actual idea conversation rather than guessed at here.
 
-  One real technical consideration already surfaced, worth carrying into
-  that conversation rather than rediscovering: SwiftUI's `.swipeActions()`
-  is `List`-specific as far as investigated so far, and Trove's rows are
-  deliberately `ScrollView`-based — the `T056` pull-to-refresh
-  investigation already considered and rejected converting to `List`,
-  since it would clobber the custom row styling (thumbnails, the desire
-  dial/gauge) Design actually drew. Verify that constraint fresh rather
-  than assuming it still holds by the time this spec starts; expect
-  either a `List` reconsideration or a custom gesture implementation,
-  not a one-line modifier.
+  The container facts, corrected at `001`'s sign-off (this entry
+  previously claimed all of Trove's rows were `ScrollView`-based, which
+  was half wrong and would have sent whoever picks this up hunting for a
+  problem already half solved):
+
+  - **`WishlistView` is a `List`** — since its first commit (T036),
+    because spec-required drag reordering is a `List` capability — and
+    therefore *already has* swipe-to-delete via `.onDelete`. As of the
+    `001` sign-off it presents the same cascade-consequence alert the
+    detail screen shows (shared `WishlistDeleteCopy`), routed through
+    `WishlistViewModel.delete(id:)`. It also demonstrates that `List`
+    can host Trove's custom row styling: plain list style, hidden
+    separators, clear row backgrounds, custom insets, and tap-gesture
+    navigation instead of `NavigationLink` (which is what avoids the
+    disclosure chevrons a naive conversion shows).
+  - **`ItemListView` is a `ScrollView` + `LazyVStack`** and has no
+    row-level delete at all — deletion lives on the detail screen. This
+    is the real scope of the swipe-to-delete work: either convert it to
+    a `List` following the wishlist's proven pattern, or build a custom
+    gesture. The wishlist's existence makes the `List` route much less
+    speculative than this entry previously suggested.
+  - If instant-delete-with-undo (the Mail model) ever feels better than
+    confirm-then-delete, that's a `010` decision too — the shared-copy
+    alert was chosen at `001` for consistency with the detail screens,
+    with the undo model noted as the alternative.
+
+  Also parked here from the `001` sign-off: the wishlist rows' desire
+  gauge is deliberately unlabeled (the label lives in the form and
+  detail screen, where the value is set and learned), but there's a real
+  first-encounter observation that an unlabeled three-segment gauge
+  doesn't read as a *desire* gauge on sight. Revisit alongside the other
+  item-management interactions rather than patching one row now.
 
 ## Working convention
 

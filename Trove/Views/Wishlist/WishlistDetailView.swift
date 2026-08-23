@@ -57,15 +57,15 @@ struct WishlistDetailView: View {
         // the item detail screen: from a toolbar button the dialog renders as
         // a popover that drops the cancel button entirely.
         .alert(
-            "Remove \(viewModel.item?.name ?? "this item")?",
+            WishlistDeleteCopy.title(for: viewModel.item?.name ?? "this item"),
             isPresented: $isConfirmingDelete
         ) {
-            Button("Remove", role: .destructive) {
+            Button(WishlistDeleteCopy.confirm, role: .destructive) {
                 if viewModel.delete() { dismiss() }
             }
-            Button("Keep", role: .cancel) {}
+            Button(WishlistDeleteCopy.cancel, role: .cancel) {}
         } message: {
-            Text("Its photos go too. Anything on its sell plan stays where it is.")
+            Text(WishlistDeleteCopy.message)
         }
         .navigationDestination(item: $sellPlanRoute) { route in
             SellPlanView(

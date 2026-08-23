@@ -140,6 +140,25 @@ final class WishlistViewModel {
         }
     }
 
+    /// Deletes a wanted item by id. The list's swipe used to call
+    /// `modelContext.delete` straight from the view — business logic in a
+    /// view, and the one deletion in the app with no tests behind it. Routed
+    /// through here so both routes to the same deletion share one tested path.
+    ///
+    /// Photos cascade with it; sell-plan items are unlinked, not deleted —
+    /// the same asymmetry `WishlistDeleteCopy.message` states to the user.
+    func delete(id: UUID) {
+        guard let item = items.first(where: { $0.id == id }) else { return }
+
+        modelContext.delete(item)
+        do {
+            try modelContext.save()
+        } catch {
+            loadFailureMessage = error.localizedDescription
+        }
+        load()
+    }
+
     private func isOrderedBefore(_ lhs: WishlistItem, _ rhs: WishlistItem) -> Bool {
         switch sortOrder {
         case .manual:
