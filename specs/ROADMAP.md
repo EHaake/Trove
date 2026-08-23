@@ -24,6 +24,7 @@ own.
 | Spec | Status |
 |---|---|
 | `001-core-inventory` | **Shipped** — merged to `main` 2026-08-23 via [PR #1](https://github.com/EHaake/Trove/pull/1); spec, plan and tasks all Approved in specs/001-core-inventory/ |
+| `010-item-management-enhancements` | **In progress** — `spec.md` drafted (2026-08-23), pending review; `plan.md` and the design-brief addendum are next |
 
 ## Future specs
 
@@ -145,6 +146,49 @@ actually useful once the app is in daily use.
   first-encounter observation that an unlabeled three-segment gauge
   doesn't read as a *desire* gauge on sight. Revisit alongside the other
   item-management interactions rather than patching one row now.
+
+  **Settled via the idea conversation and initial `spec.md` draft
+  (2026-08-23)**: scope beyond swipe-to-delete is leading-swipe Edit and
+  Duplicate on both lists, extending the existing delete-confirmation
+  alert to `ItemListView`'s new swipe path rather than removing it
+  anywhere (an earlier draft of the spec briefly proposed removing it
+  app-wide instead — see `011-recycle-bin` below for why that was
+  reconsidered), and a real Claude Design pass covering the
+  gauge-legibility observation above, the wishlist's Reorder control's
+  discoverability, and general list-row visual treatment. Full detail
+  lives in `specs/010-item-management-enhancements/spec.md`, not
+  restated here.
+
+- **`011-recycle-bin`** — Soft-delete instead of permanent delete: a
+  deleted item or wishlist item moves to a recoverable trash rather
+  than disappearing immediately, with a restore action. Surfaced while
+  scoping `010`'s delete gestures, not an idea that existed before
+  that. `010` ships permanent delete with a confirmation alert on every
+  path (consistently, now) — this is the more thorough fix that would
+  eventually let that confirmation step go away, once deleting is
+  actually reversible rather than needing to be caught before it
+  happens. Open questions of its own, deliberately not resolved here:
+  purge policy (indefinite, time-based, or a manual empty action), and
+  where "restore" actually lives in the UI. Depends on
+  `012-settings-menu`'s surface existing first — a recycle bin needs a
+  home besides a list screen, and there isn't one yet.
+- **`012-settings-menu`** — A real settings/utility surface for Trove,
+  which doesn't exist yet — the `TabView` is deliberately three tabs
+  with no "More" (see `001`'s `plan.md` Navigation section). Originally
+  predicted to arrive as a side effect of `004-themes` (a theme picker
+  needs to live somewhere), but by the time `010` was being scoped it
+  had already accumulated independent occupants of its own: the
+  sync-status indicator deferred at `T049a` (a real decision about
+  where a persistent "syncs with iCloud" affordance lives, in a
+  three-tab app with no settings screen); a recycle-bin toggle and its
+  restore UI (`011-recycle-bin`); a delete-confirmation on/off toggle
+  (`010` ships confirmation as a fixed, well-chosen default everywhere
+  — per-user control deferred here); and a duplicate-photos toggle,
+  keep vs. clear (`010` ships "keep" as the default, same reasoning).
+  Four independent asks is enough to justify the surface on its own
+  merits, rather than only building it incidentally inside `004`'s
+  scope — worth its own small idea conversation once it's next up,
+  covering at minimum where it's reached from in a three-tab layout.
 
 ## Working convention
 
