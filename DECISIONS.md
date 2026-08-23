@@ -122,3 +122,22 @@ ends up being.
   `.github/PULL_REQUEST_TEMPLATE.md`, built for the companion
   `spec-driven-development-template` repo, was retrofitted into this
   repo around the same time.
+- **One claude.ai chat per spec, plus one standing administrative
+  chat.** After `001` shipped, the single long project chat that had
+  carried the whole v1 build (design, reviews, workflow-tooling, git
+  troubleshooting, all of it) had become an everything-drawer — the
+  same anti-pattern the methodology avoids at the file level, at the
+  conversation level. Going forward: one dedicated chat per spec
+  (`010`'s scoping and reviews live in their own chat, `011`'s in
+  another), and the original long chat is kept as the standing home for
+  administrative and workflow-tuning discussion that isn't spec-specific.
+  This works precisely because the durable context lives in the repo and
+  the Project knowledge base, not the chat log — a fresh spec chat needs
+  no prior chat history, only current files. **Before starting a new
+  spec chat, refresh the Project knowledge base with current versions of
+  the repo files** (at minimum `CLAUDE.md`, `ROADMAP.md`, `DECISIONS.md`,
+  and the relevant spec's docs) — the knowledge base is a manual-upload
+  snapshot, not a live sync, and a stale one starts the new chat with a
+  subtly wrong picture. The `spec-driven-development` skill applies
+  automatically to every chat regardless, so working style carries over
+  without being re-established.
