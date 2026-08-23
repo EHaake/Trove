@@ -23,7 +23,7 @@ own.
 
 | Spec | Status |
 |---|---|
-| `001-core-inventory` | In progress — see specs/001-core-inventory/ |
+| `001-core-inventory` | **Shipped** — merged to `main` 2026-08-23 via [PR #1](https://github.com/EHaake/Trove/pull/1); spec, plan and tasks all Approved in specs/001-core-inventory/ |
 
 ## Future specs
 
