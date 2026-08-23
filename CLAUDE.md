@@ -169,6 +169,12 @@ Do not begin implementation on a feature without an approved spec and plan
 in that feature's directory. When resuming a session, check
 `specs/<feature>/tasks.md` for the current state before doing anything else.
 
+`spec.md` and `plan.md` get authored in a chat-based design conversation,
+not in this session — if asked to scope a brand-new feature from
+scratch, point back to that conversation rather than drafting them
+inline here. This session's job starts once they already exist and are
+approved.
+
 ## Collaboration workflow
 
 If the `spec-driven-development` skill is installed
@@ -212,6 +218,15 @@ delete a test to make it pass — if a test seems wrong, flag it and ask.
   PR descriptions — don't strip it. It's accurate and worth keeping for
   a project meant to demonstrate an AI-assisted workflow.
 - Never force-push.
+- **A bug found in already-merged code gets its own small branch**
+  (`fix/<short-description>`), never a reopened spec branch — that
+  branch's job ended at merge. Not a new spec either, unless the fix
+  turns out to need substantial rework or reveals a genuinely new
+  design question, in which case treat it as one (see the
+  `spec-driven-development` skill's "Bugs found after a spec ships"
+  section). If the fix corrects a real misunderstanding about how the
+  system works, update the relevant spec's `plan.md` in place, even
+  though that spec already shipped.
 
 ## Commits
 

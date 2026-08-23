@@ -102,6 +102,27 @@ actually useful once the app is in daily use.
   screen that doesn't block or get blocked by anything already in
   flight — it deserves a real Claude Design pass rather than an
   improvised layout, the same reasoning that held `008` to v2.
+- **`010-item-management-enhancements`** — Came up right as `001` was
+  wrapping up: a request for swipe-left-to-delete on `ItemListView`/
+  `WishlistView` rows (standard iOS convention), which grew into wanting
+  a broader look at item-management interactions before committing to a
+  spec. Deliberately kept out of `001` rather than bolted on as "just
+  one more thing" — `001`'s `tasks.md` was already fully checked off,
+  and growing it further would have undercut the same one-feature-one-
+  spec discipline this file's own opening section argues for. The exact
+  scope beyond swipe-to-delete is still open, to be settled in the
+  actual idea conversation rather than guessed at here.
+
+  One real technical consideration already surfaced, worth carrying into
+  that conversation rather than rediscovering: SwiftUI's `.swipeActions()`
+  is `List`-specific as far as investigated so far, and Trove's rows are
+  deliberately `ScrollView`-based — the `T056` pull-to-refresh
+  investigation already considered and rejected converting to `List`,
+  since it would clobber the custom row styling (thumbnails, the desire
+  dial/gauge) Design actually drew. Verify that constraint fresh rather
+  than assuming it still holds by the time this spec starts; expect
+  either a `List` reconsideration or a custom gesture implementation,
+  not a one-line modifier.
 
 ## Working convention
 
