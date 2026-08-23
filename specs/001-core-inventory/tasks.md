@@ -955,6 +955,22 @@ is a bigger change than this phase.
       following within a few seconds as caught up — but it needs a clock,
       so it isn't worth building against a risk that may not exist.
 
+      **Both checks passed.** Reinstalled on a device signed into the
+      account holding the data: all four screens read "Catching up with
+      iCloud" and filled in as items arrived. On an account with
+      genuinely nothing in it, the screens showed "Catching up with
+      iCloud" briefly and then settled to "Nothing tracked yet" / "No
+      gear yet" as appropriate — so `NSPersistentCloudKitContainer` does
+      post an import event with nothing to fetch, and the state can't
+      stick. **The risk this task existed to falsify is closed**, and no
+      clock is needed.
+
+      The brief appearance on a genuinely empty account is the predicted
+      behaviour, not a defect: `SyncMonitor` starts at `.unknown` because
+      nothing has been heard from CloudKit yet, which is honest. It
+      resolves in the safe direction — an uncertain message replaced by a
+      confident one, never the reverse.
+
 ## Phase 12a — Pull to refresh
 
 - [x] **T056** — `.refreshable` on `ItemListView`, `WishlistView` and
@@ -991,6 +1007,80 @@ is a bigger change than this phase.
       showing "Catching up with iCloud". Phase 12's import-driven refetch
       covers that screen, so it isn't a gap, but it does mean the gesture
       is unavailable exactly where someone might reach for it.
+
+## Pre-merge review — findings
+
+A `skeptical-reviewer` pass over the whole spec against what shipped,
+run before taking the PR out of draft. Its four blocking findings are
+fixed; the rest are recorded here rather than dropped.
+
+**Fixed before merge:**
+
+- **A real data-integrity defect: removing a photo while editing orphaned
+  the row.** SwiftData's `.cascade` fires when the *parent* is deleted;
+  there's no orphan-removal rule for a child dropped from a to-many
+  relationship. So reassigning `item.photos` left the removed `Photo` in
+  the store with both inverses nil, still holding an
+  `@Attribute(.externalStorage)` blob that CloudKit uploads as a
+  `CKAsset` and nothing ever collects — invisible, cumulative, synced
+  everywhere. `PhotoSelection.orphaned(previous:current:)` plus a delete
+  in both form view models; `PhotoRemovalTests` covers both paths and was
+  written red first.
+- **`plan.md` prescribed copy the test suite rejects** — "Not yet known"
+  and "Not valued", both on `UnvaluedCopyTests`'s rejected list since
+  T047b unified them. The design document of record was telling the next
+  reader to write code that goes red.
+- **A comment asserted a Sell Plan entry point that was deliberately
+  removed** ("besides the wishlist row's shortcut"), contradicting both
+  spec.md and `WishlistView`'s own comment.
+- **Two guards in `StillSyncingWiringTests` couldn't fail as claimed** —
+  the same bare-`contains` shape that suite's header says it was rewritten
+  to avoid. One was satisfiable by a comment; the other by a private
+  helper that had stopped being called. Both now structural, along with
+  `SaveCaptionWiringTests`, which had the same shape and wasn't flagged.
+  All hardened scans share `SourceScan` so the next one starts hardened.
+
+Also fixed, cheaper: `plan.md` describing category filtering as *prefix*
+matching when the code is deliberately segment-bounded; `plan.md`
+claiming the remote-change problem was "resolved" when it's addressed on
+three screens by a manual gesture; the pull-to-refresh limitation being
+scoped to `stillSyncing` when it applies to every empty state; two
+references to a `Trove/Info.plist` that deliberately doesn't exist; and
+`SellPlanFramingTests` guarding only the view model when spec.md's
+constraint is about copy on the screen.
+
+**Recorded, not fixed — worth a decision before wide distribution:**
+
+- [ ] **`SyncMonitor` registers its observer after the container is
+      built**, so anything posted in that window is lost. If the setup
+      pair is missed on a signed-out device, `phase` stays `.unknown` and
+      all four screens show "Catching up with iCloud" for the whole
+      launch — the bug `.unavailable` exists to prevent, through another
+      door. The window is small and T055 saw correct behaviour on real
+      devices, so this is theory, not an observed failure.
+- [ ] **Signed in, setup succeeds, no network: `.working` forever.** The
+      copy says data "is on its way" when nothing is coming. No timeout,
+      no reachability check. `SyncMonitor.event(from:)`'s `nil` paths are
+      also untested, though they're testable with a hand-built
+      `Notification`.
+- [ ] **The sell-candidate threshold is restated as a literal in shipping
+      copy** ("rated 3 or lower"), independent of
+      `DesireLevel.isSellCandidate`, which plan.md insists is the single
+      source. Change the rule and the sentence goes quietly false.
+- [ ] **Wishlist swipe-delete bypasses the view model and the
+      confirmation.** It calls `modelContext.delete` straight from the
+      view — business logic in a view, untested — and cascades the photos
+      instantly, where the same action from the detail screen sits behind
+      an alert explaining the cascade. Swipe-without-confirmation is a
+      normal iOS idiom, so this is a consistency and MVVM question rather
+      than a defect.
+- [ ] **Coverage gaps in the design-correctness guards.** The dial's ramp
+      is checked at palette-token level while the gauge's is checked
+      against rendered pixels; the two are equivalent today only because
+      the arc is an opaque stroke. `EmptyStateMarkTests` checks one system
+      symbol of seven. `TabIconTests` hardcodes the three asset names
+      rather than reading them from `ContentView`, so renaming one there
+      leaves the test green and the tab blank.
 
 ---
 

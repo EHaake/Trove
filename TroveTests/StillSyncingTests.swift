@@ -263,10 +263,10 @@ struct StillSyncingWiringTests {
     func everyScreenIsHandedTheRealMonitor(handoff: Handoff) throws {
         // Truncated at `#Preview`: a preview legitimately takes the default,
         // since there's no app around it to have a real monitor.
-        let contents = try source(handoff.file)
-        let production = contents.range(of: "#Preview").map { String(contents[..<$0.lowerBound]) } ?? contents
-
-        let calls = Self.argumentLists(of: handoff.callee, in: production)
+        let calls = SourceScan.argumentLists(
+            of: handoff.callee,
+            in: try SourceScan.production(handoff.file)
+        )
 
         #expect(!calls.isEmpty, "No \(handoff.callee)(…) found in \(handoff.file) — this would pass over nothing.")
         for call in calls {
@@ -281,36 +281,16 @@ struct StillSyncingWiringTests {
         }
     }
 
-    /// The text between the parentheses of each `callee(…)` call, paren-depth
-    /// aware so a nested call doesn't end the match early.
-    private nonisolated static func argumentLists(of callee: String, in source: String) -> [String] {
-        var results: [String] = []
-        var rest = Substring(source)
-
-        while let call = rest.range(of: "\(callee)(") {
-            var depth = 1
-            var index = call.upperBound
-            while index < rest.endIndex, depth > 0 {
-                switch rest[index] {
-                case "(": depth += 1
-                case ")": depth -= 1
-                default: break
-                }
-                if depth > 0 { index = rest.index(after: index) }
-            }
-            guard depth == 0 else { break }
-            results.append(String(rest[call.upperBound..<index]))
-            rest = rest[index...]
-        }
-
-        return results
-    }
-
     /// Every screen that can show the still-syncing state has to leave it when
-    /// the data lands. The view models fetch on appear and hold an array, so
-    /// an import arriving under an open screen changes nothing until something
+    /// the data lands. The view models fetch on appear and hold an array, so an
+    /// import arriving under an open screen changes nothing until something
     /// asks them to look again — and the screen it leaves behind claims the
     /// collection is empty.
+    ///
+    /// Comment-stripped and body-checked. The first version was a bare
+    /// `contains`, which a commented-out modifier still satisfies — the exact
+    /// mutation that proved it, after this test was accidentally deleted
+    /// during the rewrite and the suite stayed green without it.
     @Test(arguments: [
         "Trove/Views/Items/ItemListView.swift",
         "Trove/Views/Wishlist/WishlistView.swift",
@@ -318,21 +298,43 @@ struct StillSyncingWiringTests {
         "Trove/Views/Wishlist/SellPlanView.swift",
     ])
     func everyScreenRefetchesWhenAnImportLands(path: String) throws {
-        #expect(
-            try source(path).contains(".onChange(of: viewModel.completedImports)"),
-            """
-            \(path) never refetches on an import, so it would sit on "Catching up \
-            with iCloud" until the data arrived and then show the empty state \
-            instead of the collection.
-            """
+        let bodies = SourceScan.closureBodies(
+            after: ".onChange(of: viewModel.completedImports)",
+            in: try SourceScan.production(path)
         )
+
+        #expect(bodies.count == 1, "\(path) has \(bodies.count) import-refetch handlers, expected exactly 1")
+        for body in bodies {
+            #expect(
+                body.contains("viewModel.load()"),
+                """
+                \(path) watches the import count but doesn't refetch, so it would \
+                sit on "Catching up with iCloud" until the data arrived and then \
+                show the empty state instead of the collection: {\(body)}
+                """
+            )
+        }
     }
 
     @Test(arguments: listScreens)
     func bothListScreensQualifyTheirFilteredEmptyStates(path: String) throws {
+        // Counts the *call sites*, not the helper's existence. The previous
+        // version looked for "ListEmptyReason.detail(", which lives in a private
+        // helper in both views — drop `detail(...)` from the two filtered cases
+        // and the helper survives unused (Swift doesn't error on that), so the
+        // guard stayed green while the note vanished from the UI.
+        let qualified = try SourceScan.production(path)
+        let callSites = SourceScan.argumentLists(of: "EmptyStateView", in: qualified)
+            .count { $0.contains("detail: detail(") }
+
         #expect(
-            try source(path).contains("ListEmptyReason.detail("),
-            "\(path) writes its own detail lines, so they can't say the list may be incomplete"
+            callSites == 2,
+            """
+            \(path) qualifies \(callSites) empty state(s) mid-import, expected 2 \
+            (the search and category cases). Any other number means a filtered \
+            empty state states a narrower absence as final while the collection \
+            is still arriving.
+            """
         )
     }
 }

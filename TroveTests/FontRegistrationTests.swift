@@ -24,7 +24,7 @@ struct FontRegistrationTests {
             """
             Not registered: \(missing.joined(separator: ", ")).
             Add the .ttf under Trove/Fonts and list it in UIAppFonts \
-            (Trove/Info.plist), or the app renders on system faces instead.
+            (Config/Info.plist), or the app renders on system faces instead.
             """
         )
     }

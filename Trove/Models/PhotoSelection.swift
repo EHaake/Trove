@@ -19,6 +19,24 @@ enum PhotoSelection {
         renumbered(inDisplayOrder(existing).filter { $0.id != photo.id })
     }
 
+    /// Photos that were in `previous` and aren't in `current` — the ones a
+    /// save has to *delete*, not merely unlink.
+    ///
+    /// SwiftData's `.cascade` fires when the parent is deleted; there is no
+    /// orphan-removal rule for a child dropped from a to-many relationship.
+    /// Reassigning `item.photos` therefore leaves the dropped `Photo` in the
+    /// store with both inverses nil, still holding its
+    /// `@Attribute(.externalStorage)` blob — which CloudKit uploads as a
+    /// `CKAsset` and nothing ever collects. Invisible on screen, cumulative,
+    /// and it syncs everywhere.
+    ///
+    /// Here rather than in each form so the two can't drift on it; both call
+    /// it, and `PhotoRemovalTests` covers each path end to end.
+    static func orphaned(previous: [Photo], current: [Photo]) -> [Photo] {
+        let kept = Set(current.map(\.id))
+        return previous.filter { !kept.contains($0.id) }
+    }
+
     /// Restates `sortOrder` as position. Called after every mutation rather
     /// than trusting whatever the previous numbering was — removing the middle
     /// photo of three would otherwise leave a gap at 1.

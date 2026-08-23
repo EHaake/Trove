@@ -146,3 +146,63 @@ struct WishlistPhotoDeleteRuleTests {
         #expect(survivors.first?.imageData == Data([0x02]))
     }
 }
+
+/// Removing a photo while editing has to delete the row, not just drop it from
+/// the array.
+///
+/// SwiftData's `.cascade` fires when the *parent* is deleted; there is no
+/// orphan-removal rule for a child dropped from a to-many relationship. So
+/// reassigning `item.photos` leaves the removed `Photo` in the store with both
+/// inverses nil — and, because `imageData` is `@Attribute(.externalStorage)`,
+/// still holding a blob that CloudKit uploads as a `CKAsset` and nothing ever
+/// collects.
+///
+/// Invisible in the UI, cumulative, and it syncs to every device. Found by the
+/// pre-merge review; the create path was covered and the edit path wasn't.
+@Suite("Photo removal")
+struct PhotoRemovalTests {
+    @Test func removingAPhotoWhileEditingAnItemDeletesIt() throws {
+        let context = try makeInMemoryContext()
+
+        let form = ItemFormViewModel(modelContext: context)
+        form.name = "Leica M6"
+        form.categoryPath = "Photography/Cameras"
+        form.purchasePrice = 2_900
+        form.photos = PhotoSelection.appending([Data([0x01]), Data([0x02])], to: [])
+        #expect(form.save())
+
+        let item = try #require(try context.fetch(FetchDescriptor<Item>()).first)
+        #expect(try context.fetch(FetchDescriptor<Photo>()).count == 2)
+
+        let edit = ItemFormViewModel(modelContext: context, editing: item)
+        let dropped = try #require(edit.photos.first)
+        edit.photos = PhotoSelection.removing(dropped, from: edit.photos)
+        #expect(edit.save())
+
+        let remaining = try context.fetch(FetchDescriptor<Photo>())
+        #expect(remaining.count == 1, "\(remaining.count - 1) orphaned Photo row(s) left in the store")
+        #expect(remaining.allSatisfy { $0.item != nil }, "A Photo survived with no owner")
+    }
+
+    @Test func removingAPhotoWhileEditingAWishlistItemDeletesIt() throws {
+        let context = try makeInMemoryContext()
+
+        let form = WishlistFormViewModel(modelContext: context)
+        form.name = "Summicron 35mm f/2"
+        form.categoryPath = "Photography/Lenses"
+        form.estimatedCost = 2_400
+        form.photos = PhotoSelection.appending([Data([0x01]), Data([0x02])], to: [])
+        #expect(form.save())
+
+        let wanted = try #require(try context.fetch(FetchDescriptor<WishlistItem>()).first)
+
+        let edit = WishlistFormViewModel(modelContext: context, editing: wanted)
+        let dropped = try #require(edit.photos.first)
+        edit.photos = PhotoSelection.removing(dropped, from: edit.photos)
+        #expect(edit.save())
+
+        let remaining = try context.fetch(FetchDescriptor<Photo>())
+        #expect(remaining.count == 1, "\(remaining.count - 1) orphaned Photo row(s) left in the store")
+        #expect(remaining.allSatisfy { $0.wishlistItem != nil }, "A Photo survived with no owner")
+    }
+}

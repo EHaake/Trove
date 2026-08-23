@@ -46,7 +46,7 @@ enum FontFamily: Sendable {
 /// point size.
 struct ThemeTypography: Sendable {
     /// The faces in `Trove/Fonts/` are registered through `UIAppFonts` in
-    /// `Trove/Info.plist`. `FontRegistrationTests` asserts every name this
+    /// `Config/Info.plist`. `FontRegistrationTests` asserts every name this
     /// type asks for is actually registered, because `Font.custom` falls back
     /// to the system font silently when it isn't — a typo'd PostScript name
     /// looks like nothing happened.

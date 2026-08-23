@@ -27,13 +27,7 @@ struct PullToRefreshTests {
 
     @Test(arguments: tabRoots)
     func eachTabRootRefreshesItself(path: String) throws {
-        let url = URL(filePath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appending(path: path)
-        let source = try String(contentsOf: url, encoding: .utf8)
-
-        let bodies = Self.closureBodies(after: ".refreshable", in: source)
+        let bodies = SourceScan.closureBodies(after: ".refreshable", in: try SourceScan.production(path))
 
         #expect(bodies.count == 1, "\(path) has \(bodies.count) .refreshable modifiers, expected exactly 1")
         for body in bodies {
@@ -46,30 +40,5 @@ struct PullToRefreshTests {
                 """
             )
         }
-    }
-
-    /// The text between the braces of each `label { … }`, brace-depth aware.
-    private nonisolated static func closureBodies(after label: String, in source: String) -> [String] {
-        var results: [String] = []
-        var rest = Substring(source)
-
-        while let modifier = rest.range(of: label) {
-            guard let open = rest[modifier.upperBound...].firstIndex(of: "{") else { break }
-            var depth = 1
-            var index = rest.index(after: open)
-            while index < rest.endIndex, depth > 0 {
-                switch rest[index] {
-                case "{": depth += 1
-                case "}": depth -= 1
-                default: break
-                }
-                if depth > 0 { index = rest.index(after: index) }
-            }
-            guard depth == 0 else { break }
-            results.append(String(rest[rest.index(after: open)..<index]))
-            rest = rest[index...]
-        }
-
-        return results
     }
 }

@@ -85,7 +85,9 @@ struct SaveCaptionWiringTests {
 
     @Test(arguments: forms)
     func theFormAsksForTheCaptionRatherThanStatingIt(path: String) throws {
-        let contents = try source(path)
+        // Comment-stripped for the same reason StillSyncingWiringTests is: a
+        // bare `contains` is satisfied by a comment mentioning the call.
+        let contents = try SourceScan.production(path)
 
         #expect(contents.contains("SaveCaption.text("), "\(path) doesn't use SaveCaption")
         #expect(

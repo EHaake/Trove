@@ -103,6 +103,12 @@ final class ItemFormViewModel {
         item.condition = condition
         item.conditionNotes = Self.nilIfBlank(conditionNotes)
         item.notes = Self.nilIfBlank(notes)
+        // Dropped photos are deleted, not just unlinked — see
+        // PhotoSelection.orphaned. Captured before the reassignment,
+        // which is what replaces the old set.
+        for orphan in PhotoSelection.orphaned(previous: item.photos ?? [], current: photos) {
+            modelContext.delete(orphan)
+        }
         item.photos = photos
         item.updatedAt = .now
 

@@ -490,6 +490,30 @@ struct SellPlanFramingTests {
             .appending(path: "Trove/ViewModels/SellPlanViewModel.swift")
     }
 
+    /// The other half, and the half spec.md actually describes: it forbids
+    /// "text urging the user toward covering the gap", which is copy on a
+    /// screen, not a property on a type. Scanning string literals rather than
+    /// whole source because `sectionGap` and `listRowGap` contain "gap" and
+    /// would fire on every layout constant.
+    @Test func theScreenShowsNoCopyFramingItAsAGapToClose() throws {
+        let source = try SourceScan.production("Trove/Views/Wishlist/SellPlanView.swift")
+        let literals = SourceScan.stringLiterals(in: source)
+
+        #expect(!literals.isEmpty, "Found no copy on SellPlanView — this would pass over nothing.")
+
+        let offending = literals.filter { literal in
+            Self.framingTerms.contains { literal.localizedCaseInsensitiveContains($0) }
+        }
+
+        #expect(
+            offending.isEmpty,
+            """
+            Copy on the Sell Plan frames the comparison as a gap to close, which \
+            spec.md forbids: \(offending.joined(separator: " | "))
+            """
+        )
+    }
+
     @Test func theViewModelOffersNoSurplusOrShortfallFigure() throws {
         let path = viewModelSource
         #expect(

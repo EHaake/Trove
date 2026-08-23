@@ -150,9 +150,13 @@ if we want a proper tree-browsing UI later, promoting categories to a
 real entity is a clean, isolated migration — flagging it here so it's a
 known future option, not a surprise.
 
-Filtering the item list by category matches on path *prefix*, so
+Filtering the item list by category matches on whole path *segments*, so
 filtering by `"Photography"` also shows `Photography/Cameras` and
-`Photography/Lenses`.
+`Photography/Lenses` — but not `Photographic Lighting`. A plain string
+prefix would sweep that in, which is why `CategoryPathHelper.path(_:isWithin:)`
+compares segment by segment. (Typing in the picker still filters by plain
+prefix: there you're completing a name, and matching mid-segment is what
+you want.)
 
 **Case handling**: matching is case-insensitive throughout (search-as-
 you-type in the picker, list filtering), always on — no setting for this,
@@ -473,7 +477,7 @@ this document is careful never to make.
 `isEmpty` doesn't cover it — there *is* data, it just has no money in
 it — so `hasAnyValues` gates the money-derived parts:
 
-- **Headline** — "Not yet known" instead of `$0`. Same distinction the
+- **Headline** — "Not yet valued" instead of `$0`. Same distinction the
   item rows and the value sort already draw between un-valued and
   worthless.
 - **Ruler** — hidden. It measures how much of the total is accounted
@@ -487,7 +491,7 @@ it — so `hasAnyValues` gates the money-derived parts:
 - **Breakdown rows** — kept. Item counts and un-valued counts are real
   information. The percentage drops out (every row would read "0%",
   which looks like a measurement and isn't one), and a row with nothing
-  priced reads "Not valued" rather than "$0" — decided per row, not per
+  priced reads "Not yet valued" rather than "$0" — decided per row, not per
   screen, so a category nobody has priced says so even on a dashboard
   full of figures.
 - **"Value →" callout** — unchanged, and the one part that was already
@@ -578,7 +582,10 @@ counts landed imports and the four screens refetch on the count.
 
 That is deliberately the narrow fix. **The general problem — a change
 made on another device doesn't appear in an already-open screen — is
-resolved too, deliberately not with full reactive observation.**
+addressed, not eliminated, and deliberately not with full reactive
+observation.** What ships is a manual gesture on the three tab roots; a
+detail screen left open still won't notice a remote edit until it's
+navigated away from and back.
 Considered and rejected: view models observing the store directly would
 mean every screen watching for remote changes continuously, which is
 real new architecture for a problem this app rarely has — Trove is a
@@ -791,12 +798,15 @@ forgotten — a known, deliberate v1 trade-off rather than an oversight,
 in the same spirit as `TroveApp`'s fatalError-on-store-failure decision
 (discussed with Claude Code at T009, not otherwise written down here).
 
-## Known v1 limitation: pull-to-refresh unreachable during `stillSyncing`
+## Known v1 limitation: pull-to-refresh unreachable on any empty state
 
 `T056`'s empty states live outside the `ScrollView` (a deliberate Phase 9
 choice, for proper vertical centering), so there's nothing to pull on a
 screen showing "Catching up with iCloud" — exactly the moment someone
-might reach for it. Accepted rather than fixed: `stillSyncing` already
+might reach for it. **It applies to every empty state, not just that
+one** — including the filtered ones that mid-import carry "Your collection
+is still arriving from iCloud, so this may not be all of it", which is at
+least as likely a moment to pull. Accepted rather than fixed: `stillSyncing` already
 updates itself the instant `SyncMonitor.completedImports` changes, so
 nothing is functionally lost, only a manual option is missing during
 what's expected to be a rare, short-lived screen. Reworking Phase 9's

@@ -101,6 +101,12 @@ final class WishlistFormViewModel {
         // Assigning the whole set, not appending: SwiftData sets each photo's
         // `wishlistItem` inverse from this side, and anything the user removed
         // in the picker drops out of the relationship here.
+        // Dropped photos are deleted, not just unlinked — see
+        // PhotoSelection.orphaned. Captured before the reassignment,
+        // which is what replaces the old set.
+        for orphan in PhotoSelection.orphaned(previous: item.photos ?? [], current: photos) {
+            modelContext.delete(orphan)
+        }
         item.photos = photos
 
         if editingItem == nil {

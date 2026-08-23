@@ -167,3 +167,134 @@ struct Bitmap {
         )
     }
 }
+
+/// Reading Swift sources as text, for the handful of guards whose subject is
+/// "is this wired up" rather than "does this compute the right answer".
+///
+/// Source scans are fragile by nature and this project has already shipped two
+/// that couldn't fail: one asked whether a file contained a string *anywhere*,
+/// which one wired tab out of three satisfied, and a second was satisfied by a
+/// private helper that had stopped being called. Both were found by mutation
+/// testing, not by reading them. Centralised here so the next scan starts from
+/// the hardened version rather than re-deriving it.
+enum SourceScan {
+    /// A source file's production code: comments stripped, and everything from
+    /// the first `#Preview` dropped.
+    ///
+    /// Comments matter because a scan for `.onChange(of: viewModel.x)` is
+    /// otherwise satisfied by a comment mentioning it — which is exactly how a
+    /// guard survives the code it guards being deleted. Previews matter because
+    /// they legitimately use defaults no shipping call site should.
+    static func production(_ path: String, file: StaticString = #filePath) throws -> String {
+        let url = URL(filePath: "\(file)")
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: path)
+        let source = try String(contentsOf: url, encoding: .utf8)
+        let code = source.range(of: "#Preview").map { String(source[..<$0.lowerBound]) } ?? source
+        return stripComments(code)
+    }
+
+    /// Drops `//` line comments and `/* */` blocks. Deliberately naive about
+    /// `//` inside string literals — no source in this project has one, and a
+    /// scan that quietly over-matched would be worse than one that over-strips.
+    static func stripComments(_ source: String) -> String {
+        var output = ""
+        var index = source.startIndex
+        var inLine = false
+        var inBlock = false
+
+        while index < source.endIndex {
+            let rest = source[index...]
+            if !inLine, !inBlock, rest.hasPrefix("//") {
+                inLine = true
+            } else if !inLine, !inBlock, rest.hasPrefix("/*") {
+                inBlock = true
+                index = source.index(index, offsetBy: 2)
+                continue
+            } else if inLine, source[index] == "\n" {
+                inLine = false
+            } else if inBlock, rest.hasPrefix("*/") {
+                inBlock = false
+                index = source.index(index, offsetBy: 2)
+                continue
+            }
+
+            if !inLine, !inBlock { output.append(source[index]) }
+            index = source.index(after: index)
+        }
+
+        return output
+    }
+
+    /// The contents of every `"…"` literal, which for a view is close enough
+    /// to "the text a person can read on screen".
+    ///
+    /// Scanning whole source for a forbidden *word* catches identifiers that
+    /// merely contain it — `sectionGap` and `listRowGap` both contain "gap",
+    /// which is why the Sell Plan's framing guard originally scanned only the
+    /// view model and left the copy unguarded. Literals are the right unit.
+    static func stringLiterals(in source: String) -> [String] {
+        var results: [String] = []
+        var current = ""
+        var inString = false
+        var escaped = false
+
+        for character in source {
+            if escaped { escaped = false; if inString { current.append(character) }; continue }
+            if character == "\\" { escaped = true; continue }
+            if character == "\"" {
+                if inString { results.append(current); current = "" }
+                inString.toggle()
+                continue
+            }
+            if inString { current.append(character) }
+        }
+
+        return results
+    }
+
+    /// The text between the parentheses of each `callee(…)`, paren-depth aware
+    /// so a nested call doesn't end the match early.
+    static func argumentLists(of callee: String, in source: String) -> [String] {
+        spans(opening: "(", closing: ")", after: "\(callee)(", in: source)
+    }
+
+    /// The text between the braces of each `label { … }`, brace-depth aware.
+    static func closureBodies(after label: String, in source: String) -> [String] {
+        spans(opening: "{", closing: "}", after: label, in: source, findsOpener: true)
+    }
+
+    private static func spans(
+        opening: Character,
+        closing: Character,
+        after marker: String,
+        in source: String,
+        findsOpener: Bool = false
+    ) -> [String] {
+        var results: [String] = []
+        var rest = Substring(source)
+
+        while let match = rest.range(of: marker) {
+            var start = match.upperBound
+            if findsOpener {
+                guard let open = rest[match.upperBound...].firstIndex(of: opening) else { break }
+                start = rest.index(after: open)
+            }
+
+            var depth = 1
+            var index = start
+            while index < rest.endIndex, depth > 0 {
+                if rest[index] == opening { depth += 1 }
+                if rest[index] == closing { depth -= 1 }
+                if depth > 0 { index = rest.index(after: index) }
+            }
+            guard depth == 0 else { break }
+
+            results.append(String(rest[start..<index]))
+            rest = rest[index...]
+        }
+
+        return results
+    }
+}
