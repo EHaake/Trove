@@ -28,8 +28,9 @@ and Trove's first dedicated design-refinement pass.
 3. Let a user reveal Edit and Duplicate via a leading swipe on rows in
    both `ItemListView` and `WishlistView`.
 4. Let a user duplicate an owned item or wishlist item from the list:
-   creates a new row with most fields copied, a few reset, inserted
-   into the list with no forced navigation.
+   creates a new row with nearly every field copied — serial number is
+   the one exception, cleared on owned items — inserted into the list
+   with no forced navigation.
 5. Make the wishlist's "Reorder" control read as an actual, discoverable
    button rather than plain text with a small, easy-to-miss tap target.
 6. Give list rows on both screens a small amount of additional visual
@@ -78,10 +79,19 @@ and Trove's first dedicated design-refinement pass.
 
 No new entities and no new fields. Duplicate is a new *operation* on
 the existing `Item` and `WishlistItem` types — conceptually "a new row
-with most fields copied from the original, a few reset" — not a schema
-change. Exact field-by-field behavior is in "Key user flows" below;
-the concrete data-model shape (if anything beyond a plain insert is
-needed) belongs in `plan.md`.
+with nearly every field copied from the original, serial number the
+one exception on owned items" — not a schema change. Exact
+field-by-field behavior is in "Key user flows" below.
+
+One thing worth flagging for `plan.md` specifically, not resolved here:
+since photos now carry over on duplicate too, and the schema's
+one-photo-one-parent rule (`PhotoOwnershipTests`) doesn't support a
+`Photo` belonging to two items, duplicating means genuinely new `Photo`
+rows with duplicated `.externalStorage` data — not a shared reference.
+Duplicating an item with several photos duplicates that storage, both
+locally and in CloudKit's sync payload. Not a reason to reverse the
+decision, just a real cost worth being explicit about rather than
+discovering mid-implementation.
 
 ## Key user flows
 
@@ -248,7 +258,9 @@ off (with citations, matching `001`'s convention) once built.
   they're often a stock/reference image rather than a photo of one
   specific unit. Sell Plan membership/selection is never inherited. A
   per-user toggle for the photo behavior specifically is deferred to
-  `012-settings-menu`.
+  `012-settings-menu`. The storage cost of that choice (real duplicated
+  `Photo` rows, not a shared reference — see Entities) is accepted
+  knowingly, not an oversight.
 - **Both swipe directions ship on both lists** — not owned items only.
 - **Row visual treatment stays inside `brief.md`'s existing
   no-bevel/no-drop-shadow constraint**; the exact mechanism is a
