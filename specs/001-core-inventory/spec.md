@@ -1,7 +1,7 @@
 # Spec: Core Inventory (v1)
 
 **App name**: Trove — *Your Gear, Valued*
-**Status**: Draft — pending review
+**Status**: Approved — all fifteen acceptance criteria signed off 2026-08-22; shipped in PR #1
 **Depends on**: nothing (first feature)
 
 ## Summary

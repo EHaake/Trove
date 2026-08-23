@@ -1,7 +1,7 @@
 # Tasks: Core Inventory (v1)
 
 **App**: Trove — *Your Gear, Valued*
-**Status**: Draft — pending review
+**Status**: Complete — every task verified, pre-merge review findings resolved or recorded; shipped in PR #1
 **Implements**: plan.md in this directory
 
 Ordered, small, independently verifiable. Each task should be completable

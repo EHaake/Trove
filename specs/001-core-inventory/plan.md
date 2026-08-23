@@ -1,7 +1,7 @@
 # Plan: Core Inventory (v1)
 
 **App**: Trove — *Your Gear, Valued*
-**Status**: Draft — pending review
+**Status**: Approved — reflects what was built, corrected where the build taught otherwise; shipped in PR #1
 **Implements**: spec.md in this directory
 
 ## Data model (SwiftData)
