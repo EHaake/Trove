@@ -1,0 +1,56 @@
+import Foundation
+import SwiftData
+
+/// Where a photo came from.
+///
+/// v1 only ever writes `.device` — there is no stock-photo fetching yet (see
+/// spec.md non-goals). `.fetched` exists now because the field is cheap to add
+/// today and expensive to retrofit once real photos exist in CloudKit, so a
+/// future fetch feature becomes a UI/network addition rather than a schema
+/// migration.
+enum PhotoSource: String, Codable, CaseIterable {
+    case device
+    case fetched
+}
+
+@Model
+final class Photo {
+    var id: UUID = UUID()
+
+    /// `.externalStorage` keeps the blob out of the main store file and hands it
+    /// to CloudKit as a `CKAsset` instead of inlining it — otherwise photos
+    /// bloat both the local SQLite store and the sync payload.
+    @Attribute(.externalStorage) var imageData: Data = Data()
+
+    /// Backing store for ``source``. Persisted as a raw `String`; use `source`
+    /// everywhere except in `FetchDescriptor` predicates and sort descriptors,
+    /// which can only see stored properties.
+    var sourceRawValue: String = PhotoSource.device.rawValue
+
+    var sortOrder: Int = 0
+
+    /// Inverse of `Item.photos`, which owns the `@Relationship` declaration.
+    var item: Item?
+
+    /// Inverse of `WishlistItem.photos`, declared the same way on that side.
+    ///
+    /// A photo belongs to at most one of `item` or `wishlistItem`, never both.
+    /// SwiftData can't express "exactly one of these two", so what actually
+    /// holds the line is that each form only ever writes its own side —
+    /// `PhotoOwnershipTests` is what keeps that true rather than a comment.
+    /// Two independently-optional relationships is what lets one `Photo` type
+    /// serve both entities without a shared parent protocol or the polymorphic
+    /// relationship SwiftData doesn't really support.
+    var wishlistItem: WishlistItem?
+
+    var source: PhotoSource {
+        get { PhotoSource(rawValue: sourceRawValue) ?? .device }
+        set { sourceRawValue = newValue.rawValue }
+    }
+
+    init(imageData: Data = Data(), source: PhotoSource = .device, sortOrder: Int = 0) {
+        self.imageData = imageData
+        self.sourceRawValue = source.rawValue
+        self.sortOrder = sortOrder
+    }
+}

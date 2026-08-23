@@ -1,7 +1,7 @@
 # Spec: Core Inventory (v1)
 
 **App name**: Trove — *Your Gear, Valued*
-**Status**: Draft — pending review
+**Status**: Approved — all fifteen acceptance criteria signed off 2026-08-22; shipped in PR #1
 **Depends on**: nothing (first feature)
 
 ## Summary
@@ -66,6 +66,14 @@ they can reason about selling underused gear to fund new purchases.
   did. A real "mark as sold" workflow is a natural, meaningfully bigger
   future feature, deliberately excluded now to keep the Sell Plan
   screen simple.
+- **Color-coded categories.** Top-level categories (`Photography`,
+  `Music`, etc.) getting a distinct color, shown wherever that
+  category's chips appear, is a real future enhancement — a curated
+  palette that harmonizes with the existing theme, user-selectable or
+  auto-assigned on first use of a new top-level category. Deferred
+  because it's a real design decision (palette selection) as much as an
+  engineering one, and deserves a deliberate pass rather than an
+  incidental one.
 
 ## Entities (conceptual — see plan.md for the actual data model)
 
@@ -83,7 +91,7 @@ they can reason about selling underused gear to fund new purchases.
   sell); defaults to 3 on creation
 - Condition — one of New / Excellent / Good / Fair / Broken, plus a
   free-text condition notes field for specifics
-- Photo(s) — multiple photos supported, at least one
+- Photo(s) — multiple photos supported
 - Notes (free text)
 
 ### Wishlist Item
@@ -91,6 +99,13 @@ they can reason about selling underused gear to fund new purchases.
 - Category path (same system as owned items)
 - Estimated cost
 - Notes
+- Photo(s) — multiple photos supported, same treatment as owned items
+- Desire-to-own rating, 1–3 (1 = "Someday", 2 = "Soon", 3 = "Next");
+  defaults to 2 on creation. Deliberately coarser than owned items'
+  1–5 desire-to-keep — three levels is about the resolution people
+  actually have about their own wants, and it keeps the two ratings
+  from reading as the same measurement pointed in opposite directions.
+  Display-only: it does not sort or reorder the wishlist (see below).
 - Priority or ranking (exact mechanism TBD in plan — at minimum the user
   can order the list)
 - Sell Plan — a persisted selection of owned items the user is
@@ -123,6 +138,43 @@ category to the app. This isn't user-configurable; it's just correct
 behavior for a free-typed field nobody's going to capitalize consistently
 on their own.
 
+### Displaying a category path
+
+Two rules, applied everywhere a category path is shown as a chip or a
+compact label — the item list's filter chips, the add/edit form's
+suggestion chips, and anywhere else a path appears as a short tag rather
+than a full breadcrumb:
+
+- **Leaf label, with disambiguation.** Show only the path's last segment
+  (`Electric`, not `Music/Guitars/Electric`) when that segment is unique
+  across the current category set. If two different paths would
+  otherwise show the same leaf (`Music/Amps` and `Audio/Amps` both
+  ending in "Amps"), both expand to their last two segments instead —
+  just enough to disambiguate, not the whole path. If two segments still
+  collide (a deeper hierarchy where even that isn't enough), fall back
+  to the full path — showing two identical-looking chips is worse than
+  one long one. This is a label-only rule: filtering and storage always
+  use the full path underneath.
+- **Arrow breadcrumb for an already-set value.** Where a *complete*
+  category path is displayed as a navigable read-out — specifically the
+  add/edit form's field once a category is chosen — render it as
+  segments joined by a right-arrow icon (`Music › Guitars › Electric`)
+  rather than literal slashes. This is display-only; the underlying
+  value is still the slash-delimited string, and any text field the
+  user actually types into still takes and shows literal `/` while
+  being edited.
+
+  **This does not apply to the item list row or item detail screen's
+  meta line** (`MUSIC · GUITARS · HOLLOWBODY`). That's a different kind
+  of display — a stylistic, all-caps mono tag deliberately echoing the
+  brief's `LEICA · CAMERAS` convention, not a navigable breadcrumb — and
+  keeps its middot separator, showing the last two segments per the
+  truncation rule discussed elsewhere in this doc. Two different jobs:
+  the form field is showing a hierarchy the user is choosing through;
+  the meta line is a compact label matching Design's typographic
+  language. Don't unify them just because both happen to touch category
+  segments.
+
 ## Key user flows
 
 ### Add an owned item
@@ -143,12 +195,32 @@ specifically").
 
 ### Browse/sort owned items
 List of owned items, filterable by category, sortable by desire-to-keep,
-value, or purchase date.
+value, or purchase date, and searchable by name or serial number. Search
+sits below the header and above the category filter chip row, matching
+Design's layout. Category filter chips are a single horizontally
+scrolling row, not a wrapping grid — vertical space above the list stays
+fixed regardless of how many distinct categories are in use. The header
+(title, summary line, search field, filter chips) stays fixed in place;
+only the item rows beneath it scroll. Chip label text follows the leaf-
+with-disambiguation rule in the Categories section above.
 
 ### Browse and manage the wishlist
-List of wishlist items, filterable by category, same as the owned-items
-list. Each row has a "See sell plan" shortcut straight to that item's
-Sell Plan, alongside opening the item itself for its own details.
+List of wishlist items, filterable by category and searchable by name,
+same treatment as the owned-items list.
+
+Each row shows the item's desire-to-own rating as a small three-segment
+gauge, unlabeled — the gauge alone, no "Someday"/"Soon"/"Next" text and
+no legend, since repeating a static word down every row of a scrolling
+list is noise. The words appear in the add/edit form and the wishlist
+item's detail screen, which is where the user sets the value and learns
+what the three levels mean.
+
+The rating never reorders the list. Manual `sortOrder` (drag to reorder)
+stays the only ordering — two competing ordering systems where one
+silently overrides the other is worse than one the user controls, and
+three coarse tiers would produce mostly-ties anyway. Consistent with the
+Sell Plan's principle: show the information, let the user decide what to
+do with it.
 
 ### Add and review a wishlist item
 User adds a wishlist item with name, category, estimated cost. Viewing a
@@ -191,6 +263,17 @@ showing it automatically would overstate what it currently does. It's
 one tap away, not hidden, but the wishlist item's own details are what
 the screen leads with.
 
+**Reached only from the wishlist item's detail screen — not from the
+list rows.** A per-row shortcut was built and tried; removed after
+review because a CTA repeated on every row is a stronger, more constant
+push toward the Sell Plan than even the goal-completion framing that
+got removed from the screen itself — the same over-prominence problem
+in a different form. One extra tap versus a shortcut is the right
+trade for a feature that's meant to stay quietly available, not
+prominent. A future dashboard-level view of active plans
+(`009-sell-plan-list` in `specs/ROADMAP.md`) is the intended way to
+survey plans in bulk, once it exists.
+
 The Sell Plan does not track whether anything was actually sold — no
 "mark as sold," no removal from inventory, no transaction history (see
 non-goals). It's for deciding, not for bookkeeping a completed sale.
@@ -214,42 +297,115 @@ need to clear.)
 
 ## Acceptance criteria
 
-- [ ] User can create an owned item with name, category path, purchase
+Signed off by Erik, 2026-08-22, against the pre-merge review. Each
+criterion cites the tests that demonstrate it; where the evidence is a
+human attestation rather than a test, it says whose and of what.
+
+- [x] User can create an owned item with name, category path, purchase
       price, and purchase date; can optionally add serial number,
       purchase location, current value, desire rating, condition, photo,
       notes.
-- [ ] User can edit and delete an owned item.
-- [ ] User can create, edit, and delete a wishlist item (name, category,
-      estimated cost, notes).
-- [ ] Category paths autocomplete from previously-used paths across both
+      *`ItemFormViewModelTests` (`savesAValidItem`,
+      `appliesModelDefaultsToFieldsLeftAlone`,
+      `storesBlankOptionalFieldsAsNil`); end to end,
+      `TroveUITests.testAddingAnItemThroughQuickAddPutsItInTheList`.*
+- [x] User can edit and delete an owned item.
+      *`ItemDetailViewModelTests` (`deleteRemovesTheItemFromTheStore`,
+      `deletingAnItemTakesItsPhotosWithIt`); edits via
+      `ItemFormViewModelTests.canonicalizesTheCategoryPathOnSave` and
+      `PhotoRemovalTests.removingAPhotoWhileEditingAnItemDeletesIt`.*
+- [x] User can create, edit, and delete a wishlist item (name, category,
+      estimated cost, notes, photos, desire-to-own rating).
+      *`WishlistFormViewModelTests` (`createsAWishlistItem`,
+      `editingUpdatesInPlaceRatherThanInserting`);
+      `WishlistDetailViewModelTests.deleteRemovesTheItemFromTheStore`;
+      the list's swipe route, `WishlistDeletionTests`.*
+- [x] Desire-to-own defaults to 2 ("Soon") on creation, is settable 1–3
+      in the add/edit form, and renders as an unlabeled three-segment
+      gauge in wishlist rows and a labeled one in the form and detail
+      screen. It does not affect list ordering.
+      *Rule: `WishlistFormViewModelTests`
+      (`newItemsDefaultToTheMiddleOfTheScale`,
+      `clampsOnAssignmentRatherThanOnSave`) and `WishlistViewModelTests`
+      (`theManualOrderWinsOverTheRating`,
+      `theSortControlOffersNoRatingOption`). Presentation confirmed by
+      Erik at sign-off — rows deliberately unlabeled; the first-encounter
+      legibility observation is recorded under ROADMAP `010`, not
+      changed here.*
+- [x] Category paths autocomplete from previously-used paths across both
       owned items and wishlist items.
-- [ ] Dashboard shows total current value (excluding un-valued items,
+      *`CategoryPathHelperTests.dedupsAcrossItemsAndWishlistItems`;
+      `WishlistFormViewModelTests.suggestsCategoriesFromOwnedItemsAndWishlistItemsAlike`.*
+- [x] Dashboard shows total current value (excluding un-valued items,
       with a separate count of how many are un-valued), total spent, and
-      the delta, across all owned items.
-- [ ] Owned items list can be filtered by category and sorted by
-      desire-to-keep, current value, and purchase date.
-- [ ] Wishlist list can be filtered by category.
-- [ ] Each wishlist list row and the wishlist item's own detail screen
-      both offer a way to reach that item's Sell Plan.
-- [ ] Viewing a wishlist item shows the item's own details (name,
+      the delta — all three scoped to the same valued items, so the
+      delta is never silently wrong by an un-valued item's purchase
+      price.
+      *`DashboardViewModelTests` (`theThreeHeadlineFiguresAlwaysReconcile`,
+      `excludesUnvaluedItemsFromTheTotalAndCountsThemInstead`,
+      `spendExcludesUnvaluedItemsToo`).*
+- [x] Owned items list can be filtered by category, sorted by
+      desire-to-keep/current value/purchase date, and searched by name
+      or serial number.
+      *`ItemListViewModelTests` (`filtersByCategoryPrefix`,
+      `matchesOnName`, `matchesOnSerialNumber`, the three sort tests,
+      `filteringAndSortingApplyTogether`).*
+- [x] Wishlist list can be filtered by category and searched by name.
+      *`WishlistViewModelTests` (`aFilterStopsAtASegmentBoundary`,
+      `matchesOnName`).*
+- [x] The wishlist item's own detail screen offers a way to reach that
+      item's Sell Plan. List rows do not carry their own shortcut — see
+      the Sell Plan section for why.
+      *Erik, at sign-off: confirmed on device — the detail screen offers
+      the route and rows carry none. No automated guard exists for the
+      absence; the comments describing it were themselves corrected in
+      the pre-merge review, which is why this one is an attestation.*
+- [x] Viewing a wishlist item shows the item's own details (name,
       category, cost, notes) by default, not its Sell Plan.
-- [ ] A wishlist item's Sell Plan, opened for the first time, shows the
+      *`WishlistDetailViewModelTests.loadingDoesNotTouchTheSellPlan`.*
+- [x] A wishlist item's Sell Plan, opened for the first time, shows the
       ranked candidate pool (owned items, desire-to-keep ≤ 3, valued,
       ranked ascending by desire-to-keep, ties broken by higher current
       value) with nothing pre-selected — no automatic selection toward
       covering the estimated cost.
-- [ ] The user can add or remove any eligible owned item from the Sell
+      *`SellPlanViewModelTests` (`ranksLeastWantedFirst`,
+      `breaksTiesByHigherValueFirst`, `leavesOutItemsWithNoValueEntered`,
+      `startsWithNothingSelected`,
+      `doesNotPreselectEvenWhenOneItemWouldCoverTheCost`).*
+- [x] The user can add or remove any eligible owned item from the Sell
       Plan; changes save immediately and persist across app launches.
-- [ ] The Sell Plan shows the selected items' combined value alongside
+      *`SellPlanViewModelTests`
+      (`eachToggleIsPersistedWithoutASeparateSaveStep`,
+      `reloadingReflectsThePersistedSelection`), both through a second
+      `ModelContext` so they measure the store, not the context. A real
+      quit-and-relaunch, and the selection syncing over iCloud, verified
+      by Erik at sign-off.*
+- [x] The Sell Plan shows the selected items' combined value alongside
       the wishlist item's estimated cost. A quiet color distinction
       between "meets or exceeds the cost" and "doesn't" is acceptable;
       no text prompts the user to select more or otherwise implies
       they're expected to cover the full cost. Un-valued items are
       excluded from the candidate pool entirely.
-- [ ] Data persists across app launches and syncs across the user's
+      *`SellPlanViewModelTests` (`theTwoFiguresAreReportedSeparately`,
+      `theColourCueTurnsOverAtTheEstimate`,
+      `anEmptySelectionNeverReadsAsMeetingTheCost`,
+      `theViewModelOffersNoSurplusOrShortfallFigure`,
+      `theScreenShowsNoCopyFramingItAsAGapToClose`,
+      `leavesOutItemsWithNoValueEntered`).*
+- [x] Data persists across app launches and syncs across the user's
       devices signed into the same iCloud account.
-- [ ] Adding an item with only the required fields (name, category, price,
+      *Local: `ModelTests.itemsSurviveASaveAndRefetch`. Cross-device:
+      `T048` (an item added on one device appears on the other) and
+      `T055` (first-import and empty-account behaviour), both run by
+      Erik on real devices — results recorded in tasks.md — and
+      re-confirmed at sign-off.*
+- [x] Adding an item with only the required fields (name, category, price,
       date) takes no more than a few taps/screens from the dashboard.
+      *Route documented by
+      `TroveUITests.testAddingAnItemThroughQuickAddPutsItInTheList`:
+      Items tab → floating add → three fields → save — three taps and
+      two screens from the dashboard. Confirmed acceptable by Erik at
+      sign-off.*
 
 ## Resolved decisions
 

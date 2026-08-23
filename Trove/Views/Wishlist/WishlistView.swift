@@ -1,0 +1,447 @@
+import SwiftData
+import SwiftUI
+
+/// Browse the wishlist, per `design/screens/Trove Wishlist List.png`.
+///
+/// Follows the item list's standing layout rule from plan.md — title, summary,
+/// search and chips stay fixed, only the rows scroll — so the two list screens
+/// behave the same way.
+///
+/// **Design's per-row "59% / $990 short / $360 surplus" progress bars, and the
+/// "SELLABLE VALUE AGAINST WISHLIST" card above them, are deliberately not
+/// built.** spec.md rules out exactly that framing three times over: the Sell
+/// Plan is "advisory, not a target to hit", "full cost covered, or explicitly
+/// falling short" is named as the thing it must not imply, and an acceptance
+/// criterion forbids text implying the user is expected to cover the full
+/// cost. The mock's arithmetic also measures one sellable pool against every
+/// wishlist item independently, so the same gear reads as funding all four.
+struct WishlistView: View {
+    @State private var viewModel: WishlistViewModel
+    @State private var isAddingItem = false
+    @State private var selectedItemID: UUID?
+    @State private var isReordering = false
+
+    /// The row a swipe (or the edit-mode minus) has asked to delete, held
+    /// until the alert resolves it. The swipe-then-tap gesture is a fine
+    /// two-step on its own; what it can't do is *say* anything — and every
+    /// other delete path in the app states the cascade/nullify asymmetry
+    /// before committing, so this one does too.
+    @State private var pendingDeletion: WishlistItem?
+
+    @Environment(\.theme) private var theme
+    @Environment(\.modelContext) private var modelContext
+
+    init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
+        _viewModel = State(
+            initialValue: WishlistViewModel(modelContext: modelContext, syncMonitor: syncMonitor)
+        )
+    }
+
+    var body: some View {
+        ZStack {
+            theme.colors.background.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
+                    header
+                        .padding(.horizontal, theme.metrics.screenGutter)
+                        .padding(.bottom, theme.metrics.sectionGap - theme.metrics.controlRowGap)
+
+                    // Controls for narrowing a list need a list to narrow.
+                    // On a first run they were a search field over nothing and
+                    // a lone "All" chip, both of which made the screen look
+                    // like it had lost something rather than not started yet.
+                    if viewModel.totalCount > 0 {
+                        SearchField(placeholder: "Search wishlist", text: $viewModel.searchText)
+                            .padding(.horizontal, theme.metrics.screenGutter)
+
+                        categoryChips
+                    }
+                }
+                .padding(.top, theme.metrics.sectionGap)
+                .padding(.bottom, theme.metrics.listRowGap)
+                .background(theme.colors.background)
+
+                if let reason = viewModel.emptyReason {
+                    emptyState(reason)
+                } else {
+                    rows
+                }
+            }
+        }
+        // Floats over the rows on purpose — see plan.md's Navigation section.
+        // The list scrolls right to the bottom underneath it.
+        .overlay(alignment: .bottomTrailing) {
+            AddButton(label: "Add wanted item") { isAddingItem = true }
+                .padding(.trailing, theme.metrics.screenGutter)
+                .padding(.bottom, theme.metrics.sectionGap)
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarVisibility(.hidden, for: .navigationBar)
+        // The item's own screen is the only thing this list pushes. The Sell
+        // Plan is reached from there, not from here — `WishlistDetailView`
+        // declares that destination.
+        .navigationDestination(item: $selectedItemID) { itemID in
+            WishlistDetailView(modelContext: modelContext, itemID: itemID)
+        }
+        .sheet(isPresented: $isAddingItem, onDismiss: viewModel.load) {
+            NavigationStack { WishlistFormView(modelContext: modelContext) }
+        }
+        // Values can change on the detail screen — an edit, the gauge, or a
+        // deletion — so the list refetches whenever it comes back into view.
+        .onAppear(perform: viewModel.load)
+        // An import landing while this screen is open changes what it should
+        // show, and nothing else tells it — the view models fetch on appear
+        // and hold an array rather than observing the store.
+        .onChange(of: viewModel.completedImports) { viewModel.load() }
+        // Pull to refresh, per plan.md's CloudKit sync section: the user says
+        // when a screen should look again, rather than the screen watching the
+        // store continuously. Straight into the same load() everything else
+        // calls — no second fetch path to keep in step with this one.
+        .refreshable { viewModel.load() }
+        // The same alert, word for word, that the detail screen shows for the
+        // same action — both read from WishlistDeleteCopy, so they can't
+        // drift. An alert rather than a confirmation dialog for the same
+        // reason the detail screens chose one.
+        .alert(
+            WishlistDeleteCopy.title(for: pendingDeletion?.name ?? "this item"),
+            isPresented: Binding(
+                get: { pendingDeletion != nil },
+                set: { if !$0 { pendingDeletion = nil } }
+            ),
+            presenting: pendingDeletion
+        ) { item in
+            Button(WishlistDeleteCopy.confirm, role: .destructive) {
+                viewModel.delete(id: item.id)
+            }
+            Button(WishlistDeleteCopy.cancel, role: .cancel) {}
+        } message: { _ in
+            Text(WishlistDeleteCopy.message)
+        }
+        .onChange(of: viewModel.searchText) { viewModel.load() }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Wishlist")
+                    .font(theme.typography.screenTitle)
+                    .foregroundStyle(theme.colors.textPrimary)
+                Text(summaryLine).monoLabel()
+            }
+
+            Spacer()
+
+            // Nothing to sort or reorder on an empty list.
+            if viewModel.totalCount > 0 {
+                VStack(alignment: .trailing, spacing: 8) {
+                    sortControl
+                    if viewModel.canReorder || isReordering {
+                        reorderToggle
+                    }
+                }
+            }
+        }
+    }
+
+    /// Design's "4 WANTED · $4,740".
+    private var summaryLine: String {
+        let count = viewModel.items.count
+        return "\(count) wanted · "
+            + viewModel.totalEstimatedCostCents.formattedAsWholeCurrency(currencyCode: "USD")
+    }
+
+    private var sortControl: some View {
+        Menu {
+            ForEach(WishlistViewModel.SortOrder.allCases) { order in
+                Button {
+                    viewModel.sortOrder = order
+                    if !viewModel.canReorder { isReordering = false }
+                    viewModel.load()
+                } label: {
+                    if viewModel.sortOrder == order {
+                        Label(order.label, systemImage: "checkmark")
+                    } else {
+                        Text(order.label)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "line.3.horizontal.decrease")
+                    .font(.system(size: 12, weight: .medium))
+                Text(viewModel.sortOrder.label)
+                    .font(theme.typography.body)
+            }
+            .foregroundStyle(theme.colors.textBody)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
+                    .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
+            )
+        }
+        .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+    }
+
+    /// Dragging needs an explicit mode. Long-press-to-drag competes with
+    /// tapping a row to edit it, and a permanent set of grab handles would put
+    /// furniture on a screen that's usually just being read.
+    private var reorderToggle: some View {
+        Button {
+            isReordering.toggle()
+        } label: {
+            Text(isReordering ? "Done" : "Reorder")
+                .monoLabel(color: isReordering ? theme.colors.accentBrass : theme.colors.textQuiet)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Rows
+
+    /// A `List` purely for `onMove`; everything visible is overridden so it
+    /// reads as the same card stack the item list draws with a `LazyVStack`.
+    private var rows: some View {
+        List {
+            ForEach(viewModel.items, id: \.id) { item in
+                WishlistRow(item: item)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(
+                        top: theme.metrics.listRowGap / 2,
+                        leading: theme.metrics.listRowInset,
+                        bottom: theme.metrics.listRowGap / 2,
+                        trailing: theme.metrics.listRowInset
+                    ))
+                    .contentShape(Rectangle())
+                    // Opens the item, not the form. Tapping a row used to jump
+                    // straight to editing because there was nowhere else to
+                    // go; now that the detail screen exists it's the row's
+                    // destination, and editing is one step further in — the
+                    // same shape as the item list.
+                    .onTapGesture { selectedItemID = item.id }
+            }
+            .onMove { source, destination in
+                viewModel.move(fromOffsets: source, toOffset: destination)
+            }
+            .onDelete { offsets in
+                requestDeletion(at: offsets)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        // No bottom margin, deliberately. The add button and the tab bar are
+        // meant to sit over the last row or two when scrolled fully down —
+        // that overlap is what gives iOS 26's glass material something to
+        // refract. A margin here would buy clearance at the cost of the
+        // effect it exists to enable. plan.md says so explicitly, because
+        // this was once "fixed" the other way.
+        .environment(\.editMode, .constant(isReordering ? .active : .inactive))
+    }
+
+    /// Swipe and the edit-mode minus both hand over a single index; the alert
+    /// takes it from there. Nothing is deleted here — the view model owns that.
+    private func requestDeletion(at offsets: IndexSet) {
+        guard let index = offsets.first, viewModel.items.indices.contains(index) else { return }
+        pendingDeletion = viewModel.items[index]
+    }
+
+    // MARK: - Filter
+
+    private var categoryChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                chip(label: "All", path: "")
+                ForEach(viewModel.categoryOptions, id: \.self) { path in
+                    chip(label: viewModel.categoryLabels[path] ?? path, path: path)
+                }
+            }
+            .padding(.horizontal, theme.metrics.screenGutter)
+        }
+        .scrollClipDisabled()
+    }
+
+    private func chip(label: String, path: String) -> some View {
+        let isSelected = viewModel.categoryFilter == path
+
+        return Button {
+            viewModel.categoryFilter = path
+            if !viewModel.canReorder { isReordering = false }
+            viewModel.load()
+        } label: {
+            CategoryPathLabel(
+                path: label,
+                separatorColor: isSelected ? theme.colors.accentBrass : theme.colors.textQuiet
+            )
+                .font(theme.typography.secondary)
+                .foregroundStyle(isSelected ? theme.colors.accentBrass : theme.colors.textBody)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .background(
+                    Capsule().fill(isSelected ? theme.colors.accentBrassTint : Color.clear)
+                )
+                .overlay(
+                    Capsule().strokeBorder(
+                        isSelected ? theme.colors.accentBrass : theme.colors.divider,
+                        lineWidth: theme.metrics.hairline
+                    )
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    // MARK: - Empty
+
+    /// See `ItemListView.detail(_:)` — the filtered cases keep their context
+    /// mid-import and say they may be incomplete, rather than being replaced.
+    private func detail(_ base: String) -> String {
+        ListEmptyReason.detail(base, mayStillBeImporting: viewModel.mayStillBeImporting)
+    }
+
+    /// Every case the item list has except the un-valued one, which can't
+    /// arise here — nothing on a wishlist is owned yet, so nothing on it has a
+    /// value to be missing. The shared `ListEmptyReason` is still what decides
+    /// which, so the two screens can't end up disagreeing about what "empty"
+    /// means.
+    ///
+    /// The copy differs from the item list's throughout, because the wishlist
+    /// is about wanting rather than owning and "no gear yet" would be the wrong
+    /// sentence on a screen that never holds gear.
+    @ViewBuilder
+    private func emptyState(_ reason: ListEmptyReason) -> some View {
+        switch reason {
+        case .stillSyncing:
+            EmptyStateView(
+                mark: .stillSyncing,
+                headline: "Catching up with iCloud",
+                detail: "Your list is on its way to this device. It'll appear here as it arrives."
+            )
+
+        case .nothingAdded, .everythingIsValued:
+            EmptyStateView(
+                mark: .asset("TabWishlist"),
+                headline: "Nothing on the list yet",
+                detail: "Keep track of what you're after, and Trove can work out which gear could fund it.",
+                action: .init(label: "Add something you want", isProminent: true) { isAddingItem = true }
+            )
+
+        case .searchMatchedNothing(let query):
+            EmptyStateView(
+                mark: .system("magnifyingglass"),
+                headline: "No matches for \u{201C}\(query)\u{201D}",
+                detail: detail("Only names are searched here."),
+                action: .init(label: "Clear search") {
+                    viewModel.searchText = ""
+                    viewModel.load()
+                }
+            )
+
+        case .categoryMatchedNothing:
+            EmptyStateView(
+                mark: .system("line.3.horizontal.decrease"),
+                headline: "Nothing in this category",
+                detail: detail("The rest of your list is still here — the filter is just narrow."),
+                action: .init(label: "Show the whole list") {
+                    viewModel.categoryFilter = ""
+                    viewModel.load()
+                }
+            )
+        }
+    }
+}
+
+/// One wishlist row: what it is, its category, and what it's expected to cost.
+///
+/// **No per-row Sell Plan shortcut.** One was drawn by Design, built, and
+/// removed after seeing it: a CTA repeated down every row pushes harder toward
+/// the Sell Plan than the goal-completion framing that was already cut from
+/// the plan screen itself — the same over-prominence in another form. The plan
+/// is reached from `WishlistDetailView`'s button alone, one tap further in,
+/// which is the right trade for something meant to stay quietly available.
+/// See spec.md's Sell Plan section.
+private struct WishlistRow: View {
+    let item: WishlistItem
+
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        HStack(alignment: .top, spacing: theme.metrics.cardPadding) {
+            RowThumbnail(photos: item.photos ?? [])
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(item.name)
+                    .font(theme.typography.rowTitle)
+                    .foregroundStyle(theme.colors.textPrimary)
+                    .lineLimit(1)
+
+                Text(CategoryPathHelper.trailingSegments(of: item.categoryPath).joined(separator: " · "))
+                    .monoLabel()
+                    .lineLimit(1)
+
+                if let notes = item.notes {
+                    Text(notes)
+                        .font(theme.typography.body)
+                        .foregroundStyle(theme.colors.textQuiet)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            // Cost leads at the top, the gauge sits quietly at the bottom —
+            // the brief puts it in the row's lower-right, unlabeled. The
+            // thumbnail sets the row's height, so this column has the space
+            // for both without the row growing.
+            VStack(alignment: .trailing, spacing: 0) {
+                Text(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))
+                    .font(theme.typography.monoValue)
+                    .foregroundStyle(theme.colors.textPrimary)
+                    .lineLimit(1)
+                    .accessibilityLabel("Estimated cost \(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))")
+
+                Spacer(minLength: theme.metrics.fieldGap)
+
+                DesireGauge(value: .constant(item.desireToOwn))
+            }
+        }
+        // One element again. It was split apart while the row held a button,
+        // which combining would have swallowed; with nothing to reach in here,
+        // a single description reads better than five fragments.
+        .accessibilityElement(children: .combine)
+        .padding(theme.metrics.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
+                .fill(theme.colors.surface)
+        )
+    }
+}
+
+#Preview {
+    let container = try! ModelContainer(
+        for: TroveSchema.schema,
+        configurations: ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
+    )
+    let context = ModelContext(container)
+    for (index, wanted) in [
+        WishlistItem(name: "Leica Summicron 35mm f/2 (v4)", categoryPath: "Photography/Lenses",
+                     estimatedCostCents: 240_000, notes: "v4 only", desireToOwn: 3),
+        WishlistItem(name: "Vox AC15 Custom", categoryPath: "Music/Amps",
+                     estimatedCostCents: 105_000),
+        WishlistItem(name: "Hasselblad 80mm f/2.8 CF", categoryPath: "Photography/Lenses",
+                     estimatedCostCents: 95_000),
+    ].enumerated() {
+        wanted.sortOrder = index
+        context.insert(wanted)
+    }
+
+    return NavigationStack {
+        WishlistView(modelContext: context)
+    }
+    .environment(\.theme, .dark)
+    .environment(SyncMonitor.notSyncing)
+    .preferredColorScheme(.dark)
+}
