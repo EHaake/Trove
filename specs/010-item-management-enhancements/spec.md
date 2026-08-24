@@ -137,9 +137,13 @@ the app already uses — the wishlist's swipe and both entities' detail
 screens all confirm before committing, and `ItemListView`'s new swipe
 gesture now does too, rather than being the one path that doesn't.
 
-What the alert says is unchanged by this spec on the wishlist side
-(`WishlistDeleteCopy`, already explaining that a wishlist item's own
-Sell Plan selection goes away without touching the owned items in it).
+On the wishlist side, the alert continues to explain the same cascade
+consequence it already does (`WishlistDeleteCopy`: a wishlist item's
+own Sell Plan selection goes away without touching the owned items in
+it) — but its wording isn't unchanged: the verb unifies with the item
+side ("Delete," not "Remove"), and it gains the item alert's "This
+can't be undone" sentence, since that's equally true on the wishlist
+side. See Resolved decisions for the reasoning.
 For owned items, the confirmation should name the equivalent
 consequence — that deleting an item silently drops it out of any Sell
 Plan it was selected in — with the same specificity the wishlist side
@@ -313,8 +317,11 @@ off (with citations, matching `001`'s convention) once built.
       entry points (list swipe and detail screen's overflow menu), and
       that alert names the sell-plan cascade consequence with the same
       specificity the wishlist's existing alert has.
-- [ ] Deleting a wishlist item continues to show its existing
-      confirmation alert on both entry points, unchanged by this spec.
+- [ ] Deleting a wishlist item continues to show its confirmation
+      alert on both entry points, explaining the same consequence as
+      before — with updated wording rather than unchanged wording: the
+      verb unified with the item side ("Delete," not "Remove"), and the
+      "This can't be undone" sentence added.
 - [ ] Underlying cascade behavior is unchanged by the above: a deleted
       item's photos are removed; a deleted owned item is silently
       dropped from any Sell Plan that had selected it; a deleted
@@ -520,3 +527,18 @@ off (with citations, matching `001`'s convention) once built.
   Kept inside `010` rather than split into its own spec, since it's the
   same screen and same control; worth revisiting that call if this
   keeps growing.
+- **The wishlist alert's wording changes after all — unified verb and
+  an added undo-sentence — surfaced by implementation's T002 finding,
+  not anticipated when this spec was drafted.** The earlier "wishlist
+  side unchanged" framing was accurate when written: it rested on the
+  then-correct assumption that only the item side needed new copy.
+  T002's check of the real source complicated that — the item alert
+  already says "This can't be undone." where the wishlist's doesn't,
+  and the two entities confirmed with different verbs ("Delete" vs.
+  "Remove"). Resolved: unify on "Delete" — matching `delete(id:)` in
+  code, and not softening a permanent action — and add the
+  undo-sentence to `WishlistDeleteCopy`, since it's equally true
+  there. The wishlist-side edit is `tasks.md`'s `T010a`, split from
+  `T010` the same way `T025a` split from `T025`: a change to shipped,
+  tested content gets its own task rather than riding along inside new
+  work.
