@@ -75,8 +75,13 @@ anything gets built against a guess.
 The one schema-touching, hard-to-reverse piece of this spec. Same
 review cadence `CLAUDE.md` calls for on data-model work generally.
 
-- [ ] **T003** — Add `sortOrder: Int` (default `0`) to `Item`. *Verify:
+- [x] **T003** — Add `sortOrder: Int` (default `0`) to `Item`. *Verify:
       `xcodebuild build` succeeds.*
+      Done 2026-08-23: stored property plus an `init` parameter,
+      mirroring `WishlistItem.sortOrder`'s exact shape (scalar with a
+      default, no optionality needed for CloudKit). Placed with the
+      other user-facing scalars; doc comment notes pre-`010` rows sit
+      at 0 until T005's backfill. `** BUILD SUCCEEDED **`.
 - [ ] **T004** — Confirm `CloudKitSchemaTests` still validates against
       the updated schema. *Verify: `xcodebuild test` green — this is an
       existing test, not a new one; it should just keep passing.*
