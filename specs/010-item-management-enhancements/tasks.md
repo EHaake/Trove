@@ -136,6 +136,11 @@ review cadence `CLAUDE.md` calls for on data-model work generally.
       existing delete tests still pass; manual swipe-delete on
       `WishlistView` shows the same alert and deletes correctly as
       before the conversion.*
+      Considered and declined in review (2026-08-23): a VoiceOver
+      spot-check in this verify step. Raised because the conversion
+      trades `.onDelete`'s system-synthesized "Delete" custom action
+      for hand-built buttons (per Apple's `swipeActions` doc); declined
+      on record, not overlooked.
 - [ ] **T017** — Update `ItemDetailView`'s delete confirmation to read
       from `ItemDeleteCopy` instead of whatever it currently has.
       *Verify: manual — delete via the detail screen's overflow menu,
@@ -219,9 +224,10 @@ review cadence `CLAUDE.md` calls for on data-model work generally.
       before T028 — but not after. *Verify: documented finding,
       recorded inline here the way T001's was, before T028 executes.
       Determines whether the docs need correcting: if edit mode does
-      expose an accessible reorder path, spec.md's Non-goals entry (and
-      its matching acceptance criterion, and plan.md's
-      known-limitations section) mustn't read as "a known gap, never
+      expose an accessible reorder path, spec.md's Non-goals entry, its
+      acceptance criterion beginning "Neither list's drag-to-reorder
+      gesture has a VoiceOver-accessible equivalent," and plan.md's
+      known-limitations section mustn't read as "a known gap, never
       existed" — they need to say an accessible path existed via edit
       mode and `010` removed it deliberately alongside the button. If
       VoiceOver exposes nothing useful there today, the current framing
@@ -293,6 +299,10 @@ references the actual token table now, not a placeholder pointer to
       "Duplicate," on screen. *Verify: manual, both screens, icons
       render at the sizes/strokes in `tokens.md`'s "Swipe-action rows"
       table.*
+      Considered and declined in review (2026-08-23): a
+      label-preservation note here (VoiceOver names swipe actions by
+      their button labels; icon-only buttons fall back to the symbol's
+      default description). Declined on record, not overlooked.
 - [ ] **T037** — `DesireGauge` legibility fix, per `tokens.md`'s "The
       desire gauge's stepped ramp" table — ascending segment heights,
       the per-row "DESIRE" legend, the new `accentBrassMid` fill tone.
