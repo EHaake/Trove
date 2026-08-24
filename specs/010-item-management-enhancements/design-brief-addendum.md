@@ -1,5 +1,18 @@
 # Design Brief Addendum: Item Management Enhancements (010)
 
+**Status: superseded — kept as historical record, not current
+guidance.** This was the kickoff brief handed to Claude Design before
+any of it was resolved; that pass is complete now. Real values are in
+`tokens.md` (row treatment, sort picker, `DesireGauge`, swipe-action
+rows), the actual decisions and reasoning are in `spec.md`'s and
+`plan.md`'s Resolved decisions. One specific thing below is now flatly
+wrong, not just superseded: item 1's stated constraint ("no bevels...
+no drop shadows") no longer holds — `brief.md`'s skeuomorphism section
+was itself amended during this spec to permit the treatment Design
+actually produced (see `brief.md`'s own "Amended in `010`" note). Read
+this document for what was originally asked; read `tokens.md` and the
+two Resolved decisions sections for what's actually true.
+
 For Claude Design. This is an **addendum** to `design/brief.md`, not a
 replacement — everything in the original brief still governs (palette,
 typography, the desire dial as signature element, the skeuomorphism
