@@ -66,6 +66,9 @@ anything gets built against a guess.
       be undone." exists only on the item side — keep/drop is T010's
       call, worth making deliberately since `011-recycle-bin` would
       eventually make the sentence false.
+      Both calls settled in review (2026-08-23): the verb unifies on
+      "Delete" across both entities, and the undo sentence stays — and
+      is added to the wishlist side too. Recorded at T010/T010a.
 
 ## Phase 1 — Data model: `Item.sortOrder` (foundational — review every task)
 
@@ -120,6 +123,36 @@ review cadence `CLAUDE.md` calls for on data-model work generally.
       ("This item will be removed, along with its photos. If it's part
       of a Sell Plan, it'll no longer be included there.") if not.
       *Verify: single source exists; not yet wired to either call site.*
+      Settled (2026-08-23), superseding the two branches above: T002
+      found the alert halfway, so T010 extends the existing inline copy
+      (title "Delete \(name)?", buttons "Delete"/"Keep", message "Its
+      photos go too. This can't be undone.") with the Sell Plan
+      consequence sentence spec.md requires — rather than extracting
+      as-is or writing plan.md's proposal from scratch. Item side only;
+      the wishlist-side copy changes settled in the same review are
+      T010a's, not folded in here.
+- [ ] **T010a** — Apply the two settled delete-copy decisions to
+      `WishlistDeleteCopy` — a change to already-shipped, tested
+      content, split out from T010 the same way T025a is split from
+      T025: the title verb and confirm button change from "Remove" to
+      "Delete" ("Keep" stays), matching `ItemDetailView`'s existing
+      alert, and "This can't be undone." is added to the message —
+      already true there today. Includes updating any existing tests
+      that assert on the current "Remove" strings or on the message
+      without the undo sentence (001's copy assertions —
+      `DeletionGuardTests`' shared-copy checks and
+      `WishlistDeletionTests` — are the known suspects; grep for the
+      old strings to catch any others). Note: spec.md currently says
+      the wishlist alert is unchanged in two places — the delete flow's
+      "What the alert says is unchanged by this spec on the wishlist
+      side" paragraph, and the criterion beginning "Deleting a wishlist
+      item continues to show its existing confirmation alert" — both
+      predate this decision and need amending when this task executes,
+      so the docs don't contradict what ships. *Verify: `xcodebuild
+      test` green; grep afterward confirms no live assertion or
+      delete-confirmation string still reads "Remove" (unrelated uses
+      of the word are fine); the wishlist alert on both entry points
+      shows the new verb and the undo sentence.*
 - [ ] **T011** — Test confirming `ItemDeleteCopy`'s content actually
       names the Sell Plan consequence, mirroring however
       `WishlistDeleteCopy`'s content is already asserted today.
