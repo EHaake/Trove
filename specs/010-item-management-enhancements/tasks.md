@@ -100,13 +100,32 @@ first place, not T003 or T004 on their own merits.
       log noise in the run is the simulator's (no iCloud account), not
       the validator's — the test needs no account, per its own doc
       comment.
-- [ ] **T005** — Backfill routine: on launch, if `hasBackfilledItemSortOrder`
+- [x] **T005** — Backfill routine: on launch, if `hasBackfilledItemSortOrder`
       (`UserDefaults`) is unset, fetch all `Item`s ordered by `createdAt`
       ascending, assign sequential `sortOrder` values, save, set the
       flag. Never re-runs once set, regardless of what the stored
       values look like. *Verify: manual — fresh install with existing
       items gets sequential, `createdAt`-ordered `sortOrder` on first
       launch.*
+      Done 2026-08-23. `ItemSortOrderBackfill` lives in
+      `TroveStore.swift` (plan.md's file structure says no new files
+      beyond the two named), called from `TroveApp.init` with `try?` —
+      the flag flips only *after* a successful save, so a failed
+      backfill stays unclaimed and the next launch retries. One
+      decision plan.md didn't anticipate: the ephemeral (`-uiTesting`)
+      store is skipped entirely and never sets the flag — a UI-test
+      launch that burned the flag against its throwaway store would
+      stop the device's real store from ever being backfilled.
+      Verified on the simulator against the real persistent store, all
+      three legs: (1) first launch on the empty store ran it and set
+      the flag; (2) with the flag set and three seeded items sitting
+      at 0/0/0, a relaunch left them untouched — no re-run, even
+      though the values don't "look backfilled"; (3) with the flag
+      removed (sim shut down, plist edited, rebooted — the
+      fresh-install-with-existing-items simulation), the next launch
+      assigned Alpha=0, Bravo=1, Charlie=2 in `createdAt` order and
+      set the flag again. Read from the store file with sqlite3, not
+      inferred from the UI.
 - [ ] **T006** — Unit tests for the backfill routine: the fresh-install
       case (sequential, correctly ordered); the already-flagged case —
       including a version that seeds an already-user-customized order
