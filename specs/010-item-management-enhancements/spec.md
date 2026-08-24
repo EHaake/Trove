@@ -7,11 +7,11 @@
 
 Brings the owned-items list to full behavioral parity with the
 wishlist — swipe-to-delete, swipe-revealed Edit and Duplicate, and
-manual drag-to-reorder via a "Yours" sort option matching wishlist's
+manual drag-to-reorder via a "Custom" sort option matching wishlist's
 own convention — extends the existing delete-confirmation model to
 every delete path consistently (rather than removing it), removes the
 wishlist's now-redundant "Reorder" button, expands the wishlist's own
-sort options ("Desire" and "Alphabetical" alongside "Yours" and
+sort options ("Desire" and "Alphabetical" alongside "Custom" and
 "Cost"), and gives the list rows and the `DesireGauge` a real visual
 refinement pass.
 This started as an interaction-parity and design-refinement spec and
@@ -38,21 +38,22 @@ refinement rather than a new feature concept.
    the one exception, cleared on owned items — inserted into the list
    with no forced navigation.
 5. Give `ItemListView` the same manual drag-to-reorder capability
-   `WishlistView` already has: a "Yours" option in the sort picker
+   `WishlistView` already has: a "Custom" option in the sort picker
    (alongside desire-to-keep, value, and purchase date) that shows the
    list in its manual order and enables press-and-hold-then-drag —
-   matching exactly how `WishlistView` already exposes its own "Yours"
+   matching exactly how `WishlistView` already exposes its own "Custom"
    mode. Full behavioral parity between the two lists, not just a
    shared gesture vocabulary. Neither list gets a separate "Reorder"
    entry-point button; the sort picker is the whole entry point on
    both.
 6. Give list rows on both screens a small amount of additional visual
-   depth/character, without crossing into anything `design/brief.md`'s
-   "explicitly not skeuomorphic" section already rules out.
+   depth/character. Ended up requiring an amendment to
+   `design/brief.md`'s skeuomorphism section rather than fitting inside
+   its original wording — see Resolved decisions.
 7. Improve `DesireGauge`'s at-a-glance legibility as a *desire*
    indicator specifically — not just "three boxes" — via a real Claude
    Design pass.
-8. Expand `WishlistView`'s sort options beyond "Yours" and "Cost": add
+8. Expand `WishlistView`'s sort options beyond "Custom" and "Cost": add
    "Desire" (by desire-to-own) and "Alphabetical" (by name), plus
    whatever else makes sense for a personal wishlist. Reverses `001`'s
    deliberate decision not to offer a desire-based sort — see Resolved
@@ -205,18 +206,20 @@ Same shape as above, adjusted for the entity:
 
 Both `ItemListView` and `WishlistView` support manual drag-to-reorder
 via the same native press-and-hold-then-drag gesture directly on a
-row, entered the same way on both screens: a "Yours" option in the
+row, entered the same way on both screens: a "Custom" option in the
 sort picker, matching `WishlistView`'s existing convention (previously
-"Yours" and "Cost"; now also "Desire" and "Alphabetical" — see below).
-Selecting "Yours" shows the list in its manual order and enables the
+"Yours" and "Cost," "Yours" renamed to "Custom" as part of this spec —
+see Resolved decisions; now also "Desire" and "Alphabetical" — see
+below).
+Selecting "Custom" shows the list in its manual order and enables the
 drag gesture; selecting anything else hides it. This is new capability
-for `ItemListView`, which had no manual order or "Yours" option at all
+for `ItemListView`, which had no manual order or "Custom" option at all
 before this spec (see Resolved decisions for why that reverses an
 earlier non-goal); `WishlistView` already has both, minus the
 redundant "Reorder" button being removed alongside this change.
 
 Switching to a different sort doesn't discard the manual order
-underneath — selecting "Yours" again shows it exactly as last
+underneath — selecting "Custom" again shows it exactly as last
 arranged.
 
 Existing owned items need a sensible starting manual order the first
@@ -228,26 +231,26 @@ Neither list's reordering has a VoiceOver-accessible entry point today
 
 ### Wishlist sort options, expanded
 
-`WishlistView`'s sort picker gains two new options alongside "Yours"
+`WishlistView`'s sort picker gains two new options alongside "Custom"
 and "Cost": "Desire" (by desire-to-own) and "Alphabetical" (by name,
 case-insensitive, matching how the app already treats free-typed text
 elsewhere). This reverses a decision `001` shipped and tested — see
 Resolved decisions for why that's a deliberate, confirmed choice, not
 an oversight.
 
-Tie-break, confirmed: manual order breaks ties within any non-"Yours"
+Tie-break, confirmed: manual order breaks ties within any non-"Custom"
 sort — a tier of same-desire wishlist items (there are only three
 tiers, so ties are the common case, not an edge case) shows in
 whatever relative order they currently hold manually; two
 identically-named items under "Alphabetical" resolve the same way. One
 rule for every sort mode rather than a different one each, and it gives
-"Yours" a second job as the fallback ordering everything else falls
+"Custom" a second job as the fallback ordering everything else falls
 back on.
 
 "Desire" and "Alphabetical" compose with category filtering exactly
 like "Cost" already does — filter to a category and sort by Desire at
 the same time, both active together, the same as every existing
-attribute sort already allows. This is unlike "Yours": manual
+attribute sort already allows. This is unlike "Custom": manual
 drag-to-reorder remains filter-incompatible, per the existing guard —
 dragging is only offered against the list's full, unfiltered manual
 order, since reordering a filtered view would silently misorder items
@@ -263,36 +266,41 @@ added" (by creation date) is a plausible candidate, not decided.
 ### Browsing either list
 
 Rows read with a bit more visual depth than the current flat rectangle;
-exact treatment lives in the design-brief addendum.
+exact treatment in `tokens.md`'s "Row treatment" table.
 
 ## Design requirements
 
-Visual specifics (row treatment, `DesireGauge` legibility, the sort
-pickers on both screens, and any new iconography for the swipe
-actions) belong to a design-brief addendum and a real Claude Design
-pass, not this spec — but each needs to clear a stated bar:
+Visual specifics for all four items below have gone through a real
+Claude Design pass and are resolved — real values live in `tokens.md`
+and `design/icons/`, not restated here. What follows is the bar each
+was held to, kept for context on why the chosen treatment looks the
+way it does, not as still-open requirements.
 
 - **Row treatment**: more perceived depth/life than the current flat
-  rectangle, without crossing into anything `brief.md`'s "explicitly
-  not skeuomorphic" section already rules out by name (no bevels or
-  embossing, no drop shadows simulating a raised physical control).
-  Subtle is the target — "slightly nicer," not a redesign. `tokens.md`'s
-  existing `surfaceInset` token is a plausible starting vehicle, not a
-  locked answer.
-- **Sort picker on both screens**: `ItemListView` gains a fourth option
-  ("Yours"), `WishlistView` gains a third and fourth ("Desire",
-  "Alphabetical") — both pickers now need to read cleanly with more
-  options than they were designed for, without becoming its own source
-  of clutter. The entry-point *mechanism* is resolved (a sort option,
-  not a separate control); how it reads with four options in it isn't.
+  rectangle. Chosen treatment (a cast shadow plus inset bevel) required
+  amending `brief.md`'s skeuomorphism section, not just interpreting
+  the original bar generously — see Resolved decisions. `brief.md`'s
+  updated section is the current, accurate constraint; the original
+  "no bevels, no drop shadows" framing this bullet used to state is no
+  longer the rule.
+- **Sort picker on both screens**: `ItemListView` gained a fourth
+  option ("Custom"), `WishlistView` a third and fourth ("Desire",
+  "Alphabetical"). Resolved cleanly — the actual pattern is a compact
+  badge that opens a dropdown, so its footprint doesn't grow with
+  option count; the "does four options crowd the header" concern this
+  bullet used to flag turned out not to apply.
 - **`DesireGauge`**: reads as a *desire* indicator specifically to
   someone encountering it without prior context, while remaining the
   flat/graphic three-segment control already described in `brief.md`
-  and `plan.md` — a legibility fix, not a request to redesign the
-  control's underlying shape.
-- **New swipe-action iconography** (Edit, Duplicate, Delete) should
-  feel like it belongs to the same flat/graphic instrument language the
-  tab icons and `AddButton` already established (`T044`).
+  and `plan.md`. Resolved by keeping the same sheared-segment shape and
+  adding two things: ascending height per segment, and a per-row
+  "DESIRE" legend in dimmed mono type. The legend is a deliberate
+  reversal of `001`'s "unlabeled in list rows" decision, not a
+  loophole around "a legibility fix, not a redesign" — see Resolved
+  decisions.
+- **New swipe-action iconography** (Edit, Duplicate, Delete): done,
+  in `design/icons/`, matching the tab icons and `AddButton`'s
+  flat/graphic language.
 
 ## Acceptance criteria
 
@@ -332,33 +340,36 @@ off (with citations, matching `001`'s convention) once built.
 - [ ] Manual order on `ItemListView` persists across app launches and
       syncs across devices, the same as `WishlistView`'s `sortOrder`
       already does.
-- [ ] Dragging to reorder is only available while "Yours" is selected
+- [ ] Dragging to reorder is only available while "Custom" is selected
       on either screen — not while `ItemListView` is sorted by
       desire-to-keep, value, or purchase date, or `WishlistView` by
       Cost, Desire, or Alphabetical, and not while either list is
       filtered by category or search.
-- [ ] Selecting a different sort and returning to "Yours" shows the
+- [ ] Selecting a different sort and returning to "Custom" shows the
       manual order exactly as last arranged — it isn't discarded.
 - [ ] Existing owned items have a sensible, non-tied starting manual
       order the first time this ships.
 - [ ] `WishlistView`'s sort picker offers "Desire" and "Alphabetical"
-      in addition to "Yours" and "Cost."
-- [ ] Ties within a non-"Yours" sort (e.g., two wishlist items at the
+      in addition to "Custom" and "Cost."
+- [ ] Ties within a non-"Custom" sort (e.g., two wishlist items at the
       same desire tier) resolve by manual order — the confirmed
       tie-break, not left open.
 - [ ] "Desire" and "Alphabetical" sorts on `WishlistView` compose with
       category filtering exactly like "Cost" already does — both active
-      simultaneously. "Yours" remains the one mode that requires an
+      simultaneously. "Custom" remains the one mode that requires an
       unfiltered, unsearched view, per the existing guard.
 - [ ] Neither list's drag-to-reorder gesture has a VoiceOver-accessible
       equivalent; this is documented as a known gap, not silently
       dropped from the record.
 - [ ] List rows on both screens read with more visual depth than a flat
-      rectangle, per the design-brief addendum, without introducing
-      treatment `brief.md` rules out.
+      rectangle, per `tokens.md`'s "Row treatment" table, and stay
+      inside `brief.md`'s current (post-`010`-amendment) skeuomorphism
+      boundary — no metallic gradients, wood/leather texture, screws,
+      stitching, or photorealism, though restrained depth cues like the
+      chosen treatment are now permitted.
 - [ ] `DesireGauge` reads as a desire-specific indicator to someone
-      encountering it without prior context, per the design-brief
-      addendum.
+      encountering it without prior context, per `tokens.md`'s "The
+      desire gauge's stepped ramp" table.
 
 ## Resolved decisions
 
@@ -383,10 +394,45 @@ off (with citations, matching `001`'s convention) once built.
   `Photo` rows, not a shared reference — see Entities) is accepted
   knowingly, not an oversight.
 - **Both swipe directions ship on both lists** — not owned items only.
-- **Row visual treatment stays inside `brief.md`'s existing
-  no-bevel/no-drop-shadow constraint**; the exact mechanism is a
-  design-brief-addendum and Claude Design decision, not resolved in
-  this spec.
+- **Row treatment amends `brief.md` rather than staying inside it —
+  reversed from an earlier draft of this spec.** This document
+  originally stated row treatment would stay inside `brief.md`'s
+  existing no-bevel/no-drop-shadow constraint. That held until Design
+  produced a real, chosen treatment (a cast shadow plus inset bevel)
+  and the person steering this project confirmed the original
+  flat-only reading was an assumption about the limits of flat design,
+  not a permanent boundary — Trove's visual identity is expected to
+  keep evolving. `brief.md`'s skeuomorphism section was amended
+  accordingly: narrowed, not deleted. Restrained alpha-based depth is
+  now permitted; literal materiality (metallic gradients, wood/leather
+  texture, screws, stitching, photorealism) still isn't. Real values in
+  `tokens.md`'s "Row treatment" table.
+- **`DesireGauge` gains a per-row "DESIRE" legend — reversing `001`'s
+  explicit "unlabeled in list rows" decision, not just refining the
+  control.** `001`'s own `spec.md` states this plainly: the gauge
+  "renders as an unlabeled three-segment gauge in wishlist rows... where
+  it sits in the row's lower-right" — a deliberate choice made because a
+  label repeating down every row is noise. `010` reverses it on
+  purpose: the redesigned gauge (same sheared-segment shape, extended
+  with ascending height and the legend) ships with a small, dimmed-font
+  legend on every row specifically to close the legibility gap `001`'s
+  own sign-off flagged, without repeating the earlier "full-weight
+  repeated text is noise" mistake the dimmed treatment is meant to
+  avoid. Explicitly provisional, in the words of the person steering
+  this spec — easy to remove if it reads as noisier in the running app
+  than in Design's mockup.
+- **Two naming mismatches inside Design's own approved output,
+  resolved differently from each other on purpose.** The swipe-action
+  icon set labels the middle action "Duplicate," but the actual
+  swipe-reveal button says "Copy" — kept as designed: "Duplicate"
+  stays this document's name for the action (matching `duplicate(id:)`
+  in `plan.md`/`tasks.md`), "Copy" is the on-screen string only, the
+  same relationship `desireToKeep` already has to its displayed form.
+  "Yours" vs. "Custom" resolved the opposite way — see the dedicated
+  entry above — because the reasoning behind it was different: a
+  genuine concept-level confusion, not a button-length preference,
+  confirmed by the person who built the app finding "Yours" unclear in
+  their own early use of it.
 - **`DesireGauge` legibility gets a real Design pass inside this spec**
   rather than splitting into its own spec — the reasoning being that
   `010` is already Trove's first dedicated post-v1 UI-refinement spec,
@@ -422,17 +468,18 @@ off (with citations, matching `001`'s convention) once built.
   known gap (see Non-goals), matching `001`'s convention for `plan.md`
   "known limitation" sections, rather than blocking this spec on fixing
   it or letting it go unrecorded.
-- **`ItemListView`'s "Yours" sort option resolves what was previously
+- **`ItemListView`'s "Custom" sort option resolves what was previously
   an open design question** (how a user enters manual-order mode) —
   same convention `WishlistView` already established, a sort-picker
   option rather than a separate control. Confirms the earlier read on
-  `WishlistView`'s own button, too: "Yours" was always the real entry
+  `WishlistView`'s own button, too: "Custom" was always the real entry
   point underneath it; the button was genuinely redundant with it, not
   a guess.
-- **`WishlistView`'s sort options expand from two ("Yours"/"Cost") to
-  at least four — reversing a decision `001` shipped and tested, not
-  just an earlier draft of `010`.** `001`'s `spec.md` states plainly
-  that desire-to-own "does not affect list ordering," backed by
+- **`WishlistView`'s sort options expand from two ("Yours"/"Cost", as
+  `001` actually shipped them — renamed to "Custom" later in `010`, see
+  below) to at least four — reversing a decision `001` shipped and
+  tested, not just an earlier draft of `010`.** `001`'s `spec.md` states
+  plainly that desire-to-own "does not affect list ordering," backed by
   `WishlistViewModelTests.theSortControlOffersNoRatingOption` — a test
   written specifically to assert the sort control does *not* offer a
   desire-based mode. The reasoning on record: a 1–3 scale produces
@@ -447,15 +494,24 @@ off (with citations, matching `001`'s convention) once built.
   describe what was true when `001` shipped — but `010` now supersedes
   that specific decision going forward, recorded here so the two specs
   don't read as contradicting each other by accident.
-- **Tie-break for every non-"Yours" sort, confirmed: manual order.**
+- **"Yours" renamed to "Custom" throughout — a real product decision,
+  not a cosmetic one.** Confirmed directly by the person steering this
+  project: "Yours" was unclear as a *concept*, not just wordy as a
+  button — confusing even to them in early use of the real, shipped
+  app, which is why "Custom" was proposed to Claude Design in the first
+  place. Every "Yours" in this document has been renamed accordingly,
+  including the `WishlistView` sort option that's been live since `001`
+  — this is a rename of existing, shipped behavior, not just new
+  naming for `010`'s additions (see `tasks.md`'s `T025a`).
+- **Tie-break for every non-"Custom" sort, confirmed: manual order.**
   Weighed and decided, not left as a `plan.md` open question — a
   desire-based sort is worth having despite the ties a 3-tier scale
   produces, and manual order is a good enough answer for what breaks
-  them: it needs no new rule of its own, and it gives "Yours" a second
+  them: it needs no new rule of its own, and it gives "Custom" a second
   job as the fallback underneath every other sort. Confirmed alongside
   this: "Desire" and "Alphabetical" compose with category filtering
   exactly like "Cost" already does — filter and attribute-sort both
-  active at once, no special-casing. Only "Yours" keeps the existing
+  active at once, no special-casing. Only "Custom" keeps the existing
   filter-incompatibility guard, since dragging against a filtered view
   risks silently misordering items not currently on screen.
 - **Scope note**: the sort-option expansion isn't required to give
