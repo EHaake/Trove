@@ -149,27 +149,46 @@ review cadence `CLAUDE.md` calls for on data-model work generally.
 - [ ] **T022** — Unit tests for `WishlistViewModel.duplicate(id:)`,
       mirroring T020. *Verify: `xcodebuild test` green.*
 - [ ] **T023** — Wire `.swipeActions(edge: .leading)` on `ItemListView`:
-      Edit (opens `ItemFormView` pre-filled) and Duplicate. *Verify:
-      manual — swipe right, tap Edit, confirm the form opens correctly
-      pre-filled; tap Duplicate, confirm a correct copy appears in the
-      list with no navigation and no confirmation step.*
+      Edit (opens `ItemFormView` pre-filled) and Duplicate. On-screen
+      button text is "Copy," not "Duplicate" — "Duplicate" stays the
+      name used in code and docs (`duplicate(id:)`, this file), "Copy"
+      is Design's chosen on-screen string specifically, per `plan.md`'s
+      Resolved decisions. *Verify: manual — swipe right, tap Edit,
+      confirm the form opens correctly pre-filled; tap Copy, confirm a
+      correct duplicate appears in the list with no navigation and no
+      confirmation step.*
 - [ ] **T024** — Wire `.swipeActions(edge: .leading)` on `WishlistView`:
-      Edit and Duplicate, same shape as T023 for wishlist items.
-      *Verify: manual, same checks as T023 against `WishlistFormView`.*
+      Edit and Duplicate, same shape and same "Copy" button-text note as
+      T023, for wishlist items. *Verify: manual, same checks as T023
+      against `WishlistFormView`.*
 
 ## Phase 5 — Manual reorder parity
 
-- [ ] **T025** — Add a "Yours" case to `ItemListViewModel`'s
+- [ ] **T025** — Add a "Custom" case to `ItemListViewModel`'s
       sort-option type; a reorder method routing through
       `ManualOrderHelper`. *Verify: `xcodebuild build` succeeds.*
+- [ ] **T025a** — Rename `WishlistViewModel`'s *existing*, already-shipped
+      "Yours" sort case/display string to "Custom" — a rename, not an
+      addition, since this case already exists and ships in production
+      today. Confirmed directly by the person steering this project: the
+      name "Yours" was unclear even to them in early use of the real app,
+      which is why "Custom" was proposed to Design in the first place.
+      Includes updating any existing `WishlistViewModelTests` that
+      reference the old case name or assert on the string "Yours"
+      anywhere (sort-option tests, snapshot-style assertions, etc.) — a
+      rename that leaves a stale test still passing on the old string is
+      a false negative waiting to happen. *Verify: `xcodebuild build`
+      succeeds; `xcodebuild test` green; grep the test target for
+      "Yours" afterward and confirm nothing real remains (a historical
+      comment explaining the rename is fine, a live assertion is not).*
 - [ ] **T026** — Unit tests: dense/unique invariant on
       `ItemListViewModel`'s new reorder method (mirroring
       `WishlistViewModelTests`'s existing shape via the shared helper);
-      confirms drag-reorder is only meaningful while sort is "Yours."
+      confirms drag-reorder is only meaningful while sort is "Custom."
       *Verify: `xcodebuild test` green.*
 - [ ] **T027** — Wire `.onMove` on `ItemListView`, attached only when
-      the active sort is "Yours" — hidden, not just disabled,
-      otherwise. *Verify: manual — select "Yours," drag to reorder,
+      the active sort is "Custom" — hidden, not just disabled,
+      otherwise. *Verify: manual — select "Custom," drag to reorder,
       confirm it persists across a relaunch; select any other sort,
       confirm dragging is unavailable.*
 - [ ] **T028** — Remove `WishlistView`'s "Reorder" button from the
@@ -178,7 +197,7 @@ review cadence `CLAUDE.md` calls for on data-model work generally.
       `WishlistView` exactly as before, with no separate entry point
       needed.*
 - [ ] **T029** — Manual verification, both screens: switching away from
-      "Yours" and back preserves the manual order exactly as last
+      "Custom" and back preserves the manual order exactly as last
       arranged; dragging is unavailable while filtered or searched.
 
 ## Phase 6 — Wishlist sort expansion
@@ -205,36 +224,57 @@ review cadence `CLAUDE.md` calls for on data-model work generally.
       filtering to a category while sorted by Desire or Alphabetical
       narrows correctly without losing the sort.
 
-## Phase 7 — Visual refinement (blocked on the design-brief addendum)
+## Phase 7 — Visual refinement
 
-**Do not start this phase until `design/brief-addendum-010.md` has
-actually been through Claude Design and produced real screens/tokens.**
-Everything below assumes that output exists — building against a guess
-here means redoing it once real output arrives.
+**No longer blocked** — `design/elements/010-item-management/` has real
+output from an approved Design pass, and the real values are already
+extracted into `tokens.md` and `design/brief.md` (which was itself
+amended to permit the chosen row treatment — see below). Each task
+references the actual token table now, not a placeholder pointer to
+"Design's output."
 
-- [ ] **T034** — Row treatment (both lists), per Design's output.
-      *Verify: manual, checked against Design's actual output **and**
-      against `brief.md`'s no-bevel/no-drop-shadow constraint directly
-      — Design's session may not perfectly reflect current reality (see
-      the addendum's own note on this), so don't treat its output as
-      automatically correct. Flag and resolve toward correctness, not
-      silently, if the two disagree.*
-- [ ] **T035** — Sort picker visual treatment (both screens, four
-      options each), per Design's output. *Verify: manual, both
-      screens.*
-- [ ] **T036** — Swipe-action iconography (Edit, Duplicate, Delete), per
-      Design's output. *Verify: manual, both screens.*
-- [ ] **T037** — `DesireGauge` legibility fix, per Design's output.
-      *Verify: manual — check the unlabeled in-row version specifically
-      (the one the fix targets), confirm it reads as a desire indicator
-      without prior context.*
+- [ ] **T034** — Row treatment (both lists), per `tokens.md`'s "Row
+      treatment" table (box-shadow, radius, padding, thumbnail size).
+      Applies uniformly whether a row is resting or swiped open — the
+      swipe-reveal mockup showed a plain-bordered row, but that was
+      illustrating the gesture, not final row chrome (see `plan.md`).
+      *Verify: manual, checked against `tokens.md`'s exact values, and
+      against `design/brief.md`'s current skeuomorphism section — which
+      now permits restrained alpha-based depth like this treatment,
+      following its `010` amendment, but still rules out literal
+      materiality (metallic gradients, wood/leather texture, screws,
+      stitching, photorealism). The old "no bevels, no drop shadows"
+      reading of `brief.md` no longer applies; don't check against it.*
+- [ ] **T035** — Sort picker visual treatment (both screens), per
+      `tokens.md`. Compact badge showing the current sort, opening a
+      dropdown of options on tap — confirmed not to have a crowding
+      problem at four options, since the badge's footprint doesn't grow
+      with option count. *Verify: manual, both screens, all four options
+      each.*
+- [ ] **T036** — Swipe-action iconography (Edit, Duplicate, Delete) —
+      already added to `design/icons/`; this task is wiring them into
+      the actual swipe-action buttons from T023/T024/T015, not designing
+      them. Remember the button-text note from T023: "Copy," not
+      "Duplicate," on screen. *Verify: manual, both screens, icons
+      render at the sizes/strokes in `tokens.md`'s "Swipe-action rows"
+      table.*
+- [ ] **T037** — `DesireGauge` legibility fix, per `tokens.md`'s "The
+      desire gauge's stepped ramp" table — ascending segment heights,
+      the per-row "DESIRE" legend, the new `accentBrassMid` fill tone.
+      The legend is a deliberate reversal of `001`'s "unlabeled in list
+      rows" decision, not an oversight — see `spec.md`'s Resolved
+      decisions. *Verify: manual — check the unlabeled-but-now-legended
+      in-row version specifically (the one the fix targets), confirm it
+      reads as a desire indicator without prior context, confirm the
+      legend text is genuinely dimmed (not full-weight) per the token
+      values.*
 
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and
       detail-menu delete on both entities (confirm identical alert copy
       per entity); swipe-edit and swipe-duplicate on both lists; manual
-      reorder on both lists via "Yours," including switching sorts away
+      reorder on both lists via "Custom," including switching sorts away
       and back; all four wishlist sort options, including a tie case;
       the Phase 7 visual treatment, on a real device.
 - [ ] **T039** — Invoke the `skeptical-reviewer` subagent against the
@@ -253,10 +293,7 @@ something like:
 > {spec,plan,tasks}.md`, then begin implementing starting at T001. For
 > Phases 0–1, stop for review after each individual task — this is
 > verification and schema-touching work. From Phase 2 onward, stop
-> after each phase instead. Phase 7 needs the design-brief addendum's
-> real output first; if that isn't ready yet, do Phase 8's regression
-> pass against everything through Phase 6, and come back to Phase 7
-> once Design's output exists.
+> after each phase instead.
 
 ## Model and effort per phase
 
