@@ -88,7 +88,7 @@ Once it's a `List`:
 - `.swipeActions(edge: .trailing)` — Delete, behind the shared
   confirmation alert (see `ItemDeleteCopy` below).
 - `.swipeActions(edge: .leading)` — Edit, Duplicate.
-- `.onMove` — attached only while the active sort is `.yours`; hidden
+- `.onMove` — attached only while the active sort is `.custom`; hidden
   (not just disabled) otherwise, mirroring how `WishlistView` already
   gates its own manual-order mode.
 
@@ -108,12 +108,12 @@ per `CLAUDE.md`'s "one source of truth" instinct.
 - `.swipeActions(edge: .leading)` — Edit, Duplicate (new; trailing
   delete swipe is unchanged in behavior, only possibly unified in
   mechanism per the note above).
-- Sort picker gains "Desire" and "Alphabetical" alongside "Yours" and
+- Sort picker gains "Desire" and "Alphabetical" alongside "Custom" and
   "Cost."
 
 ### `ItemListViewModel`
 
-- New sort case for manual/"Yours" mode, added to whatever the existing
+- New sort case for manual/"Custom" mode, added to whatever the existing
   sort-option type is actually called in source — not guessing a name
   here, reconcile against the real enum.
 - `delete(id:)` — new. Must live here, not inline in a swipe button's
@@ -175,7 +175,7 @@ scratch." Proposed copy, to use if new copy turns out to be needed:
 Matches `WishlistDeleteCopy`'s plain, consequence-naming voice rather
 than inventing a new tone for one screen.
 
-### Visual specifics — mostly resolved from the actual Design export
+### Visual specifics — fully resolved
 
 Updated from the earlier placeholder now that
 `design/elements/010-item-management/` contains real HTML, not just a
@@ -184,7 +184,7 @@ screenshots — corrected one of this document's own earlier guesses in
 the process (row corner radius stayed `3px`, unchanged from `001`; an
 eyeballed read of the screenshot alone had suggested otherwise).
 
-- **Swipe-action iconography**: done. Real values now in `tokens.md`'s
+- **Swipe-action iconography**: done. Real values in `tokens.md`'s
   "Swipe-action rows" table.
 - **Sort pickers, both screens**: resolved. The earlier open
   verification — whether a four-option picker crowds `ItemListView`'s
@@ -196,42 +196,40 @@ eyeballed read of the screenshot alone had suggested otherwise).
   underlying shape) is answered: same three sheared segments, same
   shear angle, extended with ascending height per segment plus a
   per-row legend. Stays inside `spec.md`'s stated bar.
-- **Row treatment — NOT resolved, needs an explicit call.** Design's
-  output uses a real drop shadow (`0 2px 6px rgba(0,0,0,0.5)`) plus an
-  inset bevel (a lighter top edge, a darker bottom edge, border
-  removed entirely) — Design's own annotation calls it "the extruded
-  plate" and states outright that "the bevel does the separating."
-  This is what `brief.md`'s skeuomorphism section names and rules out
-  by name: "no bevels or embossing, no drop shadows simulating a
-  raised physical control." Not written into `tokens.md` yet, on
-  purpose — this needs a decision (accept the departure deliberately,
-  ask Design for a flat-only alternative, or keep the border removal
-  and tonal lift while dropping the drop shadow specifically), not a
-  silent pass-through of Design output that happens to conflict with
-  a standing rule.
+- **Row treatment: accepted, and it's now `brief.md`'s standard, not
+  just an exception for `010`.** Design's chosen treatment uses a real
+  drop shadow plus an inset bevel — the thing `brief.md`'s original
+  skeuomorphism section ruled out by name. Rather than let `010`
+  quietly contradict a standing rule, `brief.md` itself was amended
+  (see its own updated skeuomorphism section) to narrow, not remove,
+  that constraint — restrained alpha-based depth is permitted now;
+  literal materiality (metallic gradients, wood/leather texture,
+  screws, stitching, photorealism) still isn't. Real values in
+  `tokens.md`'s new "Row treatment" table.
 
-**Two copy mismatches inside Design's own approved output**, also
-unresolved: the icon legend labels the middle swipe action
-"Duplicate," but the actual button in the swipe-reveal mockup says
-"Copy." The sort picker's manual-order option is labeled "Custom,"
-not "Yours" — every doc in this spec has said "Yours" throughout.
-Proposed resolution, pending confirmation: keep "Duplicate" and
-"Yours" as this spec's internal/conceptual names (already threaded
-through `spec.md`, this document, and `tasks.md`), and treat "Copy"
-and "Custom" as the on-screen strings specifically — the same
-relationship `desireToKeep` already has to whatever a user actually
-sees, not a reason to rename three documents. A voice call, not a
-technical one, so worth a real decision rather than defaulting to
-whichever word happened to get typed first.
+**Naming, both resolved, asymmetrically.** The icon legend labels the
+middle swipe action "Duplicate," but the actual swipe-reveal button
+says "Copy" — kept as designed: "Duplicate" stays the name used in
+`spec.md`, this document, and `tasks.md`; "Copy" is the on-screen
+button text specifically, the same relationship `desireToKeep` already
+has to whatever a user actually sees. The sort picker's manual-order
+option is labeled "Custom," not "Yours" — but here the reasoning was
+different: "Yours" was confusing as a *concept*, not just wordy as a
+button, confirmed by the person who built the app finding it unclear
+in their own early use. That's a reason to replace the term
+everywhere, not just on screen — every "Yours" in this document has
+been renamed to "Custom," including the internal `.custom` sort case,
+and the same rename is still needed in `spec.md` and `tasks.md` (not
+done here — see the note accompanying this file).
 
-One more inconsistency inside Design's own output, minor: the
-swipe-reveal mockup's row (in the same file, further down) uses a
-plain `1px solid #26272A` border rather than the "extruded plate"
-treatment from the row-treatment section above it — almost certainly
-because that mockup was focused on illustrating the gesture, not
-re-rendering final row chrome. Whatever gets decided about the row
-treatment above should apply uniformly, including to a swiped-open
-row, not just the resting state.
+One more inconsistency inside Design's own output, minor and still
+worth a look during implementation: the swipe-reveal mockup's row (in
+the same HTML file, further down) uses a plain `1px solid #26272A`
+border rather than the "extruded plate" treatment from the
+row-treatment section above it — almost certainly because that mockup
+was focused on illustrating the gesture, not re-rendering final row
+chrome. The extruded-plate treatment applies uniformly, including to a
+swiped-open row, not just the resting state.
 
 ## Sort direction (proposed, not locked)
 
@@ -271,7 +269,7 @@ limitations.
 - New `ItemListViewModelTests`: `delete(id:)`, `duplicate(id:)` (field
   rules, Sell Plan non-inheritance, manual-order placement), reorder
   behavior mirroring `WishlistViewModelTests`'s existing shape,
-  sort-by-"Yours" behavior.
+  sort-by-"Custom" behavior.
 - New `WishlistViewModelTests`: `duplicate(id:)`, Desire and
   Alphabetical sort correctness plus their manual-order tie-break.
 - Backfill migration tests, including the idempotency case specifically
@@ -373,17 +371,25 @@ rather than re-deriving next time:
    treatment is meant to avoid. Explicitly provisional, in the person
    steering this spec's own words — easy to remove if it reads as
    noisier in the running app than it does in Design's mockup.
-7. **Not yet decided — the row treatment's drop shadow/bevel.** Real
-   HTML confirms Design's chosen row treatment uses a genuine drop
-   shadow plus an inset bevel, which `brief.md`'s skeuomorphism section
-   rules out by name. Flagged, not resolved — see "Visual specifics"
-   above for the three ways this could go. `tokens.md` deliberately
-   doesn't have this treatment written into it yet.
-8. **Not yet decided — two copy mismatches inside Design's own
-   output.** "Duplicate" (icon legend) vs. "Copy" (actual swipe
-   button); "Yours" (every doc in this spec) vs. "Custom" (actual sort
-   picker). Proposed default — keep the conceptual names already used
-   throughout `spec.md`/`plan.md`/`tasks.md`, treat Design's words as
-   the on-screen strings only — but this is a voice call for the
-   person steering the spec to confirm, not something to default
-   silently.
+7. **Row treatment's drop shadow/bevel — accepted, and elevated into an
+   amendment to `brief.md` itself, not treated as a one-off exception.**
+   The person steering this spec was explicit that the original
+   flat-only reading of `brief.md` reflected an assumption about the
+   limits of flat design, not a permanent boundary, and that Trove's
+   visual identity is expected to keep evolving. `brief.md`'s
+   skeuomorphism section now reflects that — narrowed, not deleted:
+   restrained alpha-based depth is fine, literal materiality (metallic
+   gradients, wood/leather texture, screws, stitching, photorealism)
+   still isn't. Real values in `tokens.md`'s new "Row treatment" table.
+8. **Two copy mismatches inside Design's own output, resolved
+   differently from each other on purpose.** "Duplicate" (icon legend)
+   vs. "Copy" (actual swipe button): keep "Duplicate" as this spec's
+   name throughout the docs, treat "Copy" as the on-screen string only
+   — a display-layer difference, not a conceptual one. "Yours" (every
+   doc in this spec, until now) vs. "Custom" (actual sort picker):
+   different reasoning, different resolution — "Yours" was unclear as
+   a concept, not just wordy as a button, so "Custom" replaces it
+   everywhere, including this document's own internal `.custom` sort
+   case. `spec.md` and `tasks.md` still need the same rename applied —
+   not done as part of this pass, since neither was available as a
+   confirmed-current copy when this edit was made.
