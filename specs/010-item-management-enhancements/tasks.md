@@ -41,11 +41,31 @@ anything gets built against a guess.
       into the swipe buttons, which `.onDelete`'s system-provided button
       can't host — `.swipeActions` is a prerequisite for it on this
       screen.
-- [ ] **T002** — Check `ItemDetailView`'s current delete-confirmation
+- [x] **T002** — Check `ItemDetailView`'s current delete-confirmation
       alert: does it already name the Sell Plan consequence, or is it
       generic ("are you sure")? *Verify: documented finding. Determines
       whether T010 extracts existing copy or writes new copy from
       `plan.md`'s proposal.*
+      **Finding: halfway — T010 writes the missing half rather than
+      extracting or starting over.** The alert is hardcoded inline
+      (`ItemDetailView.swift`, the `.alert` in `body`), no shared
+      constant: title "Delete \(name)?", message "Its photos go too.
+      This can't be undone.", buttons Delete (destructive) / Keep
+      (cancel). So it names the photo cascade and permanence, but not
+      the Sell Plan consequence spec.md requires — neither generic nor
+      sufficient. Reusable: "Its photos go too." is word-for-word the
+      sentence `WishlistDeleteCopy.message` opens with, so the voice is
+      already converged; T010's natural shape is extending the existing
+      copy with a sell-plan sentence, not adopting `plan.md`'s
+      from-scratch proposal wholesale. Two details for T010/T017:
+      (1) verb asymmetry on screen today — the item alert says
+      Delete/Delete where the wishlist says Remove/Remove ("Keep" is
+      shared); T017 makes the two *item* entry points match word for
+      word, but whether the two entities should share one verb is a
+      conscious T010 call, not an accident to preserve. (2) "This can't
+      be undone." exists only on the item side — keep/drop is T010's
+      call, worth making deliberately since `011-recycle-bin` would
+      eventually make the sentence false.
 
 ## Phase 1 — Data model: `Item.sortOrder` (foundational — review every task)
 
