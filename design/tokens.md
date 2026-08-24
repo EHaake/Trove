@@ -36,6 +36,7 @@ screen) — not part of the app itself.
 | `accentRustText` | `#B8674F` | rust as *text* — same contrast reasoning as `accentMossText` |
 | `dialMidpoint` | `#8F8C38` | desire dial's middle-of-range color (between rust and moss) |
 | `accentBrassDim` | `#746140` | held-back brass for repeated marks — the dashboard ruler's minor ticks |
+| `accentBrassMid` | `#A07E48` | perceptual half-mix of `accentBrassDim` and `accentBrass` — the `DesireGauge` ramp's middle segment. Already in the shipped build (the Oklab-searched value `T036c` describes) but never actually named here until `010`'s Design pass surfaced the gap. |
 | `categoryNeutral` | `#6B6C6F` | dashboard breakdown's "everything else" swatch, past the three accents |
 
 The rust/moss "text-safe lift" pair is a real accessibility catch, not a
@@ -78,6 +79,50 @@ A candidate measured 0.058 from brass while its own stops were 0.12
 apart — a "3" that read as a price. The rule the search enforces, and
 `DesireDialColorTests` checks, is that no stop may sit closer to the
 money colour than to its own neighbours on the dial.
+
+### The desire gauge's stepped ramp (`010`)
+
+Redesigned in `010` to close the legibility gap flagged at `001`'s
+sign-off — see `design/elements/010-item-management/` for the source.
+Same underlying shape as before (three sheared segments, `skewX(-12deg)`
+consistently), extended with two things: an ascending height per
+segment, and a per-row legend.
+
+| Property | Value |
+|---|---|
+| Segment width | `12px`, all three |
+| Segment heights | `8px` / `11px` / `14px`, ascending |
+| Gap between segments | `4px` |
+| Shear | `skewX(-12deg)` |
+| Unfilled segment | `1px solid rgba(242,237,228,0.16)`, `box-sizing: border-box` |
+| Fill ramp | `accentBrassDim` (1) → `accentBrassMid` (2) → `accentBrass` (3) |
+| Legend text | "DESIRE" — IBM Plex Mono, `8.5px`, letter-spacing `0.12em`, `rgba(242,237,228,0.35)`, line-height `1.7` |
+| Legend position | left of the segments, `7px` gap |
+| Total row-width cost | ~`42px` |
+
+The ascending height is doing real work, not just decoration — it
+carries the ramp's direction even where the brass-tone color
+progression alone might not (someone with limited color perception, or
+just glancing quickly). The legend is per-row and always visible,
+which is a deliberate reversal of `001`'s "unlabeled in list rows"
+decision — see `plan.md`'s Resolved decisions for the reasoning and the
+explicitly provisional framing.
+
+### Swipe-action rows (specific)
+
+| Token | Value |
+|---|---|
+| Leading action button width | `76px` each (Edit, Duplicate) |
+| Trailing delete button width | `88px` |
+| Action row height | `78px` (matches full row height) |
+| Edit background | `divider` (`#3A3B3E`) |
+| Duplicate background | `surfaceInset` (`#26272A`) |
+| Delete background | `accentRust` (`#9C4A34`) |
+| Icon box | `20px`, `1.5px` stroke — matches the tab-bar icon convention |
+
+Leading actions deliberately use neutral tones (`divider`, `surfaceInset`)
+rather than accent colors, so rust stays the only consequential color on
+a swiped-open row — nothing competes with Delete for attention.
 
 ## Typography
 
