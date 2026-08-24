@@ -108,6 +108,31 @@ which is a deliberate reversal of `001`'s "unlabeled in list rows"
 decision — see `plan.md`'s Resolved decisions for the reasoning and the
 explicitly provisional framing.
 
+### Row treatment — "extruded plate" (`010`)
+
+Added in `010`, amending `brief.md`'s skeuomorphism section rather than
+quietly contradicting it — see `brief.md`'s own updated note and
+`plan.md`'s Resolved decisions for the full reasoning. Replaces the
+flat `surface` rectangle with a bordered plate that reads as having a
+little more depth, built entirely from black/ivory alphas layered over
+the existing `surface` color — no new hardcoded colors, which is part
+of what keeps it a subtle depth cue rather than a rendered material.
+
+| Property | Value |
+|---|---|
+| Background | `surface` (`#201F1D`), unchanged |
+| Corner radius | `3px`, unchanged from the existing card radius |
+| Border | none — removed; the shadow/bevel below does the separating |
+| Box-shadow | `inset 0 1px 0 rgba(242,237,228,0.055)` (top highlight) + `inset 0 -1px 0 rgba(0,0,0,0.4)` (bottom shadow) + `0 2px 6px rgba(0,0,0,0.5)` (cast shadow) |
+| Row internal padding | `13px` |
+| Row internal gap | `13px` (thumbnail to text) |
+| Thumbnail | `52px × 52px`, `2px` radius, existing placeholder pattern unchanged |
+
+Applies uniformly on both `ItemListView` and `WishlistView`, resting or
+swiped open — the swipe-reveal mockup showed a plain-bordered row, but
+that was illustrating the gesture, not the final row chrome (see
+`plan.md`).
+
 ### Swipe-action rows (specific)
 
 | Token | Value |
