@@ -133,6 +133,33 @@ swiped open — the swipe-reveal mockup showed a plain-bordered row, but
 that was illustrating the gesture, not the final row chrome (see
 `plan.md`).
 
+### Sort picker (`010`)
+
+Same component now used on both `ItemListView` and `WishlistView`,
+extended to hold four options each rather than redesigned — a compact
+badge showing the current selection, opening a dropdown on tap. Its
+footprint doesn't grow with option count, which is what resolved the
+earlier open question about whether four options would crowd either
+header.
+
+| Property | Value |
+|---|---|
+| Badge border | `1px solid accentBrass` (`#C79A56`), `3px` radius |
+| Badge padding | `8px 12px` |
+| Badge text | IBM Plex Mono, `11px`, `accentBrass` |
+| Badge sort-icon | three horizontal bars, widths `10px`/`7px`/`4px`, `1.5px` tall, `2.5px` gap, `currentColor` |
+| Dropdown width | `232px` |
+| Dropdown background/border | `surface` (`#201F1D`) / `1px solid divider` (`#3A3B3E`), `3px` radius |
+| "SORT BY" header | padding `11px 14px 9px`, IBM Plex Mono `10px`, letter-spacing `0.16em`, `textQuiet` |
+| Row padding | `12px 14px`, `1px solid surfaceInset` top border between rows |
+| Selected row | text `accentBrass`, `13.5px`, background `accentBrassTint` |
+| Selected row, "Custom" specifically | adds a "REORDER" label (IBM Plex Mono `9.5px`, letter-spacing `0.12em`, `textQuiet`) and a `12×12` brass checkmark, `1.6px` stroke — the other three options show no such label |
+| Unselected row | text `textBody` (`rgba(242,237,228,0.75)`), `13.5px` |
+
+The "REORDER" label appearing only on the "Custom" row (not on every
+row's selected state generically) is what replaces the old standalone
+button — see `plan.md`'s Resolved decisions.
+
 ### Swipe-action rows (specific)
 
 | Token | Value |
