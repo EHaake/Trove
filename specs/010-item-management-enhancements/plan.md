@@ -175,14 +175,63 @@ scratch." Proposed copy, to use if new copy turns out to be needed:
 Matches `WishlistDeleteCopy`'s plain, consequence-naming voice rather
 than inventing a new tone for one screen.
 
-### Visual specifics — deferred, not designed here
+### Visual specifics — mostly resolved from the actual Design export
 
-Row treatment, the now-four-option sort pickers on both screens,
-`DesireGauge` legibility, and swipe-action iconography all stay pending
-the design-brief addendum and a real Claude Design pass, per `spec.md`.
-This plan covers the mechanism (SwiftUI APIs, view model shape), not
-the polish — same split `001`'s `plan.md` kept with `design/brief.md`
-throughout.
+Updated from the earlier placeholder now that
+`design/elements/010-item-management/` contains real HTML, not just a
+description of it. Real values were extracted, not estimated from
+screenshots — corrected one of this document's own earlier guesses in
+the process (row corner radius stayed `3px`, unchanged from `001`; an
+eyeballed read of the screenshot alone had suggested otherwise).
+
+- **Swipe-action iconography**: done. Real values now in `tokens.md`'s
+  "Swipe-action rows" table.
+- **Sort pickers, both screens**: resolved. The earlier open
+  verification — whether a four-option picker crowds `ItemListView`'s
+  header — turned out to be moot: the actual pattern is a compact
+  badge that opens a dropdown, so its footprint doesn't grow with
+  option count. No layout risk to carry forward.
+- **`DesireGauge`**: resolved and documented in full in `tokens.md`.
+  The earlier open question (refinement vs. reshape of the control's
+  underlying shape) is answered: same three sheared segments, same
+  shear angle, extended with ascending height per segment plus a
+  per-row legend. Stays inside `spec.md`'s stated bar.
+- **Row treatment — NOT resolved, needs an explicit call.** Design's
+  output uses a real drop shadow (`0 2px 6px rgba(0,0,0,0.5)`) plus an
+  inset bevel (a lighter top edge, a darker bottom edge, border
+  removed entirely) — Design's own annotation calls it "the extruded
+  plate" and states outright that "the bevel does the separating."
+  This is what `brief.md`'s skeuomorphism section names and rules out
+  by name: "no bevels or embossing, no drop shadows simulating a
+  raised physical control." Not written into `tokens.md` yet, on
+  purpose — this needs a decision (accept the departure deliberately,
+  ask Design for a flat-only alternative, or keep the border removal
+  and tonal lift while dropping the drop shadow specifically), not a
+  silent pass-through of Design output that happens to conflict with
+  a standing rule.
+
+**Two copy mismatches inside Design's own approved output**, also
+unresolved: the icon legend labels the middle swipe action
+"Duplicate," but the actual button in the swipe-reveal mockup says
+"Copy." The sort picker's manual-order option is labeled "Custom,"
+not "Yours" — every doc in this spec has said "Yours" throughout.
+Proposed resolution, pending confirmation: keep "Duplicate" and
+"Yours" as this spec's internal/conceptual names (already threaded
+through `spec.md`, this document, and `tasks.md`), and treat "Copy"
+and "Custom" as the on-screen strings specifically — the same
+relationship `desireToKeep` already has to whatever a user actually
+sees, not a reason to rename three documents. A voice call, not a
+technical one, so worth a real decision rather than defaulting to
+whichever word happened to get typed first.
+
+One more inconsistency inside Design's own output, minor: the
+swipe-reveal mockup's row (in the same file, further down) uses a
+plain `1px solid #26272A` border rather than the "extruded plate"
+treatment from the row-treatment section above it — almost certainly
+because that mockup was focused on illustrating the gesture, not
+re-rendering final row chrome. Whatever gets decided about the row
+treatment above should apply uniformly, including to a swiped-open
+row, not just the resting state.
 
 ## Sort direction (proposed, not locked)
 
@@ -260,6 +309,30 @@ Everything else is a modification to existing files
 (`ItemListView`/`ItemListViewModel`, `WishlistView`/`WishlistViewModel`,
 `Item.swift` for the new field), not a new file.
 
+### Design asset organization (new convention — first spec to extend `design/`)
+
+`010` is the first spec since `001` to add anything to the shared,
+repo-root `design/` folder, so this is a real decision worth recording
+rather than re-deriving next time:
+
+- **Swipe-action icons** (Edit, Duplicate, Delete) → `design/icons/`,
+  alongside the existing tab-bar icons. Not a new category — `icons/`
+  already established itself at `001`'s `T044` as where reusable,
+  sub-screen graphic marks live.
+- **Row treatment, sort picker, and `DesireGauge` element output** → a
+  new `design/elements/010-item-management/` folder, sibling to
+  `screens/` and `icons/`. `screens/` holds whole rendered views;
+  these are close-ups of one changed piece of an existing screen, not
+  a new screen — mixing the two in one flat folder would leave
+  `screens/` ambiguous about what it actually shows. Scoped by spec
+  from the start, since `elements/` is likely to accumulate more per
+  spec than `icons/` does.
+- Each element's exported HTML sits alongside its screenshot — real,
+  inspectable values, not just a picture of them.
+- **The full Claude Design zip export is deliberately not committed.**
+  It re-bundles everything already in `design/` from `001` alongside
+  the new element output, which duplicates rather than adds anything.
+
 ## Resolved decisions
 
 1. **Backfill via a one-time launch-time routine, not a formal
@@ -284,3 +357,33 @@ Everything else is a modification to existing files
    consistent with treating manual order as the universal fallback —
    but it wasn't asked for, so raising it here as an option rather than
    folding it in unasked.
+6. **`DesireGauge` gains a per-row "desire" legend — reversing `001`'s
+   explicit "unlabeled in list rows" decision, not just refining it.**
+   `001`'s `spec.md` states this plainly: the gauge "renders as an
+   unlabeled three-segment gauge in wishlist rows and a labeled one in
+   the form and detail screen... unlabeled in list rows, where it sits
+   in the row's lower-right" — a deliberate choice, not an oversight,
+   made because a label repeating down every row of a scrolling list is
+   noise. `010` reverses it on purpose, not by accident: the
+   redesigned gauge (stepped slots, same shape family as before —
+   confirmed against the real HTML, not just described) ships with a
+   small, dimmed-font legend on every row, chosen specifically to close
+   the legibility gap `001`'s own sign-off flagged, without repeating
+   the earlier "full-weight repeated text is noise" mistake the dimmed
+   treatment is meant to avoid. Explicitly provisional, in the person
+   steering this spec's own words — easy to remove if it reads as
+   noisier in the running app than it does in Design's mockup.
+7. **Not yet decided — the row treatment's drop shadow/bevel.** Real
+   HTML confirms Design's chosen row treatment uses a genuine drop
+   shadow plus an inset bevel, which `brief.md`'s skeuomorphism section
+   rules out by name. Flagged, not resolved — see "Visual specifics"
+   above for the three ways this could go. `tokens.md` deliberately
+   doesn't have this treatment written into it yet.
+8. **Not yet decided — two copy mismatches inside Design's own
+   output.** "Duplicate" (icon legend) vs. "Copy" (actual swipe
+   button); "Yours" (every doc in this spec) vs. "Custom" (actual sort
+   picker). Proposed default — keep the conceptual names already used
+   throughout `spec.md`/`plan.md`/`tasks.md`, treat Design's words as
+   the on-screen strings only — but this is a voice call for the
+   person steering the spec to confirm, not something to default
+   silently.
