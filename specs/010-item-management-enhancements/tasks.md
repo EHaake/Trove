@@ -75,6 +75,14 @@ anything gets built against a guess.
 The one schema-touching, hard-to-reverse piece of this spec. Same
 review cadence `CLAUDE.md` calls for on data-model work generally.
 
+Cadence refined in review (2026-08-23), after T003's individual stop:
+T004 batches with T005 rather than getting its own stop — it's purely
+confirmatory, no new logic, nothing independent to review. T005 and
+T006 keep their individual stops. T005 specifically is the one task in
+this whole spec where a bug means silently destroying real user data —
+which is the actual reason this phase warranted tight review in the
+first place, not T003 or T004 on their own merits.
+
 - [x] **T003** — Add `sortOrder: Int` (default `0`) to `Item`. *Verify:
       `xcodebuild build` succeeds.*
       Done 2026-08-23: stored property plus an `init` parameter,
@@ -395,8 +403,11 @@ something like:
 > Read `CLAUDE.md` and `specs/010-item-management-enhancements/
 > {spec,plan,tasks}.md`, then begin implementing starting at T001. For
 > Phases 0–1, stop for review after each individual task — this is
-> verification and schema-touching work. From Phase 2 onward, stop
-> after each phase instead.
+> verification and schema-touching work — with one refinement decided
+> in review (2026-08-23): T004 batches with T005 instead of getting its
+> own stop, per the cadence note under Phase 1's header. T005 and T006
+> keep individual stops. From Phase 2 onward, stop after each phase
+> instead.
 
 ## Model and effort per phase
 
