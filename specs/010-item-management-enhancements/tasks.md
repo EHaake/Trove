@@ -20,10 +20,27 @@ not summarized.
 alone. Both gate later tasks' exact shape, so they come first, before
 anything gets built against a guess.
 
-- [ ] **T001** — Check `WishlistView`'s current swipe-to-delete
+- [x] **T001** — Check `WishlistView`'s current swipe-to-delete
       implementation: built on `.onDelete`, or already
       `.swipeActions(edge: .trailing)`. *Verify: documented finding.
       Determines whether T016 is needed or skipped.*
+      **Finding: `.onDelete`-based — T016 is needed.** The trailing
+      swipe comes from `.onDelete { requestDeletion(at:) }` attached to
+      the row `ForEach` (`WishlistView.swift`, `rows`), not from
+      `.swipeActions`. The staging/confirm layer is already the right
+      shape and carries over unchanged: the closure resolves the offset
+      to an item, stages it in `pendingDeletion`, and the shared
+      `WishlistDeleteCopy` alert commits via `viewModel.delete(id:)` —
+      only the reveal mechanism differs between the lists. Two details
+      T016 should carry: (1) `.onDelete` currently serves a *second*
+      entry point — the edit-mode minus button, driven by the "Reorder"
+      toggle's `editMode` binding. T028 removes that toggle, so nothing
+      is lost by the conversion, but T016 and T028's ordering matters if
+      the minus button is meant to keep working in between. (2) T016
+      isn't just mechanism-unification: T036 wires custom iconography
+      into the swipe buttons, which `.onDelete`'s system-provided button
+      can't host — `.swipeActions` is a prerequisite for it on this
+      screen.
 - [ ] **T002** — Check `ItemDetailView`'s current delete-confirmation
       alert: does it already name the Sell Plan consequence, or is it
       generic ("are you sure")? *Verify: documented finding. Determines
