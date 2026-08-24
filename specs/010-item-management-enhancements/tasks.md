@@ -90,9 +90,16 @@ first place, not T003 or T004 on their own merits.
       default, no optionality needed for CloudKit). Placed with the
       other user-facing scalars; doc comment notes pre-`010` rows sit
       at 0 until T005's backfill. `** BUILD SUCCEEDED **`.
-- [ ] **T004** — Confirm `CloudKitSchemaTests` still validates against
+- [x] **T004** — Confirm `CloudKitSchemaTests` still validates against
       the updated schema. *Verify: `xcodebuild test` green — this is an
       existing test, not a new one; it should just keep passing.*
+      Done 2026-08-23, batched with T005 per the cadence note above:
+      `-only-testing:TroveTests/CloudKitSchemaTests` against the schema
+      with `Item.sortOrder` — "✔ Test schemaMeetsCloudKitRequirements()
+      passed", `** TEST SUCCEEDED **`. The account-unavailable CloudKit
+      log noise in the run is the simulator's (no iCloud account), not
+      the validator's — the test needs no account, per its own doc
+      comment.
 - [ ] **T005** — Backfill routine: on launch, if `hasBackfilledItemSortOrder`
       (`UserDefaults`) is unset, fetch all `Item`s ordered by `createdAt`
       ascending, assign sequential `sortOrder` values, save, set the
