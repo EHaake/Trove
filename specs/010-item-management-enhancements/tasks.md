@@ -208,11 +208,29 @@ review cadence `CLAUDE.md` calls for on data-model work generally.
       otherwise. *Verify: manual — select "Custom," drag to reorder,
       confirm it persists across a relaunch; select any other sort,
       confirm dragging is unavailable.*
+- [ ] **T027a** — Before the Reorder button goes: check whether
+      `WishlistView`'s edit mode — reachable today only via that
+      button — actually exposes VoiceOver custom actions (or any other
+      accessible mechanism) for reordering rows. An empirical check
+      against the running app with VoiceOver / Accessibility Inspector,
+      not an API-docs guess. Nothing earlier in this list touches the
+      mechanism in question (`editMode` + `.onMove` on `WishlistView`),
+      so the check stays faithful to today's shipped behavior anywhere
+      before T028 — but not after. *Verify: documented finding,
+      recorded inline here the way T001's was, before T028 executes.
+      Determines whether the docs need correcting: if edit mode does
+      expose an accessible reorder path, spec.md's Non-goals entry (and
+      its matching acceptance criterion, and plan.md's
+      known-limitations section) mustn't read as "a known gap, never
+      existed" — they need to say an accessible path existed via edit
+      mode and `010` removed it deliberately alongside the button. If
+      VoiceOver exposes nothing useful there today, the current framing
+      already holds and no doc change is needed.*
 - [ ] **T028** — Remove `WishlistView`'s "Reorder" button from the
       header entirely. *Verify: manual — button no longer appears
       anywhere in the UI; press-and-hold-drag still works on
       `WishlistView` exactly as before, with no separate entry point
-      needed.*
+      needed. Gated on T027a's finding being recorded first.*
 - [ ] **T029** — Manual verification, both screens: switching away from
       "Custom" and back preserves the manual order exactly as last
       arranged; dragging is unavailable while filtered or searched.
