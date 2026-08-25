@@ -242,9 +242,12 @@ struct WishlistOrderingTests {
         #expect(viewModel.items.map(\.name) == ["Third", "First", "Second"])
         #expect(viewModel.items.map(\.sortOrder) == [0, 1, 2])
 
-        // A fresh view model over the same store sees the new order, so the
-        // move reached disk rather than only the array on screen.
-        let reloaded = WishlistViewModel(modelContext: context)
+        // A fresh *context* over the same container — the same context
+        // reloaded hands back its own unsaved changes, so the original form
+        // of this check passed even with the save deleted. Found at T026,
+        // when the item-list mirror inherited the shape and its mutation
+        // survived; fixed in both places.
+        let reloaded = WishlistViewModel(modelContext: ModelContext(context.container))
         reloaded.load()
         #expect(reloaded.items.map(\.name) == ["Third", "First", "Second"])
     }
