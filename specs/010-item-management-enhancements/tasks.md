@@ -165,23 +165,44 @@ that Plan Mode and the skeptical-reviewer can't resolve) surface
 immediately, not at phase-end. Routine ambiguity resolves the normal
 way and gets reported at the end.
 
-- [ ] **T007** — `ManualOrderHelper`: shared logic for computing the
+- [x] **T007** — `ManualOrderHelper`: shared logic for computing the
       next-append position, performing a reorder while preserving the
       dense/unique `sortOrder` invariant, and combining any attribute
       comparator with manual order as a tie-break — generic over
       anything exposing `sortOrder: Int`. *Verify: compiles; not yet
       wired to a call site.*
-- [ ] **T008** — Refactor `WishlistViewModel`'s existing reorder logic
+      Done 2026-08-23: `Extensions/ManualOrderHelper.swift` — a
+      `ManuallyOrdered` protocol (class-bound; positions are assigned
+      in place on `@Model` objects), `nextPosition` (max + 1),
+      `reorder`, `renumber` exposed on its own (duplication will need
+      it without a move), and `areInOrder` with a nil-means-tie
+      primary. `Item` and `WishlistItem` conform. Build succeeded.
+- [x] **T008** — Refactor `WishlistViewModel`'s existing reorder logic
       to route through `ManualOrderHelper`, rather than keeping a
       separate implementation alongside the new shared one — the whole
       point of T007 is one source of truth, not two. *Verify:
       `WishlistViewModelTests`' existing dense/unique invariant tests
       (`T034`-era) still pass unchanged, now exercising the shared
       helper underneath.*
-- [ ] **T009** — Unit tests for `ManualOrderHelper` directly, not just
+      Done 2026-08-23, with one scope note: the task names
+      `WishlistViewModel`'s reorder, but next-append lived in
+      `WishlistFormViewModel.nextSortOrder` — leaving it inline would
+      have kept two implementations of a job T007 exists to own once,
+      so both call sites moved. All 487 unit tests passed unchanged.
+- [x] **T009** — Unit tests for `ManualOrderHelper` directly, not just
       indirectly through `WishlistViewModelTests`: next-append
       position, the reorder invariant, tie-break combination logic in
       isolation. *Verify: `xcodebuild test` green.*
+      Done 2026-08-23: 8 tests against a plain class through the
+      protocol, no SwiftData — including the deletion-gap fixture
+      ([0, 5] → 6) that fails a count-based next-position. Mutations
+      run against the *full* unit target doubled as proof of T008's
+      wiring: count-based nextPosition reddened these tests and
+      `WishlistFormViewModel`'s saving suite; gutting renumber
+      reddened these and the T034-era ordering suite; inverting the
+      tie-break reddened only these — correct, nothing wires
+      `areInOrder` until Phases 5–6. Zero compile errors across all
+      three.
 - [ ] **T010** — `ItemDeleteCopy`: shared delete-confirmation copy for
       `Item`, to be read by both `ItemListView`'s swipe path (T015) and
       `ItemDetailView`'s overflow-menu path (T017). Shape depends on
@@ -241,10 +262,21 @@ way and gets reported at the end.
       Keep + Delete. The spec.md amendment this note anticipated had
       already landed in review (commit 759c523: flow paragraph,
       criterion, and a Resolved decision) — nothing further needed.
-- [ ] **T011** — Test confirming `ItemDeleteCopy`'s content actually
+- [x] **T011** — Test confirming `ItemDeleteCopy`'s content actually
       names the Sell Plan consequence, mirroring however
       `WishlistDeleteCopy`'s content is already asserted today.
       *Verify: `xcodebuild test` green.*
+      Done 2026-08-23: `ItemDeleteCopyTests`, three tests mirroring
+      `DeletionGuardTests`' promise-by-promise shape, plus one guard
+      the mirror alone can't provide: the two entities' sell-plan
+      lines run in opposite directions and both contain "sell plan",
+      so a wishlist-message paste would pass every contains-check
+      while telling the user the opposite of the truth —
+      `theSellPlanLineStatesTheDropNotTheSpare` pins the direction and
+      asserts the two messages differ. Mutation-verified: pasting the
+      wishlist message in → red on all three direction assertions;
+      deleting the sell-plan sentence → red on the promise check. Full
+      suite: 499 tests in 80 suites + 5 UI tests, `** TEST SUCCEEDED **`.
 
 ## Phase 3 — Item delete parity
 
