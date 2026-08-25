@@ -110,9 +110,9 @@ final class WishlistFormViewModel {
         item.photos = photos
 
         if editingItem == nil {
-            // New entries go to the end of the manual order. Fetching the max
-            // rather than counting, so a gap left by a deletion can't put two
-            // items on the same rung.
+            // New entries go to the end of the manual order — see
+            // ManualOrderHelper.nextPosition for why the end is max + 1
+            // rather than a count.
             item.sortOrder = nextSortOrder()
             modelContext.insert(item)
         }
@@ -142,7 +142,7 @@ final class WishlistFormViewModel {
 
     private func nextSortOrder() -> Int {
         let existing = (try? modelContext.fetch(FetchDescriptor<WishlistItem>())) ?? []
-        return (existing.map(\.sortOrder).max() ?? -1) + 1
+        return ManualOrderHelper.nextPosition(after: existing)
     }
 
     private func canonicalCategoryPath() -> String {

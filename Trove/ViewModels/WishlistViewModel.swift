@@ -116,22 +116,14 @@ final class WishlistViewModel {
         }
     }
 
-    /// Applies a drag, renumbering every row so the stored order matches what
-    /// the user just saw.
-    ///
-    /// Renumbers densely from zero rather than nudging the moved row's
-    /// `sortOrder`, for the same reason `PhotoSelection` does: the invariant
-    /// "position in the list equals `sortOrder`" is trivial to check and
-    /// leaves no room for two rows to collide or drift apart over many moves.
+    /// Applies a drag through `ManualOrderHelper`, which renumbers every row
+    /// densely so the stored order matches what the user just saw — see the
+    /// helper for the invariant's rationale, and
+    /// `positionsStayDenseAndUniqueAcrossManyMoves` for its guard.
     func move(fromOffsets source: IndexSet, toOffset destination: Int) {
         guard canReorder else { return }
 
-        var reordered = items
-        reordered.move(fromOffsets: source, toOffset: destination)
-        for (position, item) in reordered.enumerated() {
-            item.sortOrder = position
-        }
-        items = reordered
+        items = ManualOrderHelper.reorder(items, fromOffsets: source, toOffset: destination)
 
         do {
             try modelContext.save()
