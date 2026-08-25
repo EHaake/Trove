@@ -158,6 +158,13 @@ first place, not T003 or T004 on their own merits.
 
 ## Phase 2 — Shared utilities (review every phase from here)
 
+Cadence, clarified in review (2026-08-23): the per-phase stop is the
+default from here on — but escalation-worthy findings (CLAUDE.md's
+triggers: infeasibility/rework risk, or a direction-changing unknown
+that Plan Mode and the skeptical-reviewer can't resolve) surface
+immediately, not at phase-end. Routine ambiguity resolves the normal
+way and gets reported at the end.
+
 - [ ] **T007** — `ManualOrderHelper`: shared logic for computing the
       next-append position, performing a reorder while preserving the
       dense/unique `sortOrder` invariant, and combining any attribute
@@ -453,8 +460,14 @@ something like:
 > verification and schema-touching work — with one refinement decided
 > in review (2026-08-23): T004 batches with T005 instead of getting its
 > own stop, per the cadence note under Phase 1's header. T005 and T006
-> keep individual stops. From Phase 2 onward, stop after each phase
-> instead.
+> keep individual stops. From Phase 2 onward, the per-phase stop is
+> the default — but don't wait for phase-end if something meets
+> CLAUDE.md's own escalation triggers (infeasibility/rework risk, or a
+> direction-changing unknown) that Plan Mode and the skeptical-reviewer
+> subagent can't resolve on their own. Surface those immediately.
+> Routine ambiguity within a phase should get resolved the normal way
+> (Plan Mode, the subagent) and reported at the end, not escalated
+> just because it came up mid-phase.
 
 ## Model and effort per phase
 
