@@ -13,6 +13,11 @@ struct ItemListView: View {
     /// path in this app states its consequences before committing.
     @State private var pendingDeletion: Item?
 
+    /// The row whose Edit swipe action is open in the form sheet — the same
+    /// form, same pre-fill, the detail screen already presents; the swipe is
+    /// a shortcut into that flow, not a new one (spec.md).
+    @State private var itemBeingEdited: Item?
+
     /// The chip the next layout pass should bring into view.
     ///
     /// Set only when a filter arrives from another tab, never when the user
@@ -96,6 +101,13 @@ struct ItemListView: View {
         .sheet(isPresented: $isAddingItem, onDismiss: viewModel.load) {
             NavigationStack {
                 ItemFormView(modelContext: modelContext)
+            }
+        }
+        // The Edit swipe's sheet (T023). Same refetch-on-dismiss reasoning
+        // as the add sheet above.
+        .sheet(item: $itemBeingEdited, onDismiss: viewModel.load) { item in
+            NavigationStack {
+                ItemFormView(modelContext: modelContext, editing: item)
             }
         }
         // Values can change on the detail screen — an edit, or the dial — so
@@ -189,6 +201,26 @@ struct ItemListView: View {
                         // rows" table for the same reason — rust stays the
                         // one consequential color on a swiped-open row.
                         .tint(theme.colors.accentRust)
+                    }
+                    // Edit nearest the edge, Copy second — the design mock's
+                    // order, and Edit is what a full swipe triggers. Neutral
+                    // tints per tokens.md, so rust keeps the only
+                    // consequential color on a swiped-open row.
+                    .swipeActions(edge: .leading) {
+                        Button {
+                            itemBeingEdited = item
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        .tint(theme.colors.divider)
+                        // "Copy" on screen, "Duplicate" in code — Design's
+                        // chosen string, per plan.md's Resolved decisions.
+                        Button {
+                            viewModel.duplicate(id: item.id)
+                        } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                        }
+                        .tint(theme.colors.surfaceInset)
                     }
             }
         }
