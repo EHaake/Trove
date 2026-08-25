@@ -21,6 +21,10 @@ struct WishlistView: View {
     @State private var selectedItemID: UUID?
     @State private var isReordering = false
 
+    /// The row whose Edit swipe action is open in the form sheet — a
+    /// shortcut into the same flow the detail screen offers (T024).
+    @State private var itemBeingEdited: WishlistItem?
+
     /// The row a swipe has asked to delete, held until the alert resolves it.
     /// The swipe-then-tap gesture is a fine two-step on its own; what it
     /// can't do is *say* anything — and every other delete path in the app
@@ -91,6 +95,13 @@ struct WishlistView: View {
         }
         .sheet(isPresented: $isAddingItem, onDismiss: viewModel.load) {
             NavigationStack { WishlistFormView(modelContext: modelContext) }
+        }
+        // The Edit swipe's sheet (T024), refetching on dismiss like the add
+        // sheet above.
+        .sheet(item: $itemBeingEdited, onDismiss: viewModel.load) { item in
+            NavigationStack {
+                WishlistFormView(modelContext: modelContext, editing: item)
+            }
         }
         // Values can change on the detail screen — an edit, the gauge, or a
         // deletion — so the list refetches whenever it comes back into view.
@@ -243,6 +254,22 @@ struct WishlistView: View {
                         // overrides the destructive role's red, so each
                         // swipe button carries its own tokens.md color.
                         .tint(theme.colors.accentRust)
+                    }
+                    // Same order, tints, and "Copy" string as ItemListView's
+                    // leading swipe (T023) — one pattern, both lists.
+                    .swipeActions(edge: .leading) {
+                        Button {
+                            itemBeingEdited = item
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        .tint(theme.colors.divider)
+                        Button {
+                            viewModel.duplicate(id: item.id)
+                        } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                        }
+                        .tint(theme.colors.surfaceInset)
                     }
             }
             .onMove { source, destination in
