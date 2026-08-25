@@ -147,6 +147,26 @@ final class ItemListViewModel {
         }
     }
 
+    /// Deletes an owned item by id, on the same shape as
+    /// `WishlistViewModel.delete(id:)` — the list's swipe (T015) routes here
+    /// rather than touching the store itself, per `DeletionGuardTests`'
+    /// structural rule, and this new path is inside that rule from day one.
+    ///
+    /// Photos cascade with it; any sell plan that selected it drops it, the
+    /// wishlist entries themselves untouched — the same consequences
+    /// `ItemDeleteCopy.message` promises before this runs.
+    func delete(id: UUID) {
+        guard let item = items.first(where: { $0.id == id }) else { return }
+
+        modelContext.delete(item)
+        do {
+            try modelContext.save()
+        } catch {
+            loadFailureMessage = error.localizedDescription
+        }
+        load()
+    }
+
     private func isOrderedBefore(_ lhs: Item, _ rhs: Item) -> Bool {
         switch sortOrder {
         case .purchaseDate:
