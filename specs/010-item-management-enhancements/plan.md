@@ -42,6 +42,12 @@ photo-orphan defect, the false-passing persistence tests) — a flag
 that flips once and is never consulted for its correctness again is
 the safer shape.
 
+One detail found at T005, not anticipated here: the ephemeral
+`-uiTesting` store is deliberately skipped and never sets the flag.
+`UserDefaults` isn't scoped to a store — a flag burned during a
+UI-test launch, against a throwaway store with nothing in it, would
+permanently block the real store's backfill on that device.
+
 Why `createdAt` specifically, not one of `Item`'s other three sortable
 attributes: none of desire-to-keep, value, or purchase date is more
 "canonical" than the others — `ItemListView` has no single default sort

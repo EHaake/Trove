@@ -126,7 +126,7 @@ first place, not T003 or T004 on their own merits.
       assigned Alpha=0, Bravo=1, Charlie=2 in `createdAt` order and
       set the flag again. Read from the store file with sqlite3, not
       inferred from the UI.
-- [ ] **T006** — Unit tests for the backfill routine: the fresh-install
+- [x] **T006** — Unit tests for the backfill routine: the fresh-install
       case (sequential, correctly ordered); the already-flagged case —
       including a version that seeds an already-user-customized order
       *first*, then confirms a second run leaves it completely
@@ -134,6 +134,27 @@ first place, not T003 or T004 on their own merits.
       here means silently destroying real user data, not just a wrong
       UI state. *Verify: `xcodebuild test` green, including the
       idempotency case specifically, not just the happy path.*
+      Done 2026-08-23: `ItemSortOrderBackfillTests`, 7 tests. Beyond
+      the named cases: both persistent modes run (a fallen-back
+      `.localOnly` device still backfills), the ephemeral store never
+      runs and never burns the flag (T005's finding, now pinned; also
+      recorded in plan.md's Backfill section in this commit), and the
+      flag key string is asserted as a persisted contract — renaming
+      it re-runs the backfill on every real device. Every persisted-
+      state assertion reads through a second `ModelContext` so a
+      deleted `save()` can't false-pass (001's same-context lesson),
+      and the fresh-install test inserts items in a different order
+      than their `createdAt`s so a dropped sort descriptor can't pass
+      by luck (001's tie-break lesson). Mutation-verified per plan.md's
+      testing strategy — seven mutations (save deleted, flag-set
+      deleted, short-circuit deleted, ephemeral guard deleted, sort
+      descriptor dropped, index→0, sort reversed), each `TEST FAILED`
+      with zero compile errors, caught by the test designed for it.
+      Honestly recorded gap: the failed-save-leaves-flag-unset leg is
+      untested — SwiftData offers no way to make an in-memory save
+      throw without faking `ModelContext`, which it doesn't allow; the
+      suite's doc comment says so. Full suite after: 487 tests in 78
+      suites + 5 UI tests, `** TEST SUCCEEDED **`.
 
 ## Phase 2 — Shared utilities (review every phase from here)
 
