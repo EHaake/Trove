@@ -14,7 +14,14 @@ final class ItemListViewModel {
     /// Each order has one sensible direction, so there's no ascending/
     /// descending toggle to get lost in: keepers, most valuable, and most
     /// recent all lead.
+    ///
+    /// "Custom" leads the menu the way the wishlist's manual option does —
+    /// same convention on both lists (010) — but the *default* stays Date:
+    /// unlike the wishlist, whose manual order has been its single ordering
+    /// since 001, an item collection's most recent purchase leading is the
+    /// shipped behavior this spec doesn't change.
     enum SortOrder: String, CaseIterable, Identifiable {
+        case custom
         case purchaseDate
         case currentValue
         case desireToKeep
@@ -25,6 +32,7 @@ final class ItemListViewModel {
         /// the list and any future control can't disagree.
         var label: String {
             switch self {
+            case .custom: "Custom"
             case .purchaseDate: "Date"
             case .currentValue: "Value"
             case .desireToKeep: "Desire"
@@ -107,6 +115,18 @@ final class ItemListViewModel {
         self.syncMonitor = syncMonitor
     }
 
+    /// Dragging only makes sense against the real, whole list in its own
+    /// order — same rule as `WishlistViewModel.canReorder`, with this
+    /// screen's third narrowing included: the un-valued filter hides rows
+    /// exactly the way a category or query does, so it blocks reordering
+    /// for the same reason.
+    var canReorder: Bool {
+        sortOrder == .custom
+            && categoryFilter.isEmpty
+            && SearchMatching.normalized(searchText).isEmpty
+            && !showsOnlyUnvalued
+    }
+
     /// Whether this device might still be receiving the collection. Read by
     /// the empty states, and by the note appended to the ones that survive
     /// mid-import.
@@ -167,6 +187,20 @@ final class ItemListViewModel {
         load()
     }
 
+    /// Applies a drag through `ManualOrderHelper`, exactly as
+    /// `WishlistViewModel.move` does — one renumbering rule, both lists.
+    func move(fromOffsets source: IndexSet, toOffset destination: Int) {
+        guard canReorder else { return }
+
+        items = ManualOrderHelper.reorder(items, fromOffsets: source, toOffset: destination)
+
+        do {
+            try modelContext.save()
+        } catch {
+            loadFailureMessage = error.localizedDescription
+        }
+    }
+
     /// Creates a copy per spec.md's duplicate flow, immediately and without
     /// confirmation: every field as-is except the serial number, which is
     /// cleared — it identifies one physical unit, and carrying it over would
@@ -215,6 +249,10 @@ final class ItemListViewModel {
 
     private func isOrderedBefore(_ lhs: Item, _ rhs: Item) -> Bool {
         switch sortOrder {
+        case .custom:
+            if lhs.sortOrder != rhs.sortOrder {
+                return lhs.sortOrder < rhs.sortOrder
+            }
         case .purchaseDate:
             if lhs.purchaseDate != rhs.purchaseDate {
                 return lhs.purchaseDate > rhs.purchaseDate
