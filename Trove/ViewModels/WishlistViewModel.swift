@@ -10,18 +10,20 @@ import SwiftData
 /// filter or a query means.
 @Observable
 final class WishlistViewModel {
-    /// Design's sort control reads "Cost". Manual is the default because
-    /// `WishlistItem.sortOrder` exists precisely so the user can rank what
-    /// they want most, which no derived order can express.
+    /// "Custom" is the default because `WishlistItem.sortOrder` exists
+    /// precisely so the user can rank what they want most, which no derived
+    /// order can express. It shipped in `001` as "Yours" and was renamed by
+    /// `010` after real use found that name unclear even to the person who
+    /// chose it — spec.md's Resolved decisions record the reversal.
     enum SortOrder: String, CaseIterable, Identifiable {
-        case manual
+        case custom
         case cost
 
         var id: String { rawValue }
 
         var label: String {
             switch self {
-            case .manual: "Yours"
+            case .custom: "Custom"
             case .cost: "Cost"
             }
         }
@@ -29,7 +31,7 @@ final class WishlistViewModel {
 
     var categoryFilter: String = ""
     var searchText: String = ""
-    var sortOrder: SortOrder = .manual
+    var sortOrder: SortOrder = .custom
 
     private(set) var items: [WishlistItem] = []
     private(set) var categoryOptions: [String] = []
@@ -83,7 +85,7 @@ final class WishlistViewModel {
     /// the rows that aren't showing, and sorting by cost already fixes the
     /// order — a drag there would be undone by the next `load()`.
     var canReorder: Bool {
-        sortOrder == .manual
+        sortOrder == .custom
             && categoryFilter.isEmpty
             && SearchMatching.normalized(searchText).isEmpty
     }
@@ -191,7 +193,7 @@ final class WishlistViewModel {
 
     private func isOrderedBefore(_ lhs: WishlistItem, _ rhs: WishlistItem) -> Bool {
         switch sortOrder {
-        case .manual:
+        case .custom:
             if lhs.sortOrder != rhs.sortOrder {
                 return lhs.sortOrder < rhs.sortOrder
             }

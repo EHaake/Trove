@@ -169,8 +169,17 @@ struct WishlistOrderingTests {
         let viewModel = WishlistViewModel(modelContext: context)
         viewModel.load()
 
-        #expect(viewModel.sortOrder == .manual)
+        #expect(viewModel.sortOrder == .custom)
         #expect(viewModel.items.map(\.name) == ["First", "Second", "Third"])
+    }
+
+    /// T025a's rename, pinned on both lists — and pinned because the rename
+    /// itself found nothing guarding the old string: every test stayed green
+    /// while "Yours" became "Custom", the same under-pinning T010a found on
+    /// the delete copy. A silent revert would now fail here.
+    @Test func theManualOptionReadsCustomOnBothLists() {
+        #expect(WishlistViewModel.SortOrder.custom.label == "Custom")
+        #expect(ItemListViewModel.SortOrder.custom.label == "Custom")
     }
 
     @Test func sortsByCostWithTheDearestFirst() throws {
@@ -271,7 +280,7 @@ struct WishlistOrderingTests {
         viewModel.sortOrder = .cost
         #expect(viewModel.canReorder == false)
 
-        viewModel.sortOrder = .manual
+        viewModel.sortOrder = .custom
         viewModel.categoryFilter = "Photography"
         #expect(viewModel.canReorder == false)
 
