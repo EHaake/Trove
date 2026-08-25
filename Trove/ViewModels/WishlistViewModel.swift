@@ -151,6 +151,44 @@ final class WishlistViewModel {
         load()
     }
 
+    /// Creates a copy per spec.md's wishlist duplicate flow — the same shape
+    /// as `ItemListViewModel.duplicate(id:)` adjusted for the entity: no
+    /// serial number exists to clear, photos become genuinely new `Photo`
+    /// rows (same one-photo-one-parent reasoning), and the copy's own Sell
+    /// Plan selection starts empty rather than inheriting
+    /// `plannedSaleItems`. Lands immediately after the original in manual
+    /// order.
+    func duplicate(id: UUID) {
+        guard let original = items.first(where: { $0.id == id }) else { return }
+
+        let copy = WishlistItem(
+            name: original.name,
+            categoryPath: original.categoryPath,
+            estimatedCostCents: original.estimatedCostCents,
+            currencyCode: original.currencyCode,
+            notes: original.notes,
+            desireToOwn: original.desireToOwn,
+            photos: (original.photos ?? []).map {
+                Photo(imageData: $0.imageData, source: $0.source, sortOrder: $0.sortOrder)
+            },
+            plannedSaleItems: []
+        )
+        modelContext.insert(copy)
+
+        // Whole collection in manual order, never the filtered slice.
+        let ordered = (try? modelContext.fetch(
+            FetchDescriptor<WishlistItem>(sortBy: [SortDescriptor(\.sortOrder)])
+        )) ?? []
+        ManualOrderHelper.insert(copy, after: original, in: ordered)
+
+        do {
+            try modelContext.save()
+        } catch {
+            loadFailureMessage = error.localizedDescription
+        }
+        load()
+    }
+
     private func isOrderedBefore(_ lhs: WishlistItem, _ rhs: WishlistItem) -> Bool {
         switch sortOrder {
         case .manual:
