@@ -396,23 +396,46 @@ explicit tint from tokens.md's "Swipe-action rows" table (Edit =
 `divider` #3A3B3E, Duplicate = `surfaceInset` #26272A), or it ships
 brass.
 
-- [ ] **T019** — `ItemListViewModel.duplicate(id:)`: copy every field
+- [x] **T019** — `ItemListViewModel.duplicate(id:)`: copy every field
       except serial number (cleared); include photos; don't inherit
       Sell Plan membership; place adjacent to the original in manual
       order via `ManualOrderHelper`. *Verify: `xcodebuild build`
       succeeds.*
-- [ ] **T020** — Unit tests for `duplicate(id:)`: field-copy correctness;
+      Done 2026-08-24: spec.md's field rules exactly — serial cleared,
+      photos as genuinely new `Photo` rows, no plan inheritance,
+      adjacency via `ManualOrderHelper.insert(after:in:)`, added to the
+      helper (T019's own text sanctions it) so T021 shares the
+      placement instead of re-implementing it. Placement operates on
+      the whole collection in manual order, never the filtered slice.
+      Build succeeded.
+- [x] **T020** — Unit tests for `duplicate(id:)`: field-copy correctness;
       serial number cleared; photos actually copied as new `Photo` rows
       with duplicated `.externalStorage` data (confirms the
       storage-duplication behavior `plan.md` flagged, rather than
       assuming it); Sell Plan non-inheritance; manual-order placement.
       *Verify: `xcodebuild test` green.*
-- [ ] **T021** — `WishlistViewModel.duplicate(id:)`, mirroring T019 for
+      Done 2026-08-24: `ItemDuplicationTests`, 5 tests, each rule
+      measured separately, plus a direct `insert(after:)` test in
+      `ManualOrderHelperTests`. Sharing a photo reference isn't
+      aliasing under one-photo-one-parent — it reparents the
+      original's photo onto the copy — and the photo test is built to
+      catch exactly that. Four mutations, each red on its designed
+      test with zero compile errors: serial carried over, photos
+      shared, plan membership inherited, placement appended at end.
+- [x] **T021** — `WishlistViewModel.duplicate(id:)`, mirroring T019 for
       wishlist items (no serial number to clear; otherwise identical
       shape). *Verify: `xcodebuild build` succeeds.*
-- [ ] **T022** — Unit tests for `WishlistViewModel.duplicate(id:)`,
+      Done 2026-08-24: the mirror through the same helper — no serial
+      exists to clear; the copy's own `plannedSaleItems` starts empty.
+      Build succeeded.
+- [x] **T022** — Unit tests for `WishlistViewModel.duplicate(id:)`,
       mirroring T020. *Verify: `xcodebuild test` green.*
-- [ ] **T023** — Wire `.swipeActions(edge: .leading)` on `ItemListView`:
+      Done 2026-08-24: `WishlistDuplicationTests`, 5 tests, the
+      non-inheritance pointed the other way — the copy's own selection
+      empty, the original's surviving — so duplicating a wishlist
+      entry can't double-count the gear its original planned to sell.
+      Spot-mutation (photos shared) red, zero compile errors.
+- [x] **T023** — Wire `.swipeActions(edge: .leading)` on `ItemListView`:
       Edit (opens `ItemFormView` pre-filled) and Duplicate. On-screen
       button text is "Copy," not "Duplicate" — "Duplicate" stays the
       name used in code and docs (`duplicate(id:)`, this file), "Copy"
@@ -421,11 +444,23 @@ brass.
       confirm the form opens correctly pre-filled; tap Copy, confirm a
       correct duplicate appears in the list with no navigation and no
       confirmation step.*
-- [ ] **T024** — Wire `.swipeActions(edge: .leading)` on `WishlistView`:
+      Done 2026-08-24: Edit nearest the edge, Copy second (the mock's
+      order; full swipe triggers Edit — verified live, form opened
+      pre-filled with the real item). Tints pixel-sampled byte-exact:
+      Edit #3A3B3E (`divider`), Copy #26272A (`surfaceInset`), per the
+      Phase 4 header note. Copy produced a duplicate in place, no
+      navigation, no confirmation.
+- [x] **T024** — Wire `.swipeActions(edge: .leading)` on `WishlistView`:
       Edit and Duplicate, same shape and same "Copy" button-text note as
       T023, for wishlist items. *Verify: manual, same checks as T023
       against `WishlistFormView`.*
 
+      Done 2026-08-24: same wiring, verified live against
+      `WishlistFormView` — Edit pre-filled with the real entry; Copy
+      landed the duplicate directly below its original in manual
+      order ("Yours"), visibly adjacent, no navigation. Full suite
+      after the phase: 515 tests in 83 suites + 5 UI tests,
+      `** TEST SUCCEEDED **`.
 ## Phase 5 — Manual reorder parity
 
 - [ ] **T025** — Add a "Custom" case to `ItemListViewModel`'s
