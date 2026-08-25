@@ -77,6 +77,20 @@ struct ManualOrderHelperTests {
         #expect(rows.map(\.sortOrder) == [0, 1, 2])
     }
 
+    /// The duplicate-placement rule (T019/T021), directly: the new row slots
+    /// immediately after its original — not at the end — and the whole
+    /// ordering renumbers densely around it.
+    @Test func insertAfterSlotsTheNewRowAdjacentAndRenumbers() {
+        let rows = [Row("Alpha", order: 0), Row("Bravo", order: 1), Row("Charlie", order: 2)]
+        let copy = Row("Bravo copy", order: 0)
+
+        ManualOrderHelper.insert(copy, after: rows[1], in: rows)
+
+        let ordered = (rows + [copy]).sorted { $0.sortOrder < $1.sortOrder }
+        #expect(ordered.map(\.name) == ["Alpha", "Bravo", "Bravo copy", "Charlie"])
+        #expect(ordered.map(\.sortOrder) == [0, 1, 2, 3])
+    }
+
     // MARK: - Tie-break combination
 
     /// When the attribute decides, manual order must not leak in — otherwise
