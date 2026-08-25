@@ -7,6 +7,12 @@ struct ItemListView: View {
     @State private var isAddingItem = false
     @State private var selectedItemID: UUID?
 
+    /// The row a swipe has asked to delete, held until the alert resolves it.
+    /// Same staging the wishlist uses: the swipe-then-tap gesture is a fine
+    /// two-step on its own, but it can't *say* anything — and every delete
+    /// path in this app states its consequences before committing.
+    @State private var pendingDeletion: Item?
+
     /// The chip the next layout pass should bring into view.
     ///
     /// Set only when a filter arrives from another tab, never when the user
@@ -122,6 +128,24 @@ struct ItemListView: View {
         // store continuously. Straight into the same load() everything else
         // calls — no second fetch path to keep in step with this one.
         .refreshable { viewModel.load() }
+        // The same alert, word for word, that the detail screen shows for the
+        // same action — both read from ItemDeleteCopy, so they can't drift.
+        // Same staging shape as the wishlist's.
+        .alert(
+            ItemDeleteCopy.title(for: pendingDeletion?.name ?? "this item"),
+            isPresented: Binding(
+                get: { pendingDeletion != nil },
+                set: { if !$0 { pendingDeletion = nil } }
+            ),
+            presenting: pendingDeletion
+        ) { item in
+            Button(ItemDeleteCopy.confirm, role: .destructive) {
+                viewModel.delete(id: item.id)
+            }
+            Button(ItemDeleteCopy.cancel, role: .cancel) {}
+        } message: { _ in
+            Text(ItemDeleteCopy.message)
+        }
     }
 
     // MARK: - Rows
@@ -148,6 +172,17 @@ struct ItemListView: View {
                     // List a `NavigationLink` row brings its own styling, and
                     // the row is already the whole tap target.
                     .onTapGesture { selectedItemID = item.id }
+                    // Stages, never deletes — the alert commits through the
+                    // view model (T015). A full swipe triggers the same
+                    // staging, so the farthest gesture still can't skip the
+                    // consequence line.
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            pendingDeletion = item
+                        } label: {
+                            Label(ItemDeleteCopy.confirm, systemImage: "trash")
+                        }
+                    }
             }
         }
         .listStyle(.plain)
