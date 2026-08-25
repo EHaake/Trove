@@ -50,15 +50,18 @@ struct ItemDetailView: View {
         // cancel button entirely, leaving "Delete" as the only thing to press
         // on a destructive, irreversible action.
         .alert(
-            "Delete \(viewModel.item?.name ?? "this item")?",
+            ItemDeleteCopy.title(for: viewModel.item?.name ?? "this item"),
             isPresented: $isConfirmingDelete
         ) {
-            Button("Delete", role: .destructive) {
+            Button(ItemDeleteCopy.confirm, role: .destructive) {
                 if viewModel.delete() { dismiss() }
             }
-            Button("Keep", role: .cancel) {}
+            Button(ItemDeleteCopy.cancel, role: .cancel) {}
         } message: {
-            Text("Its photos go too. This can't be undone.")
+            // Shared with the list's swipe path (T017) — one source, so the
+            // two entry points can't drift, and the sell-plan consequence
+            // T002 found missing here arrives with it.
+            Text(ItemDeleteCopy.message)
         }
         .onAppear(perform: viewModel.load)
     }

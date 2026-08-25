@@ -130,6 +130,21 @@ struct DeletionGuardTests {
         #expect(source.contains("WishlistDeleteCopy.message"), "\(path) writes its own consequence line")
     }
 
+    /// The item side's mirror, added with its second entry point
+    /// (T015/T017): both routes to an item deletion read the shared copy, so
+    /// they can't drift any more than the wishlist's pair can — plan.md's
+    /// testing strategy asks for exactly this extension.
+    @Test(arguments: [
+        "Trove/Views/Items/ItemListView.swift",
+        "Trove/Views/Items/ItemDetailView.swift",
+    ])
+    func bothItemDeleteRoutesReadTheSharedCopy(path: String) throws {
+        let source = try SourceScan.production(path)
+
+        #expect(source.contains("ItemDeleteCopy.title"), "\(path) titles its own delete alert")
+        #expect(source.contains("ItemDeleteCopy.message"), "\(path) writes its own consequence line")
+    }
+
     /// The consequence line carries all three promises — the cascade, the
     /// nullify, and the permanence `010` added once the undo-sentence proved
     /// equally true here. Losing any one makes the alert a shrug.
