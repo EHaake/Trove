@@ -463,10 +463,18 @@ brass.
       `** TEST SUCCEEDED **`.
 ## Phase 5 — Manual reorder parity
 
-- [ ] **T025** — Add a "Custom" case to `ItemListViewModel`'s
+- [x] **T025** — Add a "Custom" case to `ItemListViewModel`'s
       sort-option type; a reorder method routing through
       `ManualOrderHelper`. *Verify: `xcodebuild build` succeeds.*
-- [ ] **T025a** — Rename `WishlistViewModel`'s *existing*, already-shipped
+      Done 2026-08-24: `.custom` case leads the menu (wishlist's
+      convention; default stays Date), `canReorder` with this screen's
+      third narrowing (un-valued filter), `move` through the helper.
+      Scope note: `ItemFormViewModel` never assigned `sortOrder` — every
+      new item landed at 0, so Custom would pile new purchases at the
+      top; plan.md's helper section covers next-append for both
+      entities, the task list just never named the item form. Wired
+      like the wishlist form's: max + 1 on create, untouched on edit.
+- [x] **T025a** — Rename `WishlistViewModel`'s *existing*, already-shipped
       "Yours" sort case/display string to "Custom" — a rename, not an
       addition, since this case already exists and ships in production
       today. Confirmed directly by the person steering this project: the
@@ -480,16 +488,51 @@ brass.
       succeeds; `xcodebuild test` green; grep the test target for
       "Yours" afterward and confirm nothing real remains (a historical
       comment explaining the rename is fine, a live assertion is not).*
-- [ ] **T026** — Unit tests: dense/unique invariant on
+      Done 2026-08-24, with a correction on the record: the case and
+      label renamed (`manual`→`custom`, "Yours"→"Custom"), two `.manual`
+      test references updated — and the first commit claimed no
+      assertion pinned the old name and landed before its own test run
+      reported. The suite then failed:
+      `theSortControlOffersNoRatingOption` pins the case set by
+      *rawValue strings*, invisible to the case-name grep. True finding:
+      the label was unpinned, the rawValues were pinned. That test
+      updates to ["custom", "cost"] (a rename doesn't reverse its
+      no-rating rule — T030's reversal keeps its own commit), and
+      `theManualOptionReadsCustomOnBothLists` now pins the label on
+      both lists. Grep: the only surviving "Yours" is the historical
+      comment the verify explicitly permits. rawValue persisted
+      nowhere.
+- [x] **T026** — Unit tests: dense/unique invariant on
       `ItemListViewModel`'s new reorder method (mirroring
       `WishlistViewModelTests`'s existing shape via the shared helper);
       confirms drag-reorder is only meaningful while sort is "Custom."
       *Verify: `xcodebuild test` green.*
-- [ ] **T027** — Wire `.onMove` on `ItemListView`, attached only when
+      Done 2026-08-24: `ItemReorderTests` mirrors the wishlist's
+      ordering suite; `ItemFormManualOrderTests` covers the append
+      scope note. The mutation pass caught two false-passers in the
+      new tests themselves — a `.sorted()` assertion that verified
+      nothing, and a persistence check reloading through the same
+      `ModelContext` — the second inherited faithfully from the
+      T034-era wishlist original, which had the same latent defect.
+      Both fixed, wishlist's original fixed too (audit-the-same-shape),
+      and proven: deleting the wishlist move's save now reddens its
+      persistence test for the first time. Final tally, all red, zero
+      compile errors: guard gutted, item save dropped, append dropped,
+      wishlist save dropped. One survived check also repeated the
+      -only-testing file-vs-struct trap (zero tests ran, verdict
+      green); mutation checks now print the ran= count.
+- [x] **T027** — Wire `.onMove` on `ItemListView`, attached only when
       the active sort is "Custom" — hidden, not just disabled,
       otherwise. *Verify: manual — select "Custom," drag to reorder,
       confirm it persists across a relaunch; select any other sort,
       confirm dragging is unavailable.*
+      Done 2026-08-24: nil-perform detaches the gesture wherever
+      Custom isn't the active unnarrowed view. Live: long-press drag
+      moved Echo bottom→top under Custom; sqlite shows
+      Echo=0/Charlie=1/Charlie=2 across a relaunch; the identical
+      touch path under Date changed nothing on screen or in the
+      store. Bonus live proof of T025's append: newly added Echo
+      sorted first under Date, last under Custom.
 - [ ] **T027a** — Before the Reorder button goes: check whether
       `WishlistView`'s edit mode — reachable today only via that
       button — actually exposes VoiceOver custom actions (or any other
