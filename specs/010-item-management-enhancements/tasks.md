@@ -280,7 +280,7 @@ way and gets reported at the end.
 
 ## Phase 3 — Item delete parity
 
-- [ ] **T012** — Convert `ItemListView` from `ScrollView`/`LazyVStack`
+- [x] **T012** — Convert `ItemListView` from `ScrollView`/`LazyVStack`
       to `List`, matching `WishlistView`'s existing styling exactly:
       plain list style, hidden separators, clear row backgrounds,
       custom insets, tap-gesture navigation instead of `NavigationLink`.
@@ -288,21 +288,43 @@ way and gets reported at the end.
       separate from T015/T023 so a regression here is easy to isolate.
       *Verify: app builds; `ItemListView` renders visually identical to
       before in the simulator; existing filter/sort/search still work.*
-- [ ] **T013** — `ItemListViewModel.delete(id:)`. Must not be inline in
+      Done 2026-08-24: rows block mirrors `WishlistView.rows` line for
+      line; navigation swapped to the wishlist's tap-gesture +
+      item-binding shape (a List row's `NavigationLink` brings its own
+      styling). Verified against a pre-conversion screenshot: identical
+      rows, spacing, insets — the stack sits ~4pt lower from the List's
+      half-gap top inset, the same accepted trade the wishlist made at
+      its own conversion. Tap-through, search, chips confirmed working.
+- [x] **T013** — `ItemListViewModel.delete(id:)`. Must not be inline in
       a view — `DeletionGuardTests`' existing structural rule ("no view
       deletes from the store directly") extends to this new path from
       day one. *Verify: `xcodebuild build` succeeds; `DeletionGuardTests`
       still passes with the new path included.*
-- [ ] **T014** — Unit tests for `delete(id:)`, through a second
+      Done 2026-08-24: mirrors `WishlistViewModel.delete(id:)` exactly
+      (guard by id, delete, save with failure surfaced, reload).
+      `DeletionGuardTests` green with the new path in place.
+- [x] **T014** — Unit tests for `delete(id:)`, through a second
       `ModelContext` over the same container — measures the store, not
       the context, per the pattern `SellPlanViewModelTests` already
       established in `001` for exactly this reason. *Verify: `xcodebuild
       test` green.*
-- [ ] **T015** — Wire `.swipeActions(edge: .trailing)` on `ItemListView`
+      Done 2026-08-24: `ItemDeletionTests`, 4 tests on
+      `WishlistDeletionTests`' shape. The cascade test points the
+      nullify the other way — photos cascade, the planning wishlist
+      entry survives with its selection shrunk. Mutation-verified:
+      removing `save()` reddened both second-context tests while the
+      same-context ones stayed green — the false-pass shape the
+      pattern exists to prevent, demonstrated live.
+- [x] **T015** — Wire `.swipeActions(edge: .trailing)` on `ItemListView`
       rows: Delete, behind `ItemDeleteCopy`'s confirmation alert.
       *Verify: manual — swipe left on an item row, confirm the alert
       appears with the correct copy, confirming deletes the item.*
-- [ ] **T016** — *Conditional on T001.* If `WishlistView`'s swipe-delete
+      Done 2026-08-24: `.swipeActions(edge: .trailing)` stages
+      `pendingDeletion`; the alert commits through the view model. A
+      full swipe stages the same way, so no gesture skips the
+      consequence line. Manual: swipe on Alpha showed the
+      `ItemDeleteCopy` alert word for word; confirming deleted it.
+- [x] **T016** — *Conditional on T001.* If `WishlistView`'s swipe-delete
       isn't already `.swipeActions`-based, convert it to be, unifying
       both lists onto one mechanism. Skip entirely if T001 found it
       already is. *Verify (if not skipped): `WishlistViewModelTests`'
@@ -314,17 +336,42 @@ way and gets reported at the end.
       trades `.onDelete`'s system-synthesized "Delete" custom action
       for hand-built buttons (per Apple's `swipeActions` doc); declined
       on record, not overlooked.
-- [ ] **T017** — Update `ItemDetailView`'s delete confirmation to read
+      Executed (not skipped), 2026-08-24, per T001's finding. Both
+      lists now share one mechanism, and T036 gets a button it can
+      restyle. Recorded consequence from T001 carried forward: the
+      edit-mode minus button rode on `.onDelete`, so between T016 and
+      T028 edit mode offers reordering only. Manual: swipe on a
+      throwaway entry showed the same alert as before the conversion
+      and deleted correctly; existing delete tests unchanged and
+      green.
+- [x] **T017** — Update `ItemDetailView`'s delete confirmation to read
       from `ItemDeleteCopy` instead of whatever it currently has.
       *Verify: manual — delete via the detail screen's overflow menu,
       confirm the alert matches the swipe path's alert exactly, word
       for word.*
-- [ ] **T018** — Manual verification: delete an item (via both swipe and
+      Done 2026-08-24: inline strings replaced by `ItemDeleteCopy`
+      reads. `DeletionGuardTests` gains the item-side
+      `bothItemDeleteRoutesReadTheSharedCopy` mirror (plan.md's named
+      extension), mutation-verified by reverting the detail title to
+      an inline string — red on exactly that path. Honesty note: the
+      first mutation run filtered to the wrong suite via
+      `-only-testing` and proved nothing; rerun against
+      `DeletionGuardTests` before trusting it. Manual: detail alert
+      matches the swipe path word for word (Bravo).
+- [x] **T018** — Manual verification: delete an item (via both swipe and
       detail-menu) that's currently selected in an active Sell Plan.
       Confirm it silently drops from that plan — existing cascade
       behavior, unchanged — and that the alert named this consequence
       before the delete happened, on both entry points.
 
+      Done 2026-08-24, full transcript: Alpha ($150) and Bravo ($200)
+      valued and selected into Strymon Flint's plan ($350, 2 of 2).
+      Deleted Alpha via the list swipe — alert named the sell-plan
+      drop before committing; the plan silently read $200, 1 of 1.
+      Deleted Bravo via the detail overflow — same alert word for
+      word; the plan silently read $0, 0 of 0 with the candidates
+      empty state. No errors, no residue, cascade behavior unchanged —
+      exactly what the alert promises on both entry points.
 ## Phase 4 — Edit/Duplicate swipe actions
 
 - [ ] **T019** — `ItemListViewModel.duplicate(id:)`: copy every field
