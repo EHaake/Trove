@@ -21,11 +21,16 @@ struct WishlistView: View {
     @State private var selectedItemID: UUID?
     @State private var isReordering = false
 
-    /// The row a swipe (or the edit-mode minus) has asked to delete, held
-    /// until the alert resolves it. The swipe-then-tap gesture is a fine
-    /// two-step on its own; what it can't do is *say* anything — and every
-    /// other delete path in the app states the cascade/nullify asymmetry
-    /// before committing, so this one does too.
+    /// The row a swipe has asked to delete, held until the alert resolves it.
+    /// The swipe-then-tap gesture is a fine two-step on its own; what it
+    /// can't do is *say* anything — and every other delete path in the app
+    /// states the cascade/nullify asymmetry before committing, so this one
+    /// does too.
+    ///
+    /// Until T016 this was fed by `.onDelete`, which also powered the
+    /// edit-mode minus button; `.swipeActions` doesn't, so between here and
+    /// T028 (which removes the Reorder toggle entirely) edit mode offers
+    /// reordering only. T001's finding records the ordering call.
     @State private var pendingDeletion: WishlistItem?
 
     @Environment(\.theme) private var theme
@@ -222,12 +227,21 @@ struct WishlistView: View {
                     // destination, and editing is one step further in — the
                     // same shape as the item list.
                     .onTapGesture { selectedItemID = item.id }
+                    // `.swipeActions` rather than `.onDelete` (T016), so both
+                    // lists delete through one mechanism — and so T036 can put
+                    // custom iconography in a button `.onDelete` doesn't let
+                    // anyone touch. Stages, never deletes; the alert commits
+                    // through the view model.
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            pendingDeletion = item
+                        } label: {
+                            Label(WishlistDeleteCopy.confirm, systemImage: "trash")
+                        }
+                    }
             }
             .onMove { source, destination in
                 viewModel.move(fromOffsets: source, toOffset: destination)
-            }
-            .onDelete { offsets in
-                requestDeletion(at: offsets)
             }
         }
         .listStyle(.plain)
@@ -239,13 +253,6 @@ struct WishlistView: View {
         // effect it exists to enable. plan.md says so explicitly, because
         // this was once "fixed" the other way.
         .environment(\.editMode, .constant(isReordering ? .active : .inactive))
-    }
-
-    /// Swipe and the edit-mode minus both hand over a single index; the alert
-    /// takes it from there. Nothing is deleted here — the view model owns that.
-    private func requestDeletion(at offsets: IndexSet) {
-        guard let index = offsets.first, viewModel.items.indices.contains(index) else { return }
-        pendingDeletion = viewModel.items[index]
     }
 
     // MARK: - Filter
