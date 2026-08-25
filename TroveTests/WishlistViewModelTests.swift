@@ -435,9 +435,11 @@ struct DesireToOwnOrderingTests {
     }
 
     /// The structural half: no sort option is *named* for the rating either,
-    /// so it can't be reached from the sort control.
+    /// so it can't be reached from the sort control. ("manual" became
+    /// "custom" at T025a — a rename, not a reversal of this test's rule;
+    /// the deliberate reversal is T030's, with its own commit.)
     @Test func theSortControlOffersNoRatingOption() {
         #expect(WishlistViewModel.SortOrder.allCases.count == 2)
-        #expect(Set(WishlistViewModel.SortOrder.allCases.map(\.rawValue)) == ["manual", "cost"])
+        #expect(Set(WishlistViewModel.SortOrder.allCases.map(\.rawValue)) == ["custom", "cost"])
     }
 }
