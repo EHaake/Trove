@@ -331,6 +331,10 @@ way and gets reported at the end.
       full swipe stages the same way, so no gesture skips the
       consequence line. Manual: swipe on Alpha showed the
       `ItemDeleteCopy` alert word for word; confirming deleted it.
+      Addendum (2026-08-24 review): the button had shipped brass — the
+      root tint cascade, see the Phase 4 header note — and now carries
+      `.tint(theme.colors.accentRust)` explicitly; pixel-sampled
+      `#9C4A34` exact against tokens.md.
 - [x] **T016** — *Conditional on T001.* If `WishlistView`'s swipe-delete
       isn't already `.swipeActions`-based, convert it to be, unifying
       both lists onto one mechanism. Skip entirely if T001 found it
@@ -351,6 +355,8 @@ way and gets reported at the end.
       throwaway entry showed the same alert as before the conversion
       and deleted correctly; existing delete tests unchanged and
       green.
+      Addendum (2026-08-24 review): same brass-button fix and
+      pixel-verification as T015's — see the Phase 4 header note.
 - [x] **T017** — Update `ItemDetailView`'s delete confirmation to read
       from `ItemDeleteCopy` instead of whatever it currently has.
       *Verify: manual — delete via the detail screen's overflow menu,
@@ -380,6 +386,15 @@ way and gets reported at the end.
       empty state. No errors, no residue, cascade behavior unchanged —
       exactly what the alert promises on both entry points.
 ## Phase 4 — Edit/Duplicate swipe actions
+
+Carried forward from the Phase 3 review (2026-08-24): `ContentView`'s
+root brass `.tint` cascades into every `.swipeActions` button and
+overrides role-default styling — it turned both Delete buttons brass
+until each got an explicit `.tint(theme.colors.accentRust)`. T023/T024
+inherit the same behavior: every new swipe button must carry its own
+explicit tint from tokens.md's "Swipe-action rows" table (Edit =
+`divider` #3A3B3E, Duplicate = `surfaceInset` #26272A), or it ships
+brass.
 
 - [ ] **T019** — `ItemListViewModel.duplicate(id:)`: copy every field
       except serial number (cleared); include photos; don't inherit

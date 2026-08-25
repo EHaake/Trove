@@ -238,6 +238,11 @@ struct WishlistView: View {
                         } label: {
                             Label(WishlistDeleteCopy.confirm, systemImage: "trash")
                         }
+                        // Explicit, not redundant — see ItemListView's swipe
+                        // action: the root brass .tint cascades in here and
+                        // overrides the destructive role's red, so each
+                        // swipe button carries its own tokens.md color.
+                        .tint(theme.colors.accentRust)
                     }
             }
             .onMove { source, destination in

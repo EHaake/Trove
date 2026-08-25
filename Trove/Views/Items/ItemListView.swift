@@ -182,6 +182,13 @@ struct ItemListView: View {
                         } label: {
                             Label(ItemDeleteCopy.confirm, systemImage: "trash")
                         }
+                        // Explicit, not redundant: ContentView's brass .tint
+                        // cascades into swipe buttons and overrides the
+                        // destructive role's default red. Every swipe action
+                        // must color itself from tokens.md's "Swipe-action
+                        // rows" table for the same reason — rust stays the
+                        // one consequential color on a swiped-open row.
+                        .tint(theme.colors.accentRust)
                     }
             }
         }
