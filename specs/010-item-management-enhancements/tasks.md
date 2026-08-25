@@ -203,7 +203,7 @@ way and gets reported at the end.
       tie-break reddened only these — correct, nothing wires
       `areInOrder` until Phases 5–6. Zero compile errors across all
       three.
-- [ ] **T010** — `ItemDeleteCopy`: shared delete-confirmation copy for
+- [x] **T010** — `ItemDeleteCopy`: shared delete-confirmation copy for
       `Item`, to be read by both `ItemListView`'s swipe path (T015) and
       `ItemDetailView`'s overflow-menu path (T017). Shape depends on
       T002's finding: extract existing copy if `ItemDetailView` already
@@ -219,7 +219,14 @@ way and gets reported at the end.
       as-is or writing plan.md's proposal from scratch. Item side only;
       the wishlist-side copy changes settled in the same review are
       T010a's, not folded in here.
-- [ ] **T010a** — Apply the two settled delete-copy decisions to
+      Done 2026-08-23 (commit e7721dd; record added late — the commit
+      staged only the new file and this entry was never updated at
+      execution): `Trove/Models/ItemDeleteCopy.swift`, beside
+      `WishlistDeleteCopy` per plan.md's "mirrors wherever it already
+      lives". Message: "Its photos go too. Any sell plan it's on drops
+      it. This can't be undone." — the settled extension, T011 pins
+      it. Wired at T015/T017.
+- [x] **T010a** — Apply the two settled delete-copy decisions to
       `WishlistDeleteCopy` — a change to already-shipped, tested
       content, split out from T010 the same way T025a is split from
       T025: the title verb and confirm button change from "Remove" to
