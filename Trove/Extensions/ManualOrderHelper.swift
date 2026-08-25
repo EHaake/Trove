@@ -51,6 +51,19 @@ enum ManualOrderHelper {
         }
     }
 
+    /// Slots a new row immediately after its original and renumbers densely —
+    /// the duplicate-placement rule both lists share (spec.md: "placed
+    /// immediately after the original in the manual order"). Operates on
+    /// whatever ordering the caller passes, which should be the *whole*
+    /// collection in manual order, never a filtered slice — placement in a
+    /// slice would renumber only what happened to be visible.
+    static func insert<T: ManuallyOrdered>(_ newRow: T, after original: T, in ordered: [T]) {
+        var result = ordered.filter { $0 !== newRow }
+        let index = result.firstIndex { $0 === original } ?? result.count - 1
+        result.insert(newRow, at: index + 1)
+        renumber(result)
+    }
+
     /// Combines an attribute comparison with manual order as its tie-break —
     /// spec.md's confirmed rule for every non-manual sort: when `primary`
     /// can't decide (returns `nil`), the user's own arrangement does.

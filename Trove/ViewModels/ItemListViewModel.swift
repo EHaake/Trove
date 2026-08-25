@@ -167,6 +167,52 @@ final class ItemListViewModel {
         load()
     }
 
+    /// Creates a copy per spec.md's duplicate flow, immediately and without
+    /// confirmation: every field as-is except the serial number, which is
+    /// cleared — it identifies one physical unit, and carrying it over would
+    /// have two rows claiming the same one. Photos become genuinely new
+    /// `Photo` rows with duplicated `.externalStorage` data; the
+    /// one-photo-one-parent rule (`PhotoOwnershipTests`) allows no sharing,
+    /// so the storage cost is real and spec.md accepts it explicitly. Sell
+    /// Plan membership is not inherited. The copy lands immediately after
+    /// the original in manual order.
+    func duplicate(id: UUID) {
+        guard let original = items.first(where: { $0.id == id }) else { return }
+
+        let copy = Item(
+            name: original.name,
+            categoryPath: original.categoryPath,
+            purchasePriceCents: original.purchasePriceCents,
+            purchaseDate: original.purchaseDate,
+            currencyCode: original.currencyCode,
+            serialNumber: nil,
+            purchaseLocation: original.purchaseLocation,
+            currentValueCents: original.currentValueCents,
+            desireToKeep: original.desireToKeep,
+            condition: original.condition,
+            conditionNotes: original.conditionNotes,
+            notes: original.notes,
+            photos: (original.photos ?? []).map {
+                Photo(imageData: $0.imageData, source: $0.source, sortOrder: $0.sortOrder)
+            }
+        )
+        modelContext.insert(copy)
+
+        // Placement runs against the whole collection in manual order, not
+        // this screen's filtered slice — see ManualOrderHelper.insert.
+        let ordered = (try? modelContext.fetch(
+            FetchDescriptor<Item>(sortBy: [SortDescriptor(\.sortOrder)])
+        )) ?? []
+        ManualOrderHelper.insert(copy, after: original, in: ordered)
+
+        do {
+            try modelContext.save()
+        } catch {
+            loadFailureMessage = error.localizedDescription
+        }
+        load()
+    }
+
     private func isOrderedBefore(_ lhs: Item, _ rhs: Item) -> Bool {
         switch sortOrder {
         case .purchaseDate:
