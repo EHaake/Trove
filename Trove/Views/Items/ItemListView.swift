@@ -223,6 +223,13 @@ struct ItemListView: View {
                         .tint(theme.colors.surfaceInset)
                     }
             }
+            // Attached only while Custom is the active, unnarrowed view —
+            // `nil` detaches the gesture entirely, so reordering is hidden,
+            // not just disabled, everywhere it wouldn't be meaningful (T027).
+            // The view model's own guard stays as the second line of defense.
+            .onMove(perform: viewModel.canReorder ? { source, destination in
+                viewModel.move(fromOffsets: source, toOffset: destination)
+            } : nil)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
