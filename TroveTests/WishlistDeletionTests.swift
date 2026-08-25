@@ -130,12 +130,24 @@ struct DeletionGuardTests {
         #expect(source.contains("WishlistDeleteCopy.message"), "\(path) writes its own consequence line")
     }
 
-    /// The consequence line carries both halves of the asymmetry — the cascade
-    /// and the nullify. Losing either half makes the alert a shrug.
-    @Test func theMessageStatesBothHalvesOfTheAsymmetry() {
+    /// The consequence line carries all three promises — the cascade, the
+    /// nullify, and the permanence `010` added once the undo-sentence proved
+    /// equally true here. Losing any one makes the alert a shrug.
+    @Test func theMessageKeepsAllThreePromises() {
         let message = WishlistDeleteCopy.message
 
         #expect(message.localizedCaseInsensitiveContains("photos"), "\(message)")
         #expect(message.localizedCaseInsensitiveContains("sell plan"), "\(message)")
+        #expect(message.localizedCaseInsensitiveContains("undone"), "\(message)")
+    }
+
+    /// `010`'s verb unification, pinned — and pinned because T010a changed
+    /// these shipped strings and found *nothing* guarding them: every test
+    /// stayed green while "Remove" became "Delete". The verb matches
+    /// `delete(id:)` and doesn't soften a permanent action; a drift back
+    /// would now fail here instead of shipping silently.
+    @Test func theConfirmButtonAndTitleSayDelete() {
+        #expect(WishlistDeleteCopy.confirm == "Delete")
+        #expect(WishlistDeleteCopy.title(for: "Vox AC15") == "Delete Vox AC15?")
     }
 }

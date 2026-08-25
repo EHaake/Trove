@@ -220,6 +220,27 @@ way and gets reported at the end.
       delete-confirmation string still reads "Remove" (unrelated uses
       of the word are fine); the wishlist alert on both entry points
       shows the new verb and the undo sentence.*
+      Done 2026-08-23. Copy changed as settled; both doc-comment
+      references updated (including a stale pointer to
+      "WishlistDeleteCopyTests" — the real home of the content
+      assertions is `DeletionGuardTests`). Finding worth keeping: the
+      anticipated test updates didn't exist — all 495 tests stayed
+      green while "Remove" became "Delete", because nothing pinned the
+      verb, title, or exact message; only the two consequence halves
+      were asserted. The copy was under-pinned, so T010a *added* the
+      missing guards instead: `theMessageKeepsAllThreePromises` (photos,
+      sell plan, undone) and `theConfirmButtonAndTitleSayDelete`, both
+      mutation-verified red (verb reverted to "Remove" → red;
+      undo-sentence dropped → red; zero compile errors). Grep confirms
+      the only remaining "Remove" string is `PhotoPickerField`'s
+      "Remove photo" accessibility label — unrelated, allowed. Both
+      entry points verified on the simulator showing the new alert
+      word for word: the list swipe and the detail overflow both
+      present "Delete Strymon Flint?" / "Its photos go too. Anything
+      on its sell plan stays where it is. This can't be undone." /
+      Keep + Delete. The spec.md amendment this note anticipated had
+      already landed in review (commit 759c523: flow paragraph,
+      criterion, and a Resolved decision) — nothing further needed.
 - [ ] **T011** — Test confirming `ItemDeleteCopy`'s content actually
       names the Sell Plan consequence, mirroring however
       `WishlistDeleteCopy`'s content is already asserted today.
