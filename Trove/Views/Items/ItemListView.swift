@@ -5,6 +5,7 @@ import SwiftUI
 struct ItemListView: View {
     @State private var viewModel: ItemListViewModel
     @State private var isAddingItem = false
+    @State private var selectedItemID: UUID?
 
     /// The chip the next layout pass should bring into view.
     ///
@@ -67,25 +68,7 @@ struct ItemListView: View {
                 if let reason = viewModel.emptyReason {
                     emptyState(reason)
                 } else {
-                    ScrollView {
-                        // Rows sit inside the gutter by their own card padding,
-                        // so a row's text lines up with the title above it
-                        // while the card still reaches nearer the edge than the
-                        // header does.
-                        LazyVStack(spacing: theme.metrics.listRowGap) {
-                            ForEach(viewModel.items, id: \.id) { item in
-                                NavigationLink(value: item.id) {
-                                    ItemRow(item: item)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal, theme.metrics.listRowInset)
-                        // No bottom padding: the rows run right to the edge of
-                        // the scroll, so the tab bar and the add button sit
-                        // over the last one or two. Same rule the wishlist
-                        // follows — see plan.md's Navigation section.
-                    }
+                    rows
                 }
             }
         }
@@ -98,7 +81,7 @@ struct ItemListView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .navigationBar)
-        .navigationDestination(for: UUID.self) { itemID in
+        .navigationDestination(item: $selectedItemID) { itemID in
             ItemDetailView(modelContext: modelContext, itemID: itemID)
         }
         // Owned here rather than by a parent so dismissing the form can
@@ -139,6 +122,39 @@ struct ItemListView: View {
         // store continuously. Straight into the same load() everything else
         // calls — no second fetch path to keep in step with this one.
         .refreshable { viewModel.load() }
+    }
+
+    // MARK: - Rows
+
+    /// A `List` for the same reasons the wishlist's is one — swipe actions
+    /// now, drag reordering at T027 — with everything visible overridden so it
+    /// reads as the same card stack the `LazyVStack` used to draw. The styling
+    /// mirrors `WishlistView.rows` line for line, deliberately: the two list
+    /// screens are one pattern, not two (T012).
+    private var rows: some View {
+        List {
+            ForEach(viewModel.items, id: \.id) { item in
+                ItemRow(item: item)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(
+                        top: theme.metrics.listRowGap / 2,
+                        leading: theme.metrics.listRowInset,
+                        bottom: theme.metrics.listRowGap / 2,
+                        trailing: theme.metrics.listRowInset
+                    ))
+                    .contentShape(Rectangle())
+                    // Tap-gesture navigation, same as the wishlist: inside a
+                    // List a `NavigationLink` row brings its own styling, and
+                    // the row is already the whole tap target.
+                    .onTapGesture { selectedItemID = item.id }
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        // No bottom margin, deliberately — the add button and the tab bar sit
+        // over the last row or two when scrolled fully down. Same rule as
+        // `WishlistView.rows`, recorded in plan.md's Navigation section.
     }
 
     // MARK: - Header
