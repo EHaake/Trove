@@ -509,6 +509,27 @@ brass.
       mode and `010` removed it deliberately alongside the button. If
       VoiceOver exposes nothing useful there today, the current framing
       already holds and no doc change is needed.*
+      Interim record (2026-08-24) — instruments exhausted, human check
+      requested, T028 held: (1) An in-app probe walking the UIKit
+      hierarchy and `accessibilityElements` (T051/T056 precedent,
+      temporary code, never committed) found the edit-mode rows as
+      combined elements with zero custom actions — but it failed its
+      own pre-registered positive control, seeing none of the swipe
+      actions VoiceOver demonstrably gets, so its silence proves
+      nothing about reorder. (2) The iOS Simulator cannot run
+      VoiceOver at all — no VoiceOver row exists under Settings >
+      Accessibility > Vision, and the `com.apple.Accessibility`
+      defaults keys are inert — so no on-simulator check can be
+      VoiceOver-faithful. (3) The macOS AX bridge (what Accessibility
+      Inspector uses) is scriptable but gated on an Accessibility
+      permission this environment doesn't hold (`AXIsProcessTrusted =
+      false`), grantable only by hand in System Settings. Remaining
+      evidence is exactly the API-docs/forum-post guesswork this task
+      forbids as a sole basis (Apple forums thread 743351 reports no
+      move actions, unanswered, dated). The check that remains is the
+      task's own named tool in human hands: Accessibility Inspector
+      against the booted simulator, ~2 minutes — steps in the Phase 5
+      report. T028 stays gated per its own text.
 - [ ] **T028** — Remove `WishlistView`'s "Reorder" button from the
       header entirely. *Verify: manual — button no longer appears
       anywhere in the UI; press-and-hold-drag still works on
