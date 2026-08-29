@@ -663,6 +663,17 @@ brass.
       behavior of the genuine reorder mechanism, not a generic
       action label. `ItemListView`'s Custom-wired edit mode exposes
       the accessible reorder path. T028 complete.
+      Clarified (2026-08-29, same review, superseding the decision
+      above): the intended product behavior was narrower than what
+      shipped — "Custom" should only ALLOW press-and-hold drag,
+      never force edit mode. Handles should never be visible, no
+      Reorder button should exist, the two screens must behave
+      identically, and swipe actions must stay live. The editMode
+      wiring this task added is therefore reverted and the button
+      the earlier decision kept is removed after all — safely this
+      time, because the accessible path both prior decisions were
+      protecting moves to explicit VoiceOver row actions instead of
+      edit mode. Split into T028a / T028b / T029a below.
 - [x] **T029** — Manual verification, both screens, updated for T028's
       rewrite: switching away from "Custom" and back preserves the
       manual order exactly as last arranged; dragging is unavailable
@@ -681,6 +692,37 @@ brass.
       back. Wishlist on the same binary: Reorder → handles + DONE,
       Done → resting swipe pops Delete. Every check on the current
       build, not carried over from the pre-T028 binary.
+- [ ] **T028a** — Unify both screens on the clarified minimal
+      behavior: remove `ItemListView`'s editMode environment line
+      (reverting 19dd93d's wiring); remove `WishlistView`'s Reorder
+      button, its `isReordering` state, and its editMode binding
+      entirely; and switch `WishlistView`'s `.onMove` to the same
+      conditional-nil pattern `ItemListView` uses, so the drag
+      gesture is detached — not merely no-opped by the VM guard —
+      outside an unnarrowed "Custom". No formal edit mode anywhere
+      in the app; swipe actions live in every state. *Verify: build;
+      full suite; manual — no handles or button on either screen in
+      any state; long-press drag reorders under Custom on both;
+      swipes work while Custom is active.*
+- [ ] **T028b** — Replace the edit-mode accessible path with explicit
+      VoiceOver actions, both screens: position-aware "Move up" /
+      "Move down" accessibility actions on rows, present only while
+      reordering is meaningful (unnarrowed Custom), backed by new
+      `moveUp(id:)` / `moveDown(id:)` / `canMoveUp(id:)` /
+      `canMoveDown(id:)` intent methods on both view models. This is
+      what lets the button go without reopening the gap T027a found
+      — spec.md's corrected criterion (reordering VoiceOver-reachable
+      on both lists) still holds, now with zero edit-mode UI.
+      *Verify: unit tests on both VMs (moves, boundary no-ops,
+      canReorder gate), mutation-checked per the standing rule;
+      build; full suite; Accessibility Inspector check by hand on
+      both screens (same ~2-minute pass as before) confirming Move
+      up / Move down appear under Custom with no edit mode involved.*
+- [ ] **T029a** — Re-run T029's manual verification against the
+      unified behavior (its earlier record verified the edit-mode
+      variant): order round-trip preserved; drag detached while
+      filtered or searched on both screens; no button, no handles
+      anywhere; swipes live under Custom on both screens.
 
 ## Phase 6 — Wishlist sort expansion
 
