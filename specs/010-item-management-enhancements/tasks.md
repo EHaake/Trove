@@ -637,7 +637,25 @@ brass.
       Plus one Accessibility Inspector check: Move Up/Move Down
       appear on an Items row with "Custom" selected — closing the
       strong-but-unconfirmed inference from T027a's second check.*
-- [ ] **T029** — Manual verification, both screens, updated for T028's
+      Done (2026-08-29) except the Inspector item: one environment
+      line at the end of `ItemListView.rows` (19dd93d),
+      `WishlistView` untouched (diff shows only ItemListView). Build
+      green; full suite green — 524 tests in 85 suites + 5 UI tests.
+      Manual, all on the fresh binary: Items under Date shows no
+      handles and its trailing swipe pops the rust Delete; picking
+      Custom flips both rows to drag handles; a category chip and a
+      live search each drop edit mode while active; the handle-drag
+      moved a row and sqlite shows the arranged order persisted
+      (Leica=0, Another=1); the wishlist's Reorder button still
+      toggles edit mode and its resting-state swipe still works.
+      The Inspector check is the one open item — the same
+      environment blocker as T027a's interim record
+      (`AXIsProcessTrusted` still false, grantable only by hand), so
+      it needs the same ~2-minute human pass: the simulator is
+      parked on the Items tab with Custom selected and edit mode
+      active; point Inspector at either row and look for Move
+      Up/Move Down.
+- [x] **T029** — Manual verification, both screens, updated for T028's
       rewrite: switching away from "Custom" and back preserves the
       manual order exactly as last arranged; dragging is unavailable
       while filtered or searched; `ItemListView` enters edit mode only
@@ -646,6 +664,15 @@ brass.
       button still toggles edit mode exactly as before, and its
       resting state (Custom selected, button not pressed) still has
       live swipe actions.
+      Done (2026-08-29), live transcript: arranged Leica above
+      Another Item under Custom (store: Leica=0/Another=1), switched
+      to Date (order inverted to Another/Leica, handles gone,
+      resting swipe live), back to Custom — arranged order intact
+      with handles restored. Cameras chip and a "le" search each
+      removed the handles under Custom; clearing each brought them
+      back. Wishlist on the same binary: Reorder → handles + DONE,
+      Done → resting swipe pops Delete. Every check on the current
+      build, not carried over from the pre-T028 binary.
 
 ## Phase 6 — Wishlist sort expansion
 
