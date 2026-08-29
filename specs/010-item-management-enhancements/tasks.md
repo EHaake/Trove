@@ -593,6 +593,19 @@ brass.
       second empirical check (Inspector against a row with Custom
       selected, no edit mode involved, on both screens) is required
       before a real decision about T028.
+      **Second check (2026-08-29, recorded verbatim from the same
+      review): "the row itself, not just the drag handle, was checked
+      in three matched states (Wishlist/edit-mode-on,
+      Wishlist/Custom-sort/edit-mode-off, Items/Custom-sort). Move
+      Up/Move Down appear only in the edit-mode-on state. The
+      accessible actions are tied to formal editMode specifically, not
+      to .onMove or to either screen's Custom sort selection."**
+      Consequence, stated explicitly (also verbatim): ItemListView's
+      reorder capability has no accessible path today, on any screen,
+      under any state. WishlistView's only accessible reorder path is
+      the one T028 would remove. T028/T029 remain held — this is
+      bigger than what T027a was scoped to decide, and needs a real
+      product call, not a docs update.
 - [ ] **T028** — Remove `WishlistView`'s "Reorder" button from the
       header entirely. *Verify: manual — button no longer appears
       anywhere in the UI; press-and-hold-drag still works on
