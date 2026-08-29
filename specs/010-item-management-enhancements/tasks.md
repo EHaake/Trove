@@ -615,7 +615,7 @@ brass.
       the "Reorder either list" flow, the Non-goals entry, three
       acceptance criteria, and three Resolved-decisions entries;
       plan.md's known-limitations section.
-- [ ] **T028** — Rewritten after T027a reversed its premise; the
+- [x] **T028** — Rewritten after T027a reversed its premise; the
       original task ("remove `WishlistView`'s Reorder button from the
       header entirely") does NOT execute — the button stays. T027a
       measured that formal edit mode is what exposes VoiceOver's
@@ -655,6 +655,14 @@ brass.
       parked on the Items tab with Custom selected and edit mode
       active; point Inspector at either row and look for Move
       Up/Move Down.
+      Inspector check done (2026-08-29, by the person steering this
+      project): selecting the first item with Accessibility
+      Inspector shows "Move down" in the Actions list. That closes
+      the inference — and closes it well: the top row offering only
+      Move down (no Move up, nowhere to go) is the position-aware
+      behavior of the genuine reorder mechanism, not a generic
+      action label. `ItemListView`'s Custom-wired edit mode exposes
+      the accessible reorder path. T028 complete.
 - [x] **T029** — Manual verification, both screens, updated for T028's
       rewrite: switching away from "Custom" and back preserves the
       manual order exactly as last arranged; dragging is unavailable
