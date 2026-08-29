@@ -743,6 +743,11 @@ brass.
       per-entity spot-check, T020/T022 precedent). All reverted;
       restored suite green. Inspector pass pending, same
       AXIsProcessTrusted blocker as before.
+      Inspector check done (2026-08-29, by the person steering the
+      project): "Move up/Move down appears in actions on each row in
+      both screens." T028b closes green — the named actions are the
+      accessible reorder path on both lists, with no edit mode
+      anywhere.
 - [ ] **T029a** — Re-run T029's manual verification against the
       unified behavior (its earlier record verified the edit-mode
       variant): order round-trip preserved; drag detached while
@@ -774,6 +779,40 @@ brass.
       robot-gesture artifact and T029a closes green; if a real
       drag can also land stale, it's a real defect to fix before
       the spec ships.
+      Human check (2026-08-29): it's a real defect. Recorded
+      near-verbatim: "I can press and drag to move the physical
+      item but then after switching the order of items and
+      releasing the gesture, the item snaps back to where it was in
+      the list and I can't reorder it again, suggesting that the
+      underlying order has changed but it's not being reflected in
+      the UI." So a real finger reaches the same end state the
+      synthetic drags did — model and store move, the rendered rows
+      don't — *with* the visible lift, and the broken view-to-data
+      mapping then defeats follow-up drags. T029a stays open until
+      T029b lands the fix and this checklist re-runs against it.
+- [ ] **T029b** — Diagnose, then fix, the reorder render desync on
+      both screens: after `.onMove` fires, the List must show the
+      new order immediately — no snap-back, no stale arrangement,
+      no dead follow-up drags. Diagnose before fixing, per the
+      standing rule: instrument to find which link breaks (the VM
+      mutation, the save timing, a competing row gesture, or
+      List-internal teardown), and fix the actual cause rather than
+      forcing a whole-List identity rebuild. *Verify: build; full
+      suite; robot-drag repro recipe (the one that hit 4/4 stale on
+      the wishlist) now renders correctly, repeatedly, on both
+      screens, with store round-trips confirming persistence; then
+      a human finger-drag confirms lift-land-stay.*
+- [ ] **T029c** — Fix the sort control's transient border glitch:
+      switching to "Custom" from any other sort makes one or both
+      sides of the button's surrounding rectangle vanish for about
+      half a second, and the label text sometimes jumps — every
+      time, both screens (reported 2026-08-29 during T029a's human
+      pass). The label grows to its widest string while the
+      stroke-border overlay animates on its own schedule; they need
+      to move as one unit. *Verify: build; full suite; human
+      confirmation that the transient is gone on both screens,
+      since a half-second animation artifact outlives any
+      screenshot this environment can time.*
 
 ## Phase 6 — Wishlist sort expansion
 
