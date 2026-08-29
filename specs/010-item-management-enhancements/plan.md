@@ -259,9 +259,12 @@ This section originally carried forward `spec.md`'s "no
 VoiceOver-accessible entry point for manual reordering" non-goal as a
 deliberate, documented gap. T027a's empirical check reversed the
 premise, and `010` ships accessible reordering on both screens
-instead: explicit, position-aware "Move up"/"Move down" accessibility
-actions on the rows of both lists, present only while reordering is
-meaningful. (Formal edit mode — what T027a measured as the native
+instead: explicit "Move up"/"Move down" accessibility actions on the
+rows of both lists, present while reordering is available — their
+presence gated on reorderability rather than row position, because
+position-conditional presence destabilized the List's reorder
+rendering (spec.md's reorder flow records T029b's finding). (Formal
+edit mode — what T027a measured as the native
 carrier of those actions — is not used anywhere in the shipped
 design; an interim build routed accessibility through it before the
 intended minimal behavior was clarified.) The full account — what was

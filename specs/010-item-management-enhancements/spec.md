@@ -47,8 +47,9 @@ refinement rather than a new feature concept.
    and nothing else. No separate "Reorder" button on either screen,
    no drag handles, no formal edit mode, ever; swipe actions stay
    live in every state. Identical behavior on both lists. Reordering
-   stays VoiceOver-reachable on both screens through explicit,
-   position-aware "Move up"/"Move down" row actions — the resolution
+   stays VoiceOver-reachable on both screens through explicit
+   "Move up"/"Move down" row actions, offered wherever reordering
+   itself is — the resolution
    of a two-step implementation story recorded in Resolved decisions
    (an edit-mode-based approach shipped briefly in between, and was
    pulled back once it turned out to force reorder UI and dead swipe
@@ -106,9 +107,11 @@ refinement rather than a new feature concept.
   VoiceOver's Move Up/Move Down actions — the drag gesture itself
   exposes nothing. Edit mode later left the design entirely when the
   clarified intent landed (no handles, no button, identical screens —
-  see Resolved decisions), so what `010` actually ships is explicit,
-  position-aware "Move up"/"Move down" accessibility actions on the
-  rows of both lists, present only while reordering is meaningful.
+  see Resolved decisions), so what `010` actually ships is explicit
+  "Move up"/"Move down" accessibility actions on the rows of both
+  lists, present while reordering is available — the ends of the
+  list no-op, and the reorder flow records why their presence
+  deliberately isn't position-conditional (T029b).
   Reordering is VoiceOver-reachable on both screens; the bare
   long-press drag still has no accessible equivalent *of its own*,
   which is moot — the row actions reach the same capability
@@ -250,9 +253,14 @@ forced exactly that trade into the reorderable state. Outside an
 unnarrowed "Custom" the drag gesture is detached entirely — hidden,
 not merely disabled — identically on both screens. VoiceOver reaches
 the same capability through explicit "Move up"/"Move down" actions on
-each row, present only while reordering is meaningful and
-position-aware at the ends of the list; they replace the edit-mode
-path the interim design relied on.
+each row, present exactly while reordering is available and inert at
+the ends of the list. Their *presence* is deliberately not
+position-conditional: an earlier version added and removed the
+actions by row position, and restructuring a row's accessibility
+content while a drag settles turned out to be precisely what broke
+the List's reorder rendering (the T029b defect — the row snapped back
+visually while the order changed underneath). They replace the
+edit-mode path the interim design relied on.
 
 Switching to a different sort doesn't discard the manual order
 underneath — selecting "Custom" again shows it exactly as last
@@ -403,9 +411,11 @@ off (with citations, matching `001`'s convention) once built.
       category filtering exactly like "Cost" already does — both active
       simultaneously. "Custom" remains the one mode that requires an
       unfiltered, unsearched view, per the existing guard.
-- [ ] Reordering is VoiceOver-reachable on both lists via explicit,
-      position-aware "Move up"/"Move down" row actions, present only
-      while reordering is meaningful. (This criterion originally
+- [ ] Reordering is VoiceOver-reachable on both lists via explicit
+      "Move up"/"Move down" row actions, present while reordering is
+      available; the ends of the list no-op rather than dropping the
+      action, since position-conditional presence destabilized the
+      List's reorder rendering (T029b). (This criterion originally
       documented the opposite as a known gap; T027a's measurements
       reversed it, an interim design satisfied it via edit mode, and
       the row actions are its final form — see Resolved decisions.)
@@ -512,9 +522,11 @@ off (with citations, matching `001`'s convention) once built.
   three, the shipped resolution: no formal edit mode anywhere; the
   button goes; both screens attach the drag gesture only under an
   unnarrowed "Custom" (detached otherwise); and the accessible path
-  the first two steps fought over moves to explicit, position-aware
-  "Move up"/"Move down" VoiceOver actions on the rows — so the
-  removal no longer costs what step one would have cost. No bespoke
+  the first two steps fought over moves to explicit "Move up"/"Move
+  down" VoiceOver actions on the rows (presence gated on
+  reorderability, not row position — T029b found position-conditional
+  presence broke the List's reorder rendering) — so the removal no
+  longer costs what step one would have cost. No bespoke
   reorder-button Design treatment needed; the control no longer
   exists.
 - **`ItemListView` gains manual reorder too — a second, bigger reversal
