@@ -237,15 +237,11 @@ struct ItemListView: View {
         // over the last row or two when scrolled fully down. Same rule as
         // `WishlistView.rows`, recorded in plan.md's Navigation section.
         //
-        // Formal edit mode rides the same gate as the drag gesture. The mode
-        // is what exposes VoiceOver's Move Up/Move Down actions (T027a — they
-        // belong to edit mode, not to `.onMove`), and it silences the swipe
-        // actions while active, which is why it can key off "Custom" here and
-        // not on the wishlist: Date is this screen's default sort, so the
-        // trade applies only in a view the user chose in order to arrange.
-        // The wishlist's Reorder button exists to solve the same problem from
-        // the other side — see spec.md's Resolved decisions.
-        .environment(\.editMode, .constant(viewModel.canReorder ? .active : .inactive))
+        // No `\.editMode` here, deliberately. An interim build wired it to
+        // `canReorder`, which put drag handles on every row and silenced the
+        // swipe actions whenever Custom was active — spec.md's reorder flow
+        // records why that left: Custom only *allows* the long-press drag.
+        // VoiceOver reorders through the rows' named actions instead.
     }
 
     // MARK: - Header

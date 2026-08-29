@@ -19,7 +19,6 @@ struct WishlistView: View {
     @State private var viewModel: WishlistViewModel
     @State private var isAddingItem = false
     @State private var selectedItemID: UUID?
-    @State private var isReordering = false
 
     /// The row whose Edit swipe action is open in the form sheet — a
     /// shortcut into the same flow the detail screen offers (T024).
@@ -32,9 +31,9 @@ struct WishlistView: View {
     /// does too.
     ///
     /// Until T016 this was fed by `.onDelete`, which also powered the
-    /// edit-mode minus button; `.swipeActions` doesn't, so between here and
-    /// T028 (which removes the Reorder toggle entirely) edit mode offers
-    /// reordering only. T001's finding records the ordering call.
+    /// edit-mode minus button; `.swipeActions` doesn't — and since T028a
+    /// removed edit mode from this screen entirely, the swipe is simply the
+    /// list's one delete gesture. T001's finding records the ordering call.
     @State private var pendingDeletion: WishlistItem?
 
     @Environment(\.theme) private var theme
@@ -150,14 +149,9 @@ struct WishlistView: View {
 
             Spacer()
 
-            // Nothing to sort or reorder on an empty list.
+            // Nothing to sort on an empty list.
             if viewModel.totalCount > 0 {
-                VStack(alignment: .trailing, spacing: 8) {
-                    sortControl
-                    if viewModel.canReorder || isReordering {
-                        reorderToggle
-                    }
-                }
+                sortControl
             }
         }
     }
@@ -174,7 +168,6 @@ struct WishlistView: View {
             ForEach(WishlistViewModel.SortOrder.allCases) { order in
                 Button {
                     viewModel.sortOrder = order
-                    if !viewModel.canReorder { isReordering = false }
                     viewModel.load()
                 } label: {
                     if viewModel.sortOrder == order {
@@ -200,19 +193,6 @@ struct WishlistView: View {
             )
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
-    }
-
-    /// Dragging needs an explicit mode. Long-press-to-drag competes with
-    /// tapping a row to edit it, and a permanent set of grab handles would put
-    /// furniture on a screen that's usually just being read.
-    private var reorderToggle: some View {
-        Button {
-            isReordering.toggle()
-        } label: {
-            Text(isReordering ? "Done" : "Reorder")
-                .monoLabel(color: isReordering ? theme.colors.accentBrass : theme.colors.textQuiet)
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Rows
@@ -272,9 +252,14 @@ struct WishlistView: View {
                         .tint(theme.colors.surfaceInset)
                     }
             }
-            .onMove { source, destination in
+            // Attached only while Custom is the active, unnarrowed view —
+            // `nil` detaches the gesture entirely, so reordering is hidden,
+            // not just disabled, everywhere it wouldn't be meaningful. Same
+            // pattern as ItemListView's, since T028a unified the two screens;
+            // the view model's guard stays as the second line of defense.
+            .onMove(perform: viewModel.canReorder ? { source, destination in
                 viewModel.move(fromOffsets: source, toOffset: destination)
-            }
+            } : nil)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -284,7 +269,6 @@ struct WishlistView: View {
         // refract. A margin here would buy clearance at the cost of the
         // effect it exists to enable. plan.md says so explicitly, because
         // this was once "fixed" the other way.
-        .environment(\.editMode, .constant(isReordering ? .active : .inactive))
     }
 
     // MARK: - Filter
@@ -307,7 +291,6 @@ struct WishlistView: View {
 
         return Button {
             viewModel.categoryFilter = path
-            if !viewModel.canReorder { isReordering = false }
             viewModel.load()
         } label: {
             CategoryPathLabel(

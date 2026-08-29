@@ -692,7 +692,7 @@ brass.
       back. Wishlist on the same binary: Reorder → handles + DONE,
       Done → resting swipe pops Delete. Every check on the current
       build, not carried over from the pre-T028 binary.
-- [ ] **T028a** — Unify both screens on the clarified minimal
+- [x] **T028a** — Unify both screens on the clarified minimal
       behavior: remove `ItemListView`'s editMode environment line
       (reverting 19dd93d's wiring); remove `WishlistView`'s Reorder
       button, its `isReordering` state, and its editMode binding
@@ -704,6 +704,16 @@ brass.
       full suite; manual — no handles or button on either screen in
       any state; long-press drag reorders under Custom on both;
       swipes work while Custom is active.*
+      Done (2026-08-29): editMode line gone from ItemListView;
+      WishlistView loses `isReordering`, the toggle, its editMode
+      binding, and both `isReordering = false` resets, and its
+      header/sortControl now match ItemListView's line for line;
+      its `.onMove` adopts the conditional-nil pattern. A grep for
+      isReordering/editMode/EditButton across the app target finds
+      only `canReorder` and one explanatory comment. Build green;
+      full suite green (524 tests in 85 suites + 5 UI tests). The
+      manual pass runs at T029a, after T028b restores the
+      accessible path.
 - [ ] **T028b** — Replace the edit-mode accessible path with explicit
       VoiceOver actions, both screens: position-aware "Move up" /
       "Move down" accessibility actions on rows, present only while
