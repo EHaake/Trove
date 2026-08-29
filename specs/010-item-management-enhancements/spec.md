@@ -9,9 +9,12 @@ Brings the owned-items list to full behavioral parity with the
 wishlist — swipe-to-delete, swipe-revealed Edit and Duplicate, and
 manual drag-to-reorder via a "Custom" sort option matching wishlist's
 own convention — extends the existing delete-confirmation model to
-every delete path consistently (rather than removing it), removes the
-wishlist's now-redundant "Reorder" button, expands the wishlist's own
-sort options ("Desire" and "Alphabetical" alongside "Custom" and
+every delete path consistently (rather than removing it), keeps the
+wishlist's "Reorder" button after all — implementation's T027a check
+found its edit mode carries the app's only confirmed
+VoiceOver-accessible reorder path, reversing the removal this summary
+originally announced (see Resolved decisions) — expands the wishlist's
+own sort options ("Desire" and "Alphabetical" alongside "Custom" and
 "Cost"), and gives the list rows and the `DesireGauge` a real visual
 refinement pass.
 This started as an interaction-parity and design-refinement spec and
@@ -40,12 +43,18 @@ refinement rather than a new feature concept.
 5. Give `ItemListView` the same manual drag-to-reorder capability
    `WishlistView` already has: a "Custom" option in the sort picker
    (alongside desire-to-keep, value, and purchase date) that shows the
-   list in its manual order and enables press-and-hold-then-drag —
-   matching exactly how `WishlistView` already exposes its own "Custom"
-   mode. Full behavioral parity between the two lists, not just a
-   shared gesture vocabulary. Neither list gets a separate "Reorder"
-   entry-point button; the sort picker is the whole entry point on
-   both.
+   list in its manual order, enables press-and-hold-then-drag, and
+   puts the list into formal edit mode — drag handles, and with them
+   VoiceOver's Move Up/Move Down actions — for as long as "Custom" is
+   the active, unnarrowed view. `WishlistView` keeps its existing
+   "Reorder" button rather than losing it as this goal originally
+   planned ("neither list gets a separate entry-point button"):
+   implementation's empirical check (T027a) found that button's
+   edit-mode toggle is the app's only confirmed VoiceOver-accessible
+   reorder path, and — because "Custom" is the wishlist's *default*
+   sort, unlike the item list's — wiring it the item list's way would
+   park the whole screen in edit mode at rest. See Resolved decisions
+   for the full reversal.
 6. Give list rows on both screens a small amount of additional visual
    depth/character. Ended up requiring an amendment to
    `design/brief.md`'s skeuomorphism section rather than fitting inside
@@ -90,13 +99,20 @@ refinement rather than a new feature concept.
 - **In-row editable desire dial** (dragging a rating directly on a list
   row). Tension with `brief.md`'s "small and quiet in list contexts" for
   the dial; not raised as a need here.
-- **A VoiceOver-accessible entry point for manual reordering.** Neither
-  list's drag-to-reorder gesture has one today — raised while scoping
-  this spec and deliberately left unsolved rather than folded in as an
-  extra requirement. Documented here as a known gap, to carry into
-  `plan.md`'s known-limitations section (matching `001`'s convention for
-  things like "no Dynamic Type" and "pull-to-refresh unreachable on any
-  empty state") rather than going unrecorded.
+- **A VoiceOver-accessible entry point for manual reordering — written
+  here as a deferred gap, resolved during implementation instead.**
+  This entry originally deferred the problem outright, on the belief
+  that neither list's drag-to-reorder had an accessible equivalent.
+  T027a's empirical check reversed that: the wishlist's "Reorder"
+  button already carried one — formal edit mode is what exposes
+  VoiceOver's Move Up/Move Down actions — which is why that button
+  survived its planned removal, and `ItemListView` gained the same
+  accessible path by wiring its "Custom" sort to the same edit mode.
+  What `010` actually ships: reordering is VoiceOver-reachable on
+  both lists. The one narrow remainder — the bare long-press drag
+  outside edit mode has no accessible equivalent *of its own* — is
+  moot in practice, since edit mode reaches the same capability on
+  both screens. See Resolved decisions for the full account.
 
 ## Entities
 
@@ -219,8 +235,25 @@ Selecting "Custom" shows the list in its manual order and enables the
 drag gesture; selecting anything else hides it. This is new capability
 for `ItemListView`, which had no manual order or "Custom" option at all
 before this spec (see Resolved decisions for why that reverses an
-earlier non-goal); `WishlistView` already has both, minus the
-redundant "Reorder" button being removed alongside this change.
+earlier non-goal); `WishlistView` already has both, and keeps its
+"Reorder" button too — the removal originally planned here was
+reversed by T027a's finding (see Resolved decisions).
+
+The two screens now differ, deliberately, in how formal edit mode —
+the state that shows drag handles and exposes VoiceOver's Move Up/Move
+Down actions — is entered, because edit mode has a measured cost:
+while it's active, swipe actions (Delete, Edit, Copy) don't respond
+(checked on both edges during implementation, with a positive
+control). On `ItemListView`, "Custom" itself engages edit mode: that
+screen's default sort is Date, so the trade applies only in a state
+the user deliberately chose in order to arrange. On `WishlistView`,
+"Custom" *is* the default sort, so the same wiring would put the
+screen in edit mode at rest — swipe actions dead and drag handles
+permanent on a screen that's usually just being read — hence the kept
+button: reading and swiping stay the resting state, and the button
+opts into arranging (with the accessible path) explicitly. Bare
+long-press drag additionally works on both screens without edit mode,
+whenever "Custom" is active and unnarrowed.
 
 Switching to a different sort doesn't discard the manual order
 underneath — selecting "Custom" again shows it exactly as last
@@ -230,8 +263,10 @@ Existing owned items need a sensible starting manual order the first
 time this ships, rather than every item tying at the same default value
 — the concrete backfill strategy is a `plan.md` decision.
 
-Neither list's reordering has a VoiceOver-accessible entry point today
-— see Non-goals.
+Both lists' reordering has a VoiceOver-accessible path — the
+wishlist's via its kept "Reorder" button, the item list's via "Custom"
+engaging edit mode. See Non-goals for how this stopped being a
+deferred gap.
 
 ### Wishlist sort options, expanded
 
@@ -338,12 +373,17 @@ off (with citations, matching `001`'s convention) once built.
 - [ ] A duplicated owned item does not inherit membership in any Sell
       Plan the original was part of; a duplicated wishlist item's own
       Sell Plan selection starts empty.
-- [ ] The wishlist's "Reorder" button no longer appears anywhere in the
-      UI; press-and-hold-then-drag reordering on wishlist rows still
-      works exactly as it does today.
+- [ ] The wishlist's "Reorder" button remains, and its edit mode still
+      exposes VoiceOver's Move Up/Move Down actions;
+      press-and-hold-then-drag reordering on wishlist rows also still
+      works exactly as it did before. (This criterion originally
+      required the button's removal — reversed by T027a's finding,
+      see Resolved decisions.)
 - [ ] User can drag-to-reorder owned items in `ItemListView` via the
-      same press-and-hold gesture `WishlistView` already uses; no
-      separate "Reorder" button appears on either screen.
+      same press-and-hold gesture `WishlistView` already uses, and
+      selecting "Custom" there engages formal edit mode — drag
+      handles, accessible Move actions — with no separate button
+      needed on that screen.
 - [ ] Manual order on `ItemListView` persists across app launches and
       syncs across devices, the same as `WishlistView`'s `sortOrder`
       already does.
@@ -365,9 +405,11 @@ off (with citations, matching `001`'s convention) once built.
       category filtering exactly like "Cost" already does — both active
       simultaneously. "Custom" remains the one mode that requires an
       unfiltered, unsearched view, per the existing guard.
-- [ ] Neither list's drag-to-reorder gesture has a VoiceOver-accessible
-      equivalent; this is documented as a known gap, not silently
-      dropped from the record.
+- [ ] Reordering is VoiceOver-reachable on both lists — the wishlist
+      through its kept "Reorder" button's edit mode, the item list
+      through "Custom" engaging edit mode. (This criterion originally
+      documented the opposite as a known gap; T027a's measurements
+      reversed it — see Resolved decisions.)
 - [ ] List rows on both screens read with more visual depth than a flat
       rectangle, per `tokens.md`'s "Row treatment" table, and stay
       inside `brief.md`'s current (post-`010`-amendment) skeuomorphism
@@ -450,14 +492,29 @@ off (with citations, matching `001`'s convention) once built.
   yet, now tracked as its own candidate too (`012-settings-menu`, which
   also picks up the delete-confirmation and duplicate-photo toggles
   above, plus the sync-status indicator already deferred at `T049a`).
-- **Wishlist's "Reorder" button removed rather than redesigned —
-  reversed from Goal 5's earlier framing.** Turned out manual
-  reordering already works via a native press-and-hold-then-drag
-  gesture directly on rows, independent of the button; the button was
-  a redundant second entry point into a capability that already didn't
-  need one, not a real UI problem worth a Design pass. This also
-  shrinks the design-brief addendum — no bespoke reorder-button
-  treatment needed.
+- **Wishlist's "Reorder" button KEPT — the removal this entry
+  originally recorded was reversed by measurement, and the reversal
+  is the record now.** As first written, this entry said the button
+  was "a redundant second entry point into a capability that already
+  didn't need one," because the drag gesture works without it. That
+  premise didn't hold. T027a's empirical check (Accessibility
+  Inspector, three matched states, live device) found the button's
+  edit-mode toggle is the *only* mechanism in the app that exposes
+  VoiceOver's Move Up/Move Down actions — the accessible actions
+  belong to formal edit mode specifically, not to the drag gesture or
+  to the "Custom" sort selection. Removing the button would have
+  removed the app's one working accessible reorder path, not a
+  redundancy. Resolution: the button stays untouched, and
+  `ItemListView` gets its accessible path a different way — "Custom"
+  there wires directly to formal edit mode, which is safe on that
+  screen because its default sort is Date: edit mode, and its
+  measured cost of deadening swipe actions, applies only in an
+  opt-in arranging state. The wishlist can't use that wiring —
+  "Custom" is its default sort, so the same line would park the
+  screen in edit mode at rest — which is exactly the problem the
+  button already solves. One piece of the original entry still
+  stands: no bespoke reorder-button Design treatment is needed; the
+  existing button ships as-is.
 - **`ItemListView` gains manual reorder too — a second, bigger reversal
   of an earlier non-goal in the same spec.** The original draft
   explicitly ruled this out ("attribute-sorted by design... nothing in
@@ -469,19 +526,27 @@ off (with citations, matching `001`'s convention) once built.
   worth the review scrutiny `CLAUDE.md`'s "foundational, hard-to-reverse
   work" tier calls for once this reaches `tasks.md`, unlike the rest of
   this spec's comparatively mechanical UI work.
-- **The VoiceOver question raised while scoping this is deliberately
-  left open, not solved.** Neither list's drag-to-reorder has an
-  accessible entry point today, on either screen — documented as a
-  known gap (see Non-goals), matching `001`'s convention for `plan.md`
-  "known limitation" sections, rather than blocking this spec on fixing
-  it or letting it go unrecorded.
+- **The VoiceOver question raised while scoping was NOT left open
+  after all — implementation resolved it, and the resolution reversed
+  a different decision than the one this entry originally described.**
+  As first written, this entry recorded "neither list has an
+  accessible entry point" as a documented, deliberately deferred gap.
+  T027a's check showed that premise was already false on the wishlist
+  side — the supposedly redundant button's edit mode was carrying a
+  working accessible path all along — and true on the item-list side
+  only until `010` wired "Custom" to edit mode there. So the gap this
+  entry deferred no longer exists, and what the finding actually
+  overturned was the button-removal decision above, not anything this
+  entry had framed as at stake. `plan.md`'s known-limitations entry is
+  superseded the same way.
 - **`ItemListView`'s "Custom" sort option resolves what was previously
   an open design question** (how a user enters manual-order mode) —
   same convention `WishlistView` already established, a sort-picker
-  option rather than a separate control. Confirms the earlier read on
-  `WishlistView`'s own button, too: "Custom" was always the real entry
-  point underneath it; the button was genuinely redundant with it, not
-  a guess.
+  option rather than a separate control. (This entry originally added
+  that it "confirmed" the wishlist's own button as genuinely redundant
+  — T027a later disproved exactly that claim; see the corrected button
+  entry above. The sort-picker-as-entry-point convention itself
+  stands.)
 - **`WishlistView`'s sort options expand from two ("Yours"/"Cost", as
   `001` actually shipped them — renamed to "Custom" later in `010`, see
   below) to at least four — reversing a decision `001` shipped and

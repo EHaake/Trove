@@ -253,16 +253,20 @@ product calls, not technical constraints, so easy to override:
 
 ## Known limitations
 
-### No VoiceOver-accessible entry point for manual reordering
+### VoiceOver-accessible reordering — resolved, no longer a limitation
 
-Carried forward from `spec.md`'s Non-goals, in the same spirit as
-`001`'s "no Dynamic Type" and "pull-to-refresh unreachable on any empty
-state" entries: a real, deliberate gap, not an oversight nobody
-noticed. Neither list's press-and-hold-drag gesture has an accessible
-equivalent today, on either screen, and this spec doesn't fix that —
-it documents it. Revisit if this turns out to matter more in practice
-than expected, the same trigger `001` used for its own deferred
-limitations.
+This section originally carried forward `spec.md`'s "no
+VoiceOver-accessible entry point for manual reordering" non-goal as a
+deliberate, documented gap. T027a's empirical check reversed the
+premise, and `010` ships accessible reordering on both screens
+instead: the wishlist's kept "Reorder" button toggles formal edit mode
+— which is what actually exposes VoiceOver's Move Up/Move Down
+actions — and `ItemListView`'s "Custom" sort engages the same edit
+mode directly. The full account (what was measured, why the wishlist
+keeps a button the item list doesn't need, and the
+edit-mode/swipe-action trade underneath both) lives in `spec.md`'s
+corrected Non-goals entry and Resolved decisions, not duplicated
+here.
 
 ## Testing strategy
 
