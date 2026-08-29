@@ -573,6 +573,26 @@ brass.
       task's own named tool in human hands: Accessibility Inspector
       against the booted simulator, ~2 minutes — steps in the Phase 5
       report. T028 stays gated per its own text.
+      **Finding (2026-08-25, recorded verbatim from the person steering
+      this project): "WishlistView's edit mode does expose
+      VoiceOver-accessible Move Up / Move Down actions, confirmed via
+      Accessibility Inspector against a live device."** This reverses
+      the premise T028 was scoped under — removing the Reorder button
+      would remove a working accessible path, not a redundant one. T028
+      and T029 remain held; not cleared to proceed. Follow-on question
+      opened in the same review, answered from source: the accessible
+      path just confirmed is the *formal edit-mode* path specifically —
+      `WishlistView` binds `\.editMode` to the Reorder toggle alone and
+      attaches `.onMove` unconditionally, while `ItemListView`'s new
+      T027 mechanism never touches edit mode at all (nil/non-nil
+      `perform` plus long-press drag, no `EditButton`, no `editMode`
+      anywhere in the file, nor anywhere else in the app target). So
+      the item list's entire new reorder mechanism, and the wishlist's
+      post-T028 long-press-only mode, are both outside anything this
+      device check measured — their accessibility is UNVERIFIED, and a
+      second empirical check (Inspector against a row with Custom
+      selected, no edit mode involved, on both screens) is required
+      before a real decision about T028.
 - [ ] **T028** — Remove `WishlistView`'s "Reorder" button from the
       header entirely. *Verify: manual — button no longer appears
       anywhere in the UI; press-and-hold-drag still works on
