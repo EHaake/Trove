@@ -222,6 +222,22 @@ struct ItemListView: View {
                         }
                         .tint(theme.colors.surfaceInset)
                     }
+                    // VoiceOver's route into reordering. The drag gesture
+                    // below has no accessible equivalent of its own, and the
+                    // edit mode that natively carries Move Up/Move Down left
+                    // at T028a — these named actions are what keeps spec.md's
+                    // "reordering is VoiceOver-reachable on both lists"
+                    // criterion true, invisibly. Position-aware on purpose:
+                    // the top row offers no "Move up", matching the system
+                    // control's own behavior (T027a's Inspector finding).
+                    .accessibilityActions {
+                        if viewModel.canMoveUp(id: item.id) {
+                            Button("Move up") { viewModel.moveUp(id: item.id) }
+                        }
+                        if viewModel.canMoveDown(id: item.id) {
+                            Button("Move down") { viewModel.moveDown(id: item.id) }
+                        }
+                    }
             }
             // Attached only while Custom is the active, unnarrowed view —
             // `nil` detaches the gesture entirely, so reordering is hidden,

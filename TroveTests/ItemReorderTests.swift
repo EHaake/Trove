@@ -141,6 +141,102 @@ struct ItemReorderTests {
         #expect(orderByName["First"] == 0)
         #expect(orderByName["Second"] == 1)
     }
+
+    // MARK: - VoiceOver moves (T028b)
+
+    /// The rows' "Move down" accessibility action, at the view-model layer:
+    /// one step, dense renumbering, and genuinely saved — the same
+    /// fresh-context proof `aMoveRenumbersAndReachesTheStore` uses.
+    @Test func moveDownStepsOneRowAndPersists() throws {
+        let context = try makeInMemoryContext()
+        insertItem("First", order: 0, into: context)
+        insertItem("Second", order: 1, into: context)
+        insertItem("Third", order: 2, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.sortOrder = .custom
+        viewModel.load()
+        let first = try #require(viewModel.items.first)
+        viewModel.moveDown(id: first.id)
+
+        #expect(viewModel.items.map(\.name) == ["Second", "First", "Third"])
+        #expect(viewModel.items.map(\.sortOrder) == [0, 1, 2])
+
+        let reloaded = ItemListViewModel(modelContext: ModelContext(context.container))
+        reloaded.sortOrder = .custom
+        reloaded.load()
+        #expect(reloaded.items.map(\.name) == ["Second", "First", "Third"])
+    }
+
+    /// `moveUp` is a separate code path (`index - 1`, not `index + 2`), so it
+    /// gets its own step check rather than riding the one above.
+    @Test func moveUpStepsOneRowTowardTheTop() throws {
+        let context = try makeInMemoryContext()
+        insertItem("First", order: 0, into: context)
+        insertItem("Second", order: 1, into: context)
+        insertItem("Third", order: 2, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.sortOrder = .custom
+        viewModel.load()
+        let last = try #require(viewModel.items.last)
+        viewModel.moveUp(id: last.id)
+
+        #expect(viewModel.items.map(\.name) == ["First", "Third", "Second"])
+        #expect(viewModel.items.map(\.sortOrder) == [0, 1, 2])
+    }
+
+    /// Position-awareness is what the views render from: the top row offers
+    /// no "Move up" and the bottom row no "Move down", and calling the moves
+    /// anyway changes nothing.
+    @Test func theEndsOfferNoAccessibleMove() throws {
+        let context = try makeInMemoryContext()
+        insertItem("First", order: 0, into: context)
+        insertItem("Second", order: 1, into: context)
+        insertItem("Third", order: 2, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.sortOrder = .custom
+        viewModel.load()
+        let first = try #require(viewModel.items.first)
+        let middle = viewModel.items[1]
+        let last = try #require(viewModel.items.last)
+
+        #expect(viewModel.canMoveUp(id: first.id) == false)
+        #expect(viewModel.canMoveDown(id: last.id) == false)
+        #expect(viewModel.canMoveUp(id: middle.id))
+        #expect(viewModel.canMoveDown(id: middle.id))
+
+        viewModel.moveUp(id: first.id)
+        viewModel.moveDown(id: last.id)
+        #expect(viewModel.items.map(\.name) == ["First", "Second", "Third"])
+    }
+
+    /// The accessible moves sit behind the same gate as the drag — a
+    /// VoiceOver user narrowed to a category must not be able to reorder a
+    /// subset the sighted gesture refuses to.
+    @Test func accessibleMovesRespectTheReorderGate() throws {
+        let context = try makeInMemoryContext()
+        insertItem("First", order: 0, into: context)
+        insertItem("Second", order: 1, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.sortOrder = .custom
+        viewModel.load()
+        let first = try #require(viewModel.items.first)
+
+        viewModel.categoryFilter = "Test"
+        #expect(viewModel.canMoveDown(id: first.id) == false)
+        viewModel.moveDown(id: first.id)
+
+        let orderByName = Dictionary(uniqueKeysWithValues: viewModel.items.map { ($0.name, $0.sortOrder) })
+        #expect(orderByName["First"] == 0)
+        #expect(orderByName["Second"] == 1)
+    }
 }
 
 /// The append half of T025's scope note: `ItemFormViewModel` assigned no

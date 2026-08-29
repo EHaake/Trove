@@ -251,6 +251,18 @@ struct WishlistView: View {
                         }
                         .tint(theme.colors.surfaceInset)
                     }
+                    // Same named actions as ItemListView's rows, for the
+                    // same reason — one accessible reorder pattern on both
+                    // screens, replacing the edit-mode path the Reorder
+                    // button used to provide (T028a/T028b).
+                    .accessibilityActions {
+                        if viewModel.canMoveUp(id: item.id) {
+                            Button("Move up") { viewModel.moveUp(id: item.id) }
+                        }
+                        if viewModel.canMoveDown(id: item.id) {
+                            Button("Move down") { viewModel.moveDown(id: item.id) }
+                        }
+                    }
             }
             // Attached only while Custom is the active, unnarrowed view —
             // `nil` detaches the gesture entirely, so reordering is hidden,

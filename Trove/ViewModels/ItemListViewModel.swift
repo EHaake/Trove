@@ -201,6 +201,37 @@ final class ItemListViewModel {
         }
     }
 
+    /// Whether a row can move one step toward the top — the gate for the
+    /// row's "Move up" VoiceOver action. False at the top of the list, and
+    /// false whenever the drag itself wouldn't be offered, so the two reorder
+    /// mechanisms can't disagree about when reordering is available.
+    func canMoveUp(id: UUID) -> Bool {
+        guard canReorder, let index = items.firstIndex(where: { $0.id == id }) else { return false }
+        return index > 0
+    }
+
+    /// See `canMoveUp(id:)`. False at the bottom of the list.
+    func canMoveDown(id: UUID) -> Bool {
+        guard canReorder, let index = items.firstIndex(where: { $0.id == id }) else { return false }
+        return index < items.count - 1
+    }
+
+    /// One step toward the top: VoiceOver's equivalent of a short drag,
+    /// routed through the same `move(fromOffsets:toOffset:)` as the gesture
+    /// so there is one reorder path to keep correct, not two.
+    func moveUp(id: UUID) {
+        guard canMoveUp(id: id), let index = items.firstIndex(where: { $0.id == id }) else { return }
+        move(fromOffsets: IndexSet(integer: index), toOffset: index - 1)
+    }
+
+    /// See `moveUp(id:)`. The `+ 2` is `onMove`'s convention: the destination
+    /// indexes the array *before* removal, so one step down from `index`
+    /// means inserting ahead of the element two positions along.
+    func moveDown(id: UUID) {
+        guard canMoveDown(id: id), let index = items.firstIndex(where: { $0.id == id }) else { return }
+        move(fromOffsets: IndexSet(integer: index), toOffset: index + 2)
+    }
+
     /// Creates a copy per spec.md's duplicate flow, immediately and without
     /// confirmation: every field as-is except the serial number, which is
     /// cleared — it identifies one physical unit, and carrying it over would

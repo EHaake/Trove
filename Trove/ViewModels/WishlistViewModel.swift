@@ -134,6 +134,32 @@ final class WishlistViewModel {
         }
     }
 
+    /// See `ItemListViewModel.canMoveUp(id:)` — the same VoiceOver gate,
+    /// mirrored per entity the way `duplicate(id:)` is.
+    func canMoveUp(id: UUID) -> Bool {
+        guard canReorder, let index = items.firstIndex(where: { $0.id == id }) else { return false }
+        return index > 0
+    }
+
+    /// See `canMoveUp(id:)`. False at the bottom of the list.
+    func canMoveDown(id: UUID) -> Bool {
+        guard canReorder, let index = items.firstIndex(where: { $0.id == id }) else { return false }
+        return index < items.count - 1
+    }
+
+    /// See `ItemListViewModel.moveUp(id:)` — one step toward the top, through
+    /// the same `move(fromOffsets:toOffset:)` as the drag.
+    func moveUp(id: UUID) {
+        guard canMoveUp(id: id), let index = items.firstIndex(where: { $0.id == id }) else { return }
+        move(fromOffsets: IndexSet(integer: index), toOffset: index - 1)
+    }
+
+    /// See `ItemListViewModel.moveDown(id:)` for the `+ 2`.
+    func moveDown(id: UUID) {
+        guard canMoveDown(id: id), let index = items.firstIndex(where: { $0.id == id }) else { return }
+        move(fromOffsets: IndexSet(integer: index), toOffset: index + 2)
+    }
+
     /// Deletes a wanted item by id. The list's swipe used to call
     /// `modelContext.delete` straight from the view — business logic in a
     /// view, and the one deletion in the app with no tests behind it. Routed

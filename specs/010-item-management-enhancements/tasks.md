@@ -714,7 +714,7 @@ brass.
       full suite green (524 tests in 85 suites + 5 UI tests). The
       manual pass runs at T029a, after T028b restores the
       accessible path.
-- [ ] **T028b** — Replace the edit-mode accessible path with explicit
+- [x] **T028b** — Replace the edit-mode accessible path with explicit
       VoiceOver actions, both screens: position-aware "Move up" /
       "Move down" accessibility actions on rows, present only while
       reordering is meaningful (unnarrowed Custom), backed by new
@@ -728,6 +728,21 @@ brass.
       build; full suite; Accessibility Inspector check by hand on
       both screens (same ~2-minute pass as before) confirming Move
       up / Move down appear under Custom with no edit mode involved.*
+      Done (2026-08-29) except the Inspector item: both VMs gain
+      `canMoveUp/Down(id:)` and `moveUp/Down(id:)` routed through the
+      existing `move(fromOffsets:toOffset:)`; both views attach
+      position-aware "Move up"/"Move down" via `.accessibilityActions`
+      on the rows. Six new tests (four in ItemReorderTests, two in
+      WishlistOrderingTests); full suite 530 tests in 85 suites + 5
+      UI tests, green. Four mutations, all red with ran=20 confirmed
+      per run: item moveDown `+2`→`+1` (caught by
+      moveDownStepsOneRowAndPersists), canMoveDown's canReorder guard
+      removed (accessibleMovesRespectTheReorderGate), canMoveUp
+      `>`→`>=` (theEndsOfferNoAccessibleMove), wishlist moveDown
+      `+2`→`+1` (aVoiceOverMoveStepsOneRowAndPersists — the
+      per-entity spot-check, T020/T022 precedent). All reverted;
+      restored suite green. Inspector pass pending, same
+      AXIsProcessTrusted blocker as before.
 - [ ] **T029a** — Re-run T029's manual verification against the
       unified behavior (its earlier record verified the edit-mode
       variant): order round-trip preserved; drag detached while

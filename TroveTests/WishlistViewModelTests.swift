@@ -311,6 +311,55 @@ struct WishlistOrderingTests {
         #expect(viewModel.items.map(\.name) == ["Summicron", "Vox AC15"])
         #expect(viewModel.items.map(\.sortOrder) == [0, 1])
     }
+
+    // MARK: - VoiceOver moves (T028b)
+
+    /// The wishlist's mirror of `ItemReorderTests`' accessible-move suite —
+    /// spot checks per the T020/T022 precedent, since the methods are
+    /// duplicated per entity while only the renumbering helper is shared.
+    @Test func aVoiceOverMoveStepsOneRowAndPersists() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("First", order: 0, into: context)
+        insertWanted("Second", order: 1, into: context)
+        insertWanted("Third", order: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.load()
+        let first = try #require(viewModel.items.first)
+        viewModel.moveDown(id: first.id)
+
+        #expect(viewModel.items.map(\.name) == ["Second", "First", "Third"])
+        #expect(viewModel.items.map(\.sortOrder) == [0, 1, 2])
+
+        let reloaded = WishlistViewModel(modelContext: ModelContext(context.container))
+        reloaded.load()
+        #expect(reloaded.items.map(\.name) == ["Second", "First", "Third"])
+    }
+
+    /// Ends and gate in one pass: no move offered off the top or bottom, and
+    /// none at all while the sort isn't Custom.
+    @Test func accessibleMovesStopAtTheEndsAndBehindTheGate() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("First", order: 0, into: context)
+        insertWanted("Second", order: 1, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.load()
+        let first = try #require(viewModel.items.first)
+        let last = try #require(viewModel.items.last)
+
+        #expect(viewModel.canMoveUp(id: first.id) == false)
+        #expect(viewModel.canMoveDown(id: last.id) == false)
+        viewModel.moveUp(id: first.id)
+        #expect(viewModel.items.map(\.name) == ["First", "Second"])
+
+        viewModel.sortOrder = .cost
+        #expect(viewModel.canMoveDown(id: first.id) == false)
+        viewModel.moveDown(id: first.id)
+        #expect(viewModel.items.map(\.sortOrder) == [0, 1])
+    }
 }
 
 /// Filter chips come from the screen's own rows, while autocomplete spans both
