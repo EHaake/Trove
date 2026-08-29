@@ -227,14 +227,16 @@ struct ItemListView: View {
                     // edit mode that natively carries Move Up/Move Down left
                     // at T028a — these named actions are what keeps spec.md's
                     // "reordering is VoiceOver-reachable on both lists"
-                    // criterion true, invisibly. Position-aware on purpose:
-                    // the top row offers no "Move up", matching the system
-                    // control's own behavior (T027a's Inspector finding).
+                    // criterion true, invisibly. Gated on `canReorder` alone,
+                    // never on the row's position: an earlier position-aware
+                    // version changed this block's structure while a drag
+                    // settled, and the List answered by painting the
+                    // pre-drag order over the committed move (T029b's
+                    // bisect pinned it). The ends of the list are handled
+                    // inside `moveUp`/`moveDown`, which no-op there.
                     .accessibilityActions {
-                        if viewModel.canMoveUp(id: item.id) {
+                        if viewModel.canReorder {
                             Button("Move up") { viewModel.moveUp(id: item.id) }
-                        }
-                        if viewModel.canMoveDown(id: item.id) {
                             Button("Move down") { viewModel.moveDown(id: item.id) }
                         }
                     }

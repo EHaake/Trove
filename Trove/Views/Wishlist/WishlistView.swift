@@ -255,11 +255,19 @@ struct WishlistView: View {
                     // same reason — one accessible reorder pattern on both
                     // screens, replacing the edit-mode path the Reorder
                     // button used to provide (T028a/T028b).
+                    // Same named actions as ItemListView's rows, for the
+                    // same reason — one accessible reorder pattern on both
+                    // screens, replacing the edit-mode path the Reorder
+                    // button used to provide (T028a/T028b). Gated on
+                    // `canReorder` alone, never on the row's position: this
+                    // block's structure must not change while a drag
+                    // settles, or the List paints the pre-drag order over
+                    // the committed move (T029b's bisect). The ends of the
+                    // list are handled inside `moveUp`/`moveDown`, which
+                    // no-op there.
                     .accessibilityActions {
-                        if viewModel.canMoveUp(id: item.id) {
+                        if viewModel.canReorder {
                             Button("Move up") { viewModel.moveUp(id: item.id) }
-                        }
-                        if viewModel.canMoveDown(id: item.id) {
                             Button("Move down") { viewModel.moveDown(id: item.id) }
                         }
                     }

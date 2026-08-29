@@ -790,7 +790,7 @@ brass.
       don't — *with* the visible lift, and the broken view-to-data
       mapping then defeats follow-up drags. T029a stays open until
       T029b lands the fix and this checklist re-runs against it.
-- [ ] **T029b** — Diagnose, then fix, the reorder render desync on
+- [x] **T029b** — Diagnose, then fix, the reorder render desync on
       both screens: after `.onMove` fires, the List must show the
       new order immediately — no snap-back, no stale arrangement,
       no dead follow-up drags. Diagnose before fixing, per the
@@ -802,6 +802,30 @@ brass.
       the wishlist) now renders correctly, repeatedly, on both
       screens, with store round-trips confirming persistence; then
       a human finger-drag confirms lift-land-stay.*
+      Done (2026-08-29), diagnosed by elimination then bisection,
+      every configuration measured with the repro recipe plus store
+      reads: deferring the save — still desynced; deferring the
+      whole mutation a runloop turn — 1/2; removing the row tap
+      gesture — 1/2; bare `Text` rows with only `.onMove` — 4/4
+      clean; full styled rows minus ONLY the T028b
+      `.accessibilityActions` block — 4/4 clean. Culprit: that
+      block's position-conditional buttons (`canMoveUp/Down`)
+      restructure each row's accessibility content at the exact
+      moment the reorder settles — positions are what just changed —
+      and the List answers by painting the pre-drag order over the
+      committed move. Fix: the block's structure now depends only on
+      `canReorder`, which cannot change mid-drag; both "Move up" and
+      "Move down" are present on every row while reordering is
+      available, and the ends of the list no-op inside
+      `moveUp`/`moveDown` (the guards the mutation tests already
+      cover). Trade-off accepted and recorded: boundary rows expose
+      an action that does nothing, in exchange for reorder rendering
+      that survives its own settle. Verified: wishlist 4/4 and items
+      2/2 robot drags render-and-persist consistent on the fix
+      build; full suite green (530 in 85 + 5 UI). Human
+      finger-drag confirmation pending, alongside a quick Inspector
+      re-check (both actions now appear on every row under Custom,
+      none under other sorts).
 - [ ] **T029c** — Fix the sort control's transient border glitch:
       switching to "Custom" from any other sort makes one or both
       sides of the button's surrounding rectangle vanish for about
