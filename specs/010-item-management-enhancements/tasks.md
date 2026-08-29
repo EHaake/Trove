@@ -748,6 +748,32 @@ brass.
       variant): order round-trip preserved; drag detached while
       filtered or searched on both screens; no button, no handles
       anywhere; swipes live under Custom on both screens.
+      Interim record (2026-08-29) — most checks green, one finding
+      needs a human hand. Green, all on the clean final binary:
+      no Reorder button and no handles anywhere on either screen;
+      trailing swipe pops the rust Delete *while Custom is active*
+      on both lists (the clarified requirement); long-press drag
+      reorders and persists on both (item store round-tripped
+      Leica=0/Another=1; wishlist swaps confirmed by sqlite);
+      Custom→Date→Custom preserved the arranged order; the same
+      drag recipe does nothing while a category filter is active.
+      The finding: with SYNTHETIC touches, a drag that completes
+      without the row visibly lifting still fires `.onMove` — the
+      model and store update correctly — while the List keeps
+      painting the pre-drag order until the next load() (tab away
+      and back fixes it). Reproduced 4/4 on the wishlist;
+      instrumented per the T056 rule (temp prints, reverted): move()
+      fires with correct indices AND the view's own onChange sees
+      the new array, yet the rendered rows don't change. When the
+      pickup visibly engages (observed on the item list), rendering
+      is correct. Undetermined whether a real finger can reach the
+      silent-commit state at all — the visible lift is the normal
+      human experience, and this long-press reorder is 001-shipped
+      behavior on the wishlist. Needs a human drag on each screen:
+      if the row lifts, lands, and stays where dropped, this is a
+      robot-gesture artifact and T029a closes green; if a real
+      drag can also land stale, it's a real defect to fix before
+      the spec ships.
 
 ## Phase 6 — Wishlist sort expansion
 
