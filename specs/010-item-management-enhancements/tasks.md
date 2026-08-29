@@ -837,6 +837,14 @@ brass.
       confirmation that the transient is gone on both screens,
       since a half-second animation artifact outlives any
       screenshot this environment can time.*
+      Implemented (2026-08-29): `.geometryGroup()` on both sort
+      controls' labels, after the border overlay, so the text and
+      its stroked rectangle resize atomically. Build + full suite
+      green (530 in 85 + 5 UI). Awaiting the human eyeball pass; if
+      the transient survives geometryGroup, the fallback is
+      disabling the implicit animation on the label
+      (`.animation(nil, value:)`) so the size change snaps instead
+      of tweening.
 
 ## Phase 6 — Wishlist sort expansion
 

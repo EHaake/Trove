@@ -191,6 +191,9 @@ struct WishlistView: View {
                 RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
                     .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
             )
+            // One unit with its border — same reasoning as ItemListView's
+            // sort control (T029c).
+            .geometryGroup()
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
     }

@@ -323,6 +323,11 @@ struct ItemListView: View {
                 RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
                     .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
             )
+            // The label and its stroked border must resize as one unit.
+            // Without this, picking "Custom" — the widest label — grows the
+            // text on one schedule and the border on another, so the border's
+            // sides drop out for a beat and the text hops (T029c).
+            .geometryGroup()
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
     }
