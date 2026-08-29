@@ -259,14 +259,16 @@ This section originally carried forward `spec.md`'s "no
 VoiceOver-accessible entry point for manual reordering" non-goal as a
 deliberate, documented gap. T027a's empirical check reversed the
 premise, and `010` ships accessible reordering on both screens
-instead: the wishlist's kept "Reorder" button toggles formal edit mode
-— which is what actually exposes VoiceOver's Move Up/Move Down
-actions — and `ItemListView`'s "Custom" sort engages the same edit
-mode directly. The full account (what was measured, why the wishlist
-keeps a button the item list doesn't need, and the
-edit-mode/swipe-action trade underneath both) lives in `spec.md`'s
-corrected Non-goals entry and Resolved decisions, not duplicated
-here.
+instead: explicit, position-aware "Move up"/"Move down" accessibility
+actions on the rows of both lists, present only while reordering is
+meaningful. (Formal edit mode — what T027a measured as the native
+carrier of those actions — is not used anywhere in the shipped
+design; an interim build routed accessibility through it before the
+intended minimal behavior was clarified.) The full account — what was
+measured, the three-step Reorder-button story, and the
+edit-mode/swipe-action trade that drove the final shape — lives in
+`spec.md`'s corrected Non-goals entry and Resolved decisions, not
+duplicated here.
 
 ## Testing strategy
 
