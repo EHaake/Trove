@@ -533,7 +533,7 @@ brass.
       touch path under Date changed nothing on screen or in the
       store. Bonus live proof of T025's append: newly added Echo
       sorted first under Date, last under Custom.
-- [ ] **T027a** — Before the Reorder button goes: check whether
+- [x] **T027a** — Before the Reorder button goes: check whether
       `WishlistView`'s edit mode — reachable today only via that
       button — actually exposes VoiceOver custom actions (or any other
       accessible mechanism) for reordering rows. An empirical check
@@ -606,14 +606,46 @@ brass.
       the one T028 would remove. T028/T029 remain held — this is
       bigger than what T027a was scoped to decide, and needs a real
       product call, not a docs update.
-- [ ] **T028** — Remove `WishlistView`'s "Reorder" button from the
-      header entirely. *Verify: manual — button no longer appears
-      anywhere in the UI; press-and-hold-drag still works on
-      `WishlistView` exactly as before, with no separate entry point
-      needed. Gated on T027a's finding being recorded first.*
-- [ ] **T029** — Manual verification, both screens: switching away from
-      "Custom" and back preserves the manual order exactly as last
-      arranged; dragging is unavailable while filtered or searched.
+      Decision (2026-08-29, closing this task): `ItemListView` wires
+      "Custom" to formal edit mode, mirroring `WishlistView`'s
+      existing environment binding; `WishlistView`'s Reorder button
+      is KEPT — T028 as originally written does not execute (see its
+      rewritten entry below). Doc corrections applied per this
+      task's own rule, as real reversals: spec.md's Summary, Goal 5,
+      the "Reorder either list" flow, the Non-goals entry, three
+      acceptance criteria, and three Resolved-decisions entries;
+      plan.md's known-limitations section.
+- [ ] **T028** — Rewritten after T027a reversed its premise; the
+      original task ("remove `WishlistView`'s Reorder button from the
+      header entirely") does NOT execute — the button stays. T027a
+      measured that formal edit mode is what exposes VoiceOver's
+      Move Up/Move Down actions, and the button's toggle is the only
+      way into that mode the app had — so removing it would remove a
+      working accessible path, not a redundancy. Actual work:
+      `ItemListView` wires "Custom" to formal edit mode — add
+      `.environment(\.editMode, .constant(viewModel.canReorder ?
+      .active : .inactive))` at the end of `rows`, mirroring
+      `WishlistView`'s existing binding. Safe there because Items
+      defaults to Date, so edit mode (which deadens both swipe-action
+      edges — measured live with a positive control) applies only in
+      an opt-in arranging state; unsafe on the wishlist, where
+      "Custom" is the default sort and the same wiring would park the
+      screen in edit mode at rest. `WishlistView` is untouched.
+      *Verify: build; full test suite; manual — Items under Date
+      shows no handles and swipes work, Items under Custom shows
+      handles, wishlist's Reorder button still present and working.
+      Plus one Accessibility Inspector check: Move Up/Move Down
+      appear on an Items row with "Custom" selected — closing the
+      strong-but-unconfirmed inference from T027a's second check.*
+- [ ] **T029** — Manual verification, both screens, updated for T028's
+      rewrite: switching away from "Custom" and back preserves the
+      manual order exactly as last arranged; dragging is unavailable
+      while filtered or searched; `ItemListView` enters edit mode only
+      under an unnarrowed "Custom" — never under Date/Value/Desire,
+      never while filtered or searched; `WishlistView`'s Reorder
+      button still toggles edit mode exactly as before, and its
+      resting state (Custom selected, button not pressed) still has
+      live swipe actions.
 
 ## Phase 6 — Wishlist sort expansion
 
