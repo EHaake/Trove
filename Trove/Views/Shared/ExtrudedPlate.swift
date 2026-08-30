@@ -7,30 +7,39 @@ import SwiftUI
 /// the existing `surface`, never a rendered material, which is what keeps
 /// this inside `brief.md`'s amended skeuomorphism boundary.
 ///
-/// Shared because the list rows and the detail screens' cards are one
-/// treatment, not two — tokens.md says it applies uniformly, resting or
-/// swiped open.
-struct ExtrudedPlate: ViewModifier {
+/// Shared because every card in the app is one treatment, not several: list
+/// rows, detail cards, the dashboard's figures, the search field, photo
+/// heroes and every form field all draw this. The rule the `010` review
+/// settled on is simply "any rectangle whose background differs from the
+/// screen's" — so a new card gets the plate by default, and *not* having it
+/// is what needs a reason.
+///
+/// This type is the plate as a drawable surface; `.extrudedPlate()` is the
+/// same thing as a wrapper. Both exist because the form screens hand their
+/// field chrome to `.background(_:)` and compose a validity border on top —
+/// they need the plate as a thing, not as a modifier.
+struct PlateSurface: View {
     @Environment(\.theme) private var theme
 
-    func body(content: Content) -> some View {
-        content
-            .background {
-                RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                    .fill(theme.colors.surface)
-                    .overlay(alignment: .top) {
-                        theme.colors.plateHighlight
-                            .frame(height: theme.metrics.hairline)
-                    }
-                    .overlay(alignment: .bottom) {
-                        theme.colors.plateEdgeShadow
-                            .frame(height: theme.metrics.hairline)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
-                    // tokens.md's `0 2px 6px` — SwiftUI's blur radius is half
-                    // the CSS pixel blur, hence 3.
-                    .shadow(color: theme.colors.plateCastShadow, radius: 3, x: 0, y: 2)
+    var body: some View {
+        RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
+            .fill(theme.colors.surface)
+            .overlay(alignment: .top) {
+                theme.colors.plateHighlight.frame(height: theme.metrics.hairline)
             }
+            .overlay(alignment: .bottom) {
+                theme.colors.plateEdgeShadow.frame(height: theme.metrics.hairline)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
+            // tokens.md's `0 2px 6px` — SwiftUI's blur radius is half the CSS
+            // pixel blur, hence 3.
+            .shadow(color: theme.colors.plateCastShadow, radius: 3, x: 0, y: 2)
+    }
+}
+
+struct ExtrudedPlate: ViewModifier {
+    func body(content: Content) -> some View {
+        content.background { PlateSurface() }
     }
 }
 

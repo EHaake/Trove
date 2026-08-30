@@ -171,6 +171,8 @@ struct ItemDetailView: View {
                     isInteractive: true,
                     showsScale: true
                 )
+                .padding(.bottom, -DesireDial.emptyBottomInset(diameter: 116))
+                .padding(.top, DesireDial.knobOverhang(diameter: 116))
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(DesireLevel(clamping: item.desireToKeep).summary)

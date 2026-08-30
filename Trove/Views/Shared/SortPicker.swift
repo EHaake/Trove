@@ -78,10 +78,7 @@ struct SortDropdown<Option: Identifiable & Equatable>: View {
             }
         }
         .frame(width: 232)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
-                .fill(theme.colors.surface)
-        )
+        .background { PlateSurface() }
         .clipShape(RoundedRectangle(cornerRadius: theme.metrics.buttonRadius))
         .overlay(
             RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)

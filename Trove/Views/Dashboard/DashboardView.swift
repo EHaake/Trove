@@ -181,10 +181,7 @@ struct DashboardView: View {
             .padding(.leading, theme.metrics.cardPadding)
         }
         .padding(theme.metrics.cardPadding)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
+        .extrudedPlate()
     }
 
     private func figure(

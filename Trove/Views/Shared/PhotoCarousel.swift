@@ -48,6 +48,10 @@ struct PhotoCarousel: View {
             .frame(height: photos.isEmpty ? 108 : 240)
             .frame(maxWidth: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
+            // A photo is a card like any other (`010`'s review): the plate
+            // sits behind it, so an opaque image hides the bevel and only
+            // the cast shadow reads — which is the whole point of it here.
+            .extrudedPlate()
 
             Text(photos.isEmpty ? "No photos" : "\(noun) photo \(safeIndex + 1) / \(photos.count)")
                 .monoLabel(color: theme.colors.textQuiet)

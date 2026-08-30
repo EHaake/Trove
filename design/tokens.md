@@ -127,11 +127,26 @@ of what keeps it a subtle depth cue rather than a rendered material.
 | Row internal padding | `13px` |
 | Row internal gap | `13px` (thumbnail to text) |
 | Thumbnail | `52px × 52px`, `2px` radius, existing placeholder pattern unchanged |
+| Dial-bearing cards | pad symmetrically, but trim the dial: `DesireDial`'s sweep stops at 4-and-8 o'clock, so a quarter of its square is blank below and its knob overhangs the top. `emptyBottomInset` / `knobOverhang` give those back, and only then does equal padding *look* equal (measured 15.0/16.3pt on the form, 22.0/21.7pt on the detail — it was 11.7/21.0 before) |
 
-Applies uniformly on both `ItemListView` and `WishlistView`, resting or
-swiped open — the swipe-reveal mockup showed a plain-bordered row, but
-that was illustrating the gesture, not the final row chrome (see
-`plan.md`).
+**Applies to every card in the app, not just list rows** — settled at the
+2026-08-30 review, where the rule was stated plainly: *any rectangle whose
+background differs from the screen's gets the plate.* That covers list rows
+(resting or swiped open — the swipe-reveal mockup's plain border was
+illustrating the gesture, not final chrome), the detail screens' cards, the
+dashboard's Spent/Gain figures, the search field, photo heroes, the sell
+plan's cards, both dropdowns, and every form field on both forms. A new
+card gets it by default; *not* having it is what needs a reason.
+
+Two surfaces are deliberately outside the rule, both because they have no
+fill to plate: capsule chips (category, condition, cost presets) are
+outlined pills, and the dashboard's un-valued callout is unfilled by
+design — the mock distinguishes it from the figures card above by
+outlining it rather than raising it.
+
+On form fields the border changes job rather than disappearing: the plate's
+bevel does the separating, so `fieldBorder` now draws **only** when a field
+is invalid, where rust is a signal rather than chrome.
 
 ### Sort picker (`010`)
 

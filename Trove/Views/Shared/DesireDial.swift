@@ -170,6 +170,27 @@ struct DesireDial: View {
     /// deliberate, obvious once you rest on one dial.
     static func arcRadius(diameter: CGFloat) -> CGFloat { diameter / 2 }
 
+    /// How much of the dial's own square sits empty below its ink.
+    ///
+    /// The sweep runs 150°→390°, so it never reaches 6 o'clock: both ends
+    /// stop at `sin 30° = 0.5`, putting the lowest ink at ¾ of the diameter
+    /// plus the knob's overhang. The remaining quarter is blank — which is
+    /// why a card that pads the dial equally top and bottom *measures* even
+    /// and *looks* bottom-heavy. Cards trim it with a negative bottom
+    /// padding; `DesireDialTests` pins the arithmetic against the rendered
+    /// arc rather than trusting this comment.
+    static func emptyBottomInset(diameter: CGFloat) -> CGFloat {
+        diameter * 0.25 - knobOverhang(diameter: diameter)
+    }
+
+    /// How far the knob spills past the arc — and so past the dial's frame at
+    /// 12 o'clock, where the arc runs along the frame's own edge. A card that
+    /// wants even-looking gaps has to give this back at the top, the mirror
+    /// of `emptyBottomInset` at the bottom.
+    static func knobOverhang(diameter: CGFloat) -> CGFloat {
+        max(diameter * 0.035, 2) * 1.1
+    }
+
     /// Where a level sits on the dial, as a screen bearing measured clockwise
     /// from 3 o'clock — the same convention the trimmed `Circle` is drawn in
     /// and `value(at:)` reads back.

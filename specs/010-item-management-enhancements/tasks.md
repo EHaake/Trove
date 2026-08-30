@@ -1244,6 +1244,45 @@ designs added. Decisions, all theirs, recorded before execution:
       header incidentally confirms the CTA subtitle is accurate.)
       Suite 542 in 85 + 5 UI green.
 
+- [x] **T037c** — Extend the plate to every card in the app, plus three
+      fixes, all from the 2026-08-30 design review. The rule as stated:
+      *any rectangle whose background differs from the screen's* gets the
+      treatment — so the dashboard's Spent/Gain figures, the search field
+      on both list screens, the photo hero on both detail screens, every
+      field on both forms, and (following the same rule rather than the
+      list) the sell plan's cards and both dropdowns. *Verify: build;
+      full suite; manual on every surface named.*
+      Done (2026-08-30): the plate's drawing moved into a reusable
+      `PlateSurface` view so the form screens — which hand their chrome
+      to `.background(_:)` and compose a validity border on top — could
+      use it without a wrapper. On form fields the border changed job
+      rather than vanishing: the bevel separates, so `fieldBorder` now
+      draws only when a field is invalid, where rust is a signal.
+      Two surfaces deliberately left alone, both for the same reason —
+      they have no fill to plate: capsule chips (category, condition,
+      cost presets) are outlined pills, and the dashboard's un-valued
+      callout is unfilled by design, the mock distinguishing it from the
+      figures card by outlining rather than raising it. The code already
+      said so; the rule as stated agrees.
+      The three fixes:
+      (1) **Price paid / Date bought now match heights.** A `TextField`
+      sits a couple of points taller than the plain `Text` the date
+      field draws; both boxes now stretch to the taller of the two.
+      (2) **A calendar glyph replaces the empty square**, which read as
+      an unchecked checkbox. SF Symbol, like the search magnifier and
+      the sell-plan arrow — the brief's custom-mark rule covers the
+      signature elements, not every affordance.
+      (3) **The desire cards' padding now looks even.** The cause wasn't
+      the padding: `DesireDial`'s sweep stops at 4-and-8 o'clock, so a
+      quarter of its own square is blank below it, while its knob
+      overhangs the frame at 12 o'clock. Both are computable, so the
+      arithmetic lives with the geometry (`emptyBottomInset`,
+      `knobOverhang`) and the cards give it back rather than
+      hand-tuning a number. Measured, not eyeballed: the form card went
+      11.7/21.0pt to 15.0/16.3pt, the detail card to 22.0/21.7pt — in
+      line with the plain fields around them (19.3/19.0, 18.0/18.3).
+      Suite 542 in 85 + 5 UI green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and
