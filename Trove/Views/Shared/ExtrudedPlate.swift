@@ -34,9 +34,35 @@ struct ExtrudedPlate: ViewModifier {
     }
 }
 
+/// The plate's inner bevel alone — no corner radius, no cast shadow.
+///
+/// For cells that sit *inside* a plate rather than being one: the item
+/// detail's WORTH NOW / PAID pair is two bevelled cells split by a hairline
+/// seam, clipped and shadowed once as a unit. Rounding and shadowing each
+/// cell separately would draw a shadow through the seam.
+struct PlateBevel: ViewModifier {
+    @Environment(\.theme) private var theme
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                theme.colors.surface
+                    .overlay(alignment: .top) {
+                        theme.colors.plateHighlight.frame(height: theme.metrics.hairline)
+                    }
+                    .overlay(alignment: .bottom) {
+                        theme.colors.plateEdgeShadow.frame(height: theme.metrics.hairline)
+                    }
+            }
+    }
+}
+
 extension View {
     /// The extruded-plate card/row background — see `ExtrudedPlate`.
     func extrudedPlate() -> some View { modifier(ExtrudedPlate()) }
+
+    /// The plate's bevel without its radius or shadow — see `PlateBevel`.
+    func plateBevel() -> some View { modifier(PlateBevel()) }
 }
 
 #Preview {

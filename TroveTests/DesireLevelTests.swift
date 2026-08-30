@@ -28,10 +28,69 @@ struct DesireLevelTests {
         #expect(Set(DesireLevel.allCases.map(\.summary)).count == DesireLevel.allCases.count)
     }
 
-    /// Design's own copy, from the item form and item detail mocks.
+    /// Design's own copy, from the item form and item detail mocks —
+    /// including level 3, which `010`'s refresh renamed from "Undecided".
+    /// Pinned because the last two shipped strings that weren't (the delete
+    /// copy at T010a, "Yours" at T025a) each drifted unnoticed.
     @Test func usesDesignsWordingWhereDesignProvidedIt() {
+        #expect(DesireLevel.undecided.summary == "On the fence")
         #expect(DesireLevel.keepingForNow.summary == "Keeping for now")
         #expect(DesireLevel.absolutelyKeeping.summary == "Absolutely keeping it")
+    }
+
+    // MARK: - The per-level hint (`010`)
+
+    @Test(arguments: [true, false])
+    func everyLevelHasADistinctEnoughHint(isValued: Bool) {
+        let hints = DesireLevel.allCases.map { $0.detail(isValued: isValued) }
+        #expect(hints.allSatisfy { !$0.isEmpty })
+    }
+
+    /// The rewording's whole point: no hint may promise behaviour `010`
+    /// doesn't ship. The mock's originals described target-shortfall
+    /// escalation and per-level exclusion overrides — neither exists, so
+    /// neither may be described. (Restore the richer copy *with* the
+    /// feature, not before it.)
+    @Test(arguments: [true, false])
+    func noHintDescribesUnbuiltSellPlanMechanics(isValued: Bool) {
+        let forbidden = ["target", "far short", "unless you say otherwise", "override"]
+        for level in DesireLevel.allCases {
+            let hint = level.detail(isValued: isValued).lowercased()
+            for phrase in forbidden {
+                #expect(
+                    hint.contains(phrase) == false,
+                    "level \(level.rawValue) promises unbuilt behaviour: \(hint)"
+                )
+            }
+        }
+    }
+
+    /// An unvalued item can't join a plan whatever its rating
+    /// (`SellPlanViewModel.qualifies`), so a candidate-level hint must say so
+    /// rather than claiming it'll be offered.
+    @Test func candidateLevelsSayWhatAnUnvaluedItemActuallyDoes() {
+        for level in DesireLevel.allCases where level.isSellCandidate {
+            let unvalued = level.detail(isValued: false)
+            #expect(unvalued.contains("value"), "level \(level.rawValue) said: \(unvalued)")
+            #expect(unvalued != level.detail(isValued: true))
+        }
+    }
+
+    /// A value changes nothing for a non-candidate: it isn't in the pool
+    /// either way, and implying the value is what's holding it back would be
+    /// the same false promise from the other direction.
+    @Test func nonCandidateLevelsReadTheSameValuedOrNot() {
+        for level in DesireLevel.allCases where !level.isSellCandidate {
+            #expect(level.detail(isValued: true) == level.detail(isValued: false))
+        }
+    }
+
+    /// Candidate and non-candidate levels must not read alike — the hint is
+    /// the only place the threshold is stated in words.
+    @Test func candidatesAndKeepersDoNotShareAHint() {
+        let candidates = Set(DesireLevel.allCases.filter(\.isSellCandidate).map { $0.detail(isValued: true) })
+        let keepers = Set(DesireLevel.allCases.filter { !$0.isSellCandidate }.map { $0.detail(isValued: true) })
+        #expect(candidates.isDisjoint(with: keepers))
     }
 
     /// The threshold has to agree with the Sell Plan's candidate rule in

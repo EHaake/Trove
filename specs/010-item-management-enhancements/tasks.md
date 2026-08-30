@@ -1171,7 +1171,7 @@ designs added. Decisions, all theirs, recorded before execution:
       ghost outline, brightest-at-top). Suite 537 in 85 + 5 UI
       green.
 
-- [ ] **T037a** — Item detail refresh per `Trove Item Detail.dc.html`,
+- [x] **T037a** — Item detail refresh per `Trove Item Detail.dc.html`,
       scoped by the design-refresh decisions above: keep the "…"
       overflow (no header Edit/Delete buttons); existing schema fields
       only in the DETAILS table; photo hero with pager dots and
@@ -1181,6 +1181,35 @@ designs added. Decisions, all theirs, recorded before execution:
       (`DesireLevel.detail`); NOTES and the "Add to a sell plan" row
       per `tokens.md`'s new "Item detail" table. *Verify: build; full
       suite; manual against tokens.md's exact values.*
+      Done (2026-08-30): WORTH NOW / PAID became two bevelled cells
+      split by a hairline seam, clipped and shadowed once as a unit
+      (new `.plateBevel()` alongside `.extrudedPlate()` — rounding
+      and shadowing each cell would draw a shadow through the seam);
+      the desire block became a plate; DETAILS gained its header with
+      right-aligned values over hairline rules; NOTES moved out to
+      its own section. `DesireLevel` grew `detail(isValued:)` and
+      level 3 became "On the fence" — five new tests pin the copy
+      (nothing had, and the last two unpinned strings both drifted),
+      two of them mutation-verified red: restoring the mock's
+      "unless you say otherwise" tripped the unbuilt-mechanics
+      guard, collapsing the unvalued branch tripped the
+      unvalued-differs guard.
+      Three deliberate divergences from the refreshed mock, beyond
+      the review's own list:
+      (1) **No "Add to a sell plan" row.** It has no destination —
+      `SellPlanView` takes a `wishlistItemID`, because a plan
+      belongs to a wishlist item and owned items are picked *into*
+      it from there. Building the row would mean either a button to
+      nowhere or a new item→plan picker flow, which is a feature,
+      not visual refinement. Flagged for the phase review.
+      (2) **Section headings stay `monoLabel`** rather than the
+      mock's sans-semibold: every all-caps label on every other
+      screen is mono, and one screen breaking that reads as a
+      mistake. Recorded in `tokens.md`'s table too.
+      (3) **No duplicate money rows in DETAILS.** The mock lists
+      Purchase price and Current value there *and* in the stat pair;
+      the screen would state each figure twice, so the existing row
+      set stands. Suite 542 in 85 + 5 UI green.
 - [ ] **T037b** — Wishlist detail refresh per
       `Trove Wishlist Detail.dc.html`, same scoping: ESTIMATED COST
       card, DETAILS table (Category / Estimated cost / Added — no
