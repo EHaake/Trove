@@ -166,7 +166,8 @@ struct WishlistFormView: View {
             Text("How much do you want it").monoLabel()
             DesireGauge(
                 value: $viewModel.desireToOwn,
-                segmentSize: CGSize(width: 30, height: 18),
+                maxSegmentHeight: 18,
+                segmentWidth: 30,
                 showsLabel: true,
                 isInteractive: true
             )

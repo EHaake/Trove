@@ -8,7 +8,7 @@ import Testing
 /// whose only symptom is a control that sets the wrong number.
 @Suite("DesireGauge touch mapping")
 struct DesireGaugeTouchTests {
-    private let width = DesireGauge.totalWidth(segmentSize: CGSize(width: 30, height: 18))
+    private let width = DesireGauge.totalWidth(segmentWidth: 30, maxHeight: 18)
 
     private func value(atFraction fraction: CGFloat) -> Int {
         DesireGauge.value(atX: width * fraction, totalWidth: width)
@@ -42,11 +42,10 @@ struct DesireGaugeTouchTests {
     /// same contract the dial's knob is held to.
     @Test(arguments: DesireToOwnLevel.allCases)
     func tappingASegmentReadsBackItsOwnLevel(segment: DesireToOwnLevel) {
-        let size = CGSize(width: 30, height: 18)
-        let centre = DesireGauge.segmentCentre(segment, segmentSize: size)
+        let centre = DesireGauge.segmentCentre(segment, segmentWidth: 30, maxHeight: 18)
         let readBack = DesireGauge.value(
             atX: centre.x,
-            totalWidth: DesireGauge.totalWidth(segmentSize: size)
+            totalWidth: DesireGauge.totalWidth(segmentWidth: 30, maxHeight: 18)
         )
 
         #expect(readBack == segment.rawValue)
@@ -58,14 +57,17 @@ struct DesireGaugeTouchTests {
 struct DesireGaugeFillTests {
     private let colors = ThemeColors.dark
 
+    /// An unfilled segment has no fill at all since `010`'s stepped ramp —
+    /// the track is a hairline outline, drawn by the view, not a tone this
+    /// function hands back.
     @Test(arguments: DesireToOwnLevel.allCases)
     func segmentsUpToTheLevelAreFilledAndTheRestAreEmptyTrack(level: DesireToOwnLevel) {
         for segment in DesireToOwnLevel.allCases {
-            let color = DesireGauge.segmentColor(segment, filledThrough: level, in: colors)
+            let color = DesireGauge.segmentFill(segment, filledThrough: level, in: colors)
             if segment.rawValue <= level.rawValue {
                 #expect(color == DesireGauge.fillTone(segment, in: colors))
             } else {
-                #expect(color == colors.divider)
+                #expect(color == nil)
             }
         }
     }
@@ -77,7 +79,7 @@ struct DesireGaugeFillTests {
         for segment in DesireToOwnLevel.allCases {
             let tones = DesireToOwnLevel.allCases
                 .filter { segment.rawValue <= $0.rawValue }
-                .map { DesireGauge.segmentColor(segment, filledThrough: $0, in: colors) }
+                .map { DesireGauge.segmentFill(segment, filledThrough: $0, in: colors) }
 
             #expect(Set(tones).count == 1, "segment \(segment.rawValue) changed tone by level")
         }
@@ -90,12 +92,12 @@ struct DesireGaugeFillTests {
 
         for level in [DesireToOwnLevel.someday, .soon] {
             let shown = DesireToOwnLevel.allCases
-                .map { DesireGauge.segmentColor($0, filledThrough: level, in: colors) }
+                .map { DesireGauge.segmentFill($0, filledThrough: level, in: colors) }
             #expect(shown.contains(brightest) == false, "level \(level.rawValue) showed \(brightest)")
         }
 
         let atTop = DesireToOwnLevel.allCases
-            .map { DesireGauge.segmentColor($0, filledThrough: .next, in: colors) }
+            .map { DesireGauge.segmentFill($0, filledThrough: .next, in: colors) }
         #expect(atTop.contains(brightest))
     }
 
@@ -118,8 +120,10 @@ struct DesireGaugeFillTests {
 @Suite("DesireGauge perceptual separation at row size")
 struct DesireGaugeColorTests {
     /// The row default — the smallest the gauge is ever drawn, so the hardest
-    /// case. `WishlistView` uses `DesireGauge(value:)` with no size override.
-    private let rowSize = CGSize(width: 14, height: 10)
+    /// case. `WishlistView`'s row uses the default size; tokens.md's stepped
+    /// ramp puts it at 12pt-wide segments under a 14pt tallest height.
+    private let rowSegmentWidth: CGFloat = 12
+    private let rowMaxHeight: CGFloat = 14
 
     /// The floor `DesireDialColorTests` holds the dial's adjacent stops to.
     /// Reused deliberately: two ratings a tab apart shouldn't be separated to
@@ -130,14 +134,18 @@ struct DesireGaugeColorTests {
     /// segment's centre.
     @MainActor
     private func sampledSegments(atLevel level: Int) throws -> [RGB8] {
-        let gauge = DesireGauge(value: .constant(level), segmentSize: rowSize)
+        let gauge = DesireGauge(value: .constant(level))
             .background(ThemeColors.dark.surface)
 
         let image = try #require(renderBitmap(gauge), "ImageRenderer produced nothing to sample.")
         let bitmap = try #require(Bitmap(image), "Couldn't read the rendered pixels.")
 
         return try DesireToOwnLevel.allCases.map { segment in
-            let centre = DesireGauge.segmentCentre(segment, segmentSize: rowSize)
+            let centre = DesireGauge.segmentCentre(
+                segment,
+                segmentWidth: rowSegmentWidth,
+                maxHeight: rowMaxHeight
+            )
             return try #require(
                 bitmap.pixel(at: centre),
                 "Segment \(segment.rawValue) centre \(centre) fell outside the \(bitmap.width)×\(bitmap.height) render."

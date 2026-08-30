@@ -29,6 +29,10 @@ struct ThemeColors: Sendable {
     /// Brass held back for repeated marks that would shout in full strength —
     /// the dashboard ruler's minor ticks, where only the majors are at full.
     let accentBrassDim: Color
+    /// The perceptual half-mix of `accentBrassDim` and `accentBrass` — the
+    /// `DesireGauge` ramp's middle segment. Shipped since the ramp's Oklab
+    /// search; named when `010`'s Design pass surfaced the gap (tokens.md).
+    let accentBrassMid: Color
     /// Background wash for selected rows and chips.
     let accentBrassTint: Color
 
@@ -62,6 +66,11 @@ struct ThemeColors: Sendable {
     /// The soft shadow the plate casts on the background.
     let plateCastShadow: Color
 
+    /// An unfilled `DesireGauge` segment's hairline outline (`010`'s stepped
+    /// ramp) — the scale stays visible without a solid track competing with
+    /// the reading.
+    let gaugeTrack: Color
+
     /// Swatches for the dashboard's category breakdown, in assignment order.
     /// Three accents to tell the largest categories apart, then
     /// `categoryNeutral` for the tail, matching Design's mock.
@@ -90,6 +99,7 @@ extension ThemeColors {
         accentBrass: Color(hex: "#C79A56"),
         accentBrassHover: Color(hex: "#DDB877"),
         accentBrassDim: Color(hex: "#746140"),
+        accentBrassMid: Color(hex: "#A07E48"),
         accentBrassTint: Color(hex: "#C79A56", opacity: 0.12),
 
         accentMoss: Color(hex: "#52634F"),
@@ -110,6 +120,8 @@ extension ThemeColors {
 
         plateHighlight: Color(hex: ink, opacity: 0.055),
         plateEdgeShadow: Color(hex: "#000000", opacity: 0.40),
-        plateCastShadow: Color(hex: "#000000", opacity: 0.50)
+        plateCastShadow: Color(hex: "#000000", opacity: 0.50),
+
+        gaugeTrack: Color(hex: ink, opacity: 0.16)
     )
 }

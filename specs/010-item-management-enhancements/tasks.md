@@ -1141,7 +1141,7 @@ designs added. Decisions, all theirs, recorded before execution:
       label-preservation note here (VoiceOver names swipe actions by
       their button labels; icon-only buttons fall back to the symbol's
       default description). Declined on record, not overlooked.
-- [ ] **T037** — `DesireGauge` legibility fix, per `tokens.md`'s "The
+- [x] **T037** — `DesireGauge` legibility fix, per `tokens.md`'s "The
       desire gauge's stepped ramp" table — ascending segment heights,
       the per-row "DESIRE" legend, the new `accentBrassMid` fill tone.
       The legend is a deliberate reversal of `001`'s "unlabeled in list
@@ -1151,6 +1151,25 @@ designs added. Decisions, all theirs, recorded before execution:
       reads as a desire indicator without prior context, confirm the
       legend text is genuinely dimmed (not full-weight) per the token
       values.*
+      Done (2026-08-30): the gauge's geometry rebuilt around the
+      token table — bottom-aligned segments at the 8/11/14 ratio
+      (scaling for the form and detail sizes), gap and shear derived
+      from the same base (shear is now `tan(12°)` of each segment's
+      own height, so all three share the mock's angle), unfilled
+      segments became hairline outlines (`Parallelogram` turned
+      `InsettableShape` for a true border-box stroke; new
+      `gaugeTrack` theme color), and the mid tone became the named
+      `accentBrassMid` token instead of a runtime mix — same
+      Oklab-searched value. The per-row "DESIRE" legend (mono 8.5,
+      `textDisabled`, baseline nudged flush) ships on the row gauge
+      only; the form and detail keep their own headings. All four
+      gauge test suites updated to the new API/geometry, and the
+      pixel-measuring perceptual floors re-passed against the
+      *rendered stepped ramp* at the new row size — the
+      distinguishability claim is still measured, not assumed.
+      Verified live: rows match the redesign PNG (legend, stairs,
+      ghost outline, brightest-at-top). Suite 537 in 85 + 5 UI
+      green.
 
 - [ ] **T037a** — Item detail refresh per `Trove Item Detail.dc.html`,
       scoped by the design-refresh decisions above: keep the "…"

@@ -453,7 +453,10 @@ private struct WishlistRow: View {
 
                 Spacer(minLength: theme.metrics.fieldGap)
 
-                DesireGauge(value: .constant(item.desireToOwn))
+                // Legended per row since `010`'s stepped-ramp redesign — a
+                // deliberate reversal of `001`'s "unlabeled in list rows"
+                // call; tokens.md and plan.md's Resolved decisions carry it.
+                DesireGauge(value: .constant(item.desireToOwn), showsLegend: true)
             }
         }
         // One element again. It was split apart while the row held a button,

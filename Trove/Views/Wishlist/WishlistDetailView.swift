@@ -153,7 +153,8 @@ struct WishlistDetailView: View {
 
             DesireGauge(
                 value: desireBinding(for: item),
-                segmentSize: CGSize(width: 40, height: 22),
+                maxSegmentHeight: 22,
+                segmentWidth: 40,
                 showsLabel: true,
                 isInteractive: true
             )
