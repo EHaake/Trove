@@ -933,27 +933,70 @@ brass.
 
 ## Phase 6 — Wishlist sort expansion
 
-- [ ] **T030** — Remove `WishlistViewModelTests.theSortControlOffersNoRatingOption`.
+- [x] **T030** — Remove `WishlistViewModelTests.theSortControlOffersNoRatingOption`.
       Commit message states plainly that this reverses a `001` decision
       and why (see `spec.md`'s Resolved decisions) — an honest reversal,
       not a silent deletion. *Verify: test suite no longer contains it;
       commit message reviewed for the explanation before merging.*
-- [ ] **T031** — Add "Desire" and "Alphabetical" sort cases to
+      Done (2026-08-29, 1d95c8e): grep finds zero occurrences; the
+      commit message carries the reversal's why. Beyond the one test,
+      the suite housing it was reframed in the same commit — "Desire
+      to own never reorders the wishlist" became "Desire to own
+      reorders nothing but its own sort" — since T031 makes the old
+      name false on its face while the three surviving tests (Custom
+      ignores the rating, Cost ignores it, rewriting ratings moves
+      nothing) still pin what 001 got right.
+- [x] **T031** — Add "Desire" and "Alphabetical" sort cases to
       `WishlistViewModel`, each combined with manual order as tie-break
       via `ManualOrderHelper`. Sort directions per `plan.md`'s proposed
       defaults (Cost ascending, Desire highest-first, Alphabetical A→Z)
       unless overridden before this task starts. *Verify: `xcodebuild
       build` succeeds.*
-- [ ] **T032** — Unit tests: correctness of both new sorts; their
+      Done (2026-08-29, 775ed54): two new cases; directions exactly
+      plan.md's, no override having arrived — which made Cost
+      ascending a deliberate flip of 001's shipped dearest-first, so
+      the three tests pinning the old direction changed in the same
+      commit (the cheapest-first rename; the move-ignored-under-cost
+      expectations; and the rating-independence fixture inverted, its
+      old wanted-and-cheap pairing having agreed with a desire sort
+      once cost flipped — it would have stopped detecting the leak
+      it exists to catch). `isOrderedBefore` restructured around
+      `ManualOrderHelper.areInOrder` (its first production caller):
+      attribute first, manual order on any tie, name-then-id kept
+      for rows tying on both. Full suite green.
+- [x] **T032** — Unit tests: correctness of both new sorts; their
       tie-break specifically (construct same-tier items, confirm manual
       order resolves them consistently); composability with category
       filtering, mirroring `ItemListViewModel`'s existing
       `filteringAndSortingApplyTogether` pattern. *Verify: `xcodebuild
       test` green.*
-- [ ] **T033** — Manual verification: both new sort options appear and
+      Done (2026-08-29, 93a2978): six tests, every fixture built so
+      manual order opposes the sorted order (a wrong field, wrong
+      direction, or name-first tie-break shows); tie coverage on
+      Desire (the common case), Cost (where 001's name fallback used
+      to rule), and spec.md's identical-names Alphabetical example;
+      filter+sort composability across both new sorts. Four
+      mutations all red with ran-counts confirmed — desire flipped
+      (2 catchers), tie-break bypassed (4, including the Custom
+      suite: the branch serves both), alphabet reversed (2), cost
+      re-flipped (3+) — all reverted, production diff empty, full
+      suite 535 in 85 + 5 UI green.
+- [x] **T033** — Manual verification: both new sort options appear and
       produce correct order; ties resolve by manual order visibly;
       filtering to a category while sorted by Desire or Alphabetical
       narrows correctly without losing the sort.
+      Done (2026-08-29), live transcript: the menu offers all four
+      options; Desire put the tier-3 Hasselblad over the tier-2
+      Something; raising Something to tier 3 (detail-screen gauge)
+      produced a tie that showed in manual order — then, the visible
+      proof, rearranging under Custom (Something to top,
+      store-confirmed S=0/H=1) flipped the Desire order to match;
+      Alphabetical showed H-before-S *against* the manual order;
+      Cost showed $200 before $7,000 — cheapest first, the flipped
+      direction, on screen; with Desire active, the Cameras chip and
+      a "some" search each narrowed correctly with the sort control
+      still reading Desire. Fixture restored afterward
+      (H=0/desire 3, S=1/desire 2, store-confirmed).
 
 ## Phase 7 — Visual refinement
 
