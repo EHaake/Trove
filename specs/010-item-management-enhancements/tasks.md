@@ -1407,6 +1407,32 @@ designs added. Decisions, all theirs, recorded before execution:
       is the full-strength spinner sitting on the row. Suite 542 in
       85 + 5 UI green.
 
+- [x] **T039a** — First fixes from T039's skeptical review (its full
+      report is recorded under T039). Three items were unambiguous
+      and are done:
+      (1) **The Items tab's split navigation is unified on the bound
+      path.** The reviewer predicted, and a simulator repro confirmed,
+      that a row-tapped detail (pushed via a view-local
+      `navigationDestination(item:)` binding) survived
+      `popToItemsRoot()` — dashboard → leaf category, with a detail
+      open on the Items tab, landed on the stale detail with the
+      narrowed list invisibly beneath. Row taps now append to
+      `router.itemsPath`; the `item:` destination and `selectedItemID`
+      are gone; the typed `UUID` destination from T037g is the stack's
+      only destination. Re-run of the repro lands on the narrowed
+      list. (WishlistView keeps its `selectedItemID` — its stack has
+      no bound path and no router interplay.)
+      (2) **Three stale doc comments corrected** — both view models'
+      `canMoveUp` claimed to be "the gate for the row's Move up
+      VoiceOver action," and an ItemReorderTests comment claimed the
+      end rows offer no move action; T029b removed exactly that
+      gating. The comments now describe the boundary-guard role the
+      methods actually play.
+      (3) **A duplicated comment block in WishlistView removed** — the
+      T028a/T028b accessibility note was pasted twice, a truncated
+      copy above the full one.
+      Suite 542 in 85 + 5 UI green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and

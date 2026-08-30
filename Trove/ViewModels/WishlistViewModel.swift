@@ -150,7 +150,7 @@ final class WishlistViewModel {
         }
     }
 
-    /// See `ItemListViewModel.canMoveUp(id:)` — the same VoiceOver gate,
+    /// See `ItemListViewModel.canMoveUp(id:)` — the same boundary guard,
     /// mirrored per entity the way `duplicate(id:)` is.
     func canMoveUp(id: UUID) -> Bool {
         guard canReorder, let index = items.firstIndex(where: { $0.id == id }) else { return false }

@@ -207,10 +207,13 @@ final class ItemListViewModel {
         }
     }
 
-    /// Whether a row can move one step toward the top — the gate for the
-    /// row's "Move up" VoiceOver action. False at the top of the list, and
-    /// false whenever the drag itself wouldn't be offered, so the two reorder
-    /// mechanisms can't disagree about when reordering is available.
+    /// Whether a row can move one step toward the top. False at the top of
+    /// the list, and false whenever the drag itself wouldn't be offered, so
+    /// the two reorder mechanisms can't disagree about when reordering is
+    /// available. Since T029b the views no longer read this to gate the
+    /// VoiceOver actions (position-conditional AX content breaks a settling
+    /// drag) — it survives as the boundary guard inside `moveUp`/`moveDown`,
+    /// which is what makes the always-offered actions safe to call anywhere.
     func canMoveUp(id: UUID) -> Bool {
         guard canReorder, let index = items.firstIndex(where: { $0.id == id }) else { return false }
         return index > 0

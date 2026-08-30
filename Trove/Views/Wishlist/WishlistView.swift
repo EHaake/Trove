@@ -275,10 +275,6 @@ struct WishlistView: View {
                     // Same named actions as ItemListView's rows, for the
                     // same reason — one accessible reorder pattern on both
                     // screens, replacing the edit-mode path the Reorder
-                    // button used to provide (T028a/T028b).
-                    // Same named actions as ItemListView's rows, for the
-                    // same reason — one accessible reorder pattern on both
-                    // screens, replacing the edit-mode path the Reorder
                     // button used to provide (T028a/T028b). Gated on
                     // `canReorder` alone, never on the row's position: this
                     // block's structure must not change while a drag

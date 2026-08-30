@@ -5,7 +5,6 @@ import SwiftUI
 struct ItemListView: View {
     @State private var viewModel: ItemListViewModel
     @State private var isAddingItem = false
-    @State private var selectedItemID: UUID?
 
     /// The row a swipe has asked to delete, held until the alert resolves it.
     /// Same staging the wishlist uses: the swipe-then-tap gesture is a fine
@@ -97,15 +96,14 @@ struct ItemListView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .navigationBar)
-        .navigationDestination(item: $selectedItemID) { itemID in
-            ItemDetailView(modelContext: modelContext, itemID: itemID)
-        }
-        // The router pushes item ids straight into this stack's bound path —
-        // the dashboard's un-valued callout does it when exactly one item
-        // needs a value. A pushed value needs a *typed* destination; the
-        // `item:` binding above only serves the row taps, and a UUID landing
-        // in the path without this handler renders SwiftUI's black
-        // missing-destination placeholder instead of a screen.
+        // The one destination for this stack, and deliberately the only
+        // push mechanism: row taps and the router (the dashboard's un-valued
+        // callout) both go through the bound `itemsPath`. T039's review
+        // caught the split that existed before — row taps pushed through a
+        // separate `navigationDestination(item:)` binding the router
+        // couldn't see, so `popToItemsRoot()` left a tapped-open detail
+        // sitting on top of the narrowed list the dashboard had asked for.
+        // One path, one destination, and the router's pop clears everything.
         .navigationDestination(for: UUID.self) { itemID in
             ItemDetailView(modelContext: modelContext, itemID: itemID)
         }
@@ -236,8 +234,10 @@ struct ItemListView: View {
                     .contentShape(Rectangle())
                     // Tap-gesture navigation, same as the wishlist: inside a
                     // List a `NavigationLink` row brings its own styling, and
-                    // the row is already the whole tap target.
-                    .onTapGesture { selectedItemID = item.id }
+                    // the row is already the whole tap target. Pushed through
+                    // the router's bound path — not view-local state — so a
+                    // cross-tab pop (`popToItemsRoot`) can actually clear it.
+                    .onTapGesture { router.itemsPath.append(item.id) }
                     // Stages, never deletes — the alert commits through the
                     // view model (T015). A full swipe triggers the same
                     // staging, so the farthest gesture still can't skip the

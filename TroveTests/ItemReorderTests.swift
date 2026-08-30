@@ -188,9 +188,11 @@ struct ItemReorderTests {
         #expect(viewModel.items.map(\.sortOrder) == [0, 1, 2])
     }
 
-    /// Position-awareness is what the views render from: the top row offers
-    /// no "Move up" and the bottom row no "Move down", and calling the moves
-    /// anyway changes nothing.
+    /// Position-awareness is the moves' own boundary guard: the views offer
+    /// "Move up"/"Move down" on every row whenever reordering is on (T029b —
+    /// position-conditional AX content breaks a settling drag), so calling
+    /// the moves at the ends must change nothing, and that no-op is exactly
+    /// what makes the always-offered actions safe.
     @Test func theEndsOfferNoAccessibleMove() throws {
         let context = try makeInMemoryContext()
         insertItem("First", order: 0, into: context)
