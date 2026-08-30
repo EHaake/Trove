@@ -202,7 +202,16 @@ struct ItemListView: View {
         List {
             ForEach(viewModel.items, id: \.id) { item in
                 ItemRow(item: item)
-                    .listRowBackground(Color.clear)
+                    // The screen's own background, not `.clear`, and not
+                    // decoration: at rest they're pixel-identical (the screen
+                    // shows through either way), but the reorder lift
+                    // snapshots the row *with* this background. Clear-backed,
+                    // UIKit substitutes an opaque black plateau behind the
+                    // snapshot and the row floats as an edge-to-edge black
+                    // slab; screen-colored, the slab blends into the screen
+                    // and only the plate reads as picked up. Verified on film
+                    // both ways (2026-08-30).
+                    .listRowBackground(theme.colors.background)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(
                         top: theme.metrics.listRowGap / 2,

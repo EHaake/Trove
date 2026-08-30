@@ -1347,6 +1347,35 @@ designs added. Decisions, all theirs, recorded before execution:
       wishlist detail unchanged by construction. Suite 542 in 85 +
       5 UI green.
 
+- [x] **T037f** — The reorder lift loses its black slab.
+      Review feedback: picking up a row to reorder turned the whole
+      cell background black to the edges; wanted subtler, ideally no
+      background at all since the lift itself already signals pick-up.
+      *Verify: build; full suite; filmed drags on both screens.*
+      Done (2026-08-30): the slab was UIKit's lift plateau showing
+      through the clear-backed cell — with `.listRowBackground(Color
+      .clear)`, the reorder snapshot composites onto an opaque black
+      backing. True transparency isn't reachable from SwiftUI, so the
+      rows now paint `.listRowBackground(theme.colors.background)`:
+      pixel-identical at rest (the screen showed through the clear
+      background anyway), but the lift snapshot becomes opaque
+      screen-color and the plate reads as picked up on its own.
+      Verified on film on both screens — no slab at lift, mid-drag,
+      or settle, and the reorder still commits.
+      Also removed in the same pass: a `.contentShape(.dragPreview,
+      RoundedRectangle(...))` modifier both screens carried, whose
+      comment claimed it clipped the lift to the plate's rounded rect.
+      It turned out to be an *uncommitted working-tree leftover* from
+      the earlier reorder debugging — never in the repo's history, so
+      this commit's diff shows no trace of it. The baseline film
+      showed the full-width slab *with* the modifier present — it
+      shapes `.onDrag`-family previews, which the List reorder lift
+      never consults — so both the modifier and its false comment
+      went, and a re-film without them shows the same clean lift.
+      (The comment was written from intention, not from film; the
+      same lesson as T029c and the T056 note in CLAUDE.md.)
+      Suite 542 in 85 + 5 UI green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and
