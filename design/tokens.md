@@ -123,7 +123,7 @@ of what keeps it a subtle depth cue rather than a rendered material.
 | Background | `surface` (`#201F1D`), unchanged |
 | Corner radius | `3px`, unchanged from the existing card radius |
 | Border | none — removed; the shadow/bevel below does the separating |
-| Box-shadow | `inset 0 1px 0 rgba(242,237,228,0.055)` (top highlight) + `inset 0 -1px 0 rgba(0,0,0,0.4)` (bottom shadow) + `0 2px 6px rgba(0,0,0,0.5)` (cast shadow) |
+| Box-shadow | `inset 0 1px 0 rgba(242,237,228,0.055)` (top highlight) + `inset 0 -1px 0 rgba(0,0,0,0.4)` (bottom shadow) + `0 2px 6px rgba(0,0,0,0.25)` (cast shadow — softened from the mocks' `0.5` by review, 2026-08-30: the full-strength shadow read as too heavy once the treatment covered every card) |
 | Row internal padding | `13px` |
 | Row internal gap | `13px` (thumbnail to text) |
 | Thumbnail | `52px × 52px`, `2px` radius, existing placeholder pattern unchanged |
@@ -215,7 +215,7 @@ decisions in `tasks.md`'s Phase 7 header.
 | Add-photo tile | `1px dashed divider`, plus glyph `12px`, `1.5px` stroke, `textMonoMeta` |
 | Title eyebrow | IBM Plex Mono `10.5px`, letter-spacing `0.12em`, `textMonoMeta` |
 | Title | Archivo 600, `27px`, line-height `1.1`, letter-spacing `-0.01em`, `textPrimary` |
-| Stat pair container | two cells split by a `1px` `divider` seam (divider-colored gap), `3px` radius, cast shadow `0 2px 6px rgba(0,0,0,0.5)` |
+| Stat pair container | two cells split by a `1px` `divider` seam (divider-colored gap), `3px` radius, cast shadow `0 2px 6px rgba(0,0,0,0.25)` (softened from the mocks' `0.5` — same review note as the row treatment) |
 | Stat cell | `surface` background with the extruded-plate inner bevel, padding `15px 16px`, `7px` internal gap |
 | Stat label | `10px` weight 600, letter-spacing `0.14em`, `#F2EDE4 @ 50%` — "WORTH NOW" / "PAID" |
 | WORTH NOW value | Archivo 600 `25px`, `accentBrass`, tabular numerals |

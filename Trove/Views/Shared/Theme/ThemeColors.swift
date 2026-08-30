@@ -120,7 +120,7 @@ extension ThemeColors {
 
         plateHighlight: Color(hex: ink, opacity: 0.055),
         plateEdgeShadow: Color(hex: "#000000", opacity: 0.40),
-        plateCastShadow: Color(hex: "#000000", opacity: 0.50),
+        plateCastShadow: Color(hex: "#000000", opacity: 0.25),
 
         gaugeTrack: Color(hex: ink, opacity: 0.16)
     )
