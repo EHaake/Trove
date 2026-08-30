@@ -610,6 +610,23 @@ off (with citations, matching `001`'s convention) once built.
   they do under Value ↓, since unknown isn't a low value any more
   than it was a zero. Every other sort keeps its single sensible
   direction. `tasks.md`'s T033a records the request and execution.
+- **The detail screens joined Phase 7's visual scope at the design
+  refresh review (2026-08-29), with the refreshed mocks adopted
+  selectively rather than wholesale.** Two new detail-screen designs
+  arrived with the refined exports and are implemented as
+  `tasks.md`'s T037a/T037b — but four of their elements were
+  identified in review as stale artifacts of the initial design and
+  are deliberately not adopted: the header Edit/Delete buttons (the
+  "…" overflow stays), the schema-less DETAILS fields (Stored, a
+  split Brand/model, a Valued date — the schema is unchanged), the
+  missing tap-to-set gauge on the wishlist detail (kept; its absence
+  was accidental), and the swipe label DUPLICATE (outdated; "Copy"
+  stands). The item dial's per-level hints were reworded to be true
+  today — they now describe the real candidate mechanics
+  (`DesireLevel.isSellCandidate`, lowest-desire-first ranking) rather
+  than the mock's not-yet-built shortfall escalation — with a
+  recorded revisit note to restore the richer copy when that logic
+  ships. `tasks.md`'s Phase 7 header carries the full decision list.
 - **Scope note**: the sort-option expansion isn't required to give
   `ItemListView` reorder parity — it's a related but separable idea
   that happens to touch the same sort-picker UI already being changed.

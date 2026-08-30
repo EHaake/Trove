@@ -1026,6 +1026,41 @@ amended to permit the chosen row treatment — see below). Each task
 references the actual token table now, not a placeholder pointer to
 "Design's output."
 
+**Design refresh reviewed 2026-08-29** with the person steering the
+project — the exports in `design/elements/010-item-management/` were
+refined (three PNGs, the Approved canvas) and two new detail-screen
+designs added. Decisions, all theirs, recorded before execution:
+1. The swipe label stays **"Copy"** — the refreshed exports' DUPLICATE
+   is outdated text, not a reversal ("The Duplicate text is outdated.
+   Please keep Copy."). T036 must not follow the export on this one
+   string.
+2. The two detail screens join Phase 7's scope as T037a/T037b.
+3. Detail headers keep the existing "…" overflow menu; the mocks'
+   separate Edit/Delete header buttons are not adopted.
+4. Schema unchanged: the item mock's "Stored", split "Brand / model",
+   and "Valued" date are stale artifacts of the initial design
+   ("Let's keep the app as it is for now") — render existing fields
+   only.
+5. The wishlist detail keeps its tap-to-set desire gauge; its absence
+   from the mock is accidental ("I don't know why it is missing").
+6. The item dial's per-level hint copy is **reworded to be true
+   today** (option 2 of the review) — the mock's hints describe
+   target-shortfall escalation and per-level exclusion overrides that
+   don't exist yet. What DOES exist and the reworded hints lean on:
+   `DesireLevel.isSellCandidate` (desire ≤ 3 joins the candidate
+   pool) and `SellPlanViewModel`'s lowest-desire-first candidate
+   ranking. **Revisit note, per the same instruction: when the more
+   sophisticated sell-plan logic ships (shortfall escalation, opt-in
+   overrides — 009-adjacent), re-differentiate the level-4/5 hints
+   and restore the richer copy.** Recorded here and beside the
+   strings in code.
+7. Adopted from the mock's copy: level 3 reads "On the fence"
+   (was "Undecided") — the design pass owns these words, same as
+   levels 4/5 always were.
+8. The wishlist mock's "Priority" DETAILS row was standing in for the
+   missing gauge; with the gauge kept (decision 5), the row would
+   show desire twice — omitted.
+
 - [ ] **T034** — Row treatment (both lists), per `tokens.md`'s "Row
       treatment" table (box-shadow, radius, padding, thumbnail size).
       Applies uniformly whether a row is resting or swiped open — the
@@ -1065,6 +1100,26 @@ references the actual token table now, not a placeholder pointer to
       reads as a desire indicator without prior context, confirm the
       legend text is genuinely dimmed (not full-weight) per the token
       values.*
+
+- [ ] **T037a** — Item detail refresh per `Trove Item Detail.dc.html`,
+      scoped by the design-refresh decisions above: keep the "…"
+      overflow (no header Edit/Delete buttons); existing schema fields
+      only in the DETAILS table; photo hero with pager dots and
+      caption plus thumbnail strip with add tile; WORTH NOW / PAID
+      stat pair with the gain/loss delta; desire block with the dial,
+      per-level summary, and the new true-today hint line
+      (`DesireLevel.detail`); NOTES and the "Add to a sell plan" row
+      per `tokens.md`'s new "Item detail" table. *Verify: build; full
+      suite; manual against tokens.md's exact values.*
+- [ ] **T037b** — Wishlist detail refresh per
+      `Trove Wishlist Detail.dc.html`, same scoping: ESTIMATED COST
+      card, DETAILS table (Category / Estimated cost / Added — no
+      Priority row, decision 8), NOTES, MARKET PRICE ghost restyle,
+      and the sell-plan CTA ("Find items to sell" with the
+      lowest-desire-first subtitle, which is accurate to
+      `SellPlanViewModel`'s real ranking); the tap-to-set desire
+      gauge stays (decision 5); the "…" overflow stays. *Verify:
+      build; full suite; manual against tokens.md.*
 
 ## Phase 8 — Full regression and close-out
 

@@ -96,8 +96,8 @@ segment, and a per-row legend.
 | Shear | `skewX(-12deg)` |
 | Unfilled segment | `1px solid rgba(242,237,228,0.16)`, `box-sizing: border-box` |
 | Fill ramp | `accentBrassDim` (1) → `accentBrassMid` (2) → `accentBrass` (3) |
-| Legend text | "DESIRE" — IBM Plex Mono, `8.5px`, letter-spacing `0.12em`, `rgba(242,237,228,0.35)`, line-height `1.7` |
-| Legend position | left of the segments, `7px` gap |
+| Legend text | "DESIRE" — IBM Plex Mono, `8.5px`, letter-spacing `0.12em`, `rgba(242,237,228,0.35)`, line-height `1` |
+| Legend position | left of the segments, `7px` gap, baseline flush with the segments' bottom edge (the source nudges `-1px`); the 2026-08-29 refresh replaced the earlier `1.7` line-height, which floated the legend off the baseline |
 | Total row-width cost | ~`42px` |
 
 The ascending height is doing real work, not just decoration — it
@@ -175,6 +175,84 @@ button — see `plan.md`'s Resolved decisions.
 Leading actions deliberately use neutral tones (`divider`, `surfaceInset`)
 rather than accent colors, so rust stays the only consequential color on
 a swiped-open row — nothing competes with Delete for attention.
+
+The 2026-08-29 export refresh relabels this button DUPLICATE — that text
+is **outdated**, confirmed at review: the on-screen string stays "Copy"
+per plan.md's Resolved decisions. The export was not edited; this note
+is the flag.
+
+### Item detail (`010` refresh, 2026-08-29)
+
+Source: `Trove Item Detail.dc.html`. Adopted selectively — the mock's
+header Edit/Delete buttons (the "…" overflow stays), its schema-less
+DETAILS rows (Stored, split Brand/model, Valued date), and its
+aspirational dial hints are all stale artifacts, per the review
+decisions in `tasks.md`'s Phase 7 header.
+
+| Property | Value |
+|---|---|
+| Screen padding / section gap | `18px 24px 48px` scroll padding, `24px` between sections |
+| Photo hero | `210px` tall, `3px` radius, `1px solid surfaceInset` border, caption bottom-left |
+| Hero caption | IBM Plex Mono `9.5px`, letter-spacing `0.1em`, `textQuiet` — "ITEM PHOTO n / m" |
+| Hero pager dots | `5px` circles, `5px` gap; active `accentBrass`, rest `textInactive` |
+| Thumbnail strip | `8px` below hero, equal-width tiles `52px` tall, `2px` radius, `8px` gap; selected border `1px accentBrass`, others `1px surfaceInset` |
+| Add-photo tile | `1px dashed divider`, plus glyph `12px`, `1.5px` stroke, `textMonoMeta` |
+| Title eyebrow | IBM Plex Mono `10.5px`, letter-spacing `0.12em`, `textMonoMeta` |
+| Title | Archivo 600, `27px`, line-height `1.1`, letter-spacing `-0.01em`, `textPrimary` |
+| Stat pair container | two cells split by a `1px` `divider` seam (divider-colored gap), `3px` radius, cast shadow `0 2px 6px rgba(0,0,0,0.5)` |
+| Stat cell | `surface` background with the extruded-plate inner bevel, padding `15px 16px`, `7px` internal gap |
+| Stat label | `10px` weight 600, letter-spacing `0.14em`, `#F2EDE4 @ 50%` — "WORTH NOW" / "PAID" |
+| WORTH NOW value | Archivo 600 `25px`, `accentBrass`, tabular numerals |
+| PAID value | IBM Plex Mono 500 `19px`, `textPrimary`, tabular numerals |
+| Delta line | IBM Plex Mono `11px`, `accentMossText` gain / `accentRustText` loss — "+$550 · +19%" |
+| Desire block | extruded-plate card, padding `20px 18px`, `14px` internal gap |
+| Desire block header | "DESIRE TO KEEP" `11px` 600, letter-spacing `0.16em`, `textLabelSecondary`; right-aligned "TAP OR DRAG" IBM Plex Mono `11px`, `textQuiet` |
+| Dial | `132px`, the existing `DesireDial`, `20px` gap to the text column |
+| Level summary | `14px` weight 500, `textPrimary` |
+| Level hint | `12px`, line-height `1.45`, `textLabelSecondary` — copy from the table below |
+| DETAILS section header | `11px` 600, letter-spacing `0.16em`, `textLabelSecondary` |
+| DETAILS row | padding `12px 0`, bottom border `1px surfaceInset`; label `12.5px` `textLabelSecondary`; value `13px` `textPrimary`, right-aligned, tabular, mono for money/serial/dates and sans otherwise |
+| NOTES body | `13px`, line-height `1.6`, `textBody` |
+| Sell-plan row | `1px solid divider`, `3px` radius, padding `15px 16px`; text `13px` `textPrimary`; trailing "→" IBM Plex Mono `12px` `accentBrass` |
+
+### Wishlist detail (`010` refresh, 2026-08-29)
+
+Source: `Trove Wishlist Detail.dc.html`. Same selective adoption; two
+additional review calls: the tap-to-set desire gauge **stays** (its
+absence from the mock is accidental), and the mock's "Priority" DETAILS
+row is omitted as redundant with it.
+
+| Property | Value |
+|---|---|
+| Screen padding / section gap | `22px 24px 40px` scroll padding, `28px` between sections |
+| Title eyebrow / title | same treatment as the item detail's ("WANTED · …"), title line-height `1.12` |
+| Cost card | extruded-plate card, padding `18px`, `8px` internal gap |
+| Cost label | "ESTIMATED COST" `10px` 600, letter-spacing `0.14em`, `#F2EDE4 @ 50%` |
+| Cost value | Archivo 600 `34px`, line-height `1`, `accentBrass`, tabular |
+| Cost sub-line | IBM Plex Mono `11px`, letter-spacing `0.06em`, `textMonoMeta` — "YOUR ESTIMATE · ADDED …" |
+| DETAILS / NOTES | identical treatment to the item detail's tables above; rows Category / Estimated cost / Added only |
+| Market-price ghost | `1px dashed divider`, `3px` radius, padding `18px`, `12px` gap; header pair `10px` 600 `0.14em` `textQuiet` / mono `10px` `0.1em` `textInactive`; ghost bars `divider` at `35%` opacity, `40px` tall field; note `12px` line-height `1.5` `textQuiet` |
+| Sell-plan CTA | `1px solid accentBrass`, `3px` radius, padding `16px 18px`; heading "Find items to sell" `14.5px` 600 `accentBrass`; subtitle `11.5px` `#F2EDE4 @ 50%`; trailing "→" mono `15px` `accentBrass` |
+| CTA subtitle copy | "Browse your lowest desire-to-keep items" — accurate today: `SellPlanViewModel` ranks candidates lowest-desire-first |
+
+### Desire dial copy (`010` refresh)
+
+The level summaries are `DesireLevel.summary` (level 3 becomes "On the
+fence" per the refreshed mock — the design pass owns these words). The
+hints are the review's **true-today rewording**: the mock's originals
+described shortfall escalation and exclusion overrides that don't exist
+yet. These lean only on what ships — `DesireLevel.isSellCandidate`
+(desire ≤ 3) and the candidate pool's lowest-desire-first ranking.
+**Revisit when the richer sell-plan logic lands: re-differentiate
+levels 4/5 and restore the mock's fuller copy.**
+
+| Level | Summary | Hint |
+|---|---|---|
+| 1 | Ready to sell | First in line when a sell plan needs candidates. |
+| 2 | Would let it go | Offered early among sell candidates. |
+| 3 | On the fence | Still a sell candidate — the last in line. |
+| 4 | Keeping for now | Left out of the sell-candidate pool. |
+| 5 | Absolutely keeping it | Never offered up. This one stays. |
 
 ## Typography
 
