@@ -874,6 +874,33 @@ brass.
       label so nothing ever resizes — a small design change that
       would need a call, since post-T030 the wishlist's widest
       label becomes "Alphabetical."
+      Second eyeball pass (2026-08-29): still there, and on more
+      transitions — Date→Value and Value→Desire too, i.e. any
+      width-growing swap; the reviewer's diagnosis: the border
+      draws slower than the text changes. Root cause finally
+      *seen*, not inferred: a screen recording with per-frame
+      extraction (AVAssetImageGenerator, no ffmpeg on this machine)
+      caught the defect in a single frame — label "Custom" fully
+      landed while the border rendered as two horizontal lines with
+      both vertical sides missing, recovering ~400ms later. That
+      also explains both failed fixes: the width tween is imposed
+      by the menu-dismiss transaction from OUTSIDE the label, where
+      neither geometryGroup nor a value-scoped animation(nil) can
+      reach — text is an uninterpolable content swap (lands
+      instantly), the border honestly tracks the animating bounds.
+      Escalation applied without waiting for a Phase 6 call, since
+      today's design cost is nil: both sort controls reserve the
+      width of their widest label (every option's label measured
+      hidden in a ZStack, one shown), so switching sorts changes no
+      geometry at all — nothing to tween on any transition, current
+      or future. Frame-verified on the fix build: the full dismiss
+      sequence shows an intact four-sided border in every frame,
+      and the Date-state control occupies the identical rectangle
+      as the Custom-state one. Suite green (530 in 85 + 5 UI).
+      Design note carried to Phase 6, unchanged: T030's
+      "Alphabetical" will widen the wishlist control's resting
+      width by construction — flag at that review. Final human
+      eyeball pass pending.
 
 ## Phase 6 — Wishlist sort expansion
 

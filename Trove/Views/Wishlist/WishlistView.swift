@@ -181,8 +181,17 @@ struct WishlistView: View {
             HStack(spacing: 8) {
                 Image(systemName: "line.3.horizontal.decrease")
                     .font(.system(size: 12, weight: .medium))
-                Text(viewModel.sortOrder.label)
-                    .font(theme.typography.body)
+                // Constant width via every label measured, one shown — see
+                // ItemListView's sort control for the full T029c story.
+                // Note for `010`'s Phase 6: adding "Alphabetical" widens
+                // this control's resting width to match, by construction.
+                ZStack(alignment: .leading) {
+                    ForEach(WishlistViewModel.SortOrder.allCases) { option in
+                        Text(option.label).hidden()
+                    }
+                    Text(viewModel.sortOrder.label)
+                }
+                .font(theme.typography.body)
             }
             .foregroundStyle(theme.colors.textBody)
             .padding(.horizontal, 14)
@@ -191,9 +200,6 @@ struct WishlistView: View {
                 RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
                     .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
             )
-            // One unit with its border, and the resize snaps rather than
-            // tweens — same reasoning, in both halves, as ItemListView's
-            // sort control (T029c).
             .geometryGroup()
             .animation(nil, value: viewModel.sortOrder)
         }

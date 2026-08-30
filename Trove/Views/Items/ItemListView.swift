@@ -313,8 +313,22 @@ struct ItemListView: View {
             HStack(spacing: 8) {
                 Image(systemName: "line.3.horizontal.decrease")
                     .font(.system(size: 12, weight: .medium))
-                Text(viewModel.sortOrder.label)
-                    .font(theme.typography.body)
+                // Every label measured, one shown: the control is always as
+                // wide as its widest option, so switching sorts changes no
+                // geometry at all. This is T029c's actual fix — the
+                // menu-dismiss transaction animates any size change from
+                // outside this view, where neither geometryGroup nor
+                // animation(nil) below can reach: the text swapped
+                // instantly while the border tweened, dropping its sides
+                // mid-flight (caught on a frame capture). No resize, no
+                // tween, nothing to tear.
+                ZStack(alignment: .leading) {
+                    ForEach(ItemListViewModel.SortOrder.allCases) { option in
+                        Text(option.label).hidden()
+                    }
+                    Text(viewModel.sortOrder.label)
+                }
+                .font(theme.typography.body)
             }
             .foregroundStyle(theme.colors.textBody)
             .padding(.horizontal, 14)
@@ -323,16 +337,10 @@ struct ItemListView: View {
                 RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
                     .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
             )
-            // The label and its stroked border must resize as one unit.
-            // Without this, picking "Custom" — the widest label — grows the
-            // text on one schedule and the border on another, so the border's
-            // sides drop out for a beat and the text hops (T029c).
+            // Belt to the ZStack's suspenders: label and border as one
+            // geometry unit, and no value-driven tween — cheap, and they
+            // cover size changes with causes other than the sort label.
             .geometryGroup()
-            // And the resize itself must snap, not tween. geometryGroup
-            // alone still left the border transient (confirmed by eye on a
-            // device): the menu-dismiss transaction animates the label's
-            // width change, and the stroke can't keep up. A sort change is
-            // a content swap, not motion — nothing here should animate.
             .animation(nil, value: viewModel.sortOrder)
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
