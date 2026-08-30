@@ -465,6 +465,23 @@ struct ItemListViewModelSortTests {
         #expect(viewModel.items.map(\.name) == ["Dear", "Middling", "Cheap"])
     }
 
+    /// The ascending half of the Value pair (T033a) — and un-valued items
+    /// stay last here too, rather than leading as the "cheapest": unknown
+    /// isn't a low value any more than it was a zero.
+    @Test func valueAscendingLeadsWithTheCheapestAndStillSinksUnvalued() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Dear", valueCents: 500_000, into: context)
+        insertItem("Unvalued", valueCents: nil, into: context)
+        insertItem("Cheap", valueCents: 5_000, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.sortOrder = .currentValueAscending
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Cheap", "Dear", "Unvalued"])
+    }
+
     /// Un-valued isn't worth zero, it's unknown — so those items go last
     /// rather than sinking below the cheapest valued one.
     @Test func sortsUnvaluedItemsLast() throws {

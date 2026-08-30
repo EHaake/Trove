@@ -11,9 +11,13 @@ import SwiftData
 /// rather than hiding fetches inside property observers.
 @Observable
 final class ItemListViewModel {
-    /// Each order has one sensible direction, so there's no ascending/
-    /// descending toggle to get lost in: keepers, most valuable, and most
-    /// recent all lead.
+    /// Most orders have one sensible direction — keepers and most recent
+    /// lead, full stop — but Value carries both, as a labeled pair rather
+    /// than a toggle: a direction switch hidden behind re-selecting the
+    /// active option is exactly the kind of control that gets lost.
+    /// (The pair reverses this enum's original "one direction each" rule —
+    /// requested by the person steering the project during Phase 6 review;
+    /// `tasks.md`'s T033a records it.)
     ///
     /// "Custom" leads the menu the way the wishlist's manual option does —
     /// same convention on both lists (010) — but the *default* stays Date:
@@ -24,6 +28,7 @@ final class ItemListViewModel {
         case custom
         case purchaseDate
         case currentValue
+        case currentValueAscending
         case desireToKeep
 
         var id: String { rawValue }
@@ -34,7 +39,8 @@ final class ItemListViewModel {
             switch self {
             case .custom: "Custom"
             case .purchaseDate: "Date"
-            case .currentValue: "Value"
+            case .currentValue: "Value ↓"
+            case .currentValueAscending: "Value ↑"
             case .desireToKeep: "Desire"
             }
         }
@@ -288,13 +294,15 @@ final class ItemListViewModel {
             if lhs.purchaseDate != rhs.purchaseDate {
                 return lhs.purchaseDate > rhs.purchaseDate
             }
-        case .currentValue:
+        case .currentValue, .currentValueAscending:
             if lhs.currentValueCents != rhs.currentValueCents {
-                // Un-valued items sort last whichever side they're on — they're
-                // not worth zero, they're unknown, same as on the dashboard.
+                // Un-valued items sort last in *either* direction — they're
+                // not worth zero, they're unknown, same as on the dashboard;
+                // ascending must not promote them above the cheapest valued
+                // item.
                 guard let left = lhs.currentValueCents else { return false }
                 guard let right = rhs.currentValueCents else { return true }
-                return left > right
+                return sortOrder == .currentValue ? left > right : left < right
             }
         case .desireToKeep:
             if lhs.desireToKeep != rhs.desireToKeep {

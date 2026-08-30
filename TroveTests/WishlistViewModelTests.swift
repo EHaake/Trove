@@ -202,6 +202,22 @@ struct WishlistOrderingTests {
 
     // MARK: - The 010 sorts (T031/T032)
 
+    /// The descending half of the Cost pair (T033a) — 001's dearest-first,
+    /// back as an explicit option rather than the default.
+    @Test func costDescendingLeadsWithTheDearest() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Cheap", costCents: 5_000, order: 0, into: context)
+        insertWanted("Dear", costCents: 240_000, order: 1, into: context)
+        insertWanted("Middling", costCents: 105_000, order: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .costDescending
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Dear", "Middling", "Cheap"])
+    }
+
     /// Manual order runs opposite the ratings on purpose, so a sort that
     /// consulted the wrong field — or the right one backwards — shows.
     @Test func sortsByDesireWithTheMostWantedFirst() throws {

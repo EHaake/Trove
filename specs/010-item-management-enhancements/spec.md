@@ -600,6 +600,16 @@ off (with citations, matching `001`'s convention) once built.
   active at once, no special-casing. Only "Custom" keeps the existing
   filter-incompatibility guard, since dragging against a filtered view
   risks silently misordering items not currently on screen.
+- **Both money sorts carry both directions — a Phase 6 review request,
+  reversing the one-direction-each rule.** The item list's Value and
+  the wishlist's Cost each appear as a labeled pair in the sort picker
+  ("Value ↓"/"Value ↑", "Cost ↑"/"Cost ↓") rather than hiding a
+  direction toggle behind re-selecting the active option. The shipped
+  lead directions stand — Value high-first, Cost cheapest-first per
+  plan.md — and un-valued items sort last under Value ↑ exactly as
+  they do under Value ↓, since unknown isn't a low value any more
+  than it was a zero. Every other sort keeps its single sensible
+  direction. `tasks.md`'s T033a records the request and execution.
 - **Scope note**: the sort-option expansion isn't required to give
   `ItemListView` reorder parity — it's a related but separable idea
   that happens to touch the same sort-picker UI already being changed.

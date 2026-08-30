@@ -21,9 +21,14 @@ final class WishlistViewModel {
     /// by design. spec.md's Resolved decisions record why that concern no
     /// longer applies (every sort is an explicit picker choice now); T030's
     /// commit records the removal of the test that pinned it.
+    /// Cost carries both directions as a labeled pair — the same reversal of
+    /// the one-direction-each rule as `ItemListViewModel`'s Value pair, made
+    /// on the same request (T033a). Cheapest-first stays the lead option,
+    /// per plan.md's direction call.
     enum SortOrder: String, CaseIterable, Identifiable {
         case custom
         case cost
+        case costDescending
         case desire
         case alphabetical
 
@@ -32,7 +37,8 @@ final class WishlistViewModel {
         var label: String {
             switch self {
             case .custom: "Custom"
-            case .cost: "Cost"
+            case .cost: "Cost ↑"
+            case .costDescending: "Cost ↓"
             case .desire: "Desire"
             case .alphabetical: "Alphabetical"
             }
@@ -261,9 +267,11 @@ final class WishlistViewModel {
         switch sortOrder {
         case .custom:
             return nil
-        case .cost:
+        case .cost, .costDescending:
             guard lhs.estimatedCostCents != rhs.estimatedCostCents else { return nil }
-            return lhs.estimatedCostCents < rhs.estimatedCostCents
+            return sortOrder == .cost
+                ? lhs.estimatedCostCents < rhs.estimatedCostCents
+                : lhs.estimatedCostCents > rhs.estimatedCostCents
         case .desire:
             guard lhs.desireToOwn != rhs.desireToOwn else { return nil }
             return lhs.desireToOwn > rhs.desireToOwn

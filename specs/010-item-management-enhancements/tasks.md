@@ -998,6 +998,25 @@ brass.
       still reading Desire. Fixture restored afterward
       (H=0/desire 3, S=1/desire 2, store-confirmed).
 
+- [x] **T033a** — Both money sorts gain their second direction, requested
+      by the person steering the project at the Phase 6 review ("Both
+      the Value and Cost orderings... only allow the ascending option.
+      I'd like to add a descending option for each"): the item list's
+      Value and the wishlist's Cost each become a labeled pair in the
+      picker rather than a re-tap toggle — "Value ↓"/"Value ↑" (the
+      shipped high-first stays the lead option) and "Cost ↑"/"Cost ↓"
+      (cheapest-first stays the lead, per plan.md's direction call).
+      This reverses the SortOrder enums' original one-direction-each
+      rule; both enum docs say so. Un-valued items stay last under
+      Value ↑ too — unknown isn't a low value any more than it was a
+      zero. Done (2026-08-29): two new cases, two new tests (ascending
+      Value with the unvalued-last rule; descending Cost), both
+      mutation-verified red on direction flips with ran-counts
+      confirmed; full suite 537 in 85 + 5 UI green; verified live on
+      both screens (Value ↑ put $2,500 above the un-valued item;
+      Cost ↓ put $7,000 above $200; the width-reserving pill absorbed
+      the new labels by construction).
+
 ## Phase 7 — Visual refinement
 
 **No longer blocked** — `design/elements/010-item-management/` has real
