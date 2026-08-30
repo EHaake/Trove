@@ -210,10 +210,10 @@ decisions in `tasks.md`'s Phase 7 header.
 | Dial | `132px`, the existing `DesireDial`, `20px` gap to the text column |
 | Level summary | `14px` weight 500, `textPrimary` |
 | Level hint | `12px`, line-height `1.45`, `textLabelSecondary` — copy from the table below |
-| DETAILS section header | `11px` 600, letter-spacing `0.16em`, `textLabelSecondary` |
+| DETAILS section header | **Diverges deliberately:** the app's `monoLabel` (IBM Plex Mono `10.5`, tracked) rather than the mock's sans-semibold `11px`/`0.16em`. Every all-caps label on every other screen is mono; one screen breaking that reads as a mistake, not a refinement. Same call on both detail screens (`DetailSection`). |
 | DETAILS row | padding `12px 0`, bottom border `1px surfaceInset`; label `12.5px` `textLabelSecondary`; value `13px` `textPrimary`, right-aligned, tabular, mono for money/serial/dates and sans otherwise |
 | NOTES body | `13px`, line-height `1.6`, `textBody` |
-| Sell-plan row | `1px solid divider`, `3px` radius, padding `15px 16px`; text `13px` `textPrimary`; trailing "→" IBM Plex Mono `12px` `accentBrass` |
+| Sell-plan row | **Not built.** The mock's "Add to a sell plan →" has no destination: `SellPlanView` takes a `wishlistItemID`, because a plan belongs to a wishlist item and owned items are picked *into* it from there. Building the row would mean a button to nowhere, or a new item→plan picker — a feature, not a refinement. Flagged at `T037a`. |
 
 ### Wishlist detail (`010` refresh, 2026-08-29)
 
@@ -227,10 +227,11 @@ row is omitted as redundant with it.
 | Screen padding / section gap | `22px 24px 40px` scroll padding, `28px` between sections |
 | Title eyebrow / title | same treatment as the item detail's ("WANTED · …"), title line-height `1.12` |
 | Cost card | extruded-plate card, padding `18px`, `8px` internal gap |
+| Sell-plan CTA hit area | the outline leaves the interior transparent, so the button needs an explicit `contentShape` — the solid fill it replaced was doing that silently, and without it the control only responds on its glyphs (caught on device at `T037b`) |
 | Cost label | "ESTIMATED COST" `10px` 600, letter-spacing `0.14em`, `#F2EDE4 @ 50%` |
 | Cost value | Archivo 600 `34px`, line-height `1`, `accentBrass`, tabular |
 | Cost sub-line | IBM Plex Mono `11px`, letter-spacing `0.06em`, `textMonoMeta` — "YOUR ESTIMATE · ADDED …" |
-| DETAILS / NOTES | identical treatment to the item detail's tables above; rows Category / Estimated cost / Added only |
+| DETAILS / NOTES | identical treatment to the item detail's tables above (shared `DetailSection` / `DetailRow` / `DetailProse`), including its mono-heading divergence; rows Category and Added only — the estimated cost is the screen's headline figure already, and printing it again to the cent under a whole-dollar hero was removed at `T044` |
 | Market-price ghost | `1px dashed divider`, `3px` radius, padding `18px`, `12px` gap; header pair `10px` 600 `0.14em` `textQuiet` / mono `10px` `0.1em` `textInactive`; ghost bars `divider` at `35%` opacity, `40px` tall field; note `12px` line-height `1.5` `textQuiet` |
 | Sell-plan CTA | `1px solid accentBrass`, `3px` radius, padding `16px 18px`; heading "Find items to sell" `14.5px` 600 `accentBrass`; subtitle `11.5px` `#F2EDE4 @ 50%`; trailing "→" mono `15px` `accentBrass` |
 | CTA subtitle copy | "Browse your lowest desire-to-keep items" — accurate today: `SellPlanViewModel` ranks candidates lowest-desire-first |

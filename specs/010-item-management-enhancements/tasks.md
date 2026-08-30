@@ -1210,7 +1210,7 @@ designs added. Decisions, all theirs, recorded before execution:
       Purchase price and Current value there *and* in the stat pair;
       the screen would state each figure twice, so the existing row
       set stands. Suite 542 in 85 + 5 UI green.
-- [ ] **T037b** — Wishlist detail refresh per
+- [x] **T037b** — Wishlist detail refresh per
       `Trove Wishlist Detail.dc.html`, same scoping: ESTIMATED COST
       card, DETAILS table (Category / Estimated cost / Added — no
       Priority row, decision 8), NOTES, MARKET PRICE ghost restyle,
@@ -1219,6 +1219,30 @@ designs added. Decisions, all theirs, recorded before execution:
       `SellPlanViewModel`'s real ranking); the tap-to-set desire
       gauge stays (decision 5); the "…" overflow stays. *Verify:
       build; full suite; manual against tokens.md.*
+      Done (2026-08-30): cost and desire cards became plates; the
+      market-price ghost's bars moved to `divider` at 35% and its
+      note to `textQuiet` per the table; the sell-plan CTA became
+      the mock's outlined treatment with its subtitle — a
+      de-emphasis that matches plan.md's own restraint about not
+      overstating what the plan does. Two things the screen already
+      got right stood: no Priority row (the gauge says it — the
+      code had made decision 8's call independently at `001`), and
+      the gauge itself.
+      Both detail screens now share `DetailSection` / `DetailRow` /
+      `DetailProse` (new `DetailSection.swift`) rather than each
+      drawing its own field table — the same instinct that pulled
+      `PhotoCarousel` out of the item screen; `ItemDetailView` was
+      moved onto them in the same commit.
+      **One real defect caught on the simulator, not in review:**
+      the outlined CTA's interior is transparent and therefore not
+      hit-testable, so the button stopped responding except on its
+      glyphs — the solid fill it replaced had been doing that job
+      silently. Fixed with an explicit `contentShape`, re-verified
+      by tapping through to the Sell Plan, and recorded in
+      tokens.md so the next outlined control doesn't repeat it.
+      (The Sell Plan screen's own "LOWEST DESIRE TO KEEP FIRST"
+      header incidentally confirms the CTA subtitle is accurate.)
+      Suite 542 in 85 + 5 UI green.
 
 ## Phase 8 — Full regression and close-out
 

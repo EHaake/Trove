@@ -86,33 +86,12 @@ struct ItemDetailView: View {
                 details(for: item)
 
                 if let notes = item.notes, !notes.isEmpty {
-                    section("Notes") {
-                        Text(notes)
-                            .font(theme.typography.body)
-                            .foregroundStyle(theme.colors.textBody)
-                            .lineSpacing(4)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    DetailSection(title: "Notes") { DetailProse(text: notes) }
                 }
             }
             .padding(.horizontal, theme.metrics.screenGutter)
             .padding(.bottom, theme.metrics.sectionGap)
         }
-    }
-
-    /// A labelled block — the detail screens' one section shape (`010`).
-    ///
-    /// The heading uses the app's established `monoLabel` rather than the
-    /// refreshed mock's sans-semibold: every all-caps label on every other
-    /// screen is mono, and one screen breaking that reads as a mistake rather
-    /// than a refinement. Recorded as a deliberate divergence in `tokens.md`'s
-    /// item-detail table.
-    private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: theme.metrics.fieldGap + 2) {
-            Text(title).monoLabel()
-            content()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Value
@@ -251,25 +230,10 @@ struct ItemDetailView: View {
         ].filter { !$0.value.isEmpty }
 
         if !rows.isEmpty {
-            section("Details") {
+            DetailSection(title: "Details") {
                 VStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                        HStack(alignment: .firstTextBaseline, spacing: theme.metrics.cardPadding) {
-                            Text(row.label)
-                                .font(theme.typography.secondary)
-                                .foregroundStyle(theme.colors.textLabelSecondary)
-                                .fixedSize(horizontal: true, vertical: false)
-                            Spacer(minLength: 0)
-                            Text(row.value)
-                                .font(row.isMono ? theme.typography.monoMeta : theme.typography.body)
-                                .foregroundStyle(theme.colors.textPrimary)
-                                .multilineTextAlignment(.trailing)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(.vertical, 12)
-                        .overlay(alignment: .bottom) {
-                            theme.colors.surfaceInset.frame(height: theme.metrics.hairline)
-                        }
+                        DetailRow(label: row.label, value: row.value, isMono: row.isMono)
                     }
                 }
             }
