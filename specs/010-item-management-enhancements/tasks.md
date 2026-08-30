@@ -1319,6 +1319,34 @@ designs added. Decisions, all theirs, recorded before execution:
       rather than done.
       Suite 542 in 85 + 5 UI green.
 
+- [x] **T037e** — The hero swipe becomes a real pager, with dots.
+      Review feedback on T037d's swipe: the photo changed on release but
+      nothing moved with the finger, and there was no indicator of which
+      photo of how many was showing.
+      *Verify: build; full suite; filmed drag frames; manual.*
+      Done (2026-08-30): the hero's discrete `DragGesture` is replaced
+      by a paging `ScrollView` (`.scrollTargetBehavior(.paging)`) whose
+      `.scrollPosition` is bridged both ways to the carousel's one
+      `selectedIndex` — so a swipe, a thumbnail tap, and VoiceOver's
+      adjustable action all drive and reflect the same state. The
+      caption, plate, and new dots row (brass on the current photo,
+      shown only when there's more than one, hidden from VoiceOver
+      since the caption already announces the count) stay fixed as
+      hero chrome while only the photos move — the property that ruled
+      out `TabView` still holds, now without giving up tracking.
+      Each page clips itself, since a filled landscape image is wider
+      than its page and would lie over its neighbors mid-swipe.
+      Verified by filming the drag and hashing the hero band per
+      frame: twenty distinct intermediate states across ~1s of motion,
+      with mid-drag frames showing both photos sliding together under
+      a fixed caption, and rubber-banding at the ends in place of any
+      wrap. (First hashing pass looked in the wrong 4s of a
+      variable-frame-rate recording and saw a hard cut — the frame
+      *timestamps*, not the extracted images, are what locate the
+      gesture in a VFR film.) Empty-photo placeholder and the shared
+      wishlist detail unchanged by construction. Suite 542 in 85 +
+      5 UI green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and

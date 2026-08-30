@@ -32,45 +32,29 @@ struct PhotoCarousel: View {
         }
     }
 
+    // MARK: - Hero
+
     @ViewBuilder
     private var hero: some View {
         ZStack(alignment: .bottomLeading) {
-            Group {
-                if let photo = photos[safe: safeIndex], let image = Image(imageData: photo.imageData) {
-                    image.resizable().scaledToFill()
-                } else {
-                    theme.colors.surfaceInset
+            heroPager
+                .frame(height: photos.isEmpty ? 108 : 240)
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
+                // A photo is a card like any other (`010`'s review): the plate
+                // sits behind it, so an opaque image hides the bevel and only
+                // the cast shadow reads — which is the whole point of it here.
+                .extrudedPlate()
+                .overlay(alignment: .bottom) {
+                    if photos.count > 1 {
+                        dots
+                    }
                 }
-            }
-            // A full-height hero is worth the space when there's a photo in
-            // it; empty, it's just a large grey rectangle. Photos are optional
-            // at creation, so plenty of items sit in the shorter state.
-            .frame(height: photos.isEmpty ? 108 : 240)
-            .frame(maxWidth: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
-            // A photo is a card like any other (`010`'s review): the plate
-            // sits behind it, so an opaque image hides the bevel and only
-            // the cast shadow reads — which is the whole point of it here.
-            .extrudedPlate()
 
             Text(photos.isEmpty ? "No photos" : "\(noun) photo \(safeIndex + 1) / \(photos.count)")
                 .monoLabel(color: theme.colors.textQuiet)
                 .padding(theme.metrics.cardPadding)
         }
-        // Swiping the hero is the gesture people try first; before `010` the
-        // thumbnails were the only way through a set. A drag rather than a
-        // paging `TabView`: the caption and the plate belong to the hero, and
-        // a TabView would page those too.
-        .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 20)
-                .onEnded { gesture in
-                    // Horizontal intent only — a mostly-vertical drag is the
-                    // scroll view's, not ours.
-                    guard abs(gesture.translation.width) > abs(gesture.translation.height) else { return }
-                    step(by: gesture.translation.width < 0 ? 1 : -1)
-                }
-        )
         .accessibilityElement(children: .combine)
         .accessibilityAdjustableAction { direction in
             switch direction {
@@ -81,9 +65,78 @@ struct PhotoCarousel: View {
         }
     }
 
-    /// Moves one photo along, stopping at either end rather than wrapping —
-    /// the strip below is a fixed row, and a hero that looped would disagree
-    /// with it about where the set ends.
+    /// Swiping the hero is the gesture people try first; before `010` the
+    /// thumbnails were the only way through a set. A paging `ScrollView`
+    /// rather than a `TabView`: the caption, the plate, and the dots are the
+    /// hero's chrome and must hold still while only the photos move — a
+    /// TabView would page all of it. Pages track the finger and rubber-band
+    /// at both ends, so there's no wrap, which agrees with the fixed strip
+    /// below about where the set ends.
+    @ViewBuilder
+    private var heroPager: some View {
+        if photos.isEmpty {
+            theme.colors.surfaceInset
+        } else {
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
+                        Group {
+                            if let image = Image(imageData: photo.imageData) {
+                                image.resizable().scaledToFill()
+                            } else {
+                                theme.colors.surfaceInset
+                            }
+                        }
+                        .containerRelativeFrame(.horizontal)
+                        .frame(height: 240)
+                        // Each page clips itself — a filled landscape image
+                        // is wider than its page and would lie over its
+                        // neighbors mid-swipe otherwise.
+                        .clipped()
+                        .id(index)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollIndicators(.hidden)
+            .scrollPosition(id: scrolledIndex)
+        }
+    }
+
+    /// Two-way bridge between the pager's settle position and the carousel's
+    /// one selection state: a swipe writes through to `selectedIndex`, and a
+    /// thumbnail tap (or VoiceOver step) writing `selectedIndex` scrolls the
+    /// pager. One state, three controls.
+    private var scrolledIndex: Binding<Int?> {
+        Binding(
+            get: { photos.isEmpty ? nil : safeIndex },
+            set: { index in
+                if let index { selectedIndex = index }
+            }
+        )
+    }
+
+    /// One dot per photo, brass on the current one — the same treatment the
+    /// strip's selected thumbnail border uses, and unscrimmed like the
+    /// caption that shares the photo's surface.
+    private var dots: some View {
+        HStack(spacing: 6) {
+            ForEach(photos.indices, id: \.self) { index in
+                Circle()
+                    .fill(index == safeIndex
+                        ? theme.colors.accentBrass
+                        : theme.colors.textPrimary.opacity(0.45))
+                    .frame(width: 6, height: 6)
+            }
+        }
+        .padding(.bottom, 10)
+        // The caption already announces "photo 1 / 3" for the combined
+        // element; the dots repeat it visually.
+        .accessibilityHidden(true)
+    }
+
+    /// Moves one photo along, stopping at either end rather than wrapping.
     private func step(by delta: Int) {
         guard !photos.isEmpty else { return }
         let next = safeIndex + delta
@@ -91,12 +144,14 @@ struct PhotoCarousel: View {
         withAnimation(.snappy(duration: 0.2)) { selectedIndex = next }
     }
 
+    // MARK: - Strip
+
     private var strip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: theme.metrics.listRowGap) {
                 ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
                     Button {
-                        selectedIndex = index
+                        withAnimation(.snappy(duration: 0.2)) { selectedIndex = index }
                     } label: {
                         Group {
                             if let image = Image(imageData: photo.imageData) {
@@ -121,11 +176,5 @@ struct PhotoCarousel: View {
                 }
             }
         }
-    }
-}
-
-private extension Array {
-    subscript(safe index: Int) -> Element? {
-        indices.contains(index) ? self[index] : nil
     }
 }
