@@ -223,7 +223,9 @@ struct ItemListView: View {
                         Button(role: .destructive) {
                             pendingDeletion = item
                         } label: {
-                            Label(ItemDeleteCopy.confirm, systemImage: "trash")
+                            // Design's own glyphs (T036), not SF Symbols —
+                            // template-rendered from `design/icons/`.
+                            Label { Text(ItemDeleteCopy.confirm) } icon: { Image("ActionDelete") }
                         }
                         // Explicit, not redundant: ContentView's brass .tint
                         // cascades into swipe buttons and overrides the
@@ -241,15 +243,17 @@ struct ItemListView: View {
                         Button {
                             itemBeingEdited = item
                         } label: {
-                            Label("Edit", systemImage: "pencil")
+                            Label { Text("Edit") } icon: { Image("ActionEdit") }
                         }
                         .tint(theme.colors.divider)
                         // "Copy" on screen, "Duplicate" in code — Design's
-                        // chosen string, per plan.md's Resolved decisions.
+                        // chosen string, per plan.md's Resolved decisions
+                        // (the refreshed export's DUPLICATE is outdated
+                        // text, confirmed at the Phase 7 review).
                         Button {
                             viewModel.duplicate(id: item.id)
                         } label: {
-                            Label("Copy", systemImage: "doc.on.doc")
+                            Label { Text("Copy") } icon: { Image("ActionDuplicate") }
                         }
                         .tint(theme.colors.surfaceInset)
                     }

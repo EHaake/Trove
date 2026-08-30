@@ -232,7 +232,9 @@ struct WishlistView: View {
                         Button(role: .destructive) {
                             pendingDeletion = item
                         } label: {
-                            Label(WishlistDeleteCopy.confirm, systemImage: "trash")
+                            // Design's own glyphs (T036) — see ItemListView's
+                            // twin buttons.
+                            Label { Text(WishlistDeleteCopy.confirm) } icon: { Image("ActionDelete") }
                         }
                         // Explicit, not redundant — see ItemListView's swipe
                         // action: the root brass .tint cascades in here and
@@ -246,13 +248,13 @@ struct WishlistView: View {
                         Button {
                             itemBeingEdited = item
                         } label: {
-                            Label("Edit", systemImage: "pencil")
+                            Label { Text("Edit") } icon: { Image("ActionEdit") }
                         }
                         .tint(theme.colors.divider)
                         Button {
                             viewModel.duplicate(id: item.id)
                         } label: {
-                            Label("Copy", systemImage: "doc.on.doc")
+                            Label { Text("Copy") } icon: { Image("ActionDuplicate") }
                         }
                         .tint(theme.colors.surfaceInset)
                     }

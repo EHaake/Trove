@@ -1113,13 +1113,30 @@ designs added. Decisions, all theirs, recorded before execution:
       from the reviewer's own Inspector pass performing a Move
       action — the store and screen agree, which is the feature
       working, not a defect.)
-- [ ] **T036** — Swipe-action iconography (Edit, Duplicate, Delete) —
+- [x] **T036** — Swipe-action iconography (Edit, Duplicate, Delete) —
       already added to `design/icons/`; this task is wiring them into
       the actual swipe-action buttons from T023/T024/T015, not designing
       them. Remember the button-text note from T023: "Copy," not
       "Duplicate," on screen. *Verify: manual, both screens, icons
       render at the sizes/strokes in `tokens.md`'s "Swipe-action rows"
       table.*
+      Done (2026-08-30): three template-rendered imagesets
+      (ActionEdit/ActionDuplicate/ActionDelete) created inside the
+      asset catalog from `design/icons/`'s SVGs — no .pbxproj edits,
+      the catalog absorbs new sets — and wired into all six swipe
+      buttons via `Label { } icon: { }`. "Copy" kept per the
+      design-refresh decision (the export's DUPLICATE is outdated).
+      Verified live on both screens: Design's pencil,
+      overlapping-rects, and trash glyphs render at their drawn
+      20px/1.5-stroke geometry with the correct per-button tints,
+      and the full-leading-swipe still triggers Edit. One divergence
+      flagged, not fixed: iOS 26 presents icon-bearing swipe actions
+      as tinted circular chips with the label beneath — at any
+      reveal depth (tested shallow and full) — rather than the
+      mock's 76px full-height rectangles. That presentation belongs
+      to the system, not to anything `.swipeActions` exposes;
+      matching the mock exactly would mean abandoning the system
+      swipe machinery. Suite 537 in 85 + 5 UI green.
       Considered and declined in review (2026-08-23): a
       label-preservation note here (VoiceOver names swipe actions by
       their button labels; icon-only buttons fall back to the symbol's
