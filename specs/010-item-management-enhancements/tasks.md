@@ -1389,6 +1389,24 @@ designs added. Decisions, all theirs, recorded before execution:
       the simulator: the callout lands on the un-valued item's
       detail. Suite 542 in 85 + 5 UI green.
 
+- [x] **T037h** — Pull-to-refresh stops snapping the list up under
+      the spinner. Review bug on both lists: the rows snapped back to
+      the top before the spinner finished, so it briefly drew on top
+      of the first row. Cause: `load()` completes within a frame (the
+      T056 lesson), so the bare `.refreshable` action returned before
+      the spinner had even settled and the retraction fought the
+      still-animating spinner. Fixed with `RefreshPacing.hold()` — a
+      500ms hold after `load()` at all three refresh sites (both
+      lists and the dashboard, which shares the mechanism), kept in
+      the view layer so view-model unit tests don't inherit the
+      sleep. Verified on film: the spinner spins in clear space with
+      the rows parked below it, then the system's own coordinated
+      retraction runs. Stated plainly: that retraction still
+      crossfades — a mostly-faded spinner ghost crosses the row's
+      top edge for a frame or two, same as stock apps — what's gone
+      is the full-strength spinner sitting on the row. Suite 542 in
+      85 + 5 UI green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and

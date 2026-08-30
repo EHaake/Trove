@@ -82,7 +82,12 @@ struct DashboardView: View {
         // when a screen should look again, rather than the screen watching the
         // store continuously. Straight into the same load() everything else
         // calls — no second fetch path to keep in step with this one.
-        .refreshable { viewModel.load() }
+        .refreshable {
+            viewModel.load()
+            // Holds the refresh open so the list doesn't snap back up
+            // underneath the still-animating spinner — see RefreshPacing.
+            await RefreshPacing.hold()
+        }
     }
 
     // MARK: - Header

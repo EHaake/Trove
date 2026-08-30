@@ -153,7 +153,12 @@ struct ItemListView: View {
         // when a screen should look again, rather than the screen watching the
         // store continuously. Straight into the same load() everything else
         // calls — no second fetch path to keep in step with this one.
-        .refreshable { viewModel.load() }
+        .refreshable {
+            viewModel.load()
+            // Holds the refresh open so the list doesn't snap back up
+            // underneath the still-animating spinner — see RefreshPacing.
+            await RefreshPacing.hold()
+        }
         // The same alert, word for word, that the detail screen shows for the
         // same action — both read from ItemDeleteCopy, so they can't drift.
         // Same staging shape as the wishlist's.

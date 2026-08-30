@@ -117,7 +117,12 @@ struct WishlistView: View {
         // when a screen should look again, rather than the screen watching the
         // store continuously. Straight into the same load() everything else
         // calls — no second fetch path to keep in step with this one.
-        .refreshable { viewModel.load() }
+        .refreshable {
+            viewModel.load()
+            // Holds the refresh open so the list doesn't snap back up
+            // underneath the still-animating spinner — see RefreshPacing.
+            await RefreshPacing.hold()
+        }
         // The same alert, word for word, that the detail screen shows for the
         // same action — both read from WishlistDeleteCopy, so they can't
         // drift. An alert rather than a confirmation dialog for the same
