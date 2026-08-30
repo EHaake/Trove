@@ -57,6 +57,38 @@ struct PhotoCarousel: View {
                 .monoLabel(color: theme.colors.textQuiet)
                 .padding(theme.metrics.cardPadding)
         }
+        // Swiping the hero is the gesture people try first; before `010` the
+        // thumbnails were the only way through a set. A drag rather than a
+        // paging `TabView`: the caption and the plate belong to the hero, and
+        // a TabView would page those too.
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 20)
+                .onEnded { gesture in
+                    // Horizontal intent only — a mostly-vertical drag is the
+                    // scroll view's, not ours.
+                    guard abs(gesture.translation.width) > abs(gesture.translation.height) else { return }
+                    step(by: gesture.translation.width < 0 ? 1 : -1)
+                }
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: step(by: 1)
+            case .decrement: step(by: -1)
+            default: break
+            }
+        }
+    }
+
+    /// Moves one photo along, stopping at either end rather than wrapping —
+    /// the strip below is a fixed row, and a hero that looped would disagree
+    /// with it about where the set ends.
+    private func step(by delta: Int) {
+        guard !photos.isEmpty else { return }
+        let next = safeIndex + delta
+        guard photos.indices.contains(next) else { return }
+        withAnimation(.snappy(duration: 0.2)) { selectedIndex = next }
     }
 
     private var strip: some View {

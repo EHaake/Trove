@@ -234,8 +234,17 @@ struct ItemFormView: View {
         VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
             Divider().overlay(theme.colors.divider)
 
+            // Toggled without an animation, deliberately. Animating the
+            // insert made SwiftUI lay the whole optional section out at the
+            // scroll content's origin for the duration of the transition, so
+            // it ghosted across the entire form from the top of the screen on
+            // every open and close — caught on a frame capture, and neither
+            // an explicit transition nor a nil-animation transaction on the
+            // inserted subtree stopped it. Snapping is honest; a real fold
+            // would mean measuring the section's height and animating that,
+            // which is a bigger change than this glitch warrants.
             Button {
-                withAnimation(.snappy(duration: 0.22)) { showsMoreDetails.toggle() }
+                showsMoreDetails.toggle()
             } label: {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 3) {

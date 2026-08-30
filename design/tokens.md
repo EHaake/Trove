@@ -145,8 +145,9 @@ design — the mock distinguishes it from the figures card above by
 outlining it rather than raising it.
 
 On form fields the border changes job rather than disappearing: the plate's
-bevel does the separating, so `fieldBorder` now draws **only** when a field
-is invalid, where rust is a signal rather than chrome.
+bevel does the separating, so a border now draws **only** for state — rust
+when a field is invalid, and brass when the category field is focused —
+never as resting chrome.
 
 ### Sort picker (`010`)
 

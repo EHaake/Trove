@@ -144,14 +144,8 @@ struct CategoryPickerField: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, theme.metrics.fieldPaddingVertical)
                 .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
-                .background(
-                    RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                        .fill(theme.colors.surface)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                        .strokeBorder(borderColor, lineWidth: theme.metrics.hairline)
-                )
+                .background(PlateSurface())
+                .overlay(stateBorder)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -179,21 +173,29 @@ struct CategoryPickerField: View {
         .accessibilityLabel(label)
         .padding(.vertical, theme.metrics.fieldPaddingVertical)
         .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .strokeBorder(borderColor, lineWidth: theme.metrics.hairline)
-        )
+        .background(PlateSurface())
+        .overlay(stateBorder)
     }
 
     /// Focus wins over the invalid state — once the user is fixing the field,
     /// telling them it's still wrong is noise.
-    private var borderColor: Color {
+    ///
+    /// `nil` in the resting state since `010`: the plate's bevel does the
+    /// separating every other field's does, so a border here would say
+    /// "something is going on with this field" when nothing is. What's left
+    /// is state — brass for focus, rust for invalid — matching the rule the
+    /// two form screens' own fields follow.
+    private var borderColor: Color? {
         if isFocused { return theme.colors.accentBrass }
-        return isInvalid ? theme.colors.accentRust : theme.colors.divider
+        return isInvalid ? theme.colors.accentRust : nil
+    }
+
+    @ViewBuilder
+    private var stateBorder: some View {
+        if let borderColor {
+            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
+                .strokeBorder(borderColor, lineWidth: theme.metrics.hairline)
+        }
     }
 
     private func chip(_ path: String) -> some View {

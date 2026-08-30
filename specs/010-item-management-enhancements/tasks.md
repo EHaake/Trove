@@ -1283,6 +1283,42 @@ designs added. Decisions, all theirs, recorded before execution:
       line with the plain fields around them (19.3/19.0, 18.0/18.3).
       Suite 542 in 85 + 5 UI green.
 
+- [x] **T037d** — Four follow-ups from the same review round.
+      *Verify: build; full suite; manual on each.*
+      Done (2026-08-30):
+      (1) **The category field takes the plate** on both forms — it
+      was the last input still drawing the old flat surface, and
+      sitting beside plated siblings it read as a mistake. Its border
+      follows the rule the other fields now follow: state only, so
+      brass on focus and rust on invalid survive while the resting
+      divider outline goes.
+      (2) **The "More details" ghost is gone.** Filmed before fixing,
+      per the T029c lesson: animating the insert made SwiftUI lay the
+      whole optional section out at the *scroll content's origin* for
+      the transition's duration, so it faded in ghosted across the
+      entire form from the top of the screen. Neither an explicit
+      transition nor a nil-animation transaction on the inserted
+      subtree stopped it; removing the animation did, confirmed on a
+      second capture. **Trade-off stated plainly: the section now
+      snaps rather than folds.** A true fold means measuring the
+      section's height and animating that — a bigger change than this
+      glitch warranted, and worth doing only if the motion is wanted
+      for its own sake.
+      (3) **The photo hero takes a swipe** on both detail screens —
+      the gesture people try first, where the thumbnails had been the
+      only way through a set. A drag rather than a paging `TabView`,
+      since the caption and the plate belong to the hero and a
+      TabView would page those too; it steps one photo and stops at
+      each end rather than wrapping, so it agrees with the fixed
+      strip below. Verified live: forward, back, and no wrap at the
+      first photo. VoiceOver gets the same movement as an adjustable
+      action.
+      (4) **The thumbnail strips already scrolled horizontally in a
+      single row** — both the detail carousel's and the form picker's
+      — so nothing needed changing, and this is recorded as verified
+      rather than done.
+      Suite 542 in 85 + 5 UI green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and
