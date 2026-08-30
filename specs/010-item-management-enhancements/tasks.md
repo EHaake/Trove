@@ -1085,12 +1085,34 @@ designs added. Decisions, all theirs, recorded before execution:
       (19,19,17) vs black-40%-over-surface (19.2,18.6,17.4); cast
       shadow visible under the card, fading with distance. Suite 537
       in 85 + 5 UI green.
-- [ ] **T035** — Sort picker visual treatment (both screens), per
+- [x] **T035** — Sort picker visual treatment (both screens), per
       `tokens.md`. Compact badge showing the current sort, opening a
       dropdown of options on tap — confirmed not to have a crowding
       problem at four options, since the badge's footprint doesn't grow
       with option count. *Verify: manual, both screens, all four options
       each.*
+      Done (2026-08-30): new shared `SortPicker.swift` — `SortBadge`
+      (brass border/text, custom three-bar glyph at the 10/7/4 token
+      widths) and `SortDropdown` (232px, SORT BY header, hairline
+      row separators, selected row tinted with a drawn 12×12/1.6
+      checkmark, REORDER tag on the Custom row alone). The system
+      `Menu` is gone entirely, and with it T029c's whole workaround
+      class — the badge hugs its label again because no UIKit
+      machinery animates it; the constant-footprint pill and its
+      helpers were deleted from both screens. Screens own the open
+      state, a full-screen clear catcher dismisses on outside tap,
+      and the dropdown floats via a screen-level overlay. One
+      rendering call recorded: the checkmark shows on ANY selected
+      row (the mock only draws the Custom case; tint alone marking
+      selection elsewhere would be odd), REORDER stays Custom-only
+      per the tokens table. Verified live on both screens: options
+      render (5 each, post-T033a), selection re-sorts and closes,
+      outside tap dismisses without leaking the tap to rows beneath,
+      badge tracks the label. Suite 537 in 85 + 5 UI green. (Also
+      noted: the wishlist fixture's manual order arrived swapped
+      from the reviewer's own Inspector pass performing a Move
+      action — the store and screen agree, which is the feature
+      working, not a defect.)
 - [ ] **T036** — Swipe-action iconography (Edit, Duplicate, Delete) —
       already added to `design/icons/`; this task is wiring them into
       the actual swipe-action buttons from T023/T024/T015, not designing

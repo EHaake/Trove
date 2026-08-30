@@ -29,6 +29,11 @@ struct ItemListView: View {
     /// collide with one — no real path is empty *and* prefixed like this.
     private static let unvaluedChipID = "\u{0}unvalued"
 
+    /// Whether T035's sort dropdown is open. Owned here rather than by the
+    /// badge because the dropdown floats over the whole screen and dismisses
+    /// on any outside tap — both beyond the header's reach.
+    @State private var isSortMenuOpen = false
+
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(AppRouter.self) private var router
@@ -157,6 +162,32 @@ struct ItemListView: View {
             Button(ItemDeleteCopy.cancel, role: .cancel) {}
         } message: { _ in
             Text(ItemDeleteCopy.message)
+        }
+        // T035's dropdown floats over the whole screen, a full-screen
+        // catcher behind it so any outside tap closes it. Screen-level
+        // rather than anchored to the badge: the header can't reach over
+        // the rows below it.
+        .overlay {
+            if isSortMenuOpen {
+                ZStack(alignment: .topTrailing) {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .ignoresSafeArea()
+                        .onTapGesture { isSortMenuOpen = false }
+                    SortDropdown(
+                        options: ItemListViewModel.SortOrder.allCases,
+                        selection: viewModel.sortOrder,
+                        label: \.label,
+                        isManualOrder: { $0 == .custom }
+                    ) { option in
+                        viewModel.sortOrder = option
+                        isSortMenuOpen = false
+                        viewModel.load()
+                    }
+                    .padding(.top, 60)
+                    .padding(.trailing, theme.metrics.screenGutter)
+                }
+            }
         }
     }
 
@@ -295,74 +326,15 @@ struct ItemListView: View {
         return parts.joined(separator: " · ")
     }
 
+    /// T035's badge — see `SortBadge` for why this stopped being a system
+    /// `Menu` (the T029c saga in one sentence: UIKit animated the Menu
+    /// label's bounds beyond SwiftUI's reach; a custom control has no such
+    /// machinery, so the badge simply hugs its label again).
     private var sortControl: some View {
-        Menu {
-            ForEach(ItemListViewModel.SortOrder.allCases) { order in
-                Button {
-                    // A sort change is a content swap, not motion — nothing
-                    // about it should animate. This keeps the pill's resize
-                    // (now SwiftUI-internal — see the label below) from
-                    // tweening; the Menu's UIKit-side bounds animation is
-                    // silenced separately, by the label's constant
-                    // footprint (T029c).
-                    var transaction = Transaction()
-                    transaction.disablesAnimations = true
-                    withTransaction(transaction) {
-                        viewModel.sortOrder = order
-                        viewModel.load()
-                    }
-                } label: {
-                    if viewModel.sortOrder == order {
-                        Label(order.label, systemImage: "checkmark")
-                    } else {
-                        Text(order.label)
-                    }
-                }
-            }
-        } label: {
-            // The Menu's UIKit machinery animates its label's *bounds* on
-            // every size change, regardless of the transaction the change
-            // rides in — frame captures at T029c showed the border tweening
-            // (its sides dropped mid-flight) while the text swapped
-            // instantly, and a source-side disablesAnimations didn't touch
-            // it. So the label keeps a constant footprint — every option's
-            // pill measured hidden — and the visible pill hugs the current
-            // text inside it, anchored trailing. The outer bounds never
-            // change, so UIKit has nothing to animate; the pill's own
-            // resize is plain SwiftUI riding the de-animated transaction
-            // above, and snaps whole. Costs only an invisible, slightly
-            // wider tap target on the shorter labels.
-            ZStack(alignment: .trailing) {
-                ForEach(ItemListViewModel.SortOrder.allCases) { option in
-                    sortPill(label: option.label).hidden()
-                }
-                sortPill(label: viewModel.sortOrder.label)
-            }
-            // The pill's resize is SwiftUI-internal now (the outer footprint
-            // is what UIKit sees), so unlike the earlier attempts this
-            // receiving-side suppression can actually reach it.
-            .animation(nil, value: viewModel.sortOrder)
+        SortBadge(label: viewModel.sortOrder.label) {
+            isSortMenuOpen.toggle()
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
-    }
-
-    /// One hugging, bordered pill of the sort control — drawn once visibly
-    /// and once hidden per option to reserve the constant footprint above.
-    private func sortPill(label: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "line.3.horizontal.decrease")
-                .font(.system(size: 12, weight: .medium))
-            Text(label)
-                .font(theme.typography.body)
-        }
-        .foregroundStyle(theme.colors.textBody)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .overlay(
-            RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
-                .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
-        )
-        .geometryGroup()
     }
 
     // MARK: - Filter

@@ -20,6 +20,10 @@ struct WishlistView: View {
     @State private var isAddingItem = false
     @State private var selectedItemID: UUID?
 
+    /// Whether T035's sort dropdown is open — see ItemListView's twin for
+    /// why the screen owns it.
+    @State private var isSortMenuOpen = false
+
     /// The row whose Edit swipe action is open in the form sheet — a
     /// shortcut into the same flow the detail screen offers (T024).
     @State private var itemBeingEdited: WishlistItem?
@@ -134,6 +138,30 @@ struct WishlistView: View {
             Text(WishlistDeleteCopy.message)
         }
         .onChange(of: viewModel.searchText) { viewModel.load() }
+        // T035's dropdown — same screen-level float-and-catcher as
+        // ItemListView's, for the same reach reasons.
+        .overlay {
+            if isSortMenuOpen {
+                ZStack(alignment: .topTrailing) {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .ignoresSafeArea()
+                        .onTapGesture { isSortMenuOpen = false }
+                    SortDropdown(
+                        options: WishlistViewModel.SortOrder.allCases,
+                        selection: viewModel.sortOrder,
+                        label: \.label,
+                        isManualOrder: { $0 == .custom }
+                    ) { option in
+                        viewModel.sortOrder = option
+                        isSortMenuOpen = false
+                        viewModel.load()
+                    }
+                    .padding(.top, 60)
+                    .padding(.trailing, theme.metrics.screenGutter)
+                }
+            }
+        }
     }
 
     // MARK: - Header
@@ -163,60 +191,13 @@ struct WishlistView: View {
             + viewModel.totalEstimatedCostCents.formattedAsWholeCurrency(currencyCode: "USD")
     }
 
+    /// T035's badge — one control on both screens; see `SortBadge` and
+    /// ItemListView's twin for the note on why the system `Menu` left.
     private var sortControl: some View {
-        Menu {
-            ForEach(WishlistViewModel.SortOrder.allCases) { order in
-                Button {
-                    // De-animated at the source, so the control snaps to its
-                    // new size whole — see ItemListView's sort menu for the
-                    // full T029c story.
-                    var transaction = Transaction()
-                    transaction.disablesAnimations = true
-                    withTransaction(transaction) {
-                        viewModel.sortOrder = order
-                        viewModel.load()
-                    }
-                } label: {
-                    if viewModel.sortOrder == order {
-                        Label(order.label, systemImage: "checkmark")
-                    } else {
-                        Text(order.label)
-                    }
-                }
-            }
-        } label: {
-            // Constant outer footprint, hugging pill inside — see
-            // ItemListView's sort control for the full T029c story. Note
-            // for `010`'s Phase 6: "Alphabetical" widens only this
-            // invisible tap target, not the visible pill.
-            ZStack(alignment: .trailing) {
-                ForEach(WishlistViewModel.SortOrder.allCases) { option in
-                    sortPill(label: option.label).hidden()
-                }
-                sortPill(label: viewModel.sortOrder.label)
-            }
-            .animation(nil, value: viewModel.sortOrder)
+        SortBadge(label: viewModel.sortOrder.label) {
+            isSortMenuOpen.toggle()
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
-    }
-
-    /// See `ItemListView.sortPill(label:)` — the same pill, one per screen
-    /// because each reserves its own option set's footprint.
-    private func sortPill(label: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "line.3.horizontal.decrease")
-                .font(.system(size: 12, weight: .medium))
-            Text(label)
-                .font(theme.typography.body)
-        }
-        .foregroundStyle(theme.colors.textBody)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .overlay(
-            RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
-                .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
-        )
-        .geometryGroup()
     }
 
     // MARK: - Rows
