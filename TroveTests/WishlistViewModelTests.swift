@@ -182,7 +182,10 @@ struct WishlistOrderingTests {
         #expect(ItemListViewModel.SortOrder.custom.label == "Custom")
     }
 
-    @Test func sortsByCostWithTheDearestFirst() throws {
+    /// Cheapest first as of `010` — plan.md's recorded direction call
+    /// ("what could I realistically buy soon"), deliberately flipping
+    /// `001`'s dearest-first. This test flipped with it, in T031's commit.
+    @Test func sortsByCostWithTheCheapestFirst() throws {
         let context = try makeInMemoryContext()
         insertWanted("Cheap", costCents: 5_000, order: 0, into: context)
         insertWanted("Dear", costCents: 240_000, order: 1, into: context)
@@ -193,7 +196,7 @@ struct WishlistOrderingTests {
         viewModel.sortOrder = .cost
         viewModel.load()
 
-        #expect(viewModel.items.map(\.name) == ["Dear", "Middling", "Cheap"])
+        #expect(viewModel.items.map(\.name) == ["Cheap", "Middling", "Dear"])
     }
 
     /// Items created before manual ordering existed all sit at 0, so the
@@ -308,8 +311,10 @@ struct WishlistOrderingTests {
         viewModel.load()
         viewModel.move(fromOffsets: IndexSet(integer: 0), toOffset: 2)
 
-        #expect(viewModel.items.map(\.name) == ["Summicron", "Vox AC15"])
-        #expect(viewModel.items.map(\.sortOrder) == [0, 1])
+        // Cheapest first, so Vox leads on screen — while the sortOrders,
+        // read in that screen order, stay the untouched manual positions.
+        #expect(viewModel.items.map(\.name) == ["Vox AC15", "Summicron"])
+        #expect(viewModel.items.map(\.sortOrder) == [1, 0])
     }
 
     // MARK: - VoiceOver moves (T028b)
@@ -444,25 +449,30 @@ struct DesireToOwnOrderingTests {
         #expect(viewModel.items.map(\.name) == ["First", "Second", "Third"])
     }
 
+    /// The ratings run opposite the cost order — the dear item is the wanted
+    /// one — so a cost sort that consulted desire would flip this list.
+    /// (The fixture inverted when `010` flipped cost to cheapest-first: the
+    /// old wanted-and-cheap pairing would have *agreed* with a desire sort,
+    /// leaving the test unable to detect the very leak it pins.)
     @Test func theCostOrderIsUnaffectedByTheRatingToo() throws {
         let context = try makeInMemoryContext()
-        let cheapButWanted = WishlistItem(
+        let cheapButNot = WishlistItem(
             name: "Cheap", categoryPath: "Music/Amps", estimatedCostCents: 5_000, sortOrder: 0
         )
-        cheapButWanted.desireToOwn = 3
-        let dearButNot = WishlistItem(
+        cheapButNot.desireToOwn = 1
+        let dearButWanted = WishlistItem(
             name: "Dear", categoryPath: "Music/Amps", estimatedCostCents: 240_000, sortOrder: 1
         )
-        dearButNot.desireToOwn = 1
-        context.insert(cheapButWanted)
-        context.insert(dearButNot)
+        dearButWanted.desireToOwn = 3
+        context.insert(cheapButNot)
+        context.insert(dearButWanted)
         try context.save()
 
         let viewModel = WishlistViewModel(modelContext: context)
         viewModel.sortOrder = .cost
         viewModel.load()
 
-        #expect(viewModel.items.map(\.name) == ["Dear", "Cheap"])
+        #expect(viewModel.items.map(\.name) == ["Cheap", "Dear"])
     }
 
     /// Changing a rating must not move a row. Same list, same items, ratings

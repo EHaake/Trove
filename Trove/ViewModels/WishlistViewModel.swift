@@ -15,9 +15,17 @@ final class WishlistViewModel {
     /// order can express. It shipped in `001` as "Yours" and was renamed by
     /// `010` after real use found that name unclear even to the person who
     /// chose it — spec.md's Resolved decisions record the reversal.
+    ///
+    /// "Desire" and "Alphabetical" arrived with `010` too, and "Desire"
+    /// reverses another `001` decision — the rating used to order nothing,
+    /// by design. spec.md's Resolved decisions record why that concern no
+    /// longer applies (every sort is an explicit picker choice now); T030's
+    /// commit records the removal of the test that pinned it.
     enum SortOrder: String, CaseIterable, Identifiable {
         case custom
         case cost
+        case desire
+        case alphabetical
 
         var id: String { rawValue }
 
@@ -25,6 +33,8 @@ final class WishlistViewModel {
             switch self {
             case .custom: "Custom"
             case .cost: "Cost"
+            case .desire: "Desire"
+            case .alphabetical: "Alphabetical"
             }
         }
     }
@@ -218,25 +228,49 @@ final class WishlistViewModel {
     }
 
     private func isOrderedBefore(_ lhs: WishlistItem, _ rhs: WishlistItem) -> Bool {
-        switch sortOrder {
-        case .custom:
-            if lhs.sortOrder != rhs.sortOrder {
-                return lhs.sortOrder < rhs.sortOrder
-            }
-        case .cost:
-            if lhs.estimatedCostCents != rhs.estimatedCostCents {
-                return lhs.estimatedCostCents > rhs.estimatedCostCents
-            }
+        // Attribute first, the user's own manual order on any tie — spec.md's
+        // confirmed rule for every non-"Custom" sort, applied through the
+        // shared helper so the tie-break can't drift from the item list's
+        // reading of it. For "Custom" the attribute abstains entirely, so the
+        // manual order *is* the sort.
+        if lhs.sortOrder != rhs.sortOrder || attributeOrder(lhs, rhs) != nil {
+            return ManualOrderHelper.areInOrder(lhs, rhs, primary: attributeOrder)
         }
 
-        // Ties fall back to name then id, so the order is fully determined by
-        // the data rather than by whatever `FetchDescriptor` returns. Matters
-        // more here than on the item list: two wishlist items added in one
-        // sitting can easily share a `sortOrder` of 0 from an older build.
+        // Tied all the way down — same attribute value *and* a shared manual
+        // position (easy from an older build: two items added in one sitting
+        // both at 0). Name then id keeps the order fully determined by the
+        // data rather than by whatever `FetchDescriptor` returns.
         let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
         if byName != .orderedSame {
             return byName == .orderedAscending
         }
         return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    /// The active sort's own comparison, `nil` on a tie — the shape
+    /// `ManualOrderHelper.areInOrder` wants, so manual order steps in
+    /// exactly where the attribute can't decide.
+    ///
+    /// Directions are plan.md's recorded calls ("Sort direction" section):
+    /// Cost ascending — cheapest first reads as "what could I realistically
+    /// buy soon," and `010` deliberately flips `001`'s dearest-first here —
+    /// Desire descending (most wanted first), Alphabetical A→Z,
+    /// case-insensitively like every other name comparison in the app.
+    private func attributeOrder(_ lhs: WishlistItem, _ rhs: WishlistItem) -> Bool? {
+        switch sortOrder {
+        case .custom:
+            return nil
+        case .cost:
+            guard lhs.estimatedCostCents != rhs.estimatedCostCents else { return nil }
+            return lhs.estimatedCostCents < rhs.estimatedCostCents
+        case .desire:
+            guard lhs.desireToOwn != rhs.desireToOwn else { return nil }
+            return lhs.desireToOwn > rhs.desireToOwn
+        case .alphabetical:
+            let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+            guard byName != .orderedSame else { return nil }
+            return byName == .orderedAscending
+        }
     }
 }
