@@ -841,7 +841,7 @@ brass.
       position-conditional presence was the desync's cause, so the
       inert boundary action is the price of stable reorder
       rendering. T029b closed.
-- [ ] **T029c** — Fix the sort control's transient border glitch:
+- [x] **T029c** — Fix the sort control's transient border glitch:
       switching to "Custom" from any other sort makes one or both
       sides of the button's surrounding rectangle vanish for about
       half a second, and the label text sometimes jumps — every
@@ -927,6 +927,9 @@ brass.
       only that, not the visible pill — the earlier Phase 6
       design concern dissolves). Suite green (530 in 85 + 5 UI).
       Final eyeball pass pending.
+      Closed (2026-08-29): "the sort control looks and behaves
+      correctly now on both screens" — confirmed by the person
+      steering the project. Phase 5 complete in full.
 
 ## Phase 6 — Wishlist sort expansion
 
