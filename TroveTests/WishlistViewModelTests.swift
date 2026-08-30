@@ -8,16 +8,17 @@ private func insertWanted(
     category: String = "Music/Amps",
     costCents: Int = 10_000,
     order: Int = 0,
+    desire: Int = 1,
     into context: ModelContext
 ) {
-    context.insert(
-        WishlistItem(
-            name: name,
-            categoryPath: category,
-            estimatedCostCents: costCents,
-            sortOrder: order
-        )
+    let wanted = WishlistItem(
+        name: name,
+        categoryPath: category,
+        estimatedCostCents: costCents,
+        sortOrder: order
     )
+    wanted.desireToOwn = desire
+    context.insert(wanted)
 }
 
 @Suite("WishlistViewModel — loading and filtering")
@@ -197,6 +198,109 @@ struct WishlistOrderingTests {
         viewModel.load()
 
         #expect(viewModel.items.map(\.name) == ["Cheap", "Middling", "Dear"])
+    }
+
+    // MARK: - The 010 sorts (T031/T032)
+
+    /// Manual order runs opposite the ratings on purpose, so a sort that
+    /// consulted the wrong field — or the right one backwards — shows.
+    @Test func sortsByDesireWithTheMostWantedFirst() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Someday", order: 0, desire: 1, into: context)
+        insertWanted("Next", order: 1, desire: 3, into: context)
+        insertWanted("Soon", order: 2, desire: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .desire
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Next", "Soon", "Someday"])
+    }
+
+    /// Case runs against the alphabet on purpose — a case-sensitive compare
+    /// would put "Bravo" before "alpha".
+    @Test func sortsAlphabeticallyIgnoringCase() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("charlie", order: 0, into: context)
+        insertWanted("Bravo", order: 1, into: context)
+        insertWanted("alpha", order: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .alphabetical
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["alpha", "Bravo", "charlie"])
+    }
+
+    /// spec.md's confirmed tie-break, on the sort where ties are the common
+    /// case (three tiers). The names run opposite the manual order, so the
+    /// old name-first fallback would order this list backwards — the tie
+    /// must be the user's own arrangement, not the alphabet.
+    @Test func desireTiesResolveByManualOrder() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Charlie", order: 0, desire: 2, into: context)
+        insertWanted("Bravo", order: 1, desire: 2, into: context)
+        insertWanted("Alpha", order: 2, desire: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .desire
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Charlie", "Bravo", "Alpha"])
+    }
+
+    /// The same confirmed rule now applies to Cost, which `001` shipped with
+    /// a name-first fallback — same opposing construction as above.
+    @Test func costTiesResolveByManualOrder() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Bravo", costCents: 105_000, order: 0, into: context)
+        insertWanted("Alpha", costCents: 105_000, order: 1, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .cost
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Bravo", "Alpha"])
+    }
+
+    /// Two identically-named items — spec.md's own example for the
+    /// Alphabetical tie — keep the user's relative order. Read back by
+    /// position, since the names can't tell the rows apart.
+    @Test func identicalNamesUnderAlphabeticalKeepTheManualOrder() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Summicron", costCents: 240_000, order: 1, into: context)
+        insertWanted("Summicron", costCents: 105_000, order: 0, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .alphabetical
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.sortOrder) == [0, 1])
+    }
+
+    /// Mirrors `ItemListViewModelTests.filteringAndSortingApplyTogether`:
+    /// a category filter and either new sort stay active together.
+    @Test func filteringAndTheNewSortsApplyTogether() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Summicron", category: "Photography/Lenses", order: 0, desire: 1, into: context)
+        insertWanted("Xpan", category: "Photography/Cameras", order: 1, desire: 3, into: context)
+        insertWanted("Vox AC15", category: "Music/Amps", order: 2, desire: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.categoryFilter = "Photography"
+        viewModel.sortOrder = .desire
+        viewModel.load()
+        #expect(viewModel.items.map(\.name) == ["Xpan", "Summicron"])
+
+        viewModel.sortOrder = .alphabetical
+        viewModel.load()
+        #expect(viewModel.items.map(\.name) == ["Summicron", "Xpan"])
     }
 
     /// Items created before manual ordering existed all sit at 0, so the
