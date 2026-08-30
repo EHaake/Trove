@@ -1376,6 +1376,19 @@ designs added. Decisions, all theirs, recorded before execution:
       same lesson as T029c and the T056 note in CLAUDE.md.)
       Suite 542 in 85 + 5 UI green.
 
+- [x] **T037g** — The un-valued callout's single-item push finds its
+      destination. Review bug: tapping the dashboard's "1 item not
+      yet valued" callout showed a black screen with a yellow warning
+      icon — SwiftUI's missing-destination placeholder. The router
+      pushes the item's id into the Items tab's bound path, but the
+      list only registered `navigationDestination(item:)` for its row
+      taps, which a value pushed into the path never consults. Fixed
+      with a typed `navigationDestination(for: UUID.self)` serving
+      the same detail screen. The multi-item case (the `.unvalued`
+      filter request) already worked and is untouched. Verified on
+      the simulator: the callout lands on the un-valued item's
+      detail. Suite 542 in 85 + 5 UI green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and

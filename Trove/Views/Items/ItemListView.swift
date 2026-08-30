@@ -100,6 +100,15 @@ struct ItemListView: View {
         .navigationDestination(item: $selectedItemID) { itemID in
             ItemDetailView(modelContext: modelContext, itemID: itemID)
         }
+        // The router pushes item ids straight into this stack's bound path —
+        // the dashboard's un-valued callout does it when exactly one item
+        // needs a value. A pushed value needs a *typed* destination; the
+        // `item:` binding above only serves the row taps, and a UUID landing
+        // in the path without this handler renders SwiftUI's black
+        // missing-destination placeholder instead of a screen.
+        .navigationDestination(for: UUID.self) { itemID in
+            ItemDetailView(modelContext: modelContext, itemID: itemID)
+        }
         // Owned here rather than by a parent so dismissing the form can
         // refetch — a new item has to appear without the user leaving and
         // coming back.
