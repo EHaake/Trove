@@ -299,8 +299,18 @@ struct ItemListView: View {
         Menu {
             ForEach(ItemListViewModel.SortOrder.allCases) { order in
                 Button {
-                    viewModel.sortOrder = order
-                    viewModel.load()
+                    // A sort change is a content swap, not motion — nothing
+                    // about it should animate. This keeps the pill's resize
+                    // (now SwiftUI-internal — see the label below) from
+                    // tweening; the Menu's UIKit-side bounds animation is
+                    // silenced separately, by the label's constant
+                    // footprint (T029c).
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        viewModel.sortOrder = order
+                        viewModel.load()
+                    }
                 } label: {
                     if viewModel.sortOrder == order {
                         Label(order.label, systemImage: "checkmark")
@@ -310,40 +320,49 @@ struct ItemListView: View {
                 }
             }
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "line.3.horizontal.decrease")
-                    .font(.system(size: 12, weight: .medium))
-                // Every label measured, one shown: the control is always as
-                // wide as its widest option, so switching sorts changes no
-                // geometry at all. This is T029c's actual fix — the
-                // menu-dismiss transaction animates any size change from
-                // outside this view, where neither geometryGroup nor
-                // animation(nil) below can reach: the text swapped
-                // instantly while the border tweened, dropping its sides
-                // mid-flight (caught on a frame capture). No resize, no
-                // tween, nothing to tear.
-                ZStack(alignment: .leading) {
-                    ForEach(ItemListViewModel.SortOrder.allCases) { option in
-                        Text(option.label).hidden()
-                    }
-                    Text(viewModel.sortOrder.label)
+            // The Menu's UIKit machinery animates its label's *bounds* on
+            // every size change, regardless of the transaction the change
+            // rides in — frame captures at T029c showed the border tweening
+            // (its sides dropped mid-flight) while the text swapped
+            // instantly, and a source-side disablesAnimations didn't touch
+            // it. So the label keeps a constant footprint — every option's
+            // pill measured hidden — and the visible pill hugs the current
+            // text inside it, anchored trailing. The outer bounds never
+            // change, so UIKit has nothing to animate; the pill's own
+            // resize is plain SwiftUI riding the de-animated transaction
+            // above, and snaps whole. Costs only an invisible, slightly
+            // wider tap target on the shorter labels.
+            ZStack(alignment: .trailing) {
+                ForEach(ItemListViewModel.SortOrder.allCases) { option in
+                    sortPill(label: option.label).hidden()
                 }
-                .font(theme.typography.body)
+                sortPill(label: viewModel.sortOrder.label)
             }
-            .foregroundStyle(theme.colors.textBody)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .overlay(
-                RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
-                    .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
-            )
-            // Belt to the ZStack's suspenders: label and border as one
-            // geometry unit, and no value-driven tween — cheap, and they
-            // cover size changes with causes other than the sort label.
-            .geometryGroup()
+            // The pill's resize is SwiftUI-internal now (the outer footprint
+            // is what UIKit sees), so unlike the earlier attempts this
+            // receiving-side suppression can actually reach it.
             .animation(nil, value: viewModel.sortOrder)
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+    }
+
+    /// One hugging, bordered pill of the sort control — drawn once visibly
+    /// and once hidden per option to reserve the constant footprint above.
+    private func sortPill(label: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(.system(size: 12, weight: .medium))
+            Text(label)
+                .font(theme.typography.body)
+        }
+        .foregroundStyle(theme.colors.textBody)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
+                .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
+        )
+        .geometryGroup()
     }
 
     // MARK: - Filter

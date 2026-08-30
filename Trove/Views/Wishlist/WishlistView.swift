@@ -167,8 +167,15 @@ struct WishlistView: View {
         Menu {
             ForEach(WishlistViewModel.SortOrder.allCases) { order in
                 Button {
-                    viewModel.sortOrder = order
-                    viewModel.load()
+                    // De-animated at the source, so the control snaps to its
+                    // new size whole — see ItemListView's sort menu for the
+                    // full T029c story.
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        viewModel.sortOrder = order
+                        viewModel.load()
+                    }
                 } label: {
                     if viewModel.sortOrder == order {
                         Label(order.label, systemImage: "checkmark")
@@ -178,32 +185,38 @@ struct WishlistView: View {
                 }
             }
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "line.3.horizontal.decrease")
-                    .font(.system(size: 12, weight: .medium))
-                // Constant width via every label measured, one shown — see
-                // ItemListView's sort control for the full T029c story.
-                // Note for `010`'s Phase 6: adding "Alphabetical" widens
-                // this control's resting width to match, by construction.
-                ZStack(alignment: .leading) {
-                    ForEach(WishlistViewModel.SortOrder.allCases) { option in
-                        Text(option.label).hidden()
-                    }
-                    Text(viewModel.sortOrder.label)
+            // Constant outer footprint, hugging pill inside — see
+            // ItemListView's sort control for the full T029c story. Note
+            // for `010`'s Phase 6: "Alphabetical" widens only this
+            // invisible tap target, not the visible pill.
+            ZStack(alignment: .trailing) {
+                ForEach(WishlistViewModel.SortOrder.allCases) { option in
+                    sortPill(label: option.label).hidden()
                 }
-                .font(theme.typography.body)
+                sortPill(label: viewModel.sortOrder.label)
             }
-            .foregroundStyle(theme.colors.textBody)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .overlay(
-                RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
-                    .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
-            )
-            .geometryGroup()
             .animation(nil, value: viewModel.sortOrder)
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+    }
+
+    /// See `ItemListView.sortPill(label:)` — the same pill, one per screen
+    /// because each reserves its own option set's footprint.
+    private func sortPill(label: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(.system(size: 12, weight: .medium))
+            Text(label)
+                .font(theme.typography.body)
+        }
+        .foregroundStyle(theme.colors.textBody)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
+                .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
+        )
+        .geometryGroup()
     }
 
     // MARK: - Rows

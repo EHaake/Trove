@@ -901,6 +901,32 @@ brass.
       "Alphabetical" will widen the wishlist control's resting
       width by construction — flag at that review. Final human
       eyeball pass pending.
+      Third pass (2026-08-29): the reviewer confirmed the
+      constant-width build glitch-free but didn't love the resting
+      slack on short labels, and asked for hug-width without the
+      tear if reachable without significant rework. Two more
+      oracle-verified rounds: (1) de-animating the change at its
+      source (withTransaction, disablesAnimations) — tear
+      unchanged on film, proving the tween is the Menu's UIKit
+      bounds animation, beyond any SwiftUI transaction; (2) the
+      shipped shape: the Menu label keeps a constant invisible
+      footprint (every option's pill measured hidden — which the
+      constant-width oracle proved silences UIKit), while the
+      visible bordered pill hugs the current text inside it,
+      anchored trailing. Hug look restored (frame-verified: "Date"
+      wraps snugly); no text hop (the label never moves); the tear
+      shrank from ~400ms at full opacity to at most ~2 frames
+      (~70–100ms) *inside the system menu's dismiss dissolve* —
+      it lives in UIKit's overlay compositing, not in anything
+      this app draws, and the real control is correct the moment
+      it is visible. Eliminating that trace would mean replacing
+      the system Menu with a custom control — the significant
+      rework the reviewer ruled out; recorded as the
+      revisit-later boundary. Only cost: the tap target on short
+      labels is invisibly wider (post-T030, "Alphabetical" widens
+      only that, not the visible pill — the earlier Phase 6
+      design concern dissolves). Suite green (530 in 85 + 5 UI).
+      Final eyeball pass pending.
 
 ## Phase 6 — Wishlist sort expansion
 
