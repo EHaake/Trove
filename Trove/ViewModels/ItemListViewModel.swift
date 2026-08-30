@@ -288,38 +288,49 @@ final class ItemListViewModel {
     }
 
     private func isOrderedBefore(_ lhs: Item, _ rhs: Item) -> Bool {
-        switch sortOrder {
-        case .custom:
-            if lhs.sortOrder != rhs.sortOrder {
-                return lhs.sortOrder < rhs.sortOrder
-            }
-        case .purchaseDate:
-            if lhs.purchaseDate != rhs.purchaseDate {
-                return lhs.purchaseDate > rhs.purchaseDate
-            }
-        case .currentValue, .currentValueAscending:
-            if lhs.currentValueCents != rhs.currentValueCents {
-                // Un-valued items sort last in *either* direction — they're
-                // not worth zero, they're unknown, same as on the dashboard;
-                // ascending must not promote them above the cheapest valued
-                // item.
-                guard let left = lhs.currentValueCents else { return false }
-                guard let right = rhs.currentValueCents else { return true }
-                return sortOrder == .currentValue ? left > right : left < right
-            }
-        case .desireToKeep:
-            if lhs.desireToKeep != rhs.desireToKeep {
-                return lhs.desireToKeep > rhs.desireToKeep
-            }
+        // Attribute first, the user's own manual order on any tie — spec.md's
+        // confirmed rule for every non-"Custom" sort, and the same shared
+        // helper the wishlist reads so the two lists can't drift. plan.md's
+        // Resolved decision 5 left this open and the first implementation
+        // fell back to name instead; T039's review caught the divergence and
+        // the 2026-08-30 close-out decided it: manual order, both lists.
+        if lhs.sortOrder != rhs.sortOrder || attributeOrder(lhs, rhs) != nil {
+            return ManualOrderHelper.areInOrder(lhs, rhs, primary: attributeOrder)
         }
 
-        // Ties fall back to name, then id, so the order is fully determined by
-        // the data. FetchDescriptor guarantees no ordering of its own, and a
-        // list that reshuffles equal rows between launches looks broken.
+        // Tied all the way down — same attribute value *and* a shared manual
+        // position. Name then id keeps the order fully determined by the
+        // data rather than by whatever `FetchDescriptor` returns.
         let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
         if byName != .orderedSame {
             return byName == .orderedAscending
         }
         return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    /// The active sort's own comparison, `nil` on a tie — the shape
+    /// `ManualOrderHelper.areInOrder` wants, mirroring the wishlist's
+    /// `attributeOrder` so manual order steps in exactly where the attribute
+    /// can't decide.
+    private func attributeOrder(_ lhs: Item, _ rhs: Item) -> Bool? {
+        switch sortOrder {
+        case .custom:
+            return nil
+        case .purchaseDate:
+            guard lhs.purchaseDate != rhs.purchaseDate else { return nil }
+            return lhs.purchaseDate > rhs.purchaseDate
+        case .currentValue, .currentValueAscending:
+            guard lhs.currentValueCents != rhs.currentValueCents else { return nil }
+            // Un-valued items sort last in *either* direction — they're not
+            // worth zero, they're unknown, same as on the dashboard;
+            // ascending must not promote them above the cheapest valued
+            // item.
+            guard let left = lhs.currentValueCents else { return false }
+            guard let right = rhs.currentValueCents else { return true }
+            return sortOrder == .currentValue ? left > right : left < right
+        case .desireToKeep:
+            guard lhs.desireToKeep != rhs.desireToKeep else { return nil }
+            return lhs.desireToKeep > rhs.desireToKeep
+        }
     }
 }

@@ -10,6 +10,7 @@ private func insertItem(
     valueCents: Int? = nil,
     serial: String? = nil,
     purchasedAt seconds: TimeInterval = 0,
+    order: Int = 0,
     into context: ModelContext
 ) {
     context.insert(
@@ -19,7 +20,8 @@ private func insertItem(
             purchaseDate: Date(timeIntervalSince1970: seconds),
             serialNumber: serial,
             currentValueCents: valueCents,
-            desireToKeep: desire
+            desireToKeep: desire,
+            sortOrder: order
         )
     )
 }
@@ -511,20 +513,42 @@ struct ItemListViewModelSortTests {
         #expect(viewModel.items.map(\.name) == ["Accordion", "Zither"])
     }
 
-    /// Equal sort keys must not leave the order up to the fetch, which
-    /// guarantees nothing — rows reshuffling between launches reads as a bug.
-    @Test func breaksTiesByNameSoOrderIsDeterministic() throws {
+    /// Equal sort keys resolve by the user's own manual order — spec.md's
+    /// confirmed tie-break, shared with the wishlist (2026-08-30 close-out;
+    /// this replaced a name fallback and the test that pinned it). Names run
+    /// *against* the manual order on purpose, so a name-based fallback fails
+    /// here rather than passing by coincidence.
+    @Test func desireTiesResolveByManualOrder() throws {
         let context = try makeInMemoryContext()
-        insertItem("Charlie", desire: 3, into: context)
-        insertItem("alpha", desire: 3, into: context)
-        insertItem("Bravo", desire: 3, into: context)
+        insertItem("Charlie", desire: 3, order: 0, into: context)
+        insertItem("alpha", desire: 3, order: 2, into: context)
+        insertItem("Bravo", desire: 3, order: 1, into: context)
         try context.save()
 
         let viewModel = ItemListViewModel(modelContext: context)
         viewModel.sortOrder = .desireToKeep
         viewModel.load()
 
-        #expect(viewModel.items.map(\.name) == ["alpha", "Bravo", "Charlie"])
+        #expect(viewModel.items.map(\.name) == ["Charlie", "Bravo", "alpha"])
+    }
+
+    /// The same rule where the tied attribute is *absence* — two un-valued
+    /// items are a value tie, and their relative order is the user's
+    /// arrangement, not the alphabet. Names oppose the manual order here too.
+    @Test func valueTiesAmongUnvaluedItemsResolveByManualOrder() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Accordion", valueCents: nil, order: 1, into: context)
+        insertItem("Zither", valueCents: nil, order: 0, into: context)
+        insertItem("Valued", valueCents: 100_00, order: 2, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.sortOrder = .currentValue
+        viewModel.load()
+
+        // The valued item leads regardless of its manual position; the
+        // un-valued pair follows in manual order.
+        #expect(viewModel.items.map(\.name) == ["Valued", "Zither", "Accordion"])
     }
 
     @Test func repeatedLoadsProduceTheSameOrder() throws {

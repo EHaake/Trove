@@ -362,14 +362,17 @@ rather than re-deriving next time:
 4. **Sort directions proposed** (Cost ascending, Desire
    highest-first, Alphabetical A→Z) — open to override, not treated as
    settled by virtue of being written down here first.
-5. **Worth considering, not decided**: now that `Item` has a manual
-   order to fall back on, should its three *existing* sorts
-   (desire-to-keep, value, purchase date) also adopt manual order as
-   their tie-break, the same way the two new wishlist sorts do? Cheap
-   to add given `ManualOrderHelper` already exists for this reason, and
-   consistent with treating manual order as the universal fallback —
-   but it wasn't asked for, so raising it here as an option rather than
-   folding it in unasked.
+5. **Decided at the T039 close-out review (2026-08-30): yes — `Item`'s
+   existing sorts adopt manual order as their tie-break**, through the
+   same `ManualOrderHelper.areInOrder` the wishlist reads. This
+   question had sat unanswered while spec.md's "Tie-break, confirmed:
+   manual order … within any non-'Custom' sort" already promised it,
+   and the first implementation silently answered no (name, then id) —
+   the review caught the three documents and the code telling two
+   stories. The name-tie test that pinned the old behavior was
+   replaced, not weakened: the new tie tests use fixtures whose names
+   run against the manual order, and were mutation-verified red
+   against the old comparator before landing.
 6. **`DesireGauge` gains a per-row "desire" legend — reversing `001`'s
    explicit "unlabeled in list rows" decision, not just refining it.**
    `001`'s `spec.md` states this plainly: the gauge "renders as an

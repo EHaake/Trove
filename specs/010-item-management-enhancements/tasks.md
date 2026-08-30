@@ -1433,6 +1433,22 @@ designs added. Decisions, all theirs, recorded before execution:
       copy above the full one.
       Suite 542 in 85 + 5 UI green.
 
+- [x] **T039b** — Item sorts adopt manual order as their tie-break
+      (close-out decision 2a, answering plan.md's open Resolved
+      decision 5). `ItemListViewModel.isOrderedBefore` restructured to
+      the wishlist's shape: the attribute compares first and abstains
+      on ties (`attributeOrder` returning `Bool?`), and
+      `ManualOrderHelper.areInOrder` supplies the user's arrangement
+      where it abstains — one shared helper, so the two lists can't
+      drift. The un-valued-sorts-last rule moved into `attributeOrder`
+      unchanged. The old name-then-id fallback survives only beneath a
+      *shared* manual position. The name-tie test that pinned the old
+      behavior is replaced by `desireTiesResolveByManualOrder` and
+      `valueTiesAmongUnvaluedItemsResolveByManualOrder`, both with
+      names deliberately opposing the manual order —
+      **mutation-verified**: run against the old comparator, both go
+      red. Suite 543 in 85 green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and
