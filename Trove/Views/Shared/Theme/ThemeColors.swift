@@ -51,6 +51,17 @@ struct ThemeColors: Sendable {
     /// accents are spent — "everything else", not a category of its own.
     let categoryNeutral: Color
 
+    /// The extruded-plate treatment's three alphas (`010`, tokens.md's "Row
+    /// treatment" table) — depth layered over `surface` from ivory and black
+    /// alphas, never a new hue, which is what keeps the plate inside
+    /// `brief.md`'s amended skeuomorphism boundary.
+    /// The 1px inner top edge that catches the light.
+    let plateHighlight: Color
+    /// The 1px inner bottom edge that falls into shadow.
+    let plateEdgeShadow: Color
+    /// The soft shadow the plate casts on the background.
+    let plateCastShadow: Color
+
     /// Swatches for the dashboard's category breakdown, in assignment order.
     /// Three accents to tell the largest categories apart, then
     /// `categoryNeutral` for the tail, matching Design's mock.
@@ -95,6 +106,10 @@ extension ThemeColors {
         // neighbour. See `design/tokens.md` for the measurements.
         dialMidpoint: Color(hex: "#8F8C38"),
 
-        categoryNeutral: Color(hex: "#6B6C6F")
+        categoryNeutral: Color(hex: "#6B6C6F"),
+
+        plateHighlight: Color(hex: ink, opacity: 0.055),
+        plateEdgeShadow: Color(hex: "#000000", opacity: 0.40),
+        plateCastShadow: Color(hex: "#000000", opacity: 0.50)
     )
 }

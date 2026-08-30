@@ -5,6 +5,12 @@ import SwiftUI
 struct ThemeMetrics: Sendable {
     let screenGutter: CGFloat
     let cardPadding: CGFloat
+    /// List-row internals run tighter than a card's (`010`'s row treatment):
+    /// the padding inside the plate, and the thumbnail-to-text gap. Two
+    /// tokens because tokens.md lists them separately, the same reasoning
+    /// that keeps `textLabel`/`textLabelSecondary` apart.
+    let rowPadding: CGFloat
+    let rowContentGap: CGFloat
     let sectionGap: CGFloat
     let listRowGap: CGFloat
     let fieldGap: CGFloat
@@ -70,15 +76,18 @@ extension ThemeMetrics {
     ///
     /// Cards reach closer to the edge than the header block does, while the
     /// text *inside* a card still lines up with the title above it. Derived
-    /// rather than written as `8` so it survives either token changing, and
-    /// so it can't be mistaken for a spacing value of its own.
-    var listRowInset: CGFloat { screenGutter - cardPadding }
+    /// rather than written out so it survives either token changing, and so
+    /// it can't be mistaken for a spacing value of its own. Off `rowPadding`
+    /// since `010`'s row treatment — it's list rows this insets.
+    var listRowInset: CGFloat { screenGutter - rowPadding }
 }
 
 extension ThemeMetrics {
     static let standard = ThemeMetrics(
         screenGutter: 24,
         cardPadding: 16,
+        rowPadding: 13,
+        rowContentGap: 13,
         sectionGap: 24,
         listRowGap: 10,
         fieldGap: 8,

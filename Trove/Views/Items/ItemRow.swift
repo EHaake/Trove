@@ -9,7 +9,7 @@ struct ItemRow: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        HStack(spacing: theme.metrics.cardPadding) {
+        HStack(spacing: theme.metrics.rowContentGap) {
             RowThumbnail(photos: item.photos ?? [])
 
             VStack(alignment: .leading, spacing: 5) {
@@ -29,12 +29,9 @@ struct ItemRow: View {
             // list contexts, editable on the form and detail screens.
             DesireDial(value: .constant(item.desireToKeep), diameter: 36)
         }
-        .padding(theme.metrics.cardPadding)
+        .padding(theme.metrics.rowPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
+        .extrudedPlate()
         .accessibilityElement(children: .combine)
     }
 

@@ -434,7 +434,7 @@ private struct WishlistRow: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        HStack(alignment: .top, spacing: theme.metrics.cardPadding) {
+        HStack(alignment: .top, spacing: theme.metrics.rowContentGap) {
             RowThumbnail(photos: item.photos ?? [])
 
             VStack(alignment: .leading, spacing: 5) {
@@ -477,12 +477,9 @@ private struct WishlistRow: View {
         // which combining would have swallowed; with nothing to reach in here,
         // a single description reads better than five fragments.
         .accessibilityElement(children: .combine)
-        .padding(theme.metrics.cardPadding)
+        .padding(theme.metrics.rowPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
+        .extrudedPlate()
     }
 }
 

@@ -1061,7 +1061,7 @@ designs added. Decisions, all theirs, recorded before execution:
    missing gauge; with the gauge kept (decision 5), the row would
    show desire twice — omitted.
 
-- [ ] **T034** — Row treatment (both lists), per `tokens.md`'s "Row
+- [x] **T034** — Row treatment (both lists), per `tokens.md`'s "Row
       treatment" table (box-shadow, radius, padding, thumbnail size).
       Applies uniformly whether a row is resting or swiped open — the
       swipe-reveal mockup showed a plain-bordered row, but that was
@@ -1073,6 +1073,18 @@ designs added. Decisions, all theirs, recorded before execution:
       materiality (metallic gradients, wood/leather texture, screws,
       stitching, photorealism). The old "no bevels, no drop shadows"
       reading of `brief.md` no longer applies; don't check against it.*
+      Done (2026-08-29): shared `.extrudedPlate()` modifier (new
+      `ExtrudedPlate.swift` — one treatment for rows now and the
+      detail cards at T037a/b), three new theme alphas
+      (plateHighlight/plateEdgeShadow/plateCastShadow), row padding
+      and content gap to 13 as their own metrics with `listRowInset`
+      re-derived, thumbnail slot 72→52 (its two size-pinning tests
+      updated with the token note). Pixel-verified byte-exact at 3×:
+      surface #201F1D; top edge (44,42,40) vs computed
+      ivory-5.5%-over-surface (43.6,42.3,39.9); bottom edge
+      (19,19,17) vs black-40%-over-surface (19.2,18.6,17.4); cast
+      shadow visible under the card, fading with distance. Suite 537
+      in 85 + 5 UI green.
 - [ ] **T035** — Sort picker visual treatment (both screens), per
       `tokens.md`. Compact badge showing the current sort, opening a
       dropdown of options on tap — confirmed not to have a crowding

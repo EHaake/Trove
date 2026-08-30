@@ -27,7 +27,9 @@ struct RowThumbnailTests {
         let filled = try renderedSize(RowThumbnail(photos: [photo]))
 
         #expect(empty == filled)
-        #expect(empty == CGSize(width: 72, height: 72))
+        // 52, tokens.md's `010` row treatment — the plate tightened the rows
+        // and the slot with them (was 72).
+        #expect(empty == CGSize(width: 52, height: 52))
     }
 
     /// A photo whose data won't decode falls back to the placeholder rather
@@ -38,7 +40,7 @@ struct RowThumbnailTests {
 
         let size = try renderedSize(RowThumbnail(photos: [corrupt]))
 
-        #expect(size == CGSize(width: 72, height: 72))
+        #expect(size == CGSize(width: 52, height: 52))
     }
 
     @Test(arguments: [44.0, 72.0, 96.0])
