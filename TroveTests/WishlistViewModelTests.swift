@@ -407,15 +407,16 @@ struct CategoryChipScopeTests {
     }
 }
 
-/// spec.md is explicit that desire-to-own is display-only: manual `sortOrder`
-/// stays the single ordering. Two competing ordering systems where one silently
-/// overrides the other is worse than one the user controls, and three coarse
-/// tiers would produce mostly-ties anyway.
-///
-/// Worth pinning rather than assuming. Adding a rating to a list and *not*
-/// sorting by it is the unusual choice, so it's the one a later change is
-/// likely to "fix".
-@Suite("Desire to own never reorders the wishlist")
+/// `001` shipped desire-to-own as display-only — no sort consulted it — and
+/// this suite pinned that rule. `010` deliberately reverses half of it: the
+/// rating now orders the list through its own explicit "Desire" option (see
+/// spec.md's Resolved decisions for why the original "competing orderings"
+/// concern no longer applies — every sort is an explicit picker choice now).
+/// What survives, and what this suite still pins: the rating reorders
+/// *nothing else*. Manual order stays the default and ignores it; Cost
+/// ignores it; changing a rating never moves a row in any sort that isn't
+/// "Desire".
+@Suite("Desire to own reorders nothing but its own sort")
 struct DesireToOwnOrderingTests {
     private func insertRated(
         _ name: String,
@@ -484,14 +485,5 @@ struct DesireToOwnOrderingTests {
         viewModel.load()
 
         #expect(viewModel.items.map(\.name) == before)
-    }
-
-    /// The structural half: no sort option is *named* for the rating either,
-    /// so it can't be reached from the sort control. ("manual" became
-    /// "custom" at T025a — a rename, not a reversal of this test's rule;
-    /// the deliberate reversal is T030's, with its own commit.)
-    @Test func theSortControlOffersNoRatingOption() {
-        #expect(WishlistViewModel.SortOrder.allCases.count == 2)
-        #expect(Set(WishlistViewModel.SortOrder.allCases.map(\.rawValue)) == ["custom", "cost"])
     }
 }
