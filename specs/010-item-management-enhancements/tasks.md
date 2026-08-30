@@ -748,7 +748,7 @@ brass.
       both screens." T028b closes green — the named actions are the
       accessible reorder path on both lists, with no edit mode
       anywhere.
-- [ ] **T029a** — Re-run T029's manual verification against the
+- [x] **T029a** — Re-run T029's manual verification against the
       unified behavior (its earlier record verified the edit-mode
       variant): order round-trip preserved; drag detached while
       filtered or searched on both screens; no button, no handles
@@ -790,6 +790,13 @@ brass.
       don't — *with* the visible lift, and the broken view-to-data
       mapping then defeats follow-up drags. T029a stays open until
       T029b lands the fix and this checklist re-runs against it.
+      Closed (2026-08-29): every checklist item verified on the fix
+      build — round-trip, filtered/searched drags detached, no
+      button or handles anywhere, swipes live under Custom — and
+      the drag itself confirmed by the person steering the project
+      on an actual device: rows land and stay where dropped. The
+      one item still open from that same human pass is T029c's
+      border transient, tracked there.
 - [x] **T029b** — Diagnose, then fix, the reorder render desync on
       both screens: after `.onMove` fires, the List must show the
       new order immediately — no snap-back, no stale arrangement,
@@ -826,6 +833,14 @@ brass.
       finger-drag confirmation pending, alongside a quick Inspector
       re-check (both actions now appear on every row under Custom,
       none under other sorts).
+      Confirmed (2026-08-29, on an actual device): "items remain
+      where you put them in order." Inspector re-check also
+      confirmed: actions appear only under Custom, both on every
+      row. The reviewer flagged the every-row presence as possibly
+      an issue — it is the deliberate trade this task records above:
+      position-conditional presence was the desync's cause, so the
+      inert boundary action is the price of stable reorder
+      rendering. T029b closed.
 - [ ] **T029c** — Fix the sort control's transient border glitch:
       switching to "Custom" from any other sort makes one or both
       sides of the button's surrounding rectangle vanish for about
@@ -845,6 +860,20 @@ brass.
       disabling the implicit animation on the label
       (`.animation(nil, value:)`) so the size change snaps instead
       of tweening.
+      Eyeball pass (2026-08-29): geometryGroup alone was NOT enough
+      — the transient survived, still only when switching *to*
+      Custom, with the text hop varying by which sort was switched
+      from (i.e., by the width delta being animated). Fallback
+      applied: `.animation(nil, value: viewModel.sortOrder)` on
+      both labels, after geometryGroup, so the label's size change
+      snaps — a sort change is a content swap, not motion. Suite
+      green again. Second eyeball pass pending; if any trace still
+      survives (which would mean the animation lives in the Menu's
+      UIKit layer beyond SwiftUI's transaction), the next
+      escalation is reserving the control's width at the widest
+      label so nothing ever resizes — a small design change that
+      would need a call, since post-T030 the wishlist's widest
+      label becomes "Alphabetical."
 
 ## Phase 6 — Wishlist sort expansion
 

@@ -328,6 +328,12 @@ struct ItemListView: View {
             // text on one schedule and the border on another, so the border's
             // sides drop out for a beat and the text hops (T029c).
             .geometryGroup()
+            // And the resize itself must snap, not tween. geometryGroup
+            // alone still left the border transient (confirmed by eye on a
+            // device): the menu-dismiss transaction animates the label's
+            // width change, and the stroke can't keep up. A sort change is
+            // a content swap, not motion — nothing here should animate.
+            .animation(nil, value: viewModel.sortOrder)
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
     }

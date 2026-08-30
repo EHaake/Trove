@@ -191,9 +191,11 @@ struct WishlistView: View {
                 RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
                     .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
             )
-            // One unit with its border — same reasoning as ItemListView's
+            // One unit with its border, and the resize snaps rather than
+            // tweens — same reasoning, in both halves, as ItemListView's
             // sort control (T029c).
             .geometryGroup()
+            .animation(nil, value: viewModel.sortOrder)
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
     }
