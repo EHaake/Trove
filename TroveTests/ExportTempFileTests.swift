@@ -58,6 +58,20 @@ struct ExportTempFileTests {
         #expect(!FileManager.default.fileExists(atPath: scratch.path))
     }
 
+    /// The launch sweep acts on the one real staging directory — seeded
+    /// stale, swept clean. (Uses the real location by necessity; nothing
+    /// else in the suite touches it.)
+    @Test func launchSweepClearsTheRealStagingDirectory() throws {
+        let directory = FileExportService.defaultDirectory
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let stale = directory.appending(path: "stale.csv")
+        try Data("stale".utf8).write(to: stale)
+
+        FileExportService.purgeAtLaunch()
+
+        #expect(!FileManager.default.fileExists(atPath: stale.path))
+    }
+
     @Test func filenamesCarryTheLocalDay() throws {
         var newYork = Calendar(identifier: .gregorian)
         newYork.timeZone = TimeZone(identifier: "America/New_York")!

@@ -320,7 +320,15 @@ reported.
   The print-first document renders on device exactly as the composer
   tests describe it.
 
-- [ ] **T014 — Launch purge hook.**
+- [x] **T014 — Launch purge hook.**
+  *Done (2026-08-31)*: `FileExportService.purgeAtLaunch()` (static — at
+  launch there's no service or container, and purging needs neither)
+  called from `TroveApp.init`, sweeping the shared `defaultDirectory`.
+  Unit test seeds the real staging directory and asserts the sweep;
+  simulator check: seeded `stale.csv` into the sandbox's `tmp/Exports`
+  — where it sat alongside *genuine* residue, the PDF left by T013's
+  canceled share sheet — relaunched, whole directory gone. The
+  wiring's call-site guard lands with T015. Full suite 592/592 green.
   `FileExportService.purge()` called once at app startup from the
   smallest sensible hook (`TroveApp`/`TroveStore` per plan).
   *Done when*: builds; a stale file seeded in `tmp/Exports/` is gone

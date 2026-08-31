@@ -78,12 +78,16 @@ nonisolated final class FileExportService: ExportService {
     /// than a proxy. Nil (free) outside tests.
     private let generationProbe: (@Sendable (_ isMainThread: Bool) -> Void)?
 
+    /// Where every real export stages — one location, so the launch sweep
+    /// and the per-export purge can't disagree about what they clean.
+    static let defaultDirectory: URL = FileManager.default.temporaryDirectory
+        .appending(path: "Exports", directoryHint: .isDirectory)
+
     /// - Parameter directory: injectable so tests get an isolated directory;
     ///   the default is the one real location every export shares.
     init(
         container: ModelContainer,
-        directory: URL = FileManager.default.temporaryDirectory
-            .appending(path: "Exports", directoryHint: .isDirectory),
+        directory: URL = FileExportService.defaultDirectory,
         generationProbe: (@Sendable (_ isMainThread: Bool) -> Void)? = nil
     ) {
         self.container = container
@@ -116,9 +120,21 @@ nonisolated final class FileExportService: ExportService {
     private static func onMainThread() -> Bool { Thread.isMainThread }
 
     /// Empties the staging directory. Called by `stage` before every write,
-    /// and once at app launch (T014) to sweep whatever the last session's
-    /// share sheet left behind.
+    /// and — via `purgeAtLaunch` — once at app startup.
     func purge() throws {
+        try Self.purge(directory: directory)
+    }
+
+    /// The launch-time sweep (criterion 10's other half): clears whatever
+    /// the previous session's share sheet left staged. Static, because at
+    /// launch there's no service — or container — yet, and purging needs
+    /// neither. Failures are swallowed: a sweep that can't run leaves at
+    /// most one stale file set for the next export's own purge.
+    static func purgeAtLaunch() {
+        try? purge(directory: defaultDirectory)
+    }
+
+    private static func purge(directory: URL) throws {
         guard FileManager.default.fileExists(atPath: directory.path) else { return }
         try FileManager.default.removeItem(at: directory)
     }

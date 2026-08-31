@@ -33,6 +33,10 @@ struct TroveApp: App {
             // CloudKit mirror has nothing to wait for, and the monitor is
             // what keeps every empty state from having to know that.
             syncMonitor = SyncMonitor(mode: store.mode)
+            // 011: sweep whatever the previous session's share sheet left
+            // staged — the launch half of criterion 10's "no residue"; the
+            // per-export half lives in FileExportService.stage.
+            FileExportService.purgeAtLaunch()
         } catch {
             // Reachable only once the CloudKit configuration has already
             // failed and been retried without it, so the remaining causes are
