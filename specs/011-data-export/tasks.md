@@ -114,7 +114,23 @@ reported.
   *Done when*: tests green; mutation check — remove the purge call and
   confirm the two-exports test goes red.
 
-- [ ] **T005 — Walking skeleton: off-main CG/CT pipeline proof.**
+- [x] **T005 — Walking skeleton: off-main CG/CT pipeline proof.**
+  *Done (2026-08-30)*: the skeleton earned its keep immediately — the
+  first build compiled clean but the probe recorded `[true, true]`:
+  generation ran ON the main thread. Root cause: the plan's SE-0338
+  premise doesn't hold on this toolchain — `SWIFT_APPROACHABLE_CONCURRENCY`
+  enables `NonisolatedNonsendingByDefault` (SE-0461), which runs
+  nonisolated async functions on the *caller's* actor. Fix: `@concurrent`
+  on both protocol requirements and implementations (the existential
+  path — the view models' real one — follows the requirement's
+  convention, and the probe test now calls through `any ExportService`
+  for exactly that reason). plan.md's Concurrency section corrected in
+  place. Two compile-time finds besides: `Thread.isMainThread` is
+  `noasync` (sampled via a sync helper), and `FontFamily` needed an
+  explicit `nonisolated` so the composer can resolve PostScript names
+  off-main. Mutation check: stripping `@concurrent` → probe red with
+  `[true, true]` — the realistic regression, verified through the
+  existential. Full suite 567/567 green.
   Minimal `PDFComposer` rendering a one-page cover-only PDF via
   `CGContext(consumer:mediaBox:)` + `CTFramesetter`, wired through
   `FileExportService.exportPDF` as an explicitly `nonisolated async`

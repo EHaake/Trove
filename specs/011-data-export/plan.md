@@ -341,13 +341,21 @@ Menu strings, exactly: **Export as CSV…**, **Export as PDF…**.
 - The export module (schema, writer, composer, live service) is
   **explicitly `nonisolated`** — the project-wide `MainActor` default
   would otherwise capture every one of these types.
-- The service entry points are **`nonisolated async` functions**, which
-  per SE-0338 do not inherit the caller's isolation and run on the
-  cooperative pool. Pinned in writing because the failure mode is
-  silent: a `nonisolated` *synchronous* function called from the main
-  actor still runs on the main thread — a later refactor to a sync
-  signature would re-block the UI without a compiler word. The
-  instrumented test below is what keeps this true.
+- The service entry points are **`@concurrent` async functions**.
+  *(Corrected 2026-08-30 at T005 — the draft said `nonisolated async`
+  sufficed per SE-0338. The walking skeleton disproved it on this
+  toolchain: the project builds with `SWIFT_APPROACHABLE_CONCURRENCY`,
+  whose `NonisolatedNonsendingByDefault` (SE-0461) runs nonisolated
+  async functions on the caller's actor — the probe recorded generation
+  on the main thread until `@concurrent` forced the cooperative pool.
+  The attribute lives on the protocol requirements as well as the
+  implementations, because calls through the `any ExportService`
+  existential — the view models' actual path — follow the requirement's
+  convention, and the probe test calls through the existential for the
+  same reason.)* The failure mode stays silent either way — dropping
+  the attribute or refactoring to a sync signature would re-block the
+  UI without a compiler word — and the instrumented test is what keeps
+  this true.
 - Inside an entry point, the body is **synchronous from the first
   `ModelContext` creation to the file write** — no suspension points,
   so no context-across-`await` hazard and no need for `@ModelActor`
