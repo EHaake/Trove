@@ -42,6 +42,26 @@ struct DesireGauge: View {
     }
 
     var body: some View {
+        // Adjustable only where the gauge is actually a control — the list
+        // rows build it read-only over a `.constant` binding, and an
+        // adjustable element whose adjustments go nowhere is worse for
+        // VoiceOver than a plain value read-out (T039 review, finding 12).
+        // Attached conditionally rather than guarded inside the action, so
+        // the read-only gauge doesn't advertise "adjustable" at all.
+        if isInteractive {
+            labeledGauge.accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: value = min(value + 1, DesireToOwnLevel.allCases.count)
+                case .decrement: value = max(value - 1, 1)
+                default: break
+                }
+            }
+        } else {
+            labeledGauge
+        }
+    }
+
+    private var labeledGauge: some View {
         HStack(alignment: .bottom, spacing: showsLegend ? 7 : (showsLabel ? 10 : 0)) {
             if showsLegend {
                 // Baseline flush with the segments' bottom edge — the design
@@ -62,13 +82,6 @@ struct DesireGauge: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Desire to own")
         .accessibilityValue("\(level.rawValue) of \(DesireToOwnLevel.allCases.count), \(level.summary)")
-        .accessibilityAdjustableAction { direction in
-            switch direction {
-            case .increment: value = min(value + 1, DesireToOwnLevel.allCases.count)
-            case .decrement: value = max(value - 1, 1)
-            default: break
-            }
-        }
     }
 
     private var segments: some View {

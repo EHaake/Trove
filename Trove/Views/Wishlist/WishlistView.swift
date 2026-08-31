@@ -152,6 +152,11 @@ struct WishlistView: View {
                         .contentShape(Rectangle())
                         .ignoresSafeArea()
                         .onTapGesture { isSortMenuOpen = false }
+                        // The catcher is a real tap target, so VoiceOver
+                        // should call it what it is rather than an unnamed
+                        // element (T039 review, finding 13).
+                        .accessibilityLabel("Dismiss sort options")
+                        .accessibilityAddTraits(.isButton)
                     SortDropdown(
                         options: WishlistViewModel.SortOrder.allCases,
                         selection: viewModel.sortOrder,

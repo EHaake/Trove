@@ -1512,6 +1512,19 @@ designs added. Decisions, all theirs, recorded before execution:
       then reverted and the suite runs green. Suite 540 in 85 + 5 UI
       green.
 
+- [x] **T039e** — Two accessibility corrections from the review
+      (findings 12 and 13). `DesireGauge` attaches its adjustable
+      action only when `isInteractive` — attached conditionally, not
+      guarded inside the action, so the read-only gauges in list rows
+      stop advertising an "adjustable" element whose adjustments went
+      nowhere. And both lists' full-screen sort-dropdown dismiss
+      catchers are now labeled ("Dismiss sort options", button trait)
+      instead of being unnamed tappable elements. Recorded, not
+      changed: the content behind the open dropdown is not hidden
+      from VoiceOver — the dropdown is an overlay, not a modal, and a
+      full VO curtain is out of proportion for a control dismissed by
+      a single tap anywhere. Suite 540 in 85 + 5 UI green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and
