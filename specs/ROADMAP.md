@@ -24,7 +24,7 @@ own.
 | Spec | Status |
 |---|---|
 | `001-core-inventory` | **Shipped** — merged to `main` 2026-08-23 via [PR #1](https://github.com/EHaake/Trove/pull/1); spec, plan and tasks all Approved in specs/001-core-inventory/ |
-| `010-item-management-enhancements` | **In progress** — `spec.md` drafted (2026-08-23), pending review; `plan.md` and the design-brief addendum are next |
+| `010-item-management-enhancements` | **Complete** — all tasks through the Phase 8 close-out done (2026-08-30); twenty acceptance criteria signed off; skeptical-review findings resolved or recorded in `tasks.md` |
 
 ## Future specs
 

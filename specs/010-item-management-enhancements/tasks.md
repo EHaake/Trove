@@ -1,6 +1,6 @@
 # Tasks: Item Management Enhancements
 
-**Status**: Draft — pending review
+**Status**: Complete — all tasks T001–T039e done and verified; spec.md's twenty acceptance criteria signed off 2026-08-30
 **Implements**: plan.md in this directory
 
 Ordered, small, independently verifiable. Each task should be
@@ -1527,16 +1527,63 @@ designs added. Decisions, all theirs, recorded before execution:
 
 ## Phase 8 — Full regression and close-out
 
-- [ ] **T038** — Full manual click-through: swipe-delete and
+- [x] **T038** — Full manual click-through: swipe-delete and
       detail-menu delete on both entities (confirm identical alert copy
       per entity); swipe-edit and swipe-duplicate on both lists; manual
       reorder on both lists via "Custom," including switching sorts away
       and back; all four wishlist sort options, including a tie case;
       the Phase 7 visual treatment, on a real device.
-- [ ] **T039** — Invoke the `skeptical-reviewer` subagent against the
+      Done (2026-08-30): run by the user on device. One finding — the
+      detail hero's thumbnail strip and caption were redundant next to
+      the new pager dots, and the strip made the two detail screens
+      differ — fixed as T038a.
+- [x] **T039** — Invoke the `skeptical-reviewer` subagent against the
       whole spec, per this project's established close-out convention.
       *Verify: findings resolved or explicitly recorded, per `001`'s own
       pre-merge-review pattern — not silently dropped either way.*
+      Done (2026-08-30). The review returned three blocking findings,
+      six should-fixes, and five notes, alongside a clean bill on
+      constitution compliance (no UIKit outside the documented
+      exception, no Combine, SwiftUI-free view models, no stray
+      debris) and explicit validation of the mutation discipline,
+      `ManualOrderHelper`, and the delete-copy guards. Disposition of
+      every finding:
+      1. Close-out record undone → this commit (statuses, all twenty
+         criteria checked with citations, ROADMAP row).
+      2. Backfill's multi-device data-loss race → **confirmed real**,
+         fixed as T039c (decision 1b: backfill removed for a sort-time
+         `createdAt` floor).
+      3. Tie-break contradiction (spec vs. items code, plan.md
+         decision 5 unanswered) → **confirmed real**, fixed as T039b
+         (decision 2a: manual order, both lists).
+      4. View-wiring claims unguarded → fixed as T039d
+         (`ReorderWiringTests`, mutation-verified).
+      5. Dual push mechanisms on the Items stack → **confirmed by
+         simulator repro before fixing**, fixed as T039a (row taps
+         through the router's bound path).
+      6. Stale `canMoveUp` doc comments → fixed as T039a.
+      7. `RefreshPacing.hold()` unpinned → fixed as T039d.
+      8. Undocumented tokens.md deviations on the newest surfaces →
+         reconciled as decisions in T038a's tokens.md pass.
+      9. Plate rule's exception list incomplete → completed in the
+         same pass (four exceptions now listed).
+      10. Duplicated comment block → fixed as T039a.
+      11. `duplicate(id:)` renumbers the whole collection per copy →
+          **recorded as accepted**: N record writes per duplicate is
+          fine at personal-inventory scale, the renumber is what
+          guarantees gap-free positions, and T039c's `createdAt` floor
+          removes the tie-reshuffle edge this finding worried about.
+      12. Read-only gauges advertising VoiceOver adjustments → fixed
+          as T039e.
+      13. Unlabeled dropdown dismiss catcher → fixed as T039e; the
+          no-VO-curtain half recorded as accepted there.
+      14. Stale "fourth option" phrasing in spec.md → fixed in this
+          close-out commit.
+      One review claim was disproven while verifying: the two list
+      files were not carrying uncommitted modifications at review time
+      — the tree was clean. (The uncommitted `.contentShape(
+      .dragPreview, ...)` remnant that shape of claim would fit had
+      already been found and removed at T037f; see that entry.)
 
 ---
 

@@ -1,6 +1,6 @@
 # Plan: Item Management Enhancements
 
-**Status**: Draft — pending review
+**Status**: Approved — implemented through Phase 8's close-out (2026-08-30); the Backfill and Resolved-decision sections carry their revision history in place
 **Implements**: spec.md in this directory
 
 ## Data model / core types

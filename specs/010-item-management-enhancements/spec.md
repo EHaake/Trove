@@ -1,6 +1,6 @@
 # Spec: Item Management Enhancements
 
-**Status**: Draft — pending review
+**Status**: Approved — all twenty acceptance criteria signed off (2026-08-30); see tasks.md Phase 8 for the close-out record
 **Depends on**: `001-core-inventory` (shipped; this spec modifies its screens directly)
 
 ## Summary
@@ -331,9 +331,10 @@ way it does, not as still-open requirements.
   updated section is the current, accurate constraint; the original
   "no bevels, no drop shadows" framing this bullet used to state is no
   longer the rule.
-- **Sort picker on both screens**: `ItemListView` gained a fourth
-  option ("Custom"), `WishlistView` a third and fourth ("Desire",
-  "Alphabetical"). Resolved cleanly — the actual pattern is a compact
+- **Sort picker on both screens**: `ItemListView` grew from three
+  options to five ("Custom", plus T033a's ascending Value),
+  `WishlistView` from two to five ("Desire", "Alphabetical", plus
+  T033a's descending Cost). Resolved cleanly — the actual pattern is a compact
   badge that opens a dropdown, so its footprint doesn't grow with
   option count; the "does four options crowd the header" concern this
   bullet used to flag turned out not to apply.
@@ -352,69 +353,115 @@ way it does, not as still-open requirements.
 
 ## Acceptance criteria
 
-Not yet signed off — listed here as the testable target, to be checked
-off (with citations, matching `001`'s convention) once built.
+All twenty signed off 2026-08-30, at the close of Phase 8 — citations
+per `001`'s convention. Two criteria carry wording amendments from the
+T039 close-out decisions, noted in place.
 
-- [ ] User can delete an owned item via a trailing swipe on
+- [x] User can delete an owned item via a trailing swipe on
       `ItemListView`; the row and the underlying item are removed.
-- [ ] Deleting an owned item shows the same confirmation alert on both
+      *(T015/T016; `ItemListView.swift` trailing `.swipeActions` →
+      staged alert → `viewModel.delete`; "Item deletion" suite's
+      second-context persistence checks.)*
+- [x] Deleting an owned item shows the same confirmation alert on both
       entry points (list swipe and detail screen's overflow menu), and
       that alert names the sell-plan cascade consequence with the same
       specificity the wishlist's existing alert has.
-- [ ] Deleting a wishlist item continues to show its confirmation
+      *(`ItemDeleteCopy` is the single source; "Deletion guard"
+      `bothItemDeleteRoutesReadTheSharedCopy` pins both entry points,
+      "Item delete copy" pins the cascade sentence's direction.)*
+- [x] Deleting a wishlist item continues to show its confirmation
       alert on both entry points, explaining the same consequence as
       before — with updated wording rather than unchanged wording: the
       verb unified with the item side ("Delete," not "Remove"), and the
       "This can't be undone" sentence added.
-- [ ] Underlying cascade behavior is unchanged by the above: a deleted
+      *(T010a; `WishlistDeleteCopy`; "Deletion guard"
+      `bothDeleteRoutesReadTheSharedCopy`.)*
+- [x] Underlying cascade behavior is unchanged by the above: a deleted
       item's photos are removed; a deleted owned item is silently
       dropped from any Sell Plan that had selected it; a deleted
       wishlist item's own Sell Plan selection disappears without
       affecting the owned items that were in it.
-- [ ] User can reveal Edit and Duplicate via a leading swipe on rows in
+      *("Item deletion" / "Wishlist deletion" suites; "Photo
+      ownership — one parent, never both".)*
+- [x] User can reveal Edit and Duplicate via a leading swipe on rows in
       both `ItemListView` and `WishlistView`.
-- [ ] Tapping Edit from the swipe reveal opens the existing add/edit
+      *(T023/T024; leading `.swipeActions` on both lists, labeled
+      "Copy" per the Phase 7 decision; T036's custom glyphs.)*
+- [x] Tapping Edit from the swipe reveal opens the existing add/edit
       form for that row, pre-filled, identical to reaching it from the
       detail screen.
-- [ ] Tapping Duplicate creates a new row per the field rules in "Key
+      *(Both routes construct the same `ItemFormView(editing:)` /
+      `WishlistFormView(editing:)`; verified in T023's manual pass.)*
+- [x] Tapping Duplicate creates a new row per the field rules in "Key
       user flows," inserted into the list with no forced navigation and
       no confirmation step.
-- [ ] A duplicated owned item does not inherit membership in any Sell
+      *(T025; "Item duplication" / "Wishlist duplication" suites cover
+      the field rules and the insert-after-original placement.)*
+- [x] A duplicated owned item does not inherit membership in any Sell
       Plan the original was part of; a duplicated wishlist item's own
       Sell Plan selection starts empty.
-- [ ] The wishlist's "Reorder" button no longer appears anywhere in
+      *(Same duplication suites — sell-plan fields are excluded from
+      the copy by construction and asserted.)*
+- [x] The wishlist's "Reorder" button no longer appears anywhere in
       the UI, and no edit-mode UI (drag handles) ever appears on
       either list; press-and-hold-then-drag reordering under "Custom"
       still works exactly as before. (This criterion flipped twice:
       removal as originally written, then kept per T027a's edit-mode
       finding, then removed again once explicit VoiceOver row actions
       replaced the edit-mode path — see Resolved decisions.)
-- [ ] User can drag-to-reorder owned items in `ItemListView` via the
+      *(T028a/T028b; guarded since T039d by "Reorder wiring"'s
+      app-target-wide `editMode`/`EditButton` scan, mutation-verified.)*
+- [x] User can drag-to-reorder owned items in `ItemListView` via the
       same press-and-hold gesture `WishlistView` uses — identical
       behavior on both screens, no separate button, no edit mode,
       and swipe actions live throughout, including under "Custom".
-- [ ] Manual order on `ItemListView` persists across app launches and
+      *(T028a; "ItemListViewModel — manual order" and "Reorder
+      wiring"'s per-list `.onMove` gate; T038's device pass.)*
+- [x] Manual order on `ItemListView` persists across app launches and
       syncs across devices, the same as `WishlistView`'s `sortOrder`
       already does.
-- [ ] Dragging to reorder is only available while "Custom" is selected
+      *(`Item.sortOrder` in the CloudKit-validated schema; "Item
+      reorder"'s second-context persistence tests. Made true for the
+      multi-device case by T039c — the launch-time backfill that could
+      race sync on a second device was removed; positions are now
+      written only by user drags, which sync as ordinary edits.)*
+- [x] Dragging to reorder is only available while "Custom" is selected
       on either screen — not while `ItemListView` is sorted by
       desire-to-keep, value, or purchase date, or `WishlistView` by
       Cost, Desire, or Alphabetical, and not while either list is
       filtered by category or search.
-- [ ] Selecting a different sort and returning to "Custom" shows the
+      *(`canReorder` on both view models, unit-tested per condition;
+      "Reorder wiring" pins the views reading it.)*
+- [x] Selecting a different sort and returning to "Custom" shows the
       manual order exactly as last arranged — it isn't discarded.
-- [ ] Existing owned items have a sensible, non-tied starting manual
-      order the first time this ships.
-- [ ] `WishlistView`'s sort picker offers "Desire" and "Alphabetical"
+      *(Sort modes are comparators over the same `sortOrder` data;
+      "WishlistViewModel — ordering" and T038's device pass.)*
+- [x] Existing owned items have a sensible starting manual order the
+      first time this ships. *(Amended at the T039 close-out: "non-tied"
+      is struck — stored positions on a legacy store stay tied at 0,
+      and the sensible order (creation order, exactly what the removed
+      backfill wrote) comes from the comparator's `createdAt` floor
+      instead, with no migration write to race sync. See plan.md's
+      Backfill section;
+      `customSortOnAnUnbackfilledStoreFollowsCreationOrder`.)*
+- [x] `WishlistView`'s sort picker offers "Desire" and "Alphabetical"
       in addition to "Custom" and "Cost."
-- [ ] Ties within a non-"Custom" sort (e.g., two wishlist items at the
+      *(T030–T032; plus T033a's descending Cost and ascending Value
+      pairs. "WishlistViewModel — ordering" per option.)*
+- [x] Ties within a non-"Custom" sort (e.g., two wishlist items at the
       same desire tier) resolve by manual order — the confirmed
       tie-break, not left open.
-- [ ] "Desire" and "Alphabetical" sorts on `WishlistView` compose with
+      *(True on both lists since T039b closed the divergence the T039
+      review caught — the item side first shipped a name fallback.
+      `desireTiesResolveByManualOrder` on each view model, fixtures
+      opposing name order, mutation-verified.)*
+- [x] "Desire" and "Alphabetical" sorts on `WishlistView` compose with
       category filtering exactly like "Cost" already does — both active
       simultaneously. "Custom" remains the one mode that requires an
       unfiltered, unsearched view, per the existing guard.
-- [ ] Reordering is VoiceOver-reachable on both lists via explicit
+      *("WishlistViewModel — loading and filtering" composition tests;
+      `canReorder`'s filter guard.)*
+- [x] Reordering is VoiceOver-reachable on both lists via explicit
       "Move up"/"Move down" row actions, present while reordering is
       available; the ends of the list no-op rather than dropping the
       action, since position-conditional presence destabilized the
@@ -422,15 +469,24 @@ off (with citations, matching `001`'s convention) once built.
       documented the opposite as a known gap; T027a's measurements
       reversed it, an interim design satisfied it via edit mode, and
       the row actions are its final form — see Resolved decisions.)
-- [ ] List rows on both screens read with more visual depth than a flat
+      *(Accessibility Inspector pass at T028b; end no-ops in
+      `theEndsOfferNoAccessibleMove`; structure guarded since T039d by
+      "Reorder wiring"'s position-conditional scan.)*
+- [x] List rows on both screens read with more visual depth than a flat
       rectangle, per `tokens.md`'s "Row treatment" table, and stay
       inside `brief.md`'s current (post-`010`-amendment) skeuomorphism
       boundary — no metallic gradients, wood/leather texture, screws,
       stitching, or photorealism, though restrained depth cues like the
       chosen treatment are now permitted.
-- [ ] `DesireGauge` reads as a desire-specific indicator to someone
+      *(T034/T037c's `ExtrudedPlate`, pixel-verified byte-exact against
+      tokens.md's alphas; the 2026-08-30 shadow softening is recorded
+      in tokens.md as a decision.)*
+- [x] `DesireGauge` reads as a desire-specific indicator to someone
       encountering it without prior context, per `tokens.md`'s "The
       desire gauge's stepped ramp" table.
+      *(T037's stepped ramp with per-row "DESIRE" legend; "DesireGauge
+      perceptual separation at row size" holds the confusability
+      floors, mutation-verified against rendered pixels.)*
 
 ## Resolved decisions
 
