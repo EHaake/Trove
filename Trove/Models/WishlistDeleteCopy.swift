@@ -8,18 +8,21 @@ import Foundation
 /// detail alert explained the cascade/nullify asymmetry and the swipe said
 /// nothing at all. Sharing the strings is what keeps the explanation from
 /// drifting apart again the way the "not yet valued" copy once did; the
-/// consequence line matters because neither half of it is guessable from the
-/// button ("Remove" doesn't say photos die with it, or that sell-plan gear
-/// doesn't).
+/// consequence line matters because none of it is guessable from the button
+/// ("Delete" doesn't say photos die with it, or that sell-plan gear doesn't).
+///
+/// `010` unified the verb with the item side — "Delete", matching
+/// `delete(id:)` and not softening a permanent action — and added the
+/// undo-sentence, equally true here. spec.md's Resolved decisions record why.
 enum WishlistDeleteCopy {
     static func title(for name: String) -> String {
-        "Remove \(name)?"
+        "Delete \(name)?"
     }
 
-    /// Both halves of the asymmetry, deliberately: photos cascade, sell-plan
-    /// items are merely unlinked. `WishlistDeleteCopyTests` pins each half.
-    static let message = "Its photos go too. Anything on its sell plan stays where it is."
+    /// All three promises, deliberately: photos cascade, sell-plan items are
+    /// merely unlinked, and there's no undo. `DeletionGuardTests` pins each.
+    static let message = "Its photos go too. Anything on its sell plan stays where it is. This can't be undone."
 
-    static let confirm = "Remove"
+    static let confirm = "Delete"
     static let cancel = "Keep"
 }

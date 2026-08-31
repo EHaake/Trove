@@ -129,12 +129,9 @@ struct WishlistDetailView: View {
             Text("Your estimate · Added \(item.createdAt.formatted(date: .abbreviated, time: .omitted))")
                 .monoLabel(color: theme.colors.textQuiet)
         }
-        .padding(theme.metrics.cardPadding)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
+        .extrudedPlate()
     }
 
     // MARK: - Desire
@@ -153,17 +150,15 @@ struct WishlistDetailView: View {
 
             DesireGauge(
                 value: desireBinding(for: item),
-                segmentSize: CGSize(width: 40, height: 22),
+                maxSegmentHeight: 22,
+                segmentWidth: 40,
                 showsLabel: true,
                 isInteractive: true
             )
         }
-        .padding(theme.metrics.cardPadding)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
+        .extrudedPlate()
     }
 
     /// Writes straight through and saves, matching the item detail dial: a
@@ -193,39 +188,24 @@ struct WishlistDetailView: View {
     /// number to reconcile against the first. Found at T044.
     @ViewBuilder
     private func details(for item: WishlistItem) -> some View {
-        let rows: [(String, String)] = [
-            ("Category", viewModel.categorySegments.joined(separator: " · ")),
-            ("Added", item.createdAt.formatted(date: .abbreviated, time: .omitted)),
-        ].filter { !$0.1.isEmpty }
+        let rows: [(label: String, value: String, isMono: Bool)] = [
+            ("Category", viewModel.categorySegments.joined(separator: " · "), false),
+            ("Added", item.createdAt.formatted(date: .abbreviated, time: .omitted), true),
+        ].filter { !$0.value.isEmpty }
 
-        VStack(spacing: 0) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
-                if index > 0 {
-                    Divider().overlay(theme.colors.divider)
+        if !rows.isEmpty {
+            DetailSection(title: "Details") {
+                VStack(spacing: 0) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                        DetailRow(label: row.label, value: row.value, isMono: row.isMono)
+                    }
                 }
-                HStack(alignment: .top, spacing: theme.metrics.cardPadding) {
-                    Text(row.0).monoLabel()
-                        .frame(width: 116, alignment: .leading)
-                    Text(row.1)
-                        .font(theme.typography.body)
-                        .foregroundStyle(theme.colors.textBody)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.vertical, 13)
             }
         }
     }
 
     private func notesSection(_ notes: String) -> some View {
-        VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
-            Text("Notes").monoLabel()
-            Text(notes)
-                .font(theme.typography.body)
-                .foregroundStyle(theme.colors.textBody)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
+        DetailSection(title: "Notes") { DetailProse(text: notes) }
     }
 
     // MARK: - Sell Plan
@@ -243,19 +223,36 @@ struct WishlistDetailView: View {
         Button {
             sellPlanRoute = SellPlanRoute(wishlistItemID: item.id)
         } label: {
-            HStack(spacing: 8) {
-                Text("Find items to sell")
-                    .font(theme.typography.rowTitle)
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Find items to sell")
+                        .font(theme.typography.rowTitle)
+                        .foregroundStyle(theme.colors.accentBrass)
+                    // True today: `SellPlanViewModel.rank` really does put the
+                    // least-wanted gear first. Design's own subtitle, kept
+                    // because it describes the ranking that exists rather
+                    // than a target the app doesn't compute.
+                    Text("Browse your lowest desire-to-keep items")
+                        .font(theme.typography.secondary)
+                        .foregroundStyle(theme.colors.textLabelSecondary)
+                }
+                Spacer(minLength: 0)
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(theme.colors.accentBrass)
             }
-            .foregroundStyle(theme.colors.background)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .background(
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
+            .overlay(
                 RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
-                    .fill(theme.colors.accentBrass)
+                    .strokeBorder(theme.colors.accentBrass, lineWidth: theme.metrics.hairline)
             )
+            // The outline leaves the interior transparent, and a transparent
+            // interior isn't hit-testable — the solid fill this replaced was
+            // doing that job silently. Without this the button only responds
+            // on its glyphs (caught on the simulator, not in review).
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -282,7 +279,7 @@ struct WishlistDetailView: View {
             HStack(alignment: .bottom, spacing: 6) {
                 ForEach(Array(Self.placeholderBarHeights.enumerated()), id: \.offset) { _, height in
                     RoundedRectangle(cornerRadius: theme.metrics.thumbnailRadius)
-                        .fill(theme.colors.surfaceInset)
+                        .fill(theme.colors.divider.opacity(0.35))
                         .frame(height: height)
                         .frame(maxWidth: .infinity)
                 }
@@ -290,8 +287,8 @@ struct WishlistDetailView: View {
             .frame(height: 44, alignment: .bottom)
 
             Text("Trove will chart what this actually sells for once price tracking is switched on.")
-                .font(theme.typography.body)
-                .foregroundStyle(theme.colors.textInactive)
+                .font(theme.typography.secondary)
+                .foregroundStyle(theme.colors.textQuiet)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(theme.metrics.cardPadding)

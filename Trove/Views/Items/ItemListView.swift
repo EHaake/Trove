@@ -6,6 +6,17 @@ struct ItemListView: View {
     @State private var viewModel: ItemListViewModel
     @State private var isAddingItem = false
 
+    /// The row a swipe has asked to delete, held until the alert resolves it.
+    /// Same staging the wishlist uses: the swipe-then-tap gesture is a fine
+    /// two-step on its own, but it can't *say* anything — and every delete
+    /// path in this app states its consequences before committing.
+    @State private var pendingDeletion: Item?
+
+    /// The row whose Edit swipe action is open in the form sheet — the same
+    /// form, same pre-fill, the detail screen already presents; the swipe is
+    /// a shortcut into that flow, not a new one (spec.md).
+    @State private var itemBeingEdited: Item?
+
     /// The chip the next layout pass should bring into view.
     ///
     /// Set only when a filter arrives from another tab, never when the user
@@ -16,6 +27,11 @@ struct ItemListView: View {
     /// The un-valued chip's scroll id. Not a category path, so it can't
     /// collide with one — no real path is empty *and* prefixed like this.
     private static let unvaluedChipID = "\u{0}unvalued"
+
+    /// Whether T035's sort dropdown is open. Owned here rather than by the
+    /// badge because the dropdown floats over the whole screen and dismisses
+    /// on any outside tap — both beyond the header's reach.
+    @State private var isSortMenuOpen = false
 
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
@@ -67,25 +83,7 @@ struct ItemListView: View {
                 if let reason = viewModel.emptyReason {
                     emptyState(reason)
                 } else {
-                    ScrollView {
-                        // Rows sit inside the gutter by their own card padding,
-                        // so a row's text lines up with the title above it
-                        // while the card still reaches nearer the edge than the
-                        // header does.
-                        LazyVStack(spacing: theme.metrics.listRowGap) {
-                            ForEach(viewModel.items, id: \.id) { item in
-                                NavigationLink(value: item.id) {
-                                    ItemRow(item: item)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal, theme.metrics.listRowInset)
-                        // No bottom padding: the rows run right to the edge of
-                        // the scroll, so the tab bar and the add button sit
-                        // over the last one or two. Same rule the wishlist
-                        // follows — see plan.md's Navigation section.
-                    }
+                    rows
                 }
             }
         }
@@ -98,6 +96,14 @@ struct ItemListView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .navigationBar)
+        // The one destination for this stack, and deliberately the only
+        // push mechanism: row taps and the router (the dashboard's un-valued
+        // callout) both go through the bound `itemsPath`. T039's review
+        // caught the split that existed before — row taps pushed through a
+        // separate `navigationDestination(item:)` binding the router
+        // couldn't see, so `popToItemsRoot()` left a tapped-open detail
+        // sitting on top of the narrowed list the dashboard had asked for.
+        // One path, one destination, and the router's pop clears everything.
         .navigationDestination(for: UUID.self) { itemID in
             ItemDetailView(modelContext: modelContext, itemID: itemID)
         }
@@ -107,6 +113,13 @@ struct ItemListView: View {
         .sheet(isPresented: $isAddingItem, onDismiss: viewModel.load) {
             NavigationStack {
                 ItemFormView(modelContext: modelContext)
+            }
+        }
+        // The Edit swipe's sheet (T023). Same refetch-on-dismiss reasoning
+        // as the add sheet above.
+        .sheet(item: $itemBeingEdited, onDismiss: viewModel.load) { item in
+            NavigationStack {
+                ItemFormView(modelContext: modelContext, editing: item)
             }
         }
         // Values can change on the detail screen — an edit, or the dial — so
@@ -138,7 +151,178 @@ struct ItemListView: View {
         // when a screen should look again, rather than the screen watching the
         // store continuously. Straight into the same load() everything else
         // calls — no second fetch path to keep in step with this one.
-        .refreshable { viewModel.load() }
+        .refreshable {
+            viewModel.load()
+            // Holds the refresh open so the list doesn't snap back up
+            // underneath the still-animating spinner — see RefreshPacing.
+            await RefreshPacing.hold()
+        }
+        // The same alert, word for word, that the detail screen shows for the
+        // same action — both read from ItemDeleteCopy, so they can't drift.
+        // Same staging shape as the wishlist's.
+        .alert(
+            ItemDeleteCopy.title(for: pendingDeletion?.name ?? "this item"),
+            isPresented: Binding(
+                get: { pendingDeletion != nil },
+                set: { if !$0 { pendingDeletion = nil } }
+            ),
+            presenting: pendingDeletion
+        ) { item in
+            Button(ItemDeleteCopy.confirm, role: .destructive) {
+                viewModel.delete(id: item.id)
+            }
+            Button(ItemDeleteCopy.cancel, role: .cancel) {}
+        } message: { _ in
+            Text(ItemDeleteCopy.message)
+        }
+        // T035's dropdown floats over the whole screen, a full-screen
+        // catcher behind it so any outside tap closes it. Screen-level
+        // rather than anchored to the badge: the header can't reach over
+        // the rows below it.
+        .overlay {
+            if isSortMenuOpen {
+                ZStack(alignment: .topTrailing) {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .ignoresSafeArea()
+                        .onTapGesture { isSortMenuOpen = false }
+                        // The catcher is a real tap target, so VoiceOver
+                        // should call it what it is rather than an unnamed
+                        // element (T039 review, finding 13).
+                        .accessibilityLabel("Dismiss sort options")
+                        .accessibilityAddTraits(.isButton)
+                    SortDropdown(
+                        options: ItemListViewModel.SortOrder.allCases,
+                        selection: viewModel.sortOrder,
+                        label: \.label,
+                        isManualOrder: { $0 == .custom }
+                    ) { option in
+                        viewModel.sortOrder = option
+                        isSortMenuOpen = false
+                        viewModel.load()
+                    }
+                    .padding(.top, 60)
+                    .padding(.trailing, theme.metrics.screenGutter)
+                }
+            }
+        }
+    }
+
+    // MARK: - Rows
+
+    /// A `List` for the same reasons the wishlist's is one — swipe actions
+    /// now, drag reordering at T027 — with everything visible overridden so it
+    /// reads as the same card stack the `LazyVStack` used to draw. The styling
+    /// mirrors `WishlistView.rows` line for line, deliberately: the two list
+    /// screens are one pattern, not two (T012).
+    private var rows: some View {
+        List {
+            ForEach(viewModel.items, id: \.id) { item in
+                ItemRow(item: item)
+                    // The screen's own background, not `.clear`, and not
+                    // decoration: at rest they're pixel-identical (the screen
+                    // shows through either way), but the reorder lift
+                    // snapshots the row *with* this background. Clear-backed,
+                    // UIKit substitutes an opaque black plateau behind the
+                    // snapshot and the row floats as an edge-to-edge black
+                    // slab; screen-colored, the slab blends into the screen
+                    // and only the plate reads as picked up. Verified on film
+                    // both ways (2026-08-30).
+                    .listRowBackground(theme.colors.background)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(
+                        top: theme.metrics.listRowGap / 2,
+                        leading: theme.metrics.listRowInset,
+                        bottom: theme.metrics.listRowGap / 2,
+                        trailing: theme.metrics.listRowInset
+                    ))
+                    .contentShape(Rectangle())
+                    // Tap-gesture navigation, same as the wishlist: inside a
+                    // List a `NavigationLink` row brings its own styling, and
+                    // the row is already the whole tap target. Pushed through
+                    // the router's bound path — not view-local state — so a
+                    // cross-tab pop (`popToItemsRoot`) can actually clear it.
+                    .onTapGesture { router.itemsPath.append(item.id) }
+                    // Stages, never deletes — the alert commits through the
+                    // view model (T015). A full swipe triggers the same
+                    // staging, so the farthest gesture still can't skip the
+                    // consequence line.
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            pendingDeletion = item
+                        } label: {
+                            // Design's own glyphs (T036), not SF Symbols —
+                            // template-rendered from `design/icons/`.
+                            Label { Text(ItemDeleteCopy.confirm) } icon: { Image("ActionDelete") }
+                        }
+                        // Explicit, not redundant: ContentView's brass .tint
+                        // cascades into swipe buttons and overrides the
+                        // destructive role's default red. Every swipe action
+                        // must color itself from tokens.md's "Swipe-action
+                        // rows" table for the same reason — rust stays the
+                        // one consequential color on a swiped-open row.
+                        .tint(theme.colors.accentRust)
+                    }
+                    // Edit nearest the edge, Copy second — the design mock's
+                    // order, and Edit is what a full swipe triggers. Neutral
+                    // tints per tokens.md, so rust keeps the only
+                    // consequential color on a swiped-open row.
+                    .swipeActions(edge: .leading) {
+                        Button {
+                            itemBeingEdited = item
+                        } label: {
+                            Label { Text("Edit") } icon: { Image("ActionEdit") }
+                        }
+                        .tint(theme.colors.divider)
+                        // "Copy" on screen, "Duplicate" in code — Design's
+                        // chosen string, per plan.md's Resolved decisions
+                        // (the refreshed export's DUPLICATE is outdated
+                        // text, confirmed at the Phase 7 review).
+                        Button {
+                            viewModel.duplicate(id: item.id)
+                        } label: {
+                            Label { Text("Copy") } icon: { Image("ActionDuplicate") }
+                        }
+                        .tint(theme.colors.surfaceInset)
+                    }
+                    // VoiceOver's route into reordering. The drag gesture
+                    // below has no accessible equivalent of its own, and the
+                    // edit mode that natively carries Move Up/Move Down left
+                    // at T028a — these named actions are what keeps spec.md's
+                    // "reordering is VoiceOver-reachable on both lists"
+                    // criterion true, invisibly. Gated on `canReorder` alone,
+                    // never on the row's position: an earlier position-aware
+                    // version changed this block's structure while a drag
+                    // settled, and the List answered by painting the
+                    // pre-drag order over the committed move (T029b's
+                    // bisect pinned it). The ends of the list are handled
+                    // inside `moveUp`/`moveDown`, which no-op there.
+                    .accessibilityActions {
+                        if viewModel.canReorder {
+                            Button("Move up") { viewModel.moveUp(id: item.id) }
+                            Button("Move down") { viewModel.moveDown(id: item.id) }
+                        }
+                    }
+            }
+            // Attached only while Custom is the active, unnarrowed view —
+            // `nil` detaches the gesture entirely, so reordering is hidden,
+            // not just disabled, everywhere it wouldn't be meaningful (T027).
+            // The view model's own guard stays as the second line of defense.
+            .onMove(perform: viewModel.canReorder ? { source, destination in
+                viewModel.move(fromOffsets: source, toOffset: destination)
+            } : nil)
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        // No bottom margin, deliberately — the add button and the tab bar sit
+        // over the last row or two when scrolled fully down. Same rule as
+        // `WishlistView.rows`, recorded in plan.md's Navigation section.
+        //
+        // No `\.editMode` here, deliberately. An interim build wired it to
+        // `canReorder`, which put drag handles on every row and silenced the
+        // swipe actions whenever Custom was active — spec.md's reorder flow
+        // records why that left: Custom only *allows* the long-press drag.
+        // VoiceOver reorders through the rows' named actions instead.
     }
 
     // MARK: - Header
@@ -174,34 +358,13 @@ struct ItemListView: View {
         return parts.joined(separator: " · ")
     }
 
+    /// T035's badge — see `SortBadge` for why this stopped being a system
+    /// `Menu` (the T029c saga in one sentence: UIKit animated the Menu
+    /// label's bounds beyond SwiftUI's reach; a custom control has no such
+    /// machinery, so the badge simply hugs its label again).
     private var sortControl: some View {
-        Menu {
-            ForEach(ItemListViewModel.SortOrder.allCases) { order in
-                Button {
-                    viewModel.sortOrder = order
-                    viewModel.load()
-                } label: {
-                    if viewModel.sortOrder == order {
-                        Label(order.label, systemImage: "checkmark")
-                    } else {
-                        Text(order.label)
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "line.3.horizontal.decrease")
-                    .font(.system(size: 12, weight: .medium))
-                Text(viewModel.sortOrder.label)
-                    .font(theme.typography.body)
-            }
-            .foregroundStyle(theme.colors.textBody)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .overlay(
-                RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
-                    .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
-            )
+        SortBadge(label: viewModel.sortOrder.label) {
+            isSortMenuOpen.toggle()
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
     }

@@ -118,6 +118,11 @@ struct ItemFormView: View {
                 }
                 .padding(.vertical, theme.metrics.fieldPaddingVertical)
                 .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
+                // Both boxes stretch to the taller of the two: a `TextField`
+                // sits a couple of points taller than the plain `Text` the
+                // date field draws, and side-by-side cards of different
+                // heights read as a mistake.
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .background(fieldBackground)
                 .overlay(fieldBorder(isInvalid: viewModel.validationErrors.contains(.priceNegative)
                     || viewModel.validationErrors.contains(.priceMissing)))
@@ -125,6 +130,9 @@ struct ItemFormView: View {
 
             dateField
         }
+        // The row takes its natural height from the taller field; the two
+        // boxes above then fill it, so they finish level.
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     /// A plain button wearing the same chrome as every other field, with the
@@ -152,14 +160,20 @@ struct ItemFormView: View {
 
                     Spacer(minLength: 0)
 
-                    // The mock's small square outline. A flat graphic mark
-                    // rather than an SF calendar glyph, per the brief.
-                    RoundedRectangle(cornerRadius: 1)
-                        .strokeBorder(theme.colors.textLabel, lineWidth: theme.metrics.hairline)
-                        .frame(width: 15, height: 15)
+                    // The mock drew a bare square outline here, which reads
+                    // as an empty checkbox rather than "opens a calendar"
+                    // (`010` review). A calendar glyph instead — the same
+                    // SF-symbol utility mark the search field's magnifier
+                    // and the sell-plan arrow already use; the brief's
+                    // custom-mark rule covers the signature elements, not
+                    // every affordance.
+                    Image(systemName: "calendar")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundStyle(theme.colors.textLabel)
                 }
                 .padding(.vertical, theme.metrics.fieldPaddingVertical)
                 .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .background(fieldBackground)
                 .overlay(fieldBorder(isInvalid: false))
             }
@@ -190,6 +204,10 @@ struct ItemFormView: View {
     private var desireCard: some View {
         HStack(spacing: theme.metrics.cardPadding) {
             DesireDial(value: $viewModel.desireToKeep, diameter: 84, isInteractive: true)
+                // Trim the dial's blank quarter so the card's padding can be
+                // symmetric and still *look* it — see `emptyBottomInset`.
+                .padding(.bottom, -DesireDial.emptyBottomInset(diameter: 84))
+                .padding(.top, DesireDial.knobOverhang(diameter: 84))
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("Desire to keep").monoLabel()
@@ -207,10 +225,7 @@ struct ItemFormView: View {
         }
         .padding(theme.metrics.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
+        .extrudedPlate()
     }
 
     // MARK: - Optional fields
@@ -219,8 +234,17 @@ struct ItemFormView: View {
         VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
             Divider().overlay(theme.colors.divider)
 
+            // Toggled without an animation, deliberately. Animating the
+            // insert made SwiftUI lay the whole optional section out at the
+            // scroll content's origin for the duration of the transition, so
+            // it ghosted across the entire form from the top of the screen on
+            // every open and close — caught on a frame capture, and neither
+            // an explicit transition nor a nil-animation transaction on the
+            // inserted subtree stopped it. Snapping is honest; a real fold
+            // would mean measuring the section's height and animating that,
+            // which is a bigger change than this glitch warrants.
             Button {
-                withAnimation(.snappy(duration: 0.22)) { showsMoreDetails.toggle() }
+                showsMoreDetails.toggle()
             } label: {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 3) {
@@ -378,17 +402,20 @@ struct ItemFormView: View {
 
     // MARK: - Shared field chrome
 
+    /// Every field is a card, so every field is a plate (`010`'s review
+    /// extended the treatment past list rows and detail cards). The border
+    /// stays a *validity* signal rather than the separator the plate's bevel
+    /// now handles — `fieldBorder` draws nothing but rust when invalid.
     private var fieldBackground: some View {
-        RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-            .fill(theme.colors.surface)
+        PlateSurface()
     }
 
+    @ViewBuilder
     private func fieldBorder(isInvalid: Bool) -> some View {
-        RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-            .strokeBorder(
-                isInvalid ? theme.colors.accentRust : theme.colors.divider,
-                lineWidth: theme.metrics.hairline
-            )
+        if isInvalid {
+            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
+                .strokeBorder(theme.colors.accentRust, lineWidth: theme.metrics.hairline)
+        }
     }
 
     private func labelledField<Content: View>(

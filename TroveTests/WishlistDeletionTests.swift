@@ -130,12 +130,39 @@ struct DeletionGuardTests {
         #expect(source.contains("WishlistDeleteCopy.message"), "\(path) writes its own consequence line")
     }
 
-    /// The consequence line carries both halves of the asymmetry — the cascade
-    /// and the nullify. Losing either half makes the alert a shrug.
-    @Test func theMessageStatesBothHalvesOfTheAsymmetry() {
+    /// The item side's mirror, added with its second entry point
+    /// (T015/T017): both routes to an item deletion read the shared copy, so
+    /// they can't drift any more than the wishlist's pair can — plan.md's
+    /// testing strategy asks for exactly this extension.
+    @Test(arguments: [
+        "Trove/Views/Items/ItemListView.swift",
+        "Trove/Views/Items/ItemDetailView.swift",
+    ])
+    func bothItemDeleteRoutesReadTheSharedCopy(path: String) throws {
+        let source = try SourceScan.production(path)
+
+        #expect(source.contains("ItemDeleteCopy.title"), "\(path) titles its own delete alert")
+        #expect(source.contains("ItemDeleteCopy.message"), "\(path) writes its own consequence line")
+    }
+
+    /// The consequence line carries all three promises — the cascade, the
+    /// nullify, and the permanence `010` added once the undo-sentence proved
+    /// equally true here. Losing any one makes the alert a shrug.
+    @Test func theMessageKeepsAllThreePromises() {
         let message = WishlistDeleteCopy.message
 
         #expect(message.localizedCaseInsensitiveContains("photos"), "\(message)")
         #expect(message.localizedCaseInsensitiveContains("sell plan"), "\(message)")
+        #expect(message.localizedCaseInsensitiveContains("undone"), "\(message)")
+    }
+
+    /// `010`'s verb unification, pinned — and pinned because T010a changed
+    /// these shipped strings and found *nothing* guarding them: every test
+    /// stayed green while "Remove" became "Delete". The verb matches
+    /// `delete(id:)` and doesn't soften a permanent action; a drift back
+    /// would now fail here instead of shipping silently.
+    @Test func theConfirmButtonAndTitleSayDelete() {
+        #expect(WishlistDeleteCopy.confirm == "Delete")
+        #expect(WishlistDeleteCopy.title(for: "Vox AC15") == "Delete Vox AC15?")
     }
 }

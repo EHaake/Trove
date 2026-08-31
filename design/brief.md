@@ -19,13 +19,28 @@ a near-black/neon-accent look, or a hairline-rule broadsheet look. Those
 are the current AI-design defaults and none of them are actually about
 this subject.
 
-**Explicitly not skeuomorphic.** The brief below references physical
-instruments (dials, gauges, meters) as a *shape and metaphor* language —
-flat, graphic, minimal. This is not a request for rendered materials:
-no metallic gradients, no bevels or embossing, no drop shadows simulating
-a raised physical control, no wood-grain or leather-grain textures, no
-fake screws or stitching. A dial in this app is a thin arc and a number,
-not a photorealistic knob.
+**Mostly not skeuomorphic — narrowed in `010`.** The brief below
+references physical instruments (dials, gauges, meters) as a *shape and
+metaphor* language — flat, graphic, minimal, with room for restrained
+depth where it earns its place. This is not a request for rendered
+materials: no metallic gradients, no wood-grain or leather-grain
+textures, no fake screws or stitching, nothing photorealistic. A dial
+in this app is a thin arc and a number, not a photorealistic knob.
+
+**Amended in `010`** (see `specs/010-item-management-enhancements/plan.md`'s
+Resolved decisions): this section originally also ruled out bevels,
+embossing, and drop shadows outright. That reflected an assumption
+about the limits of flat design, not a permanent boundary — Trove's
+visual identity is expected to keep evolving as the app grows, not stay
+fixed to what shipped in `001`. Subtle, alpha-based depth cues (a
+restrained cast shadow, a light top edge and dark bottom edge
+suggesting depth — built from black/ivory alphas layered over the
+existing `surface` color, never new hardcoded colors) are permitted now,
+used sparingly. `010`'s row treatment (`tokens.md`) is the reference
+example. What still holds absolutely is the line above: nothing that
+reads as a rendered physical material or a literal control — the
+boundary moved from "no depth at all" to "depth without literal
+materiality," not to "anything goes."
 
 ## Palette
 

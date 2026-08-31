@@ -61,10 +61,7 @@ struct SearchField: View {
         }
         .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
         .frame(height: theme.metrics.searchFieldHeight)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
+        .extrudedPlate()
         .contentShape(Rectangle())
         // The field is 40pt tall and the glyphs inside it are small, so the
         // whole box takes the tap rather than just the text baseline.

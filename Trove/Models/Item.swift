@@ -46,6 +46,13 @@ final class Item {
     var conditionNotes: String?
     var notes: String?
 
+    /// User-adjustable manual ordering of the item list — the same concept
+    /// `WishlistItem.sortOrder` has represented since `001`, added here by
+    /// `010`. A scalar with a default needs no optionality for CloudKit.
+    /// Rows that predate this field all sit at 0 until the one-time launch
+    /// backfill (`010`'s T005) assigns them a real order.
+    var sortOrder: Int = 0
+
     /// Optional, not `[Photo]`, because CloudKit rejects non-optional
     /// relationships outright — see the note in plan.md. Read it as
     /// `photos ?? []`; nil and empty mean the same thing here.
@@ -95,6 +102,7 @@ final class Item {
         condition: Condition = .excellent,
         conditionNotes: String? = nil,
         notes: String? = nil,
+        sortOrder: Int = 0,
         photos: [Photo]? = []
     ) {
         let now = Date.now
@@ -110,6 +118,7 @@ final class Item {
         self.conditionRawValue = condition.rawValue
         self.conditionNotes = conditionNotes
         self.notes = notes
+        self.sortOrder = sortOrder
         self.photos = photos
         self.createdAt = now
         self.updatedAt = now

@@ -50,15 +50,18 @@ struct ItemDetailView: View {
         // cancel button entirely, leaving "Delete" as the only thing to press
         // on a destructive, irreversible action.
         .alert(
-            "Delete \(viewModel.item?.name ?? "this item")?",
+            ItemDeleteCopy.title(for: viewModel.item?.name ?? "this item"),
             isPresented: $isConfirmingDelete
         ) {
-            Button("Delete", role: .destructive) {
+            Button(ItemDeleteCopy.confirm, role: .destructive) {
                 if viewModel.delete() { dismiss() }
             }
-            Button("Keep", role: .cancel) {}
+            Button(ItemDeleteCopy.cancel, role: .cancel) {}
         } message: {
-            Text("Its photos go too. This can't be undone.")
+            // Shared with the list's swipe path (T017) — one source, so the
+            // two entry points can't drift, and the sell-plan consequence
+            // T002 found missing here arrives with it.
+            Text(ItemDeleteCopy.message)
         }
         .onAppear(perform: viewModel.load)
     }
@@ -71,16 +74,20 @@ struct ItemDetailView: View {
                     selectedIndex: $selectedPhotoIndex
                 )
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 7) {
                     Text(item.categorySegments.joined(separator: " · ")).monoLabel()
                     Text(item.name)
                         .font(theme.typography.heroFigureSecondary)
                         .foregroundStyle(theme.colors.textPrimary)
                 }
 
-                valueCard(for: item)
+                statPair(for: item)
                 desireCard(for: item)
                 details(for: item)
+
+                if let notes = item.notes, !notes.isEmpty {
+                    DetailSection(title: "Notes") { DetailProse(text: notes) }
+                }
             }
             .padding(.horizontal, theme.metrics.screenGutter)
             .padding(.bottom, theme.metrics.sectionGap)
@@ -89,13 +96,17 @@ struct ItemDetailView: View {
 
     // MARK: - Value
 
-    private func valueCard(for item: Item) -> some View {
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
+    /// WORTH NOW and PAID as two bevelled cells split by a hairline seam,
+    /// clipped and shadowed once as a unit — `tokens.md`'s "Item detail" stat
+    /// pair. The seam is the container's own colour showing through the gap,
+    /// which is why the cells carry no radius of their own.
+    private func statPair(for item: Item) -> some View {
+        HStack(spacing: theme.metrics.hairline) {
+            VStack(alignment: .leading, spacing: 7) {
                 Text("Worth now").monoLabel()
                 if let worth = item.currentValueCents {
                     Text(worth.formattedAsWholeCurrency(currencyCode: item.currencyCode))
-                        .font(theme.typography.heroFigure)
+                        .font(theme.typography.heroFigureSecondary)
                         .foregroundStyle(theme.colors.accentBrass)
                 } else {
                     // Design drew only the valued case, but a value is optional
@@ -103,20 +114,18 @@ struct ItemDetailView: View {
                     Text("Not yet valued")
                         .font(theme.typography.body)
                         .foregroundStyle(theme.colors.textQuiet)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 6)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, theme.metrics.cardPadding)
+            .padding(.vertical, 15)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .plateBevel()
 
-            Rectangle()
-                .fill(theme.colors.divider)
-                .frame(width: theme.metrics.hairline)
-                .padding(.vertical, 4)
-
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 7) {
                 Text("Paid").monoLabel()
                 Text(item.purchasePriceCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))
-                    .font(theme.typography.heroFigureSecondary)
+                    .font(theme.typography.monoValue)
                     .foregroundStyle(theme.colors.textPrimary)
 
                 if let delta = item.valueDeltaCents {
@@ -125,14 +134,15 @@ struct ItemDetailView: View {
                         .foregroundStyle(delta < 0 ? theme.colors.accentRustText : theme.colors.accentMossText)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, theme.metrics.cardPadding)
+            .padding(.horizontal, theme.metrics.cardPadding)
+            .padding(.vertical, 15)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .plateBevel()
         }
-        .padding(theme.metrics.cardPadding)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
+        .fixedSize(horizontal: false, vertical: true)
+        .background(theme.colors.divider)
+        .clipShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
+        .shadow(color: theme.colors.plateCastShadow, radius: 3, x: 0, y: 2)
     }
 
     /// Design's "+$550 · +19%". The percentage is skipped when the item was
@@ -154,31 +164,37 @@ struct ItemDetailView: View {
                 Text("Tap or drag").monoLabel(color: theme.colors.textQuiet)
             }
 
-            HStack(spacing: theme.metrics.sectionGap) {
+            HStack(spacing: 20) {
                 DesireDial(
                     value: desireBinding(for: item),
                     diameter: 116,
                     isInteractive: true,
                     showsScale: true
                 )
+                .padding(.bottom, -DesireDial.emptyBottomInset(diameter: 116))
+                .padding(.top, DesireDial.knobOverhang(diameter: 116))
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(DesireLevel(clamping: item.desireToKeep).summary)
                         .font(theme.typography.rowTitle)
                         .foregroundStyle(theme.colors.textPrimary)
-                    Text(sellCandidacyNote(for: item))
-                        .font(theme.typography.body)
-                        .foregroundStyle(theme.colors.textQuiet)
-                        .fixedSize(horizontal: false, vertical: true)
+                    // What the rating actually does today — see
+                    // `DesireLevel.detail(isValued:)` for why the mock's
+                    // richer copy was reworded, and when to restore it.
+                    Text(
+                        DesireLevel(clamping: item.desireToKeep)
+                            .detail(isValued: item.currentValueCents != nil)
+                    )
+                    .font(theme.typography.secondary)
+                    .foregroundStyle(theme.colors.textLabelSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
-        .padding(theme.metrics.cardPadding)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
+        .extrudedPlate()
     }
 
     /// Editing the dial writes straight through to the item and saves, so the
@@ -196,47 +212,32 @@ struct ItemDetailView: View {
         )
     }
 
-    /// Says what the rating actually does. Design shows this for a 5
-    /// ("Excluded from sell candidates unless you say otherwise"); the
-    /// candidate side is the same fact from the other direction.
-    private func sellCandidacyNote(for item: Item) -> String {
-        let level = DesireLevel(clamping: item.desireToKeep)
-        if level.isSellCandidate {
-            return item.currentValueCents == nil
-                ? "Would appear in sell plans, once it has a value."
-                : "Appears in sell plans for wishlist items."
-        }
-        return "Excluded from sell candidates unless you say otherwise."
-    }
-
     // MARK: - Remaining fields
 
+    /// Label left, value right, hairline under each row — `tokens.md`'s item
+    /// detail table.
+    ///
+    /// Money and dates stay out of here deliberately: the stat pair above
+    /// already carries them, and the refreshed mock's duplicate rows would
+    /// have the screen state the same figure twice. Notes moved out to their
+    /// own section, which is what the mock does with them.
     @ViewBuilder
     private func details(for item: Item) -> some View {
-        let rows: [(String, String)] = [
-            ("Condition", item.condition.rawValue.capitalized),
-            ("Condition notes", item.conditionNotes ?? ""),
-            ("Bought", item.purchaseDate.formatted(date: .abbreviated, time: .omitted)),
-            ("Bought from", item.purchaseLocation ?? ""),
-            ("Serial number", item.serialNumber ?? ""),
-            ("Notes", item.notes ?? ""),
-        ].filter { !$0.1.isEmpty }
+        let rows: [(label: String, value: String, isMono: Bool)] = [
+            ("Condition", item.condition.rawValue.capitalized, false),
+            ("Condition notes", item.conditionNotes ?? "", false),
+            ("Bought", item.purchaseDate.formatted(date: .abbreviated, time: .omitted), true),
+            ("Bought from", item.purchaseLocation ?? "", false),
+            ("Serial number", item.serialNumber ?? "", true),
+        ].filter { !$0.value.isEmpty }
 
-        VStack(spacing: 0) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
-                if index > 0 {
-                    Divider().overlay(theme.colors.divider)
+        if !rows.isEmpty {
+            DetailSection(title: "Details") {
+                VStack(spacing: 0) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                        DetailRow(label: row.label, value: row.value, isMono: row.isMono)
+                    }
                 }
-                HStack(alignment: .top, spacing: theme.metrics.cardPadding) {
-                    Text(row.0).monoLabel()
-                        .frame(width: 116, alignment: .leading)
-                    Text(row.1)
-                        .font(row.0 == "Serial number" ? theme.typography.monoMeta : theme.typography.body)
-                        .foregroundStyle(theme.colors.textBody)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.vertical, 13)
             }
         }
     }

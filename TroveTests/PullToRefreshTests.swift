@@ -39,6 +39,15 @@ struct PullToRefreshTests {
                 .refreshable {\(body)}
                 """
             )
+            // T037h: load() completes within a frame, so without the hold the
+            // list snaps back up under the still-animating spinner. Pinned
+            // per screen because the three closures are written
+            // independently — dropping it from one reintroduces the defect
+            // on that screen alone, silently.
+            #expect(
+                body.contains("RefreshPacing.hold()"),
+                "\(path)'s refresh doesn't hold, so it snaps back under the spinner (T037h): .refreshable {\(body)}"
+            )
         }
     }
 }

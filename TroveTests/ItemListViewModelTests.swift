@@ -10,18 +10,23 @@ private func insertItem(
     valueCents: Int? = nil,
     serial: String? = nil,
     purchasedAt seconds: TimeInterval = 0,
+    order: Int = 0,
+    createdAt: TimeInterval? = nil,
     into context: ModelContext
 ) {
-    context.insert(
-        Item(
-            name: name,
-            categoryPath: category,
-            purchaseDate: Date(timeIntervalSince1970: seconds),
-            serialNumber: serial,
-            currentValueCents: valueCents,
-            desireToKeep: desire
-        )
+    let item = Item(
+        name: name,
+        categoryPath: category,
+        purchaseDate: Date(timeIntervalSince1970: seconds),
+        serialNumber: serial,
+        currentValueCents: valueCents,
+        desireToKeep: desire,
+        sortOrder: order
     )
+    if let createdAt {
+        item.createdAt = Date(timeIntervalSince1970: createdAt)
+    }
+    context.insert(item)
 }
 
 @Suite("ItemListViewModel — loading and filtering")
@@ -465,6 +470,23 @@ struct ItemListViewModelSortTests {
         #expect(viewModel.items.map(\.name) == ["Dear", "Middling", "Cheap"])
     }
 
+    /// The ascending half of the Value pair (T033a) — and un-valued items
+    /// stay last here too, rather than leading as the "cheapest": unknown
+    /// isn't a low value any more than it was a zero.
+    @Test func valueAscendingLeadsWithTheCheapestAndStillSinksUnvalued() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Dear", valueCents: 500_000, into: context)
+        insertItem("Unvalued", valueCents: nil, into: context)
+        insertItem("Cheap", valueCents: 5_000, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.sortOrder = .currentValueAscending
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Cheap", "Dear", "Unvalued"])
+    }
+
     /// Un-valued isn't worth zero, it's unknown — so those items go last
     /// rather than sinking below the cheapest valued one.
     @Test func sortsUnvaluedItemsLast() throws {
@@ -481,33 +503,79 @@ struct ItemListViewModelSortTests {
         #expect(viewModel.items.map(\.name) == ["Dear", "Cheap", "Unvalued"])
     }
 
-    @Test func ordersSeveralUnvaluedItemsAmongThemselvesByName() throws {
+    /// Beneath a tied attribute *and* a shared manual position — the real
+    /// state of a pre-`010` store, where every legacy item sits at 0 — the
+    /// order is the order things were added. This floor is what replaced the
+    /// launch-time backfill (close-out decision 1b): the same `createdAt`
+    /// order the backfill used to write, read at sort time instead, with no
+    /// migration write to race CloudKit sync on a second device. Names
+    /// oppose creation order so a name-based floor fails here.
+    @Test func unvaluedItemsAtASharedPositionFollowCreationOrder() throws {
         let context = try makeInMemoryContext()
-        insertItem("Zither", valueCents: nil, into: context)
-        insertItem("Accordion", valueCents: nil, into: context)
+        insertItem("Zither", valueCents: nil, order: 0, createdAt: 100, into: context)
+        insertItem("Accordion", valueCents: nil, order: 0, createdAt: 200, into: context)
         try context.save()
 
         let viewModel = ItemListViewModel(modelContext: context)
         viewModel.sortOrder = .currentValue
         viewModel.load()
 
-        #expect(viewModel.items.map(\.name) == ["Accordion", "Zither"])
+        #expect(viewModel.items.map(\.name) == ["Zither", "Accordion"])
     }
 
-    /// Equal sort keys must not leave the order up to the fetch, which
-    /// guarantees nothing — rows reshuffling between launches reads as a bug.
-    @Test func breaksTiesByNameSoOrderIsDeterministic() throws {
+    /// The legacy store under "Custom" itself: all positions tied at 0, so
+    /// the whole list rides the `createdAt` floor until the first drag
+    /// renumbers it. Names oppose creation order here too.
+    @Test func customSortOnAnUnbackfilledStoreFollowsCreationOrder() throws {
         let context = try makeInMemoryContext()
-        insertItem("Charlie", desire: 3, into: context)
-        insertItem("alpha", desire: 3, into: context)
-        insertItem("Bravo", desire: 3, into: context)
+        insertItem("Charlie", order: 0, createdAt: 100, into: context)
+        insertItem("Bravo", order: 0, createdAt: 200, into: context)
+        insertItem("alpha", order: 0, createdAt: 300, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.sortOrder = .custom
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Charlie", "Bravo", "alpha"])
+    }
+
+    /// Equal sort keys resolve by the user's own manual order — spec.md's
+    /// confirmed tie-break, shared with the wishlist (2026-08-30 close-out;
+    /// this replaced a name fallback and the test that pinned it). Names run
+    /// *against* the manual order on purpose, so a name-based fallback fails
+    /// here rather than passing by coincidence.
+    @Test func desireTiesResolveByManualOrder() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Charlie", desire: 3, order: 0, into: context)
+        insertItem("alpha", desire: 3, order: 2, into: context)
+        insertItem("Bravo", desire: 3, order: 1, into: context)
         try context.save()
 
         let viewModel = ItemListViewModel(modelContext: context)
         viewModel.sortOrder = .desireToKeep
         viewModel.load()
 
-        #expect(viewModel.items.map(\.name) == ["alpha", "Bravo", "Charlie"])
+        #expect(viewModel.items.map(\.name) == ["Charlie", "Bravo", "alpha"])
+    }
+
+    /// The same rule where the tied attribute is *absence* — two un-valued
+    /// items are a value tie, and their relative order is the user's
+    /// arrangement, not the alphabet. Names oppose the manual order here too.
+    @Test func valueTiesAmongUnvaluedItemsResolveByManualOrder() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Accordion", valueCents: nil, order: 1, into: context)
+        insertItem("Zither", valueCents: nil, order: 0, into: context)
+        insertItem("Valued", valueCents: 100_00, order: 2, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.sortOrder = .currentValue
+        viewModel.load()
+
+        // The valued item leads regardless of its manual position; the
+        // un-valued pair follows in manual order.
+        #expect(viewModel.items.map(\.name) == ["Valued", "Zither", "Accordion"])
     }
 
     @Test func repeatedLoadsProduceTheSameOrder() throws {

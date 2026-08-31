@@ -19,16 +19,52 @@ enum DesireLevel: Int, CaseIterable, Sendable {
         self = DesireLevel(rawValue: min(max(value, 1), 5)) ?? .undecided
     }
 
-    /// "Keeping for now" and "Absolutely keeping it" are Design's own words,
-    /// from the item form and item detail mocks. The other three follow their
-    /// voice — plain, first-person about the gear, no filler.
+    /// "Keeping for now", "Absolutely keeping it" and — since `010`'s design
+    /// refresh — "On the fence" are Design's own words, from the item form and
+    /// detail mocks. The other two follow their voice: plain, first-person
+    /// about the gear, no filler. (Level 3 read "Undecided" until `010`; the
+    /// case keeps its old name, which nothing user-facing depends on.)
     var summary: String {
         switch self {
         case .readyToSell: "Ready to sell"
         case .wouldLetItGo: "Would let it go"
-        case .undecided: "Undecided"
+        case .undecided: "On the fence"
         case .keepingForNow: "Keeping for now"
         case .absolutelyKeeping: "Absolutely keeping it"
+        }
+    }
+
+    /// The line under the summary: what this rating actually *does*, in terms
+    /// of behaviour that exists today.
+    ///
+    /// Design's mock wrote these against a richer sell plan than `010` ships —
+    /// target-shortfall escalation ("only offered up if you're far short of a
+    /// target") and per-level exclusion overrides. Reworded at the `010`
+    /// design review to describe only what's real: `isSellCandidate` decides
+    /// who joins the pool, and `SellPlanViewModel.rank` orders it
+    /// least-wanted-first. **Revisit when that richer logic lands** — levels 4
+    /// and 5 differ in the mock's copy and are deliberately near-synonyms here,
+    /// because today they behave identically. `tasks.md`'s Phase 7 header and
+    /// `tokens.md`'s dial-copy table carry the same note.
+    ///
+    /// - Parameter isValued: whether the item has a current value. An unvalued
+    ///   item can't join a plan whatever its rating (`SellPlanViewModel
+    ///   .qualifies`), so saying otherwise would be the same kind of untrue
+    ///   promise the rewording exists to remove.
+    func detail(isValued: Bool) -> String {
+        guard isSellCandidate else {
+            switch self {
+            case .keepingForNow: return "Left out of the sell-candidate pool."
+            default: return "Never offered up. This one stays."
+            }
+        }
+        guard isValued else {
+            return "Won't appear in a sell plan until it has a value."
+        }
+        switch self {
+        case .readyToSell: return "First in line when a sell plan needs candidates."
+        case .wouldLetItGo: return "Offered early among sell candidates."
+        default: return "Still a sell candidate — the last in line."
         }
     }
 

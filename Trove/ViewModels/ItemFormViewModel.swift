@@ -113,6 +113,13 @@ final class ItemFormViewModel {
         item.updatedAt = .now
 
         if editingItem == nil {
+            // New items go to the end of the manual order, same as the
+            // wishlist form — see ManualOrderHelper.nextPosition for why the
+            // end is max + 1 rather than a count. Editing never touches the
+            // position the user arranged.
+            item.sortOrder = ManualOrderHelper.nextPosition(
+                after: (try? modelContext.fetch(FetchDescriptor<Item>())) ?? []
+            )
             modelContext.insert(item)
         }
 

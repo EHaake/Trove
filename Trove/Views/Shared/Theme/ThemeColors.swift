@@ -29,6 +29,10 @@ struct ThemeColors: Sendable {
     /// Brass held back for repeated marks that would shout in full strength —
     /// the dashboard ruler's minor ticks, where only the majors are at full.
     let accentBrassDim: Color
+    /// The perceptual half-mix of `accentBrassDim` and `accentBrass` — the
+    /// `DesireGauge` ramp's middle segment. Shipped since the ramp's Oklab
+    /// search; named when `010`'s Design pass surfaced the gap (tokens.md).
+    let accentBrassMid: Color
     /// Background wash for selected rows and chips.
     let accentBrassTint: Color
 
@@ -50,6 +54,22 @@ struct ThemeColors: Sendable {
     /// The neutral the dashboard's breakdown falls back to once the three
     /// accents are spent — "everything else", not a category of its own.
     let categoryNeutral: Color
+
+    /// The extruded-plate treatment's three alphas (`010`, tokens.md's "Row
+    /// treatment" table) — depth layered over `surface` from ivory and black
+    /// alphas, never a new hue, which is what keeps the plate inside
+    /// `brief.md`'s amended skeuomorphism boundary.
+    /// The 1px inner top edge that catches the light.
+    let plateHighlight: Color
+    /// The 1px inner bottom edge that falls into shadow.
+    let plateEdgeShadow: Color
+    /// The soft shadow the plate casts on the background.
+    let plateCastShadow: Color
+
+    /// An unfilled `DesireGauge` segment's hairline outline (`010`'s stepped
+    /// ramp) — the scale stays visible without a solid track competing with
+    /// the reading.
+    let gaugeTrack: Color
 
     /// Swatches for the dashboard's category breakdown, in assignment order.
     /// Three accents to tell the largest categories apart, then
@@ -79,6 +99,7 @@ extension ThemeColors {
         accentBrass: Color(hex: "#C79A56"),
         accentBrassHover: Color(hex: "#DDB877"),
         accentBrassDim: Color(hex: "#746140"),
+        accentBrassMid: Color(hex: "#A07E48"),
         accentBrassTint: Color(hex: "#C79A56", opacity: 0.12),
 
         accentMoss: Color(hex: "#52634F"),
@@ -95,6 +116,12 @@ extension ThemeColors {
         // neighbour. See `design/tokens.md` for the measurements.
         dialMidpoint: Color(hex: "#8F8C38"),
 
-        categoryNeutral: Color(hex: "#6B6C6F")
+        categoryNeutral: Color(hex: "#6B6C6F"),
+
+        plateHighlight: Color(hex: ink, opacity: 0.055),
+        plateEdgeShadow: Color(hex: "#000000", opacity: 0.40),
+        plateCastShadow: Color(hex: "#000000", opacity: 0.25),
+
+        gaugeTrack: Color(hex: ink, opacity: 0.16)
     )
 }

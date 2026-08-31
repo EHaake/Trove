@@ -19,13 +19,25 @@ struct WishlistView: View {
     @State private var viewModel: WishlistViewModel
     @State private var isAddingItem = false
     @State private var selectedItemID: UUID?
-    @State private var isReordering = false
 
-    /// The row a swipe (or the edit-mode minus) has asked to delete, held
-    /// until the alert resolves it. The swipe-then-tap gesture is a fine
-    /// two-step on its own; what it can't do is *say* anything — and every
-    /// other delete path in the app states the cascade/nullify asymmetry
-    /// before committing, so this one does too.
+    /// Whether T035's sort dropdown is open — see ItemListView's twin for
+    /// why the screen owns it.
+    @State private var isSortMenuOpen = false
+
+    /// The row whose Edit swipe action is open in the form sheet — a
+    /// shortcut into the same flow the detail screen offers (T024).
+    @State private var itemBeingEdited: WishlistItem?
+
+    /// The row a swipe has asked to delete, held until the alert resolves it.
+    /// The swipe-then-tap gesture is a fine two-step on its own; what it
+    /// can't do is *say* anything — and every other delete path in the app
+    /// states the cascade/nullify asymmetry before committing, so this one
+    /// does too.
+    ///
+    /// Until T016 this was fed by `.onDelete`, which also powered the
+    /// edit-mode minus button; `.swipeActions` doesn't — and since T028a
+    /// removed edit mode from this screen entirely, the swipe is simply the
+    /// list's one delete gesture. T001's finding records the ordering call.
     @State private var pendingDeletion: WishlistItem?
 
     @Environment(\.theme) private var theme
@@ -87,6 +99,13 @@ struct WishlistView: View {
         .sheet(isPresented: $isAddingItem, onDismiss: viewModel.load) {
             NavigationStack { WishlistFormView(modelContext: modelContext) }
         }
+        // The Edit swipe's sheet (T024), refetching on dismiss like the add
+        // sheet above.
+        .sheet(item: $itemBeingEdited, onDismiss: viewModel.load) { item in
+            NavigationStack {
+                WishlistFormView(modelContext: modelContext, editing: item)
+            }
+        }
         // Values can change on the detail screen — an edit, the gauge, or a
         // deletion — so the list refetches whenever it comes back into view.
         .onAppear(perform: viewModel.load)
@@ -98,7 +117,12 @@ struct WishlistView: View {
         // when a screen should look again, rather than the screen watching the
         // store continuously. Straight into the same load() everything else
         // calls — no second fetch path to keep in step with this one.
-        .refreshable { viewModel.load() }
+        .refreshable {
+            viewModel.load()
+            // Holds the refresh open so the list doesn't snap back up
+            // underneath the still-animating spinner — see RefreshPacing.
+            await RefreshPacing.hold()
+        }
         // The same alert, word for word, that the detail screen shows for the
         // same action — both read from WishlistDeleteCopy, so they can't
         // drift. An alert rather than a confirmation dialog for the same
@@ -119,6 +143,35 @@ struct WishlistView: View {
             Text(WishlistDeleteCopy.message)
         }
         .onChange(of: viewModel.searchText) { viewModel.load() }
+        // T035's dropdown — same screen-level float-and-catcher as
+        // ItemListView's, for the same reach reasons.
+        .overlay {
+            if isSortMenuOpen {
+                ZStack(alignment: .topTrailing) {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .ignoresSafeArea()
+                        .onTapGesture { isSortMenuOpen = false }
+                        // The catcher is a real tap target, so VoiceOver
+                        // should call it what it is rather than an unnamed
+                        // element (T039 review, finding 13).
+                        .accessibilityLabel("Dismiss sort options")
+                        .accessibilityAddTraits(.isButton)
+                    SortDropdown(
+                        options: WishlistViewModel.SortOrder.allCases,
+                        selection: viewModel.sortOrder,
+                        label: \.label,
+                        isManualOrder: { $0 == .custom }
+                    ) { option in
+                        viewModel.sortOrder = option
+                        isSortMenuOpen = false
+                        viewModel.load()
+                    }
+                    .padding(.top, 60)
+                    .padding(.trailing, theme.metrics.screenGutter)
+                }
+            }
+        }
     }
 
     // MARK: - Header
@@ -134,14 +187,9 @@ struct WishlistView: View {
 
             Spacer()
 
-            // Nothing to sort or reorder on an empty list.
+            // Nothing to sort on an empty list.
             if viewModel.totalCount > 0 {
-                VStack(alignment: .trailing, spacing: 8) {
-                    sortControl
-                    if viewModel.canReorder || isReordering {
-                        reorderToggle
-                    }
-                }
+                sortControl
             }
         }
     }
@@ -153,50 +201,13 @@ struct WishlistView: View {
             + viewModel.totalEstimatedCostCents.formattedAsWholeCurrency(currencyCode: "USD")
     }
 
+    /// T035's badge — one control on both screens; see `SortBadge` and
+    /// ItemListView's twin for the note on why the system `Menu` left.
     private var sortControl: some View {
-        Menu {
-            ForEach(WishlistViewModel.SortOrder.allCases) { order in
-                Button {
-                    viewModel.sortOrder = order
-                    if !viewModel.canReorder { isReordering = false }
-                    viewModel.load()
-                } label: {
-                    if viewModel.sortOrder == order {
-                        Label(order.label, systemImage: "checkmark")
-                    } else {
-                        Text(order.label)
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "line.3.horizontal.decrease")
-                    .font(.system(size: 12, weight: .medium))
-                Text(viewModel.sortOrder.label)
-                    .font(theme.typography.body)
-            }
-            .foregroundStyle(theme.colors.textBody)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .overlay(
-                RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
-                    .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
-            )
+        SortBadge(label: viewModel.sortOrder.label) {
+            isSortMenuOpen.toggle()
         }
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
-    }
-
-    /// Dragging needs an explicit mode. Long-press-to-drag competes with
-    /// tapping a row to edit it, and a permanent set of grab handles would put
-    /// furniture on a screen that's usually just being read.
-    private var reorderToggle: some View {
-        Button {
-            isReordering.toggle()
-        } label: {
-            Text(isReordering ? "Done" : "Reorder")
-                .monoLabel(color: isReordering ? theme.colors.accentBrass : theme.colors.textQuiet)
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Rows
@@ -207,7 +218,16 @@ struct WishlistView: View {
         List {
             ForEach(viewModel.items, id: \.id) { item in
                 WishlistRow(item: item)
-                    .listRowBackground(Color.clear)
+                    // The screen's own background, not `.clear`, and not
+                    // decoration: at rest they're pixel-identical (the screen
+                    // shows through either way), but the reorder lift
+                    // snapshots the row *with* this background. Clear-backed,
+                    // UIKit substitutes an opaque black plateau behind the
+                    // snapshot and the row floats as an edge-to-edge black
+                    // slab; screen-colored, the slab blends into the screen
+                    // and only the plate reads as picked up. Verified on film
+                    // both ways (2026-08-30).
+                    .listRowBackground(theme.colors.background)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(
                         top: theme.metrics.listRowGap / 2,
@@ -222,13 +242,66 @@ struct WishlistView: View {
                     // destination, and editing is one step further in — the
                     // same shape as the item list.
                     .onTapGesture { selectedItemID = item.id }
+                    // `.swipeActions` rather than `.onDelete` (T016), so both
+                    // lists delete through one mechanism — and so T036 can put
+                    // custom iconography in a button `.onDelete` doesn't let
+                    // anyone touch. Stages, never deletes; the alert commits
+                    // through the view model.
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            pendingDeletion = item
+                        } label: {
+                            // Design's own glyphs (T036) — see ItemListView's
+                            // twin buttons.
+                            Label { Text(WishlistDeleteCopy.confirm) } icon: { Image("ActionDelete") }
+                        }
+                        // Explicit, not redundant — see ItemListView's swipe
+                        // action: the root brass .tint cascades in here and
+                        // overrides the destructive role's red, so each
+                        // swipe button carries its own tokens.md color.
+                        .tint(theme.colors.accentRust)
+                    }
+                    // Same order, tints, and "Copy" string as ItemListView's
+                    // leading swipe (T023) — one pattern, both lists.
+                    .swipeActions(edge: .leading) {
+                        Button {
+                            itemBeingEdited = item
+                        } label: {
+                            Label { Text("Edit") } icon: { Image("ActionEdit") }
+                        }
+                        .tint(theme.colors.divider)
+                        Button {
+                            viewModel.duplicate(id: item.id)
+                        } label: {
+                            Label { Text("Copy") } icon: { Image("ActionDuplicate") }
+                        }
+                        .tint(theme.colors.surfaceInset)
+                    }
+                    // Same named actions as ItemListView's rows, for the
+                    // same reason — one accessible reorder pattern on both
+                    // screens, replacing the edit-mode path the Reorder
+                    // button used to provide (T028a/T028b). Gated on
+                    // `canReorder` alone, never on the row's position: this
+                    // block's structure must not change while a drag
+                    // settles, or the List paints the pre-drag order over
+                    // the committed move (T029b's bisect). The ends of the
+                    // list are handled inside `moveUp`/`moveDown`, which
+                    // no-op there.
+                    .accessibilityActions {
+                        if viewModel.canReorder {
+                            Button("Move up") { viewModel.moveUp(id: item.id) }
+                            Button("Move down") { viewModel.moveDown(id: item.id) }
+                        }
+                    }
             }
-            .onMove { source, destination in
+            // Attached only while Custom is the active, unnarrowed view —
+            // `nil` detaches the gesture entirely, so reordering is hidden,
+            // not just disabled, everywhere it wouldn't be meaningful. Same
+            // pattern as ItemListView's, since T028a unified the two screens;
+            // the view model's guard stays as the second line of defense.
+            .onMove(perform: viewModel.canReorder ? { source, destination in
                 viewModel.move(fromOffsets: source, toOffset: destination)
-            }
-            .onDelete { offsets in
-                requestDeletion(at: offsets)
-            }
+            } : nil)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -238,14 +311,6 @@ struct WishlistView: View {
         // refract. A margin here would buy clearance at the cost of the
         // effect it exists to enable. plan.md says so explicitly, because
         // this was once "fixed" the other way.
-        .environment(\.editMode, .constant(isReordering ? .active : .inactive))
-    }
-
-    /// Swipe and the edit-mode minus both hand over a single index; the alert
-    /// takes it from there. Nothing is deleted here — the view model owns that.
-    private func requestDeletion(at offsets: IndexSet) {
-        guard let index = offsets.first, viewModel.items.indices.contains(index) else { return }
-        pendingDeletion = viewModel.items[index]
     }
 
     // MARK: - Filter
@@ -268,7 +333,6 @@ struct WishlistView: View {
 
         return Button {
             viewModel.categoryFilter = path
-            if !viewModel.canReorder { isReordering = false }
             viewModel.load()
         } label: {
             CategoryPathLabel(
@@ -368,7 +432,7 @@ private struct WishlistRow: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        HStack(alignment: .top, spacing: theme.metrics.cardPadding) {
+        HStack(alignment: .top, spacing: theme.metrics.rowContentGap) {
             RowThumbnail(photos: item.photos ?? [])
 
             VStack(alignment: .leading, spacing: 5) {
@@ -404,19 +468,19 @@ private struct WishlistRow: View {
 
                 Spacer(minLength: theme.metrics.fieldGap)
 
-                DesireGauge(value: .constant(item.desireToOwn))
+                // Legended per row since `010`'s stepped-ramp redesign — a
+                // deliberate reversal of `001`'s "unlabeled in list rows"
+                // call; tokens.md and plan.md's Resolved decisions carry it.
+                DesireGauge(value: .constant(item.desireToOwn), showsLegend: true)
             }
         }
         // One element again. It was split apart while the row held a button,
         // which combining would have swallowed; with nothing to reach in here,
         // a single description reads better than five fragments.
         .accessibilityElement(children: .combine)
-        .padding(theme.metrics.cardPadding)
+        .padding(theme.metrics.rowPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
-        )
+        .extrudedPlate()
     }
 }
 

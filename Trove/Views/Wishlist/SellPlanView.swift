@@ -127,8 +127,7 @@ struct SellPlanView: View {
         .padding(.vertical, 12)
         .padding(.horizontal, theme.metrics.cardPadding)
         .background(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .fill(theme.colors.surface)
+            PlateSurface()
         )
     }
 

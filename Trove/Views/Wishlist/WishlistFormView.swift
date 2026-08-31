@@ -166,7 +166,8 @@ struct WishlistFormView: View {
             Text("How much do you want it").monoLabel()
             DesireGauge(
                 value: $viewModel.desireToOwn,
-                segmentSize: CGSize(width: 30, height: 18),
+                maxSegmentHeight: 18,
+                segmentWidth: 30,
                 showsLabel: true,
                 isInteractive: true
             )
@@ -254,17 +255,20 @@ struct WishlistFormView: View {
 
     // MARK: - Shared chrome
 
+    /// Every field is a card, so every field is a plate (`010`'s review
+    /// extended the treatment past list rows and detail cards). The border
+    /// stays a *validity* signal rather than the separator the plate's bevel
+    /// now handles — `fieldBorder` draws nothing but rust when invalid.
     private var fieldBackground: some View {
-        RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-            .fill(theme.colors.surface)
+        PlateSurface()
     }
 
+    @ViewBuilder
     private func fieldBorder(isInvalid: Bool) -> some View {
-        RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-            .strokeBorder(
-                isInvalid ? theme.colors.accentRust : theme.colors.divider,
-                lineWidth: theme.metrics.hairline
-            )
+        if isInvalid {
+            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
+                .strokeBorder(theme.colors.accentRust, lineWidth: theme.metrics.hairline)
+        }
     }
 }
 

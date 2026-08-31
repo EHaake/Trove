@@ -8,16 +8,17 @@ private func insertWanted(
     category: String = "Music/Amps",
     costCents: Int = 10_000,
     order: Int = 0,
+    desire: Int = 1,
     into context: ModelContext
 ) {
-    context.insert(
-        WishlistItem(
-            name: name,
-            categoryPath: category,
-            estimatedCostCents: costCents,
-            sortOrder: order
-        )
+    let wanted = WishlistItem(
+        name: name,
+        categoryPath: category,
+        estimatedCostCents: costCents,
+        sortOrder: order
     )
+    wanted.desireToOwn = desire
+    context.insert(wanted)
 }
 
 @Suite("WishlistViewModel — loading and filtering")
@@ -169,11 +170,23 @@ struct WishlistOrderingTests {
         let viewModel = WishlistViewModel(modelContext: context)
         viewModel.load()
 
-        #expect(viewModel.sortOrder == .manual)
+        #expect(viewModel.sortOrder == .custom)
         #expect(viewModel.items.map(\.name) == ["First", "Second", "Third"])
     }
 
-    @Test func sortsByCostWithTheDearestFirst() throws {
+    /// T025a's rename, pinned on both lists — and pinned because the rename
+    /// itself found nothing guarding the old string: every test stayed green
+    /// while "Yours" became "Custom", the same under-pinning T010a found on
+    /// the delete copy. A silent revert would now fail here.
+    @Test func theManualOptionReadsCustomOnBothLists() {
+        #expect(WishlistViewModel.SortOrder.custom.label == "Custom")
+        #expect(ItemListViewModel.SortOrder.custom.label == "Custom")
+    }
+
+    /// Cheapest first as of `010` — plan.md's recorded direction call
+    /// ("what could I realistically buy soon"), deliberately flipping
+    /// `001`'s dearest-first. This test flipped with it, in T031's commit.
+    @Test func sortsByCostWithTheCheapestFirst() throws {
         let context = try makeInMemoryContext()
         insertWanted("Cheap", costCents: 5_000, order: 0, into: context)
         insertWanted("Dear", costCents: 240_000, order: 1, into: context)
@@ -184,7 +197,126 @@ struct WishlistOrderingTests {
         viewModel.sortOrder = .cost
         viewModel.load()
 
+        #expect(viewModel.items.map(\.name) == ["Cheap", "Middling", "Dear"])
+    }
+
+    // MARK: - The 010 sorts (T031/T032)
+
+    /// The descending half of the Cost pair (T033a) — 001's dearest-first,
+    /// back as an explicit option rather than the default.
+    @Test func costDescendingLeadsWithTheDearest() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Cheap", costCents: 5_000, order: 0, into: context)
+        insertWanted("Dear", costCents: 240_000, order: 1, into: context)
+        insertWanted("Middling", costCents: 105_000, order: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .costDescending
+        viewModel.load()
+
         #expect(viewModel.items.map(\.name) == ["Dear", "Middling", "Cheap"])
+    }
+
+    /// Manual order runs opposite the ratings on purpose, so a sort that
+    /// consulted the wrong field — or the right one backwards — shows.
+    @Test func sortsByDesireWithTheMostWantedFirst() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Someday", order: 0, desire: 1, into: context)
+        insertWanted("Next", order: 1, desire: 3, into: context)
+        insertWanted("Soon", order: 2, desire: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .desire
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Next", "Soon", "Someday"])
+    }
+
+    /// Case runs against the alphabet on purpose — a case-sensitive compare
+    /// would put "Bravo" before "alpha".
+    @Test func sortsAlphabeticallyIgnoringCase() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("charlie", order: 0, into: context)
+        insertWanted("Bravo", order: 1, into: context)
+        insertWanted("alpha", order: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .alphabetical
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["alpha", "Bravo", "charlie"])
+    }
+
+    /// spec.md's confirmed tie-break, on the sort where ties are the common
+    /// case (three tiers). The names run opposite the manual order, so the
+    /// old name-first fallback would order this list backwards — the tie
+    /// must be the user's own arrangement, not the alphabet.
+    @Test func desireTiesResolveByManualOrder() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Charlie", order: 0, desire: 2, into: context)
+        insertWanted("Bravo", order: 1, desire: 2, into: context)
+        insertWanted("Alpha", order: 2, desire: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .desire
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Charlie", "Bravo", "Alpha"])
+    }
+
+    /// The same confirmed rule now applies to Cost, which `001` shipped with
+    /// a name-first fallback — same opposing construction as above.
+    @Test func costTiesResolveByManualOrder() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Bravo", costCents: 105_000, order: 0, into: context)
+        insertWanted("Alpha", costCents: 105_000, order: 1, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .cost
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Bravo", "Alpha"])
+    }
+
+    /// Two identically-named items — spec.md's own example for the
+    /// Alphabetical tie — keep the user's relative order. Read back by
+    /// position, since the names can't tell the rows apart.
+    @Test func identicalNamesUnderAlphabeticalKeepTheManualOrder() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Summicron", costCents: 240_000, order: 1, into: context)
+        insertWanted("Summicron", costCents: 105_000, order: 0, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.sortOrder = .alphabetical
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.sortOrder) == [0, 1])
+    }
+
+    /// Mirrors `ItemListViewModelTests.filteringAndSortingApplyTogether`:
+    /// a category filter and either new sort stay active together.
+    @Test func filteringAndTheNewSortsApplyTogether() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Summicron", category: "Photography/Lenses", order: 0, desire: 1, into: context)
+        insertWanted("Xpan", category: "Photography/Cameras", order: 1, desire: 3, into: context)
+        insertWanted("Vox AC15", category: "Music/Amps", order: 2, desire: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.categoryFilter = "Photography"
+        viewModel.sortOrder = .desire
+        viewModel.load()
+        #expect(viewModel.items.map(\.name) == ["Xpan", "Summicron"])
+
+        viewModel.sortOrder = .alphabetical
+        viewModel.load()
+        #expect(viewModel.items.map(\.name) == ["Summicron", "Xpan"])
     }
 
     /// Items created before manual ordering existed all sit at 0, so the
@@ -233,9 +365,12 @@ struct WishlistOrderingTests {
         #expect(viewModel.items.map(\.name) == ["Third", "First", "Second"])
         #expect(viewModel.items.map(\.sortOrder) == [0, 1, 2])
 
-        // A fresh view model over the same store sees the new order, so the
-        // move reached disk rather than only the array on screen.
-        let reloaded = WishlistViewModel(modelContext: context)
+        // A fresh *context* over the same container — the same context
+        // reloaded hands back its own unsaved changes, so the original form
+        // of this check passed even with the save deleted. Found at T026,
+        // when the item-list mirror inherited the shape and its mutation
+        // survived; fixed in both places.
+        let reloaded = WishlistViewModel(modelContext: ModelContext(context.container))
         reloaded.load()
         #expect(reloaded.items.map(\.name) == ["Third", "First", "Second"])
     }
@@ -271,7 +406,7 @@ struct WishlistOrderingTests {
         viewModel.sortOrder = .cost
         #expect(viewModel.canReorder == false)
 
-        viewModel.sortOrder = .manual
+        viewModel.sortOrder = .custom
         viewModel.categoryFilter = "Photography"
         #expect(viewModel.canReorder == false)
 
@@ -296,7 +431,58 @@ struct WishlistOrderingTests {
         viewModel.load()
         viewModel.move(fromOffsets: IndexSet(integer: 0), toOffset: 2)
 
-        #expect(viewModel.items.map(\.name) == ["Summicron", "Vox AC15"])
+        // Cheapest first, so Vox leads on screen — while the sortOrders,
+        // read in that screen order, stay the untouched manual positions.
+        #expect(viewModel.items.map(\.name) == ["Vox AC15", "Summicron"])
+        #expect(viewModel.items.map(\.sortOrder) == [1, 0])
+    }
+
+    // MARK: - VoiceOver moves (T028b)
+
+    /// The wishlist's mirror of `ItemReorderTests`' accessible-move suite —
+    /// spot checks per the T020/T022 precedent, since the methods are
+    /// duplicated per entity while only the renumbering helper is shared.
+    @Test func aVoiceOverMoveStepsOneRowAndPersists() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("First", order: 0, into: context)
+        insertWanted("Second", order: 1, into: context)
+        insertWanted("Third", order: 2, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.load()
+        let first = try #require(viewModel.items.first)
+        viewModel.moveDown(id: first.id)
+
+        #expect(viewModel.items.map(\.name) == ["Second", "First", "Third"])
+        #expect(viewModel.items.map(\.sortOrder) == [0, 1, 2])
+
+        let reloaded = WishlistViewModel(modelContext: ModelContext(context.container))
+        reloaded.load()
+        #expect(reloaded.items.map(\.name) == ["Second", "First", "Third"])
+    }
+
+    /// Ends and gate in one pass: no move offered off the top or bottom, and
+    /// none at all while the sort isn't Custom.
+    @Test func accessibleMovesStopAtTheEndsAndBehindTheGate() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("First", order: 0, into: context)
+        insertWanted("Second", order: 1, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.load()
+        let first = try #require(viewModel.items.first)
+        let last = try #require(viewModel.items.last)
+
+        #expect(viewModel.canMoveUp(id: first.id) == false)
+        #expect(viewModel.canMoveDown(id: last.id) == false)
+        viewModel.moveUp(id: first.id)
+        #expect(viewModel.items.map(\.name) == ["First", "Second"])
+
+        viewModel.sortOrder = .cost
+        #expect(viewModel.canMoveDown(id: first.id) == false)
+        viewModel.moveDown(id: first.id)
         #expect(viewModel.items.map(\.sortOrder) == [0, 1])
     }
 }
@@ -346,15 +532,16 @@ struct CategoryChipScopeTests {
     }
 }
 
-/// spec.md is explicit that desire-to-own is display-only: manual `sortOrder`
-/// stays the single ordering. Two competing ordering systems where one silently
-/// overrides the other is worse than one the user controls, and three coarse
-/// tiers would produce mostly-ties anyway.
-///
-/// Worth pinning rather than assuming. Adding a rating to a list and *not*
-/// sorting by it is the unusual choice, so it's the one a later change is
-/// likely to "fix".
-@Suite("Desire to own never reorders the wishlist")
+/// `001` shipped desire-to-own as display-only — no sort consulted it — and
+/// this suite pinned that rule. `010` deliberately reverses half of it: the
+/// rating now orders the list through its own explicit "Desire" option (see
+/// spec.md's Resolved decisions for why the original "competing orderings"
+/// concern no longer applies — every sort is an explicit picker choice now).
+/// What survives, and what this suite still pins: the rating reorders
+/// *nothing else*. Manual order stays the default and ignores it; Cost
+/// ignores it; changing a rating never moves a row in any sort that isn't
+/// "Desire".
+@Suite("Desire to own reorders nothing but its own sort")
 struct DesireToOwnOrderingTests {
     private func insertRated(
         _ name: String,
@@ -382,25 +569,30 @@ struct DesireToOwnOrderingTests {
         #expect(viewModel.items.map(\.name) == ["First", "Second", "Third"])
     }
 
+    /// The ratings run opposite the cost order — the dear item is the wanted
+    /// one — so a cost sort that consulted desire would flip this list.
+    /// (The fixture inverted when `010` flipped cost to cheapest-first: the
+    /// old wanted-and-cheap pairing would have *agreed* with a desire sort,
+    /// leaving the test unable to detect the very leak it pins.)
     @Test func theCostOrderIsUnaffectedByTheRatingToo() throws {
         let context = try makeInMemoryContext()
-        let cheapButWanted = WishlistItem(
+        let cheapButNot = WishlistItem(
             name: "Cheap", categoryPath: "Music/Amps", estimatedCostCents: 5_000, sortOrder: 0
         )
-        cheapButWanted.desireToOwn = 3
-        let dearButNot = WishlistItem(
+        cheapButNot.desireToOwn = 1
+        let dearButWanted = WishlistItem(
             name: "Dear", categoryPath: "Music/Amps", estimatedCostCents: 240_000, sortOrder: 1
         )
-        dearButNot.desireToOwn = 1
-        context.insert(cheapButWanted)
-        context.insert(dearButNot)
+        dearButWanted.desireToOwn = 3
+        context.insert(cheapButNot)
+        context.insert(dearButWanted)
         try context.save()
 
         let viewModel = WishlistViewModel(modelContext: context)
         viewModel.sortOrder = .cost
         viewModel.load()
 
-        #expect(viewModel.items.map(\.name) == ["Dear", "Cheap"])
+        #expect(viewModel.items.map(\.name) == ["Cheap", "Dear"])
     }
 
     /// Changing a rating must not move a row. Same list, same items, ratings
@@ -423,12 +615,5 @@ struct DesireToOwnOrderingTests {
         viewModel.load()
 
         #expect(viewModel.items.map(\.name) == before)
-    }
-
-    /// The structural half: no sort option is *named* for the rating either,
-    /// so it can't be reached from the sort control.
-    @Test func theSortControlOffersNoRatingOption() {
-        #expect(WishlistViewModel.SortOrder.allCases.count == 2)
-        #expect(Set(WishlistViewModel.SortOrder.allCases.map(\.rawValue)) == ["manual", "cost"])
     }
 }

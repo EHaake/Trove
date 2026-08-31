@@ -17,7 +17,9 @@ import SwiftUI
 /// Shared by `ItemRow` and `WishlistView`'s row so the two can't drift.
 struct RowThumbnail: View {
     let photos: [Photo]
-    var side: CGFloat = 72
+    /// `52` per tokens.md's `010` row treatment — was `72` before the rows
+    /// tightened around the extruded plate.
+    var side: CGFloat = 52
 
     @Environment(\.theme) private var theme
 

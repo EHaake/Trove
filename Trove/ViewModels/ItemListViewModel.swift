@@ -11,12 +11,24 @@ import SwiftData
 /// rather than hiding fetches inside property observers.
 @Observable
 final class ItemListViewModel {
-    /// Each order has one sensible direction, so there's no ascending/
-    /// descending toggle to get lost in: keepers, most valuable, and most
-    /// recent all lead.
+    /// Most orders have one sensible direction — keepers and most recent
+    /// lead, full stop — but Value carries both, as a labeled pair rather
+    /// than a toggle: a direction switch hidden behind re-selecting the
+    /// active option is exactly the kind of control that gets lost.
+    /// (The pair reverses this enum's original "one direction each" rule —
+    /// requested by the person steering the project during Phase 6 review;
+    /// `tasks.md`'s T033a records it.)
+    ///
+    /// "Custom" leads the menu the way the wishlist's manual option does —
+    /// same convention on both lists (010) — but the *default* stays Date:
+    /// unlike the wishlist, whose manual order has been its single ordering
+    /// since 001, an item collection's most recent purchase leading is the
+    /// shipped behavior this spec doesn't change.
     enum SortOrder: String, CaseIterable, Identifiable {
+        case custom
         case purchaseDate
         case currentValue
+        case currentValueAscending
         case desireToKeep
 
         var id: String { rawValue }
@@ -25,8 +37,10 @@ final class ItemListViewModel {
         /// the list and any future control can't disagree.
         var label: String {
             switch self {
+            case .custom: "Custom"
             case .purchaseDate: "Date"
-            case .currentValue: "Value"
+            case .currentValue: "Value ↓"
+            case .currentValueAscending: "Value ↑"
             case .desireToKeep: "Desire"
             }
         }
@@ -107,6 +121,18 @@ final class ItemListViewModel {
         self.syncMonitor = syncMonitor
     }
 
+    /// Dragging only makes sense against the real, whole list in its own
+    /// order — same rule as `WishlistViewModel.canReorder`, with this
+    /// screen's third narrowing included: the un-valued filter hides rows
+    /// exactly the way a category or query does, so it blocks reordering
+    /// for the same reason.
+    var canReorder: Bool {
+        sortOrder == .custom
+            && categoryFilter.isEmpty
+            && SearchMatching.normalized(searchText).isEmpty
+            && !showsOnlyUnvalued
+    }
+
     /// Whether this device might still be receiving the collection. Read by
     /// the empty states, and by the note appended to the ones that survive
     /// mid-import.
@@ -147,33 +173,170 @@ final class ItemListViewModel {
         }
     }
 
+    /// Deletes an owned item by id, on the same shape as
+    /// `WishlistViewModel.delete(id:)` — the list's swipe (T015) routes here
+    /// rather than touching the store itself, per `DeletionGuardTests`'
+    /// structural rule, and this new path is inside that rule from day one.
+    ///
+    /// Photos cascade with it; any sell plan that selected it drops it, the
+    /// wishlist entries themselves untouched — the same consequences
+    /// `ItemDeleteCopy.message` promises before this runs.
+    func delete(id: UUID) {
+        guard let item = items.first(where: { $0.id == id }) else { return }
+
+        modelContext.delete(item)
+        do {
+            try modelContext.save()
+        } catch {
+            loadFailureMessage = error.localizedDescription
+        }
+        load()
+    }
+
+    /// Applies a drag through `ManualOrderHelper`, exactly as
+    /// `WishlistViewModel.move` does — one renumbering rule, both lists.
+    func move(fromOffsets source: IndexSet, toOffset destination: Int) {
+        guard canReorder else { return }
+
+        items = ManualOrderHelper.reorder(items, fromOffsets: source, toOffset: destination)
+
+        do {
+            try modelContext.save()
+        } catch {
+            loadFailureMessage = error.localizedDescription
+        }
+    }
+
+    /// Whether a row can move one step toward the top. False at the top of
+    /// the list, and false whenever the drag itself wouldn't be offered, so
+    /// the two reorder mechanisms can't disagree about when reordering is
+    /// available. Since T029b the views no longer read this to gate the
+    /// VoiceOver actions (position-conditional AX content breaks a settling
+    /// drag) — it survives as the boundary guard inside `moveUp`/`moveDown`,
+    /// which is what makes the always-offered actions safe to call anywhere.
+    func canMoveUp(id: UUID) -> Bool {
+        guard canReorder, let index = items.firstIndex(where: { $0.id == id }) else { return false }
+        return index > 0
+    }
+
+    /// See `canMoveUp(id:)`. False at the bottom of the list.
+    func canMoveDown(id: UUID) -> Bool {
+        guard canReorder, let index = items.firstIndex(where: { $0.id == id }) else { return false }
+        return index < items.count - 1
+    }
+
+    /// One step toward the top: VoiceOver's equivalent of a short drag,
+    /// routed through the same `move(fromOffsets:toOffset:)` as the gesture
+    /// so there is one reorder path to keep correct, not two.
+    func moveUp(id: UUID) {
+        guard canMoveUp(id: id), let index = items.firstIndex(where: { $0.id == id }) else { return }
+        move(fromOffsets: IndexSet(integer: index), toOffset: index - 1)
+    }
+
+    /// See `moveUp(id:)`. The `+ 2` is `onMove`'s convention: the destination
+    /// indexes the array *before* removal, so one step down from `index`
+    /// means inserting ahead of the element two positions along.
+    func moveDown(id: UUID) {
+        guard canMoveDown(id: id), let index = items.firstIndex(where: { $0.id == id }) else { return }
+        move(fromOffsets: IndexSet(integer: index), toOffset: index + 2)
+    }
+
+    /// Creates a copy per spec.md's duplicate flow, immediately and without
+    /// confirmation: every field as-is except the serial number, which is
+    /// cleared — it identifies one physical unit, and carrying it over would
+    /// have two rows claiming the same one. Photos become genuinely new
+    /// `Photo` rows with duplicated `.externalStorage` data; the
+    /// one-photo-one-parent rule (`PhotoOwnershipTests`) allows no sharing,
+    /// so the storage cost is real and spec.md accepts it explicitly. Sell
+    /// Plan membership is not inherited. The copy lands immediately after
+    /// the original in manual order.
+    func duplicate(id: UUID) {
+        guard let original = items.first(where: { $0.id == id }) else { return }
+
+        let copy = Item(
+            name: original.name,
+            categoryPath: original.categoryPath,
+            purchasePriceCents: original.purchasePriceCents,
+            purchaseDate: original.purchaseDate,
+            currencyCode: original.currencyCode,
+            serialNumber: nil,
+            purchaseLocation: original.purchaseLocation,
+            currentValueCents: original.currentValueCents,
+            desireToKeep: original.desireToKeep,
+            condition: original.condition,
+            conditionNotes: original.conditionNotes,
+            notes: original.notes,
+            photos: (original.photos ?? []).map {
+                Photo(imageData: $0.imageData, source: $0.source, sortOrder: $0.sortOrder)
+            }
+        )
+        modelContext.insert(copy)
+
+        // Placement runs against the whole collection in manual order, not
+        // this screen's filtered slice — see ManualOrderHelper.insert.
+        let ordered = (try? modelContext.fetch(
+            FetchDescriptor<Item>(sortBy: [SortDescriptor(\.sortOrder)])
+        )) ?? []
+        ManualOrderHelper.insert(copy, after: original, in: ordered)
+
+        do {
+            try modelContext.save()
+        } catch {
+            loadFailureMessage = error.localizedDescription
+        }
+        load()
+    }
+
     private func isOrderedBefore(_ lhs: Item, _ rhs: Item) -> Bool {
-        switch sortOrder {
-        case .purchaseDate:
-            if lhs.purchaseDate != rhs.purchaseDate {
-                return lhs.purchaseDate > rhs.purchaseDate
-            }
-        case .currentValue:
-            if lhs.currentValueCents != rhs.currentValueCents {
-                // Un-valued items sort last whichever side they're on — they're
-                // not worth zero, they're unknown, same as on the dashboard.
-                guard let left = lhs.currentValueCents else { return false }
-                guard let right = rhs.currentValueCents else { return true }
-                return left > right
-            }
-        case .desireToKeep:
-            if lhs.desireToKeep != rhs.desireToKeep {
-                return lhs.desireToKeep > rhs.desireToKeep
-            }
+        // Attribute first, the user's own manual order on any tie — spec.md's
+        // confirmed rule for every non-"Custom" sort, and the same shared
+        // helper the wishlist reads so the two lists can't drift. plan.md's
+        // Resolved decision 5 left this open and the first implementation
+        // fell back to name instead; T039's review caught the divergence and
+        // the 2026-08-30 close-out decided it: manual order, both lists.
+        if lhs.sortOrder != rhs.sortOrder || attributeOrder(lhs, rhs) != nil {
+            return ManualOrderHelper.areInOrder(lhs, rhs, primary: attributeOrder)
         }
 
-        // Ties fall back to name, then id, so the order is fully determined by
-        // the data. FetchDescriptor guarantees no ordering of its own, and a
-        // list that reshuffles equal rows between launches looks broken.
-        let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
-        if byName != .orderedSame {
-            return byName == .orderedAscending
+        // Tied all the way down — same attribute value *and* a shared manual
+        // position, which is the real state of a pre-`010` store: every
+        // legacy item at `sortOrder` 0 until the first drag renumbers. The
+        // launch-time backfill that used to assign positions here was
+        // removed at the T039 close-out (2026-08-30): its per-device flag
+        // raced CloudKit sync, so a second device's upgrade could rewrite an
+        // arrangement the first device had already synced. Falling back to
+        // `createdAt` at *sort time* shows the same order the backfill wrote
+        // — the order things were added — with no migration write to race.
+        // `id` beneath it keeps even same-instant creations deterministic.
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt < rhs.createdAt
         }
         return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    /// The active sort's own comparison, `nil` on a tie — the shape
+    /// `ManualOrderHelper.areInOrder` wants, mirroring the wishlist's
+    /// `attributeOrder` so manual order steps in exactly where the attribute
+    /// can't decide.
+    private func attributeOrder(_ lhs: Item, _ rhs: Item) -> Bool? {
+        switch sortOrder {
+        case .custom:
+            return nil
+        case .purchaseDate:
+            guard lhs.purchaseDate != rhs.purchaseDate else { return nil }
+            return lhs.purchaseDate > rhs.purchaseDate
+        case .currentValue, .currentValueAscending:
+            guard lhs.currentValueCents != rhs.currentValueCents else { return nil }
+            // Un-valued items sort last in *either* direction — they're not
+            // worth zero, they're unknown, same as on the dashboard;
+            // ascending must not promote them above the cheapest valued
+            // item.
+            guard let left = lhs.currentValueCents else { return false }
+            guard let right = rhs.currentValueCents else { return true }
+            return sortOrder == .currentValue ? left > right : left < right
+        case .desireToKeep:
+            guard lhs.desireToKeep != rhs.desireToKeep else { return nil }
+            return lhs.desireToKeep > rhs.desireToKeep
+        }
     }
 }
