@@ -310,7 +310,15 @@ reported.
   *Done when*: builds; simulator spot-check — badge placement, menu,
   a real CSV export reaching the share sheet.
 
-- [ ] **T013 — Wire the Wishlist screen.** Same wiring, same checks.
+- [x] **T013 — Wire the Wishlist screen.** Same wiring, same checks.
+  *Done (2026-08-31)*: twin wiring; simulator spot-check exercised the
+  live PDF path — a seeded wanted item exported to
+  `Trove-Wishlist-2026-08-31.pdf` (16 KB), opened in the system
+  viewer: cover with wordmark/rule/title, "Generated 2026-08-31 ·
+  Whole wishlist · 1 wanted", brass estimated-cost total; page 2's
+  entry with `MUSIC · AMPS` eyebrow, name, and the mono field grid.
+  The print-first document renders on device exactly as the composer
+  tests describe it.
 
 - [ ] **T014 — Launch purge hook.**
   `FileExportService.purge()` called once at app startup from the

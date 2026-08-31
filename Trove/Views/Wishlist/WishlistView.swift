@@ -143,6 +143,23 @@ struct WishlistView: View {
             Text(WishlistDeleteCopy.message)
         }
         .onChange(of: viewModel.searchText) { viewModel.load() }
+        // 011's share sheet and failure alert — ItemListView's twins, off
+        // the same view-model state shape.
+        .sheet(item: $viewModel.stagedExport) { staged in
+            ShareSheet(url: staged.url)
+                .presentationDetents([.medium, .large])
+        }
+        .alert(
+            ExportCopy.failureTitle,
+            isPresented: Binding(
+                get: { viewModel.exportFailureMessage != nil },
+                set: { if !$0 { viewModel.exportFailureMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.exportFailureMessage ?? ExportCopy.failureMessage)
+        }
         // T035's dropdown — same screen-level float-and-catcher as
         // ItemListView's, for the same reach reasons.
         .overlay {
@@ -187,11 +204,25 @@ struct WishlistView: View {
 
             Spacer()
 
-            // Nothing to sort on an empty list.
+            // Nothing to sort — or export — on an empty list; same amended
+            // criterion-1 rule as ItemListView's header.
             if viewModel.totalCount > 0 {
-                sortControl
+                HStack(spacing: 8) {
+                    sortControl
+                    exportControl
+                }
             }
         }
+    }
+
+    /// 011's "…" menu — ItemListView's twin.
+    private var exportControl: some View {
+        ExportBadge(
+            isExporting: viewModel.isExporting,
+            canExport: viewModel.canExport,
+            exportCSV: { Task { await viewModel.exportCSV() } },
+            exportPDF: { Task { await viewModel.exportPDF() } }
+        )
     }
 
     /// Design's "4 WANTED · $4,740".
