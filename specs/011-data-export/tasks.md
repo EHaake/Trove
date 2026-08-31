@@ -43,7 +43,16 @@ reported.
   *Done when*: tests green; mutation check — drop the `%02d` zero
   padding and confirm red.
 
-- [ ] **T002 — Record-from-model mapping.**
+- [x] **T002 — Record-from-model mapping.**
+  *Done (2026-08-30)*: `@MainActor init(item:)` on both record types —
+  explicit isolation, since the records themselves are `nonisolated`
+  but the initializers read MainActor-isolated model properties; this
+  is the snapshot boundary plan.md describes. Mutation check ran as
+  `.last` on the display-ordered photos rather than the task's
+  suggested raw `photos.first`: SwiftData guarantees no relationship
+  order, so `photos.first` would be a *flaky* falsifier — `.last` is
+  deterministic, and it turned both photo tests red (items and
+  wishlist). Reverted; full suite 553/553 green.
   Initializers `ItemExportRecord(item:)` / (wishlist twin) mapping
   every schema column from the model, including: empty-vs-nil handling
   (`Current Value` nil ≠ `0.00`), raw lowercase condition, and the

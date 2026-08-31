@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import Trove
 
@@ -160,5 +161,102 @@ struct ExportSchemaTests {
         let wishlist = ExportSchema.wishlistTable([])
         #expect(wishlist.headers == ExportSchema.wishlistHeaders)
         #expect(wishlist.rows.isEmpty)
+    }
+
+    // MARK: - Model → record mapping (T002)
+
+    @Test func itemRecordCarriesEveryFieldFromTheModel() throws {
+        let context = try makeInMemoryContext()
+        let bought = Date(timeIntervalSince1970: 1_700_000_000)
+        let item = Item(
+            name: "Leica M6",
+            categoryPath: "Photography/Cameras",
+            purchasePriceCents: 290_000,
+            purchaseDate: bought,
+            currencyCode: "USD",
+            serialNumber: "2244668",
+            purchaseLocation: "KEH",
+            currentValueCents: 345_000,
+            desireToKeep: 5,
+            condition: .fair,
+            conditionNotes: "New seals",
+            notes: "Body only"
+        )
+        context.insert(item)
+        try context.save()
+
+        let record = ItemExportRecord(item: item)
+        #expect(record.name == "Leica M6")
+        #expect(record.categoryPath == "Photography/Cameras")
+        #expect(record.purchasePriceCents == 290_000)
+        #expect(record.currencyCode == "USD")
+        #expect(record.purchaseDate == bought)
+        #expect(record.purchaseLocation == "KEH")
+        #expect(record.currentValueCents == 345_000)
+        #expect(record.desireToKeep == 5)
+        #expect(record.conditionRawValue == "fair")
+        #expect(record.conditionNotes == "New seals")
+        #expect(record.serialNumber == "2244668")
+        #expect(record.notes == "Body only")
+        #expect(record.firstPhotoID == nil)
+    }
+
+    @Test func itemRecordKeepsNilsNil() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Squier", categoryPath: "Music/Guitars", purchasePriceCents: 38_000)
+        context.insert(item)
+        try context.save()
+
+        let record = ItemExportRecord(item: item)
+        // Unvalued must survive as nil — the row builder turns it into an
+        // empty cell, and a 0 sneaking in here would read as "worthless".
+        #expect(record.currentValueCents == nil)
+        #expect(record.purchaseLocation == nil)
+        #expect(record.conditionNotes == nil)
+        #expect(record.serialNumber == nil)
+        #expect(record.notes == nil)
+    }
+
+    /// The chosen photo is the *display-order* first, not whatever the
+    /// relationship hands back — `sortOrder` runs opposite to insertion order
+    /// here so relationship order can't accidentally satisfy the test.
+    @Test func firstPhotoFollowsDisplayOrderNotInsertionOrder() throws {
+        let context = try makeInMemoryContext()
+        let second = Photo(imageData: Data([0x01]), sortOrder: 1)
+        let first = Photo(imageData: Data([0x02]), sortOrder: 0)
+        let item = Item(name: "M6", categoryPath: "Photography", photos: [second, first])
+        context.insert(item)
+        try context.save()
+
+        let record = ItemExportRecord(item: item)
+        #expect(record.firstPhotoID == first.persistentModelID)
+        #expect(record.firstPhotoID != second.persistentModelID)
+    }
+
+    @Test func wishlistRecordCarriesEveryFieldFromTheModel() throws {
+        let context = try makeInMemoryContext()
+        let second = Photo(imageData: Data([0x01]), sortOrder: 1)
+        let first = Photo(imageData: Data([0x02]), sortOrder: 0)
+        let wanted = WishlistItem(
+            name: "Vox AC15",
+            categoryPath: "Music/Amps",
+            estimatedCostCents: 105_000,
+            currencyCode: "USD",
+            notes: "Custom, not C2",
+            desireToOwn: 3,
+            photos: [second, first]
+        )
+        context.insert(wanted)
+        try context.save()
+
+        let record = WishlistExportRecord(item: wanted)
+        #expect(record.name == "Vox AC15")
+        #expect(record.categoryPath == "Music/Amps")
+        #expect(record.estimatedCostCents == 105_000)
+        #expect(record.currencyCode == "USD")
+        #expect(record.desireToOwn == 3)
+        #expect(record.createdAt == wanted.createdAt)
+        #expect(record.notes == "Custom, not C2")
+        #expect(record.firstPhotoID == first.persistentModelID)
     }
 }

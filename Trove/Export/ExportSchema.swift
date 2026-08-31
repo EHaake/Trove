@@ -92,6 +92,51 @@ nonisolated struct PDFDocumentModel: Sendable {
     let entries: [PDFEntry]
 }
 
+extension ItemExportRecord {
+    /// Snapshots a live item into the `Sendable` record that crosses to
+    /// generation. `@MainActor` explicitly: the record type is `nonisolated`,
+    /// but this initializer reads MainActor-isolated model properties — it
+    /// runs at snapshot time on the main actor (plan.md's Architecture
+    /// section), which is also where the first photo must be chosen, via the
+    /// one definition of photo display order.
+    @MainActor
+    init(item: Item) {
+        self.init(
+            name: item.name,
+            categoryPath: item.categoryPath,
+            purchasePriceCents: item.purchasePriceCents,
+            currencyCode: item.currencyCode,
+            purchaseDate: item.purchaseDate,
+            purchaseLocation: item.purchaseLocation,
+            currentValueCents: item.currentValueCents,
+            desireToKeep: item.desireToKeep,
+            conditionRawValue: item.conditionRawValue,
+            conditionNotes: item.conditionNotes,
+            serialNumber: item.serialNumber,
+            notes: item.notes,
+            firstPhotoID: PhotoSelection.inDisplayOrder(item.photos ?? []).first?.persistentModelID
+        )
+    }
+}
+
+extension WishlistExportRecord {
+    /// See `ItemExportRecord.init(item:)` — same snapshot rules, wishlist
+    /// fields.
+    @MainActor
+    init(item: WishlistItem) {
+        self.init(
+            name: item.name,
+            categoryPath: item.categoryPath,
+            estimatedCostCents: item.estimatedCostCents,
+            currencyCode: item.currencyCode,
+            desireToOwn: item.desireToOwn,
+            createdAt: item.createdAt,
+            notes: item.notes,
+            firstPhotoID: PhotoSelection.inDisplayOrder(item.photos ?? []).first?.persistentModelID
+        )
+    }
+}
+
 nonisolated enum ExportSchema {
     /// The items CSV's column order — the contract `012` matches
     /// byte-for-byte. Reordering or renaming is a schema change, made here
