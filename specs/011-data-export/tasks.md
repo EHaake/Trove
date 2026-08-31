@@ -198,7 +198,23 @@ reported.
   *Done when*: tests green; mutation check — break keep-together (always
   same page) and confirm the pagination test goes red.
 
-- [ ] **T008 — Photo pipeline: downsampling, batching, resilience.**
+- [x] **T008 — Photo pipeline: downsampling, batching, resilience.**
+  *Done (2026-08-30)*: ImageIO decode-to-target-size (2× the 132×99 box),
+  `PhotoFetcher` with a fresh context per 25 fetches, and resolve-before-
+  layout so an unresolvable identifier lays the entry out photo-free with
+  no reserved gap (tested deterministically with an identifier minted in
+  a foreign store — the deleted-mid-export race without the race).
+  `Photo` gained the explicit `nonisolated` (background contexts read
+  `imageData` off-main; models are context-bound, not actor-bound, and
+  stay non-`Sendable`). The size-bound fixture is deliberately
+  incompressible noise so the bound can actually fail; the embed is
+  proven real by comparing against a photo-free render of the same
+  document. Mutation check: full-resolution decode → 5.8MB vs the 3MB
+  bound, red (also learned: a typo'd `-only-testing` selector "succeeds"
+  by running zero tests — the red was confirmed on the full suite).
+  Reverted; full suite 577/577 green. Batching itself is a retention
+  strategy, not directly observable — recorded honestly rather than
+  pseudo-tested.
   `CGImageSourceCreateThumbnailAtIndex` with
   `kCGImageSourceThumbnailMaxPixelSize` = 2× the drawn box; photo
   fetches by `PersistentIdentifier` from a **fresh `ModelContext` per

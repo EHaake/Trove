@@ -82,7 +82,11 @@ nonisolated final class FileExportService: ExportService {
 
     @concurrent func exportPDF(_ document: PDFDocumentModel, filename: String) async throws -> URL {
         generationProbe?(Self.onMainThread())
-        return try stage(PDFComposer.render(document), filename: filename)
+        let fetcher = PhotoFetcher(container: container)
+        return try stage(
+            PDFComposer.render(document) { fetcher.imageData(for: $0) },
+            filename: filename
+        )
     }
 
     /// `Thread.isMainThread` is `noasync`; sampling it through a synchronous
@@ -104,5 +108,36 @@ nonisolated final class FileExportService: ExportService {
         let url = directory.appending(path: filename)
         try data.write(to: url)
         return url
+    }
+}
+
+/// Serves photo blobs to the composer from background contexts.
+///
+/// A fresh `ModelContext` every 25 fetches, deliberately: a context retains
+/// every `imageData` it materializes, so one long-lived context would
+/// quietly hold the whole collection's photos in memory and defeat the
+/// per-entry streaming (plan.md's Concurrency section). An identifier that
+/// doesn't resolve — a CloudKit delete landing between snapshot and fetch —
+/// returns nil, and the composer lays that entry out photo-free.
+private nonisolated final class PhotoFetcher {
+    private let container: ModelContainer
+    private var context: ModelContext?
+    private var served = 0
+    private static let batchSize = 25
+
+    init(container: ModelContainer) {
+        self.container = container
+    }
+
+    func imageData(for id: PersistentIdentifier) -> Data? {
+        if context == nil || served >= Self.batchSize {
+            context = ModelContext(container)
+            served = 0
+        }
+        served += 1
+
+        var descriptor = FetchDescriptor<Photo>(predicate: #Predicate { $0.persistentModelID == id })
+        descriptor.fetchLimit = 1
+        return try? context?.fetch(descriptor).first?.imageData
     }
 }

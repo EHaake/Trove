@@ -1,6 +1,8 @@
 import CoreGraphics
 import CoreText
 import Foundation
+import ImageIO
+import SwiftData
 // SwiftUI here is for `Font.Weight` alone — `FontFamily.postScriptName(for:)`
 // takes it, and reusing that one source of face names is what keeps
 // `FontRegistrationTests` covering the PDF (plan.md's typography decision).
@@ -62,7 +64,14 @@ nonisolated enum PDFComposer {
     static let margin: CGFloat = 54
     static var contentWidth: CGFloat { pageSize.width - margin * 2 }
 
-    static func render(_ document: PDFDocumentModel) throws -> Data {
+    /// - Parameter imageData: hands back the blob for an entry's photo
+    ///   identifier, or nil when it can't — the live service backs this with
+    ///   batched background fetches (T008); nil means the entry lays out
+    ///   photo-free, exactly like an entry that never had one.
+    static func render(
+        _ document: PDFDocumentModel,
+        imageData: (PersistentIdentifier) -> Data? = { _ in nil }
+    ) throws -> Data {
         let data = NSMutableData()
         var mediaBox = CGRect(origin: .zero, size: pageSize)
         guard let consumer = CGDataConsumer(data: data as CFMutableData),
@@ -77,7 +86,7 @@ nonisolated enum PDFComposer {
         }
         for entry in document.entries {
             autoreleasepool {
-                drawEntry(entry, on: writer)
+                drawEntry(entry, on: writer, imageData: imageData)
             }
         }
         writer.endPageIfOpen()
@@ -100,8 +109,19 @@ nonisolated enum PDFComposer {
     /// — an entry never opens at the very bottom of a page — while field
     /// rows may break between rows and notes flow across pages via
     /// continuation frames.
-    private static func drawEntry(_ entry: PDFEntry, on writer: PageWriter) {
-        let hasPhoto = entry.photoID != nil
+    private static func drawEntry(
+        _ entry: PDFEntry,
+        on writer: PageWriter,
+        imageData: (PersistentIdentifier) -> Data?
+    ) {
+        // Resolve before layout: an identifier that yields no image (deleted
+        // mid-export, undecodable blob) lays the entry out photo-free — the
+        // decided skip-the-photo-keep-the-entry behavior, with no reserved
+        // gap where a picture should have been.
+        let image = entry.photoID
+            .flatMap { imageData($0) }
+            .flatMap { downsampledImage(from: $0, maxPixelSize: photoBox.width * 2) }
+        let hasPhoto = image != nil
         let columnWidth = hasPhoto ? contentWidth - photoBox.width - photoGap : contentWidth
 
         let eyebrowText = styled(
@@ -129,6 +149,17 @@ nonisolated enum PDFComposer {
 
         let entryTopCursor = writer.cursor
         let entryTopPage = writer.pageIndex
+
+        if let image {
+            let box = CGRect(
+                x: margin + contentWidth - photoBox.width,
+                y: entryTopCursor - photoBox.height,
+                width: photoBox.width,
+                height: photoBox.height
+            )
+            writer.context.draw(image, in: aspectFitRect(for: image, in: box))
+        }
+
         writer.draw(eyebrowText, width: columnWidth)
         writer.advance(5)
         writer.draw(nameText, width: columnWidth)
@@ -155,6 +186,39 @@ nonisolated enum PDFComposer {
             )
         }
         writer.advance(4)
+    }
+
+    /// ImageIO decode-to-target-size: `kCGImageSourceThumbnailMaxPixelSize`
+    /// at 2× the drawn box means the full-resolution bitmap is never
+    /// materialized and the embedded image is print-sharp without ballooning
+    /// the file — the reviewer's highest-leverage catch (plan.md's Photos
+    /// section), guarded by the size-bound test.
+    static func downsampledImage(from data: Data, maxPixelSize: CGFloat) -> CGImage? {
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+            return nil
+        }
+        let options = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+            kCGImageSourceShouldCacheImmediately: true,
+        ] as [CFString: Any] as CFDictionary
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options)
+    }
+
+    /// Fit inside the box, anchored to its top-right corner — the entry's
+    /// visual anchor; CG's origin is bottom-left, so "top" is `maxY`.
+    private static func aspectFitRect(for image: CGImage, in box: CGRect) -> CGRect {
+        let imageSize = CGSize(width: image.width, height: image.height)
+        let scale = min(box.width / imageSize.width, box.height / imageSize.height)
+        let size = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+        return CGRect(
+            x: box.maxX - size.width,
+            y: box.maxY - size.height,
+            width: size.width,
+            height: size.height
+        )
     }
 
     private static func fieldTexts(_ field: PDFField) -> (label: NSAttributedString, value: NSAttributedString) {

@@ -1,6 +1,10 @@
+import CoreGraphics
 import Foundation
+import ImageIO
 import PDFKit
+import SwiftData
 import Testing
+import UniformTypeIdentifiers
 @testable import Trove
 
 /// Guards over the composer's output, read back through `PDFKit` — an Apple
@@ -199,5 +203,127 @@ struct PDFComposerTests {
 
         let lastPage = try #require(pdf.page(at: pdf.pageCount - 1)?.string)
         #expect(lastPage.contains("ENDOFNOTESMARKER"))
+    }
+
+    // MARK: - Photos (T008)
+
+    /// A deliberately incompressible JPEG: random noise defeats both JPEG
+    /// and the PDF's lossless compression, so a full-resolution embed is
+    /// enormous and the size-bound test below can genuinely fail.
+    private func noiseJPEG(side: Int) throws -> Data {
+        var seed: UInt64 = 0x9E37_79B9_7F4A_7C15
+        var bytes = [UInt8](repeating: 0, count: side * side * 4)
+        for index in bytes.indices {
+            seed ^= seed << 13
+            seed ^= seed >> 7
+            seed ^= seed << 17
+            bytes[index] = UInt8(truncatingIfNeeded: seed)
+        }
+        for index in stride(from: 3, to: bytes.count, by: 4) {
+            bytes[index] = 255
+        }
+
+        let space = try #require(CGColorSpace(name: CGColorSpace.sRGB))
+        let context = try #require(CGContext(
+            data: &bytes,
+            width: side,
+            height: side,
+            bitsPerComponent: 8,
+            bytesPerRow: side * 4,
+            space: space,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        let image = try #require(context.makeImage())
+
+        let out = NSMutableData()
+        let destination = try #require(CGImageDestinationCreateWithData(
+            out, UTType.jpeg.identifier as CFString, 1, nil
+        ))
+        CGImageDestinationAddImage(
+            destination,
+            image,
+            [kCGImageDestinationLossyCompressionQuality: 0.9] as CFDictionary
+        )
+        #expect(CGImageDestinationFinalize(destination))
+        return out as Data
+    }
+
+    private func scratchDirectory() -> URL {
+        FileManager.default.temporaryDirectory
+            .appending(path: "PDFComposerTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+    }
+
+    /// The downsampling guard (plan.md's Photos section): five items with
+    /// large, incompressible photos must produce a bounded file — bypassing
+    /// the ImageIO thumbnail decode balloons this by an order of magnitude.
+    /// The bare-render comparison proves the photos genuinely embedded.
+    @Test func photosEmbedDownsampledAndBoundTheFileSize() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let jpeg = try noiseJPEG(side: 2200)
+
+        var records: [ItemExportRecord] = []
+        for index in 1...5 {
+            let item = Item(
+                name: "Camera \(index)",
+                categoryPath: "Photography",
+                purchasePriceCents: 100_000,
+                photos: [Photo(imageData: jpeg)]
+            )
+            context.insert(item)
+            try context.save()
+            records.append(ItemExportRecord(item: item))
+        }
+        let document = PDFDocumentModel(
+            cover: itemsCover(),
+            entries: records.map { PDFEntry(record: $0) }
+        )
+
+        let scratch = scratchDirectory()
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        let service = FileExportService(container: container, directory: scratch)
+        let url = try await service.exportPDF(document, filename: "photos.pdf")
+
+        let size = try #require(
+            try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int
+        )
+        #expect(size < 3_000_000, "PDF is \(size) bytes — the downsampling regressed")
+
+        let bare = try PDFComposer.render(document)
+        #expect(size > bare.count + 100_000, "photos never embedded — the bound proves nothing")
+
+        let pdf = try #require(PDFDocument(data: try Data(contentsOf: url)))
+        #expect(pdf.pageCount >= 2)
+    }
+
+    /// The deleted-mid-export race, deterministically: an identifier minted
+    /// in a store the service can't see resolves to nothing — the entry
+    /// renders photo-free instead of crashing or vanishing.
+    @Test func anUnresolvablePhotoIdentifierKeepsTheEntryPhotoFree() async throws {
+        let foreign = try makeInMemoryContext()
+        let ghost = Item(
+            name: "Ghost camera",
+            categoryPath: "Photography",
+            purchasePriceCents: 50_000,
+            photos: [Photo(imageData: Data([0x01]))]
+        )
+        foreign.insert(ghost)
+        try foreign.save()
+
+        let record = ItemExportRecord(item: ghost)
+        #expect(record.firstPhotoID != nil)
+
+        let scratch = scratchDirectory()
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        let service = FileExportService(container: try makeInMemoryContainer(), directory: scratch)
+        let url = try await service.exportPDF(
+            PDFDocumentModel(cover: itemsCover(), entries: [PDFEntry(record: record)]),
+            filename: "ghost.pdf"
+        )
+
+        let pdf = try #require(PDFDocument(data: try Data(contentsOf: url)))
+        let text = fullText(pdf)
+        #expect(text.contains("Ghost camera"))
+        #expect(text.contains("PAID"))
     }
 }
