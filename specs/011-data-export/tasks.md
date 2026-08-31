@@ -66,7 +66,18 @@ reported.
   *Done when*: tests green; mutation check — swap the mapping to
   `photos.first` and confirm the photo test goes red.
 
-- [ ] **T003 — `CSVWriter.swift`: RFC 4180 writer.**
+- [x] **T003 — `CSVWriter.swift`: RFC 4180 writer.**
+  *Done (2026-08-30)*: writer lands with a real subtlety encoded — Swift
+  fuses `\r\n` into one grapheme that equals neither `\r` nor `\n`, so
+  the quoting check scans unicode scalars (a `Character` scan would
+  pass CRLF-bearing fields through unquoted); a dedicated test pins it.
+  The mutation check earned its keep twice: stripping the quoting
+  turned 4 tests red but left `fieldWithNewlineStaysOneParsedRow`
+  green — the test-only parser split rows only on CRLF, so a bare-LF
+  field round-tripped even unquoted, making that guard unfalsifiable.
+  Hardened the parser to split on bare LF/CR like real readers (Excel
+  splits on LF); the same mutation then turned 5 tests red including
+  that one. Reverted; full suite 560/560 green.
   UTF-8 with BOM, CRLF, minimal quoting (quote iff comma/quote/CR/LF;
   embedded quotes doubled), header row from `ExportSchema`'s constants.
   Tests (`CSVWriterTests`): a small **test-only RFC 4180 parser** and
