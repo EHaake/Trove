@@ -259,7 +259,13 @@ reported.
   *Done when*: tests green; mutation check — build records from a fresh
   fetch instead of `items` and confirm the order test goes red.
 
-- [ ] **T010 — `WishlistViewModel` export intents.**
+- [x] **T010 — `WishlistViewModel` export intents.**
+  *Done (2026-08-31)*: full mirror of T009 with wishlist vocabulary —
+  "Wishlist" title, "Whole wishlist" default coverage,
+  `.wishlist(estimatedCostCents:)` totals from
+  `totalEstimatedCostCents`, wishlist filenames. Seven mirrored tests;
+  mutation check ran independently (refetch → the filtered-out Vox
+  leaked in, order test red). Reverted; full suite 591/591 green.
   Same shape, wishlist records and `totalEstimatedCostCents` cover
   figure, tests in `WishlistViewModelTests` mirroring T009 including
   its mutation check.
