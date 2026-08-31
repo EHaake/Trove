@@ -1,8 +1,15 @@
 import SwiftUI
 
-/// Hero photo with the thumbnail strip beneath, as drawn on the item detail
-/// mock. Shows a placeholder when there are no photos — plenty of records
-/// won't have any, since photos are optional at creation.
+/// The detail screens' hero photo pager. Shows a placeholder when there are
+/// no photos — plenty of records won't have any, since photos are optional
+/// at creation.
+///
+/// The thumbnail strip and the "ITEM PHOTO 1 / 2" caption that used to
+/// accompany the hero were removed at the T038 device review (2026-08-30):
+/// once the pager tracked the finger and carried dots, both were a second
+/// way of saying what the dots already say — and the strip only ever
+/// appeared on the item detail, so removing it is also what makes the two
+/// detail screens match.
 ///
 /// Detail screens shrink the hero rather than reserving its full height, the
 /// opposite of `RowThumbnail`'s fixed slot: a large empty rectangle dominates
@@ -15,8 +22,8 @@ struct PhotoCarousel: View {
     let photos: [Photo]
     @Binding var selectedIndex: Int
 
-    /// What the captions call the thing being pictured — "Item photo 1 / 3"
-    /// against "Wishlist photo 1 / 3". Only the wording differs.
+    /// What VoiceOver calls the thing being pictured — "Item photos"
+    /// against "Wishlist photos". Only the wording differs.
     var noun: String = "Item"
 
     @Environment(\.theme) private var theme
@@ -24,12 +31,7 @@ struct PhotoCarousel: View {
     private var safeIndex: Int { min(max(selectedIndex, 0), max(photos.count - 1, 0)) }
 
     var body: some View {
-        VStack(spacing: theme.metrics.listRowGap) {
-            hero
-            if photos.count > 1 {
-                strip
-            }
-        }
+        hero
     }
 
     // MARK: - Hero
@@ -51,11 +53,17 @@ struct PhotoCarousel: View {
                     }
                 }
 
-            Text(photos.isEmpty ? "No photos" : "\(noun) photo \(safeIndex + 1) / \(photos.count)")
-                .monoLabel(color: theme.colors.textQuiet)
-                .padding(theme.metrics.cardPadding)
+            if photos.isEmpty {
+                Text("No photos")
+                    .monoLabel(color: theme.colors.textQuiet)
+                    .padding(theme.metrics.cardPadding)
+            }
         }
         .accessibilityElement(children: .combine)
+        // The removed caption was also the accessible position read-out;
+        // the dots are visual-only, so the combined element carries it.
+        .accessibilityLabel(photos.isEmpty ? "No photos" : "\(noun) photos")
+        .accessibilityValue(photos.isEmpty ? "" : "Photo \(safeIndex + 1) of \(photos.count)")
         .accessibilityAdjustableAction { direction in
             switch direction {
             case .increment: step(by: 1)
@@ -67,11 +75,10 @@ struct PhotoCarousel: View {
 
     /// Swiping the hero is the gesture people try first; before `010` the
     /// thumbnails were the only way through a set. A paging `ScrollView`
-    /// rather than a `TabView`: the caption, the plate, and the dots are the
-    /// hero's chrome and must hold still while only the photos move — a
-    /// TabView would page all of it. Pages track the finger and rubber-band
-    /// at both ends, so there's no wrap, which agrees with the fixed strip
-    /// below about where the set ends.
+    /// rather than a `TabView`: the plate and the dots are the hero's
+    /// chrome and must hold still while only the photos move — a TabView
+    /// would page all of it. Pages track the finger and rubber-band at
+    /// both ends rather than wrapping, so the ends of the set are felt.
     @ViewBuilder
     private var heroPager: some View {
         if photos.isEmpty {
@@ -117,9 +124,9 @@ struct PhotoCarousel: View {
         )
     }
 
-    /// One dot per photo, brass on the current one — the same treatment the
-    /// strip's selected thumbnail border uses, and unscrimmed like the
-    /// caption that shares the photo's surface.
+    /// One dot per photo, brass on the current one, unscrimmed on the
+    /// photo's surface — since T038's review this is the hero's only
+    /// position indicator.
     private var dots: some View {
         HStack(spacing: 6) {
             ForEach(photos.indices, id: \.self) { index in
@@ -131,8 +138,8 @@ struct PhotoCarousel: View {
             }
         }
         .padding(.bottom, 10)
-        // The caption already announces "photo 1 / 3" for the combined
-        // element; the dots repeat it visually.
+        // The combined element's accessibility value announces the
+        // position; the dots repeat it visually.
         .accessibilityHidden(true)
     }
 
@@ -142,39 +149,5 @@ struct PhotoCarousel: View {
         let next = safeIndex + delta
         guard photos.indices.contains(next) else { return }
         withAnimation(.snappy(duration: 0.2)) { selectedIndex = next }
-    }
-
-    // MARK: - Strip
-
-    private var strip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: theme.metrics.listRowGap) {
-                ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
-                    Button {
-                        withAnimation(.snappy(duration: 0.2)) { selectedIndex = index }
-                    } label: {
-                        Group {
-                            if let image = Image(imageData: photo.imageData) {
-                                image.resizable().scaledToFill()
-                            } else {
-                                theme.colors.surfaceInset
-                            }
-                        }
-                        .frame(width: 80, height: 56)
-                        .clipShape(RoundedRectangle(cornerRadius: theme.metrics.thumbnailRadius))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: theme.metrics.thumbnailRadius)
-                                .strokeBorder(
-                                    index == safeIndex ? theme.colors.accentBrass : theme.colors.divider,
-                                    lineWidth: theme.metrics.hairline
-                                )
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Photo \(index + 1)")
-                    .accessibilityAddTraits(index == safeIndex ? [.isButton, .isSelected] : .isButton)
-                }
-            }
-        }
     }
 }

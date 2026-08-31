@@ -138,11 +138,14 @@ dashboard's Spent/Gain figures, the search field, photo heroes, the sell
 plan's cards, both dropdowns, and every form field on both forms. A new
 card gets it by default; *not* having it is what needs a reason.
 
-Two surfaces are deliberately outside the rule, both because they have no
+Four surfaces are deliberately outside the rule, all because they have no
 fill to plate: capsule chips (category, condition, cost presets) are
-outlined pills, and the dashboard's un-valued callout is unfilled by
-design — the mock distinguishes it from the figures card above by
-outlining it rather than raising it.
+outlined pills; the dashboard's un-valued callout is unfilled by design —
+the mock distinguishes it from the figures card above by outlining it
+rather than raising it; and the wishlist detail's market-price ghost and
+sell-plan CTA are outlined, unfilled surfaces for the same reason (added
+to this list at the T039 review — the rule as first written didn't cover
+them, and a literal reading would have plated both).
 
 On form fields the border changes job rather than disappearing: the plate's
 bevel does the separating, so a border now draws **only** for state — rust
@@ -208,11 +211,11 @@ decisions in `tasks.md`'s Phase 7 header.
 | Property | Value |
 |---|---|
 | Screen padding / section gap | `18px 24px 48px` scroll padding, `24px` between sections |
-| Photo hero | `210px` tall, `3px` radius, `1px solid surfaceInset` border, caption bottom-left |
-| Hero caption | IBM Plex Mono `9.5px`, letter-spacing `0.1em`, `textQuiet` — "ITEM PHOTO n / m" |
-| Hero pager dots | `5px` circles, `5px` gap; active `accentBrass`, rest `textInactive` |
-| Thumbnail strip | `8px` below hero, equal-width tiles `52px` tall, `2px` radius, `8px` gap; selected border `1px accentBrass`, others `1px surfaceInset` |
-| Add-photo tile | `1px dashed divider`, plus glyph `12px`, `1.5px` stroke, `textMonoMeta` |
+| Photo hero | `240px` tall (raised from the mock's `210` when the pager landed — the swipe target earns the height), `3px` radius, no border (the Row-treatment plate rule above governs; this table used to contradict it), empty state `108px` with a "NO PHOTOS" mono label |
+| Hero caption | **removed** (T038 device review, 2026-08-30) — the dots carry the position; VoiceOver reads it from the element's accessibility value instead |
+| Hero pager dots | `6px` circles, `6px` gap; active `accentBrass`, rest `textPrimary @ 45%` (the mock's `5px`/`textInactive` read too faint over photos; deviation recorded 2026-08-30) |
+| Thumbnail strip | **removed from both detail screens** (T038 device review, 2026-08-30) — redundant once the pager tracked the finger and carried dots, and it only ever appeared on item detail. The form screens' `PhotoPickerField` keeps its strip (80×56 tiles), where tiles are also the remove-photo affordance |
+| Add-photo tile | detail screens have none — adding photos happens in the edit form (`PhotoPickerField`); the mock drew one here but the detail screens are read-only by design |
 | Title eyebrow | IBM Plex Mono `10.5px`, letter-spacing `0.12em`, `textMonoMeta` |
 | Title | Archivo 600, `27px`, line-height `1.1`, letter-spacing `-0.01em`, `textPrimary` |
 | Stat pair container | two cells split by a `1px` `divider` seam (divider-colored gap), `3px` radius, cast shadow `0 2px 6px rgba(0,0,0,0.25)` (softened from the mocks' `0.5` — same review note as the row treatment) |

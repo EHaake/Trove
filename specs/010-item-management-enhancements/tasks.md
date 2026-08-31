@@ -1469,6 +1469,27 @@ designs added. Decisions, all theirs, recorded before execution:
       plan.md's Backfill section keeps both designs on the record.
       Suite 537 in 84 + 5 UI green.
 
+- [x] **T038a** — The hero sheds its thumbnail strip and caption
+      (T038 device-review finding, 2026-08-30). The strip only ever
+      appeared on item detail — wishlist detail never showed one — and
+      once the pager tracked the finger and carried dots, both the
+      strip and the "ITEM PHOTO n / m" caption were second ways of
+      saying what the dots say. Both removed from `PhotoCarousel`;
+      the two detail screens now match. The empty state keeps its
+      "NO PHOTOS" label (that text wasn't the redundancy). VoiceOver
+      keeps the position read-out the caption used to provide, moved
+      to the combined element's accessibility value ("Photo 1 of 2").
+      The form screens' `PhotoPickerField` strip is untouched — there
+      the tiles are also the remove-photo affordance. tokens.md's
+      item-detail table updated in the same pass, which also
+      reconciled the review's finding 8 (hero height 240 vs the
+      mock's 210, dot size/color, the never-built detail-screen add
+      tile — each now recorded as a decision) and finding 9 (the
+      plate rule's exception list gains the wishlist detail's two
+      outlined surfaces). Verified on the simulator: dots-only hero,
+      swipe still pages, wishlist detail identical by construction.
+      Suite 537 in 84 + 5 UI green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and
