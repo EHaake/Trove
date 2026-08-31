@@ -24,15 +24,22 @@ purchases.
   answering "is this a reasonable time to buy, and what would make sense
   to sell if I did" — deliberately not a goal to complete or a sales
   ledger.
+- **Low-friction item management** — swipe to delete, edit, or copy on
+  both lists; press-and-hold drag reordering under a "Custom" sort,
+  with an accessible Move up/Move down path for VoiceOver; and value
+  and cost sorts in both directions, with ties resolving by your own
+  manual order.
 - **iCloud sync** across your own devices via CloudKit, with real
   handling for the window between signing in and your existing
   collection actually finishing its first download.
 
 ## Status
 
-`001-core-inventory` (v1) is shipped and merged — item tracking, the
-dashboard, the wishlist, the Sell Plan, CloudKit sync, all tested.
-Currently building `010-item-management-enhancements`. See
+Two specs shipped: `001-core-inventory` (v1 — item tracking, the
+dashboard, the wishlist, the Sell Plan, CloudKit sync) and
+`010-item-management-enhancements` (merged 2026-08-30 — swipe actions,
+drag-to-reorder, duplication, expanded sorting, and a design-depth
+refresh across the app). See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.
 
@@ -91,7 +98,7 @@ TroveTests/             Swift Testing, one file per view model
 TroveUITests/           XCTest smoke tests
 specs/
   001-core-inventory/    Shipped v1 — spec, plan, tasks
-  010-.../               Current spec
+  010-.../               Shipped — item management + design refresh
   ROADMAP.md             Backlog of future specs
 design/
   brief.md               Visual/interaction direction
