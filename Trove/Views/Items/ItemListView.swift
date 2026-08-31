@@ -175,6 +175,26 @@ struct ItemListView: View {
         } message: { _ in
             Text(ItemDeleteCopy.message)
         }
+        // 011's share sheet, presented off view-model state so the export
+        // intent stays a testable method; dismissal writes nil back through
+        // the binding.
+        .sheet(item: $viewModel.stagedExport) { staged in
+            ShareSheet(url: staged.url)
+                .presentationDetents([.medium, .large])
+        }
+        // Criterion 2a: a failed export says so plainly — shared copy, so
+        // the two screens and their view models can't drift.
+        .alert(
+            ExportCopy.failureTitle,
+            isPresented: Binding(
+                get: { viewModel.exportFailureMessage != nil },
+                set: { if !$0 { viewModel.exportFailureMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.exportFailureMessage ?? ExportCopy.failureMessage)
+        }
         // T035's dropdown floats over the whole screen, a full-screen
         // catcher behind it so any outside tap closes it. Screen-level
         // rather than anchored to the badge: the header can't reach over
@@ -338,11 +358,28 @@ struct ItemListView: View {
 
             Spacer()
 
-            // Nothing to sort on an empty list.
+            // Nothing to sort — or export — on an empty list: the "…"
+            // follows the sort badge's visibility rule (criterion 1 as
+            // amended), and the sort badge shifts left to make room, exactly
+            // the spec's wording.
             if viewModel.totalCount > 0 {
-                sortControl
+                HStack(spacing: 8) {
+                    sortControl
+                    exportControl
+                }
             }
         }
+    }
+
+    /// 011's "…" menu. The intents are async; the badge fires them into
+    /// Tasks and `isExporting` drives its spinner.
+    private var exportControl: some View {
+        ExportBadge(
+            isExporting: viewModel.isExporting,
+            canExport: viewModel.canExport,
+            exportCSV: { Task { await viewModel.exportCSV() } },
+            exportPDF: { Task { await viewModel.exportPDF() } }
+        )
     }
 
     /// Design's "34 ITEMS · $18,420", plus a count of what the total leaves

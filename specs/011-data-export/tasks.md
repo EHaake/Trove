@@ -294,7 +294,15 @@ reported.
   *Done when*: builds; previews render; exception called out in code
   and in the task's commit message.
 
-- [ ] **T012 — Wire the Items screen.**
+- [x] **T012 — Wire the Items screen.**
+  *Done (2026-08-31)*: badge after `sortControl` inside the header's
+  visibility gate, share sheet off `$viewModel.stagedExport`, failure
+  alert off `exportFailureMessage` with the shared copy. Simulator
+  spot-check on a seeded item: badge renders beside the sort badge at
+  matched height, the system menu shows exactly the two actions, and
+  "Export as CSV…" produced a real `Trove-Items-2026-08-31.csv` in the
+  share sheet (Save to Files/Copy offered). Screenshots taken headless
+  during the run.
   Badge after `sortControl` (visible exactly when the sort badge is,
   per amended criterion 1), menu items disabled on `!canExport`,
   `.sheet(item:)` on `stagedExport` presenting `ShareSheet`, failure
