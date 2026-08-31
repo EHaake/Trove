@@ -17,7 +17,17 @@ reported.
 
 ## Phase 1 — Schema and CSV (pure logic, no UI)
 
-- [ ] **T001 — `ExportSchema.swift`: records, headers, serializers.**
+- [x] **T001 — `ExportSchema.swift`: records, headers, serializers.**
+  *Done (2026-08-30)*: all schema types land explicitly `nonisolated` +
+  `Sendable` and compile clean under the MainActor default; the row
+  builders and table builders came with this task (they're the "record →
+  `[String]`" mapping plan.md's CSV section assigns to `ExportSchema`).
+  A header pin test double-enters the column lists deliberately — the
+  wire-format contract fails loudly on an accidental reorder. Mutation
+  check: dropped the `%02d` zero padding → 9 issues across 3 tests went
+  red, including the round trip catching `"0.1"` re-parsing as 10¢
+  instead of 1¢ — the exact corruption 012 would inherit. Reverted;
+  full suite 549/549 green.
   `Trove/Export/ExportSchema.swift` (new; synchronized group, no
   `.pbxproj` edit): `ItemExportRecord`, `WishlistExportRecord`,
   `CoverSummary`, `CSVTable`, `PDFDocumentModel` as explicitly
