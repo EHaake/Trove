@@ -148,7 +148,18 @@ reported.
 
 ## Phase 3 — PDF composition
 
-- [ ] **T006 — Cover page layout.**
+- [x] **T006 — Cover page layout.**
+  *Done (2026-08-30)*: full cover per plan — wordmark, rule, title, meta
+  lines (generated day via the schema's own serializer, coverage,
+  count), totals block with the floor note appearing only when unvalued
+  items exist. `Int+Currency`'s extension gained the same explicit
+  `nonisolated` as `FontFamily` (same reason: the composer draws the
+  app's own money formatting off-main). `PrintPalette`/`PrintType` and
+  the cursor-based `PageWriter` landed here as the layout plumbing
+  T007–T008 build on. One extraction artifact recorded: PDFKit reads
+  the 4pt-tracked wordmark back as "T R O V E", so its test collapses
+  spaces rather than pinning extractor behavior. Full suite 569/569
+  green.
   Print palette and print type scale as constants in `PDFComposer`
   (values per plan's "The PDF document" section; faces via
   `FontFamily.postScriptName(for:)` → `CTFontCreateWithName`).

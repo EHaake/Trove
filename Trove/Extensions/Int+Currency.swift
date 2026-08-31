@@ -14,7 +14,12 @@ enum Currency {
     }
 }
 
-extension Int {
+// `nonisolated` explicitly (011/T006): `PDFComposer` draws the cover totals
+// with these same display formatters off the main actor — one source of money
+// display keeps the PDF's figures rendered the way every screen renders them
+// — and the project's MainActor default would otherwise forbid the call.
+// Pure formatting; nothing here needs an actor.
+nonisolated extension Int {
     /// Formats this value, interpreted as minor currency units (cents), as a
     /// localized currency string — e.g. `129_900` with `"USD"` formats as
     /// `"$1,299.00"`. Every money field in the schema is stored this way; see
