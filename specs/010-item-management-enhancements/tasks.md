@@ -1490,6 +1490,28 @@ designs added. Decisions, all theirs, recorded before execution:
       swipe still pages, wishlist detail identical by construction.
       Suite 537 in 84 + 5 UI green.
 
+- [x] **T039d** — The reorder design's wiring claims get guards
+      (review findings 4 and 7). New `ReorderWiringTests`, in the
+      established source-scan shape: (1) no `editMode`/`EditButton`
+      anywhere in the app target — T028a's thrice-reversed decision,
+      previously enforced by a one-time grep's prose note; the file
+      walk asserts it found a real source tree so a moved root fails
+      loudly rather than scanning nothing; (2) each list's `.onMove`
+      is gated on `viewModel.canReorder ?` — the nil-detach that
+      keeps swipes working under other sorts; (3) each list's
+      `.accessibilityActions` block is gated on `canReorder` alone
+      and contains no position-conditional structure — T029b's
+      invariant, the actual cause of a shipped defect. And
+      `PullToRefreshTests` now also pins `RefreshPacing.hold()`
+      inside each of the three `.refreshable` closures — written
+      independently, so one screen could silently regress alone.
+      **Mutation-verified as a batch**: four compile-clean mutations
+      (an `EditButton` string in production code, an ungated
+      `.onMove`, a `canMoveUp` call inside the AX block, a dropped
+      hold) — each caught by exactly its intended guard, five issues,
+      then reverted and the suite runs green. Suite 540 in 85 + 5 UI
+      green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and
