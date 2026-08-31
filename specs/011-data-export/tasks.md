@@ -1,7 +1,6 @@
 # 011 — Data Export: Tasks
 
-Status: **Draft** (pending human review — implementation does not start
-until this document is approved)
+Status: **Approved** (2026-08-30) — implementation in progress, Phase 1
 
 Drafted against the approved `plan.md` (commit `dbfc0a7`). No new
 technical decisions are made here — every call below traces to a plan

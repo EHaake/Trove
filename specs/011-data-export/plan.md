@@ -1,7 +1,6 @@
 # 011 — Data Export: Technical Plan
 
-Status: **Draft** (pending human review — tasks.md is not drafted until
-this document is approved)
+Status: **Approved** (2026-08-30)
 
 First plan authored under the constitution's 2026-08-30 authorship
 amendment: drafted by Claude Code in-session against the approved spec,
