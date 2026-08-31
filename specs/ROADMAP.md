@@ -114,81 +114,83 @@ actually useful once the app is in daily use.
   scope beyond swipe-to-delete is still open, to be settled in the
   actual idea conversation rather than guessed at here.
 
-  The container facts, corrected at `001`'s sign-off (this entry
-  previously claimed all of Trove's rows were `ScrollView`-based, which
-  was half wrong and would have sent whoever picks this up hunting for a
-  problem already half solved):
+  One real technical consideration already surfaced, worth carrying into
+  that conversation rather than rediscovering: SwiftUI's `.swipeActions()`
+  is `List`-specific as far as investigated so far, and Trove's rows are
+  deliberately `ScrollView`-based — the `T056` pull-to-refresh
+  investigation already considered and rejected converting to `List`,
+  since it would clobber the custom row styling (thumbnails, the desire
+  dial/gauge) Design actually drew. Verify that constraint fresh rather
+  than assuming it still holds by the time this spec starts; expect
+  either a `List` reconsideration or a custom gesture implementation,
+  not a one-line modifier.
 
-  - **`WishlistView` is a `List`** — since its first commit (T036),
-    because spec-required drag reordering is a `List` capability — and
-    therefore *already has* swipe-to-delete via `.onDelete`. As of the
-    `001` sign-off it presents the same cascade-consequence alert the
-    detail screen shows (shared `WishlistDeleteCopy`), routed through
-    `WishlistViewModel.delete(id:)`. It also demonstrates that `List`
-    can host Trove's custom row styling: plain list style, hidden
-    separators, clear row backgrounds, custom insets, and tap-gesture
-    navigation instead of `NavigationLink` (which is what avoids the
-    disclosure chevrons a naive conversion shows).
-  - **`ItemListView` is a `ScrollView` + `LazyVStack`** and has no
-    row-level delete at all — deletion lives on the detail screen. This
-    is the real scope of the swipe-to-delete work: either convert it to
-    a `List` following the wishlist's proven pattern, or build a custom
-    gesture. The wishlist's existence makes the `List` route much less
-    speculative than this entry previously suggested.
-  - If instant-delete-with-undo (the Mail model) ever feels better than
-    confirm-then-delete, that's a `010` decision too — the shared-copy
-    alert was chosen at `001` for consistency with the detail screens,
-    with the undo model noted as the alternative.
+  A second, unrelated consideration for the same spec: the wishlist
+  row's `DesireGauge` doesn't read as a desire indicator on first
+  encounter without already knowing what it is — flagged during `001`'s
+  final review, on the actual running app, not hypothetically. `T036c`'s
+  original "no legend" decision assumed the shape would already be
+  learned from the form before someone saw a bare row, which doesn't
+  hold if a row is the first encounter. Kept unlabeled for now,
+  deliberately, rather than adding scope this close to `001`'s merge —
+  a short label ("Desire" was one candidate raised) is one option, but
+  worth actually exploring rather than assuming that's the fix once
+  this spec is properly scoped.
+- **`011-data-export`** — CSV and PDF export of the collection. Not a
+  new idea, a validated one: `001`'s original `spec.md` explicitly
+  listed "Insurance-document export or valuation reports" as a non-goal,
+  noting it "may be a natural future feature, not v1." The pitch behind
+  building it now: it's a real differentiator against the spreadsheet
+  most hobbyists (including this app's own author) already use to track
+  gear — something a spreadsheet can't easily produce on its own.
 
-  Also parked here from the `001` sign-off: the wishlist rows' desire
-  gauge is deliberately unlabeled (the label lives in the form and
-  detail screen, where the value is set and learned), but there's a real
-  first-encounter observation that an unlabeled three-segment gauge
-  doesn't read as a *desire* gauge on sight. Revisit alongside the other
-  item-management interactions rather than patching one row now.
+  Two genuinely different deliverables under one spec, not one thing:
+  CSV (portable data, for backup or moving elsewhere) and PDF
+  (presentation-quality, for insurance documentation or sharing — per-
+  item spec sheets, a whole-collection appraisal document, or both,
+  scope TBD). Photos belong to the PDF side, not CSV — that's a
+  tabular/text format, and forcing images into it fights the format
+  rather than using it well.
 
-  **Settled via the idea conversation and initial `spec.md` draft
-  (2026-08-23)**: scope beyond swipe-to-delete is leading-swipe Edit and
-  Duplicate on both lists, extending the existing delete-confirmation
-  alert to `ItemListView`'s new swipe path rather than removing it
-  anywhere (an earlier draft of the spec briefly proposed removing it
-  app-wide instead — see `011-recycle-bin` below for why that was
-  reconsidered), and a real Claude Design pass covering the
-  gauge-legibility observation above, the wishlist's Reorder control's
-  discoverability, and general list-row visual treatment. Full detail
-  lives in `specs/010-item-management-enhancements/spec.md`, not
-  restated here.
+  Decided ahead of the idea conversation: CSV only, no `.xlsx`. Genuine
+  Excel format — not a renamed CSV — would likely need a third-party
+  library, which `CLAUDE.md`'s no-third-party-packages-without-
+  discussion policy would put through real scrutiny; not worth it for a
+  format any spreadsheet app already opens and can re-save as `.xlsx`
+  itself in one step. CSV alone gets the actual portability benefit
+  without the dependency question.
+- **`012-data-import`** — CSV import of externally-tracked gear. Aimed
+  at the adoption barrier from the other direction: someone already
+  tracking their collection in a spreadsheet shouldn't have to re-enter
+  it by hand to switch to Trove.
 
-- **`011-recycle-bin`** — Soft-delete instead of permanent delete: a
-  deleted item or wishlist item moves to a recoverable trash rather
-  than disappearing immediately, with a restore action. Surfaced while
-  scoping `010`'s delete gestures, not an idea that existed before
-  that. `010` ships permanent delete with a confirmation alert on every
-  path (consistently, now) — this is the more thorough fix that would
-  eventually let that confirmation step go away, once deleting is
-  actually reversible rather than needing to be caught before it
-  happens. Open questions of its own, deliberately not resolved here:
-  purge policy (indefinite, time-based, or a manual empty action), and
-  where "restore" actually lives in the UI. Depends on
-  `012-settings-menu`'s surface existing first — a recycle bin needs a
-  home besides a list screen, and there isn't one yet.
-- **`012-settings-menu`** — A real settings/utility surface for Trove,
-  which doesn't exist yet — the `TabView` is deliberately three tabs
-  with no "More" (see `001`'s `plan.md` Navigation section). Originally
-  predicted to arrive as a side effect of `004-themes` (a theme picker
-  needs to live somewhere), but by the time `010` was being scoped it
-  had already accumulated independent occupants of its own: the
-  sync-status indicator deferred at `T049a` (a real decision about
-  where a persistent "syncs with iCloud" affordance lives, in a
-  three-tab app with no settings screen); a recycle-bin toggle and its
-  restore UI (`011-recycle-bin`); a delete-confirmation on/off toggle
-  (`010` ships confirmation as a fixed, well-chosen default everywhere
-  — per-user control deferred here); and a duplicate-photos toggle,
-  keep vs. clear (`010` ships "keep" as the default, same reasoning).
-  Four independent asks is enough to justify the surface on its own
-  merits, rather than only building it incidentally inside `004`'s
-  scope — worth its own small idea conversation once it's next up,
-  covering at minimum where it's reached from in a three-tab layout.
+  Genuinely harder than `011`, and for reasons that are product
+  decisions more than engineering ones: what happens to malformed or
+  missing data (reject the whole batch, skip and report, or fill
+  defaults); how potential duplicates against an already-populated
+  collection get handled; and — given the bulk-insert risk — almost
+  certainly a preview-before-commit step, the same instinct that's
+  shaped every destructive-action flow already in this app.
+
+  Scope decided ahead of the idea conversation, to keep this spec's own
+  first version genuinely small: a rigid, Trove-defined column template
+  plus documentation describing exactly what's expected (a README-style
+  reference, not a mapping UI) is the v1 approach — someone reads the
+  spec or exports a template, formats their data to match, imports
+  directly. A flexible "tell us which column means what" mapping UI is
+  real and valuable, but explicitly deferred — a natural enhancement to
+  `012` itself once the rigid-template version has shipped and its
+  actual friction is understood, rather than something built blind
+  before knowing whether it's needed. Photos are likely out of scope
+  for a first pass either way — most spreadsheet tracking won't have
+  structured photo references to import from — worth stating as a
+  deliberate non-goal rather than silently omitting.
+
+  Soft dependency on `011`, not a hard blocker like `002`→`003`: import
+  can reuse whatever canonical schema export settles on for representing
+  an item as a row, which also enables a natural "export a template,
+  fill it in, re-import" pattern. Worth designing export's schema first
+  even if import's own build happens later.
 
 ## Working convention
 
