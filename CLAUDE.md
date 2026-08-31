@@ -165,15 +165,40 @@ between each phase. Artifacts live in `specs/<NNN>-<slug>/`:
   changes where.
 - `tasks.md` — ordered, small, independently verifiable tasks.
 
-Do not begin implementation on a feature without an approved spec and plan
-in that feature's directory. When resuming a session, check
-`specs/<feature>/tasks.md` for the current state before doing anything else.
+Do not begin implementation on a feature without an approved spec, plan,
+and tasks in that feature's directory. When resuming a session, check
+`specs/<feature>/tasks.md` for the current state before doing anything
+else.
 
-`spec.md` and `plan.md` get authored in a chat-based design conversation,
-not in this session — if asked to scope a brand-new feature from
-scratch, point back to that conversation rather than drafting them
-inline here. This session's job starts once they already exist and are
-approved.
+**Authorship split (amended 2026-08-30, during `011-data-export`):**
+`spec.md` is authored in a chat-based design conversation, not in this
+session — it captures product intent and decisions, which is that
+conversation's job, and it needs no repo access to write well. If asked
+to scope a brand-new feature from scratch (no approved spec in the
+feature's directory), point back to that conversation rather than
+drafting one inline here.
+
+`plan.md` and `tasks.md`, by contrast, are drafted **in this session**,
+by Claude Code, against the approved spec: work in Plan Mode, apply the
+`skeptical-reviewer` subagent to non-routine technical calls, and commit
+each document to the spec branch marked **Draft** at the top. **The
+human review gates are unchanged**: `plan.md` gets reviewed and approved
+by the person before `tasks.md` is drafted against it, and both are
+approved before any implementation task starts. Drafting moved; approval
+didn't. If planning surfaces something that is actually a product
+decision — scope, user-facing behavior, a spec contradiction — stop and
+escalate rather than settling it in `plan.md`.
+
+This explicitly reverses the original rule, which placed `plan.md`
+authorship in the chat conversation alongside `spec.md`. That rule was
+written when this project had no code — a plan could be authored
+anywhere, because there was nothing to inspect. With an established
+codebase, a plan's quality depends on ground truth only the repo has
+(actual model definitions, actual view structure, actual injection
+shapes), and the chat's knowledge-base snapshot is a manual upload that
+is reliably stale. See `DECISIONS.md` (2026-08-30 entry) for the full
+reasoning; the same amendment is being proposed upstream to the
+`spec-driven-development` skill.
 
 ## Collaboration workflow
 
