@@ -354,7 +354,15 @@ reported.
   reference the activity controller from a second file) and confirm
   each is caught before reverting.
 
-- [ ] **T016 — `design/tokens.md`.**
+- [x] **T016 — `design/tokens.md`.**
+  *Done (2026-08-31)*: two new sections — "Export badge and menu"
+  (badge geometry against the sort badge's tokens, the system-Menu
+  decision with the T029c argument, exporting state) and "Print
+  palette and type scale — PDF export" (the print-only tokens with the
+  darker brass rationale, page/photo-box geometry, and the full print
+  type scale with the one-source-of-face-names note). Every value
+  `PDFComposer` and `ExportBadge` use is now stated; no silent
+  divergences found while writing it up.
   Add the print-only palette table and print type scale (recorded as a
   deliberate second scale), and the export badge + menu row entries.
   *Done when*: tokens.md states every value `PDFComposer` and
