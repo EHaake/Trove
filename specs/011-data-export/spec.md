@@ -1,6 +1,8 @@
 # 011 — Data Export
 
-Status: **Draft** (pending review)
+Status: **Approved** (2026-08-30; criteria 1–2, the CSV date rule, and
+the failure surface amended the same day during planning — see the
+amendment notes inline)
 
 ## What and why
 
@@ -57,8 +59,19 @@ spec adds it to the two list screens only, with only the two export
 actions in it.
 
 Both export actions are **disabled when the current view is empty**
-(no items match the active filter, or the collection is empty). An
-empty file is never produced.
+because a filter or search matched nothing. On an entirely empty
+collection the "…" control is hidden along with the rest of the header
+controls — the same rule the sort picker already follows ("nothing to
+sort on an empty list"), and the empty state's own call-to-action owns
+that screen. Either way, an empty file is never produced. *(Amended
+2026-08-30 during planning: originally the menu showed disabled even on
+an empty collection; a lone "…" floating over the empty state matched
+neither the existing screens nor any user need.)*
+
+If generating a file fails, a plain alert says the export couldn't be
+completed and nothing was saved; no file is delivered. *(Added
+2026-08-30 during planning — the spec previously defined no failure
+surface, and a silently dead button is the worst version of one.)*
 
 ## What gets exported per item
 
@@ -79,7 +92,14 @@ added date).
 ## The CSV
 
 - One file per export. UTF-8, header row, standard quoting/escaping.
-- Dates in ISO 8601 (`2026-08-30`).
+- Dates in ISO 8601 (`2026-08-30`) — the device-local calendar day,
+  exactly what the detail screen shows. *(Caveat recorded 2026-08-30
+  during planning: purchase dates are stored as raw instants, so the
+  calendar day can differ across timezones — a CSV round trip is
+  timezone-stable only within one timezone. This is a pre-existing
+  storage property that export exposes rather than creates; normalizing
+  storage was considered and deferred. `012` inherits the caveat via
+  `plan.md`'s schema section.)*
 - Money as plain decimal numbers, no currency symbol, dot decimal
   separator regardless of locale (`1250.00`) — this is a data format,
   and `012`'s import will parse it back; locale-formatted money in a
@@ -114,10 +134,17 @@ followed by one entry per exported item.
 
 ## Acceptance criteria
 
-1. Both list screens show the "…" toolbar action, right of the sort
-   picker, on all size classes; the sort picker's behavior is unchanged.
+1. Both list screens show the "…" action at the top right, right of the
+   sort picker, whenever the sort picker itself shows (a non-empty
+   collection), on all size classes; the sort picker's behavior is
+   unchanged. *(Amended 2026-08-30 — see Entry point: on an empty
+   collection the control hides with the rest of the header controls.)*
 2. The "…" menu shows exactly two actions, Export as CSV… and Export
-   as PDF…, both disabled when the current view is empty.
+   as PDF…, both disabled when the current view is empty (a filter or
+   search matching nothing; the entirely-empty collection is covered by
+   criterion 1's visibility rule). *(Amended 2026-08-30, same decision.)*
+2a. A failed export shows a plain alert and delivers nothing. *(Added
+   2026-08-30 during planning.)*
 3. Exporting from a filtered Items list produces a file containing
    exactly the visible items, in the visible order; changing filter or
    sort and re-exporting reflects the change.
