@@ -89,8 +89,17 @@ reported.
 
 ## Phase 2 — Service, temp lifecycle, and the off-main proof
 
-- [ ] **T004 — `ExportService.swift`: protocol, live service, temp
+- [x] **T004 — `ExportService.swift`: protocol, live service, temp
   store.**
+  *Done (2026-08-30)*: one deliberate sequencing deviation — the
+  protocol lands with `exportCSV` only; the `exportPDF` requirement
+  arrives with T005, where `PDFComposer` exists, so this commit builds
+  and tests on its own instead of shipping a stub that lies.
+  `ExportFilename` helpers came with this task (they belong to the
+  delivery layer and the temp tests pin them). Mutation check: removed
+  the purge-before-write → the two-exports test went red with both
+  files accumulated, the exact criterion-10 failure. Reverted; full
+  suite 564/564 green.
   `ExportService` protocol (`exportCSV(_:filename:)`,
   `exportPDF(_:filename:)`, both `async throws -> URL`) and
   `FileExportService`: writes under `tmp/Exports/`, **purges that
