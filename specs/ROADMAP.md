@@ -24,7 +24,7 @@ own.
 | Spec | Status |
 |---|---|
 | `001-core-inventory` | **Shipped** — merged to `main` 2026-08-23 via [PR #1](https://github.com/EHaake/Trove/pull/1); spec, plan and tasks all Approved in specs/001-core-inventory/ |
-| `010-item-management-enhancements` | **Complete** — all tasks through the Phase 8 close-out done (2026-08-30); twenty acceptance criteria signed off; skeptical-review findings resolved or recorded in `tasks.md` |
+| `010-item-management-enhancements` | **Shipped** — merged to `main` 2026-08-30 via [PR #3](https://github.com/EHaake/Trove/pull/3); twenty acceptance criteria signed off, skeptical-review findings resolved or recorded in `tasks.md` |
 
 ## Future specs
 
@@ -103,39 +103,26 @@ actually useful once the app is in daily use.
   screen that doesn't block or get blocked by anything already in
   flight — it deserves a real Claude Design pass rather than an
   improvised layout, the same reasoning that held `008` to v2.
-- **`010-item-management-enhancements`** — Came up right as `001` was
-  wrapping up: a request for swipe-left-to-delete on `ItemListView`/
-  `WishlistView` rows (standard iOS convention), which grew into wanting
-  a broader look at item-management interactions before committing to a
-  spec. Deliberately kept out of `001` rather than bolted on as "just
-  one more thing" — `001`'s `tasks.md` was already fully checked off,
-  and growing it further would have undercut the same one-feature-one-
-  spec discipline this file's own opening section argues for. The exact
-  scope beyond swipe-to-delete is still open, to be settled in the
-  actual idea conversation rather than guessed at here.
+- **`010-item-management-enhancements`** — **Shipped 2026-08-30 via
+  [PR #3](https://github.com/EHaake/Trove/pull/3)**; the full record
+  lives in `specs/010-item-management-enhancements/`. Kept here for the
+  origin story: it came up right as `001` was wrapping — a request for
+  swipe-left-to-delete that grew into a broader item-management pass —
+  and was deliberately kept out of `001` rather than bolted on, per
+  this file's own one-feature-one-spec argument. It ended up covering
+  swipe delete/edit/copy on both lists, drag-to-reorder with an
+  accessible VoiceOver path, expanded sorting with manual-order
+  tie-breaks, and a design-depth refresh (the extruded-plate
+  treatment).
 
-  One real technical consideration already surfaced, worth carrying into
-  that conversation rather than rediscovering: SwiftUI's `.swipeActions()`
-  is `List`-specific as far as investigated so far, and Trove's rows are
-  deliberately `ScrollView`-based — the `T056` pull-to-refresh
-  investigation already considered and rejected converting to `List`,
-  since it would clobber the custom row styling (thumbnails, the desire
-  dial/gauge) Design actually drew. Verify that constraint fresh rather
-  than assuming it still holds by the time this spec starts; expect
-  either a `List` reconsideration or a custom gesture implementation,
-  not a one-line modifier.
-
-  A second, unrelated consideration for the same spec: the wishlist
-  row's `DesireGauge` doesn't read as a desire indicator on first
-  encounter without already knowing what it is — flagged during `001`'s
-  final review, on the actual running app, not hypothetically. `T036c`'s
-  original "no legend" decision assumed the shape would already be
-  learned from the form before someone saw a bare row, which doesn't
-  hold if a row is the first encounter. Kept unlabeled for now,
-  deliberately, rather than adding scope this close to `001`'s merge —
-  a short label ("Desire" was one candidate raised) is one option, but
-  worth actually exploring rather than assuming that's the fix once
-  this spec is properly scoped.
+  The two considerations this entry used to carry both resolved during
+  the build. The `.swipeActions()`-needs-a-`List` constraint was real,
+  and was settled by adopting `List` with every visible default
+  overridden — the custom row styling `T056` once worried a `List`
+  would clobber survived intact. And the bare `DesireGauge` legibility
+  flag became `010`'s stepped-ramp redesign with its per-row "DESIRE"
+  legend, explicitly recorded in that spec's plan as reversing `001`'s
+  "no legend" decision rather than quietly refining it.
 - **`011-data-export`** — CSV and PDF export of the collection. Not a
   new idea, a validated one: `001`'s original `spec.md` explicitly
   listed "Insurance-document export or valuation reports" as a non-goal,
@@ -196,5 +183,5 @@ actually useful once the app is in daily use.
 
 Per `CLAUDE.md`: one branch per spec, no new spec branch starts until the
 current one is merged to `main`. This roadmap is a backlog, not a
-commitment to order — pick whichever spec is actually useful next once
-`001-core-inventory` ships and the app's in real use.
+commitment to order — pick whichever spec is actually useful next now
+that the app's in real use.
