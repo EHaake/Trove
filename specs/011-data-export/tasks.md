@@ -371,7 +371,15 @@ reported.
 
 ## Phase 6 — Verification and close-out
 
-- [ ] **T017 — Full-suite run and criteria sweep.**
+- [x] **T017 — Full-suite run and criteria sweep.**
+  *Done (2026-08-31)*: `xcodebuild build` succeeded; the full test
+  action ran **597 unit tests in 93 suites (Swift Testing) and 5 UI
+  tests (XCTest), 0 failures**. All twelve criteria (1, 2, 2a, 3–11)
+  annotated in spec.md with citations to the specific tests, guards,
+  and simulator checks that carry them. Honest partials recorded
+  in-place: criterion 5's open-in-Numbers half and criterion 11's
+  large-collection feel are T018's, and the Excel serial-number caveat
+  stands per plan.md.
   `xcodebuild build` + `xcodebuild test` for the whole project, actual
   output reported. Walk all spec acceptance criteria (1, 2, 2a, 3–11)
   and check each off in `spec.md` with a citation to the test or task

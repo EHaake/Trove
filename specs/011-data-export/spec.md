@@ -134,38 +134,95 @@ followed by one entry per exported item.
 
 ## Acceptance criteria
 
-1. Both list screens show the "…" action at the top right, right of the
+1. [x] Both list screens show the "…" action at the top right, right of the
    sort picker, whenever the sort picker itself shows (a non-empty
    collection), on all size classes; the sort picker's behavior is
    unchanged. *(Amended 2026-08-30 — see Entry point: on an empty
    collection the control hides with the rest of the header controls.)*
-2. The "…" menu shows exactly two actions, Export as CSV… and Export
+   *Verified: both headers share one visibility gate
+   (`ItemListView.header` / `WishlistView.header`);
+   `ExportWiringTests.theBadgeIsFedByTheViewModelAndFiresBothIntents`;
+   simulator checks at T012/T013. The layout is intrinsic (no
+   size-class branching exists to diverge).*
+2. [x] The "…" menu shows exactly two actions, Export as CSV… and Export
    as PDF…, both disabled when the current view is empty (a filter or
    search matching nothing; the entirely-empty collection is covered by
    criterion 1's visibility rule). *(Amended 2026-08-30, same decision.)*
-2a. A failed export shows a plain alert and delivers nothing. *(Added
+   *Verified: `ExportWiringTests.bothMenuActionsGateOnCanExport` (two
+   pinned strings, each individually gated);
+   `canExportTracksTheVisibleListNotTheStore` and
+   `nothingIsExportedWhenTheViewIsEmpty` in both view-model suites.*
+2a. [x] A failed export shows a plain alert and delivers nothing. *(Added
    2026-08-30 during planning.)*
-3. Exporting from a filtered Items list produces a file containing
+   *Verified: `aThrowingServiceSurfacesTheSharedFailureCopy` in both
+   view-model suites (shared copy, nothing staged, progress cleared);
+   `ExportWiringTests.theShareSheetAndFailureAlertAreWired`.*
+3. [x] Exporting from a filtered Items list produces a file containing
    exactly the visible items, in the visible order; changing filter or
    sort and re-exporting reflects the change.
-4. The same holds on the Wishlist with its filter and sort.
-5. The CSV opens correctly in Numbers and in Excel (via a standard
+   *Verified:
+   `ItemListViewModelExportTests.exportedRowsAreTheVisibleItemsInVisibleOrder`
+   — filter + non-default sort, mutation-verified (a refetch leaked the
+   filtered-out item and went red).*
+4. [x] The same holds on the Wishlist with its filter and sort.
+   *Verified: the wishlist twin in `WishlistViewModelExportTests`,
+   independently mutation-verified.*
+5. [x] The CSV opens correctly in Numbers and in Excel (via a standard
    CSV import) with all columns intact — including fields containing
    commas, quotes, and newlines in notes.
-6. A round-trip sanity check: every detail-screen field for a given
+   *Verified: the format half by `CSVWriterTests` (RFC 4180 round trip
+   through a real parser over the comma/quote/newline hard cases; BOM
+   for Excel). The open-it-and-look half is T018's; plan.md records the
+   Excel serial-number caveat honestly (Excel's default open coerces
+   long digit strings — the criterion's own "standard CSV import" path
+   with text columns is what holds).*
+6. [x] A round-trip sanity check: every detail-screen field for a given
    item can be located in that item's CSV row with the correct value.
-7. Money and date values in the CSV match the formats above regardless
+   *Verified: `itemRowCarriesEveryColumnInHeaderOrder` +
+   `itemRecordCarriesEveryFieldFromTheModel` (and wishlist twins) in
+   `ExportSchemaTests` — model → record → row, per column. Condition
+   matches case-insensitively (raw lowercase in the CSV, capitalized on
+   screen), recorded in plan.md's schema table.*
+7. [x] Money and date values in the CSV match the formats above regardless
    of device locale.
-8. The PDF's cover figures match the app's own arithmetic for the same
+   *Verified: `moneySerializesExactValues`,
+   `moneyRoundTripsThroughTheParseSide`, `daySerializesZeroPaddedISO` —
+   and by construction: no locale API exists anywhere in the
+   serialization path (plan.md's "Money and date serialization").*
+8. [x] The PDF's cover figures match the app's own arithmetic for the same
    filtered set.
-9. An item with no photos produces a clean PDF entry; an item with
+   *Verified: `pdfCoverFiguresAreTheViewModelsOwnArithmetic` (items) and
+   `pdfCoverTotalsTheViewModelsOwnEstimatedCost` (wishlist) — the cover
+   the service receives carries the view models' own totals, checked
+   against live properties and concrete figures both.*
+9. [x] An item with no photos produces a clean PDF entry; an item with
    several photos shows exactly its first.
-10. Both formats deliver via the standard share sheet; canceling the
+   *Verified: `entriesStartOnTheirOwnPageWithTheFullFieldGrid` (no-photo
+   layout, full width, no gap),
+   `anUnresolvablePhotoIdentifierKeepsTheEntryPhotoFree`,
+   `firstPhotoFollowsDisplayOrderNotInsertionOrder` ("first" =
+   `PhotoSelection.inDisplayOrder`, the one definition, mutation-verified
+   at snapshot level), and the embed proven real by
+   `photosEmbedDownsampledAndBoundTheFileSize`.*
+10. [x] Both formats deliver via the standard share sheet; canceling the
     sheet leaves no residue (no stray temp files accumulating across
     repeated exports).
-11. Exporting a large collection (hundreds of items, with photos) does
+    *Verified: delivery live on the simulator at T012 (CSV) and T013
+    (PDF); `aSecondExportLeavesExactlyOneFileSet` (purge-before-write,
+    mutation-verified) and `launchSweepClearsTheRealStagingDirectory` —
+    and T014's on-device sweep removed exactly the residue T013's
+    canceled sheet had left.*
+11. [x] Exporting a large collection (hundreds of items, with photos) does
     not block the UI — some progress affordance appears if generation
     is not effectively instant.
+    *Verified: `ExportConcurrencyTests.generationRunsOffTheMainThreadForBothFormats`
+    — instrumented through the `any ExportService` existential, the
+    probe recording the actual thread, mutation-verified (stripping
+    `@concurrent` put generation back on the main thread and went red);
+    `photosEmbedDownsampledAndBoundTheFileSize` bounds the with-photos
+    path; the progress affordance is the badge's spinner, fed by
+    `isExporting` (`ExportWiringTests` pins the feed). Scale feel
+    confirmed at T018.*
 
 ## Non-goals (explicit)
 
