@@ -114,11 +114,22 @@ final class ItemListViewModel {
 
     private let syncMonitor: SyncMonitor
 
-    /// - Parameter syncMonitor: defaults to a store with no mirror, so tests
-    ///   and previews get the settled behaviour unless they ask otherwise.
-    init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
+    private let exportService: any ExportService
+
+    /// - Parameters:
+    ///   - syncMonitor: defaults to a store with no mirror, so tests and
+    ///     previews get the settled behaviour unless they ask otherwise.
+    ///   - exportService: defaults to the live file-staging service over this
+    ///     context's container; tests inject a fake and assert on what the
+    ///     intents hand over (plan.md's Architecture section).
+    init(
+        modelContext: ModelContext,
+        syncMonitor: SyncMonitor = .notSyncing,
+        exportService: (any ExportService)? = nil
+    ) {
         self.modelContext = modelContext
         self.syncMonitor = syncMonitor
+        self.exportService = exportService ?? FileExportService(container: modelContext.container)
     }
 
     /// Dragging only makes sense against the real, whole list in its own
@@ -285,6 +296,96 @@ final class ItemListViewModel {
             loadFailureMessage = error.localizedDescription
         }
         load()
+    }
+
+    // MARK: - Export (011)
+
+    /// The staged file the view offers through the share sheet, or nil.
+    /// Settable by the view deliberately: `.sheet(item:)` writes nil back on
+    /// dismissal — view mechanics, not business logic.
+    var stagedExport: StagedExport?
+
+    /// Set when generation fails (spec criterion 2a); the view presents it
+    /// as a plain alert and writes nil back on dismissal.
+    var exportFailureMessage: String?
+
+    /// True while a file is generating — the export badge swaps to a spinner
+    /// and disables (criterion 11's progress affordance).
+    private(set) var isExporting = false
+
+    /// Whether the current view has anything to export (criterion 2): an
+    /// empty file is never produced.
+    var canExport: Bool { !items.isEmpty }
+
+    /// Combined purchase price of the items on screen — the cover's "total
+    /// paid", tracking the filter like `totalCurrentValueCents` does.
+    var totalPaidCents: Int {
+        items.reduce(0) { $0 + $1.purchasePriceCents }
+    }
+
+    /// What the export covers, in the chips' own words — "All items",
+    /// "Category: Guitars", with the un-valued filter and any search query
+    /// named too, so the document never claims more than the screen showed.
+    var exportCoverageLabel: String {
+        var parts: [String] = []
+        if !categoryFilter.isEmpty {
+            parts.append("Category: \(categoryLabels[categoryFilter] ?? categoryFilter)")
+        }
+        if showsOnlyUnvalued { parts.append("Not yet valued") }
+        let query = SearchMatching.normalized(searchText)
+        if !query.isEmpty { parts.append("Search: \u{201C}\(query)\u{201D}") }
+        return parts.isEmpty ? "All items" : parts.joined(separator: " · ")
+    }
+
+    /// Exports the visible items, in visible order, as the canonical CSV.
+    /// Records are built from `items` as-is — never a refetch: visible order
+    /// comes from `isOrderedBefore` over live filter/sort state and is not
+    /// reproducible from any `FetchDescriptor` (criteria 3–4).
+    func exportCSV() async {
+        guard canExport, !isExporting else { return }
+        isExporting = true
+        defer { isExporting = false }
+
+        let table = ExportSchema.itemsTable(items.map { ItemExportRecord(item: $0) })
+        let filename = ExportFilename.items(fileExtension: "csv")
+        do {
+            let url = try await exportService.exportCSV(table, filename: filename)
+            stagedExport = StagedExport(url: url, filename: filename)
+        } catch {
+            exportFailureMessage = ExportCopy.failureMessage
+        }
+    }
+
+    /// Exports the visible items as the PDF collection document. Same
+    /// snapshot rule as `exportCSV`; the cover's figures are this view
+    /// model's own arithmetic, which is what criterion 8 measures.
+    func exportPDF() async {
+        guard canExport, !isExporting else { return }
+        isExporting = true
+        defer { isExporting = false }
+
+        let records = items.map { ItemExportRecord(item: $0) }
+        let document = PDFDocumentModel(
+            cover: CoverSummary(
+                title: "Owned Items",
+                coverageLabel: exportCoverageLabel,
+                generatedAt: .now,
+                itemCount: items.count,
+                totals: .items(
+                    currentValueCents: totalCurrentValueCents,
+                    paidCents: totalPaidCents,
+                    unvaluedCount: unvaluedCount
+                )
+            ),
+            entries: records.map { PDFEntry(record: $0) }
+        )
+        let filename = ExportFilename.items(fileExtension: "pdf")
+        do {
+            let url = try await exportService.exportPDF(document, filename: filename)
+            stagedExport = StagedExport(url: url, filename: filename)
+        } catch {
+            exportFailureMessage = ExportCopy.failureMessage
+        }
     }
 
     private func isOrderedBefore(_ lhs: Item, _ rhs: Item) -> Bool {

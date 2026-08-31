@@ -19,6 +19,27 @@ nonisolated protocol ExportService: Sendable {
     @concurrent func exportPDF(_ document: PDFDocumentModel, filename: String) async throws -> URL
 }
 
+/// A generated file waiting for the share sheet — what a view model stages
+/// and a view presents. Foundation-only on purpose: it lives in view-model
+/// state, and view models import no SwiftUI.
+nonisolated struct StagedExport: Identifiable, Sendable, Equatable {
+    let id = UUID()
+    let url: URL
+    let filename: String
+
+    init(url: URL, filename: String) {
+        self.url = url
+        self.filename = filename
+    }
+}
+
+/// The failure surface's copy (spec criterion 2a), shared so both list
+/// screens and their view models can't drift — the `ItemDeleteCopy` pattern.
+nonisolated enum ExportCopy {
+    static let failureTitle = "Couldn't export"
+    static let failureMessage = "Nothing was saved. Try again."
+}
+
 /// The share-sheet filenames the spec pins: `Trove-Items-YYYY-MM-DD.csv`
 /// and friends, dated with the same local-day serialization the schema uses.
 nonisolated enum ExportFilename {

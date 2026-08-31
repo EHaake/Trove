@@ -231,7 +231,19 @@ reported.
 
 ## Phase 4 — View-model intents
 
-- [ ] **T009 — `ItemListViewModel` export intents.**
+- [x] **T009 — `ItemListViewModel` export intents.**
+  *Done (2026-08-31)*: intents, `canExport`, `isExporting`,
+  `stagedExport`/`exportFailureMessage` (settable by the view for
+  sheet/alert dismissal — view mechanics, documented as such), the new
+  `totalPaidCents`, and `exportCoverageLabel` naming every active
+  narrowing (category · un-valued · search). `StagedExport` and the
+  shared `ExportCopy` landed in the service layer; `ExportServiceSpy`
+  in TestSupport captures through a `Mutex` since the `@concurrent`
+  calls land off-main. Seven tests including cover arithmetic checked
+  against both the live properties and concrete figures (so a broken
+  property can't vouch for itself). Mutation check: records built from
+  a refetch → the filtered-out Telecaster leaked into the table, order
+  test red. Reverted; full suite 584/584 green.
   `ExportService` injected (live default, same shape as
   `syncMonitor:`); `exportCSV()` / `exportPDF()` async intents building
   records **from the `items` array in its existing order** (never a

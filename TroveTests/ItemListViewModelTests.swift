@@ -7,6 +7,7 @@ private func insertItem(
     _ name: String,
     category: String = "Music/Guitars",
     desire: Int = 3,
+    priceCents: Int = 0,
     valueCents: Int? = nil,
     serial: String? = nil,
     purchasedAt seconds: TimeInterval = 0,
@@ -17,6 +18,7 @@ private func insertItem(
     let item = Item(
         name: name,
         categoryPath: category,
+        purchasePriceCents: priceCents,
         purchaseDate: Date(timeIntervalSince1970: seconds),
         serialNumber: serial,
         currentValueCents: valueCents,
@@ -737,5 +739,156 @@ struct ItemListUnvaluedFilterTests {
         viewModel.load()
 
         #expect(viewModel.categoryOptions == ["Music/Amps", "Photography/Lenses"])
+    }
+}
+
+@Suite("ItemListViewModel — export")
+struct ItemListViewModelExportTests {
+    /// Criteria 3: exactly the visible items, in the visible order. The
+    /// fixture makes a refetch detectably wrong twice over — the Telecaster
+    /// is filtered out, and storage order can't produce ascending-value
+    /// order within the filter.
+    @Test func exportedRowsAreTheVisibleItemsInVisibleOrder() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", valueCents: 120_000, into: context)
+        insertItem("Leica M6", category: "Photography/Cameras", valueCents: 345_000, into: context)
+        insertItem("Summicron 35", category: "Photography/Lenses", valueCents: 240_000, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.categoryFilter = "Photography"
+        viewModel.sortOrder = .currentValueAscending
+        viewModel.load()
+
+        await viewModel.exportCSV()
+
+        let table = try #require(spy.tables.first)
+        #expect(table.headers == ExportSchema.itemHeaders)
+        #expect(table.rows.map { $0[0] } == ["Summicron 35", "Leica M6"])
+    }
+
+    @Test func exportStagesTheFileForTheShareSheet() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context, exportService: ExportServiceSpy())
+        viewModel.load()
+
+        await viewModel.exportCSV()
+
+        let staged = try #require(viewModel.stagedExport)
+        #expect(staged.filename == ExportFilename.items(fileExtension: "csv"))
+        #expect(viewModel.isExporting == false)
+        #expect(viewModel.exportFailureMessage == nil)
+    }
+
+    /// Criterion 2's actual subject: the *view*, not the store — a filter
+    /// matching nothing disables export even though the collection has items.
+    @Test func canExportTracksTheVisibleListNotTheStore() throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: ExportServiceSpy())
+        viewModel.load()
+        #expect(!viewModel.canExport)
+
+        insertItem("Telecaster", into: context)
+        try context.save()
+        viewModel.load()
+        #expect(viewModel.canExport)
+
+        viewModel.categoryFilter = "Photography"
+        viewModel.load()
+        #expect(!viewModel.canExport)
+    }
+
+    /// The intents' own guard, backing up the disabled menu: an empty view
+    /// never reaches the service, so an empty file can't exist.
+    @Test func nothingIsExportedWhenTheViewIsEmpty() async throws {
+        let context = try makeInMemoryContext()
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportCSV()
+        await viewModel.exportPDF()
+
+        #expect(spy.tables.isEmpty)
+        #expect(spy.documents.isEmpty)
+        #expect(viewModel.stagedExport == nil)
+    }
+
+    /// Criterion 2a: a throw becomes the shared failure copy, nothing is
+    /// staged, and the progress state doesn't stick.
+    @Test func aThrowingServiceSurfacesTheSharedFailureCopy() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            exportService: ExportServiceSpy(failsEveryCall: true)
+        )
+        viewModel.load()
+
+        await viewModel.exportCSV()
+
+        #expect(viewModel.exportFailureMessage == ExportCopy.failureMessage)
+        #expect(viewModel.stagedExport == nil)
+        #expect(viewModel.isExporting == false)
+    }
+
+    /// Criterion 8 by construction: the cover the service receives carries
+    /// this view model's own arithmetic — checked against both the live
+    /// properties and concrete figures, so a broken property can't vouch
+    /// for itself.
+    @Test func pdfCoverFiguresAreTheViewModelsOwnArithmetic() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", priceCents: 50_000, valueCents: 120_000, into: context)
+        insertItem("Leica M6", priceCents: 60_000, valueCents: 345_000, into: context)
+        insertItem("Blues Junior", priceCents: 70_000, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportPDF()
+
+        let document = try #require(spy.documents.first)
+        #expect(document.entries.count == 3)
+        #expect(document.cover.title == "Owned Items")
+        #expect(document.cover.coverageLabel == "All items")
+        #expect(document.cover.itemCount == viewModel.items.count)
+
+        guard case .items(let value, let paid, let unvalued) = document.cover.totals else {
+            Issue.record("items export produced non-items cover totals")
+            return
+        }
+        #expect(value == viewModel.totalCurrentValueCents)
+        #expect(paid == viewModel.totalPaidCents)
+        #expect(unvalued == viewModel.unvaluedCount)
+        #expect(value == 465_000)
+        #expect(paid == 180_000)
+        #expect(unvalued == 1)
+    }
+
+    @Test func coverageLabelNamesEveryActiveNarrowing() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", category: "Photography/Cameras", into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context, exportService: ExportServiceSpy())
+        viewModel.load()
+        #expect(viewModel.exportCoverageLabel == "All items")
+
+        viewModel.categoryFilter = "Photography/Cameras"
+        viewModel.showsOnlyUnvalued = true
+        viewModel.searchText = "M6"
+        viewModel.load()
+
+        let categoryLabel = viewModel.categoryLabels["Photography/Cameras"] ?? "Photography/Cameras"
+        #expect(viewModel.exportCoverageLabel
+            == "Category: \(categoryLabel) · Not yet valued · Search: \u{201C}M6\u{201D}")
     }
 }

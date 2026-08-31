@@ -2,7 +2,51 @@ import CoreGraphics
 import Foundation
 import SwiftData
 import SwiftUI
+import Synchronization
 @testable import Trove
+
+/// Records what the view models hand to `ExportService`, so intent tests
+/// assert on the actual payload (plan.md's Architecture section). Capture
+/// goes through a `Mutex` because the requirements are `@concurrent` — the
+/// calls land off-main even when the test drives them from the main actor.
+nonisolated final class ExportServiceSpy: ExportService {
+    struct PlannedFailure: Error {}
+
+    private struct Captured {
+        var tables: [CSVTable] = []
+        var documents: [PDFDocumentModel] = []
+        var filenames: [String] = []
+    }
+
+    private let captured = Mutex(Captured())
+    private let failsEveryCall: Bool
+
+    init(failsEveryCall: Bool = false) {
+        self.failsEveryCall = failsEveryCall
+    }
+
+    var tables: [CSVTable] { captured.withLock { $0.tables } }
+    var documents: [PDFDocumentModel] { captured.withLock { $0.documents } }
+    var filenames: [String] { captured.withLock { $0.filenames } }
+
+    @concurrent func exportCSV(_ table: CSVTable, filename: String) async throws -> URL {
+        guard !failsEveryCall else { throw PlannedFailure() }
+        captured.withLock {
+            $0.tables.append(table)
+            $0.filenames.append(filename)
+        }
+        return URL(filePath: "/dev/null/\(filename)")
+    }
+
+    @concurrent func exportPDF(_ document: PDFDocumentModel, filename: String) async throws -> URL {
+        guard !failsEveryCall else { throw PlannedFailure() }
+        captured.withLock {
+            $0.documents.append(document)
+            $0.filenames.append(filename)
+        }
+        return URL(filePath: "/dev/null/\(filename)")
+    }
+}
 
 /// A fresh in-memory store holding the real schema — real persistence
 /// semantics, no disk, no CloudKit. Each call is an isolated store, so tests
