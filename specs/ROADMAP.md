@@ -24,7 +24,8 @@ own.
 | Spec | Status |
 |---|---|
 | `001-core-inventory` | **Shipped** — merged to `main` 2026-08-23 via [PR #1](https://github.com/EHaake/Trove/pull/1); spec, plan and tasks all Approved in specs/001-core-inventory/ |
-| `010-item-management-enhancements` | **Shipped** — merged to `main` 2026-08-30 via [PR #3](https://github.com/EHaake/Trove/pull/3); twenty acceptance criteria signed off, skeptical-review findings resolved or recorded in `tasks.md` |
+| `010-item-management-enhancements` | **Complete** — all tasks through the Phase 8 close-out done (2026-08-30); twenty acceptance criteria signed off; skeptical-review findings resolved or recorded in `tasks.md` |
+| `011-data-export` | **In progress** — spec approved 2026-08-30 in specs/011-data-export/; plan.md next |
 
 ## Future specs
 
@@ -103,26 +104,39 @@ actually useful once the app is in daily use.
   screen that doesn't block or get blocked by anything already in
   flight — it deserves a real Claude Design pass rather than an
   improvised layout, the same reasoning that held `008` to v2.
-- **`010-item-management-enhancements`** — **Shipped 2026-08-30 via
-  [PR #3](https://github.com/EHaake/Trove/pull/3)**; the full record
-  lives in `specs/010-item-management-enhancements/`. Kept here for the
-  origin story: it came up right as `001` was wrapping — a request for
-  swipe-left-to-delete that grew into a broader item-management pass —
-  and was deliberately kept out of `001` rather than bolted on, per
-  this file's own one-feature-one-spec argument. It ended up covering
-  swipe delete/edit/copy on both lists, drag-to-reorder with an
-  accessible VoiceOver path, expanded sorting with manual-order
-  tie-breaks, and a design-depth refresh (the extruded-plate
-  treatment).
+- **`010-item-management-enhancements`** — Came up right as `001` was
+  wrapping up: a request for swipe-left-to-delete on `ItemListView`/
+  `WishlistView` rows (standard iOS convention), which grew into wanting
+  a broader look at item-management interactions before committing to a
+  spec. Deliberately kept out of `001` rather than bolted on as "just
+  one more thing" — `001`'s `tasks.md` was already fully checked off,
+  and growing it further would have undercut the same one-feature-one-
+  spec discipline this file's own opening section argues for. The exact
+  scope beyond swipe-to-delete is still open, to be settled in the
+  actual idea conversation rather than guessed at here.
 
-  The two considerations this entry used to carry both resolved during
-  the build. The `.swipeActions()`-needs-a-`List` constraint was real,
-  and was settled by adopting `List` with every visible default
-  overridden — the custom row styling `T056` once worried a `List`
-  would clobber survived intact. And the bare `DesireGauge` legibility
-  flag became `010`'s stepped-ramp redesign with its per-row "DESIRE"
-  legend, explicitly recorded in that spec's plan as reversing `001`'s
-  "no legend" decision rather than quietly refining it.
+  One real technical consideration already surfaced, worth carrying into
+  that conversation rather than rediscovering: SwiftUI's `.swipeActions()`
+  is `List`-specific as far as investigated so far, and Trove's rows are
+  deliberately `ScrollView`-based — the `T056` pull-to-refresh
+  investigation already considered and rejected converting to `List`,
+  since it would clobber the custom row styling (thumbnails, the desire
+  dial/gauge) Design actually drew. Verify that constraint fresh rather
+  than assuming it still holds by the time this spec starts; expect
+  either a `List` reconsideration or a custom gesture implementation,
+  not a one-line modifier.
+
+  A second, unrelated consideration for the same spec: the wishlist
+  row's `DesireGauge` doesn't read as a desire indicator on first
+  encounter without already knowing what it is — flagged during `001`'s
+  final review, on the actual running app, not hypothetically. `T036c`'s
+  original "no legend" decision assumed the shape would already be
+  learned from the form before someone saw a bare row, which doesn't
+  hold if a row is the first encounter. Kept unlabeled for now,
+  deliberately, rather than adding scope this close to `001`'s merge —
+  a short label ("Desire" was one candidate raised) is one option, but
+  worth actually exploring rather than assuming that's the fix once
+  this spec is properly scoped.
 - **`011-data-export`** — CSV and PDF export of the collection. Not a
   new idea, a validated one: `001`'s original `spec.md` explicitly
   listed "Insurance-document export or valuation reports" as a non-goal,
@@ -146,6 +160,26 @@ actually useful once the app is in daily use.
   format any spreadsheet app already opens and can re-save as `.xlsx`
   itself in one step. CSV alone gets the actual portability benefit
   without the dependency question.
+
+  **Scoped 2026-08-30** (spec now approved in `specs/011-data-export/`
+  — see it for the settled shape: view-scoped export via a new "…"
+  toolbar menu on both list screens, full detail-field CSV rows, a
+  collection-document PDF with first-photo entries). Three things were
+  deliberately deferred out of that scoping, recorded here so they
+  aren't lost:
+
+  - **Export-everything** (both collections at once, from anywhere) —
+    deferred to a settings menu that doesn't exist yet; now the
+    motivating first occupant of `013-settings-menu` below.
+  - **Dashboard export** — a future custom export of the Dashboard's
+    own content (summary figures plus supporting detail), distinct
+    from the list exports; the Dashboard has no view context for the
+    export-follows-view rule to act on, so it needs its own designed
+    shape rather than inheriting this spec's.
+  - **Per-item export from the detail screens** — per-item PDF spec
+    sheets as a refinement of the collection document; plausibly
+    lands alongside or after `013`'s export-everything, whenever an
+    export surface exists beyond the two list screens.
 - **`012-data-import`** — CSV import of externally-tracked gear. Aimed
   at the adoption barrier from the other direction: someone already
   tracking their collection in a spreadsheet shouldn't have to re-enter
@@ -177,11 +211,29 @@ actually useful once the app is in daily use.
   can reuse whatever canonical schema export settles on for representing
   an item as a row, which also enables a natural "export a template,
   fill it in, re-import" pattern. Worth designing export's schema first
-  even if import's own build happens later.
+  even if import's own build happens later. With `011`'s spec approved,
+  that schema now has a concrete definition to build against (`011`'s
+  CSV section: full detail-field rows, ISO 8601 dates, locale-
+  independent plain-decimal money — the money rule exists specifically
+  so this spec can parse it back).
+- **`013-settings-menu`** — A settings surface for the app, which
+  doesn't exist yet in any form. Deferred out of `011-data-export`'s
+  scoping (2026-08-30): `011` deliberately has no "export everything"
+  — export follows the current view — and the export-everything action
+  (both collections, from anywhere, in one gesture) was parked here
+  rather than bolted onto a list screen where it would break that
+  rule. That makes export-everything this spec's first motivating
+  occupant, not its whole scope; what else belongs in a settings menu
+  (theme selection once `004` lands is an obvious candidate) should be
+  settled in this spec's own idea conversation rather than accumulated
+  here. Worth noting `011` introduces the app's first "…" overflow
+  menu on the list screens — whether settings lives behind a grown
+  version of that affordance, a Dashboard entry point, or something
+  else entirely is an open design question for this spec.
 
 ## Working convention
 
 Per `CLAUDE.md`: one branch per spec, no new spec branch starts until the
 current one is merged to `main`. This roadmap is a backlog, not a
-commitment to order — pick whichever spec is actually useful next now
-that the app's in real use.
+commitment to order — pick whichever spec is actually useful next once
+`001-core-inventory` ships and the app's in real use.
