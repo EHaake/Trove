@@ -334,7 +334,17 @@ reported.
   *Done when*: builds; a stale file seeded in `tmp/Exports/` is gone
   after a fresh launch (simulator check recorded in the Done note).
 
-- [ ] **T015 — `ExportWiringTests` source-scan guards.**
+- [x] **T015 — `ExportWiringTests` source-scan guards.**
+  *Done (2026-08-31)*: five guards — badge fed by view-model state and
+  firing both intents (per list), share sheet + failure alert wired
+  (per list), both menu actions individually gated on `canExport`,
+  UIKit confined (both `UIActivityViewController` and `import UIKit`
+  walked across the whole app target against the two flagged exception
+  files), and the launch sweep actually called from `TroveApp`.
+  Mutation batch: four compile-clean breaks applied at once (dropped a
+  `.disabled`, emptied an intent closure, leaked UIKit into
+  DashboardView, deleted the purge call) — all four caught, 5 issues
+  across all 5 guards. Reverted; full suite 597/597 green.
   Per the `ReorderWiringTests` pattern: both list views gate both menu
   actions on `canExport`; both intents are wired in both views;
   `UIActivityViewController` appears **only** in `ShareSheet.swift`
