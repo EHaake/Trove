@@ -273,7 +273,15 @@ reported.
 
 ## Phase 5 — UI, wiring, and tokens
 
-- [ ] **T011 — `ExportBadge.swift` + `ShareSheet.swift`.**
+- [x] **T011 — `ExportBadge.swift` + `ShareSheet.swift`.**
+  *Done (2026-08-31)*: badge drawn to `SortBadge`'s proportions with the
+  T029c safety argument in its doc comment (constant-size glyph — the
+  `DetailOverflowMenu` shape — with the custom dropdown named as the
+  known fallback); spinner swap + whole-control disable while
+  exporting; both menu items gated on `canExport`. `ShareSheet` is the
+  flagged `UIViewControllerRepresentable` exception, ~20 lines, zero
+  logic, with the ShareLink/fileExporter rejections recorded in its
+  doc comment. Build green, previews compile, full suite 591/591.
   `ExportBadge`: ellipsis glyph in a brass hairline-bordered badge
   matching `SortBadge`'s height, hosting the system `Menu` with the two
   actions ("Export as CSV…", "Export as PDF…"), a `ProgressView` swap
