@@ -1,0 +1,157 @@
+# 011 — Data Export
+
+Status: **Draft** (pending review)
+
+## What and why
+
+Export the collection out of Trove as CSV (portable data — backup, or
+moving to another tool) and PDF (presentation-quality — insurance
+documentation, sharing). This is the differentiator against the
+spreadsheet most hobbyists already use: a spreadsheet can't produce an
+insurance-grade document of itself, and Trove's data shouldn't be locked
+in.
+
+Traces to `001`'s explicit non-goal ("Insurance-document export or
+valuation reports"), promoted via `ROADMAP.md`. Decisions made ahead of
+this spec, carried in from the roadmap and the idea conversation:
+
+- CSV only on the data side — no `.xlsx`. Any spreadsheet app opens CSV
+  and can re-save it as `.xlsx` itself; genuine Excel format would
+  likely require a third-party package.
+- Photos belong to the PDF, not the CSV.
+- The CSV schema is the canonical "item as a row" representation —
+  `012-data-import` will reuse it, and export's schema is deliberately
+  designed first.
+
+## Core behavior: export follows the view
+
+There is no global "export everything" in this spec. Export acts on
+**what the user is currently looking at**:
+
+- On the **Items list**, export produces the owned items currently
+  visible — respecting the active category filter *and* the current
+  sort order. Filtered to one category exports that category; "All"
+  exports everything owned. Rows appear in the file in exactly the
+  order they appear on screen.
+- On the **Wishlist**, the same rule with wishlist items and the
+  wishlist's own filter and sort.
+- Items and wishlist are always separate exports with separate schemas
+  — never combined into one file or document.
+
+## Entry point
+
+A "…" (more) toolbar action at the top right of both list screens,
+positioned after the existing sort picker (which shifts left to make
+room). Tapping it opens a small menu with two actions:
+
+- **Export as CSV…**
+- **Export as PDF…**
+
+Each goes directly to the iOS share sheet with the generated file —
+save to Files, AirDrop, mail, anything the sheet offers. No custom
+delivery UI, no in-app export history.
+
+The "…" menu is this app's first overflow affordance and is expected to
+accumulate future actions (and eventually appear on other screens); this
+spec adds it to the two list screens only, with only the two export
+actions in it.
+
+Both export actions are **disabled when the current view is empty**
+(no items match the active filter, or the collection is empty). An
+empty file is never produced.
+
+## What gets exported per item
+
+**The full detail-screen field set, not the list row's.** Every
+user-visible persisted field that appears on the item detail screen is
+included — name, category, prices (paid and current value), dates,
+condition, serial number, notes, desire level, and any other detail
+fields — so the CSV is a genuine backup of the data, not a summary.
+The authoritative field-by-field column list gets pinned in `plan.md`
+against the actual model, not guessed here; the rule is "if the detail
+screen shows it, the export includes it," with photos as the one
+exception (PDF only, below).
+
+The wishlist export follows the same rule against the wishlist detail
+screen's fields (name, category, estimated cost, desire-to-own, notes,
+added date).
+
+## The CSV
+
+- One file per export. UTF-8, header row, standard quoting/escaping.
+- Dates in ISO 8601 (`2026-08-30`).
+- Money as plain decimal numbers, no currency symbol, dot decimal
+  separator regardless of locale (`1250.00`) — this is a data format,
+  and `012`'s import will parse it back; locale-formatted money in a
+  CSV is a re-import landmine.
+- Desire level as its integer (1–5 owned, 1–3 wishlist).
+- Category as the full path string, exactly as stored.
+- Filename: `Trove-Items-YYYY-MM-DD.csv` / `Trove-Wishlist-YYYY-MM-DD.csv`.
+
+## The PDF
+
+A **collection document**, not per-item sheets: a cover summary
+followed by one entry per exported item.
+
+- **Cover summary**: document title, date generated, what the export
+  covers (the active filter, e.g. "Category: Guitars", or "All items"),
+  item count, and — for the items export — total current value and
+  total paid across the exported set. The summary describes the
+  exported subset, not the whole collection, consistent with
+  export-follows-view.
+- **Per-item entry**: the item's first photo (if it has one; entries
+  without photos lay out cleanly without a gap), followed by the same
+  full detail field set as the CSV. One photo per item in v1 even when
+  more exist.
+- The wishlist PDF is the same document shape with the wishlist field
+  set; its cover totals the estimated costs of the exported set.
+- Visual treatment should read as belonging to Trove (typography and
+  restraint consistent with the app) but is print-first: light
+  background, dark text — this is a document for paper and PDF viewers,
+  not a screenshot of the dark UI. Exact treatment is a design/plan
+  concern, not fixed here.
+- Filename: `Trove-Items-YYYY-MM-DD.pdf` / `Trove-Wishlist-YYYY-MM-DD.pdf`.
+
+## Acceptance criteria
+
+1. Both list screens show the "…" toolbar action, right of the sort
+   picker, on all size classes; the sort picker's behavior is unchanged.
+2. The "…" menu shows exactly two actions, Export as CSV… and Export
+   as PDF…, both disabled when the current view is empty.
+3. Exporting from a filtered Items list produces a file containing
+   exactly the visible items, in the visible order; changing filter or
+   sort and re-exporting reflects the change.
+4. The same holds on the Wishlist with its filter and sort.
+5. The CSV opens correctly in Numbers and in Excel (via a standard
+   CSV import) with all columns intact — including fields containing
+   commas, quotes, and newlines in notes.
+6. A round-trip sanity check: every detail-screen field for a given
+   item can be located in that item's CSV row with the correct value.
+7. Money and date values in the CSV match the formats above regardless
+   of device locale.
+8. The PDF's cover figures match the app's own arithmetic for the same
+   filtered set.
+9. An item with no photos produces a clean PDF entry; an item with
+   several photos shows exactly its first.
+10. Both formats deliver via the standard share sheet; canceling the
+    sheet leaves no residue (no stray temp files accumulating across
+    repeated exports).
+11. Exporting a large collection (hundreds of items, with photos) does
+    not block the UI — some progress affordance appears if generation
+    is not effectively instant.
+
+## Non-goals (explicit)
+
+- **Export-everything** (both lists at once, from anywhere) — deferred
+  to a future settings menu, which this deferral partly motivates.
+- **Dashboard export** — the Dashboard has no view context to follow; a
+  future custom dashboard export (summary figures plus detail) is a
+  roadmap idea, not this spec.
+- **Detail-screen / per-item export** — per-item PDF sheets are a
+  possible future refinement of the collection document.
+- **`.xlsx`** — decided ahead of this spec, see above.
+- **Multi-photo PDF entries** — first photo only in v1.
+- **Import** — `012`, which consumes this spec's CSV schema.
+- **Export history, scheduling, or cloud delivery** — the share sheet
+  is the whole delivery story.
+- **Combined items+wishlist files or documents.**
