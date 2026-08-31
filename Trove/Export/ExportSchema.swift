@@ -75,6 +75,15 @@ nonisolated struct CSVTable: Sendable {
 nonisolated struct PDFField: Sendable {
     let label: String
     let value: String
+    /// Money, dates, and serials draw in the mono face — the same per-row
+    /// distinction the detail screens make.
+    let isMono: Bool
+
+    init(label: String, value: String, isMono: Bool = false) {
+        self.label = label
+        self.value = value
+        self.isMono = isMono
+    }
 }
 
 /// One item's entry in the PDF collection document.
@@ -133,6 +142,80 @@ extension WishlistExportRecord {
             createdAt: item.createdAt,
             notes: item.notes,
             firstPhotoID: PhotoSelection.inDisplayOrder(item.photos ?? []).first?.persistentModelID
+        )
+    }
+}
+
+extension PDFEntry {
+    /// The item entry's field grid. Same field *set* as the CSV (plan.md's
+    /// rule), presented in the detail screen's own vocabulary and formats —
+    /// "Worth now", "Bought from", whole-dollar money, "Not yet valued" for
+    /// the unvalued case — because the PDF is presentation where the CSV is
+    /// data. Empty optionals are skipped, exactly as the detail screen
+    /// filters its empty rows.
+    nonisolated init(record: ItemExportRecord, calendar: Calendar = .current) {
+        var fields: [PDFField] = [
+            PDFField(
+                label: "Paid",
+                value: record.purchasePriceCents.formattedAsWholeCurrency(currencyCode: record.currencyCode),
+                isMono: true
+            ),
+            PDFField(
+                label: "Worth now",
+                value: record.currentValueCents
+                    .map { $0.formattedAsWholeCurrency(currencyCode: record.currencyCode) }
+                    ?? "Not yet valued",
+                isMono: record.currentValueCents != nil
+            ),
+            PDFField(label: "Currency", value: record.currencyCode, isMono: true),
+            PDFField(
+                label: "Bought",
+                value: ExportSchema.day(from: record.purchaseDate, calendar: calendar),
+                isMono: true
+            ),
+        ]
+        if let location = record.purchaseLocation, !location.isEmpty {
+            fields.append(PDFField(label: "Bought from", value: location))
+        }
+        fields.append(PDFField(label: "Desire to keep", value: "\(record.desireToKeep) / 5", isMono: true))
+        fields.append(PDFField(label: "Condition", value: record.conditionRawValue.capitalized))
+        if let conditionNotes = record.conditionNotes, !conditionNotes.isEmpty {
+            fields.append(PDFField(label: "Condition notes", value: conditionNotes))
+        }
+        if let serial = record.serialNumber, !serial.isEmpty {
+            fields.append(PDFField(label: "Serial number", value: serial, isMono: true))
+        }
+
+        self.init(
+            eyebrow: record.categoryPath.split(separator: "/").joined(separator: " · "),
+            name: record.name,
+            fields: fields,
+            notes: (record.notes?.isEmpty == false) ? record.notes : nil,
+            photoID: record.firstPhotoID
+        )
+    }
+
+    /// See `init(record: ItemExportRecord, ...)` — wishlist vocabulary.
+    nonisolated init(record: WishlistExportRecord, calendar: Calendar = .current) {
+        self.init(
+            eyebrow: record.categoryPath.split(separator: "/").joined(separator: " · "),
+            name: record.name,
+            fields: [
+                PDFField(
+                    label: "Estimated cost",
+                    value: record.estimatedCostCents.formattedAsWholeCurrency(currencyCode: record.currencyCode),
+                    isMono: true
+                ),
+                PDFField(label: "Currency", value: record.currencyCode, isMono: true),
+                PDFField(label: "Desire to own", value: "\(record.desireToOwn) / 3", isMono: true),
+                PDFField(
+                    label: "Added",
+                    value: ExportSchema.day(from: record.createdAt, calendar: calendar),
+                    isMono: true
+                ),
+            ],
+            notes: (record.notes?.isEmpty == false) ? record.notes : nil,
+            photoID: record.firstPhotoID
         )
     }
 }

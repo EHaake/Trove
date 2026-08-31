@@ -163,6 +163,64 @@ struct ExportSchemaTests {
         #expect(wishlist.rows.isEmpty)
     }
 
+    // MARK: - PDF entry builders (T007)
+
+    /// The entry grid speaks the detail screen's language ("Worth now",
+    /// "Not yet valued") and skips empty optionals the way the screen
+    /// filters its empty rows — presentation, where the CSV is data.
+    @Test func itemEntrySkipsEmptyRowsAndSpeaksScreenLanguage() {
+        let record = ItemExportRecord(
+            name: "Squier",
+            categoryPath: "Music/Guitars/Electric",
+            purchasePriceCents: 38_000,
+            currencyCode: "USD",
+            purchaseDate: .now,
+            purchaseLocation: nil,
+            currentValueCents: nil,
+            desireToKeep: 1,
+            conditionRawValue: "good",
+            conditionNotes: nil,
+            serialNumber: nil,
+            notes: nil,
+            firstPhotoID: nil
+        )
+
+        let entry = PDFEntry(record: record)
+        #expect(entry.eyebrow == "Music · Guitars · Electric")
+        #expect(entry.name == "Squier")
+        #expect(entry.notes == nil)
+
+        let labels = entry.fields.map(\.label)
+        #expect(labels == ["Paid", "Worth now", "Currency", "Bought", "Desire to keep", "Condition"])
+
+        let worthNow = entry.fields[1]
+        #expect(worthNow.value == "Not yet valued")
+        // Prose, not a figure — it draws in the sans face like the screen.
+        #expect(!worthNow.isMono)
+        #expect(entry.fields[0].value == "$380")
+        #expect(entry.fields[0].isMono)
+        #expect(entry.fields[5].value == "Good")
+    }
+
+    @Test func wishlistEntryCarriesItsFourFieldsAndNotes() {
+        let record = WishlistExportRecord(
+            name: "Vox AC15",
+            categoryPath: "Music/Amps",
+            estimatedCostCents: 105_000,
+            currencyCode: "USD",
+            desireToOwn: 3,
+            createdAt: .now,
+            notes: "Custom, not C2",
+            firstPhotoID: nil
+        )
+
+        let entry = PDFEntry(record: record)
+        #expect(entry.fields.map(\.label) == ["Estimated cost", "Currency", "Desire to own", "Added"])
+        #expect(entry.fields[0].value == "$1,050")
+        #expect(entry.fields[2].value == "3 / 3")
+        #expect(entry.notes == "Custom, not C2")
+    }
+
     // MARK: - Model → record mapping (T002)
 
     @Test func itemRecordCarriesEveryFieldFromTheModel() throws {

@@ -71,9 +71,177 @@ nonisolated enum PDFComposer {
 
         let writer = PageWriter(context: context)
         drawCover(document.cover, on: writer)
+        // The cover stands alone; the collection begins on its own page.
+        if !document.entries.isEmpty {
+            writer.newPage()
+        }
+        for entry in document.entries {
+            autoreleasepool {
+                drawEntry(entry, on: writer)
+            }
+        }
         writer.endPageIfOpen()
         context.closePDF()
         return data as Data
+    }
+
+    // MARK: - Entries
+
+    /// The reserved photo box (T008 draws into it); text narrows beside it.
+    static let photoBox = CGSize(width: 132, height: 99)
+    private static let photoGap: CGFloat = 16
+    private static let fieldLabelWidth: CGFloat = 96
+    private static let fieldColumnGap: CGFloat = 10
+
+    /// One item entry: rule, eyebrow + name (photo box top-right when the
+    /// entry has one), the field grid, then notes flowed at full width.
+    ///
+    /// Pagination per plan.md: the rule-to-first-field head is kept together
+    /// — an entry never opens at the very bottom of a page — while field
+    /// rows may break between rows and notes flow across pages via
+    /// continuation frames.
+    private static func drawEntry(_ entry: PDFEntry, on writer: PageWriter) {
+        let hasPhoto = entry.photoID != nil
+        let columnWidth = hasPhoto ? contentWidth - photoBox.width - photoGap : contentWidth
+
+        let eyebrowText = styled(
+            entry.eyebrow.uppercased(),
+            font: PrintType.mono(7.5, weight: .medium),
+            color: PrintPalette.secondary,
+            kern: 1.2
+        )
+        let nameText = styled(entry.name, font: PrintType.display(14), color: PrintPalette.ink)
+
+        // Keep-together floor: rule, head, and the first field row (or the
+        // photo box if taller) must fit, else the entry starts a new page.
+        let headHeight = measuredHeight(eyebrowText, width: columnWidth) + 5
+            + measuredHeight(nameText, width: columnWidth) + 10
+        let firstRowHeight = entry.fields.first.map { fieldRowHeight($0, width: columnWidth) } ?? 0
+        let keepTogether = 18 + 0.75 + 14
+            + max(headHeight + firstRowHeight, hasPhoto ? photoBox.height : 0)
+        if writer.remaining < keepTogether {
+            writer.newPage()
+        }
+
+        writer.advance(18)
+        writer.drawRule()
+        writer.advance(14)
+
+        let entryTopCursor = writer.cursor
+        let entryTopPage = writer.pageIndex
+        writer.draw(eyebrowText, width: columnWidth)
+        writer.advance(5)
+        writer.draw(nameText, width: columnWidth)
+        writer.advance(10)
+
+        for field in entry.fields {
+            drawFieldRow(field, columnWidth: columnWidth, on: writer)
+        }
+
+        // Notes clear the photo box — but only while still on the entry's
+        // first page; a page break has already cleared it otherwise.
+        if hasPhoto, writer.pageIndex == entryTopPage {
+            let photoBottom = entryTopCursor - photoBox.height
+            if writer.cursor > photoBottom {
+                writer.advance(writer.cursor - photoBottom)
+            }
+        }
+
+        if let notes = entry.notes {
+            writer.advance(10)
+            drawFlowed(
+                styled(notes, font: PrintType.sans(10), color: PrintPalette.ink),
+                on: writer
+            )
+        }
+        writer.advance(4)
+    }
+
+    private static func fieldTexts(_ field: PDFField) -> (label: NSAttributedString, value: NSAttributedString) {
+        (
+            styled(
+                field.label.uppercased(),
+                font: PrintType.mono(7.5, weight: .medium),
+                color: PrintPalette.secondary,
+                kern: 1.0
+            ),
+            styled(
+                field.value,
+                font: field.isMono ? PrintType.mono(10.5) : PrintType.sans(10.5),
+                color: PrintPalette.ink
+            )
+        )
+    }
+
+    private static func fieldRowHeight(_ field: PDFField, width: CGFloat) -> CGFloat {
+        let (label, value) = fieldTexts(field)
+        return max(
+            measuredHeight(label, width: fieldLabelWidth),
+            measuredHeight(value, width: width - fieldLabelWidth - fieldColumnGap)
+        ) + 7
+    }
+
+    /// Rows may break between rows: a row that doesn't fit starts the next
+    /// page, so even a pathologically tall field grid can't clip data.
+    private static func drawFieldRow(_ field: PDFField, columnWidth: CGFloat, on writer: PageWriter) {
+        if writer.remaining < fieldRowHeight(field, width: columnWidth) {
+            writer.newPage()
+        }
+        let (label, value) = fieldTexts(field)
+        writer.drawRow(
+            label: label,
+            labelWidth: fieldLabelWidth,
+            value: value,
+            gap: fieldColumnGap,
+            width: columnWidth
+        )
+    }
+
+    /// Notes flow: draw as much as fits, `CTFrameGetVisibleStringRange`
+    /// yields the resume point, continuation frames fill fresh pages until
+    /// the text is spent — plan.md's mid-notes split.
+    private static func drawFlowed(_ text: NSAttributedString, on writer: PageWriter) {
+        let framesetter = CTFramesetterCreateWithAttributedString(text)
+        var location = 0
+        var retriedOnFreshPage = false
+        while location < text.length {
+            if writer.remaining < 24 {
+                writer.newPage()
+            }
+            let capacity = writer.remaining
+            let rect = CGRect(x: margin, y: writer.cursor - capacity, width: contentWidth, height: capacity)
+            let frame = CTFramesetterCreateFrame(
+                framesetter,
+                CFRange(location: location, length: 0),
+                CGPath(rect: rect, transform: nil),
+                nil
+            )
+            CTFrameDraw(frame, writer.context)
+            let visible = CTFrameGetVisibleStringRange(frame)
+            guard visible.length > 0 else {
+                // Nothing fit. Once is a page-boundary sliver; twice — on a
+                // fresh full page — means the text can never fit, and
+                // looping forever would be worse than stopping.
+                if retriedOnFreshPage { return }
+                retriedOnFreshPage = true
+                writer.newPage()
+                continue
+            }
+            retriedOnFreshPage = false
+            location += visible.length
+            if location < text.length {
+                writer.newPage()
+            } else {
+                let used = CTFramesetterSuggestFrameSizeWithConstraints(
+                    framesetter,
+                    visible,
+                    nil,
+                    CGSize(width: contentWidth, height: .greatestFiniteMagnitude),
+                    nil
+                ).height
+                writer.advance(ceil(used))
+            }
+        }
     }
 
     // MARK: - Cover
@@ -180,6 +348,7 @@ nonisolated enum PDFComposer {
 private nonisolated final class PageWriter {
     let context: CGContext
     private(set) var cursor: CGFloat = 0
+    private(set) var pageIndex = -1
     private var pageIsOpen = false
 
     init(context: CGContext) {
@@ -194,6 +363,7 @@ private nonisolated final class PageWriter {
         context.setFillColor(PrintPalette.paper)
         context.fill(CGRect(origin: .zero, size: PDFComposer.pageSize))
         cursor = PDFComposer.pageSize.height - PDFComposer.margin
+        pageIndex += 1
         pageIsOpen = true
     }
 
@@ -221,6 +391,42 @@ private nonisolated final class PageWriter {
             height: 0.75
         ))
         advance(0.75)
+    }
+
+    /// A label/value pair sharing one top edge — the field grid's row. The
+    /// caps label sits a couple of points lower so its smaller face reads
+    /// aligned with the value's first line.
+    func drawRow(
+        label: NSAttributedString,
+        labelWidth: CGFloat,
+        value: NSAttributedString,
+        gap: CGFloat,
+        width: CGFloat
+    ) {
+        let valueWidth = width - labelWidth - gap
+        let labelHeight = PDFComposer.measuredHeight(label, width: labelWidth)
+        let valueHeight = PDFComposer.measuredHeight(value, width: valueWidth)
+        drawAt(label, x: PDFComposer.margin, top: cursor - 2, width: labelWidth, height: labelHeight)
+        drawAt(value, x: PDFComposer.margin + labelWidth + gap, top: cursor, width: valueWidth, height: valueHeight)
+        advance(max(labelHeight, valueHeight) + 7)
+    }
+
+    private func drawAt(
+        _ text: NSAttributedString,
+        x: CGFloat,
+        top: CGFloat,
+        width: CGFloat,
+        height: CGFloat
+    ) {
+        let rect = CGRect(x: x, y: top - height - 1, width: width, height: height + 2)
+        let framesetter = CTFramesetterCreateWithAttributedString(text)
+        let frame = CTFramesetterCreateFrame(
+            framesetter,
+            CFRange(location: 0, length: 0),
+            CGPath(rect: rect, transform: nil),
+            nil
+        )
+        CTFrameDraw(frame, context)
     }
 
     /// Draws at the cursor and advances by the measured height. The frame

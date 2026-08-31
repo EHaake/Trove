@@ -170,7 +170,22 @@ reported.
   label, and the formatted totals for a seeded set.
   *Done when*: tests green against both document kinds.
 
-- [ ] **T007 — Entry layout and pagination.**
+- [x] **T007 — Entry layout and pagination.**
+  *Done (2026-08-30)*: entry engine per plan — keep-together for
+  rule/head/first-field (or the photo box when taller), field rows that
+  break between rows so even a pathological grid can't clip data, and
+  notes flowing via `CTFrameGetVisibleStringRange` continuation frames.
+  The record→`PDFEntry` builders landed here too (schema side, detail-
+  screen vocabulary — "Worth now", "Not yet valued" — empty optionals
+  skipped as the screen skips them), plus `PDFField.isMono`. The cover
+  now stands alone; entries begin on a fresh page. One false alarm
+  worth recording: the continuation test failed with the tail
+  "missing" — a diagnostic showed the marker sitting exactly where it
+  belonged, line-broken at a hyphen (`END-OF-NOTES-` / `MARKER`) that
+  PDFKit extracts as a newline; the fixture's marker is now one
+  unbreakable token. Mutation check: keep-together removed → two
+  entries orphaned name from first field row, test red. Reverted; full
+  suite 575/575 green.
   Per-item entry per plan: hairline rule, photo top-right 132×99 pt
   aspect-fit (text spans full width when absent), category eyebrow,
   name, two-column field grid (same field set as the CSV), notes
