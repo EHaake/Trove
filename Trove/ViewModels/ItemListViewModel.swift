@@ -299,11 +299,17 @@ final class ItemListViewModel {
         }
 
         // Tied all the way down — same attribute value *and* a shared manual
-        // position. Name then id keeps the order fully determined by the
-        // data rather than by whatever `FetchDescriptor` returns.
-        let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
-        if byName != .orderedSame {
-            return byName == .orderedAscending
+        // position, which is the real state of a pre-`010` store: every
+        // legacy item at `sortOrder` 0 until the first drag renumbers. The
+        // launch-time backfill that used to assign positions here was
+        // removed at the T039 close-out (2026-08-30): its per-device flag
+        // raced CloudKit sync, so a second device's upgrade could rewrite an
+        // arrangement the first device had already synced. Falling back to
+        // `createdAt` at *sort time* shows the same order the backfill wrote
+        // — the order things were added — with no migration write to race.
+        // `id` beneath it keeps even same-instant creations deterministic.
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt < rhs.createdAt
         }
         return lhs.id.uuidString < rhs.id.uuidString
     }

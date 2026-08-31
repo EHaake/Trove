@@ -267,8 +267,11 @@ underneath — selecting "Custom" again shows it exactly as last
 arranged.
 
 Existing owned items need a sensible starting manual order the first
-time this ships, rather than every item tying at the same default value
-— the concrete backfill strategy is a `plan.md` decision.
+time this ships, rather than an arbitrary one — the concrete strategy
+is a `plan.md` decision. (Resolved there, revised 2026-08-30: a
+sort-time `createdAt` fallback beneath tied positions, not a stored
+backfill — the launch-time write shipped first and was removed after
+review showed it could race CloudKit sync on a second device.)
 
 Both lists' reordering has a VoiceOver-accessible path — the same
 explicit "Move up"/"Move down" row actions on both screens. See

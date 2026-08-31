@@ -26,27 +26,39 @@ since every wishlist item has existed with a manual position since
 default alone leaves every existing item at `sortOrder = 0`
 simultaneously: not a manual order, a tie across the whole collection.
 
-**Proposed approach: a one-time, app-launch-time backfill routine, not
-a formal `SchemaMigrationPlan`.** On first launch after this ships:
-fetch all existing items ordered by `createdAt` ascending, assign
-sequential `sortOrder` values (`0, 1, 2, ...`), save. Guarded by a
-persisted flag (`UserDefaults` bool, e.g. `hasBackfilledItemSortOrder`)
-read once at launch — the same narrow, single-purpose shape as
-`T050`'s `-uiTesting` argument. Once the flag is set, the routine never
-runs again, and — this is the important part — it never re-derives or
-re-checks whether the current values "look backfilled." A heuristic
-that tries to detect "has the user already customized this" and
-re-backfills when it guesses wrong is exactly the kind of quiet
-data-loss this project has already been burned by once (the
-photo-orphan defect, the false-passing persistence tests) — a flag
-that flips once and is never consulted for its correctness again is
-the safer shape.
+**Shipped approach (revised at the T039 close-out, 2026-08-30): no
+migration write at all — a `createdAt` fallback at sort time.** The
+original approach below shipped first and was removed; both are kept
+on the record because the flaw is instructive.
 
-One detail found at T005, not anticipated here: the ephemeral
-`-uiTesting` store is deliberately skipped and never sets the flag.
-`UserDefaults` isn't scoped to a store — a flag burned during a
-UI-test launch, against a throwaway store with nothing in it, would
-permanently block the real store's backfill on that device.
+*Original (removed):* a one-time, launch-time backfill — fetch all
+items by `createdAt` ascending, assign sequential `sortOrder` values,
+save, guarded by a `UserDefaults` bool read once at launch. The
+reasoning carefully rejected "does this look backfilled" heuristics as
+quiet data loss, and skipped the ephemeral `-uiTesting` store so a
+test launch couldn't burn the flag. What it never considered — caught
+by T039's skeptical review — was a **second device**: the flag is
+per-device, CloudKit sync is on unconditionally, and the backfill ran
+at launch *before* any sync import could land. Device A upgrades,
+backfills, the user rearranges; device B upgrades later, sees its own
+flag unset, rewrites every position by `createdAt`, and syncs that
+over the arrangement. The very section that warned about quiet
+destruction of a hand-arranged order had specified a mechanism that
+could do exactly that.
+
+*Current:* `ItemListViewModel.isOrderedBefore`'s deepest tie floor —
+reached only when both the sort attribute and the manual position are
+tied, i.e. the pre-`010` all-zeros state — orders by `createdAt`, then
+`id`. Same visible order the backfill wrote (the order things were
+added), no write to race sync, nothing to guard with a flag. The first
+real drag renumbers through `ManualOrderHelper.reorder` exactly as any
+drag does, as a user-initiated write. `ItemSortOrderBackfill`, its
+launch call, and its test suite were removed with the mechanism — the
+tests died with their subject, not to make anything pass — replaced by
+sort-time tests (`customSortOnAnUnbackfilledStoreFollowsCreationOrder`,
+`unvaluedItemsAtASharedPositionFollowCreationOrder`) whose fixtures
+oppose name order and were mutation-verified red against the old
+name-based floor.
 
 Why `createdAt` specifically, not one of `Item`'s other three sortable
 attributes: none of desire-to-keep, value, or purchase date is more

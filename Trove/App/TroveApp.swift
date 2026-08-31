@@ -33,15 +33,6 @@ struct TroveApp: App {
             // CloudKit mirror has nothing to wait for, and the monitor is
             // what keeps every empty state from having to know that.
             syncMonitor = SyncMonitor(mode: store.mode)
-            // One-time: items that predate `Item.sortOrder` (010) get a real
-            // manual order before any screen reads one. Failure is silent on
-            // purpose — the flag only flips after a successful save, so the
-            // next launch just tries again, and nothing else at startup
-            // depends on the order existing.
-            try? ItemSortOrderBackfill.runIfNeeded(
-                mode: store.mode,
-                context: store.container.mainContext
-            )
         } catch {
             // Reachable only once the CloudKit configuration has already
             // failed and been retried without it, so the remaining causes are

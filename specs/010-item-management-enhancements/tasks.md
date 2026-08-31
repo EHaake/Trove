@@ -1449,6 +1449,26 @@ designs added. Decisions, all theirs, recorded before execution:
       **mutation-verified**: run against the old comparator, both go
       red. Suite 543 in 85 green.
 
+- [x] **T039c** — The sort-order backfill is removed in favor of a
+      sort-time `createdAt` floor (close-out decision 1b). T039's
+      review found the backfill's per-device `UserDefaults` flag races
+      CloudKit sync: a second device upgrading later rewrites every
+      position by `createdAt` before the first device's arrangement
+      can import, and syncs the rewrite back over it — quiet
+      destruction of a hand-arranged order, the exact failure the
+      backfill's own design notes warned against. Now the comparator's
+      deepest floor (reached only when attribute *and* manual position
+      tie — the pre-`010` all-zeros state) orders by `createdAt` then
+      `id`: the same visible order the backfill wrote, with no
+      migration write to race and nothing to flag. The first drag
+      renumbers as an ordinary user write. `ItemSortOrderBackfill`,
+      its launch call, and its 8-test suite are gone — **deleted with
+      their subject, not to make anything pass** — replaced by two
+      sort-time tests with name-opposing fixtures, mutation-verified
+      red against the old name floor before the change landed.
+      plan.md's Backfill section keeps both designs on the record.
+      Suite 537 in 84 + 5 UI green.
+
 ## Phase 8 — Full regression and close-out
 
 - [ ] **T038** — Full manual click-through: swipe-delete and
