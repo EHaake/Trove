@@ -68,7 +68,26 @@ per-function selectors run zero tests and report success).
   quote handling → embedded-newline fixture red; count physical lines
   instead of records → row-number fixture red.
 
-- [ ] **T002 — Row shaping: trailing empties and blank lines.**
+- [x] **T002 — Row shaping: trailing empties and blank lines.**
+  *Done (2026-08-31)*: `ImportSchema.shaped(_:)` — strip trailing
+  *empty* cells (whitespace-only cells deliberately survive to the
+  field policy, pinned by its own test), then drop rows with nothing
+  left, survivors keeping their parser-assigned spreadsheet numbers.
+  The criterion-3 fixture builds a real canonical items file via
+  `ExportSchema.itemsTable` + `CSVWriter`, damages it with `,,,,` on
+  every line plus a blank line after each row, and requires the
+  damaged file to shape to the clean file's rows — with the clean
+  side also pinned to explicit expectations (row count, header row,
+  exact surviving cell count) so two pipelines sharing a bug can't
+  agree their way to green. One fixture-arithmetic fix during
+  drafting: the second record's trailing empty run is three cells
+  (Condition Notes / Serial / Notes all nil), not one — expectation
+  corrected to the actual 9 surviving columns, with the interior
+  empties (Location, Current Value) asserted in place. Both
+  prescribed mutations ran red: stripping removed → 3 tests / 4
+  issues; blank rows kept instead of dropped → 3 tests / 4 issues
+  including the numbering guard. Reverted; full suite 618/95 green
+  (6 new).
   Per plan §Row pipeline, steps 1–2, in
   `Trove/Import/ImportSchema.swift` (first slice): trailing-empty-cell
   stripping over header and data rows; wholly-blank-row dropping —
