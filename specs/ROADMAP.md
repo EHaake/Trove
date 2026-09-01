@@ -25,7 +25,7 @@ own.
 |---|---|
 | `001-core-inventory` | **Shipped** — merged to `main` 2026-08-23 via [PR #1](https://github.com/EHaake/Trove/pull/1); spec, plan and tasks all Approved in specs/001-core-inventory/ |
 | `010-item-management-enhancements` | **Complete** — all tasks through the Phase 8 close-out done (2026-08-30); twenty acceptance criteria signed off; skeptical-review findings resolved or recorded in `tasks.md` |
-| `011-data-export` | **In review** — implementation complete (T001–T018, 2026-08-31); T019 close-out on the branch, PR #5 |
+| `011-data-export` | **Shipped** — merged to `main` 2026-08-31 via [PR #5](https://github.com/EHaake/Trove/pull/5); all nineteen tasks done, twelve criteria verified, close-out review findings dispositioned in `tasks.md` |
 
 ## Future specs
 
@@ -161,12 +161,13 @@ actually useful once the app is in daily use.
   itself in one step. CSV alone gets the actual portability benefit
   without the dependency question.
 
-  **Scoped 2026-08-30** (spec now approved in `specs/011-data-export/`
-  — see it for the settled shape: view-scoped export via a new "…"
-  toolbar menu on both list screens, full detail-field CSV rows, a
-  collection-document PDF with first-photo entries). Three things were
-  deliberately deferred out of that scoping, recorded here so they
-  aren't lost:
+  **Shipped 2026-08-31** ([PR #5](https://github.com/EHaake/Trove/pull/5)
+  — see `specs/011-data-export/` for the full record: view-scoped
+  export via the "…" menu on both list screens, the canonical CSV
+  schema pinned in its `plan.md` for `012` to parse, a print-first PDF
+  collection document rendered with CoreGraphics/CoreText/ImageIO).
+  Three things were deliberately deferred out of the original scoping,
+  recorded here so they aren't lost:
 
   - **Export-everything** (both collections at once, from anywhere) —
     deferred to a settings menu that doesn't exist yet; now the
@@ -232,11 +233,14 @@ actually useful once the app is in daily use.
   can reuse whatever canonical schema export settles on for representing
   an item as a row, which also enables a natural "export a template,
   fill it in, re-import" pattern. Worth designing export's schema first
-  even if import's own build happens later. With `011`'s spec approved,
-  that schema now has a concrete definition to build against (`011`'s
-  CSV section: full detail-field rows, ISO 8601 dates, locale-
-  independent plain-decimal money — the money rule exists specifically
-  so this spec can parse it back).
+  even if import's own build happens later. With `011` shipped, that
+  schema is no longer a definition but a working contract: `011`
+  plan.md's "The canonical CSV schema" section is the document this
+  spec parses against — pinned headers and column order, BOM to skip,
+  CRLF endings including the trailing one, minimal quoting, positional
+  row order, empty-cell-vs-zero semantics, locale-free money, the
+  local-day date caveat, and the append-only growth rule for future
+  columns. `ExportSchema.swift` carries the same constants in code.
 - **`013-settings-menu`** — A settings surface for the app, which
   doesn't exist yet in any form. Deferred out of `011-data-export`'s
   scoping (2026-08-30): `011` deliberately has no "export everything"

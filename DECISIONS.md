@@ -141,3 +141,25 @@ ends up being.
   subtly wrong picture. The `spec-driven-development` skill applies
   automatically to every chat regardless, so working style carries over
   without being re-established.
+- **`plan.md`/`tasks.md` authorship moved into Claude Code (2026-08-30,
+  during `011-data-export`).** This is the entry `CLAUDE.md`'s
+  authorship-split amendment points at; it was written after the fact
+  (the T019 close-out found the pointer dangling). The original rule
+  placed `plan.md` authorship in the chat conversation alongside
+  `spec.md` — written when the project had no code, so a plan could be
+  authored anywhere. With an established codebase that stopped being
+  true: a plan's quality depends on ground truth only the repo has
+  (actual model definitions, view structure, injection shapes), and the
+  chat's knowledge-base snapshot is a manual upload that is reliably
+  stale. So: `spec.md` stays with the chat conversation (product
+  intent, no repo access needed); `plan.md` and `tasks.md` are drafted
+  by Claude Code in-session — Plan Mode, `skeptical-reviewer` on
+  non-routine calls, committed as Draft — with the human review gates
+  unchanged (plan approved before tasks, both before implementation).
+  `011` validated the split immediately: its plan was grounded in facts
+  a chat draft would have missed (the custom header with no navigation
+  bar, the `SortBadge`/T029c history, synchronized folder groups), and
+  the walking-skeleton task it prescribed caught a toolchain behavior
+  (`NonisolatedNonsendingByDefault`) that falsified part of its own
+  concurrency design before any UI was built on it. The same amendment
+  was proposed upstream to the `spec-driven-development` skill.
