@@ -572,7 +572,19 @@ per-function selectors run zero tests and report success).
 
 ## Phase 6 — Docs, device pass, close-out
 
-- [ ] **T016 — `docs/csv-reference.md`.**
+- [x] **T016 — `docs/csv-reference.md`.**
+  *Done (2026-09-01)*: the reference written user-facing — both
+  column tables with per-column format / if-blank / if-unreadable
+  (the † convention marking counted defaults), both row-fatal
+  conditions with the spreadsheet-numbering note, the whole-file
+  failure list, precise field formats, all three Excel caveats
+  (plain-CSV encoding vs "CSV UTF-8", date rewriting, serial
+  coercion) plus the Numbers/trailing-columns note, and the
+  recommended template loop. Pointers back to the 011 schema
+  contract and the 012 spec close it. README: linked from
+  Documentation, `Import/` and `docs/` added to the tree.
+  Criterion 16's line-by-line completeness check happens at T018 as
+  planned.
   Per plan §Docs: new top-level `docs/` directory; both column
   tables, per-column formats, the blank-vs-default policy, both
   row-fatal conditions, the Excel caveats (date rewriting, serial
