@@ -163,3 +163,16 @@ ends up being.
   (`NonisolatedNonsendingByDefault`) that falsified part of its own
   concurrency design before any UI was built on it. The same amendment
   was proposed upstream to the `spec-driven-development` skill.
+- **Spec-authorship venue is a per-spec call (2026-08-31, during
+  `012-data-import`).** The 2026-08-30 authorship split fixed *who
+  decides* (always the person) and *where grounding lives* (the repo),
+  but had hard-coded *where the spec conversation happens* (a dedicated
+  claude.ai chat). `012` relaxed that to the person's per-spec choice:
+  its design questions hung almost entirely off `011`'s shipped CSV
+  contract — pinned headers, positional order, empty-cell semantics,
+  which fields the models actually require — all of which lives in the
+  repo, so for once the in-session venue had the fresher ground truth,
+  the same argument that moved `plan.md` in-session. The default for a
+  green-field spec remains a dedicated chat (with the knowledge-base
+  refresh first); the person picks per spec. `CLAUDE.md`'s
+  authorship-split section carries the amended rule.

@@ -170,13 +170,20 @@ and tasks in that feature's directory. When resuming a session, check
 `specs/<feature>/tasks.md` for the current state before doing anything
 else.
 
-**Authorship split (amended 2026-08-30, during `011-data-export`):**
-`spec.md` is authored in a chat-based design conversation, not in this
-session — it captures product intent and decisions, which is that
-conversation's job, and it needs no repo access to write well. If asked
-to scope a brand-new feature from scratch (no approved spec in the
-feature's directory), point back to that conversation rather than
-drafting one inline here.
+**Authorship split (amended 2026-08-30 during `011-data-export`; venue
+clause amended 2026-08-31 during `012-data-import`):** `spec.md` is
+authored in a design conversation with the person — it captures product
+intent and decisions, and every substantive call in it is theirs. The
+*venue* of that conversation is decided per spec, by the person: the
+default for a green-field feature is a dedicated claude.ai chat (product
+intent needs no repo access to write well), but they may direct it to
+happen in this session instead — as `012-data-import` was — which suits
+specs whose design questions hang off contracts already shipped in the
+repo. What does not flex, in either venue: the person makes the product
+decisions, the resulting `spec.md` is committed to the spec branch
+marked **Draft**, and it is human-approved before `plan.md` is drafted
+against it. If asked to scope a brand-new feature and the person hasn't
+said where, ask which venue they want rather than assuming either.
 
 `plan.md` and `tasks.md`, by contrast, are drafted **in this session**,
 by Claude Code, against the approved spec: work in Plan Mode, apply the
