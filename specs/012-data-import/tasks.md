@@ -593,9 +593,53 @@ per-function selectors run zero tests and report success).
   line-by-line completeness against the spec's tables is checked at
   T018.
 
-- [ ] **T017 — Full verification and manual device pass.**
-  Full `xcodebuild build` + `xcodebuild test`, actual output
-  reported. Then on the simulator (or device): import a real Trove
+- [x] **T017 — Full verification and manual device pass.**
+  *Done (2026-09-01)*: build + full suite green (696/105 + 6 UI
+  tests), then the whole pass driven on the iPhone 17 Pro simulator
+  with test files staged into Files' local storage. **One real bug
+  found and fixed on this branch (the reason this task exists)**:
+  tapping Import in the confirmation did *nothing* — the alert's
+  `isPresented` binding writes the presentation nil on any button
+  tap, and the `Task`-wrapped async intent read it only after that
+  write, so the guard failed silently. No unit test could see it
+  (they stage then call); the device did, on the second attempt
+  (the first read as a mis-tap). Fixed as synchronous-capture /
+  async-commit (`confirmImport()` returns the commit `Task`); the
+  view calls it plainly; two new regression guards — a view scan
+  forbidding the `Task` wrapper (mutation-verified red) and
+  `aDismissalWriteRacingTheConfirmCannotLoseTheCommit`, which
+  simulates the dismissal write landing before the commit body.
+  plan.md corrected in place.
+  Everything else verified on device: menu exactly as specced
+  (divider, gated exports); picker cancel a clean no-op; wrong-list
+  file → the exact "looks like a Wishlist export" alert; the
+  migration file's gate read "Import 6 items? Skipping 2 rows: Row 4
+  — no name / Row 6 — more columns than the template / 5 missing or
+  unreadable fields will use defaults" — counts, spreadsheet
+  numbers, and reasons all correct against the file (my own
+  prediction of 7 was the miscount, not the app's); Cancel left the
+  store untouched; the real import landed 6 items — custom order =
+  file order appended after existing, lowercase `photography/
+  cameras` canonicalized (single Cameras chip; row eyebrow correct),
+  desire 9 → 3, "Good"/"usd" case-tolerance, leap-day date, header
+  totals exact ($3,950 = 3450+500); the worst-case alert at
+  **accessibility-XXXL** kept Import/Cancel fully reachable with the
+  message scrollable (the empirical check the plan demanded — the
+  cap is what keeps it usable); the 300-row file committed
+  instantly, UI responsive, totals exact to the dollar ($545,750);
+  the wishlist file imported 2 with "wishlist items" nouns and
+  **Added restored — detail shows "ADDED MAY 10, 2024"**; Get Blank
+  Template staged `Trove-Wishlist-Template` at exactly 68 bytes
+  (BOM+header+CRLF). Honest residuals, recorded: a Numbers/Excel
+  re-save round trip needs those apps' hands (the transport-damage
+  fixtures cover the file shapes they produce); the smallest-device
+  alert check ran on the 17 Pro at AX5 rather than an SE-class
+  simulator (none installed); the commit spinner wasn't observable
+  at these batch sizes (~85 ms — nothing to see, criterion 15
+  carried by the yield + mid-flight tests); the app's fixed custom
+  type scale doesn't track Dynamic Type (shipped design, predates
+  012). The simulator store now carries the ~309 test items —
+  left in place rather than wiping dev data unasked. Then on the simulator (or device): import a real Trove
   export from Files; the same file re-saved by Numbers (and Excel if
   available); a wrong-list file (the alert names the other list); a
   file with skips and defaults (confirmation counts and row numbers

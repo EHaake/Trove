@@ -88,5 +88,14 @@ struct ImportWiringTests {
         #expect(code.contains("viewModel.importOffersConfirmation"), "\(path) informational case not handled")
         #expect(code.contains("viewModel.confirmImport()"), "\(path) Import button doesn't commit")
         #expect(code.contains("viewModel.cancelImport()"), "\(path) Cancel doesn't clear the staging")
+        // The T017 device finding, pinned: the Import button must call the
+        // intent SYNCHRONOUSLY. A `Task { await ... }` wrapper defers the
+        // preview capture past the alert's own dismissal write (the
+        // isPresented binding sets the presentation nil on any button),
+        // and the guard then reads nil — Import silently does nothing.
+        #expect(
+            !code.contains("await viewModel.confirmImport"),
+            "\(path) wraps confirmImport in a Task — the dismissal write will race the capture"
+        )
     }
 }

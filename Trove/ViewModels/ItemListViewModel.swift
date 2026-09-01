@@ -504,73 +504,82 @@ final class ItemListViewModel {
     /// this context, deliberately (plan §The commit path): parsing was the
     /// expensive part and ran off-main; a bulk insert `load()` can see for
     /// free beats background-context refetch plumbing.
-    func confirmImport() async {
-        guard !isBusy, case .confirmation(let preview) = importPresentation else { return }
-        guard !preview.validated.isEmpty else {
-            importPresentation = nil
-            return
-        }
+    /// **Synchronous capture, async commit** — reshaped by a T017 device
+    /// finding: an alert button's dismissal writes nil through the
+    /// presentation binding, and the original `Task`-wrapped async intent
+    /// read `importPresentation` only after that write — the guard failed
+    /// and Import silently did nothing. The unit tests couldn't see it
+    /// (they call with the presentation still staged); only the manual
+    /// pass could. The preview is now captured in the button action's
+    /// synchronous window, so dismissal ordering can't matter; the
+    /// returned task is the commit itself, for tests to await.
+    @discardableResult
+    func confirmImport() -> Task<Void, Never>? {
+        guard !isBusy, case .confirmation(let preview) = importPresentation else { return nil }
+        importPresentation = nil
+        guard !preview.validated.isEmpty else { return nil }
         isImportingFile = true
-        defer { isImportingFile = false }
-        // A real suspension before the work, so the badge's spinner renders
-        // a frame — setting the flag alone never draws (criterion 15; the
-        // T056 lesson in reverse).
-        await Task.yield()
+        return Task {
+            defer { isImportingFile = false }
+            // A real suspension before the work, so the badge's spinner renders
+            // a frame — setting the flag alone never draws (criterion 15; the
+            // T056 lesson in reverse).
+            await Task.yield()
 
-        // Placement is computed HERE, never at parse time: a CloudKit
-        // arrival — or a hand-add — between the alert and the confirm must
-        // not stale the base.
-        let existing = (try? modelContext.fetch(FetchDescriptor<Item>())) ?? []
-        let base = ManualOrderHelper.nextPosition(after: existing)
+            // Placement is computed HERE, never at parse time: a CloudKit
+            // arrival — or a hand-add — between the alert and the confirm must
+            // not stale the base.
+            let existing = (try? modelContext.fetch(FetchDescriptor<Item>())) ?? []
+            let base = ManualOrderHelper.nextPosition(after: existing)
 
-        // The canonical path set is fetched once; the per-row instance
-        // method is a full two-entity fetch per call (T009's reason for
-        // the static). Batch-internal casing resolves by file row order,
-        // first occurrence wins, each resolved path joining the set.
-        // Load-bearing beyond tidiness: chip casing follows the earliest
-        // `createdAt` across both entities, so an import restoring old
-        // dates could otherwise steal an existing path's casing.
-        var knownPaths = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []
+            // The canonical path set is fetched once; the per-row instance
+            // method is a full two-entity fetch per call (T009's reason for
+            // the static). Batch-internal casing resolves by file row order,
+            // first occurrence wins, each resolved path joining the set.
+            // Load-bearing beyond tidiness: chip casing follows the earliest
+            // `createdAt` across both entities, so an import restoring old
+            // dates could otherwise steal an existing path's casing.
+            var knownPaths = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []
 
-        for (offset, validated) in preview.validated.enumerated() {
-            let record = validated.record
-            let path = CategoryPathHelper.canonicalize(record.categoryPath, against: knownPaths)
-            if !path.isEmpty,
-               !knownPaths.contains(where: { $0.caseInsensitiveCompare(path) == .orderedSame }) {
-                knownPaths.append(path)
+            for (offset, validated) in preview.validated.enumerated() {
+                let record = validated.record
+                let path = CategoryPathHelper.canonicalize(record.categoryPath, against: knownPaths)
+                if !path.isEmpty,
+                   !knownPaths.contains(where: { $0.caseInsensitiveCompare(path) == .orderedSame }) {
+                    knownPaths.append(path)
+                }
+                modelContext.insert(Item(
+                    name: record.name,
+                    categoryPath: path,
+                    purchasePriceCents: record.purchasePriceCents,
+                    purchaseDate: record.purchaseDate,
+                    currencyCode: record.currencyCode,
+                    serialNumber: record.serialNumber,
+                    purchaseLocation: record.purchaseLocation,
+                    currentValueCents: record.currentValueCents,
+                    desireToKeep: record.desireToKeep,
+                    condition: Condition(rawValue: record.conditionRawValue) ?? .excellent,
+                    conditionNotes: record.conditionNotes,
+                    notes: record.notes,
+                    sortOrder: base + offset
+                ))
             }
-            modelContext.insert(Item(
-                name: record.name,
-                categoryPath: path,
-                purchasePriceCents: record.purchasePriceCents,
-                purchaseDate: record.purchaseDate,
-                currencyCode: record.currencyCode,
-                serialNumber: record.serialNumber,
-                purchaseLocation: record.purchaseLocation,
-                currentValueCents: record.currentValueCents,
-                desireToKeep: record.desireToKeep,
-                condition: Condition(rawValue: record.conditionRawValue) ?? .excellent,
-                conditionNotes: record.conditionNotes,
-                notes: record.notes,
-                sortOrder: base + offset
-            ))
-        }
 
-        do {
-            try modelContext.save()
-            importPresentation = nil
-        } catch {
-            // Without the rollback, `load()` on this same context would
-            // show the phantom batch — unsaved objects the context happily
-            // returns — which would vanish on relaunch (criterion 14's
-            // "never a partial batch").
-            modelContext.rollback()
-            importPresentation = .failure(
-                title: ImportCopy.failureTitle,
-                message: ImportCopy.saveFailureMessage
-            )
+            do {
+                try modelContext.save()
+            } catch {
+                // Without the rollback, `load()` on this same context would
+                // show the phantom batch — unsaved objects the context happily
+                // returns — which would vanish on relaunch (criterion 14's
+                // "never a partial batch").
+                modelContext.rollback()
+                importPresentation = .failure(
+                    title: ImportCopy.failureTitle,
+                    message: ImportCopy.saveFailureMessage
+                )
+            }
+            load()
         }
-        load()
     }
 
     private func isOrderedBefore(_ lhs: Item, _ rhs: Item) -> Bool {

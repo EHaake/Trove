@@ -344,8 +344,18 @@ the review reshaped its body:
   - `importCSV(from url: URL) async` — guard `!isBusy`; set
     `isImportingFile`; call the service; stage `.confirmation` or map
     the thrown `ImportError` through `ImportCopy` into `.failure`.
-  - `confirmImport() async` — the commit path above; on success clear
-    the presentation, on save failure `.failure`.
+  - `confirmImport()` — the commit path above; on save failure
+    `.failure`. *(Corrected at T017's device pass: the draft made this
+    `async` with the view firing it through `Task { await ... }` — and
+    the alert's `isPresented` binding writes the presentation nil on
+    any button tap, before a spawned task's body runs, so the guard
+    read nil and Import silently did nothing. Every unit test called
+    with the presentation still staged, so only the device could catch
+    it. The intent is now a synchronous capture that returns the
+    async commit as a `Task` — dismissal ordering can't matter, the
+    view calls it plainly, tests await the returned task. Guarded by
+    a view-scan forbidding the `Task` wrapper and a VM test that
+    simulates the dismissal write racing the commit.)*
   - `cancelImport()` — clear the presentation. Nothing was written;
     nothing to undo.
   - `exportBlankTemplate() async` — guard `!isBusy` only (**not**

@@ -183,7 +183,7 @@ struct WishlistView: View {
             )
         ) {
             if viewModel.importOffersConfirmation {
-                Button("Import") { Task { await viewModel.confirmImport() } }
+                Button("Import") { viewModel.confirmImport() }
                 Button("Cancel", role: .cancel) { viewModel.cancelImport() }
             } else {
                 Button("OK", role: .cancel) { viewModel.cancelImport() }

@@ -895,7 +895,7 @@ struct WishlistViewModelCommitTests {
             importService: ImportServiceSpy(wishlist: .success(wishlistPreview(names: ["OM-1"])))
         )
         await viewModel.importCSV(from: dummyURL)
-        await viewModel.confirmImport()
+        await viewModel.confirmImport()?.value
 
         let imported = try #require(
             try context.fetch(FetchDescriptor<WishlistItem>()).first { $0.name == "OM-1" }
@@ -922,7 +922,7 @@ struct WishlistViewModelCommitTests {
             )))
         )
         await viewModel.importCSV(from: dummyURL)
-        await viewModel.confirmImport()
+        await viewModel.confirmImport()?.value
 
         let imported = try #require(
             try context.fetch(FetchDescriptor<WishlistItem>()).first { $0.name == "Old Wish" }

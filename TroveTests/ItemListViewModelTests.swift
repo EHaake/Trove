@@ -1089,7 +1089,7 @@ struct ItemListViewModelCommitTests {
             importService: ImportServiceSpy(items: .success(itemsPreview(names: ["One", "Two", "Three"])))
         )
         await viewModel.importCSV(from: dummyURL)
-        await viewModel.confirmImport()
+        await viewModel.confirmImport()?.value
 
         let ordered = try context.fetch(
             FetchDescriptor<Item>(sortBy: [SortDescriptor(\.sortOrder)])
@@ -1112,7 +1112,7 @@ struct ItemListViewModelCommitTests {
         context.insert(Item(name: "Latecomer", sortOrder: 10))
         try context.save()
 
-        await viewModel.confirmImport()
+        await viewModel.confirmImport()?.value
         let imported = try #require(
             try context.fetch(FetchDescriptor<Item>()).first { $0.name == "Imported" }
         )
@@ -1134,7 +1134,7 @@ struct ItemListViewModelCommitTests {
         )
         viewModel.sortOrder = .custom
         await viewModel.importCSV(from: dummyURL)
-        await viewModel.confirmImport()
+        await viewModel.confirmImport()?.value
 
         #expect(viewModel.items.count == 5)
         #expect(viewModel.items.suffix(2).map(\.name) == ["New One", "New Two"])
@@ -1154,7 +1154,7 @@ struct ItemListViewModelCommitTests {
         try #require(viewModel.totalCount == 1)
 
         await viewModel.importCSV(from: dummyURL)
-        await viewModel.confirmImport()
+        await viewModel.confirmImport()?.value
 
         // The batch (Music/Guitars) is outside the filter: not visible,
         // but fully imported — criterion 10.
@@ -1170,9 +1170,9 @@ struct ItemListViewModelCommitTests {
             importService: ImportServiceSpy(items: .success(preview))
         )
         await viewModel.importCSV(from: dummyURL)
-        await viewModel.confirmImport()
+        await viewModel.confirmImport()?.value
         viewModel.importPresentation = .confirmation(preview)
-        await viewModel.confirmImport()
+        await viewModel.confirmImport()?.value
 
         // Stated no-dedupe behavior (criterion 11) — two copies, each with
         // its own place in the order.
@@ -1209,7 +1209,7 @@ struct ItemListViewModelCommitTests {
             modelContext: context, importService: ImportServiceSpy(items: .success(preview))
         )
         await viewModel.importCSV(from: dummyURL)
-        await viewModel.confirmImport()
+        await viewModel.confirmImport()?.value
 
         let byName = Dictionary(
             uniqueKeysWithValues: try context.fetch(FetchDescriptor<Item>()).map { ($0.name, $0.categoryPath) }
@@ -1232,10 +1232,32 @@ struct ItemListViewModelCommitTests {
             )
         )
         await viewModel.importCSV(from: dummyURL)
-        await viewModel.confirmImport()
+        await viewModel.confirmImport()?.value
 
         #expect(viewModel.importPresentation == nil)
         #expect(try context.fetch(FetchDescriptor<Item>()).isEmpty)
+    }
+
+    /// The T017 device finding, pinned at the view-model level: the
+    /// alert's isPresented binding writes the presentation nil the moment
+    /// any button is tapped, and that write can land before an async
+    /// intent's body runs. `confirmImport` must capture the preview in its
+    /// synchronous prefix, so a dismissal racing the commit cannot lose it.
+    @Test func aDismissalWriteRacingTheConfirmCannotLoseTheCommit() async throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["Strat"])))
+        )
+        await viewModel.importCSV(from: dummyURL)
+
+        let task = viewModel.confirmImport()
+        // The dismissal write, as SwiftUI performs it — immediately after
+        // the button action returns, before the commit task's body runs.
+        viewModel.importPresentation = nil
+        await task?.value
+
+        #expect(try context.fetch(FetchDescriptor<Item>()).count == 1)
     }
 
     /// The mechanism `confirmImport`'s catch relies on: rollback clears
