@@ -387,7 +387,20 @@ reported.
   text-import path and recorded honestly per the plan's serial-number
   caveat.
 
-- [ ] **T018 — Manual device pass (yours).**
+- [x] **T018 — Manual device pass (yours).**
+  *Done (2026-08-31)*: everything checked passes — "the pdf reads
+  beautifully, well formatted, exporting respects filters and ordering
+  and csvs are readable." The PDF design needed no bounce. One item
+  honestly not exercised: a large collection (criterion 11's *feel*;
+  its mechanics stay carried by the instrumented off-main probe and
+  the size-bound test). Three forward-looking notes came back and are
+  recorded in `ROADMAP.md`'s 011 entry + plan.md's schema section:
+  exports must be revisited in whatever spec adds new per-item data
+  (trending values foremost — schema growth is append-only and
+  coordinated with 012); sell-plan export is deferred deliberately;
+  and a "Full" export (dashboard + both lists + sell plans) is a
+  future export spec after trending values, to be reconciled with
+  013's export-everything and the dashboard-export deferral.
   Export from filtered and sorted states, both formats, both screens;
   open the CSV in Numbers (and Excel if at hand); read the PDF end to
   end — **this is the design bounce point**; cancel the share sheet;

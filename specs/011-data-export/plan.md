@@ -127,6 +127,14 @@ notes. Photos are the one exception (PDF only, per spec).
   stripped leading zeros). Numbers and Excel's text-import path with
   text-typed columns are fine; the criterion's own wording ("via a
   standard CSV import") is what the check exercises.
+- **The schema will grow — append-only** *(recorded 2026-08-31 at
+  T018)*: when new user-visible per-item data ships — trending/market
+  values are the known case — the detail screens gain fields and this
+  schema gains columns. That is a canonical-schema change: made here,
+  in `ExportSchema`, and against `012`'s parser together, never by an
+  edit to the writer alone. New columns append after the existing
+  ones, so files written against this version keep parsing
+  positionally.
 - **[escalated → decided] Dates are the device-local calendar day**,
   serialized from `Calendar` components — exactly what the detail
   screen shows, which is what criterion 6 measures. The caveat this
