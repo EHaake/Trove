@@ -172,10 +172,11 @@ followed by one entry per exported item.
    commas, quotes, and newlines in notes.
    *Verified: the format half by `CSVWriterTests` (RFC 4180 round trip
    through a real parser over the comma/quote/newline hard cases; BOM
-   for Excel). The open-it-and-look half is T018's; plan.md records the
-   Excel serial-number caveat honestly (Excel's default open coerces
-   long digit strings — the criterion's own "standard CSV import" path
-   with text columns is what holds).*
+   for Excel). The open-it-and-look half rests on T018's record —
+   "csvs are readable", apps not itemized (T019/S5) — and plan.md's
+   Excel serial-number caveat stands (Excel's default open coerces long
+   digit strings; the criterion's own "standard CSV import" path with
+   text columns is what holds).*
 6. [x] A round-trip sanity check: every detail-screen field for a given
    item can be located in that item's CSV row with the correct value.
    *Verified: `itemRowCarriesEveryColumnInHeaderOrder` +
@@ -186,9 +187,14 @@ followed by one entry per exported item.
 7. [x] Money and date values in the CSV match the formats above regardless
    of device locale.
    *Verified: `moneySerializesExactValues`,
-   `moneyRoundTripsThroughTheParseSide`, `daySerializesZeroPaddedISO` —
-   and by construction: no locale API exists anywhere in the
-   serialization path (plan.md's "Money and date serialization").*
+   `moneyRoundTripsThroughTheParseSide`, `daySerializesZeroPaddedISO`,
+   `dayIsAlwaysGregorianRegardlessOfDeviceCalendar` — money is
+   locale-free by construction (integer math), dates
+   calendar-identifier-free by construction (the serializer takes only
+   a `TimeZone` and builds its own Gregorian calendar). The T019 review
+   caught the first implementation defaulting to `Calendar.current`,
+   which would have written Buddhist year 2569 on so-configured
+   devices; plan.md's serialization section records the correction.*
 8. [x] The PDF's cover figures match the app's own arithmetic for the same
    filtered set.
    *Verified: `pdfCoverFiguresAreTheViewModelsOwnArithmetic` (items) and
@@ -197,8 +203,11 @@ followed by one entry per exported item.
    against live properties and concrete figures both.*
 9. [x] An item with no photos produces a clean PDF entry; an item with
    several photos shows exactly its first.
-   *Verified: `entriesStartOnTheirOwnPageWithTheFullFieldGrid` (no-photo
-   layout, full width, no gap),
+   *Verified: `entriesStartOnTheirOwnPageWithTheFullFieldGrid` (a
+   no-photo entry renders all fields — text-level; the full-width/no-gap
+   *layout* property is carried by the composer's resolve-before-layout
+   branch and T018's eyeball, since extracted text can't measure
+   geometry — narrowed at T019/S4),
    `anUnresolvablePhotoIdentifierKeepsTheEntryPhotoFree`,
    `firstPhotoFollowsDisplayOrderNotInsertionOrder` ("first" =
    `PhotoSelection.inDisplayOrder`, the one definition, mutation-verified
@@ -221,8 +230,12 @@ followed by one entry per exported item.
     `@concurrent` put generation back on the main thread and went red);
     `photosEmbedDownsampledAndBoundTheFileSize` bounds the with-photos
     path; the progress affordance is the badge's spinner, fed by
-    `isExporting` (`ExportWiringTests` pins the feed). Scale feel
-    confirmed at T018.*
+    `isExporting` (`ExportWiringTests` pins the feed). Honestly
+    partial, matching T018's record: a hundreds-of-items collection was
+    not exercised by hand — the criterion's mechanics are carried by
+    the instrumented probe and the size bound, its feel is not
+    separately confirmed. (T019/B2 corrected an earlier "confirmed"
+    here that contradicted T018's own note.)*
 
 ## Non-goals (explicit)
 

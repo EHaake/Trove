@@ -49,29 +49,43 @@ struct ExportSchemaTests {
 
     // MARK: - Dates
 
-    private func calendar(in identifier: String) -> Calendar {
+    private func zone(_ identifier: String) -> TimeZone {
+        TimeZone(identifier: identifier)!
+    }
+
+    /// Builds fixture dates; the serializer itself never takes a calendar —
+    /// only a time zone — which is what makes identifier-independence
+    /// structural (T019/B1).
+    private func gregorian(in identifier: String) -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: identifier)!
+        calendar.timeZone = zone(identifier)
         return calendar
     }
 
     @Test func daySerializesZeroPaddedISO() throws {
-        let newYork = calendar(in: "America/New_York")
+        let newYork = gregorian(in: "America/New_York")
         let date = try #require(newYork.date(from: DateComponents(year: 2026, month: 1, day: 5)))
-        #expect(ExportSchema.day(from: date, calendar: newYork) == "2026-01-05")
+        #expect(ExportSchema.day(from: date, timeZone: zone("America/New_York")) == "2026-01-05")
+    }
+
+    /// T019/B1's pin: the serializer's calendar is Gregorian by
+    /// construction — the API takes only a `TimeZone`, so the user's
+    /// preferred-calendar setting (Buddhist year 2569, Japanese eras) has no
+    /// way in. The epoch is the least ambiguous instant there is.
+    @Test func dayIsAlwaysGregorianRegardlessOfDeviceCalendar() {
+        #expect(ExportSchema.day(from: Date(timeIntervalSince1970: 0), timeZone: zone("UTC")) == "1970-01-01")
     }
 
     /// Documents the local-day semantics the spec's amended date rule chose:
     /// one instant, two calendars, two days. This is the recorded caveat, not
     /// a bug — the CSV shows the day the screen shows.
     @Test func dayIsTheLocalCalendarDay() throws {
-        let newYork = calendar(in: "America/New_York")
-        let tokyo = calendar(in: "Asia/Tokyo")
+        let newYork = gregorian(in: "America/New_York")
         let lateEvening = try #require(newYork.date(
             from: DateComponents(year: 2026, month: 8, day: 30, hour: 23, minute: 45)
         ))
-        #expect(ExportSchema.day(from: lateEvening, calendar: newYork) == "2026-08-30")
-        #expect(ExportSchema.day(from: lateEvening, calendar: tokyo) == "2026-08-31")
+        #expect(ExportSchema.day(from: lateEvening, timeZone: zone("America/New_York")) == "2026-08-30")
+        #expect(ExportSchema.day(from: lateEvening, timeZone: zone("Asia/Tokyo")) == "2026-08-31")
     }
 
     // MARK: - Rows
@@ -81,7 +95,7 @@ struct ExportSchemaTests {
     }
 
     @Test func itemRowCarriesEveryColumnInHeaderOrder() throws {
-        let newYork = calendar(in: "America/New_York")
+        let newYork = gregorian(in: "America/New_York")
         let bought = try #require(newYork.date(from: DateComponents(year: 2026, month: 3, day: 9)))
         let record = ItemExportRecord(
             name: "Leica M6",
@@ -99,7 +113,7 @@ struct ExportSchemaTests {
             firstPhotoID: nil
         )
 
-        let row = ExportSchema.row(from: record, calendar: newYork)
+        let row = ExportSchema.row(from: record, timeZone: zone("America/New_York"))
         #expect(row == [
             "Leica M6", "Photography/Cameras", "2900.00", "USD", "2026-03-09",
             "KEH", "3450.50", "5", "excellent", "New seals", "2244668", "Body only",
@@ -135,7 +149,7 @@ struct ExportSchemaTests {
     }
 
     @Test func wishlistRowCarriesEveryColumnInHeaderOrder() throws {
-        let newYork = calendar(in: "America/New_York")
+        let newYork = gregorian(in: "America/New_York")
         let added = try #require(newYork.date(from: DateComponents(year: 2026, month: 8, day: 30)))
         let record = WishlistExportRecord(
             name: "Vox AC15",
@@ -148,7 +162,7 @@ struct ExportSchemaTests {
             firstPhotoID: nil
         )
 
-        let row = ExportSchema.row(from: record, calendar: newYork)
+        let row = ExportSchema.row(from: record, timeZone: zone("America/New_York"))
         #expect(row == ["Vox AC15", "Music/Amps", "1050.00", "USD", "3", "2026-08-30", ""])
         #expect(row.count == ExportSchema.wishlistHeaders.count)
     }

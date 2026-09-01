@@ -95,7 +95,10 @@ notes. Photos are the one exception (PDF only, per spec).
 
 - UTF-8 **with BOM**. Excel on Windows misreads BOM-less UTF-8 and
   criterion 5 names Excel; `012`'s parser must skip the BOM.
-- CRLF line endings, per RFC 4180.
+- CRLF row endings, **including a trailing CRLF after the last row** —
+  RFC 4180 leaves the final one optional; this schema pins it present
+  (recorded at T019/S3) so `012`'s parser knows a naive split yields
+  one empty trailing fragment to drop.
 - RFC 4180 minimal quoting: a field is quoted iff it contains a comma,
   quote, CR, or LF; embedded quotes are doubled.
 - Header row present, matched byte-for-byte by `012`. The headers and
@@ -149,10 +152,18 @@ notes. Photos are the one exception (PDF only, per spec).
 ### Money and date serialization
 
 Pure integer arithmetic for money — `cents / 100` and a `%02d`
-remainder — and manual `String(format:)` over `Calendar`-extracted date
-components. **No locale API exists anywhere in the serialization path**;
-this deliberately routes around `Int+Currency.swift`, whose formatters
-pin `en_US` and emit symbols for *display*. Two money formatters
+remainder — so **no locale API exists in the money path**; this
+deliberately routes around `Int+Currency.swift`, whose formatters pin
+`en_US` and emit symbols for *display*. Dates serialize through a
+calendar that is **always proleptic Gregorian, built inside the
+serializer over an injectable `TimeZone`** (the device's by default).
+*(Corrected 2026-08-31 at T019/B1: the draft claimed "no locale API
+anywhere" and the first implementation defaulted to `Calendar.current`
+— which follows the user's preferred-calendar setting, not just the
+time zone, so a device set to the Buddhist calendar would have written
+year 2569 into the canonical file and its filenames. The API now takes
+only a `TimeZone`, making calendar-identifier independence structural,
+the same way integer math makes the money path locale-free.)* Two money formatters
 (display vs. data) is a deliberate split, not duplication: they answer
 different questions and must be allowed to diverge. The invariant `012`
 depends on is the round trip through the existing parse-side helper:
@@ -170,7 +181,11 @@ row mapping and the money/date serializers above.
 
 **Decision: `CGContext(consumer:mediaBox:)` PDF context, `CTFramesetter`
 text layout, ImageIO photo decoding. No UIKit in the rendering module,
-so no constitution exception is spent on it.**
+so no constitution exception is spent on it.** (One `import SwiftUI`
+exists in `PDFComposer.swift`, for `Font.Weight` alone — the parameter
+type of `FontFamily.postScriptName(for:)`, the single source of face
+names — flagged at the import site. The framework claim here is about
+UIKit; noted at T019 so it can't read as an overclaim.)
 
 The alternatives, weighed honestly (the reviewer corrected the first
 pass of this comparison):
@@ -255,7 +270,9 @@ it reads wrong.
   nobody should later "unify" them): wordmark Archivo 600 @ 26 · cover
   title Archivo @ 20 · entry name Archivo @ 14 · eyebrows/labels IBM
   Plex Mono @ 7.5, tracked caps · field values IBM Plex Sans @ 10.5 ·
-  notes IBM Plex Sans @ 10 · money IBM Plex Mono @ 10.5.
+  notes IBM Plex Sans @ 10 · money IBM Plex Mono @ 10.5 · cover
+  totals IBM Plex Mono 500 @ 15 · cover floor note IBM Plex Sans
+  @ 9.5.
 - **Cover page**: "TROVE" wordmark, hairline rule, document title
   ("Owned Items" / "Wishlist"), generated date, coverage line built
   from the active filter using the same label strings the chips show
@@ -374,6 +391,13 @@ Menu strings, exactly: **Export as CSV…**, **Export as PDF…**.
   retains every `imageData` it materializes — one long-lived context
   would quietly hold every photo in memory and defeat the streaming.
   Per-entry drawing runs inside `autoreleasepool`.
+- Marking `Photo` `nonisolated` (T008) is an accepted widening: every
+  `Photo` property becomes compiler-legal to touch off-main. The type
+  stays non-`Sendable` — instances can't cross domains — and each
+  domain fetches through its own context; today only `PhotoFetcher`
+  uses the allowance. Recorded (T019) so a future change doesn't
+  inherit it silently; `@ModelActor` remains the documented
+  alternative if this ever needs tightening.
 - Snapshot identifiers are valid because every mutation path in the app
   saves. An identifier that fails to resolve mid-export (a CloudKit
   delete landing between snapshot and fetch) **skips the photo and

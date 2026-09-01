@@ -48,6 +48,62 @@ nonisolated final class ExportServiceSpy: ExportService {
     }
 }
 
+/// A spy whose CSV export blocks until released — for observing *mid-flight*
+/// view-model state (`isExporting`) and the reentrancy guard, which is
+/// load-bearing: `stage()` purges the staging directory before writing, so a
+/// genuinely concurrent second export would delete the file the first just
+/// handed to `stagedExport`. Added at T019/S1, where review found nothing
+/// could fail if `isExporting = true` were deleted.
+nonisolated final class GatedExportServiceSpy: ExportService {
+    private struct State {
+        var csvCalls = 0
+        var pdfCalls = 0
+        var released = false
+        var waiter: CheckedContinuation<Void, Never>?
+    }
+
+    private let state = Mutex(State())
+
+    var csvCalls: Int { state.withLock { $0.csvCalls } }
+    var pdfCalls: Int { state.withLock { $0.pdfCalls } }
+
+    func release() {
+        let waiter = state.withLock { state -> CheckedContinuation<Void, Never>? in
+            state.released = true
+            defer { state.waiter = nil }
+            return state.waiter
+        }
+        waiter?.resume()
+    }
+
+    @concurrent func exportCSV(_ table: CSVTable, filename: String) async throws -> URL {
+        // Only the FIRST call gates. A reentrant call that wrongly reaches
+        // the spy must fail the call-count assertion *fast* — gating it too
+        // would deadlock the test instead of failing it, which is how the
+        // T019/S1 mutation was first "caught" (by a hang, not a red).
+        let isFirstCall = state.withLock { state -> Bool in
+            state.csvCalls += 1
+            return state.csvCalls == 1
+        }
+        guard isFirstCall else { return URL(filePath: "/dev/null/\(filename)") }
+
+        await withCheckedContinuation { continuation in
+            let resumeNow = state.withLock { state -> Bool in
+                guard !state.released else { return true }
+                state.waiter = continuation
+                return false
+            }
+            if resumeNow { continuation.resume() }
+        }
+        return URL(filePath: "/dev/null/\(filename)")
+    }
+
+    @concurrent func exportPDF(_ document: PDFDocumentModel, filename: String) async throws -> URL {
+        state.withLock { $0.pdfCalls += 1 }
+        return URL(filePath: "/dev/null/\(filename)")
+    }
+}
+
 /// A fresh in-memory store holding the real schema — real persistence
 /// semantics, no disk, no CloudKit. Each call is an isolated store, so tests
 /// can't leak state into one another.

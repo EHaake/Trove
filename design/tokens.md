@@ -219,7 +219,7 @@ deliberately separate print scale: wordmark Archivo 600 `26pt` (tracked
 `4pt`) · cover title Archivo `20pt` · entry name Archivo `14pt` ·
 eyebrows/labels IBM Plex Mono `7.5pt` tracked caps · field values IBM
 Plex Sans `10.5pt` · notes IBM Plex Sans `10pt` · money/dates/serials
-IBM Plex Mono `10.5pt` · cover totals IBM Plex Mono 500 `15pt`.
+IBM Plex Mono `10.5pt` · cover totals IBM Plex Mono 500 `15pt` · cover floor note IBM Plex Sans `9.5pt` *(missed in the first pass; added at T019/S2)*.
 
 ### Swipe-action rows (specific)
 

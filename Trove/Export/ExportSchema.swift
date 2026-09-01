@@ -153,7 +153,7 @@ extension PDFEntry {
     /// the unvalued case — because the PDF is presentation where the CSV is
     /// data. Empty optionals are skipped, exactly as the detail screen
     /// filters its empty rows.
-    nonisolated init(record: ItemExportRecord, calendar: Calendar = .current) {
+    nonisolated init(record: ItemExportRecord, timeZone: TimeZone = .current) {
         var fields: [PDFField] = [
             PDFField(
                 label: "Paid",
@@ -170,7 +170,7 @@ extension PDFEntry {
             PDFField(label: "Currency", value: record.currencyCode, isMono: true),
             PDFField(
                 label: "Bought",
-                value: ExportSchema.day(from: record.purchaseDate, calendar: calendar),
+                value: ExportSchema.day(from: record.purchaseDate, timeZone: timeZone),
                 isMono: true
             ),
         ]
@@ -196,7 +196,7 @@ extension PDFEntry {
     }
 
     /// See `init(record: ItemExportRecord, ...)` — wishlist vocabulary.
-    nonisolated init(record: WishlistExportRecord, calendar: Calendar = .current) {
+    nonisolated init(record: WishlistExportRecord, timeZone: TimeZone = .current) {
         self.init(
             eyebrow: record.categoryPath.split(separator: "/").joined(separator: " · "),
             name: record.name,
@@ -210,7 +210,7 @@ extension PDFEntry {
                 PDFField(label: "Desire to own", value: "\(record.desireToOwn) / 3", isMono: true),
                 PDFField(
                     label: "Added",
-                    value: ExportSchema.day(from: record.createdAt, calendar: calendar),
+                    value: ExportSchema.day(from: record.createdAt, timeZone: timeZone),
                     isMono: true
                 ),
             ],
@@ -247,11 +247,21 @@ nonisolated enum ExportSchema {
         return "\(sign)\(magnitude / 100).\(String(format: "%02d", magnitude % 100))"
     }
 
-    /// A date as the schema writes it: the calendar day, `yyyy-MM-dd`, in the
-    /// given calendar — the device's by default, which is the day the detail
-    /// screen shows (spec.md's amended CSV date rule; the timezone caveat
-    /// lives with the schema section in plan.md).
-    static func day(from date: Date, calendar: Calendar = .current) -> String {
+    /// A date as the schema writes it: the calendar day, `yyyy-MM-dd`, in
+    /// the given time zone — the device's by default, which is the day the
+    /// detail screen shows (spec.md's amended CSV date rule; the timezone
+    /// caveat lives with the schema section in plan.md).
+    ///
+    /// The calendar is **always proleptic Gregorian, built here** — the API
+    /// deliberately takes only a `TimeZone`, so the user's preferred-calendar
+    /// setting cannot leak in (T019/B1: the first implementation defaulted
+    /// to `Calendar.current`, which follows that setting — a device set to
+    /// the Buddhist calendar would have written year 2569 into a canonical
+    /// file and its filenames). Identifier-independence is structural, the
+    /// same way integer math makes the money path locale-free.
+    static func day(from date: Date, timeZone: TimeZone = .current) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
         // The three requested components are always present for a valid Date.
         return String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)
@@ -260,13 +270,13 @@ nonisolated enum ExportSchema {
     /// One CSV row, columns exactly per `itemHeaders`. Nil fields are empty
     /// cells — and for `Current Value` the emptiness means something: unvalued
     /// is not worthless, the same distinction the model and dashboard draw.
-    static func row(from record: ItemExportRecord, calendar: Calendar = .current) -> [String] {
+    static func row(from record: ItemExportRecord, timeZone: TimeZone = .current) -> [String] {
         [
             record.name,
             record.categoryPath,
             money(cents: record.purchasePriceCents),
             record.currencyCode,
-            day(from: record.purchaseDate, calendar: calendar),
+            day(from: record.purchaseDate, timeZone: timeZone),
             record.purchaseLocation ?? "",
             record.currentValueCents.map { money(cents: $0) } ?? "",
             String(record.desireToKeep),
@@ -278,29 +288,29 @@ nonisolated enum ExportSchema {
     }
 
     /// One CSV row, columns exactly per `wishlistHeaders`.
-    static func row(from record: WishlistExportRecord, calendar: Calendar = .current) -> [String] {
+    static func row(from record: WishlistExportRecord, timeZone: TimeZone = .current) -> [String] {
         [
             record.name,
             record.categoryPath,
             money(cents: record.estimatedCostCents),
             record.currencyCode,
             String(record.desireToOwn),
-            day(from: record.createdAt, calendar: calendar),
+            day(from: record.createdAt, timeZone: timeZone),
             record.notes ?? "",
         ]
     }
 
     static func itemsTable(
         _ records: [ItemExportRecord],
-        calendar: Calendar = .current
+        timeZone: TimeZone = .current
     ) -> CSVTable {
-        CSVTable(headers: itemHeaders, rows: records.map { row(from: $0, calendar: calendar) })
+        CSVTable(headers: itemHeaders, rows: records.map { row(from: $0, timeZone: timeZone) })
     }
 
     static func wishlistTable(
         _ records: [WishlistExportRecord],
-        calendar: Calendar = .current
+        timeZone: TimeZone = .current
     ) -> CSVTable {
-        CSVTable(headers: wishlistHeaders, rows: records.map { row(from: $0, calendar: calendar) })
+        CSVTable(headers: wishlistHeaders, rows: records.map { row(from: $0, timeZone: timeZone) })
     }
 }

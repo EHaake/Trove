@@ -173,7 +173,9 @@ reported.
 - [x] **T007 — Entry layout and pagination.**
   *Done (2026-08-30)*: entry engine per plan — keep-together for
   rule/head/first-field (or the photo box when taller), field rows that
-  break between rows so even a pathological grid can't clip data, and
+  break between rows so a tall grid can't clip data *(amended at T019:
+  true per row — one single field row taller than a full page would
+  still clip; bounded, unlikely, recorded rather than coded around)*, and
   notes flowing via `CTFrameGetVisibleStringRange` continuation frames.
   The record→`PDFEntry` builders landed here too (schema side, detail-
   screen vocabulary — "Worth now", "Not yet valued" — empty optionals
@@ -408,7 +410,48 @@ reported.
   collection for the progress affordance. Findings come back as tasks
   here, not silent fixes.
 
-- [ ] **T019 — Skeptical-reviewer close-out.**
+- [x] **T019 — Skeptical-reviewer close-out.**
   The subagent reviews the implemented feature against spec and plan
   (the 010/T039 pattern); every finding resolved or explicitly
   recorded in this file's Done notes before the PR leaves draft.
+  *Done (2026-08-31)*: verdict was "not ready yet" on three blockers +
+  seven second-looks; all now dispositioned. **Fixed in code**:
+  **B1** — `Calendar.current` follows the user's *preferred-calendar*
+  setting, so a Buddhist-calendar device would have written year 2569
+  into the canonical CSV, its filenames, and the PDF cover; the
+  serializer now takes only a `TimeZone` and builds its own Gregorian
+  calendar (identifier-independence structural, like the money path's
+  integer math), with `dayIsAlwaysGregorianRegardlessOfDeviceCalendar`
+  pinning it and plan.md/spec.md corrected. **S1** — nothing could
+  fail if `isExporting = true` were deleted, and the reentrancy guard
+  (which protects the staged file from a concurrent purge-before-
+  write) was untested; `GatedExportServiceSpy` + mid-flight tests on
+  both view models now cover both, mutation-verified — and the first
+  mutation run exposed a flaw in the *spy* (gating a reentrant call
+  deadlocked the run instead of failing it; the spy now gates only
+  the first call, and the mutation fails fast with three red
+  assertions). PDF entry order is now asserted in both cover tests
+  (was count-only). **Fixed in docs**: **B2** — criterion 11's
+  "scale feel confirmed at T018" contradicted T018's own note;
+  corrected to the honest partial. **B3** — ROADMAP's status row said
+  "plan.md next"; now "In review". **S2** — the cover floor note's
+  9.5pt was missing from both type scales (tokens.md's completeness
+  claim was false); added. **S3** — the trailing CRLF is now pinned
+  in plan.md's format rules, not just the writer's comment. **S4** —
+  criterion 9's citation narrowed (extracted text can't measure
+  geometry). **S5** — criterion 5's record now quotes what T018
+  actually said. Plus plan.md notes: the Photo-`nonisolated` widening
+  as an accepted cost, and the composer's SwiftUI-for-`Font.Weight`
+  import against the "no UIKit" claim. **Record-only, accepted**:
+  a single field row taller than a page clips (T007 note amended);
+  `drawFlowed`'s fresh-page bailout is a content-loss path, not an
+  error path; no cover pagination (~2,500-char search query to hit);
+  a keep-together taller than a page emits one blank page; narrowed
+  column width persists on continuation pages; badge placement pinned
+  only by simulator checks. **Deferred to the post-merge docs PR**
+  (main documents, constitution forbids direct commits): README's
+  "developed in conversation before any code existed" predates the
+  authorship amendment (S6); DECISIONS.md lacks the 2026-08-30 entry
+  CLAUDE.md points to (S7 — confirmed missing); ROADMAP's row flips
+  to Shipped with the PR link. Full suite after fixes: 600/600 unit,
+  5/5 UI, build green.*

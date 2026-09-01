@@ -46,17 +46,17 @@ nonisolated enum ExportFilename {
     static func items(
         fileExtension: String,
         on date: Date = .now,
-        calendar: Calendar = .current
+        timeZone: TimeZone = .current
     ) -> String {
-        "Trove-Items-\(ExportSchema.day(from: date, calendar: calendar)).\(fileExtension)"
+        "Trove-Items-\(ExportSchema.day(from: date, timeZone: timeZone)).\(fileExtension)"
     }
 
     static func wishlist(
         fileExtension: String,
         on date: Date = .now,
-        calendar: Calendar = .current
+        timeZone: TimeZone = .current
     ) -> String {
-        "Trove-Wishlist-\(ExportSchema.day(from: date, calendar: calendar)).\(fileExtension)"
+        "Trove-Wishlist-\(ExportSchema.day(from: date, timeZone: timeZone)).\(fileExtension)"
     }
 }
 

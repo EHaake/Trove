@@ -871,6 +871,41 @@ struct ItemListViewModelExportTests {
         #expect(value == 465_000)
         #expect(paid == 180_000)
         #expect(unvalued == 1)
+        // Entry order mirrors the visible order, same as the CSV rows
+        // (T019 record-only: previously only entry *count* was asserted).
+        #expect(document.entries.map(\.name) == viewModel.items.map(\.name))
+    }
+
+    /// T019/S1: the progress state observed *mid-flight* — previously no
+    /// test could fail if `isExporting = true` were deleted — and the
+    /// reentrancy guard, which protects the staged file from a concurrent
+    /// export's purge-before-write.
+    @Test func isExportingIsObservableMidFlightAndBlocksReentry() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", into: context)
+        try context.save()
+
+        let spy = GatedExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        let inFlight = Task { await viewModel.exportCSV() }
+        for _ in 0..<10_000 where spy.csvCalls == 0 { await Task.yield() }
+        try #require(spy.csvCalls == 1, "gated export never started")
+
+        #expect(viewModel.isExporting, "progress state must be visible while generating")
+
+        // Reentrant attempts — same format and the other — bounce off the
+        // guard without reaching the service.
+        await viewModel.exportCSV()
+        await viewModel.exportPDF()
+        #expect(spy.csvCalls == 1)
+        #expect(spy.pdfCalls == 0)
+
+        spy.release()
+        await inFlight.value
+        #expect(viewModel.isExporting == false)
+        #expect(viewModel.stagedExport != nil)
     }
 
     @Test func coverageLabelNamesEveryActiveNarrowing() throws {

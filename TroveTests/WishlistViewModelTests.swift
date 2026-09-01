@@ -732,6 +732,35 @@ struct WishlistViewModelExportTests {
         }
         #expect(estimated == viewModel.totalEstimatedCostCents)
         #expect(estimated == 345_000)
+        // Entry order mirrors the visible order, same as the CSV rows.
+        #expect(document.entries.map(\.name) == viewModel.items.map(\.name))
+    }
+
+    /// T019/S1 — see the items twin.
+    @Test func isExportingIsObservableMidFlightAndBlocksReentry() async throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Vox AC15", into: context)
+        try context.save()
+
+        let spy = GatedExportServiceSpy()
+        let viewModel = WishlistViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        let inFlight = Task { await viewModel.exportCSV() }
+        for _ in 0..<10_000 where spy.csvCalls == 0 { await Task.yield() }
+        try #require(spy.csvCalls == 1, "gated export never started")
+
+        #expect(viewModel.isExporting, "progress state must be visible while generating")
+
+        await viewModel.exportCSV()
+        await viewModel.exportPDF()
+        #expect(spy.csvCalls == 1)
+        #expect(spy.pdfCalls == 0)
+
+        spy.release()
+        await inFlight.value
+        #expect(viewModel.isExporting == false)
+        #expect(viewModel.stagedExport != nil)
     }
 
     @Test func coverageLabelNamesTheActiveNarrowing() throws {

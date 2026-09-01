@@ -74,12 +74,13 @@ struct ExportTempFileTests {
 
     @Test func filenamesCarryTheLocalDay() throws {
         var newYork = Calendar(identifier: .gregorian)
-        newYork.timeZone = TimeZone(identifier: "America/New_York")!
+        let zone = try #require(TimeZone(identifier: "America/New_York"))
+        newYork.timeZone = zone
         let date = try #require(newYork.date(from: DateComponents(year: 2026, month: 1, day: 5)))
 
-        #expect(ExportFilename.items(fileExtension: "csv", on: date, calendar: newYork)
+        #expect(ExportFilename.items(fileExtension: "csv", on: date, timeZone: zone)
             == "Trove-Items-2026-01-05.csv")
-        #expect(ExportFilename.wishlist(fileExtension: "pdf", on: date, calendar: newYork)
+        #expect(ExportFilename.wishlist(fileExtension: "pdf", on: date, timeZone: zone)
             == "Trove-Wishlist-2026-01-05.pdf")
     }
 }
