@@ -1,7 +1,7 @@
 # 012 — Data Import — Technical Plan
 
-Status: **Draft** (2026-08-31, drafted in-session per the authorship
-split; awaiting human review before tasks.md)
+Status: **Approved** (2026-08-31, same day as drafting; drafted
+in-session per the authorship split)
 
 Grounded in the shipped 011 export module and the current view/VM code
 — file references below are to what exists on this branch today. The
