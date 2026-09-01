@@ -22,11 +22,15 @@ struct ExportConcurrencyTests {
         let scratch = FileManager.default.temporaryDirectory
             .appending(path: "ExportConcurrencyTests-\(UUID().uuidString)", directoryHint: .isDirectory)
         defer { try? FileManager.default.removeItem(at: scratch) }
-        // Typed through the existential deliberately: the view models call
-        // through `any ExportService`, where the *protocol requirement's*
-        // `@concurrent` governs — a probe on the concrete class would pass
-        // even if the protocol annotation were dropped, and the app's real
-        // call path silently moved back onto the main actor.
+        // Typed through the existential deliberately — the view models'
+        // real call path. (Comment corrected at 012/T008, whose mutation
+        // matrix established the actual semantics: `@concurrent` on either
+        // the requirement or the implementation alone keeps the body
+        // off-main through this path — each protects against the other
+        // being forgotten — and the probe goes red only when both are
+        // absent. The original comment claimed dropping the protocol
+        // annotation alone would be caught here; it isn't, because the
+        // @concurrent witness still hops at the body.)
         let service: any ExportService = FileExportService(
             container: try makeInMemoryContainer(),
             directory: scratch,

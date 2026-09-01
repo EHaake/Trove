@@ -259,8 +259,27 @@ per-function selectors run zero tests and report success).
 
 ## Phase 3 — Service and concurrency (walking skeleton)
 
-- [ ] **T007 — `ImportService.swift`: protocol, live service,
+- [x] **T007 — `ImportService.swift`: protocol, live service,
   `ImportError`, `ImportCopy`.**
+  *Done (2026-08-31)*: protocol (both `@concurrent` requirements),
+  `FileImportService` (single-function scope open/read/close, 10 MB
+  pre-read cap, strict UTF-8 decode, one `mapped` funnel so the two
+  parse methods can't map pipeline errors differently), `ImportError`
+  (five cases, `headerMismatch(wrongList:)`), `ImportTarget` (copy
+  nouns; its extension needed its own `nonisolated` — a type's
+  isolation doesn't carry into extensions under the MainActor
+  default), `ImportCopy` (failure messages all ending with the
+  criterion-14 "Nothing was imported." guarantee; undecodable names
+  Excel's "CSV UTF-8"; unreadable mentions iCloud download;
+  wrong-list names the other list and screen; confirmation title with
+  count, capped message body). 14 tests across `ImportServiceTests`
+  (real temp-file I/O — the `ExportTempFileTests` exception) and
+  `ImportCopyTests` (pure): canonical files through both methods, all
+  five error mappings incl. the flagged-vs-plain mismatch pair, cap
+  boundary pinned at exactly 5-no-more / 6-and-1-more, the guarantee
+  suffix swept across every error×target pair. Both mutations red:
+  cap `>` → `>=` → boundary test red; wrong-list flag swallowed →
+  mapping test red. Reverted; suite green.
   Per plan §Service and concurrency: the protocol (both `@concurrent`
   requirements); `FileImportService` — security-scoped read
   tolerating a false start-access with a conditional stop in a defer,
@@ -283,7 +302,24 @@ per-function selectors run zero tests and report success).
   off by one → cap test red; swallow the wrong-list flag → its copy
   test red.
 
-- [ ] **T008 — Concurrency probe.**
+- [x] **T008 — Concurrency probe.**
+  *Done (2026-08-31)*: `ImportConcurrencyTests` — probe through
+  `any ImportService`, `[false, false]` from the main-actor call
+  site. **The prescribed mutation was wrong, and running it proved
+  it**: dropping `@concurrent` from the protocol alone stayed
+  *green* — the implementations' own `@concurrent` still hops at the
+  body, even through the witness thunk. The full matrix was then
+  established empirically: protocol-only → green; implementation-only
+  → green; both dropped → `[true, true]`, red. So either annotation
+  alone keeps the body off-main through the existential (each covers
+  the other being forgotten), and the probe guards the *pair*, not
+  each individually. Three corrections in the same commit: this
+  suite's comment states the matrix; `ExportConcurrencyTests`'
+  comment — which claimed the protocol-only drop was detectable — is
+  corrected in place (011 shipped file, comment-only, per the
+  update-shipped-records rule); and plan.md's Test-plan red-check
+  line now prescribes the both-levels drop. Restored; full suite
+  670/98 green (15 new this phase). **Phase 3 complete.**
   `ExportConcurrencyTests`' shape verbatim for import: an injected
   probe samples `Thread.isMainThread` through the synchronous helper
   inside `FileImportService`'s generation body; the test calls

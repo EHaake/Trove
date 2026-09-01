@@ -483,7 +483,17 @@ claim in this plan gets the test that would catch it false.
   with `Money.cents(from: Decimal(string:))` on canonical forms and
   with `ExportSchema.money` across a cent spread.
 - **Concurrency probe** through `any ImportService`
-  (`ExportConcurrencyTests` shape). Red check: drop `@concurrent`.
+  (`ExportConcurrencyTests` shape). Red check: drop `@concurrent` from
+  **both** the requirements and the implementations. *(Corrected at
+  T008, empirically: the draft prescribed dropping it from the protocol
+  alone, which stays green — through the existential, either
+  annotation by itself keeps the body off-main, since a `@concurrent`
+  witness hops at the body and a `@concurrent` requirement hops at the
+  call. The pair is belt-and-braces, each covering the other being
+  forgotten; the probe detects only both being absent. 011's
+  `ExportConcurrencyTests` carried a comment claiming the
+  protocol-only drop was detectable — corrected in place, same
+  commit.)*
 - **VM suites** (both lists): mid-flight observability + reentry block
   for `isImportingFile` (the gated-spy pattern — spy gates only the
   first call, so a wrongly-leaked reentrant call fails fast rather
