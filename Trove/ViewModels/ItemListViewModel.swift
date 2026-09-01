@@ -476,6 +476,29 @@ final class ItemListViewModel {
         importPresentation = nil
     }
 
+    /// Stages the header-only canonical template through the existing
+    /// export path — the template *is* an export, so no new service
+    /// surface (plan §View-model surface). Deliberately NOT gated on
+    /// `canExport`: an empty collection is the template's whole audience
+    /// (criterion 1). Uses the export progress/staging states because it
+    /// is one.
+    func exportBlankTemplate() async {
+        guard !isBusy else { return }
+        isExporting = true
+        defer { isExporting = false }
+
+        let filename = ExportFilename.itemsTemplate
+        do {
+            let url = try await exportService.exportCSV(
+                CSVTable(headers: ExportSchema.itemHeaders, rows: []),
+                filename: filename
+            )
+            stagedExport = StagedExport(url: url, filename: filename)
+        } catch {
+            exportFailureMessage = ExportCopy.failureMessage
+        }
+    }
+
     /// Commits the staged preview: real items built from the validated
     /// records, appended to the end of custom order. On the main actor, on
     /// this context, deliberately (plan §The commit path): parsing was the

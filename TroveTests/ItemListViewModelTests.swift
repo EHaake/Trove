@@ -1252,3 +1252,29 @@ struct ItemListViewModelCommitTests {
     }
 }
 
+
+/// T012's guards: the blank template stages through the existing export
+/// path, ungated by `canExport` — an empty collection is its audience.
+struct ItemListViewModelTemplateTests {
+    @Test func theTemplateStagesHeaderOnlyBytesFromAnEmptyCollection() async throws {
+        let context = try makeInMemoryContext()
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+        try #require(viewModel.canExport == false, "the empty collection is the point")
+
+        await viewModel.exportBlankTemplate()
+
+        let table = try #require(spy.tables.first)
+        #expect(table.headers == ExportSchema.itemHeaders)
+        #expect(table.rows.isEmpty)
+        // The exact bytes: BOM + the header row + one CRLF — the canonical
+        // blank template (verified against CSVWriter, the real serializer).
+        #expect(
+            CSVWriter.write(table)
+                == "\u{FEFF}" + ExportSchema.itemHeaders.joined(separator: ",") + "\r\n"
+        )
+        #expect(spy.filenames == ["Trove-Items-Template.csv"])
+        #expect(viewModel.stagedExport?.filename == ExportFilename.itemsTemplate)
+    }
+}

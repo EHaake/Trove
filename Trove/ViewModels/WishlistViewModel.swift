@@ -385,6 +385,24 @@ final class WishlistViewModel {
         importPresentation = nil
     }
 
+    /// See `ItemListViewModel.exportBlankTemplate` — the wishlist twin.
+    func exportBlankTemplate() async {
+        guard !isBusy else { return }
+        isExporting = true
+        defer { isExporting = false }
+
+        let filename = ExportFilename.wishlistTemplate
+        do {
+            let url = try await exportService.exportCSV(
+                CSVTable(headers: ExportSchema.wishlistHeaders, rows: []),
+                filename: filename
+            )
+            stagedExport = StagedExport(url: url, filename: filename)
+        } catch {
+            exportFailureMessage = ExportCopy.failureMessage
+        }
+    }
+
     /// See `ItemListViewModel.confirmImport` — one commit path, both lists,
     /// with the wishlist's one extra move: `Added` restores `createdAt`.
     func confirmImport() async {

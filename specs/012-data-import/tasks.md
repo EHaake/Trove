@@ -450,7 +450,23 @@ per-function selectors run zero tests and report success).
   insert-between-parse-and-confirm test red; skip canonicalization →
   casing tests red; remove `rollback()` → the scan red.
 
-- [ ] **T012 — Blank template intents.**
+- [x] **T012 — Blank template intents.**
+  *Done (2026-09-01)*: `ExportFilename.itemsTemplate` /
+  `wishlistTemplate` (undated — a template is a layout, not a
+  snapshot; the enum stays the single namer);
+  `exportBlankTemplate()` on both VMs, gated on `isBusy` only,
+  staging the zero-row table through the existing
+  `exportCSV(_:filename:)` path and the export progress/staging
+  states (a template *is* an export — no new protocol surface, and
+  the spy tests confirm it by seeing the existing method). Twin
+  tests pin: empty collection (`canExport` false) still stages;
+  captured table is exactly the pinned headers with zero rows;
+  `CSVWriter.write` of it equals BOM + header row + one CRLF, byte
+  for byte; filenames pinned. Both mutations red in both suites:
+  gated on `canExport` → empty-collection tests red; filename
+  inlined as a literal → pinned-name assertions red (2 tests / 4
+  issues). Reverted; full suite 693/105 green (2 new). **Phase 4
+  complete.**
   Per plan §View-model surface: `ExportFilename.itemsTemplate` /
   `wishlistTemplate` (the enum stays the only namer of share-sheet
   files); `exportBlankTemplate()` on both VMs — guarded on `isBusy`
