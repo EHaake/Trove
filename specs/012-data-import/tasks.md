@@ -1,7 +1,7 @@
 # 012 — Data Import: Tasks
 
-Status: **Draft** (2026-08-31, drafted in-session against the approved
-`plan.md`; awaiting human review — no implementation before approval)
+Status: **Approved** (2026-08-31, same day as drafting) — in
+progress, Phase 1 started 2026-08-31
 
 Drafted against the approved `plan.md` (commit `da433d3`). No new
 technical decisions are made here — every call below traces to a plan
