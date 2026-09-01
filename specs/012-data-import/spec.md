@@ -272,70 +272,143 @@ by the person):
 
 ## Acceptance criteria
 
-1. [ ] The "…" badge shows on both list screens even when the
+1. [x] The "…" badge shows on both list screens even when the
    collection is empty. Export as CSV/PDF keep exactly their existing
    disabled behavior; Import from CSV… and Get Blank Template… are
    always enabled. `011` `spec.md` criteria 1–2 carry a superseded-by
    note pointing here.
-2. [ ] **Round trip**: a file exported by `011` from a populated
+2. [x] **Round trip**: a file exported by `011` from a populated
    collection imports into an empty collection with zero skips and
    zero defaults, and the resulting list in custom order shows the
    same items, same field values, same order as the file.
-3. [ ] Transport tolerance: the same file imports identically with BOM
+3. [x] Transport tolerance: the same file imports identically with BOM
    removed, with LF-only endings, without the trailing newline, with
    trailing empty columns on every line (header included), with blank
    lines interleaved, and with maximal RFC 4180 quoting — including
    fields containing commas, quotes, and embedded newlines. *(Amended
    2026-08-31: trailing-column and blank-line cases added.)*
-4. [ ] Header gate: a file with a missing, extra, renamed, or
+4. [x] Header gate: a file with a missing, extra, renamed, or
    reordered column imports nothing and shows a plain alert naming
    the problem. A wishlist file offered to the items list (and vice
    versa) is recognized as the other list's format in the alert.
-5. [ ] The confirmation alert precedes any write: it states the
+5. [x] The confirmation alert precedes any write: it states the
    import count, lists skipped rows by spreadsheet-style row number
    with reasons — the first five, then "and N more rows" *(cap added
    2026-08-31 during planning)* — and states the defaulted-field
    count. Cancel leaves the store byte-identical. Zero importable
    rows produces an informational alert with no import action.
-6. [ ] Field policy holds as tabled: a row with no Name (after
+6. [x] Field policy holds as tabled: a row with no Name (after
    trimming) or with extra content cells is skipped and reported;
    blank model-optional fields import as empty silently; blank or
    unparseable required fields take the tabled default and are
    counted; blank Current Value imports as unvalued, not zero.
    *(Amended 2026-08-31: second row-fatal condition, after-trim
    blankness.)*
-7. [ ] Money: canonical-format amounts import to the exact cent value
+7. [x] Money: canonical-format amounts import to the exact cent value
    export would write for them; bare integers are whole amounts;
    symbols, thousands separators, and decimal commas are rejected to
    the default and counted.
-8. [ ] Dates parse `yyyy-MM-dd` as the device-local Gregorian day and
+8. [x] Dates parse `yyyy-MM-dd` as the device-local Gregorian day and
    nothing else; condition matches case-insensitively; a three-letter
    currency code is stored uppercased, blank becomes USD.
-9. [ ] The imported batch lands at the end of custom order with the
+9. [x] The imported batch lands at the end of custom order with the
    file's row order preserved within it, on both lists; switching to
    custom sort immediately after import shows the batch there.
-10. [ ] Import is view-independent: with a category filter active, the
+10. [x] Import is view-independent: with a category filter active, the
     full file still imports; imported items outside the filter appear
     once the filter is cleared.
-11. [ ] Importing the same file twice yields two copies of every
+11. [x] Importing the same file twice yields two copies of every
     accepted row — stated no-dedupe behavior, verified.
-12. [ ] Get Blank Template… stages a header-only canonical CSV
+12. [x] Get Blank Template… stages a header-only canonical CSV
     (correct name per list) through the share sheet, and that
     template — filled with one valid row in a spreadsheet app and
     re-saved — imports cleanly.
-13. [ ] Wishlist parity: criteria 2–12 hold on the wishlist against
+13. [x] Wishlist parity: criteria 2–12 hold on the wishlist against
     its 7-column schema, with `Added` restoring the wish's creation
     date.
-14. [ ] A failed import (unreadable file, undecodable text, header
+14. [x] A failed import (unreadable file, undecodable text, header
     mismatch, an unclosed quote, a file beyond the defensive size
     cap) shows a plain alert in `011`'s failure style and imports
     nothing — never a partial batch. *(Amended 2026-08-31: the last
     two causes added during planning.)*
-15. [ ] The UI stays responsive while a 300-row file parses and
+15. [x] The UI stays responsive while a 300-row file parses and
     commits, with the badge showing the progress affordance
     throughout — same bar `011`'s criterion 11 set for export.
-16. [ ] The column-reference doc exists, covers every column's format
+16. [x] The column-reference doc exists, covers every column's format
     and default, and carries the Excel caveats.
+
+### Verification record (T018, 2026-09-01)
+
+Citations per criterion; every named guard is mutation-verified per
+the constitution (each task's Done note in tasks.md records what was
+broken and what went red). "Device" means the T017 simulator pass.
+
+1. Header restructure in both list views;
+   `ImportWiringTests.theOverflowControlSitsOutsideEveryEmptyCollectionGate`
+   (brace-span scan, both views) + the empty-collection UI test — one
+   re-nest mutation turned both red;
+   `ExportWiringTests.theMenuCarriesFourActionsWithOnlyExportsGated`
+   (gating count pinned at exactly 2); 011 spec.md criteria 1–2 carry
+   the superseded-by note; device.
+2. `aTroveExportRoundTripsLosslessly` / `aWishlistExportRoundTripsLosslessly`
+   (serialization equality via `ExportSchema.row(from:)`, zero skips,
+   zero defaults); order by `commitAppendsAtTheEndPreservingFileOrder`
+   + the device Custom-sort check. The empty-collection restore is the
+   append-to-nothing case of the same commit path.
+3. `CSVParserTests` (all endings incl. lone-CR tail, BOM optional,
+   minimal-vs-maximal quoting, embedded comma/quote/newline/CRLF);
+   `aResavedFileWithTrailingColumnsAndBlankLinesShapesClean`.
+4. `missingExtraRenamedAndReorderedColumnsAllMismatch`;
+   `theOtherListsHeadersAreRecognizedAsWrongList` (+ the preview-level
+   twins); `theOtherListsFileMapsToTheFlaggedMismatch`;
+   `theWrongListMessageNamesTheOtherList`; device (the alert, verbatim).
+5. `cancelClearsThePresentationWithoutStoreWrites`;
+   `aZeroImportableConfirmationClearsWithoutWrites` +
+   `importOffersConfirmation` accessors; `theSkipListingCapsAtFive`
+   (boundary pinned); `skipReportsUseSpreadsheetNumbersPastEmbeddedNewlines`;
+   device (counts, rows 4/6, Cancel leaving 1 item).
+6. The `ImportSchemaTests` field-policy block (13 items tests + the
+   wishlist table tests): both row-fatals, after-trim blankness,
+   silent optionals, counted defaults, zero-vs-blank Current Value.
+7. `canonicalMoneyFormsParseCentExact`, `bareIntegers…`,
+   `nonCanonicalMoneyIsRejected` (13 forms),
+   `moneyOverflowRejectsWithoutTrapping`,
+   `writerMoneyRoundTripsThroughTheParser` (+ `Money.cents`
+   equivalence — 011's preserved invariant).
+8. Date shape/impossible/DST/Gregorian-pin tests;
+   `conditionMatchesCaseInsensitively`;
+   `currencyIsThreeLettersUppercased`; device ("Good"/"usd"/leap day).
+9. `commitAppendsAtTheEndPreservingFileOrder` (second-context
+   verification — see the T018 audit note),
+   `thePlacementBaseIsComputedAtCommitTimeNotParseTime`,
+   `aLegacyAllZeroStoreStillLandsTheBatchAfterTheLegacyBlock`; device.
+10. `importIsViewIndependentOfTheActiveFilter`.
+11. `committingTheSameFileTwiceDuplicatesEveryRow`.
+12. Template twins in both VM test files (byte-exact BOM+header+CRLF,
+    pinned filenames, `canExport` ignored); the closed-loop tests
+    (template + one hand row → exactly one record); device (68-byte
+    share sheet). Honest partial: the fill-in-a-real-spreadsheet
+    re-save needs Numbers/Excel hands — the transport fixtures cover
+    the file shapes those apps produce.
+13. The wishlist halves of everything above +
+    `commitAppendsAndRestoresCreatedAtFromAdded` and
+    `oldAddedDatesCannotStealAnExistingPathsCasing`; device
+    ("ADDED MAY 10, 2024").
+14. `ImportServiceTests` error mappings (all five);
+    `failureMessagesAreActionableAndAllEndWithTheGuarantee` (every
+    error × target); rollback mechanism test + per-VM catch scan +
+    the T018 deleted-`save()` mutation now caught by second-context
+    fetches; device (wrong-list alert).
+15. `ImportConcurrencyTests` (off-main parse, through the
+    existential); `isImportingFileIsObservableMidFlightAndBlocksReentry`
+    (both VMs); the yield in `confirmImport`; ~85 ms measured commit
+    (plan §The commit path); device (300 rows, instant, responsive).
+    Honest partial: at these speeds no spinner is visible — the
+    affordance is guarded by state tests, not eyeballs.
+16. `docs/csv-reference.md`, checked line-by-line against the field
+    tables this pass: all 19 columns with format/blank/unreadable,
+    both row-fatals, the whole-file list, all three Excel caveats,
+    linked from README.
 
 ## Non-goals (explicit)
 

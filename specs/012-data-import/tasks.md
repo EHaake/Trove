@@ -1,7 +1,9 @@
 # 012 — Data Import: Tasks
 
-Status: **Approved** (2026-08-31, same day as drafting) — in
-progress, Phase 1 started 2026-08-31
+Status: **Complete** (2026-09-01) — all eighteen tasks done; the
+T017 device pass found and fixed the dismissal race, the T018 audit
+found and fixed the false-passing commit-persistence tests; PR #7
+ready for review
 
 Drafted against the approved `plan.md` (commit `da433d3`). No new
 technical decisions are made here — every call below traces to a plan
@@ -652,7 +654,28 @@ per-function selectors run zero tests and report success).
   *Done when*: every check performed and noted — surprises included —
   in the Done note.
 
-- [ ] **T018 — Close-out review.**
+- [x] **T018 — Close-out review.**
+  *Done (2026-09-01)*: all sixteen criteria checked with citations —
+  spec.md carries a per-criterion Verification record, honest
+  partials stated (the real-spreadsheet re-save and smallest-device
+  alert check need hands/hardware; no spinner is visible at ~85 ms).
+  **The false-passing audit found one, live**: both commit suites
+  fetched from the same context after `confirmImport`, the exact
+  recorded persistence shape — the deleted-`save()` mutation was run
+  and *stayed green* in all 9 items tests. Both append tests now
+  verify through a second `ModelContext` over the same container;
+  the mutation re-run went red in both suites; `save()` restored.
+  (This was invisible until now precisely because the shape looks
+  like a persistence check and isn't — the third time this project
+  has caught that species, each time by running the mutation rather
+  than reading the test.) Also this pass: 011 spec.md criteria 1–2
+  gained the superseded-by note criterion 1 required; plan.md's
+  "statics are reused" wording corrected to the as-built
+  `FieldNormalization` extraction (its other in-place corrections —
+  the SE-0461 mutation matrix, the confirmImport sync-capture
+  reshape, the measured 85 ms — landed with their tasks). Final:
+  build green; full suite 697 tests / 105 suites + 6 UI tests green.
+  Status flipped to Complete.
   011's T019 pattern: sweep every Done note against what the code
   actually does; check each spec criterion box with a verification
   citation (honest partials stated as partials); audit for

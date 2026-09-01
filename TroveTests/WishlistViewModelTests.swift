@@ -885,7 +885,10 @@ struct WishlistViewModelCommitTests {
     private let dummyURL = URL(filePath: "/dev/null/import.csv")
 
     @Test func commitAppendsAndRestoresCreatedAtFromAdded() async throws {
-        let context = try makeInMemoryContext()
+        // Second-context verification — see the items twin's note (T018's
+        // audit: a same-context refetch passes with `save()` deleted).
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
         context.insert(WishlistItem(name: "Existing", sortOrder: 0))
         try context.save()
 
@@ -898,7 +901,7 @@ struct WishlistViewModelCommitTests {
         await viewModel.confirmImport()?.value
 
         let imported = try #require(
-            try context.fetch(FetchDescriptor<WishlistItem>()).first { $0.name == "OM-1" }
+            try ModelContext(container).fetch(FetchDescriptor<WishlistItem>()).first { $0.name == "OM-1" }
         )
         #expect(imported.sortOrder == 1)
         // The fixture's record carries this instant; the init hard-sets

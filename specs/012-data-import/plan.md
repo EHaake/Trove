@@ -114,11 +114,16 @@ Order of operations, before any field is read:
    alert can say "this looks like a Wishlist export."
 
 Field policy per the spec's tables, with the amended trimming rule:
-every cell normalizes through the same rules the form applies
-(`ItemFormViewModel.trimmed` / `nilIfBlank` semantics — the statics
-are reused, not reimplemented) — so "blank" means empty after
-trimming, an imported item is indistinguishable from a hand-typed one,
-and a whitespace-only Name skips the row. Row-fatal conditions, now
+every cell normalizes through the same rules the form applies — so
+"blank" means empty after trimming, an imported item is
+indistinguishable from a hand-typed one, and a whitespace-only Name
+skips the row. *(Corrected at T005: the draft said the form's statics
+would be "reused, not reimplemented," but they are `private` and —
+under the project MainActor default — MainActor-isolated, unreachable
+from nonisolated validation. The rule was extracted instead into
+`FieldNormalization` (`nonisolated`), with both form view models'
+statics now delegating to it — the same one-definition move this plan
+prescribes for `canonicalize`.)* Row-fatal conditions, now
 two (amended criterion 6): empty Name; **more content cells than the
 schema** after trailing-empty stripping — a stray comma shifts every
 later column one place and no guess about which field it belongs to is

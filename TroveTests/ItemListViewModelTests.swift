@@ -1079,7 +1079,14 @@ struct ItemListViewModelCommitTests {
     private let dummyURL = URL(filePath: "/dev/null/import.csv")
 
     @Test func commitAppendsAtTheEndPreservingFileOrder() async throws {
-        let context = try makeInMemoryContext()
+        // A container, not just a context: the verification fetch below
+        // runs on a SECOND context over the same store, because a
+        // same-context refetch returns unsaved inserts and passes with
+        // `save()` deleted — the recorded false-passing persistence shape,
+        // which this suite exhibited until T018's audit ran that exact
+        // mutation and stayed green.
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
         context.insert(Item(name: "Existing A", sortOrder: 0))
         context.insert(Item(name: "Existing B", sortOrder: 1))
         try context.save()
@@ -1091,7 +1098,7 @@ struct ItemListViewModelCommitTests {
         await viewModel.importCSV(from: dummyURL)
         await viewModel.confirmImport()?.value
 
-        let ordered = try context.fetch(
+        let ordered = try ModelContext(container).fetch(
             FetchDescriptor<Item>(sortBy: [SortDescriptor(\.sortOrder)])
         )
         #expect(ordered.map(\.name) == ["Existing A", "Existing B", "One", "Two", "Three"])
