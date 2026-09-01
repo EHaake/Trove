@@ -441,9 +441,133 @@ struct ImportSchemaTests {
         #expect(row.record.currentValueCents == nil)
     }
 
+    // MARK: - Wishlist row validation (T006)
+
+    @Test func aFullyValidWishlistRowValidatesWithNoDefaults() throws {
+        let preview = try ImportSchema.wishlistPreview(
+            from: wishlistFile([wishlistCells()]), timeZone: utc()
+        )
+        #expect(preview.skipped.isEmpty)
+        #expect(preview.defaultedFieldCount == 0)
+        let row = try #require(preview.validated.first)
+        #expect(row.record.name == "OM-1")
+        #expect(row.record.estimatedCostCents == 45_000)
+        #expect(row.record.desireToOwn == 3)
+        // Added restores the wish's creation date, not the import moment.
+        #expect(row.record.createdAt == ImportSchema.day(from: "2024-05-10", timeZone: utc()))
+    }
+
+    @Test func wishlistRowFatalsMatchTheItemsRules() throws {
+        let preview = try ImportSchema.wishlistPreview(
+            from: wishlistFile([
+                wishlistCells(["Name": "  "]),
+                wishlistCells() + ["stray"],
+            ]),
+            timeZone: utc()
+        )
+        #expect(preview.validated.isEmpty)
+        #expect(preview.skipped == [
+            SkippedRow(rowNumber: 2, reason: "no name"),
+            SkippedRow(rowNumber: 3, reason: "more columns than the template"),
+        ])
+    }
+
+    @Test func wishlistRequiredBlanksDefaultAndCountAndBlankCurrencyIsSilent() throws {
+        let preview = try ImportSchema.wishlistPreview(
+            from: wishlistFile([wishlistCells([
+                "Estimated Cost": "", "Desire to Own": "5", "Added": "", "Currency": "",
+            ])]),
+            timeZone: utc()
+        )
+        let row = try #require(preview.validated.first)
+        // Cost, out-of-scale desire (5 on a 1–3 scale), and Added count;
+        // blank currency is silent — same rule as items.
+        #expect(row.defaultedFieldCount == 3)
+        #expect(row.record.estimatedCostCents == 0)
+        #expect(row.record.desireToOwn == 2)
+        #expect(row.record.currencyCode == "USD")
+        #expect(abs(row.record.createdAt.timeIntervalSinceNow) < 60)
+    }
+
+    @Test func anItemsFileFailsTheWishlistPreviewAsWrongList() {
+        #expect(throws: ImportSchema.HeaderError.wrongList) {
+            try ImportSchema.wishlistPreview(
+                from: [CSVRow(number: 1, cells: ExportSchema.itemHeaders)],
+                timeZone: utc()
+            )
+        }
+    }
+
+    /// The wishlist round trip — serialization equality, zero skips, zero
+    /// defaults, `Added` preserved across the loop.
+    @Test func aWishlistExportRoundTripsLosslessly() throws {
+        let zone = utc()
+        let originals = [
+            WishlistExportRecord(
+                name: "OM-1", categoryPath: "Photography/Cameras",
+                estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 3,
+                createdAt: Date(timeIntervalSince1970: 1_500_000_000),
+                notes: "wants: \"clean glass\", meter\nworking", firstPhotoID: nil
+            ),
+            WishlistExportRecord(
+                name: "Big Muff", categoryPath: "Music/Pedals",
+                estimatedCostCents: 9_900, currencyCode: "USD", desireToOwn: 1,
+                createdAt: Date(timeIntervalSince1970: 1_650_000_000),
+                notes: nil, firstPhotoID: nil
+            ),
+        ]
+        let text = CSVWriter.write(ExportSchema.wishlistTable(originals, timeZone: zone))
+        let preview = try ImportSchema.wishlistPreview(from: try CSVParser.parse(text), timeZone: zone)
+
+        #expect(preview.skipped.isEmpty)
+        #expect(preview.defaultedFieldCount == 0)
+        #expect(preview.validated.count == originals.count)
+        for (validated, original) in zip(preview.validated, originals) {
+            #expect(
+                ExportSchema.row(from: validated.record, timeZone: zone)
+                    == ExportSchema.row(from: original, timeZone: zone)
+            )
+        }
+    }
+
+    @Test func theBlankWishlistTemplatePlusOneHandRowImportsCleanly() throws {
+        let template = CSVWriter.write(CSVTable(headers: ExportSchema.wishlistHeaders, rows: []))
+        let file = template + "Jazzmaster,Music/Guitars,1800.00,USD,2,2026-01-15,someday fund\r\n"
+        let preview = try ImportSchema.wishlistPreview(from: try CSVParser.parse(file), timeZone: utc())
+
+        #expect(preview.skipped.isEmpty)
+        #expect(preview.defaultedFieldCount == 0)
+        let row = try #require(preview.validated.first)
+        #expect(preview.validated.count == 1)
+        #expect(row.record.name == "Jazzmaster")
+        #expect(row.record.estimatedCostCents == 180_000)
+        #expect(row.record.desireToOwn == 2)
+        #expect(row.record.notes == "someday fund")
+        #expect(row.record.createdAt == ImportSchema.day(from: "2026-01-15", timeZone: utc()))
+    }
+
     // MARK: - Fixtures
 
     private func utc() -> TimeZone { TimeZone(identifier: "UTC")! }
+
+    private func wishlistFile(_ dataRows: [[String]]) -> [CSVRow] {
+        [CSVRow(number: 1, cells: ExportSchema.wishlistHeaders)]
+            + dataRows.enumerated().map { CSVRow(number: $0.offset + 2, cells: $0.element) }
+    }
+
+    private func wishlistCells(_ changes: [String: String] = [:]) -> [String] {
+        var byHeader = [
+            "Name": "OM-1",
+            "Category": "Photography/Cameras",
+            "Estimated Cost": "450.00",
+            "Currency": "USD",
+            "Desire to Own": "3",
+            "Added": "2024-05-10",
+            "Notes": "meter working",
+        ]
+        for (header, value) in changes { byHeader[header] = value }
+        return ExportSchema.wishlistHeaders.map { byHeader[$0]! }
+    }
 
     /// A canonical items file as parsed rows: header from the pinned array,
     /// data rows numbered the way a spreadsheet numbers them.

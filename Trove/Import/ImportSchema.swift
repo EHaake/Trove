@@ -349,6 +349,109 @@ nonisolated enum ImportSchema {
             defaultedFieldCount: validated.reduce(0) { $0 + $1.defaultedFieldCount }
         )
     }
+
+    /// The wishlist pipeline — `itemsPreview`'s twin over the 7-column
+    /// table. Deliberately a parallel implementation, not shared machinery:
+    /// each function reads as its spec table, and the tables genuinely
+    /// differ (`Added` restores `createdAt`; desire runs 1–3 defaulting
+    /// to 2, the `DesireToOwnLevel` midpoint).
+    static func wishlistPreview(
+        from rows: [CSVRow],
+        timeZone: TimeZone = .current
+    ) throws -> WishlistImportPreview {
+        let shaped = shaped(rows)
+        guard let header = shaped.first else { throw HeaderError.mismatch }
+        try requireWishlistHeader(header)
+
+        let headers = ExportSchema.wishlistHeaders
+        func column(_ name: String) -> Int { headers.firstIndex(of: name)! }
+        let nameColumn = column("Name")
+        let categoryColumn = column("Category")
+        let costColumn = column("Estimated Cost")
+        let currencyColumn = column("Currency")
+        let desireColumn = column("Desire to Own")
+        let addedColumn = column("Added")
+        let notesColumn = column("Notes")
+
+        var validated: [ValidatedRow<WishlistExportRecord>] = []
+        var skipped: [SkippedRow] = []
+
+        for row in shaped.dropFirst() {
+            guard row.cells.count <= headers.count else {
+                skipped.append(SkippedRow(rowNumber: row.number, reason: SkipReason.extraColumns))
+                continue
+            }
+            var cells = row.cells
+            cells.append(contentsOf: Array(repeating: "", count: headers.count - cells.count))
+
+            let name = FieldNormalization.trimmed(cells[nameColumn])
+            guard !name.isEmpty else {
+                skipped.append(SkippedRow(rowNumber: row.number, reason: SkipReason.noName))
+                continue
+            }
+
+            var defaulted = 0
+
+            let cost: Int
+            if let parsed = cents(from: FieldNormalization.trimmed(cells[costColumn])) {
+                cost = parsed
+            } else {
+                cost = 0
+                defaulted += 1
+            }
+
+            let currencyCell = FieldNormalization.trimmed(cells[currencyColumn])
+            let currency: String
+            if currencyCell.isEmpty {
+                currency = "USD"
+            } else if let code = currencyCode(from: currencyCell) {
+                currency = code
+            } else {
+                currency = "USD"
+                defaulted += 1
+            }
+
+            let desireToOwn: Int
+            if let parsed = desire(from: FieldNormalization.trimmed(cells[desireColumn]), in: 1...3) {
+                desireToOwn = parsed
+            } else {
+                desireToOwn = 2
+                defaulted += 1
+            }
+
+            // `Added` restores the wish's creation date — the round trip
+            // preserves when a want was recorded (spec's field table). The
+            // commit assigns it onto `createdAt` after construction, since
+            // `WishlistItem.init` hard-sets `.now`.
+            let createdAt: Date
+            if let parsed = day(from: FieldNormalization.trimmed(cells[addedColumn]), timeZone: timeZone) {
+                createdAt = parsed
+            } else {
+                createdAt = .now
+                defaulted += 1
+            }
+
+            let record = WishlistExportRecord(
+                name: name,
+                categoryPath: FieldNormalization.trimmed(cells[categoryColumn]),
+                estimatedCostCents: cost,
+                currencyCode: currency,
+                desireToOwn: desireToOwn,
+                createdAt: createdAt,
+                notes: FieldNormalization.nilIfBlank(cells[notesColumn]),
+                firstPhotoID: nil
+            )
+            validated.append(
+                ValidatedRow(record: record, rowNumber: row.number, defaultedFieldCount: defaulted)
+            )
+        }
+
+        return ImportPreview(
+            validated: validated,
+            skipped: skipped,
+            defaultedFieldCount: validated.reduce(0) { $0 + $1.defaultedFieldCount }
+        )
+    }
 }
 
 // MARK: - Preview types (plan §Records)
@@ -381,3 +484,4 @@ nonisolated struct ImportPreview<Record: Sendable>: Sendable {
 }
 
 typealias ItemsImportPreview = ImportPreview<ItemExportRecord>
+typealias WishlistImportPreview = ImportPreview<WishlistExportRecord>

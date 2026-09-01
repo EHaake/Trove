@@ -228,7 +228,24 @@ per-function selectors run zero tests and report success).
   whitespace-Name test red; remove a column from the round trip's row
   rebuild → serialization equality red.
 
-- [ ] **T006 — Wishlist row validation.**
+- [x] **T006 — Wishlist row validation.**
+  *Done (2026-08-31)*: `ImportSchema.wishlistPreview(from:timeZone:)`
+  — a deliberately parallel implementation of the 7-column table
+  (each function reads as its spec table; shared machinery would
+  obscure that they genuinely differ). `Added` restores `createdAt`
+  through the date parser; desire runs 1–3 defaulting to 2;
+  `WishlistImportPreview` typealias. 6 tests: full-valid row with the
+  `createdAt` pin, both row-fatals with spreadsheet numbers, the
+  three-way default-count row with silent blank currency, items file
+  → wrongList through the preview, the lossless round trip (`Added`
+  preserved across the loop), and the wishlist template closed loop.
+  Both mutations red: blank-name default instead of skip → the
+  row-fatals test red; `Added` pointed at `.now` instead of the
+  parsed day → 3 tests / 4 issues (direct pin, round trip, closed
+  loop). One process note: a typo'd `-project` path made a mutation
+  run produce *no* output — the memory-file trap in a new costume;
+  caught by the missing failure lines, reran correctly. Reverted;
+  full suite 655/95 green (6 new). **Phase 2 complete.**
   The wishlist variant, proven immediately after items per spec
   decision 5: the gate from T003 over `wishlistHeaders`; the 7-column
   policy table; `Added` parsed with T004's date parser into the
