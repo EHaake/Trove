@@ -261,6 +261,219 @@ struct ImportSchemaTests {
         #expect(ImportSchema.currencyCode(from: "") == nil)
     }
 
+    // MARK: - Items row validation (T005)
+
+    @Test func aFullyValidRowValidatesWithNoDefaults() throws {
+        let preview = try ImportSchema.itemsPreview(from: itemsFile([cells()]), timeZone: utc())
+        #expect(preview.skipped.isEmpty)
+        #expect(preview.defaultedFieldCount == 0)
+        let row = try #require(preview.validated.first)
+        #expect(row.rowNumber == 2)
+        #expect(row.record.name == "Leica M6")
+        #expect(row.record.purchasePriceCents == 290_000)
+        #expect(row.record.currentValueCents == 345_000)
+        #expect(row.record.conditionRawValue == "excellent")
+        #expect(row.record.purchaseLocation == "KEH")
+        #expect(row.record.firstPhotoID == nil)
+    }
+
+    @Test func blankAndWhitespaceOnlyNamesSkipTheRow() throws {
+        for name in ["", "   ", "\t"] {
+            let preview = try ImportSchema.itemsPreview(
+                from: itemsFile([cells(["Name": name])]), timeZone: utc()
+            )
+            #expect(preview.validated.isEmpty)
+            #expect(preview.skipped == [SkippedRow(rowNumber: 2, reason: "no name")])
+        }
+    }
+
+    @Test func extraContentCellsSkipTheRow() throws {
+        let preview = try ImportSchema.itemsPreview(
+            from: itemsFile([cells() + ["stray"]]), timeZone: utc()
+        )
+        #expect(preview.validated.isEmpty)
+        #expect(preview.skipped == [
+            SkippedRow(rowNumber: 2, reason: "more columns than the template"),
+        ])
+    }
+
+    @Test func underLengthRowsPadAndFollowTheBlankPolicy() throws {
+        // Only the first five columns survive transport: Name, Category,
+        // Purchase Price, Currency, Purchase Date. The padded tail is
+        // blank-silent for optionals, defaulted-and-counted for Desire to
+        // Keep and Condition.
+        let short = Array(cells().prefix(5))
+        let preview = try ImportSchema.itemsPreview(from: itemsFile([short]), timeZone: utc())
+        let row = try #require(preview.validated.first)
+        #expect(row.record.currentValueCents == nil)
+        #expect(row.record.purchaseLocation == nil)
+        #expect(row.record.notes == nil)
+        #expect(row.record.desireToKeep == 3)
+        #expect(row.record.conditionRawValue == "excellent")
+        #expect(row.defaultedFieldCount == 2)
+    }
+
+    @Test func blankOptionalFieldsAndBlankCurrencyAreSilent() throws {
+        let preview = try ImportSchema.itemsPreview(from: itemsFile([cells([
+            "Purchase Location": "", "Current Value": "", "Currency": "",
+            "Condition Notes": "", "Serial Number": "", "Notes": " ",
+        ])]), timeZone: utc())
+        let row = try #require(preview.validated.first)
+        #expect(preview.defaultedFieldCount == 0)
+        #expect(row.record.currencyCode == "USD")
+        #expect(row.record.currentValueCents == nil)
+        #expect(row.record.purchaseLocation == nil)
+        #expect(row.record.notes == nil)
+    }
+
+    @Test func requiredBlanksAndUnparseablesDefaultAndCount() throws {
+        let preview = try ImportSchema.itemsPreview(from: itemsFile([cells([
+            "Purchase Price": "", "Purchase Date": "someday", "Desire to Keep": "9",
+            "Condition": "mint", "Currency": "dollars", "Current Value": "n/a",
+        ])]), timeZone: utc())
+        let row = try #require(preview.validated.first)
+        #expect(row.defaultedFieldCount == 6)
+        #expect(preview.defaultedFieldCount == 6)
+        #expect(row.record.purchasePriceCents == 0)
+        #expect(row.record.desireToKeep == 3)
+        #expect(row.record.conditionRawValue == "excellent")
+        #expect(row.record.currencyCode == "USD")
+        #expect(row.record.currentValueCents == nil)
+        #expect(abs(row.record.purchaseDate.timeIntervalSinceNow) < 60)
+    }
+
+    @Test func currentValueZeroAndBlankStayDistinct() throws {
+        let preview = try ImportSchema.itemsPreview(
+            from: itemsFile([cells(["Current Value": "0.00"]), cells(["Current Value": ""])]),
+            timeZone: utc()
+        )
+        #expect(preview.validated[0].record.currentValueCents == 0)
+        #expect(preview.validated[1].record.currentValueCents == nil)
+        #expect(preview.defaultedFieldCount == 0)
+    }
+
+    @Test func textFieldsNormalizeExactlyAsTheFormWould() throws {
+        let preview = try ImportSchema.itemsPreview(from: itemsFile([cells([
+            "Name": "  Leica M6  ", "Category": " Photography/Cameras ",
+            "Serial Number": " 1234567 ",
+        ])]), timeZone: utc())
+        let row = try #require(preview.validated.first)
+        #expect(row.record.name == "Leica M6")
+        #expect(row.record.categoryPath == "Photography/Cameras")
+        #expect(row.record.serialNumber == "1234567")
+    }
+
+    /// The criterion-5 numbering fixture: an embedded-newline row (two
+    /// physical lines, one spreadsheet row) followed by a nameless row —
+    /// the skip must be reported as row 3, the number Numbers shows.
+    @Test func skipReportsUseSpreadsheetNumbersPastEmbeddedNewlines() throws {
+        let file = ExportSchema.itemHeaders.joined(separator: ",") + "\r\n"
+            + "\"Two\nLines\",Cat,1.00,USD,2026-01-01,,,3,good,,,\r\n"
+            + ",Cat,1.00,USD,2026-01-01,,,3,good,,,\r\n"
+        let preview = try ImportSchema.itemsPreview(from: try CSVParser.parse(file), timeZone: utc())
+        #expect(preview.validated.map(\.rowNumber) == [2])
+        #expect(preview.skipped == [SkippedRow(rowNumber: 3, reason: "no name")])
+    }
+
+    @Test func anEmptyFileFailsTheGateNotTheRowPolicy() {
+        #expect(throws: ImportSchema.HeaderError.mismatch) {
+            try ImportSchema.itemsPreview(from: [], timeZone: utc())
+        }
+    }
+
+    @Test func aWishlistFileFailsTheItemsPreviewAsWrongList() {
+        #expect(throws: ImportSchema.HeaderError.wrongList) {
+            try ImportSchema.itemsPreview(
+                from: [CSVRow(number: 1, cells: ExportSchema.wishlistHeaders)],
+                timeZone: utc()
+            )
+        }
+    }
+
+    /// Criterion 2's unit half: export → write → parse → validate → the
+    /// same rows the writer would serialize for the originals, zero skips,
+    /// zero defaults. Serialization equality, not record equality —
+    /// `firstPhotoID` can't round-trip through CSV (plan §Records).
+    @Test func aTroveExportRoundTripsLosslessly() throws {
+        let zone = utc()
+        let originals = [
+            record(name: "Leica M6", notes: "body, cap — \"user grade\"\nno box"),
+            record(name: "Blues Junior", notes: ""),
+            ItemExportRecord(
+                name: "SM7B", categoryPath: "Audio/Mics", purchasePriceCents: 39_900,
+                currencyCode: "USD", purchaseDate: Date(timeIntervalSince1970: 1_600_000_000),
+                purchaseLocation: "Sweetwater", currentValueCents: 35_000, desireToKeep: 5,
+                conditionRawValue: "new", conditionNotes: "still sealed",
+                serialNumber: "SN=1+2", notes: nil, firstPhotoID: nil
+            ),
+        ]
+        let text = CSVWriter.write(ExportSchema.itemsTable(originals, timeZone: zone))
+        let preview = try ImportSchema.itemsPreview(from: try CSVParser.parse(text), timeZone: zone)
+
+        #expect(preview.skipped.isEmpty)
+        #expect(preview.defaultedFieldCount == 0)
+        #expect(preview.validated.count == originals.count)
+        for (validated, original) in zip(preview.validated, originals) {
+            #expect(
+                ExportSchema.row(from: validated.record, timeZone: zone)
+                    == ExportSchema.row(from: original, timeZone: zone)
+            )
+        }
+    }
+
+    /// The closed loop plan.md calls the highest-value test: the blank
+    /// template's own bytes plus one hand-appended canonical row, through
+    /// the production pipeline, yields exactly that row — writer and
+    /// parser tied together with neither as the other's oracle.
+    @Test func theBlankTemplatePlusOneHandRowImportsCleanly() throws {
+        let template = CSVWriter.write(CSVTable(headers: ExportSchema.itemHeaders, rows: []))
+        let file = template + "Strat,Music/Guitars,1200.00,USD,2025-06-01,,,4,good,,,\r\n"
+        let preview = try ImportSchema.itemsPreview(from: try CSVParser.parse(file), timeZone: utc())
+
+        #expect(preview.skipped.isEmpty)
+        #expect(preview.defaultedFieldCount == 0)
+        let row = try #require(preview.validated.first)
+        #expect(preview.validated.count == 1)
+        #expect(row.record.name == "Strat")
+        #expect(row.record.purchasePriceCents == 120_000)
+        #expect(row.record.desireToKeep == 4)
+        #expect(row.record.conditionRawValue == "good")
+        #expect(row.record.currentValueCents == nil)
+    }
+
+    // MARK: - Fixtures
+
+    private func utc() -> TimeZone { TimeZone(identifier: "UTC")! }
+
+    /// A canonical items file as parsed rows: header from the pinned array,
+    /// data rows numbered the way a spreadsheet numbers them.
+    private func itemsFile(_ dataRows: [[String]]) -> [CSVRow] {
+        [CSVRow(number: 1, cells: ExportSchema.itemHeaders)]
+            + dataRows.enumerated().map { CSVRow(number: $0.offset + 2, cells: $0.element) }
+    }
+
+    /// One fully valid row, keyed by header so tests read as the change
+    /// they make — and ordered by the pinned array, so a schema growth
+    /// breaks this fixture by compile-adjacent failure, not silently.
+    private func cells(_ changes: [String: String] = [:]) -> [String] {
+        var byHeader = [
+            "Name": "Leica M6",
+            "Category": "Photography/Cameras",
+            "Purchase Price": "2900.00",
+            "Currency": "USD",
+            "Purchase Date": "2026-03-09",
+            "Purchase Location": "KEH",
+            "Current Value": "3450.00",
+            "Desire to Keep": "5",
+            "Condition": "excellent",
+            "Condition Notes": "",
+            "Serial Number": "1234567",
+            "Notes": "body only",
+        ]
+        for (header, value) in changes { byHeader[header] = value }
+        return ExportSchema.itemHeaders.map { byHeader[$0]! }
+    }
+
     private func record(name: String, notes: String) -> ItemExportRecord {
         ItemExportRecord(
             name: name,

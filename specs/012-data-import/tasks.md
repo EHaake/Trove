@@ -177,8 +177,33 @@ per-function selectors run zero tests and report success).
   `Calendar.current` → Gregorian pin red; skip the components
   round-trip → `2026-02-30` test red.
 
-- [ ] **T005 — Items row validation: `ValidatedRow` and the items
+- [x] **T005 — Items row validation: `ValidatedRow` and the items
   policy table.**
+  *Done (2026-08-31)*: `ImportSchema.itemsPreview(from:timeZone:)` —
+  shape → gate → field policy end-to-end; `ValidatedRow<Record>` /
+  `ImportPreview<Record>` generics with the `ItemsImportPreview`
+  typealias; `SkipReason` strings pinned where the validator and
+  `ImportCopy` will both read them. **One plan adjustment, recorded**:
+  the form statics turned out to be `private` *and* MainActor-isolated
+  (the project default), so "reused, not reimplemented" became
+  extraction — new `FieldNormalization` (`nonisolated`), with both
+  form view models' private statics now delegating to it; the same
+  one-definition move the plan prescribes for `canonicalize`, and the
+  header gate's trimming switched onto it too.
+  `ExportSchema.firstPhotoID` carries the import-constructs-nil doc
+  note. 13 tests: full-valid row; blank/whitespace Name skips; extra
+  cells skip; under-length pad + blank policy; silent optionals +
+  silent blank currency; six-way default-and-count row; zero-vs-blank
+  Current Value distinctness; form-identical text normalization; the
+  embedded-newline/nameless numbering fixture (skip reported as row
+  3); empty file → gate mismatch; wishlist file → wrongList through
+  the preview; the lossless round trip (serialization equality via
+  `ExportSchema.row(from:)`, zero skips/defaults); and the
+  template-plus-one-hand-row closed loop. All three mutations red:
+  blank Name defaulting to "Untitled" → 2 tests / 8 issues; raw
+  (untrimmed) name check → whitespace-only names slipped through, 2
+  tests red; notes dropped from the record build → round trip red on
+  serialization equality. Reverted; full suite 649/95 green (13 new).
   Per plan §Records and §Row pipeline: `ValidatedRow` wrapping
   `ItemExportRecord` (`firstPhotoID: nil`; the doc-comment note lands
   on `ExportSchema.firstPhotoID` in this task) +

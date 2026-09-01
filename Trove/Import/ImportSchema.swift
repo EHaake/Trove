@@ -68,7 +68,7 @@ nonisolated enum ImportSchema {
     }
 
     private static func requireHeader(_ row: CSVRow, expected: [String], other: [String]) throws {
-        let cells = row.cells.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let cells = row.cells.map { FieldNormalization.trimmed($0) }
         guard cells != expected else { return }
         throw cells == other ? HeaderError.wrongList : HeaderError.mismatch
     }
@@ -194,4 +194,190 @@ nonisolated enum ImportSchema {
         }
         return value
     }
+
+    // MARK: - Row validation (plan §Row pipeline; the spec's field-policy tables)
+
+    /// The two row-fatal reasons, as the strings the confirmation alert
+    /// composes with ("Row 7 — no name"). Pinned here so the validator and
+    /// `ImportCopy` can't drift.
+    nonisolated enum SkipReason {
+        static let noName = "no name"
+        static let extraColumns = "more columns than the template"
+    }
+
+    /// The items pipeline end-to-end: shape (T002), gate (T003), then the
+    /// field policy per the spec's items table. Throws `HeaderError` for
+    /// whole-file problems; everything row-level lands in the preview as a
+    /// skip or a counted default, never an error — the amended
+    /// skip-and-report decision.
+    static func itemsPreview(
+        from rows: [CSVRow],
+        timeZone: TimeZone = .current
+    ) throws -> ItemsImportPreview {
+        let shaped = shaped(rows)
+        // No rows at all — an empty or all-blank file — has no header, and
+        // "not a Trove items file" is the honest description.
+        guard let header = shaped.first else { throw HeaderError.mismatch }
+        try requireItemsHeader(header)
+
+        // Column positions derive from the pinned array, never hand-numbered
+        // — the arrays are the schema, and a growth lands here by compile
+        // error, not convention. Force-unwrap is deliberate: a name absent
+        // from its own schema array is a typo in this file, and any test
+        // that touches the pipeline catches it.
+        let headers = ExportSchema.itemHeaders
+        func column(_ name: String) -> Int { headers.firstIndex(of: name)! }
+        let nameColumn = column("Name")
+        let categoryColumn = column("Category")
+        let priceColumn = column("Purchase Price")
+        let currencyColumn = column("Currency")
+        let dateColumn = column("Purchase Date")
+        let locationColumn = column("Purchase Location")
+        let valueColumn = column("Current Value")
+        let desireColumn = column("Desire to Keep")
+        let conditionColumn = column("Condition")
+        let conditionNotesColumn = column("Condition Notes")
+        let serialColumn = column("Serial Number")
+        let notesColumn = column("Notes")
+
+        var validated: [ValidatedRow<ItemExportRecord>] = []
+        var skipped: [SkippedRow] = []
+
+        for row in shaped.dropFirst() {
+            guard row.cells.count <= headers.count else {
+                // Row-fatal by decision: after trailing-empty stripping,
+                // extra cells are extra *content*, and a stray comma has
+                // shifted every later column — no guess is safe.
+                skipped.append(SkippedRow(rowNumber: row.number, reason: SkipReason.extraColumns))
+                continue
+            }
+            // Under-length is transport damage (apps trim trailing
+            // delimiters); padded cells follow the ordinary blank policy,
+            // so strip-then-pad is identity for legitimate trailing blanks.
+            var cells = row.cells
+            cells.append(contentsOf: Array(repeating: "", count: headers.count - cells.count))
+
+            let name = FieldNormalization.trimmed(cells[nameColumn])
+            guard !name.isEmpty else {
+                skipped.append(SkippedRow(rowNumber: row.number, reason: SkipReason.noName))
+                continue
+            }
+
+            var defaulted = 0
+
+            let price: Int
+            if let parsed = cents(from: FieldNormalization.trimmed(cells[priceColumn])) {
+                price = parsed
+            } else {
+                price = 0
+                defaulted += 1
+            }
+
+            // Blank currency is the app's own single-currency reality, not
+            // a defect worth reporting; a malformed code is.
+            let currencyCell = FieldNormalization.trimmed(cells[currencyColumn])
+            let currency: String
+            if currencyCell.isEmpty {
+                currency = "USD"
+            } else if let code = currencyCode(from: currencyCell) {
+                currency = code
+            } else {
+                currency = "USD"
+                defaulted += 1
+            }
+
+            let purchaseDate: Date
+            if let parsed = day(from: FieldNormalization.trimmed(cells[dateColumn]), timeZone: timeZone) {
+                purchaseDate = parsed
+            } else {
+                purchaseDate = .now
+                defaulted += 1
+            }
+
+            // The empty-cell-≠-zero rule in reverse: blank is "unvalued",
+            // a legitimate value, silent. Only an unparseable cell counts.
+            let valueCell = FieldNormalization.trimmed(cells[valueColumn])
+            let currentValue: Int?
+            if valueCell.isEmpty {
+                currentValue = nil
+            } else if let parsed = cents(from: valueCell) {
+                currentValue = parsed
+            } else {
+                currentValue = nil
+                defaulted += 1
+            }
+
+            let desireToKeep: Int
+            if let parsed = desire(from: FieldNormalization.trimmed(cells[desireColumn]), in: 1...5) {
+                desireToKeep = parsed
+            } else {
+                desireToKeep = 3
+                defaulted += 1
+            }
+
+            let conditionValue: Condition
+            if let parsed = condition(from: FieldNormalization.trimmed(cells[conditionColumn])) {
+                conditionValue = parsed
+            } else {
+                conditionValue = .excellent
+                defaulted += 1
+            }
+
+            let record = ItemExportRecord(
+                name: name,
+                categoryPath: FieldNormalization.trimmed(cells[categoryColumn]),
+                purchasePriceCents: price,
+                currencyCode: currency,
+                purchaseDate: purchaseDate,
+                purchaseLocation: FieldNormalization.nilIfBlank(cells[locationColumn]),
+                currentValueCents: currentValue,
+                desireToKeep: desireToKeep,
+                conditionRawValue: conditionValue.rawValue,
+                conditionNotes: FieldNormalization.nilIfBlank(cells[conditionNotesColumn]),
+                serialNumber: FieldNormalization.nilIfBlank(cells[serialColumn]),
+                notes: FieldNormalization.nilIfBlank(cells[notesColumn]),
+                firstPhotoID: nil
+            )
+            validated.append(
+                ValidatedRow(record: record, rowNumber: row.number, defaultedFieldCount: defaulted)
+            )
+        }
+
+        return ImportPreview(
+            validated: validated,
+            skipped: skipped,
+            defaultedFieldCount: validated.reduce(0) { $0 + $1.defaultedFieldCount }
+        )
+    }
 }
+
+// MARK: - Preview types (plan §Records)
+
+/// One row the import will not create, and why — composed into the
+/// confirmation as "Row 7 — no name", numbered as the spreadsheet shows it.
+nonisolated struct SkippedRow: Sendable, Equatable {
+    let rowNumber: Int
+    let reason: String
+}
+
+/// One accepted row: the schema record it parsed to (the *export* snapshot
+/// type, reused deliberately — plan §Records: schema growth becomes a
+/// compile error here), its spreadsheet row number, and how many of its
+/// required fields took a counted default.
+nonisolated struct ValidatedRow<Record: Sendable>: Sendable {
+    let record: Record
+    let rowNumber: Int
+    let defaultedFieldCount: Int
+}
+
+/// What parsing a file produces and the confirmation alert describes —
+/// everything the commit needs, nothing store-bound.
+nonisolated struct ImportPreview<Record: Sendable>: Sendable {
+    let validated: [ValidatedRow<Record>]
+    let skipped: [SkippedRow]
+    /// Sum across `validated` — counted defaults only; silent blanks
+    /// (model-optional fields, blank currency) never appear here.
+    let defaultedFieldCount: Int
+}
+
+typealias ItemsImportPreview = ImportPreview<ItemExportRecord>

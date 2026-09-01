@@ -160,12 +160,13 @@ final class WishlistFormViewModel {
         desireToOwn = item.desireToOwn
     }
 
+    // Delegating to the shared definition since 012/T005 — see the note in
+    // ItemFormViewModel and FieldNormalization itself.
     private static func trimmed(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines)
+        FieldNormalization.trimmed(value)
     }
 
     private static func nilIfBlank(_ value: String) -> String? {
-        let trimmed = trimmed(value)
-        return trimmed.isEmpty ? nil : trimmed
+        FieldNormalization.nilIfBlank(value)
     }
 }
