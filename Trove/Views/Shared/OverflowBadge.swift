@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// 011's "…" overflow control — the list headers' second badge, sitting
-/// right of `SortBadge` and drawn to its proportions (brass hairline border,
-/// same paddings) so the pair reads as one control family.
+/// The list headers' "…" overflow control — 011's `ExportBadge`, renamed at
+/// 012/T013 when the import actions joined its menu and the old name became
+/// a lie (`DetailOverflowMenu` already established the vocabulary).
 ///
 /// Hosts a **system `Menu`**, not a `SortDropdown` clone, and the T029c
 /// history says why that's safe here: the Menu was evicted from this header
@@ -12,15 +12,21 @@ import SwiftUI
 /// ever tears the way T029c's did, the custom dropdown is the known
 /// fallback.
 ///
-/// The spec expects this menu to accumulate actions later; today it carries
-/// exactly the two export actions, disabled when the view is empty
-/// (criterion 2), and the whole control disables behind a compact spinner
-/// while a file generates (criterion 11's progress affordance).
-struct ExportBadge: View {
-    let isExporting: Bool
+/// Menu contents per 012 criterion 1: the two export actions, disabled
+/// exactly when the view has nothing to export; a divider; then Import
+/// from CSV… and Get Blank Template…, **always enabled** — an empty
+/// collection is precisely who those two serve, which is also why the
+/// badge itself now shows regardless of collection size (the headers own
+/// that half). The whole control disables behind a compact spinner while
+/// any export or import runs (`isBusy` — criterion 15's progress
+/// affordance).
+struct OverflowBadge: View {
+    let isBusy: Bool
     let canExport: Bool
     let exportCSV: () -> Void
     let exportPDF: () -> Void
+    let importCSV: () -> Void
+    let getTemplate: () -> Void
 
     @Environment(\.theme) private var theme
 
@@ -30,9 +36,12 @@ struct ExportBadge: View {
                 .disabled(!canExport)
             Button("Export as PDF…", action: exportPDF)
                 .disabled(!canExport)
+            Divider()
+            Button("Import from CSV…", action: importCSV)
+            Button("Get Blank Template…", action: getTemplate)
         } label: {
             Group {
-                if isExporting {
+                if isBusy {
                     ProgressView()
                         .controlSize(.small)
                         .tint(theme.colors.accentBrass)
@@ -53,8 +62,8 @@ struct ExportBadge: View {
             )
             .contentShape(Rectangle())
         }
-        .disabled(isExporting)
-        .accessibilityLabel(isExporting ? "Exporting" : "More actions")
+        .disabled(isBusy)
+        .accessibilityLabel(isBusy ? "Working" : "More actions")
     }
 }
 
@@ -64,9 +73,15 @@ struct ExportBadge: View {
         VStack(spacing: 12) {
             HStack(spacing: 8) {
                 SortBadge(label: "Custom") {}
-                ExportBadge(isExporting: false, canExport: true, exportCSV: {}, exportPDF: {})
+                OverflowBadge(
+                    isBusy: false, canExport: true,
+                    exportCSV: {}, exportPDF: {}, importCSV: {}, getTemplate: {}
+                )
             }
-            ExportBadge(isExporting: true, canExport: true, exportCSV: {}, exportPDF: {})
+            OverflowBadge(
+                isBusy: true, canExport: true,
+                exportCSV: {}, exportPDF: {}, importCSV: {}, getTemplate: {}
+            )
         }
     }
     .environment(\.theme, .dark)

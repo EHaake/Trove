@@ -482,7 +482,24 @@ per-function selectors run zero tests and report success).
 
 ## Phase 5 — UI (twins)
 
-- [ ] **T013 — `OverflowBadge`.**
+- [x] **T013 — `OverflowBadge`.**
+  *Done (2026-09-01)*: `git mv` + type rename, no `.pbxproj` edit —
+  the green build after the move is the proof. Props
+  `isBusy`/`canExport` + four closures; menu with the `Divider`
+  between the export group (each `.disabled(!canExport)`) and the
+  always-enabled import group; a11y "Working"/"More actions";
+  preview updated. Both call sites renamed to `overflowControl` and
+  fully wired (Import opens the new `isPickingImportFile` view state
+  — the picker is navigation; the VM flow starts when a URL
+  arrives). The header *visibility* restructure deliberately stayed
+  in T014 where the task list puts it — an initial draft folded it
+  in here and was backed out for task-commit honesty.
+  `ExportWiringTests` updated: badge test renamed and grown to all
+  four intents + `isBusy`; menu test now pins four strings, the
+  Divider, and the exactly-2 gating count (imports provably
+  ungated). Both mutations red: Import gated on `canExport` → count
+  assertion red; Divider dropped → its assertion red. Reverted; full
+  suite 693/105 green.
   Per plan §Entry point UI: `git mv` `ExportBadge.swift` →
   `OverflowBadge.swift` + type rename (no `.pbxproj` edit —
   synchronized groups; the build proves it). Props

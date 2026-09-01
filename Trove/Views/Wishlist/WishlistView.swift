@@ -24,6 +24,9 @@ struct WishlistView: View {
     /// why the screen owns it.
     @State private var isSortMenuOpen = false
 
+    /// Whether 012's file picker is up — see `ItemListView`'s twin.
+    @State private var isPickingImportFile = false
+
     /// The row whose Edit swipe action is open in the form sheet — a
     /// shortcut into the same flow the detail screen offers (T024).
     @State private var itemBeingEdited: WishlistItem?
@@ -209,19 +212,21 @@ struct WishlistView: View {
             if viewModel.totalCount > 0 {
                 HStack(spacing: 8) {
                     sortControl
-                    exportControl
+                    overflowControl
                 }
             }
         }
     }
 
-    /// 011's "…" menu — ItemListView's twin.
-    private var exportControl: some View {
-        ExportBadge(
-            isExporting: viewModel.isExporting,
+    /// 012's overflow — ItemListView's twin.
+    private var overflowControl: some View {
+        OverflowBadge(
+            isBusy: viewModel.isBusy,
             canExport: viewModel.canExport,
             exportCSV: { Task { await viewModel.exportCSV() } },
-            exportPDF: { Task { await viewModel.exportPDF() } }
+            exportPDF: { Task { await viewModel.exportPDF() } },
+            importCSV: { isPickingImportFile = true },
+            getTemplate: { Task { await viewModel.exportBlankTemplate() } }
         )
     }
 

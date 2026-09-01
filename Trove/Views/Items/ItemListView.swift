@@ -33,6 +33,11 @@ struct ItemListView: View {
     /// on any outside tap — both beyond the header's reach.
     @State private var isSortMenuOpen = false
 
+    /// Whether 012's file picker is up. View state, not view-model state:
+    /// the picker is pure navigation — the view model's flow starts when a
+    /// URL actually arrives.
+    @State private var isPickingImportFile = false
+
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(AppRouter.self) private var router
@@ -365,20 +370,24 @@ struct ItemListView: View {
             if viewModel.totalCount > 0 {
                 HStack(spacing: 8) {
                     sortControl
-                    exportControl
+                    overflowControl
                 }
             }
         }
     }
 
-    /// 011's "…" menu. The intents are async; the badge fires them into
-    /// Tasks and `isExporting` drives its spinner.
-    private var exportControl: some View {
-        ExportBadge(
-            isExporting: viewModel.isExporting,
+    /// 011's export menu grown into 012's overflow. The async intents fire
+    /// into Tasks and `isBusy` drives the spinner; Import opens the file
+    /// picker rather than an intent — the picked URL is what starts the
+    /// view-model flow.
+    private var overflowControl: some View {
+        OverflowBadge(
+            isBusy: viewModel.isBusy,
             canExport: viewModel.canExport,
             exportCSV: { Task { await viewModel.exportCSV() } },
-            exportPDF: { Task { await viewModel.exportPDF() } }
+            exportPDF: { Task { await viewModel.exportPDF() } },
+            importCSV: { isPickingImportFile = true },
+            getTemplate: { Task { await viewModel.exportBlankTemplate() } }
         )
     }
 
