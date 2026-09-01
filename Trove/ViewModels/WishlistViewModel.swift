@@ -58,9 +58,19 @@ final class WishlistViewModel {
 
     private let syncMonitor: SyncMonitor
 
-    init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
+    private let exportService: any ExportService
+
+    /// - Parameter exportService: defaults to the live file-staging service,
+    ///   injected as a protocol so tests fake it — see
+    ///   `ItemListViewModel.init`, one pattern on both lists.
+    init(
+        modelContext: ModelContext,
+        syncMonitor: SyncMonitor = .notSyncing,
+        exportService: (any ExportService)? = nil
+    ) {
         self.modelContext = modelContext
         self.syncMonitor = syncMonitor
+        self.exportService = exportService ?? FileExportService(container: modelContext.container)
     }
 
     /// See `ItemListViewModel.mayStillBeImporting`.
@@ -231,6 +241,80 @@ final class WishlistViewModel {
             loadFailureMessage = error.localizedDescription
         }
         load()
+    }
+
+    // MARK: - Export (011)
+
+    /// See `ItemListViewModel`'s export section — one pattern, both lists.
+    /// Settable by the view: `.sheet(item:)` writes nil back on dismissal.
+    var stagedExport: StagedExport?
+
+    /// Set when generation fails (spec criterion 2a); presented as a plain
+    /// alert, cleared by the view on dismissal.
+    var exportFailureMessage: String?
+
+    /// True while a file is generating (criterion 11's progress affordance).
+    private(set) var isExporting = false
+
+    /// Whether the current view has anything to export (criterion 2).
+    var canExport: Bool { !items.isEmpty }
+
+    /// What the export covers — the category chip's own label and any search
+    /// query; the wishlist has no un-valued filter to name.
+    var exportCoverageLabel: String {
+        var parts: [String] = []
+        if !categoryFilter.isEmpty {
+            parts.append("Category: \(categoryLabels[categoryFilter] ?? categoryFilter)")
+        }
+        let query = SearchMatching.normalized(searchText)
+        if !query.isEmpty { parts.append("Search: \u{201C}\(query)\u{201D}") }
+        return parts.isEmpty ? "Whole wishlist" : parts.joined(separator: " · ")
+    }
+
+    /// Exports the visible wanted items, in visible order, as the canonical
+    /// CSV. Records come from `items` as-is — never a refetch — for the same
+    /// criteria-3/4 reason as the item list.
+    func exportCSV() async {
+        guard canExport, !isExporting else { return }
+        isExporting = true
+        defer { isExporting = false }
+
+        let table = ExportSchema.wishlistTable(items.map { WishlistExportRecord(item: $0) })
+        let filename = ExportFilename.wishlist(fileExtension: "csv")
+        do {
+            let url = try await exportService.exportCSV(table, filename: filename)
+            stagedExport = StagedExport(url: url, filename: filename)
+        } catch {
+            exportFailureMessage = ExportCopy.failureMessage
+        }
+    }
+
+    /// Exports the visible wanted items as the PDF collection document; the
+    /// cover totals this view model's own `totalEstimatedCostCents`
+    /// (criterion 8).
+    func exportPDF() async {
+        guard canExport, !isExporting else { return }
+        isExporting = true
+        defer { isExporting = false }
+
+        let records = items.map { WishlistExportRecord(item: $0) }
+        let document = PDFDocumentModel(
+            cover: CoverSummary(
+                title: "Wishlist",
+                coverageLabel: exportCoverageLabel,
+                generatedAt: .now,
+                itemCount: items.count,
+                totals: .wishlist(estimatedCostCents: totalEstimatedCostCents)
+            ),
+            entries: records.map { PDFEntry(record: $0) }
+        )
+        let filename = ExportFilename.wishlist(fileExtension: "pdf")
+        do {
+            let url = try await exportService.exportPDF(document, filename: filename)
+            stagedExport = StagedExport(url: url, filename: filename)
+        } catch {
+            exportFailureMessage = ExportCopy.failureMessage
+        }
     }
 
     private func isOrderedBefore(_ lhs: WishlistItem, _ rhs: WishlistItem) -> Bool {

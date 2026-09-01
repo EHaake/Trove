@@ -1,7 +1,13 @@
 import SwiftUI
 
 /// The three type roles from `design/tokens.md`.
-enum FontFamily: Sendable {
+///
+/// `nonisolated` explicitly (011/T005): `PDFComposer` resolves these same
+/// PostScript names off the main actor — one source of face names keeps
+/// `FontRegistrationTests`' guarantee covering the PDF — and the project's
+/// MainActor default would otherwise make that call site a compile error.
+/// Pure data; nothing here needs an actor.
+nonisolated enum FontFamily: Sendable {
     /// Archivo 600 — screen titles, hero figures, dial numerals.
     case display
     /// IBM Plex Sans — list text, labels, form fields.

@@ -13,8 +13,14 @@ enum PhotoSource: String, Codable, CaseIterable {
     case fetched
 }
 
+/// `nonisolated` explicitly (011/T008): the export pipeline fetches photo
+/// blobs from background `ModelContext`s off the main actor, and the
+/// project's MainActor default would otherwise make `imageData` unreadable
+/// there. SwiftData models are context-bound, not actor-bound — the type
+/// stays non-`Sendable`, so instances still can't cross isolation domains;
+/// each domain fetches through its own context.
 @Model
-final class Photo {
+nonisolated final class Photo {
     var id: UUID = UUID()
 
     /// `.externalStorage` keeps the blob out of the main store file and hands it

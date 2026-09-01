@@ -179,6 +179,48 @@ The "REORDER" label appearing only on the "Custom" row (not on every
 row's selected state generically) is what replaces the old standalone
 button — see `plan.md`'s Resolved decisions.
 
+### Export badge and menu (`011`)
+
+The "…" overflow control, sitting right of the sort badge on both list
+screens and drawn to its proportions so the pair reads as one control
+family. It follows the sort badge's visibility rule (hidden on an empty
+collection — `011`'s amended criterion 1).
+
+| Property | Value |
+|---|---|
+| Badge border | `1px solid accentBrass`, `3px` radius — the sort badge's |
+| Badge padding | `8px 12px` — the sort badge's |
+| Badge glyph | SF `ellipsis`, `15px` semibold, `accentBrass`, in an `18×14` frame sized against the sort badge's text row |
+| Exporting state | glyph swaps to a small `ProgressView` tinted brass; whole control disabled |
+| Menu | **system `Menu`**, deliberately — its label is a constant-size glyph, the `DetailOverflowMenu` shape, not the variable-width label T029c evicted from this header. Items disable individually when the view is empty. |
+
+### Print palette and type scale — PDF export (`011`)
+
+The exported PDF is print-first: light background, dark text — a
+document for paper, not a screenshot of the dark UI. These are
+**print-only tokens** (`PrintPalette`/`PrintType` in `PDFComposer`);
+the dark-UI palette above is for screens and the two must not be
+"unified". The brass is deliberately darker than the UI's `#C79A56`,
+which fails contrast on white.
+
+| Token | Value |
+|---|---|
+| Paper | `#FFFFFF` |
+| Ink | `#1C1A17` |
+| Secondary | `#6A645C` |
+| Hairline rule | `#D8D3CA`, `0.75pt` |
+| Print brass | `#8F6E3E` (≥4.5:1 on paper) — cover money figures |
+| Page | US Letter `612×792pt`, `54pt` margins |
+| Photo box | `132×99pt`, aspect-fit, top-right of the entry |
+
+Type scale — same three faces as the app via their PostScript names
+(one source, so `FontRegistrationTests` keeps covering the PDF), at a
+deliberately separate print scale: wordmark Archivo 600 `26pt` (tracked
+`4pt`) · cover title Archivo `20pt` · entry name Archivo `14pt` ·
+eyebrows/labels IBM Plex Mono `7.5pt` tracked caps · field values IBM
+Plex Sans `10.5pt` · notes IBM Plex Sans `10pt` · money/dates/serials
+IBM Plex Mono `10.5pt` · cover totals IBM Plex Mono 500 `15pt` · cover floor note IBM Plex Sans `9.5pt` *(missed in the first pass; added at T019/S2)*.
+
 ### Swipe-action rows (specific)
 
 | Token | Value |

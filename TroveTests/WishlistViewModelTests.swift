@@ -617,3 +617,167 @@ struct DesireToOwnOrderingTests {
         #expect(viewModel.items.map(\.name) == before)
     }
 }
+
+@Suite("WishlistViewModel — export")
+struct WishlistViewModelExportTests {
+    /// Criterion 4: exactly the visible wanted items, in visible order. The
+    /// fixture makes a refetch detectably wrong twice over — the Vox is
+    /// filtered out, and cheapest-first order isn't storage order.
+    @Test func exportedRowsAreTheVisibleItemsInVisibleOrder() async throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Vox AC15", costCents: 105_000, into: context)
+        insertWanted("Summicron 35", category: "Photography/Lenses", costCents: 240_000, into: context)
+        insertWanted("Hasselblad 80mm", category: "Photography/Lenses", costCents: 95_000, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = WishlistViewModel(modelContext: context, exportService: spy)
+        viewModel.categoryFilter = "Photography"
+        viewModel.sortOrder = .cost
+        viewModel.load()
+
+        await viewModel.exportCSV()
+
+        let table = try #require(spy.tables.first)
+        #expect(table.headers == ExportSchema.wishlistHeaders)
+        #expect(table.rows.map { $0[0] } == ["Hasselblad 80mm", "Summicron 35"])
+    }
+
+    @Test func exportStagesTheWishlistFilename() async throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Vox AC15", into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context, exportService: ExportServiceSpy())
+        viewModel.load()
+
+        await viewModel.exportCSV()
+
+        let staged = try #require(viewModel.stagedExport)
+        #expect(staged.filename == ExportFilename.wishlist(fileExtension: "csv"))
+        #expect(viewModel.isExporting == false)
+    }
+
+    @Test func canExportTracksTheVisibleListNotTheStore() throws {
+        let context = try makeInMemoryContext()
+        let viewModel = WishlistViewModel(modelContext: context, exportService: ExportServiceSpy())
+        viewModel.load()
+        #expect(!viewModel.canExport)
+
+        insertWanted("Vox AC15", into: context)
+        try context.save()
+        viewModel.load()
+        #expect(viewModel.canExport)
+
+        viewModel.categoryFilter = "Photography"
+        viewModel.load()
+        #expect(!viewModel.canExport)
+    }
+
+    @Test func nothingIsExportedWhenTheViewIsEmpty() async throws {
+        let context = try makeInMemoryContext()
+        let spy = ExportServiceSpy()
+        let viewModel = WishlistViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportCSV()
+        await viewModel.exportPDF()
+
+        #expect(spy.tables.isEmpty)
+        #expect(spy.documents.isEmpty)
+        #expect(viewModel.stagedExport == nil)
+    }
+
+    @Test func aThrowingServiceSurfacesTheSharedFailureCopy() async throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Vox AC15", into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(
+            modelContext: context,
+            exportService: ExportServiceSpy(failsEveryCall: true)
+        )
+        viewModel.load()
+
+        await viewModel.exportPDF()
+
+        #expect(viewModel.exportFailureMessage == ExportCopy.failureMessage)
+        #expect(viewModel.stagedExport == nil)
+        #expect(viewModel.isExporting == false)
+    }
+
+    /// Criterion 8, wishlist side: the cover totals this view model's own
+    /// estimated-cost arithmetic — live property and concrete figure both.
+    @Test func pdfCoverTotalsTheViewModelsOwnEstimatedCost() async throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Vox AC15", costCents: 105_000, into: context)
+        insertWanted("Summicron 35", category: "Photography/Lenses", costCents: 240_000, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = WishlistViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportPDF()
+
+        let document = try #require(spy.documents.first)
+        #expect(document.entries.count == 2)
+        #expect(document.cover.title == "Wishlist")
+        #expect(document.cover.coverageLabel == "Whole wishlist")
+        #expect(document.cover.itemCount == viewModel.items.count)
+
+        guard case .wishlist(let estimated) = document.cover.totals else {
+            Issue.record("wishlist export produced non-wishlist cover totals")
+            return
+        }
+        #expect(estimated == viewModel.totalEstimatedCostCents)
+        #expect(estimated == 345_000)
+        // Entry order mirrors the visible order, same as the CSV rows.
+        #expect(document.entries.map(\.name) == viewModel.items.map(\.name))
+    }
+
+    /// T019/S1 — see the items twin.
+    @Test func isExportingIsObservableMidFlightAndBlocksReentry() async throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Vox AC15", into: context)
+        try context.save()
+
+        let spy = GatedExportServiceSpy()
+        let viewModel = WishlistViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        let inFlight = Task { await viewModel.exportCSV() }
+        for _ in 0..<10_000 where spy.csvCalls == 0 { await Task.yield() }
+        try #require(spy.csvCalls == 1, "gated export never started")
+
+        #expect(viewModel.isExporting, "progress state must be visible while generating")
+
+        await viewModel.exportCSV()
+        await viewModel.exportPDF()
+        #expect(spy.csvCalls == 1)
+        #expect(spy.pdfCalls == 0)
+
+        spy.release()
+        await inFlight.value
+        #expect(viewModel.isExporting == false)
+        #expect(viewModel.stagedExport != nil)
+    }
+
+    @Test func coverageLabelNamesTheActiveNarrowing() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Summicron 35", category: "Photography/Lenses", into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context, exportService: ExportServiceSpy())
+        viewModel.load()
+        #expect(viewModel.exportCoverageLabel == "Whole wishlist")
+
+        viewModel.categoryFilter = "Photography/Lenses"
+        viewModel.searchText = "Summicron"
+        viewModel.load()
+
+        let categoryLabel = viewModel.categoryLabels["Photography/Lenses"] ?? "Photography/Lenses"
+        #expect(viewModel.exportCoverageLabel
+            == "Category: \(categoryLabel) · Search: \u{201C}Summicron\u{201D}")
+    }
+}

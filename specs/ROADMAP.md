@@ -25,7 +25,7 @@ own.
 |---|---|
 | `001-core-inventory` | **Shipped** — merged to `main` 2026-08-23 via [PR #1](https://github.com/EHaake/Trove/pull/1); spec, plan and tasks all Approved in specs/001-core-inventory/ |
 | `010-item-management-enhancements` | **Complete** — all tasks through the Phase 8 close-out done (2026-08-30); twenty acceptance criteria signed off; skeptical-review findings resolved or recorded in `tasks.md` |
-| `011-data-export` | **In progress** — spec approved 2026-08-30 in specs/011-data-export/; plan.md next |
+| `011-data-export` | **In review** — implementation complete (T001–T018, 2026-08-31); T019 close-out on the branch, PR #5 |
 
 ## Future specs
 
@@ -180,6 +180,27 @@ actually useful once the app is in daily use.
     sheets as a refinement of the collection document; plausibly
     lands alongside or after `013`'s export-everything, whenever an
     export surface exists beyond the two list screens.
+
+  Three more were recorded at `011`'s T018 manual pass (2026-08-31),
+  with the feature verified and shipping:
+
+  - **Exports track the schema, not the other way around** — when new
+    per-item data lands (trending/market values above all), both
+    export formats need revisiting in the same spec that adds the
+    data: new CSV columns are a canonical-schema change made together
+    with `012`'s parser, and the PDF's field grid and cover should
+    carry the new figures. `011`'s plan.md schema section records the
+    mechanics (append-only column growth).
+  - **Sell-plan export** — a wishlist item's Sell Plan (the gear
+    weighed against funding it) appears in no export today; deferred
+    deliberately, not overlooked.
+  - **A "Full" export** — dashboard figures, both lists, and each
+    wishlist item's sell plan in one deliverable. A future export
+    spec of its own, sensibly after trending values exist (it's the
+    export whose value grows most with them). It overlaps `013`'s
+    export-everything occupant and the dashboard-export deferral
+    above — scoping should reconcile the three rather than build
+    them separately.
 - **`012-data-import`** — CSV import of externally-tracked gear. Aimed
   at the adoption barrier from the other direction: someone already
   tracking their collection in a spreadsheet shouldn't have to re-enter

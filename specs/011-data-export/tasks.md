@@ -1,0 +1,457 @@
+# 011 — Data Export: Tasks
+
+Status: **Complete** (2026-08-31) — all nineteen tasks done; close-out review findings dispositioned; PR #5 ready for review
+
+Drafted against the approved `plan.md` (commit `dbfc0a7`). No new
+technical decisions are made here — every call below traces to a plan
+section; where a task says "per plan," that section is the authority.
+The skeptical-reviewer ran on the plan's foundational calls and was not
+re-run for this decomposition, which is routine translation.
+
+House rules carried over: one commit per completed task, referencing
+the task ID; every guard test is **mutation-verified** (break the rule
+deliberately, confirm red) before it lands, and the task's Done note
+records what was broken and what went red; a task is not done until
+`xcodebuild build` and `xcodebuild test` pass and the actual output is
+reported.
+
+## Phase 1 — Schema and CSV (pure logic, no UI)
+
+- [x] **T001 — `ExportSchema.swift`: records, headers, serializers.**
+  *Done (2026-08-30)*: all schema types land explicitly `nonisolated` +
+  `Sendable` and compile clean under the MainActor default; the row
+  builders and table builders came with this task (they're the "record →
+  `[String]`" mapping plan.md's CSV section assigns to `ExportSchema`).
+  A header pin test double-enters the column lists deliberately — the
+  wire-format contract fails loudly on an accidental reorder. Mutation
+  check: dropped the `%02d` zero padding → 9 issues across 3 tests went
+  red, including the round trip catching `"0.1"` re-parsing as 10¢
+  instead of 1¢ — the exact corruption 012 would inherit. Reverted;
+  full suite 549/549 green.
+  `Trove/Export/ExportSchema.swift` (new; synchronized group, no
+  `.pbxproj` edit): `ItemExportRecord`, `WishlistExportRecord`,
+  `CoverSummary`, `CSVTable`, `PDFDocumentModel` as explicitly
+  `nonisolated`, `Sendable` value structs; the two pinned header/column
+  lists as shared constants; the money serializer (pure integer math,
+  `cents/100` + `%02d`, no locale API) and date serializer
+  (`Calendar` components → `String(format:)`, device-local day).
+  Tests (`ExportSchemaTests`): exact-output cases for money (0, 1,
+  999_999_999, values ending `.00`/`.05`) and dates (fixed
+  `DateComponents` in an injected calendar/timezone); the money
+  **round-trip** through `Money.cents(from:)` — the invariant 012
+  depends on.
+  *Done when*: tests green; mutation check — drop the `%02d` zero
+  padding and confirm red.
+
+- [x] **T002 — Record-from-model mapping.**
+  *Done (2026-08-30)*: `@MainActor init(item:)` on both record types —
+  explicit isolation, since the records themselves are `nonisolated`
+  but the initializers read MainActor-isolated model properties; this
+  is the snapshot boundary plan.md describes. Mutation check ran as
+  `.last` on the display-ordered photos rather than the task's
+  suggested raw `photos.first`: SwiftData guarantees no relationship
+  order, so `photos.first` would be a *flaky* falsifier — `.last` is
+  deterministic, and it turned both photo tests red (items and
+  wishlist). Reverted; full suite 553/553 green.
+  Initializers `ItemExportRecord(item:)` / (wishlist twin) mapping
+  every schema column from the model, including: empty-vs-nil handling
+  (`Current Value` nil ≠ `0.00`), raw lowercase condition, and the
+  first-photo `PersistentIdentifier` chosen via
+  `PhotoSelection.inDisplayOrder(_:).first` — the single existing
+  definition of photo order, applied at snapshot time.
+  Tests: field-fidelity per column against a fully-populated and a
+  minimally-populated model; multi-photo item yields exactly the
+  display-order first photo's identifier (reversed `sortOrder` fixture
+  so relationship order can't accidentally pass).
+  *Done when*: tests green; mutation check — swap the mapping to
+  `photos.first` and confirm the photo test goes red.
+
+- [x] **T003 — `CSVWriter.swift`: RFC 4180 writer.**
+  *Done (2026-08-30)*: writer lands with a real subtlety encoded — Swift
+  fuses `\r\n` into one grapheme that equals neither `\r` nor `\n`, so
+  the quoting check scans unicode scalars (a `Character` scan would
+  pass CRLF-bearing fields through unquoted); a dedicated test pins it.
+  The mutation check earned its keep twice: stripping the quoting
+  turned 4 tests red but left `fieldWithNewlineStaysOneParsedRow`
+  green — the test-only parser split rows only on CRLF, so a bare-LF
+  field round-tripped even unquoted, making that guard unfalsifiable.
+  Hardened the parser to split on bare LF/CR like real readers (Excel
+  splits on LF); the same mutation then turned 5 tests red including
+  that one. Reverted; full suite 560/560 green.
+  UTF-8 with BOM, CRLF, minimal quoting (quote iff comma/quote/CR/LF;
+  embedded quotes doubled), header row from `ExportSchema`'s constants.
+  Tests (`CSVWriterTests`): a small **test-only RFC 4180 parser** and
+  round-trip assertions for fields containing commas, quotes, embedded
+  newlines (criterion 5's hard cases); BOM present exactly once; CRLF
+  endings.
+  *Done when*: tests green; mutation check — strip the quoting branch
+  and confirm the round-trip goes red.
+
+## Phase 2 — Service, temp lifecycle, and the off-main proof
+
+- [x] **T004 — `ExportService.swift`: protocol, live service, temp
+  store.**
+  *Done (2026-08-30)*: one deliberate sequencing deviation — the
+  protocol lands with `exportCSV` only; the `exportPDF` requirement
+  arrives with T005, where `PDFComposer` exists, so this commit builds
+  and tests on its own instead of shipping a stub that lies.
+  `ExportFilename` helpers came with this task (they belong to the
+  delivery layer and the temp tests pin them). Mutation check: removed
+  the purge-before-write → the two-exports test went red with both
+  files accumulated, the exact criterion-10 failure. Reverted; full
+  suite 564/564 green.
+  `ExportService` protocol (`exportCSV(_:filename:)`,
+  `exportPDF(_:filename:)`, both `async throws -> URL`) and
+  `FileExportService`: writes under `tmp/Exports/`, **purges that
+  directory before every export**, exposes `purge()` for the launch
+  hook. CSV path end-to-end: table → writer → file → URL, filenames
+  `Trove-Items-YYYY-MM-DD.csv` / `Trove-Wishlist-YYYY-MM-DD.csv` from
+  the local day.
+  Tests (`ExportTempFileTests`): two exports back-to-back leave exactly
+  one file set; filename shape. Real disk I/O by necessity — the same
+  narrow exception shape as `CloudKitSchemaTests`, said in the test's
+  doc comment.
+  *Done when*: tests green; mutation check — remove the purge call and
+  confirm the two-exports test goes red.
+
+- [x] **T005 — Walking skeleton: off-main CG/CT pipeline proof.**
+  *Done (2026-08-30)*: the skeleton earned its keep immediately — the
+  first build compiled clean but the probe recorded `[true, true]`:
+  generation ran ON the main thread. Root cause: the plan's SE-0338
+  premise doesn't hold on this toolchain — `SWIFT_APPROACHABLE_CONCURRENCY`
+  enables `NonisolatedNonsendingByDefault` (SE-0461), which runs
+  nonisolated async functions on the *caller's* actor. Fix: `@concurrent`
+  on both protocol requirements and implementations (the existential
+  path — the view models' real one — follows the requirement's
+  convention, and the probe test now calls through `any ExportService`
+  for exactly that reason). plan.md's Concurrency section corrected in
+  place. Two compile-time finds besides: `Thread.isMainThread` is
+  `noasync` (sampled via a sync helper), and `FontFamily` needed an
+  explicit `nonisolated` so the composer can resolve PostScript names
+  off-main. Mutation check: stripping `@concurrent` → probe red with
+  `[true, true]` — the realistic regression, verified through the
+  existential. Full suite 567/567 green.
+  Minimal `PDFComposer` rendering a one-page cover-only PDF via
+  `CGContext(consumer:mediaBox:)` + `CTFramesetter`, wired through
+  `FileExportService.exportPDF` as an explicitly `nonisolated async`
+  entry point with a synchronous body. An instrumented probe in the
+  generation body records `Thread.isMainThread`.
+  Tests (`ExportConcurrencyTests`): calling the entry point **from the
+  main actor** sees the probe report `false` (the T056 lesson —
+  instrument the mechanism, not a proxy); `PDFComposerTests`:
+  `PDFKit.PDFDocument(data:)` non-nil, page count 1. This task is the
+  compile-time proof that the module escapes
+  `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`; **no PDF layout work
+  proceeds until it's green**.
+  *Done when*: tests green; mutation check — force the body onto the
+  main actor (`MainActor.run`) and confirm the probe test goes red.
+
+## Phase 3 — PDF composition
+
+- [x] **T006 — Cover page layout.**
+  *Done (2026-08-30)*: full cover per plan — wordmark, rule, title, meta
+  lines (generated day via the schema's own serializer, coverage,
+  count), totals block with the floor note appearing only when unvalued
+  items exist. `Int+Currency`'s extension gained the same explicit
+  `nonisolated` as `FontFamily` (same reason: the composer draws the
+  app's own money formatting off-main). `PrintPalette`/`PrintType` and
+  the cursor-based `PageWriter` landed here as the layout plumbing
+  T007–T008 build on. One extraction artifact recorded: PDFKit reads
+  the 4pt-tracked wordmark back as "T R O V E", so its test collapses
+  spaces rather than pinning extractor behavior. Full suite 569/569
+  green.
+  Print palette and print type scale as constants in `PDFComposer`
+  (values per plan's "The PDF document" section; faces via
+  `FontFamily.postScriptName(for:)` → `CTFontCreateWithName`).
+  Wordmark, rule, title, generated date, coverage line (same label
+  strings the chips show), count, totals block — items: current value
+  + paid + unvalued count; wishlist: estimated cost.
+  Tests: cover page `.string` (PDFKit) contains title, count, coverage
+  label, and the formatted totals for a seeded set.
+  *Done when*: tests green against both document kinds.
+
+- [x] **T007 — Entry layout and pagination.**
+  *Done (2026-08-30)*: entry engine per plan — keep-together for
+  rule/head/first-field (or the photo box when taller), field rows that
+  break between rows so a tall grid can't clip data *(amended at T019:
+  true per row — one single field row taller than a full page would
+  still clip; bounded, unlikely, recorded rather than coded around)*, and
+  notes flowing via `CTFrameGetVisibleStringRange` continuation frames.
+  The record→`PDFEntry` builders landed here too (schema side, detail-
+  screen vocabulary — "Worth now", "Not yet valued" — empty optionals
+  skipped as the screen skips them), plus `PDFField.isMono`. The cover
+  now stands alone; entries begin on a fresh page. One false alarm
+  worth recording: the continuation test failed with the tail
+  "missing" — a diagnostic showed the marker sitting exactly where it
+  belonged, line-broken at a hyphen (`END-OF-NOTES-` / `MARKER`) that
+  PDFKit extracts as a newline; the fixture's marker is now one
+  unbreakable token. Mutation check: keep-together removed → two
+  entries orphaned name from first field row, test red. Reverted; full
+  suite 575/575 green.
+  Per-item entry per plan: hairline rule, photo top-right 132×99 pt
+  aspect-fit (text spans full width when absent), category eyebrow,
+  name, two-column field grid (same field set as the CSV), notes
+  paragraph. Pagination: keep-together when the entry fits the
+  remaining space; otherwise new page; entries taller than a full page
+  split mid-notes via `CTFrameGetVisibleStringRange` continuation.
+  Tests: page count grows with entry count; a no-photo entry renders
+  with fields present; an entry with page-length notes produces a
+  continuation page whose `.string` carries the tail of the notes.
+  *Done when*: tests green; mutation check — break keep-together (always
+  same page) and confirm the pagination test goes red.
+
+- [x] **T008 — Photo pipeline: downsampling, batching, resilience.**
+  *Done (2026-08-30)*: ImageIO decode-to-target-size (2× the 132×99 box),
+  `PhotoFetcher` with a fresh context per 25 fetches, and resolve-before-
+  layout so an unresolvable identifier lays the entry out photo-free with
+  no reserved gap (tested deterministically with an identifier minted in
+  a foreign store — the deleted-mid-export race without the race).
+  `Photo` gained the explicit `nonisolated` (background contexts read
+  `imageData` off-main; models are context-bound, not actor-bound, and
+  stay non-`Sendable`). The size-bound fixture is deliberately
+  incompressible noise so the bound can actually fail; the embed is
+  proven real by comparing against a photo-free render of the same
+  document. Mutation check: full-resolution decode → 5.8MB vs the 3MB
+  bound, red (also learned: a typo'd `-only-testing` selector "succeeds"
+  by running zero tests — the red was confirmed on the full suite).
+  Reverted; full suite 577/577 green. Batching itself is a retention
+  strategy, not directly observable — recorded honestly rather than
+  pseudo-tested.
+  `CGImageSourceCreateThumbnailAtIndex` with
+  `kCGImageSourceThumbnailMaxPixelSize` = 2× the drawn box; photo
+  fetches by `PersistentIdentifier` from a **fresh `ModelContext` per
+  25 entries** off the shared container, per-entry work in
+  `autoreleasepool`; an identifier that fails to resolve skips the
+  photo and keeps the entry.
+  Tests: multi-photo item draws exactly its display-order first (cover
+  + entry render without error and entry page `.string` intact);
+  unresolvable-identifier fixture keeps the entry; **size-bound test**
+  — a seeded collection with deliberately large photos produces a file
+  under the bound stated in the test.
+  *Done when*: tests green; mutation check — bypass the thumbnail
+  decode (draw full-size) and confirm the size-bound test goes red.
+
+## Phase 4 — View-model intents
+
+- [x] **T009 — `ItemListViewModel` export intents.**
+  *Done (2026-08-31)*: intents, `canExport`, `isExporting`,
+  `stagedExport`/`exportFailureMessage` (settable by the view for
+  sheet/alert dismissal — view mechanics, documented as such), the new
+  `totalPaidCents`, and `exportCoverageLabel` naming every active
+  narrowing (category · un-valued · search). `StagedExport` and the
+  shared `ExportCopy` landed in the service layer; `ExportServiceSpy`
+  in TestSupport captures through a `Mutex` since the `@concurrent`
+  calls land off-main. Seven tests including cover arithmetic checked
+  against both the live properties and concrete figures (so a broken
+  property can't vouch for itself). Mutation check: records built from
+  a refetch → the filtered-out Telecaster leaked into the table, order
+  test red. Reverted; full suite 584/584 green.
+  `ExportService` injected (live default, same shape as
+  `syncMonitor:`); `exportCSV()` / `exportPDF()` async intents building
+  records **from the `items` array in its existing order** (never a
+  refetch), `isExporting`, `stagedExport: StagedExport?`,
+  `exportFailureMessage`, `canExport`. `CoverSummary` built from the
+  VM's own `totalCurrentValueCents` / `unvaluedCount` arithmetic
+  (criterion 8 by construction).
+  Tests (in `ItemListViewModelTests`, fake service recording inputs):
+  records match `items` exactly in content and order under an active
+  filter + non-default sort; `canExport` false when the filter empties
+  the view; a throwing fake sets `exportFailureMessage` and clears
+  `isExporting`; cover arithmetic equals the VM's own totals.
+  *Done when*: tests green; mutation check — build records from a fresh
+  fetch instead of `items` and confirm the order test goes red.
+
+- [x] **T010 — `WishlistViewModel` export intents.**
+  *Done (2026-08-31)*: full mirror of T009 with wishlist vocabulary —
+  "Wishlist" title, "Whole wishlist" default coverage,
+  `.wishlist(estimatedCostCents:)` totals from
+  `totalEstimatedCostCents`, wishlist filenames. Seven mirrored tests;
+  mutation check ran independently (refetch → the filtered-out Vox
+  leaked in, order test red). Reverted; full suite 591/591 green.
+  Same shape, wishlist records and `totalEstimatedCostCents` cover
+  figure, tests in `WishlistViewModelTests` mirroring T009 including
+  its mutation check.
+  *Done when*: tests green; mutation-verified as above.
+
+## Phase 5 — UI, wiring, and tokens
+
+- [x] **T011 — `ExportBadge.swift` + `ShareSheet.swift`.**
+  *Done (2026-08-31)*: badge drawn to `SortBadge`'s proportions with the
+  T029c safety argument in its doc comment (constant-size glyph — the
+  `DetailOverflowMenu` shape — with the custom dropdown named as the
+  known fallback); spinner swap + whole-control disable while
+  exporting; both menu items gated on `canExport`. `ShareSheet` is the
+  flagged `UIViewControllerRepresentable` exception, ~20 lines, zero
+  logic, with the ShareLink/fileExporter rejections recorded in its
+  doc comment. Build green, previews compile, full suite 591/591.
+  `ExportBadge`: ellipsis glyph in a brass hairline-bordered badge
+  matching `SortBadge`'s height, hosting the system `Menu` with the two
+  actions ("Export as CSV…", "Export as PDF…"), a `ProgressView` swap
+  while exporting, and a disabled binding — the T029c safety argument
+  (constant-size label) goes in its doc comment per plan.
+  `ShareSheet`: the `UIViewControllerRepresentable`-wrapped
+  `UIActivityViewController` — **the spec's single flagged UIKit
+  exception**, ~25 lines, zero logic, flagged in its doc comment per
+  the constitution.
+  *Done when*: builds; previews render; exception called out in code
+  and in the task's commit message.
+
+- [x] **T012 — Wire the Items screen.**
+  *Done (2026-08-31)*: badge after `sortControl` inside the header's
+  visibility gate, share sheet off `$viewModel.stagedExport`, failure
+  alert off `exportFailureMessage` with the shared copy. Simulator
+  spot-check on a seeded item: badge renders beside the sort badge at
+  matched height, the system menu shows exactly the two actions, and
+  "Export as CSV…" produced a real `Trove-Items-2026-08-31.csv` in the
+  share sheet (Save to Files/Copy offered). Screenshots taken headless
+  during the run.
+  Badge after `sortControl` (visible exactly when the sort badge is,
+  per amended criterion 1), menu items disabled on `!canExport`,
+  `.sheet(item:)` on `stagedExport` presenting `ShareSheet`, failure
+  alert off `exportFailureMessage`.
+  *Done when*: builds; simulator spot-check — badge placement, menu,
+  a real CSV export reaching the share sheet.
+
+- [x] **T013 — Wire the Wishlist screen.** Same wiring, same checks.
+  *Done (2026-08-31)*: twin wiring; simulator spot-check exercised the
+  live PDF path — a seeded wanted item exported to
+  `Trove-Wishlist-2026-08-31.pdf` (16 KB), opened in the system
+  viewer: cover with wordmark/rule/title, "Generated 2026-08-31 ·
+  Whole wishlist · 1 wanted", brass estimated-cost total; page 2's
+  entry with `MUSIC · AMPS` eyebrow, name, and the mono field grid.
+  The print-first document renders on device exactly as the composer
+  tests describe it.
+
+- [x] **T014 — Launch purge hook.**
+  *Done (2026-08-31)*: `FileExportService.purgeAtLaunch()` (static — at
+  launch there's no service or container, and purging needs neither)
+  called from `TroveApp.init`, sweeping the shared `defaultDirectory`.
+  Unit test seeds the real staging directory and asserts the sweep;
+  simulator check: seeded `stale.csv` into the sandbox's `tmp/Exports`
+  — where it sat alongside *genuine* residue, the PDF left by T013's
+  canceled share sheet — relaunched, whole directory gone. The
+  wiring's call-site guard lands with T015. Full suite 592/592 green.
+  `FileExportService.purge()` called once at app startup from the
+  smallest sensible hook (`TroveApp`/`TroveStore` per plan).
+  *Done when*: builds; a stale file seeded in `tmp/Exports/` is gone
+  after a fresh launch (simulator check recorded in the Done note).
+
+- [x] **T015 — `ExportWiringTests` source-scan guards.**
+  *Done (2026-08-31)*: five guards — badge fed by view-model state and
+  firing both intents (per list), share sheet + failure alert wired
+  (per list), both menu actions individually gated on `canExport`,
+  UIKit confined (both `UIActivityViewController` and `import UIKit`
+  walked across the whole app target against the two flagged exception
+  files), and the launch sweep actually called from `TroveApp`.
+  Mutation batch: four compile-clean breaks applied at once (dropped a
+  `.disabled`, emptied an intent closure, leaked UIKit into
+  DashboardView, deleted the purge call) — all four caught, 5 issues
+  across all 5 guards. Reverted; full suite 597/597 green.
+  Per the `ReorderWiringTests` pattern: both list views gate both menu
+  actions on `canExport`; both intents are wired in both views;
+  `UIActivityViewController` appears **only** in `ShareSheet.swift`
+  across the production tree.
+  *Done when*: guards green, and the batch is mutation-verified —
+  apply compile-clean breaks (drop a `disabled`, unwire an intent,
+  reference the activity controller from a second file) and confirm
+  each is caught before reverting.
+
+- [x] **T016 — `design/tokens.md`.**
+  *Done (2026-08-31)*: two new sections — "Export badge and menu"
+  (badge geometry against the sort badge's tokens, the system-Menu
+  decision with the T029c argument, exporting state) and "Print
+  palette and type scale — PDF export" (the print-only tokens with the
+  darker brass rationale, page/photo-box geometry, and the full print
+  type scale with the one-source-of-face-names note). Every value
+  `PDFComposer` and `ExportBadge` use is now stated; no silent
+  divergences found while writing it up.
+  Add the print-only palette table and print type scale (recorded as a
+  deliberate second scale), and the export badge + menu row entries.
+  *Done when*: tokens.md states every value `PDFComposer` and
+  `ExportBadge` use; any divergence discovered while implementing is
+  recorded as a decision, never silent.
+
+## Phase 6 — Verification and close-out
+
+- [x] **T017 — Full-suite run and criteria sweep.**
+  *Done (2026-08-31)*: `xcodebuild build` succeeded; the full test
+  action ran **597 unit tests in 93 suites (Swift Testing) and 5 UI
+  tests (XCTest), 0 failures**. All twelve criteria (1, 2, 2a, 3–11)
+  annotated in spec.md with citations to the specific tests, guards,
+  and simulator checks that carry them. Honest partials recorded
+  in-place: criterion 5's open-in-Numbers half and criterion 11's
+  large-collection feel are T018's, and the Excel serial-number caveat
+  stands per plan.md.
+  `xcodebuild build` + `xcodebuild test` for the whole project, actual
+  output reported. Walk all spec acceptance criteria (1, 2, 2a, 3–11)
+  and check each off in `spec.md` with a citation to the test or task
+  that carries it; the Excel side of criterion 5 is checked via the
+  text-import path and recorded honestly per the plan's serial-number
+  caveat.
+
+- [x] **T018 — Manual device pass (yours).**
+  *Done (2026-08-31)*: everything checked passes — "the pdf reads
+  beautifully, well formatted, exporting respects filters and ordering
+  and csvs are readable." The PDF design needed no bounce. One item
+  honestly not exercised: a large collection (criterion 11's *feel*;
+  its mechanics stay carried by the instrumented off-main probe and
+  the size-bound test). Three forward-looking notes came back and are
+  recorded in `ROADMAP.md`'s 011 entry + plan.md's schema section:
+  exports must be revisited in whatever spec adds new per-item data
+  (trending values foremost — schema growth is append-only and
+  coordinated with 012); sell-plan export is deferred deliberately;
+  and a "Full" export (dashboard + both lists + sell plans) is a
+  future export spec after trending values, to be reconciled with
+  013's export-everything and the dashboard-export deferral.
+  Export from filtered and sorted states, both formats, both screens;
+  open the CSV in Numbers (and Excel if at hand); read the PDF end to
+  end — **this is the design bounce point**; cancel the share sheet;
+  export repeatedly and confirm nothing accumulates; try a large-ish
+  collection for the progress affordance. Findings come back as tasks
+  here, not silent fixes.
+
+- [x] **T019 — Skeptical-reviewer close-out.**
+  The subagent reviews the implemented feature against spec and plan
+  (the 010/T039 pattern); every finding resolved or explicitly
+  recorded in this file's Done notes before the PR leaves draft.
+  *Done (2026-08-31)*: verdict was "not ready yet" on three blockers +
+  seven second-looks; all now dispositioned. **Fixed in code**:
+  **B1** — `Calendar.current` follows the user's *preferred-calendar*
+  setting, so a Buddhist-calendar device would have written year 2569
+  into the canonical CSV, its filenames, and the PDF cover; the
+  serializer now takes only a `TimeZone` and builds its own Gregorian
+  calendar (identifier-independence structural, like the money path's
+  integer math), with `dayIsAlwaysGregorianRegardlessOfDeviceCalendar`
+  pinning it and plan.md/spec.md corrected. **S1** — nothing could
+  fail if `isExporting = true` were deleted, and the reentrancy guard
+  (which protects the staged file from a concurrent purge-before-
+  write) was untested; `GatedExportServiceSpy` + mid-flight tests on
+  both view models now cover both, mutation-verified — and the first
+  mutation run exposed a flaw in the *spy* (gating a reentrant call
+  deadlocked the run instead of failing it; the spy now gates only
+  the first call, and the mutation fails fast with three red
+  assertions). PDF entry order is now asserted in both cover tests
+  (was count-only). **Fixed in docs**: **B2** — criterion 11's
+  "scale feel confirmed at T018" contradicted T018's own note;
+  corrected to the honest partial. **B3** — ROADMAP's status row said
+  "plan.md next"; now "In review". **S2** — the cover floor note's
+  9.5pt was missing from both type scales (tokens.md's completeness
+  claim was false); added. **S3** — the trailing CRLF is now pinned
+  in plan.md's format rules, not just the writer's comment. **S4** —
+  criterion 9's citation narrowed (extracted text can't measure
+  geometry). **S5** — criterion 5's record now quotes what T018
+  actually said. Plus plan.md notes: the Photo-`nonisolated` widening
+  as an accepted cost, and the composer's SwiftUI-for-`Font.Weight`
+  import against the "no UIKit" claim. **Record-only, accepted**:
+  a single field row taller than a page clips (T007 note amended);
+  `drawFlowed`'s fresh-page bailout is a content-loss path, not an
+  error path; no cover pagination (~2,500-char search query to hit);
+  a keep-together taller than a page emits one blank page; narrowed
+  column width persists on continuation pages; badge placement pinned
+  only by simulator checks. **Deferred to the post-merge docs PR**
+  (main documents, constitution forbids direct commits): README's
+  "developed in conversation before any code existed" predates the
+  authorship amendment (S6); DECISIONS.md lacks the 2026-08-30 entry
+  CLAUDE.md points to (S7 — confirmed missing); ROADMAP's row flips
+  to Shipped with the PR link. Full suite after fixes: 600/600 unit,
+  5/5 UI, build green.*
