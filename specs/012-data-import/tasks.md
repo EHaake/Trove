@@ -133,8 +133,25 @@ per-function selectors run zero tests and report success).
   of reading the array directly); drop the wrong-list check → its
   test red.
 
-- [ ] **T004 — Field parsers: money, date, desire, condition,
+- [x] **T004 — Field parsers: money, date, desire, condition,
   currency.**
+  *Done (2026-08-31)*: `ImportSchema.cents(from:)` (strict scan,
+  overflow-checked integer math), `day(from:timeZone:)` (strict
+  4-2-2, own Gregorian calendar, components round-trip),
+  `desire(from:in:)`, `condition(from:)`, `currencyCode(from:)`.
+  13 tests incl. parameterized rejection sets; both preserved
+  invariants pinned (writer→parser identity across a cent spread,
+  and `Money.cents(from: Decimal(string:))` equivalence on canonical
+  forms). Three mutations red: money scan skipping grouping commas →
+  rejection set red on `1,250.00`; calendar swapped to `.buddhist`
+  (the T019/B1 failure mode itself) → 3 tests red incl. the
+  Gregorian pin — noted honestly, as 011 did: a swap to
+  `Calendar.current` specifically is indistinguishable on a
+  Gregorian-configured test host, so identifier-independence is
+  carried structurally (the API takes only a `TimeZone`) with the
+  buddhist-swap as the detectable proxy; components round-trip
+  removed → all 5 impossible dates accepted, red. Reverted; full
+  suite 636/95 green (13 new).
   Per plan §Money and date parsing — all pure, no
   `Locale`/`DateFormatter`/`Decimal` anywhere in the path. Money:
   strict shape scan (digits, optional dot + 1–2 fraction digits; bare
