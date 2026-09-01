@@ -98,6 +98,55 @@ struct ImportSchemaTests {
         #expect(damagedRows.map(\.number) == [1, 3, 5])
     }
 
+    // MARK: - Header gate (T003)
+
+    @Test func exactHeadersPassBothGates() throws {
+        try ImportSchema.requireItemsHeader(CSVRow(number: 1, cells: ExportSchema.itemHeaders))
+        try ImportSchema.requireWishlistHeader(CSVRow(number: 1, cells: ExportSchema.wishlistHeaders))
+    }
+
+    @Test func whitespacePaddedHeaderCellsPass() throws {
+        try ImportSchema.requireItemsHeader(
+            CSVRow(number: 1, cells: ExportSchema.itemHeaders.map { " \($0)\t" })
+        )
+    }
+
+    /// The T002 tie: a re-saved header line with trailing empty columns,
+    /// run through the real parse-then-shape pipeline, still gates clean.
+    @Test func aStrippedResavedHeaderRowPassesTheGate() throws {
+        let line = ExportSchema.itemHeaders.joined(separator: ",") + ",,,,\r\n"
+        let shaped = ImportSchema.shaped(try CSVParser.parse(line))
+        try ImportSchema.requireItemsHeader(try #require(shaped.first))
+    }
+
+    @Test func missingExtraRenamedAndReorderedColumnsAllMismatch() {
+        var missing = ExportSchema.itemHeaders
+        missing.removeLast()
+        var extra = ExportSchema.itemHeaders
+        extra.append("Photos")
+        var renamed = ExportSchema.itemHeaders
+        renamed[0] = "Item Name"
+        var reordered = ExportSchema.itemHeaders
+        reordered.swapAt(0, 1)
+
+        for cells in [missing, extra, renamed, reordered] {
+            #expect(throws: ImportSchema.HeaderError.mismatch) {
+                try ImportSchema.requireItemsHeader(CSVRow(number: 1, cells: cells))
+            }
+        }
+    }
+
+    /// Criterion 4's mechanism: the other list's exact headers are
+    /// recognized as such, not lumped into "wrong columns".
+    @Test func theOtherListsHeadersAreRecognizedAsWrongList() {
+        #expect(throws: ImportSchema.HeaderError.wrongList) {
+            try ImportSchema.requireItemsHeader(CSVRow(number: 1, cells: ExportSchema.wishlistHeaders))
+        }
+        #expect(throws: ImportSchema.HeaderError.wrongList) {
+            try ImportSchema.requireWishlistHeader(CSVRow(number: 1, cells: ExportSchema.itemHeaders))
+        }
+    }
+
     private func record(name: String, notes: String) -> ItemExportRecord {
         ItemExportRecord(
             name: name,

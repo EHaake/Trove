@@ -40,4 +40,36 @@ nonisolated enum ImportSchema {
             return CSVRow(number: row.number, cells: cells)
         }
     }
+
+    // MARK: - Header gate (plan §Row pipeline, step 3)
+
+    /// Thrown by the header gate. `wrongList` is checked first and exists
+    /// for criterion 4: offering a wishlist export to the items list (or
+    /// vice versa) is the most likely wrong-file mistake, and the alert
+    /// should name it rather than say "wrong columns".
+    nonisolated enum HeaderError: Error, Equatable {
+        case wrongList
+        case mismatch
+    }
+
+    /// The items gate: trimmed header cells must equal
+    /// `ExportSchema.itemHeaders` exactly. The pinned arrays are read right
+    /// here, never copied — a schema change reshapes the gate by
+    /// construction, which is the append-only growth rule's enforcement
+    /// point. Callers shape the rows first (`shaped(_:)`), so a re-saved
+    /// header's trailing empty columns are already gone.
+    static func requireItemsHeader(_ row: CSVRow) throws {
+        try requireHeader(row, expected: ExportSchema.itemHeaders, other: ExportSchema.wishlistHeaders)
+    }
+
+    /// See `requireItemsHeader(_:)` — the wishlist twin.
+    static func requireWishlistHeader(_ row: CSVRow) throws {
+        try requireHeader(row, expected: ExportSchema.wishlistHeaders, other: ExportSchema.itemHeaders)
+    }
+
+    private static func requireHeader(_ row: CSVRow, expected: [String], other: [String]) throws {
+        let cells = row.cells.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard cells != expected else { return }
+        throw cells == other ? HeaderError.wrongList : HeaderError.mismatch
+    }
 }

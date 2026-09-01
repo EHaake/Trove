@@ -101,7 +101,20 @@ per-function selectors run zero tests and report success).
 
 ## Phase 2 — Meaning: schema and field policy
 
-- [ ] **T003 — Header gate and wrong-list detection.**
+- [x] **T003 — Header gate and wrong-list detection.**
+  *Done (2026-08-31)*: `ImportSchema.requireItemsHeader` /
+  `requireWishlistHeader` over a shared private gate;
+  `ImportSchema.HeaderError` (`wrongList` checked first, `mismatch`
+  otherwise). Five tests: exact pass both gates, whitespace-padded
+  cells pass (header trimming), a re-saved header with trailing
+  commas passes through the real parse→shape pipeline (T002 tie),
+  missing/extra/renamed/reordered all mismatch, and both wrong-list
+  directions recognized. Both mutations red: swapped the gate onto a
+  hand-copied header list with two entries transposed → 3 tests red
+  (the pass fixtures build from `ExportSchema.itemHeaders`, which is
+  the point of reading the array directly); dropped the wrong-list
+  check → its test red both directions. Reverted; full suite 623/95
+  green (5 new).
   Per plan §Row pipeline, step 3: trimmed header cells compared
   against `ExportSchema.itemHeaders` / `wishlistHeaders` **read
   directly** — column indices derived from array positions, no
