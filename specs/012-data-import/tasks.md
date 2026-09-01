@@ -330,7 +330,15 @@ per-function selectors run zero tests and report success).
 
 ## Phase 4 — View models (twins)
 
-- [ ] **T009 — `CategoryPathHelper.canonicalize(_:against:)`.**
+- [x] **T009 — `CategoryPathHelper.canonicalize(_:against:)`.**
+  *Done (2026-08-31)*: the matching rule extracted as a pure
+  `nonisolated static`, instance method delegating — one definition.
+  One new pure test (case-insensitive match, new-path passthrough,
+  empty passthrough); the existing suite ran unchanged before and
+  after, which is the no-behavior-change evidence. Mutation
+  (case-sensitive static) → 4 tests / 6 issues red — three of them
+  the *pre-existing* instance-method tests, exactly the delegation
+  proof the task wanted. Reverted; full suite 671/98 green.
   The flagged production change to a shipped file, per plan §The
   commit path: extract the case-insensitive match rule as a pure
   static; the existing instance method delegates to it. No behavior

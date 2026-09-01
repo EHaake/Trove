@@ -164,8 +164,17 @@ struct CategoryPathHelper {
     /// "Photography/Cameras" and "photography/Cameras" as separate-looking
     /// entries, not to correct the user's typing live.
     func canonicalize(_ typedPath: String) throws -> String {
-        let all = try canonicalPaths()
-        return all.first { $0.caseInsensitiveCompare(typedPath) == .orderedSame } ?? typedPath
+        Self.canonicalize(typedPath, against: try canonicalPaths())
+    }
+
+    /// The matching rule itself, extracted at `012`/T009 so bulk import can
+    /// apply it against a path set fetched **once** — the instance method
+    /// above does a full two-entity fetch per call, which is fine per form
+    /// save and ruinous per imported row (012 plan §The commit path). One
+    /// definition, the instance method delegating; `nonisolated` because
+    /// it's pure and import's callers shouldn't need this type's isolation.
+    nonisolated static func canonicalize(_ typedPath: String, against known: [String]) -> String {
+        known.first { $0.caseInsensitiveCompare(typedPath) == .orderedSame } ?? typedPath
     }
 
     /// Every distinct path in use, case-insensitively, keeping whichever

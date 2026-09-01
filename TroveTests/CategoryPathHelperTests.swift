@@ -78,6 +78,17 @@ struct CategoryPathHelperTests {
 
     /// The whole point of canonicalization: retyping an existing path with
     /// different casing reuses whatever casing was already stored.
+    /// T009's pure half: the extracted static, tested without a store. The
+    /// instance-method tests around this one double as the delegation
+    /// evidence — they ran unchanged before and after the extraction.
+    @Test func canonicalizeAgainstAKnownSetIsPureAndCaseInsensitive() {
+        let known = ["Photography/Cameras", "Music/Amps"]
+        #expect(CategoryPathHelper.canonicalize("photography/cameras", against: known) == "Photography/Cameras")
+        #expect(CategoryPathHelper.canonicalize("MUSIC/AMPS", against: known) == "Music/Amps")
+        #expect(CategoryPathHelper.canonicalize("Audio/Mics", against: known) == "Audio/Mics")
+        #expect(CategoryPathHelper.canonicalize("", against: known) == "")
+    }
+
     @Test func canonicalizeReusesExistingCasing() throws {
         let context = try makeInMemoryContext()
         context.insert(Item(categoryPath: "Photography/Cameras"))
