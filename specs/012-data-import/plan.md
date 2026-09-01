@@ -269,9 +269,10 @@ the review reshaped its body:
 1. `await Task.yield()` (a real suspension) before the work, so the
    badge's spinner renders a frame — criterion 15 covers commit, and
    setting `isBusy` without yielding never draws (the T056 lesson in
-   reverse). The walking-skeleton task **measures** a 300-row commit
-   and records the number here; if it exceeds ~100 ms, the insert loop
-   chunks across yields. Main-actor commit stays the call regardless:
+   reverse). **Measured at T011** (simulator, in-memory store, 300-row
+   batch into a 100-item collection, canonicalization and placement
+   included): **~85 ms** — under the ~100 ms threshold, so the insert
+   loop does not chunk. Main-actor commit stays the call regardless:
    `@ModelActor` plus cross-context refetch plumbing is real
    complexity for a bulk insert that `load()` on the same context sees
    for free.

@@ -385,6 +385,59 @@ final class WishlistViewModel {
         importPresentation = nil
     }
 
+    /// See `ItemListViewModel.confirmImport` — one commit path, both lists,
+    /// with the wishlist's one extra move: `Added` restores `createdAt`.
+    func confirmImport() async {
+        guard !isBusy, case .confirmation(let preview) = importPresentation else { return }
+        guard !preview.validated.isEmpty else {
+            importPresentation = nil
+            return
+        }
+        isImportingFile = true
+        defer { isImportingFile = false }
+        await Task.yield()
+
+        let existing = (try? modelContext.fetch(FetchDescriptor<WishlistItem>())) ?? []
+        let base = ManualOrderHelper.nextPosition(after: existing)
+        var knownPaths = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []
+
+        for (offset, validated) in preview.validated.enumerated() {
+            let record = validated.record
+            let path = CategoryPathHelper.canonicalize(record.categoryPath, against: knownPaths)
+            if !path.isEmpty,
+               !knownPaths.contains(where: { $0.caseInsensitiveCompare(path) == .orderedSame }) {
+                knownPaths.append(path)
+            }
+            let wish = WishlistItem(
+                name: record.name,
+                categoryPath: path,
+                estimatedCostCents: record.estimatedCostCents,
+                currencyCode: record.currencyCode,
+                notes: record.notes,
+                desireToOwn: record.desireToOwn,
+                sortOrder: base + offset
+            )
+            // Assigned after construction deliberately: the init hard-sets
+            // `.now` and has no parameter — `Added` restores when the want
+            // was actually recorded (plan §The commit path; don't "fix"
+            // the init).
+            wish.createdAt = record.createdAt
+            modelContext.insert(wish)
+        }
+
+        do {
+            try modelContext.save()
+            importPresentation = nil
+        } catch {
+            modelContext.rollback()
+            importPresentation = .failure(
+                title: ImportCopy.failureTitle,
+                message: ImportCopy.saveFailureMessage
+            )
+        }
+        load()
+    }
+
     private func isOrderedBefore(_ lhs: WishlistItem, _ rhs: WishlistItem) -> Bool {
         // Attribute first, the user's own manual order on any tie — spec.md's
         // confirmed rule for every non-"Custom" sort, applied through the

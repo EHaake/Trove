@@ -1072,3 +1072,183 @@ func itemsPreview(names: [String]) -> ItemsImportPreview {
         defaultedFieldCount: 0
     )
 }
+
+/// T011's guards: the commit path — placement, canonicalization, rollback,
+/// view-independence, and criterion 11's stated duplicate behavior.
+struct ItemListViewModelCommitTests {
+    private let dummyURL = URL(filePath: "/dev/null/import.csv")
+
+    @Test func commitAppendsAtTheEndPreservingFileOrder() async throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(name: "Existing A", sortOrder: 0))
+        context.insert(Item(name: "Existing B", sortOrder: 1))
+        try context.save()
+
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["One", "Two", "Three"])))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()
+
+        let ordered = try context.fetch(
+            FetchDescriptor<Item>(sortBy: [SortDescriptor(\.sortOrder)])
+        )
+        #expect(ordered.map(\.name) == ["Existing A", "Existing B", "One", "Two", "Three"])
+        #expect(ordered.map(\.sortOrder) == [0, 1, 2, 3, 4])
+        #expect(viewModel.importPresentation == nil)
+    }
+
+    @Test func thePlacementBaseIsComputedAtCommitTimeNotParseTime() async throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["Imported"])))
+        )
+        await viewModel.importCSV(from: dummyURL)
+
+        // Something lands between the alert and the confirm — a CloudKit
+        // arrival, a hand-add. The batch must still append after it.
+        context.insert(Item(name: "Latecomer", sortOrder: 10))
+        try context.save()
+
+        await viewModel.confirmImport()
+        let imported = try #require(
+            try context.fetch(FetchDescriptor<Item>()).first { $0.name == "Imported" }
+        )
+        #expect(imported.sortOrder == 11)
+    }
+
+    @Test func aLegacyAllZeroStoreStillLandsTheBatchAfterTheLegacyBlock() async throws {
+        // The real state of a pre-010 store: every item at sortOrder 0,
+        // ties falling back to createdAt at sort time.
+        let context = try makeInMemoryContext()
+        for name in ["Legacy A", "Legacy B", "Legacy C"] {
+            context.insert(Item(name: name, sortOrder: 0))
+        }
+        try context.save()
+
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["New One", "New Two"])))
+        )
+        viewModel.sortOrder = .custom
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()
+
+        #expect(viewModel.items.count == 5)
+        #expect(viewModel.items.suffix(2).map(\.name) == ["New One", "New Two"])
+    }
+
+    @Test func importIsViewIndependentOfTheActiveFilter() async throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(name: "Mixer", categoryPath: "Audio/Desks"))
+        try context.save()
+
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["Strat", "Tele"])))
+        )
+        viewModel.categoryFilter = "Audio/Desks"
+        viewModel.load()
+        try #require(viewModel.totalCount == 1)
+
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()
+
+        // The batch (Music/Guitars) is outside the filter: not visible,
+        // but fully imported — criterion 10.
+        #expect(viewModel.totalCount == 3)
+        #expect(viewModel.items.map(\.name) == ["Mixer"])
+    }
+
+    @Test func committingTheSameFileTwiceDuplicatesEveryRow() async throws {
+        let context = try makeInMemoryContext()
+        let preview = itemsPreview(names: ["Strat"])
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(preview))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()
+        viewModel.importPresentation = .confirmation(preview)
+        await viewModel.confirmImport()
+
+        // Stated no-dedupe behavior (criterion 11) — two copies, each with
+        // its own place in the order.
+        let all = try context.fetch(FetchDescriptor<Item>())
+        #expect(all.count == 2)
+        #expect(Set(all.map(\.sortOrder)).count == 2)
+    }
+
+    @Test func canonicalizationPreservesExistingCasingAndBatchFirstWins() async throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(name: "M6", categoryPath: "Photography/Cameras"))
+        try context.save()
+
+        var preview = itemsPreview(names: ["A", "B", "C"])
+        preview = ImportPreview(
+            validated: zip(preview.validated, ["photography/cameras", "guitars", "Guitars"])
+                .map { row, path in
+                    ValidatedRow(
+                        record: ItemExportRecord(
+                            name: row.record.name, categoryPath: path,
+                            purchasePriceCents: 0, currencyCode: "USD",
+                            purchaseDate: row.record.purchaseDate, purchaseLocation: nil,
+                            currentValueCents: nil, desireToKeep: 3,
+                            conditionRawValue: "good", conditionNotes: nil,
+                            serialNumber: nil, notes: nil, firstPhotoID: nil
+                        ),
+                        rowNumber: row.rowNumber,
+                        defaultedFieldCount: 0
+                    )
+                },
+            skipped: [], defaultedFieldCount: 0
+        )
+        let viewModel = ItemListViewModel(
+            modelContext: context, importService: ImportServiceSpy(items: .success(preview))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()
+
+        let byName = Dictionary(
+            uniqueKeysWithValues: try context.fetch(FetchDescriptor<Item>()).map { ($0.name, $0.categoryPath) }
+        )
+        #expect(byName["A"] == "Photography/Cameras")
+        #expect(byName["B"] == "guitars")
+        #expect(byName["C"] == "guitars")
+    }
+
+    @Test func aZeroImportableConfirmationClearsWithoutWrites() async throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(
+                items: .success(ImportPreview(
+                    validated: [],
+                    skipped: [SkippedRow(rowNumber: 2, reason: "no name")],
+                    defaultedFieldCount: 0
+                ))
+            )
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()
+
+        #expect(viewModel.importPresentation == nil)
+        #expect(try context.fetch(FetchDescriptor<Item>()).isEmpty)
+    }
+
+    /// The mechanism `confirmImport`'s catch relies on: rollback clears
+    /// unsaved inserts from this context — paired with the wiring scan in
+    /// `ImportWiringTests`, since a real SwiftData save failure can't be
+    /// forced deterministically (plan §The commit path, stated honestly).
+    @Test func rollbackClearsUnsavedInsertsFromTheContext() throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(name: "Phantom"))
+        try #require(try context.fetch(FetchDescriptor<Item>()).count == 1)
+
+        context.rollback()
+        #expect(try context.fetch(FetchDescriptor<Item>()).isEmpty)
+    }
+}
+

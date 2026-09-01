@@ -856,12 +856,15 @@ struct WishlistViewModelImportTests {
 }
 
 /// A validated wishlist preview for staging tests.
-func wishlistPreview(names: [String]) -> WishlistImportPreview {
+func wishlistPreview(
+    names: [String],
+    categoryPath: String = "Photography/Cameras"
+) -> WishlistImportPreview {
     ImportPreview(
         validated: names.enumerated().map { offset, name in
             ValidatedRow(
                 record: WishlistExportRecord(
-                    name: name, categoryPath: "Photography/Cameras",
+                    name: name, categoryPath: categoryPath,
                     estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 2,
                     createdAt: Date(timeIntervalSince1970: 1_500_000_000),
                     notes: nil, firstPhotoID: nil
@@ -873,4 +876,61 @@ func wishlistPreview(names: [String]) -> WishlistImportPreview {
         skipped: [],
         defaultedFieldCount: 0
     )
+}
+
+/// T011's wishlist twin: the commit path with the wishlist's one extra
+/// move — `Added` restoring `createdAt` — and the casing-priority theft
+/// that canonicalization prevents.
+struct WishlistViewModelCommitTests {
+    private let dummyURL = URL(filePath: "/dev/null/import.csv")
+
+    @Test func commitAppendsAndRestoresCreatedAtFromAdded() async throws {
+        let context = try makeInMemoryContext()
+        context.insert(WishlistItem(name: "Existing", sortOrder: 0))
+        try context.save()
+
+        let added = Date(timeIntervalSince1970: 1_500_000_000)
+        let viewModel = WishlistViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(wishlist: .success(wishlistPreview(names: ["OM-1"])))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()
+
+        let imported = try #require(
+            try context.fetch(FetchDescriptor<WishlistItem>()).first { $0.name == "OM-1" }
+        )
+        #expect(imported.sortOrder == 1)
+        // The fixture's record carries this instant; the init hard-sets
+        // `.now`, so equality here proves the post-construction restore.
+        #expect(imported.createdAt == added)
+        #expect(viewModel.importPresentation == nil)
+    }
+
+    @Test func oldAddedDatesCannotStealAnExistingPathsCasing() async throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(name: "M6", categoryPath: "Photography/Cameras"))
+        try context.save()
+
+        // A 2015-dated wish in lowercase: without canonicalization its old
+        // createdAt would outrank the existing item in the chips' earliest-
+        // casing rule across both entities.
+        let viewModel = WishlistViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(wishlist: .success(wishlistPreview(
+                names: ["Old Wish"], categoryPath: "photography/cameras"
+            )))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()
+
+        let imported = try #require(
+            try context.fetch(FetchDescriptor<WishlistItem>()).first { $0.name == "Old Wish" }
+        )
+        #expect(imported.categoryPath == "Photography/Cameras")
+        // The chips agree: earliest casing across both entities is still
+        // the existing one, because no lowercase copy ever landed.
+        let helper = CategoryPathHelper(modelContext: context)
+        #expect(try helper.allCategoryPaths() == ["Photography/Cameras"])
+    }
 }

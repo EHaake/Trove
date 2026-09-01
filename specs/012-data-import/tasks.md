@@ -391,7 +391,33 @@ per-function selectors run zero tests and report success).
   `isImportingFile` set → mid-flight test red (both VMs); route the
   failure copy through a literal → string test red.
 
-- [ ] **T011 — `confirmImport`: the commit path, both view models.**
+- [x] **T011 — `confirmImport`: the commit path, both view models.**
+  *Done (2026-09-01)*: both commit paths exactly per plan — yield
+  first, base and canonical path set computed at commit, first-
+  occurrence-wins batch casing, save once, `rollback()` in the
+  catch, `load()`; the wishlist restores `createdAt` after
+  construction (comment in place). **Timing measured and recorded in
+  plan.md**: ~85 ms for a 300-row batch into a 100-item collection —
+  under the ~100 ms threshold, no chunking; the temporary
+  measurement test was removed after the number was captured.
+  11 tests across the two commit suites + `ImportWiringTests`
+  (created early with the rollback scan): append-preserving-file-
+  order, commit-time base (insert between alert and confirm), the
+  legacy all-zero fixture, view-independence, double-commit
+  duplicates, items casing incl. intra-batch first-wins, wishlist
+  `Added` restore, the 2015-`Added` casing-theft prevention (stored
+  path *and* `allCategoryPaths` casing both pinned), zero-importable
+  clears without writes, the rollback mechanism test, and the
+  per-VM catch scan. All three mutations red: base cached at parse
+  time → 2 tests (the staleness test *and* double-commit, whose
+  second batch collided positions — a bonus catch); canonicalization
+  skipped → both casing tests, both suites; `rollback()` removed →
+  the scan red on both files. One process stumble recorded: the M-C
+  revert's anchor missed twice (the items catch carries a comment
+  block the needle didn't), leaving the mutation live into a full
+  run — caught immediately by exactly the two scan failures, which
+  is the guard doing its job; restored with grep-verified anchors.
+  Full suite 691/103 green.
   Per plan §The commit path, exactly: leading `await Task.yield()`;
   canonical path set fetched **once**, batch casing
   first-occurrence-wins via T009's static, resolved paths joining the
