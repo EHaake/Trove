@@ -30,4 +30,63 @@ struct ImportWiringTests {
             "\(path) confirmImport's failure path must roll back the context"
         )
     }
+
+    private nonisolated static let lists = [
+        "Trove/Views/Items/ItemListView.swift",
+        "Trove/Views/Wishlist/WishlistView.swift",
+    ]
+
+    /// 012 criterion 1's structural half: the overflow control lives
+    /// OUTSIDE every `totalCount > 0` gate, on both screens — the badge
+    /// must exist on a fresh install. The sort badge staying *inside* one
+    /// of those gates proves the scan is looking at the real header, not
+    /// an empty span. The empty-collection UI test is this guard's
+    /// behavioral twin; re-nesting the control must turn both red.
+    @Test(arguments: lists)
+    func theOverflowControlSitsOutsideEveryEmptyCollectionGate(path: String) throws {
+        let code = try SourceScan.production(path)
+        try #require(code.contains("overflowControl"), "\(path) doesn't build the overflow control")
+
+        let gatedSpans = SourceScan.closureBodies(after: "if viewModel.totalCount > 0", in: code)
+        try #require(!gatedSpans.isEmpty, "\(path) has no totalCount gates — wrong scan target?")
+        #expect(
+            gatedSpans.contains { $0.contains("sortControl") },
+            "\(path): the sort badge should still hide when empty — did the header move?"
+        )
+        for span in gatedSpans {
+            #expect(
+                !span.contains("overflowControl"),
+                "\(path) nests the overflow control inside a totalCount gate — criterion 1 broken"
+            )
+        }
+    }
+
+    /// The picker's contract: attached on both screens, offering both
+    /// content types — `.plainText` deliberately, since mailed CSVs are
+    /// routinely `.txt` and the header gate is the real filter.
+    @Test(arguments: lists)
+    func theFileImporterIsAttachedWithBothContentTypes(path: String) throws {
+        let code = try SourceScan.production(path)
+        #expect(code.contains(".fileImporter("), "\(path) doesn't attach the file picker")
+        #expect(code.contains("$isPickingImportFile"), "\(path) picker not driven by the badge's state")
+        #expect(code.contains(".commaSeparatedText"), "\(path) picker missing the CSV type")
+        #expect(code.contains(".plainText"), "\(path) picker missing the plain-text type")
+        #expect(
+            code.contains("viewModel.importCSV(from: url)"),
+            "\(path) a picked URL must start the view-model flow"
+        )
+    }
+
+    /// The one import alert, wired to the one presentation optional, with
+    /// the confirm/cancel intents and the dismiss-only informational case.
+    @Test(arguments: lists)
+    func theImportAlertPresentsOffTheSinglePresentation(path: String) throws {
+        let code = try SourceScan.production(path)
+        #expect(code.contains("viewModel.importAlertTitle"), "\(path) alert title not composed by the VM")
+        #expect(code.contains("viewModel.importAlertMessage"), "\(path) alert message not composed by the VM")
+        #expect(code.contains("viewModel.importPresentation != nil"), "\(path) alert not driven by the presentation")
+        #expect(code.contains("viewModel.importOffersConfirmation"), "\(path) informational case not handled")
+        #expect(code.contains("viewModel.confirmImport()"), "\(path) Import button doesn't commit")
+        #expect(code.contains("viewModel.cancelImport()"), "\(path) Cancel doesn't clear the staging")
+    }
 }

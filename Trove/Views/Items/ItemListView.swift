@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Browse owned gear, per `design/screens/Trove Item List.png`.
 struct ItemListView: View {
@@ -200,6 +201,39 @@ struct ItemListView: View {
         } message: {
             Text(viewModel.exportFailureMessage ?? ExportCopy.failureMessage)
         }
+        // 012's file picker. `.plainText` deliberately included — CSVs that
+        // arrived by mail are routinely `.txt`, and the header gate is the
+        // real filter. Cancellation must be a no-op: only a picked URL
+        // starts the flow, so a `.failure` (or an uninvoked callback,
+        // whichever this OS does) never surfaces as the failure alert.
+        .fileImporter(
+            isPresented: $isPickingImportFile,
+            allowedContentTypes: [.commaSeparatedText, .plainText]
+        ) { result in
+            if case .success(let url) = result {
+                Task { await viewModel.importCSV(from: url) }
+            }
+        }
+        // 012's one import presentation — the pre-commit gate or a failure,
+        // both off a single optional (plan §View-model surface: independent
+        // booleans that can go true together are how SwiftUI drops an
+        // alert). The zero-importable confirmation renders dismiss-only.
+        .alert(
+            viewModel.importAlertTitle,
+            isPresented: Binding(
+                get: { viewModel.importPresentation != nil },
+                set: { if !$0 { viewModel.importPresentation = nil } }
+            )
+        ) {
+            if viewModel.importOffersConfirmation {
+                Button("Import") { Task { await viewModel.confirmImport() } }
+                Button("Cancel", role: .cancel) { viewModel.cancelImport() }
+            } else {
+                Button("OK", role: .cancel) { viewModel.cancelImport() }
+            }
+        } message: {
+            Text(viewModel.importAlertMessage)
+        }
         // T035's dropdown floats over the whole screen, a full-screen
         // catcher behind it so any outside tap closes it. Screen-level
         // rather than anchored to the badge: the header can't reach over
@@ -363,15 +397,18 @@ struct ItemListView: View {
 
             Spacer()
 
-            // Nothing to sort — or export — on an empty list: the "…"
-            // follows the sort badge's visibility rule (criterion 1 as
-            // amended), and the sort badge shifts left to make room, exactly
-            // the spec's wording.
-            if viewModel.totalCount > 0 {
-                HStack(spacing: 8) {
+            // Nothing to sort on an empty list, so the sort badge still
+            // hides — but the "…" shows regardless since 012 (criterion 1,
+            // superseding 011's hide-when-empty rule): its menu now carries
+            // Import and Get Blank Template, and the fresh install with a
+            // spreadsheet in hand is exactly who they serve. Guarded from
+            // both directions — ImportWiringTests' brace-span scan and the
+            // empty-collection UI test.
+            HStack(spacing: 8) {
+                if viewModel.totalCount > 0 {
                     sortControl
-                    overflowControl
                 }
+                overflowControl
             }
         }
     }
