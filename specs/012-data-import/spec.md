@@ -1,10 +1,11 @@
 # 012 — Data Import
 
-Status: **Draft** (authored in-session 2026-08-31 at the person's
-direction — the venue decision is recorded in `DECISIONS.md` and the
-constitution's authorship-split section was amended first, in its own
-commit. Every product decision below was made by the person in that
-conversation; the Decisions record section lists them.)
+Status: **Approved** (2026-08-31, same day as drafting. Authored
+in-session at the person's direction — the venue decision is recorded
+in `DECISIONS.md` and the constitution's authorship-split section was
+amended first, in its own commit. Every product decision below was
+made by the person in that conversation; the Decisions record section
+lists them.)
 
 ## What and why
 
