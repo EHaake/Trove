@@ -1,6 +1,9 @@
 # 012 — Data Import
 
-Status: **Approved** (2026-08-31, same day as drafting. Authored
+Status: **Approved** (2026-08-31, same day as drafting; the
+transport-damage rules, the second row-fatal condition, the skip-list
+cap, and the trimming rule were amended the same day during planning
+— see the amendment notes inline and Decisions record 9–12. Authored
 in-session at the person's direction — the venue decision is recorded
 in `DECISIONS.md` and the constitution's authorship-split section was
 amended first, in its own commit. Every product decision below was
@@ -120,8 +123,20 @@ after passing through other software:
   quoting. Fields containing commas, quotes, and newlines survive
   exactly. A file exported by Trove and re-saved by Numbers, Excel, or
   Google Sheets must still import.
+- Trailing empty cells are stripped from the header row and every
+  data row before any other rule applies — spreadsheet apps emit
+  `...,Notes,,,` whenever the sheet's used range outgrew the data,
+  and the rigid header gate must not reject a re-saved file for it.
+  *(Amended 2026-08-31 during planning.)*
+- Wholly blank lines are skipped silently, never reported — a
+  trailing blank line must not produce a phantom skip on a clean
+  file. *(Same amendment.)*
 - What stays strict: the header gate above, and the field formats
   below. Tolerance is about transport, not about guessing at data.
+  One structural corruption fails the whole file rather than a row:
+  an unclosed quote, which swallows the remainder of the file into a
+  single field — "skipping" it would silently import garbage. *(Same
+  amendment; criterion 14 lists it.)*
 
 ## Field policy (skip vs. default)
 
@@ -129,9 +144,22 @@ The rule, applied per field: a field the data model treats as
 **optional** imports as empty, silently — empty is a legitimate value
 there. A field the model **requires** gets its model default when the
 cell is blank or unparseable, and each such default is **counted in
-the confirmation**. Exactly one field is row-fatal: a row with no
-**Name** is skipped (reported with its row number) — a nameless item
-is not an item.
+the confirmation**. Two conditions are row-fatal *(the second added
+2026-08-31 during planning)*: a row with no **Name** is skipped
+(reported with its row number) — a nameless item is not an item — and
+a row with **more content cells than the schema** (after
+trailing-empty stripping) is skipped and reported, because a stray
+comma shifts every later column one place and no guess about which
+field it belongs to is safe. Rows with *fewer* cells are padded with
+empty cells (transport damage), which then follow the ordinary
+blank-cell policy.
+
+"Blank" throughout means **empty after trimming**, and imported cells
+normalize through exactly the rules the app's own forms apply —
+trimmed names, whitespace-only optional cells stored as empty — so an
+imported item is indistinguishable from a hand-typed one, and a
+whitespace-only Name skips its row. *(Amended 2026-08-31 during
+planning.)*
 
 **Items:**
 
@@ -228,6 +256,20 @@ All made by the person, 2026-08-31, in the design conversation:
    the menu gains **Get Blank Template…** — superseding `011`'s
    hide-when-empty rule, recorded there.
 
+Added 2026-08-31, during planning (escalated as spec-level, decided
+by the person):
+
+9. Transport damage: trailing empty cells stripped before all rules;
+   wholly blank lines skipped silently; an unclosed quote fails the
+   whole file (it swallows the remainder into one field — skipping
+   would import garbage).
+10. A row with extra content cells is the second row-fatal condition
+    — a stray comma shifts every later column; no safe guess exists.
+11. The confirmation's skip listing is capped: first five rows with
+    reasons, then "and N more rows"; counts always complete.
+12. Imported cells normalize through the forms' own trimming rules;
+    "blank" means empty after trimming.
+
 ## Acceptance criteria
 
 1. [ ] The "…" badge shows on both list screens even when the
@@ -240,23 +282,28 @@ All made by the person, 2026-08-31, in the design conversation:
    zero defaults, and the resulting list in custom order shows the
    same items, same field values, same order as the file.
 3. [ ] Transport tolerance: the same file imports identically with BOM
-   removed, with LF-only endings, without the trailing newline, and
-   with maximal RFC 4180 quoting — including fields containing
-   commas, quotes, and embedded newlines.
+   removed, with LF-only endings, without the trailing newline, with
+   trailing empty columns on every line (header included), with blank
+   lines interleaved, and with maximal RFC 4180 quoting — including
+   fields containing commas, quotes, and embedded newlines. *(Amended
+   2026-08-31: trailing-column and blank-line cases added.)*
 4. [ ] Header gate: a file with a missing, extra, renamed, or
    reordered column imports nothing and shows a plain alert naming
    the problem. A wishlist file offered to the items list (and vice
    versa) is recognized as the other list's format in the alert.
 5. [ ] The confirmation alert precedes any write: it states the
    import count, lists skipped rows by spreadsheet-style row number
-   with reasons, and states the defaulted-field count. Cancel leaves
-   the store byte-identical. Zero importable rows produces an
-   informational alert with no import action.
-6. [ ] Field policy holds as tabled: a row with no Name is skipped
-   and reported; blank model-optional fields import as empty
-   silently; blank or unparseable required fields take the tabled
-   default and are counted; blank Current Value imports as unvalued,
-   not zero.
+   with reasons — the first five, then "and N more rows" *(cap added
+   2026-08-31 during planning)* — and states the defaulted-field
+   count. Cancel leaves the store byte-identical. Zero importable
+   rows produces an informational alert with no import action.
+6. [ ] Field policy holds as tabled: a row with no Name (after
+   trimming) or with extra content cells is skipped and reported;
+   blank model-optional fields import as empty silently; blank or
+   unparseable required fields take the tabled default and are
+   counted; blank Current Value imports as unvalued, not zero.
+   *(Amended 2026-08-31: second row-fatal condition, after-trim
+   blankness.)*
 7. [ ] Money: canonical-format amounts import to the exact cent value
    export would write for them; bare integers are whole amounts;
    symbols, thousands separators, and decimal commas are rejected to
@@ -280,8 +327,10 @@ All made by the person, 2026-08-31, in the design conversation:
     its 7-column schema, with `Added` restoring the wish's creation
     date.
 14. [ ] A failed import (unreadable file, undecodable text, header
-    mismatch) shows a plain alert in `011`'s failure style and
-    imports nothing — never a partial batch.
+    mismatch, an unclosed quote, a file beyond the defensive size
+    cap) shows a plain alert in `011`'s failure style and imports
+    nothing — never a partial batch. *(Amended 2026-08-31: the last
+    two causes added during planning.)*
 15. [ ] The UI stays responsive while a 300-row file parses and
     commits, with the badge showing the progress affordance
     throughout — same bar `011`'s criterion 11 set for export.
