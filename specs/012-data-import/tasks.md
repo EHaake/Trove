@@ -31,7 +31,22 @@ per-function selectors run zero tests and report success).
 
 ## Phase 1 — Transport: the parser
 
-- [ ] **T001 — `CSVParser.swift`: the scalar state machine.**
+- [x] **T001 — `CSVParser.swift`: the scalar state machine.**
+  *Done (2026-08-31)*: 12 tests in `CSVParserTests`, all golden
+  fixtures hand-written; the writer cross-check runs the production
+  parser over `CSVWriter`'s own hard cases (the one context the
+  test-only `RFC4180` also covers, taken as an extra bar, not the
+  oracle). The CRLF-inside-a-quoted-field test pins scalar count as
+  well as equality, because `String ==` is canonical-equivalence and
+  would call a mangled ending equal anyway. All three prescribed
+  mutations ran red: dropped the CR-peek → 8 tests / 14 issues
+  (phantom empty row after every CRLF row, including a
+  writer-round-trip failure); removed the quote-open case → 7 tests /
+  10 issues (every quoting fixture plus `unclosedQuoteThrowsWholeFile`,
+  since quotes-as-literals never throws); bumped the row number on
+  newlines inside quoted fields (physical-line counting) → 3 tests
+  red, exactly the numbering fixtures. Each reverted; full suite
+  612/94 green (12 new) + 5 UI tests.
   Per plan §The parser. `Trove/Import/CSVParser.swift` (new;
   synchronized group, no `.pbxproj` edit): BOM strip; CRLF/LF/CR row
   endings with explicit CR-then-optional-LF consumption (scalars
