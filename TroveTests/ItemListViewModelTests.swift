@@ -927,3 +927,148 @@ struct ItemListViewModelExportTests {
             == "Category: \(categoryLabel) · Not yet valued · Search: \u{201C}M6\u{201D}")
     }
 }
+
+/// T010's guards: the import surface — mid-flight state and reentry, busy
+/// serialization across export and import, failure mapping onto the shared
+/// copy, cancel leaving the store untouched, and the alert accessors.
+struct ItemListViewModelImportTests {
+    private let dummyURL = URL(filePath: "/dev/null/import.csv")
+
+    @Test func isImportingFileIsObservableMidFlightAndBlocksReentry() async throws {
+        let context = try makeInMemoryContext()
+        let spy = GatedImportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, importService: spy)
+
+        let inFlight = Task { await viewModel.importCSV(from: dummyURL) }
+        for _ in 0..<10_000 where spy.itemCalls == 0 { await Task.yield() }
+        try #require(spy.itemCalls == 1, "gated import never started")
+
+        #expect(viewModel.isImportingFile, "progress state must be visible while parsing")
+        #expect(viewModel.isBusy)
+
+        // The reentrant attempt bounces off the guard without reaching the
+        // service — the spy gates only the first call, so a wrongly-leaked
+        // call would fail this count fast rather than deadlock (T019/S1).
+        await viewModel.importCSV(from: dummyURL)
+        #expect(spy.itemCalls == 1)
+
+        spy.release()
+        await inFlight.value
+        #expect(viewModel.isImportingFile == false)
+        guard case .confirmation = viewModel.importPresentation else {
+            Issue.record("expected a staged confirmation")
+            return
+        }
+    }
+
+    @Test func aBusyImportRefusesExportAndViceVersa() async throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(name: "Telecaster"))
+        try context.save()
+
+        // Import in flight → export refused.
+        let importSpy = GatedImportServiceSpy()
+        let exportSpy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(
+            modelContext: context, exportService: exportSpy, importService: importSpy
+        )
+        viewModel.load()
+
+        let importing = Task { await viewModel.importCSV(from: dummyURL) }
+        for _ in 0..<10_000 where importSpy.itemCalls == 0 { await Task.yield() }
+        await viewModel.exportCSV()
+        #expect(exportSpy.tables.isEmpty, "export must refuse while an import is in flight")
+        importSpy.release()
+        await importing.value
+
+        // Export in flight → import refused.
+        let gatedExport = GatedExportServiceSpy()
+        let secondImportSpy = ImportServiceSpy()
+        let second = ItemListViewModel(
+            modelContext: context, exportService: gatedExport, importService: secondImportSpy
+        )
+        second.load()
+        let exporting = Task { await second.exportCSV() }
+        for _ in 0..<10_000 where gatedExport.csvCalls == 0 { await Task.yield() }
+        await second.importCSV(from: dummyURL)
+        #expect(secondImportSpy.itemURLs.isEmpty, "import must refuse while an export is in flight")
+        gatedExport.release()
+        await exporting.value
+    }
+
+    @Test func aFailureMapsToTheSharedCopy() async throws {
+        let context = try makeInMemoryContext()
+        let spy = ImportServiceSpy(items: .failure(.undecodable))
+        let viewModel = ItemListViewModel(modelContext: context, importService: spy)
+
+        await viewModel.importCSV(from: dummyURL)
+
+        guard case .failure(let title, let message) = viewModel.importPresentation else {
+            Issue.record("expected a failure presentation")
+            return
+        }
+        #expect(title == ImportCopy.failureTitle)
+        #expect(message == ImportCopy.failureMessage(for: .undecodable, target: .items))
+        #expect(viewModel.importAlertTitle == ImportCopy.failureTitle)
+        #expect(viewModel.importOffersConfirmation == false)
+    }
+
+    @Test func cancelClearsThePresentationWithoutStoreWrites() async throws {
+        let context = try makeInMemoryContext()
+        let spy = ImportServiceSpy(items: .success(itemsPreview(names: ["Strat"])))
+        let viewModel = ItemListViewModel(modelContext: context, importService: spy)
+
+        await viewModel.importCSV(from: dummyURL)
+        #expect(viewModel.importPresentation != nil)
+
+        viewModel.cancelImport()
+        #expect(viewModel.importPresentation == nil)
+        #expect(try context.fetch(FetchDescriptor<Item>()).isEmpty)
+    }
+
+    @Test func alertAccessorsComposeThroughImportCopy() async throws {
+        let context = try makeInMemoryContext()
+        let staged = ImportPreview<ItemExportRecord>(
+            validated: itemsPreview(names: ["Strat"]).validated,
+            skipped: [SkippedRow(rowNumber: 7, reason: "no name")],
+            defaultedFieldCount: 2
+        )
+        let viewModel = ItemListViewModel(
+            modelContext: context, importService: ImportServiceSpy(items: .success(staged))
+        )
+        await viewModel.importCSV(from: dummyURL)
+
+        #expect(viewModel.importAlertTitle == "Import 1 item?")
+        #expect(viewModel.importAlertMessage.contains("Row 7 \u{2014} no name"))
+        #expect(viewModel.importAlertMessage.contains("2 missing or unreadable fields"))
+        #expect(viewModel.importOffersConfirmation)
+
+        // The zero-importable case is informational only (criterion 5).
+        viewModel.importPresentation = .confirmation(
+            ImportPreview(validated: [], skipped: staged.skipped, defaultedFieldCount: 0)
+        )
+        #expect(viewModel.importAlertTitle == "Nothing to import")
+        #expect(viewModel.importOffersConfirmation == false)
+    }
+}
+
+/// A validated items preview for staging tests — plain records, no store.
+func itemsPreview(names: [String]) -> ItemsImportPreview {
+    ImportPreview(
+        validated: names.enumerated().map { offset, name in
+            ValidatedRow(
+                record: ItemExportRecord(
+                    name: name, categoryPath: "Music/Guitars", purchasePriceCents: 100_000,
+                    currencyCode: "USD", purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+                    purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
+                    conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
+                    notes: nil, firstPhotoID: nil
+                ),
+                rowNumber: offset + 2,
+                defaultedFieldCount: 0
+            )
+        },
+        skipped: [],
+        defaultedFieldCount: 0
+    )
+}

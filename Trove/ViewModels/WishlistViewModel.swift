@@ -60,17 +60,22 @@ final class WishlistViewModel {
 
     private let exportService: any ExportService
 
+    private let importService: any ImportService
+
     /// - Parameter exportService: defaults to the live file-staging service,
     ///   injected as a protocol so tests fake it — see
-    ///   `ItemListViewModel.init`, one pattern on both lists.
+    ///   `ItemListViewModel.init`, one pattern on both lists; 012's
+    ///   `importService` follows the same rule.
     init(
         modelContext: ModelContext,
         syncMonitor: SyncMonitor = .notSyncing,
-        exportService: (any ExportService)? = nil
+        exportService: (any ExportService)? = nil,
+        importService: (any ImportService)? = nil
     ) {
         self.modelContext = modelContext
         self.syncMonitor = syncMonitor
         self.exportService = exportService ?? FileExportService(container: modelContext.container)
+        self.importService = importService ?? FileImportService()
     }
 
     /// See `ItemListViewModel.mayStillBeImporting`.
@@ -275,7 +280,8 @@ final class WishlistViewModel {
     /// CSV. Records come from `items` as-is — never a refetch — for the same
     /// criteria-3/4 reason as the item list.
     func exportCSV() async {
-        guard canExport, !isExporting else { return }
+        // `!isBusy` since 012 — see `ItemListViewModel.exportCSV`.
+        guard canExport, !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
@@ -293,7 +299,7 @@ final class WishlistViewModel {
     /// cover totals this view model's own `totalEstimatedCostCents`
     /// (criterion 8).
     func exportPDF() async {
-        guard canExport, !isExporting else { return }
+        guard canExport, !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
@@ -315,6 +321,68 @@ final class WishlistViewModel {
         } catch {
             exportFailureMessage = ExportCopy.failureMessage
         }
+    }
+
+    // MARK: - Import (012)
+
+    /// See `ItemListViewModel`'s import section — one pattern, both lists.
+    var importPresentation: ImportPresentation<WishlistExportRecord>?
+
+    /// Named against the CloudKit-sync collision, same as the item list's.
+    private(set) var isImportingFile = false
+
+    var isBusy: Bool { isExporting || isImportingFile }
+
+    var importAlertTitle: String {
+        switch importPresentation {
+        case .confirmation(let preview):
+            ImportCopy.confirmationTitle(importCount: preview.validated.count, target: .wishlist)
+        case .failure(let title, _):
+            title
+        case nil:
+            ""
+        }
+    }
+
+    var importAlertMessage: String {
+        switch importPresentation {
+        case .confirmation(let preview):
+            ImportCopy.confirmationMessage(preview: preview)
+        case .failure(_, let message):
+            message
+        case nil:
+            ""
+        }
+    }
+
+    var importOffersConfirmation: Bool {
+        guard case .confirmation(let preview) = importPresentation else { return false }
+        return !preview.validated.isEmpty
+    }
+
+    func importCSV(from url: URL) async {
+        guard !isBusy else { return }
+        isImportingFile = true
+        defer { isImportingFile = false }
+
+        do {
+            let preview = try await importService.parseWishlist(at: url, timeZone: .current)
+            importPresentation = .confirmation(preview)
+        } catch let error as ImportError {
+            importPresentation = .failure(
+                title: ImportCopy.failureTitle,
+                message: ImportCopy.failureMessage(for: error, target: .wishlist)
+            )
+        } catch {
+            importPresentation = .failure(
+                title: ImportCopy.failureTitle,
+                message: ImportCopy.unexpectedFailureMessage
+            )
+        }
+    }
+
+    func cancelImport() {
+        importPresentation = nil
     }
 
     private func isOrderedBefore(_ lhs: WishlistItem, _ rhs: WishlistItem) -> Bool {

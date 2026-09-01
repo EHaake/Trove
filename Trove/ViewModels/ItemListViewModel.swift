@@ -116,20 +116,25 @@ final class ItemListViewModel {
 
     private let exportService: any ExportService
 
+    private let importService: any ImportService
+
     /// - Parameters:
     ///   - syncMonitor: defaults to a store with no mirror, so tests and
     ///     previews get the settled behaviour unless they ask otherwise.
     ///   - exportService: defaults to the live file-staging service over this
     ///     context's container; tests inject a fake and assert on what the
     ///     intents hand over (plan.md's Architecture section).
+    ///   - importService: same injection rule, 012's side of the boundary.
     init(
         modelContext: ModelContext,
         syncMonitor: SyncMonitor = .notSyncing,
-        exportService: (any ExportService)? = nil
+        exportService: (any ExportService)? = nil,
+        importService: (any ImportService)? = nil
     ) {
         self.modelContext = modelContext
         self.syncMonitor = syncMonitor
         self.exportService = exportService ?? FileExportService(container: modelContext.container)
+        self.importService = importService ?? FileImportService()
     }
 
     /// Dragging only makes sense against the real, whole list in its own
@@ -341,8 +346,10 @@ final class ItemListViewModel {
     /// Records are built from `items` as-is — never a refetch: visible order
     /// comes from `isOrderedBefore` over live filter/sort state and is not
     /// reproducible from any `FetchDescriptor` (criteria 3–4).
+    /// `!isBusy` since 012: one operation at a time across export *and*
+    /// import, so their presentations can't race.
     func exportCSV() async {
-        guard canExport, !isExporting else { return }
+        guard canExport, !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
@@ -360,7 +367,7 @@ final class ItemListViewModel {
     /// snapshot rule as `exportCSV`; the cover's figures are this view
     /// model's own arithmetic, which is what criterion 8 measures.
     func exportPDF() async {
-        guard canExport, !isExporting else { return }
+        guard canExport, !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
@@ -386,6 +393,87 @@ final class ItemListViewModel {
         } catch {
             exportFailureMessage = ExportCopy.failureMessage
         }
+    }
+
+    // MARK: - Import (012)
+
+    /// What the import flow is showing, or nil — one optional drives the one
+    /// import alert (plan §View-model surface: this view already carries
+    /// three presentations, and independent booleans that can go true
+    /// together are how SwiftUI silently drops one). View-settable so
+    /// dismissal writes nil back, the `stagedExport` convention.
+    var importPresentation: ImportPresentation<ItemExportRecord>?
+
+    /// True while a picked file parses or a confirmed batch commits. Not
+    /// `isImporting`, deliberately: "import" already means *CloudKit sync*
+    /// in this file (`mayStillBeImporting`, `completedImports`), and an
+    /// empty collection mid-sync is exactly where both meanings are live
+    /// at once.
+    private(set) var isImportingFile = false
+
+    /// The one busy flag the overflow badge reads. Every export and import
+    /// intent guards on it, which serializes the operations.
+    var isBusy: Bool { isExporting || isImportingFile }
+
+    /// The import alert's title — composed here, not in the view, so the
+    /// copy path stays testable without UI (the `ImportCopy` pattern).
+    var importAlertTitle: String {
+        switch importPresentation {
+        case .confirmation(let preview):
+            ImportCopy.confirmationTitle(importCount: preview.validated.count, target: .items)
+        case .failure(let title, _):
+            title
+        case nil:
+            ""
+        }
+    }
+
+    var importAlertMessage: String {
+        switch importPresentation {
+        case .confirmation(let preview):
+            ImportCopy.confirmationMessage(preview: preview)
+        case .failure(_, let message):
+            message
+        case nil:
+            ""
+        }
+    }
+
+    /// Whether the alert offers an Import action: a confirmation with
+    /// something to import. Zero importable rows is informational only
+    /// (criterion 5).
+    var importOffersConfirmation: Bool {
+        guard case .confirmation(let preview) = importPresentation else { return false }
+        return !preview.validated.isEmpty
+    }
+
+    /// Parses the picked file into a staged preview — nothing is written
+    /// until `confirmImport()` (criterion 5's parse-first gate).
+    func importCSV(from url: URL) async {
+        guard !isBusy else { return }
+        isImportingFile = true
+        defer { isImportingFile = false }
+
+        do {
+            let preview = try await importService.parseItems(at: url, timeZone: .current)
+            importPresentation = .confirmation(preview)
+        } catch let error as ImportError {
+            importPresentation = .failure(
+                title: ImportCopy.failureTitle,
+                message: ImportCopy.failureMessage(for: error, target: .items)
+            )
+        } catch {
+            importPresentation = .failure(
+                title: ImportCopy.failureTitle,
+                message: ImportCopy.unexpectedFailureMessage
+            )
+        }
+    }
+
+    /// Cancel at the confirmation: nothing was written, so there is nothing
+    /// to undo — the store-untouched half of criterion 5.
+    func cancelImport() {
+        importPresentation = nil
     }
 
     private func isOrderedBefore(_ lhs: Item, _ rhs: Item) -> Bool {

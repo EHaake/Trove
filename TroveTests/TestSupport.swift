@@ -104,6 +104,100 @@ nonisolated final class GatedExportServiceSpy: ExportService {
     }
 }
 
+/// Records the URLs the view models hand to `ImportService` and answers
+/// with a configured preview — or throws a configured `ImportError` — so
+/// intent tests assert staging and failure mapping without file I/O.
+nonisolated final class ImportServiceSpy: ImportService {
+    private struct Captured {
+        var itemURLs: [URL] = []
+        var wishlistURLs: [URL] = []
+    }
+
+    private let captured = Mutex(Captured())
+    private let itemsResult: Result<ItemsImportPreview, ImportError>
+    private let wishlistResult: Result<WishlistImportPreview, ImportError>
+
+    init(
+        items: Result<ItemsImportPreview, ImportError> =
+            .success(ImportPreview(validated: [], skipped: [], defaultedFieldCount: 0)),
+        wishlist: Result<WishlistImportPreview, ImportError> =
+            .success(ImportPreview(validated: [], skipped: [], defaultedFieldCount: 0))
+    ) {
+        itemsResult = items
+        wishlistResult = wishlist
+    }
+
+    var itemURLs: [URL] { captured.withLock { $0.itemURLs } }
+    var wishlistURLs: [URL] { captured.withLock { $0.wishlistURLs } }
+
+    @concurrent func parseItems(at url: URL, timeZone: TimeZone) async throws -> ItemsImportPreview {
+        captured.withLock { $0.itemURLs.append(url) }
+        return try itemsResult.get()
+    }
+
+    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone) async throws -> WishlistImportPreview {
+        captured.withLock { $0.wishlistURLs.append(url) }
+        return try wishlistResult.get()
+    }
+}
+
+/// A spy whose parse blocks until released — the `GatedExportServiceSpy`
+/// discipline for `isImportingFile`: only the FIRST call gates, so a
+/// reentrant call that wrongly reaches the spy fails the call-count
+/// assertion *fast* instead of deadlocking the test (the T019/S1 lesson).
+/// Each method gates its own first call; a test drives one list at a time.
+nonisolated final class GatedImportServiceSpy: ImportService {
+    private struct State {
+        var itemCalls = 0
+        var wishlistCalls = 0
+        var released = false
+        var waiter: CheckedContinuation<Void, Never>?
+    }
+
+    private let state = Mutex(State())
+
+    var itemCalls: Int { state.withLock { $0.itemCalls } }
+    var wishlistCalls: Int { state.withLock { $0.wishlistCalls } }
+
+    func release() {
+        let waiter = state.withLock { state -> CheckedContinuation<Void, Never>? in
+            state.released = true
+            defer { state.waiter = nil }
+            return state.waiter
+        }
+        waiter?.resume()
+    }
+
+    @concurrent func parseItems(at url: URL, timeZone: TimeZone) async throws -> ItemsImportPreview {
+        let isFirstCall = state.withLock { state -> Bool in
+            state.itemCalls += 1
+            return state.itemCalls == 1
+        }
+        if isFirstCall { await gate() }
+        return ImportPreview(validated: [], skipped: [], defaultedFieldCount: 0)
+    }
+
+    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone) async throws -> WishlistImportPreview {
+        let isFirstCall = state.withLock { state -> Bool in
+            state.wishlistCalls += 1
+            return state.wishlistCalls == 1
+        }
+        if isFirstCall { await gate() }
+        return ImportPreview(validated: [], skipped: [], defaultedFieldCount: 0)
+    }
+
+    private func gate() async {
+        await withCheckedContinuation { continuation in
+            let resumeNow = state.withLock { state -> Bool in
+                guard !state.released else { return true }
+                state.waiter = continuation
+                return false
+            }
+            if resumeNow { continuation.resume() }
+        }
+    }
+}
+
 /// A fresh in-memory store holding the real schema — real persistence
 /// semantics, no disk, no CloudKit. Each call is an isolated store, so tests
 /// can't leak state into one another.

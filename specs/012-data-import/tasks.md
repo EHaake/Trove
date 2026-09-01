@@ -350,7 +350,29 @@ per-function selectors run zero tests and report success).
   case-sensitive → the delegating instance method's existing tests
   red.
 
-- [ ] **T010 — Import surface on both view models.**
+- [x] **T010 — Import surface on both view models.**
+  *Done (2026-08-31)*: `ImportPresentation<Record>` (dumb data; the
+  VMs compose strings through `ImportCopy` — new
+  `unexpectedFailureMessage` and `saveFailureMessage` statics added
+  and pinned); both VMs gain `importPresentation`, `isImportingFile`
+  (collision comment in place), `isBusy`, the alert accessors
+  (`importAlertTitle`/`Message`, `importOffersConfirmation` with the
+  zero-importable informational case), `importCSV(from:)` and
+  `cancelImport()`; both export intents' guards moved from
+  `!isExporting` to `!isBusy` (serialization); `importService`
+  injected with a live default. `TestSupport` gains
+  `ImportServiceSpy` (configured results per list) and
+  `GatedImportServiceSpy` (first-call-only gate per method — the
+  T019/S1 discipline). 9 tests across the two new twin suites:
+  mid-flight + reentry, both directions of busy serialization
+  (import-blocks-export and export-blocks-import), failure mapping to
+  the exact `ImportCopy` strings (wishlist side pins the wrong-list
+  "Items export" copy), cancel with zero store writes, alert
+  accessors incl. the wishlist nouns. Both mutations applied to both
+  VMs at once and red in both suites: `isImportingFile` set removed →
+  4 tests / 6 issues; failure copy replaced with a literal → 2 tests
+  / 3 issues. Reverted; full suite 680/100 green (9 new + 1 T009
+  test).
   Per plan §View-model surface. `TestSupport`: `ImportServiceSpy` +
   `GatedImportServiceSpy` (gates only the first call — the T019/S1
   lesson, so a wrongly-leaked reentrant call fails the count

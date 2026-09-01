@@ -46,11 +46,31 @@ nonisolated enum ImportTarget {
     case wishlist
 }
 
+/// What a list screen's import flow is presenting, or nothing. One optional
+/// drives the one import alert per screen — the list views already carry
+/// three presentations, and independent booleans that can go true together
+/// are how SwiftUI silently drops one (plan §View-model surface). Dumb
+/// data: the view models compose its strings through `ImportCopy`.
+nonisolated enum ImportPresentation<Record: Sendable>: Sendable {
+    /// The pre-commit gate (criterion 5). A preview with nothing validated
+    /// still presents — informationally, with no import action.
+    case confirmation(ImportPreview<Record>)
+    case failure(title: String, message: String)
+}
+
 /// Every user-facing import string, pinned in one place so the two screens
 /// and their view models can't drift — the `ExportCopy`/`ItemDeleteCopy`
 /// pattern. Pure functions; `ImportCopyTests` pin the exact strings.
 nonisolated enum ImportCopy {
     static let failureTitle = "Couldn't import"
+
+    /// The live service only throws `ImportError`, but the protocol can't
+    /// promise that — anything else gets honesty over specifics.
+    static let unexpectedFailureMessage = "Something went wrong. Nothing was imported."
+
+    /// The commit's save failing after a rollback (plan §The commit path) —
+    /// the store is untouched, and the copy says so.
+    static let saveFailureMessage = "Saving failed. Nothing was imported."
 
     /// Every failure message ends with the same state sentence — the
     /// criterion-14 guarantee, stated to the user every time.
