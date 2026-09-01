@@ -516,7 +516,23 @@ per-function selectors run zero tests and report success).
   action on `canExport` → the always-enabled assertion red; drop the
   `Divider` or a menu string → pinned-strings red.
 
-- [ ] **T014 — Headers, `.fileImporter`, and the import alert.**
+- [x] **T014 — Headers, `.fileImporter`, and the import alert.**
+  *Done (2026-09-01)*: overflow control outside the `totalCount > 0`
+  gate on both screens (sort badge stays inside — its rationale
+  still holds); `.fileImporter` with both content types, driven by
+  the badge's picker state, cancel-safe by construction (only a
+  `.success` URL starts the flow — actual cancel-callback behavior
+  gets its eyes-on check at T017); the one import alert off
+  `importPresentation` with Import/Cancel or the dismiss-only
+  informational variant. `import UniformTypeIdentifiers` added to
+  both views. Three new `ImportWiringTests` scans (each × both
+  views): the brace-span gate check — with the sort badge's
+  *presence inside* a gate asserted so the scan provably looks at
+  the real header; the picker contract; the alert wiring. Both
+  mutations red: re-nesting the overflow turned the scan **and**
+  T015's UI test red in a single run (criterion 1 falsifiable from
+  both directions, as the plan required); `.plainText` dropped →
+  the picker scan red. Reverted; suite green.
   Per plan §Entry point UI, both list views: the overflow control
   moves outside the `if viewModel.totalCount > 0` gate (sort badge
   stays inside); `.fileImporter` with `[.commaSeparatedText,
@@ -532,7 +548,19 @@ per-function selectors run zero tests and report success).
   overflow inside the gate → brace-span scan red *and* T015's UI test
   red (run both); drop `.plainText` → scan red.
 
-- [ ] **T015 — Empty-collection UI test.**
+- [x] **T015 — Empty-collection UI test.**
+  *Done (2026-09-01)*:
+  `testEmptyCollectionOffersImportAndTemplateButNotExport` — fresh
+  `-uiTesting` launch, badge exists on the empty Items screen, menu
+  opens with Import and Get Blank Template enabled and both export
+  actions disabled. (XCTest per-method selectors genuinely run,
+  unlike Swift Testing's — the memory-file gotcha is framework-
+  specific, and the "passed (8.0s)" line was checked, not just the
+  banner.) Mutation shared with T014: the re-nest turned this test
+  red on "the overflow badge must exist on an empty collection"
+  alongside the scan. Full suite run **twice back-to-back**, both
+  green — 696 unit tests / 105 suites + 6 UI tests each run;
+  isolation holds (the T050 rule). **Phase 5 complete.**
   `TroveUITests`: `-uiTesting` in-memory launch, empty store → "More
   actions" exists on the Items screen; its menu shows Import from CSV
   enabled and both export actions disabled. Run the UI suite twice
