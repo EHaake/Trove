@@ -1,8 +1,11 @@
 # 013 — Settings Menu
 
-Status: **Approved** (2026-09-01, same day as drafting, with no
-amendments — the seven drafting proposals P1–P7 in the Decisions record
-became decisions on approval, as that section says they would.)
+Status: **Approved** (2026-09-01, same day as drafting; the seven
+drafting proposals P1–P7 in the Decisions record became decisions on
+approval, as that section says they would. Two sentences were amended
+the same day during planning, after the skeptical review found each
+one stating something the code couldn't make true — see the inline
+notes and Decisions 13–14.)
 Authored in-session at the person's direction — the second use of the
 per-spec venue clause `012` added to the constitution. Every product
 decision below was made by the person in that conversation and is
@@ -179,17 +182,23 @@ and whose message extends the single-item delete copy the app already
 uses, because none of the consequences are guessable from the button:
 
 - Items: their photos go too; every sell plan loses its items (the
-  nullify direction — plans empty out, wishlist entries stay); if
-  signed in to iCloud, this removes them from your other devices too;
-  it can't be undone.
+  nullify direction — plans empty out, wishlist entries stay); the
+  iCloud sentence below, when it applies; it can't be undone.
 - Wishlist: their photos go too; their sell plans go with them, and
   the gear on those plans stays exactly where it is; the same iCloud
-  sentence; it can't be undone.
+  sentence, when it applies; it can't be undone.
 
-The iCloud sentence is written in the "if signed in" form so it's true
-in every storage state. The buttons are **Delete All** (destructive)
-and **Keep** — the same pair the single-item alerts use, so the two
-kinds of deletion share a vocabulary.
+The iCloud sentence — "if you're signed in to iCloud, this removes them
+from your other devices too" — **appears only when the store is
+configured for iCloud.** *(Amended 2026-09-01 during planning, Decision
+13: the draft said the "if signed in" form made the sentence true in
+every storage state, but in the local-only fallback nothing syncs
+whether or not you're signed in, so it would have been false exactly
+where the iCloud row on the same screen says so. The save captions
+already branch on storage mode for the same reason; this alert follows
+them.)* The buttons are **Delete All** (destructive) and **Keep** — the
+same pair the single-item alerts use, so the two kinds of deletion
+share a vocabulary.
 
 Deletion is **all-or-nothing**: one save; if it fails, nothing is
 deleted and an alert says so ("Nothing was deleted." — the mirror of
@@ -218,9 +227,15 @@ generating an export pair, staging a template, deleting a list — the
 acting row shows the app's compact spinner and every other action row
 is disabled, so no two actions can overlap. Done stays available.
 Dismissing Settings during an export abandons it: no share sheet
-appears later, nothing is left staged. Dismissing during a delete
-neither stops it nor makes it partial — it completes, all-or-nothing,
-and the list behind reflects it. (Proposed at drafting — see P4.)
+appears later, and the generated file is cleared by the next export or
+the next launch, the way every staged file is. *(Amended 2026-09-01
+during planning, Decision 14: the draft promised "nothing is left
+staged", which file generation — a synchronous body that can't be
+interrupted — can't honestly deliver; `011`'s no-residue rule is what
+actually holds, and criterion 15 already states it.)* Dismissing during
+a delete neither stops it nor makes it partial — it completes,
+all-or-nothing, and the list behind reflects it. (Proposed at drafting
+— see P4.)
 
 An export-everything that fails says so with `011`'s existing export
 failure copy; a failed delete says "Nothing was deleted." Every failure
@@ -314,6 +329,19 @@ decisions on spec approval unless the person overturns them:
   the things you came for first, the destructive pair near the bottom,
   the version last as a footer.
 
+Added 2026-09-01, during planning (escalated as spec-level by the
+skeptical review, decided by the person):
+
+13. The delete alerts' iCloud sentence appears **only when the store is
+    configured for iCloud** — the save captions' rule. The "if signed
+    in" form alone isn't enough: in the local-only fallback nothing
+    syncs regardless.
+14. Dismissing Settings mid-export leaves the generated file to `011`'s
+    existing purge (next export or next launch) rather than promising
+    "nothing is left staged" — generation can't be interrupted, and
+    building a cancellation-plus-purge path for a temp file the sweep
+    already reclaims isn't worth a new mechanism.
+
 ## Acceptance criteria
 
 1. [ ] Both list screens' "…" menu reads, in order: Export as CSV…,
@@ -352,14 +380,16 @@ decisions on spec approval unless the person overturns them:
     a user who isn't signed in.
 11. [ ] Delete All Items… is disabled at zero items. Otherwise its
     alert's title carries the exact current count; its message names
-    photos, sell plans emptying, iCloud (in the "if signed in" form),
-    and no undo. Keep changes nothing. Delete All removes every item:
+    photos, sell plans emptying, and no undo — plus the iCloud
+    sentence when, and only when, the store is configured for iCloud
+    (Decision 13). Keep changes nothing. Delete All removes every item:
     the Items list shows its genuine empty state, the Dashboard shows
     its empty state, every wishlist item's sell plan is empty, and no
     wishlist item is touched.
 12. [ ] Delete All Wishlist Items… is the symmetric case: disabled at
     zero; count in the title; message names photos, sell plans going
-    with them and gear staying, iCloud, no undo. Delete All removes
+    with them and gear staying, no undo, and the iCloud sentence under
+    the same rule as criterion 11. Delete All removes
     every wishlist item and no owned item is touched.
 13. [ ] A delete that fails deletes nothing and says "Nothing was
     deleted."
