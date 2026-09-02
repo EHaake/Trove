@@ -476,3 +476,193 @@ struct SettingsViewModelTemplateTests {
         #expect(viewModel.stagedExport == nil)
     }
 }
+
+// MARK: - T011: Delete All
+
+/// 013/T011: request, confirm, cancel — and every persistence claim
+/// verified through a **second `ModelContext`** over the same container,
+/// the T018 shape: a same-context refetch returns unsaved deletions and
+/// would pass with `save()` deleted.
+@Suite("SettingsViewModel — Delete All")
+struct SettingsViewModelDeleteTests {
+    private func counts(in container: ModelContainer) throws -> (items: Int, wanted: Int, photos: Int) {
+        let fresh = ModelContext(container)
+        return (
+            try fresh.fetchCount(FetchDescriptor<Item>()),
+            try fresh.fetchCount(FetchDescriptor<WishlistItem>()),
+            try fresh.fetchCount(FetchDescriptor<Photo>())
+        )
+    }
+
+    /// The title's count is the store's count *now*: a row arriving after
+    /// the screen loaded (here, through a second context) is counted.
+    @Test func requestCarriesTheLiveCount() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        _ = insertItem("Guitar", into: context)
+        try context.save()
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+        try #require(viewModel.itemCount == 1)
+
+        let elsewhere = ModelContext(container)
+        elsewhere.insert(Item(name: "Arrived from iCloud"))
+        try elsewhere.save()
+
+        viewModel.requestDeleteAll(.items)
+
+        #expect(viewModel.alert == .confirmDelete(.items, count: 2))
+        #expect(viewModel.alertTitle == "Delete all 2 items?")
+    }
+
+    @Test func requestOnAnEmptyListStagesNothing() throws {
+        let viewModel = SettingsViewModel(modelContext: try makeInMemoryContext())
+        viewModel.load()
+
+        viewModel.requestDeleteAll(.items)
+        viewModel.requestDeleteAll(.wishlist)
+
+        #expect(viewModel.alert == nil)
+    }
+
+    @Test func cancelAfterRequestLeavesTheStoreIntact() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        _ = insertItem("Guitar", photo: true, into: context)
+        insertWanted("Pedal", into: context)
+        try context.save()
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+
+        viewModel.requestDeleteAll(.items)
+        viewModel.cancelDeleteAll()
+
+        #expect(viewModel.alert == nil)
+        let after = try counts(in: container)
+        #expect(after.items == 1 && after.wanted == 1 && after.photos == 1)
+    }
+
+    /// Criterion 11: every item goes, its photos with it, every sell plan
+    /// empties (the nullify direction), and no wishlist item is touched.
+    @Test func confirmDeletesEveryItemAndOnlyItems() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let guitar = insertItem("Guitar", photo: true, into: context)
+        _ = insertItem("Amp", into: context)
+        insertWanted("Pedal", plannedSaleItems: [guitar], into: context)
+        try context.save()
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+        viewModel.requestDeleteAll(.items)
+
+        await viewModel.confirmDeleteAll(.items)?.value
+
+        let after = try counts(in: container)
+        #expect(after.items == 0)
+        #expect(after.wanted == 1)
+        #expect(after.photos == 0)
+        let survivor = try #require(ModelContext(container).fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect((survivor.plannedSaleItems ?? []).isEmpty, "the sell plan should have emptied, not vanished")
+        #expect(viewModel.alert == nil)
+        #expect(viewModel.activity == nil)
+        #expect(viewModel.itemCount == 0)
+        #expect(viewModel.wishlistCount == 1)
+    }
+
+    /// Criterion 12: the symmetric case — wanted items and their photos go,
+    /// their sell plans go with them, and the gear on those plans stays.
+    @Test func confirmDeletesEveryWishlistItemAndOnlyThose() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let guitar = insertItem("Guitar", into: context)
+        insertWanted("Pedal", photo: true, plannedSaleItems: [guitar], into: context)
+        insertWanted("Amp", into: context)
+        try context.save()
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+        viewModel.requestDeleteAll(.wishlist)
+
+        await viewModel.confirmDeleteAll(.wishlist)?.value
+
+        let after = try counts(in: container)
+        #expect(after.wanted == 0)
+        #expect(after.items == 1)
+        #expect(after.photos == 0)
+        let gear = try #require(ModelContext(container).fetch(FetchDescriptor<Item>()).first)
+        #expect(gear.name == "Guitar")
+        #expect((gear.plannedForWishlistItems ?? []).isEmpty)
+        #expect(viewModel.wishlistCount == 0)
+        #expect(viewModel.itemCount == 1)
+    }
+
+    /// The T017 race, pinned from the other direction: the alert's binding
+    /// writes `alert` nil *before* the confirm intent runs. The intent
+    /// takes its target as a parameter and never reads `alert`, so the
+    /// deletion cannot be lost.
+    @Test func aDismissalWriteBeforeTheCallCannotLoseTheDeletion() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        _ = insertItem("Guitar", into: context)
+        try context.save()
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+        viewModel.requestDeleteAll(.items)
+        try #require(viewModel.alert != nil)
+
+        viewModel.alert = nil
+        await viewModel.confirmDeleteAll(.items)?.value
+
+        #expect(try counts(in: container).items == 0)
+    }
+
+    @Test func activityIsSetSynchronouslyAndClearsWhenDone() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        _ = insertItem("Guitar", into: context)
+        insertWanted("Pedal", into: context)
+        try context.save()
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+
+        let first = viewModel.confirmDeleteAll(.items)
+        #expect(viewModel.activity == .deleteItems)
+        #expect(viewModel.isBusy)
+        // A second action while one is in flight is refused outright.
+        #expect(viewModel.confirmDeleteAll(.wishlist) == nil)
+
+        await first?.value
+
+        #expect(viewModel.activity == nil)
+        let after = try counts(in: container)
+        #expect(after.items == 0)
+        #expect(after.wanted == 1, "the refused second action must not have run")
+    }
+
+    /// The plan's measurement (§The delete-all commit path): ~300 items,
+    /// each carrying a photo blob, deleted in one save. The figure prints
+    /// to the test log and is recorded in plan.md; the assertions are the
+    /// correctness ones — timing never gates a test.
+    @Test func deletingThreeHundredItemsWithPhotosIsAllOrNothingAndTimed() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        for index in 0..<300 {
+            let item = Item(name: "Item \(index)", sortOrder: index)
+            item.photos = [Photo(imageData: Data(repeating: UInt8(index % 251), count: 50_000))]
+            context.insert(item)
+        }
+        try context.save()
+        try #require(try counts(in: container).photos == 300)
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+
+        let elapsed = await ContinuousClock().measure {
+            await viewModel.confirmDeleteAll(.items)?.value
+        }
+        print("T011 measurement: deleted 300 items with photos in \(elapsed)")
+
+        let after = try counts(in: container)
+        #expect(after.items == 0)
+        #expect(after.photos == 0)
+        #expect(viewModel.alert == nil)
+    }
+}

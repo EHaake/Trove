@@ -17,4 +17,20 @@ struct SettingsWiringTests {
             "TroveApp doesn't forward the fallback reason into the environment"
         )
     }
+
+    /// T011: the delete commit rolls back on a failed save — the
+    /// `confirmImport` template. An in-memory save can't be made to throw
+    /// on demand, so the all-or-nothing half of criterion 13 is pinned
+    /// structurally, as 012's was; the mechanism (`rollback` discards
+    /// pending deletions) is SwiftData's own.
+    @Test func confirmDeleteAllRollsBackOnSaveFailure() throws {
+        let code = try SourceScan.production("Trove/ViewModels/SettingsViewModel.swift")
+        let bodies = SourceScan.closureBodies(after: "func confirmDeleteAll", in: code)
+        try #require(bodies.count == 1, "SettingsViewModel should define exactly one confirmDeleteAll")
+        #expect(bodies[0].contains("modelContext.save()"), "confirmDeleteAll must save once")
+        #expect(
+            bodies[0].contains("modelContext.rollback()"),
+            "confirmDeleteAll's failure path must roll back the context"
+        )
+    }
 }

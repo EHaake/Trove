@@ -364,7 +364,19 @@ func confirmDeleteAll(_ target: DeleteTarget) -> Task<Void, Never>? {
     (`PhotoFetcher` already establishes the fresh-context-off-the-
     container pattern.)
   - **No chunking either way**: chunks break all-or-nothing.
-  The measurement and the branch taken get recorded here.
+  **Measured at T011 (2026-09-01)**: 300 items, each carrying a 50 KB
+  photo, on an in-memory container — **~150 ms** on the main actor
+  (0.153 s, 0.151 s across isolated runs; phases: fetch 17 ms, the
+  delete loop 3 ms, `save()` 102 ms; ~32 ms in total without photos).
+  Under the threshold, so **the main-actor branch shipped**; the
+  background-context fallback stays documented, not built. Two things
+  the measurement taught: Swift Testing runs suites in parallel, so a
+  timing probe inside the whole unit target read 5.4 s — measure in
+  isolation; and one isolated run stalled for ~100 s, matching ~100 s
+  outliers seen in two Phase 1 full-suite runs before any delete code
+  existed — attributed to the test host's real CloudKit container on a
+  signed-out simulator, and carried to T016's device pass as a thing
+  to watch rather than a thing explained.
 - **Refresh**: the presenting list's `.sheet(isPresented:onDismiss:
   viewModel.load)` — the form-sheet precedent; the Dashboard and the
   other list reload on appear; sell plans on their own appear

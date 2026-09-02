@@ -257,6 +257,65 @@ final class SettingsViewModel {
 
     // MARK: - Delete All
 
+    /// Re-counts at request time, so the alert's title carries the count
+    /// the store has *now*, not the one this screen loaded with — a
+    /// CloudKit arrival between appear and tap would otherwise put a stale
+    /// number on a destructive confirmation.
+    func requestDeleteAll(_ target: DeleteTarget) {
+        guard !isBusy else { return }
+        load()
+        let count = target == .items ? itemCount : wishlistCount
+        guard count > 0 else { return }
+        alert = .confirmDelete(target, count: count)
+    }
+
+    /// The commit path: **synchronous capture, async commit** — T017's
+    /// shape. The alert's `isPresented` binding writes `alert` nil on any
+    /// button tap, before a spawned task's body runs, so nothing in here
+    /// may depend on `alert`; the target arrives as a parameter from the
+    /// alert's `presenting` closure for the same reason.
+    ///
+    /// Per-object `delete` in this context and **one** `save`: the
+    /// save/rollback envelope is what makes the deletion all-or-nothing
+    /// (criterion 13), and `ModelContext.delete(model:)` commits outside
+    /// it. Photos cascade and sell plans nullify by the schema's rules —
+    /// nothing is unlinked by hand, exactly as the single deletes work.
+    @discardableResult
+    func confirmDeleteAll(_ target: DeleteTarget) -> Task<Void, Never>? {
+        guard !isBusy else { return nil }
+        alert = nil
+        activity = target == .items ? .deleteItems : .deleteWishlist
+
+        return Task { @MainActor in
+            defer {
+                activity = nil
+                load()
+            }
+            // Lets the presentation write land before the work — ordering
+            // hygiene, not a promise of a rendered frame. plan.md's commit
+            // path section carries the measured cost and the branch taken.
+            await Task.yield()
+            do {
+                switch target {
+                case .items:
+                    for item in try modelContext.fetch(FetchDescriptor<Item>()) {
+                        modelContext.delete(item)
+                    }
+                case .wishlist:
+                    for wanted in try modelContext.fetch(FetchDescriptor<WishlistItem>()) {
+                        modelContext.delete(wanted)
+                    }
+                }
+                try modelContext.save()
+            } catch {
+                // Without this, load() on the same context would show the
+                // phantom deletion — the import commit's finding, reversed.
+                modelContext.rollback()
+                alert = .deleteFailed
+            }
+        }
+    }
+
     func cancelDeleteAll() {
         alert = nil
     }

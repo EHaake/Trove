@@ -334,8 +334,31 @@ anywhere in this spec.
   *Done when*: tests green; mutation check — gate the intent on
   `canExportEverything` → both red.
 
-- [ ] **T011 — Delete All: request, confirm, cancel — and the
+- [x] **T011 — Delete All: request, confirm, cancel — and the
   measurement.**
+  *Done (2026-09-01)*: `requestDeleteAll` re-counts at request time;
+  `confirmDeleteAll(_ target:)` is the synchronous capture / async
+  commit with the target as a parameter, per-object `delete` and one
+  `save`, `rollback()` in the catch, `load()` in the `defer`. Eight
+  tests, every persistence claim through a second `ModelContext`,
+  plus the rollback scan in `SettingsWiringTests`. **Measurement**:
+  300 items each carrying a 50 KB photo — **~150 ms** on the main
+  actor in isolation (0.153 s, 0.151 s), phases fetch 17 ms / loop
+  3 ms / save 102 ms (32 ms in total without photos); under the plan's
+  250 ms threshold, so **the main-actor branch ships** and the
+  background-context fallback stays unbuilt. Two honest notes: the
+  first measurement, taken inside the whole unit target, read 5.4 s
+  because Swift Testing runs suites in parallel — measure in
+  isolation, always; and one isolated run read 100 s, a stall that
+  matches ~100 s outliers seen in two Phase 1 full runs before any
+  delete code existed, so it's the test host (its real CloudKit
+  container on a signed-out simulator), not the deletion — recorded
+  for T016/T017 rather than explained away. Mutations, all reverted:
+  `save()` deleted → all five second-context tests red (and a
+  same-context refetch would not have caught it — the T018 shape);
+  the confirm depending on `alert` still being staged → the race test
+  and the synchronous-activity test red; `rollback()` removed → the
+  scan red.
   Per plan §The delete-all commit path. `requestDeleteAll(_:)`
   re-counts at request time and stages `.confirmDelete(target,
   count:)`; `confirmDeleteAll(_ target:) -> Task<Void, Never>?` —
