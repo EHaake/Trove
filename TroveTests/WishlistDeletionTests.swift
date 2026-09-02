@@ -145,6 +145,16 @@ struct DeletionGuardTests {
         #expect(source.contains("ItemDeleteCopy.message"), "\(path) writes its own consequence line")
     }
 
+    /// The third delete route (013's Delete All) reads its shared copy the
+    /// way the first two do — from the view model, since that's where its
+    /// alert is composed (the storage-mode branch is a view-model fact).
+    @Test func theSettingsDeleteRouteReadsTheSharedCopy() throws {
+        let source = try SourceScan.production("Trove/ViewModels/SettingsViewModel.swift")
+
+        #expect(source.contains("DeleteAllCopy.title"), "Settings titles its own delete alert")
+        #expect(source.contains("DeleteAllCopy.message"), "Settings writes its own consequence line")
+    }
+
     /// The consequence line carries all three promises — the cascade, the
     /// nullify, and the permanence `010` added once the undo-sentence proved
     /// equally true here. Losing any one makes the alert a shrug.

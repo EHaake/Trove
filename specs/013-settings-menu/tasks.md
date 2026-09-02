@@ -392,7 +392,25 @@ anywhere in this spec.
 
 ## Phase 4 — UI
 
-- [ ] **T012 — `SettingsView`.**
+- [x] **T012 — `SettingsView`.**
+  *Done (2026-09-01)*: the screen and its private `SettingsActionRow`
+  (brass / `accentRustText` / `textDisabled`, `DetailRow`'s hairline,
+  the trailing compact spinner while acting, `role: .destructive` plus
+  an explicit hint on both delete rows), the iCloud block as one
+  accessibility element, the footer, About as name / subtitle / mono
+  version line; one `.alert` off `viewModel.alert` switching on the
+  case, the confirm calling `confirmDeleteAll(target)` plainly; the
+  share sheet off `stagedExport` with `ShareSheet(urls:)`; three
+  previews (populated/syncing, empty, local-only with a reason).
+  Eight scans in `SettingsWiringTests` plus the third delete route in
+  `DeletionGuardTests`. **One scan was false-passing and got caught by
+  its own mutation**: the section-order scan read where the section
+  properties were *declared*, so swapping two sections in the body's
+  composition stayed green. Rewritten to read the body's stack; the
+  swap then went red. Mutations, all reverted: the confirm wrapped in
+  a `Task` → red; `.disabled(viewModel.isBusy)` on Done → red; a hint
+  dropped → red; Delete swapped above iCloud → red (after the fix).
+  Unit target: 768 tests / 114 suites green.
   Per plan §Entry point and the Settings sheet.
   `Trove/Views/Settings/SettingsView.swift`: the form sheets' chrome
   (`ZStack` background, `ScrollView`, inline "Settings" title, one

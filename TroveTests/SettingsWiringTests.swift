@@ -7,6 +7,101 @@ import Testing
 /// pinned against the production source with comments stripped.
 @Suite("Settings wiring")
 struct SettingsWiringTests {
+    private nonisolated static let settingsView = "Trove/Views/Settings/SettingsView.swift"
+    private nonisolated static let settingsViewModel = "Trove/ViewModels/SettingsViewModel.swift"
+
+    // MARK: - T012: the screen
+
+    @Test func theShareSheetTakesTheWholeSetOffTheStagedExport() throws {
+        let code = try SourceScan.production(Self.settingsView)
+        #expect(code.contains(".sheet(item: $viewModel.stagedExport)"), "share sheet not wired to stagedExport")
+        #expect(code.contains("ShareSheet(urls: staged.urls)"), "the share sheet must carry the whole set")
+    }
+
+    /// One alert modifier, off the single optional, with the view model's
+    /// title and message — not three alerts on three booleans.
+    @Test func exactlyOneAlertPresentsOffTheSinglePresentation() throws {
+        let code = try SourceScan.production(Self.settingsView)
+        #expect(code.ranges(of: ".alert(").count == 1, "Settings should present exactly one alert")
+        #expect(code.contains("presenting: viewModel.alert"))
+        #expect(code.contains("viewModel.alertTitle"))
+        #expect(code.contains("viewModel.alertMessage"))
+    }
+
+    /// The T017 rule: the confirm button calls the intent plainly, with
+    /// the target from the alert's presenting closure — never wrapped in a
+    /// Task whose body would run after the dismissal write.
+    @Test func theConfirmButtonCallsTheIntentPlainly() throws {
+        let code = try SourceScan.production(Self.settingsView)
+        #expect(code.contains("viewModel.confirmDeleteAll(target)"), "confirm doesn't hand the presented target to the intent")
+        #expect(!code.contains("await viewModel.confirmDeleteAll"), "confirm is wrapped in a Task — the dismissal write will race it")
+        #expect(code.contains("viewModel.cancelDeleteAll()"))
+        #expect(code.contains("DeleteAllCopy.confirm"))
+        #expect(code.contains("DeleteAllCopy.cancel"))
+    }
+
+    /// Spec P4: Done stays available while an action runs.
+    @Test func doneIsNeverDisabled() throws {
+        let code = try SourceScan.production(Self.settingsView)
+        let toolbars = SourceScan.closureBodies(after: ".toolbar", in: code)
+        try #require(toolbars.count == 1, "expected one toolbar block")
+        #expect(toolbars[0].contains("Button(\"Done\")"), "the toolbar should carry Done")
+        #expect(!toolbars[0].contains(".disabled("), "Done must never be disabled")
+    }
+
+    /// Checked where the sections are *composed* — the body's stack — not
+    /// where their properties happen to be declared: the first version of
+    /// this scan read declaration order and stayed green when the body's
+    /// composition was swapped, the exact false-passing shape the
+    /// constitution records. Caught by running the mutation, not by
+    /// reading the test.
+    @Test func theSectionsAppearInSpecOrder() throws {
+        let code = try SourceScan.production(Self.settingsView)
+        let stacks = SourceScan.closureBodies(
+            after: "VStack(alignment: .leading, spacing: theme.metrics.sectionGap)",
+            in: code
+        )
+        let body = try #require(stacks.first, "body's section stack not found")
+        let sections = ["exportSection", "templatesSection", "iCloudSection", "deleteSection", "aboutSection"]
+        let positions = try sections.map { name in
+            try #require(body.range(of: name)?.lowerBound, "body doesn't compose \(name)")
+        }
+        #expect(positions == positions.sorted(), "sections composed out of spec order")
+        for title in ["Export", "Templates", "iCloud", "Delete", "About"] {
+            #expect(code.contains("DetailSection(title: \"\(title)\")"), "missing section \(title)")
+        }
+    }
+
+    /// Criterion 18 rests on explicit hints — the role alone announces
+    /// nothing outside alerts and menus.
+    @Test func bothDeleteRowsCarryAnAccessibilityHint() throws {
+        let code = try SourceScan.production(Self.settingsView)
+        #expect(code.ranges(of: "isDestructive: true").count == 2, "expected exactly two destructive rows")
+        #expect(code.ranges(of: "accessibilityHint: \"").count == 2, "both destructive rows must pass a hint")
+    }
+
+    /// Criterion 17's "never typed": no literal that looks like a version
+    /// in either Settings file — the About row reads the bundle.
+    @Test func noVersionLiteralInTheSettingsFiles() throws {
+        let looksLikeAVersion = try Regex(#"\d+\.\d+"#)
+        for path in [Self.settingsView, Self.settingsViewModel] {
+            let literals = SourceScan.stringLiterals(in: try SourceScan.production(path))
+            let offenders = literals.filter { $0.firstMatch(of: looksLikeAVersion) != nil }
+            #expect(offenders.isEmpty, "\(path) carries a version-shaped literal: \(offenders)")
+        }
+    }
+
+    /// The third delete route reads the shared copy like the first two,
+    /// and the failure alerts read 011's export copy rather than new words.
+    @Test func theViewModelReadsTheSharedCopy() throws {
+        let code = try SourceScan.production(Self.settingsViewModel)
+        #expect(code.contains("DeleteAllCopy."))
+        #expect(code.contains("ExportCopy.failureTitle"))
+        #expect(code.contains("ExportCopy.failureMessage"))
+        #expect(code.contains("SyncStatusCopy.status("))
+    }
+
+    // MARK: - T005, T011
     /// T005: the store's recorded fallback reason reaches the environment.
     /// `TroveStoreTests` pins that the reason isn't thrown away; this pins
     /// that, for the first time since 001, something reads it.
