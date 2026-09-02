@@ -136,6 +136,11 @@ CSV (UTF-8), then **⋯ → Import from CSV** and confirm. Nothing is
 written until you confirm, and the confirmation tells you exactly
 what will be skipped or defaulted first.
 
+Ready-made files for trying all of this — the happy path, a
+skip-and-report file, a spreadsheet-damaged file that still imports,
+and the whole-file failures — live in [`samples/`](samples/README.md),
+each pinned to its documented behavior by a test.
+
 The full contract behind this document — byte-level framing, the
 append-only schema growth rule, and every recorded decision — lives
 in `specs/011-data-export/plan.md` ("The canonical CSV schema") and
