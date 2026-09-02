@@ -413,3 +413,66 @@ struct SettingsViewModelExportTests {
         #expect(viewModel.stagedExport?.urls.count == 2)
     }
 }
+
+// MARK: - T010: the templates, relocated
+
+/// 013/T010: 012's template tests, re-pointed at the Settings view model
+/// with their assertions intact — the same bytes, the same names, ungated
+/// by the counts, from an empty collection.
+@Suite("SettingsViewModel — templates")
+struct SettingsViewModelTemplateTests {
+    @Test func theItemsTemplateStagesHeaderOnlyBytesFromAnEmptyCollection() async throws {
+        let spy = ExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: try makeInMemoryContext(), exportService: spy)
+        viewModel.load()
+        try #require(viewModel.canExportEverything == false, "the empty collection is the point")
+
+        await viewModel.exportItemsTemplate()
+
+        let table = try #require(spy.tables.first)
+        #expect(table.headers == ExportSchema.itemHeaders)
+        #expect(table.rows.isEmpty)
+        // The exact bytes: BOM + the header row + one CRLF — the canonical
+        // blank template (verified against CSVWriter, the real serializer).
+        #expect(
+            CSVWriter.write(table)
+                == "\u{FEFF}" + ExportSchema.itemHeaders.joined(separator: ",") + "\r\n"
+        )
+        #expect(spy.filenames == ["Trove-Items-Template.csv"])
+        #expect(spy.fileSets.count == 1)
+        #expect(viewModel.stagedExport?.filenames == [ExportFilename.itemsTemplate])
+        #expect(viewModel.activity == nil)
+    }
+
+    @Test func theWishlistTemplateStagesHeaderOnlyBytesFromAnEmptyCollection() async throws {
+        let spy = ExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: try makeInMemoryContext(), exportService: spy)
+        viewModel.load()
+        try #require(viewModel.canExportEverything == false)
+
+        await viewModel.exportWishlistTemplate()
+
+        let table = try #require(spy.tables.first)
+        #expect(table.headers == ExportSchema.wishlistHeaders)
+        #expect(table.rows.isEmpty)
+        #expect(
+            CSVWriter.write(table)
+                == "\u{FEFF}" + ExportSchema.wishlistHeaders.joined(separator: ",") + "\r\n"
+        )
+        #expect(spy.filenames == ["Trove-Wishlist-Template.csv"])
+        #expect(viewModel.stagedExport?.filenames == [ExportFilename.wishlistTemplate])
+    }
+
+    @Test func aThrowingServiceSurfacesTheSharedCopyForATemplateToo() async throws {
+        let viewModel = SettingsViewModel(
+            modelContext: try makeInMemoryContext(),
+            exportService: ExportServiceSpy(failsEveryCall: true)
+        )
+        viewModel.load()
+
+        await viewModel.exportItemsTemplate()
+
+        #expect(viewModel.alert == .exportFailed)
+        #expect(viewModel.stagedExport == nil)
+    }
+}

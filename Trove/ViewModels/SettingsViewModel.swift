@@ -214,6 +214,40 @@ final class SettingsViewModel {
         }
     }
 
+    // MARK: - Templates
+
+    /// The blank templates, moved here from the lists' "…" menu (spec
+    /// Decision 2). Gated on `isBusy` only — never the counts: an empty
+    /// collection is the template's whole audience. Same bytes and names
+    /// as 012 shipped; only the row that hands them out moved.
+    func exportItemsTemplate() async {
+        await stageTemplate(
+            .itemsTemplate,
+            headers: ExportSchema.itemHeaders,
+            filename: ExportFilename.itemsTemplate
+        )
+    }
+
+    func exportWishlistTemplate() async {
+        await stageTemplate(
+            .wishlistTemplate,
+            headers: ExportSchema.wishlistHeaders,
+            filename: ExportFilename.wishlistTemplate
+        )
+    }
+
+    private func stageTemplate(_ activity: Activity, headers: [String], filename: String) async {
+        guard !isBusy else { return }
+        self.activity = activity
+        defer { self.activity = nil }
+
+        do {
+            try await stage([.csv(CSVTable(headers: headers, rows: []), filename: filename)])
+        } catch {
+            alert = .exportFailed
+        }
+    }
+
     /// One `exportFiles` call for the whole set — never one per file, which
     /// would purge each other on the live service — then the share sheet.
     private func stage(_ files: [ExportFile]) async throws {

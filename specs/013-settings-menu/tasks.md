@@ -313,7 +313,15 @@ anywhere in this spec.
   both-empty test red; call `exportFiles` twice instead of once → the
   filenames test red.
 
-- [ ] **T010 — Template intents, relocated.**
+- [x] **T010 — Template intents, relocated.**
+  *Done (2026-09-01)*: `exportItemsTemplate` / `exportWishlistTemplate`
+  through one private `stageTemplate` — `!isBusy` only — staging a
+  one-file set. Three tests: 012's two byte/name pins re-pointed at
+  the Settings view model (the wishlist one now pins bytes too), plus
+  the shared failure copy. Mutation: gating on `canExportEverything`
+  → all three red. The list view models keep `exportBlankTemplate`
+  until T013 removes it with the menu item. Unit target: 750 tests /
+  113 suites green.
   Per plan §`SettingsViewModel`. `exportItemsTemplate()` /
   `exportWishlistTemplate()`: guard `!isBusy` only (never the counts —
   an empty collection is the template's audience);
