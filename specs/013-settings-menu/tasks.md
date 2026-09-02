@@ -144,7 +144,19 @@ anywhere in this spec.
 
 ## Phase 2 — Pure pieces: copy, status, version
 
-- [ ] **T004 — `DeleteAllCopy`.**
+- [x] **T004 — `DeleteAllCopy`.**
+  *Done (2026-09-01)*: `DeleteTarget` (its own type — copy, alert case
+  and commit path say one word) and `DeleteAllCopy`; the message is
+  **count-aware** as well as mode-aware: a list of one reads with the
+  single-item alerts' own sentences ("Its photos go too. Any sell plan
+  it's on drops it."), since deleting a list of one *is* a single
+  delete — an extension of the person's singular-title correction, in
+  the same spirit. Nine tests, whole-string pins. Mutations (batched
+  with T005–T007's — disjoint functions, each red attributable):
+  removing the mode branch → `theICloudSentenceFollowsTheStorageMode`
+  (16 issues), `theLocalOnlyMessagesStillNameTheOtherConsequences`,
+  and the singular local-only pin red; pluralizing the singular →
+  `aListOfOneReadsAsYourOnlyItem` red.
   Per plan §Copy. `Trove/Models/DeleteAllCopy.swift`:
   `title(count:target:)` ("Delete all 309 items?", "Delete all 12
   wishlist items?", singular **"Delete your only item?" / "Delete your
@@ -158,8 +170,20 @@ anywhere in this spec.
   *Done when*: tests green; mutation checks — remove the mode branch
   → the absent-sentence tests red; pluralize the singular → red.
 
-- [ ] **T005 — `SyncStatusCopy`, the fallback-reason environment
+- [x] **T005 — `SyncStatusCopy`, the fallback-reason environment
   entry, and its injection.**
+  *Done (2026-09-01)*: the six-cell table pinned whole-string
+  (parameterized — the table had to be `nonisolated static`, since
+  `@Test(arguments:)` reads it off the suite's main-actor default);
+  nil / short / long reasons; the criterion-10 sweep over every cell;
+  the catching-up headline pinned to the empty states' words.
+  `StorageEnvironment.swift` holds the `@Entry`; `TroveApp` forwards
+  `store.cloudKitFailure?.localizedDescription` — the first reader
+  that value has had. `SettingsWiringTests` starts with the forwarding
+  scan. Mutations: caught-up reading as catching-up → the table cell
+  red; claiming a fallback with a nil reason → the ephemeral cell and
+  `theReasonOnlySpeaksForALocalModeThatRecordedOne` red; the
+  forwarding line removed → the scan red.
   Per plan §The iCloud row. `Trove/Models/SyncStatusCopy.swift`:
   `SyncStatus { headline, detail }` and
   `status(mode:phase:fallbackReason:)` implementing the plan's table
@@ -177,7 +201,11 @@ anywhere in this spec.
   fallback when the reason is nil → red; remove the injection line
   → scan red.
 
-- [ ] **T006 — `AppVersion`.**
+- [x] **T006 — `AppVersion`.**
+  *Done (2026-09-01)*: `init(info:)`, `current`, `display`; five tests
+  including one that `current` in the test host carries both keys
+  (the app's bundle is the host, so neither half may be "?"). Mutation:
+  keys swapped → three tests red.
   Per plan §About. `Trove/Models/AppVersion.swift`: `init(info:)`
   reading `CFBundleShortVersionString`/`CFBundleVersion` (`"?"` when
   absent), `static var current` from `Bundle.main`, a display line.
@@ -185,7 +213,16 @@ anywhere in this spec.
   display line.
   *Done when*: tests green; mutation check — swap the two keys → red.
 
-- [ ] **T007 — `ImportCopy`: the template moved.**
+- [x] **T007 — `ImportCopy`: the template moved.**
+  *Done (2026-09-01)*: body reworded to "A blank template with the
+  expected layout is in Settings › Templates."; the new whole-string
+  test covers both targets. Mutation — the B6 shape, a body carrying
+  its own "Nothing was imported." — went red in
+  `theWrongLayoutMessagePointsAtSettingsTemplatesExactlyOnce` while
+  `failureMessagesAreActionableAndAllEndWithTheGuarantee` **stayed
+  green**: both outcomes observed, which is the whole reason the
+  equality test exists. Phase-end full suite (this task's commit is
+  the phase's last): 731 tests / 110 suites + 6 UI tests green.
   Per plan §Copy. `.headerMismatch(wrongList: false)` body becomes
   "The columns don't match the \(noun) template. A blank template with
   the expected layout is in Settings › Templates." — body only; the
