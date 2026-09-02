@@ -39,17 +39,25 @@ nonisolated enum ExportFile: Sendable {
     }
 }
 
-/// A generated file waiting for the share sheet — what a view model stages
-/// and a view presents. Foundation-only on purpose: it lives in view-model
-/// state, and view models import no SwiftUI.
+/// A generated file set waiting for the share sheet — what a view model
+/// stages and a view presents. Foundation-only on purpose: it lives in
+/// view-model state, and view models import no SwiftUI.
+///
+/// A set since 013, when export-everything started handing one share sheet
+/// two files; a list export is a set of one, through the single-file
+/// initializer, so nothing on the list side changed shape.
 nonisolated struct StagedExport: Identifiable, Sendable, Equatable {
     let id = UUID()
-    let url: URL
-    let filename: String
+    let urls: [URL]
+    let filenames: [String]
+
+    init(urls: [URL], filenames: [String]) {
+        self.urls = urls
+        self.filenames = filenames
+    }
 
     init(url: URL, filename: String) {
-        self.url = url
-        self.filename = filename
+        self.init(urls: [url], filenames: [filename])
     }
 }
 

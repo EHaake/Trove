@@ -185,7 +185,7 @@ struct ItemListView: View {
         // intent stays a testable method; dismissal writes nil back through
         // the binding.
         .sheet(item: $viewModel.stagedExport) { staged in
-            ShareSheet(url: staged.url)
+            ShareSheet(urls: staged.urls)
                 .presentationDetents([.medium, .large])
         }
         // Criterion 2a: a failed export says so plainly — shared copy, so

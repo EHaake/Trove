@@ -1,7 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// The system share sheet for a staged export file.
+/// The system share sheet for a staged export — one file, or the several
+/// 013's export-everything hands it together.
 ///
 /// **Flagged UIKit exception**, per CLAUDE.md — the constitution's first
 /// sanctioned shape verbatim: a `UIViewControllerRepresentable` wrapper,
@@ -13,10 +14,10 @@ import UIKit
 /// offers. This wrapper and `Image(imageData:)` are the app's only UIKit;
 /// the PDF renderer has none.
 struct ShareSheet: UIViewControllerRepresentable {
-    let url: URL
+    let urls: [URL]
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        UIActivityViewController(activityItems: urls, applicationActivities: nil)
     }
 
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}

@@ -150,7 +150,7 @@ struct WishlistView: View {
         // 011's share sheet and failure alert — ItemListView's twins, off
         // the same view-model state shape.
         .sheet(item: $viewModel.stagedExport) { staged in
-            ShareSheet(url: staged.url)
+            ShareSheet(urls: staged.urls)
                 .presentationDetents([.medium, .large])
         }
         .alert(

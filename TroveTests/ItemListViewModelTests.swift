@@ -779,7 +779,7 @@ struct ItemListViewModelExportTests {
         await viewModel.exportCSV()
 
         let staged = try #require(viewModel.stagedExport)
-        #expect(staged.filename == ExportFilename.items(fileExtension: "csv"))
+        #expect(staged.filenames == [ExportFilename.items(fileExtension: "csv")])
         #expect(viewModel.isExporting == false)
         #expect(viewModel.exportFailureMessage == nil)
     }
@@ -1304,6 +1304,6 @@ struct ItemListViewModelTemplateTests {
                 == "\u{FEFF}" + ExportSchema.itemHeaders.joined(separator: ",") + "\r\n"
         )
         #expect(spy.filenames == ["Trove-Items-Template.csv"])
-        #expect(viewModel.stagedExport?.filename == ExportFilename.itemsTemplate)
+        #expect(viewModel.stagedExport?.filenames == [ExportFilename.itemsTemplate])
     }
 }

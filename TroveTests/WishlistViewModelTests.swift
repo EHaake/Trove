@@ -654,7 +654,7 @@ struct WishlistViewModelExportTests {
         await viewModel.exportCSV()
 
         let staged = try #require(viewModel.stagedExport)
-        #expect(staged.filename == ExportFilename.wishlist(fileExtension: "csv"))
+        #expect(staged.filenames == [ExportFilename.wishlist(fileExtension: "csv")])
         #expect(viewModel.isExporting == false)
     }
 
@@ -953,6 +953,6 @@ struct WishlistViewModelTemplateTests {
         #expect(table.headers == ExportSchema.wishlistHeaders)
         #expect(table.rows.isEmpty)
         #expect(spy.filenames == ["Trove-Wishlist-Template.csv"])
-        #expect(viewModel.stagedExport?.filename == ExportFilename.wishlistTemplate)
+        #expect(viewModel.stagedExport?.filenames == [ExportFilename.wishlistTemplate])
     }
 }

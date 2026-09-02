@@ -112,6 +112,15 @@ struct ExportTempFileTests {
         #expect(!FileManager.default.fileExists(atPath: stale.path))
     }
 
+    /// 013/T002: the single-file initializer the list view models keep
+    /// using is a one-element set — the two shapes can't disagree.
+    @Test func aSingleStagedFileIsAOneElementSet() {
+        let url = URL(filePath: "/dev/null/Trove-Items-2026-08-30.csv")
+        let staged = StagedExport(url: url, filename: "Trove-Items-2026-08-30.csv")
+        #expect(staged.urls == [url])
+        #expect(staged.filenames == ["Trove-Items-2026-08-30.csv"])
+    }
+
     @Test func filenamesCarryTheLocalDay() throws {
         var newYork = Calendar(identifier: .gregorian)
         let zone = try #require(TimeZone(identifier: "America/New_York"))

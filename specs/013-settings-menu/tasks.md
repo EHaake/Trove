@@ -79,7 +79,18 @@ anywhere in this spec.
   → probe red (per 012's matrix, dropping either alone stays green —
   confirm and record rather than assume).
 
-- [ ] **T002 — `StagedExport` as a set; `ShareSheet(urls:)`.**
+- [x] **T002 — `StagedExport` as a set; `ShareSheet(urls:)`.**
+  *Done (2026-09-01)*: `StagedExport(urls:filenames:)` with the
+  single-file initializer delegating to it; `ShareSheet.urls` →
+  `activityItems`; both views pass `staged.urls`. The reader inventory
+  was four test lines, not two — the plan's grep pattern missed
+  `staged.filename` on a local (`ItemListViewModelTests:782`,
+  `WishlistViewModelTests:657`) alongside the two
+  `stagedExport?.filename` template assertions; all four now assert
+  one-element `filenames`. `aSingleStagedFileIsAOneElementSet` pins
+  the delegation. Full suite: 705 tests / 106 suites + 6 UI tests
+  green; `ExportWiringTests`' sheet-literal and UIKit-confinement
+  scans untouched and passing.
   Per plan §Export service. `StagedExport(urls:filenames:)`, keeping
   `init(url:filename:)` so neither list VM changes; the single-file
   accessors go. `ShareSheet` takes `urls` → `activityItems`. Update
