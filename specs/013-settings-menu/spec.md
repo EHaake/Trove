@@ -6,13 +6,14 @@ approval, as that section says they would. Two sentences were amended
 the same day during planning, after the skeptical review found each
 one stating something the code couldn't make true — see the inline
 notes and Decisions 13–14.)
-Amended 2026-09-02 — **Amendment A (Draft)**: the Dashboard entry
-point and bespoke in-page menus. Raised by the person after all
+Amended 2026-09-02 — **Amendment A (Approved the same day)**: the
+Dashboard entry point and bespoke in-page menus. Raised by the person after all
 seventeen tasks were complete and before the merge, and decided in this
 session; recorded as Decisions 15–17, drafting proposals P8–P13, and
 criteria 20–27. Everything outside the sections marked "Amendment A"
-is as approved on 2026-09-01. The amendment is Draft until the person
-approves it; its plan addendum and tasks follow the usual gates.
+is as approved on 2026-09-01. The person approved the amendment on
+2026-09-02, and P8–P13 became decisions with it; its plan addendum and
+tasks follow the usual gates.
 Authored in-session at the person's direction — the second use of the
 per-spec venue clause `012` added to the constitution. Every product
 decision below was made by the person in that conversation and is
@@ -518,8 +519,8 @@ after the seventeen tasks were complete and before the merge:
     detail screens' "…" stays a system menu. **No Design pass**: same
     surface, different text.
 
-Proposed at drafting the amendment, 2026-09-02, by Claude Code. These
-become decisions on the amendment's approval unless overturned:
+Proposed at drafting the amendment, 2026-09-02, by Claude Code, and
+decisions since the amendment's approval the same day:
 
 - **P8. The Dashboard's badge is the lists' bordered pill**, not the
   mock's bare glyph — one control on three screens.
