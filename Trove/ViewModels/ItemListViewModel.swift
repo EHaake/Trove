@@ -339,8 +339,14 @@ final class ItemListViewModel {
         if showsOnlyUnvalued { parts.append("Not yet valued") }
         let query = SearchMatching.normalized(searchText)
         if !query.isEmpty { parts.append("Search: \u{201C}\(query)\u{201D}") }
-        return parts.isEmpty ? "All items" : parts.joined(separator: " · ")
+        return parts.isEmpty ? Self.wholeCoverageLabel : parts.joined(separator: " · ")
     }
+
+    /// The document title and the unfiltered coverage label, named once so
+    /// export-everything (`SettingsViewModel`, 013) and this list's own
+    /// export can't drift — criterion 5's byte-identity rests on it.
+    static let documentTitle = "Owned Items"
+    static let wholeCoverageLabel = "All items"
 
     /// Exports the visible items, in visible order, as the canonical CSV.
     /// Records are built from `items` as-is — never a refetch: visible order
@@ -374,7 +380,7 @@ final class ItemListViewModel {
         let records = items.map { ItemExportRecord(item: $0) }
         let document = PDFDocumentModel(
             cover: CoverSummary(
-                title: "Owned Items",
+                title: Self.documentTitle,
                 coverageLabel: exportCoverageLabel,
                 generatedAt: .now,
                 itemCount: items.count,

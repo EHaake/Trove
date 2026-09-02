@@ -266,7 +266,26 @@ anywhere in this spec.
   from one count → red; compose the failure title from a literal
   instead of `ExportCopy` → red.
 
-- [ ] **T009 — Export everything: the CSV pair and the PDF pair.**
+- [x] **T009 — Export everything: the CSV pair and the PDF pair.**
+  *Done (2026-09-01)*: both intents fetch whole, sort with
+  `ManualOrderHelper.areInCustomOrder`, and stage one `exportFiles`
+  set. The lists' document titles and unfiltered coverage labels
+  became `static let`s on the list view models (`documentTitle`,
+  `wholeCoverageLabel`), used by their own exports and by Settings —
+  one definition, so criterion 5's byte-identity can't drift on a
+  string. Seven tests: the tie fixture's **explicit expected order**
+  (`["Charlie", "Bravo", "alpha", "Zulu"]` / `["alpha", "Bravo",
+  "Charlie", "Zed"]`) with one-call/two-files pinned; byte-identity
+  against both list VMs' `.custom` unfiltered exports; PDF covers and
+  entries against the lists' documents, totals checked by value;
+  both-empty no-op; one-empty two files with the template bytes and a
+  cover-only document; the shared failure copy; mid-flight `activity`
+  with reentry refused (gated spy). Mutations, all reverted (batched,
+  disjoint): a position-only `FetchDescriptor` sort → the explicit-
+  order test red (and, as it happens, the byte-identity test too — the
+  fixture's ties are real); the emptiness gate dropped → the both-empty
+  test red; one `exportFiles` call per file → the one-call, one-empty
+  and PDF-pair tests red. Unit target: 747 tests / 112 suites green.
   Per plan §`SettingsViewModel` and §Custom order and totals.
   `exportEverythingAsCSV()` / `exportEverythingAsPDF()`: guard
   `canExportEverything, !isBusy`; set `activity`; fetch both entities;

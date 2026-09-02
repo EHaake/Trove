@@ -135,6 +135,92 @@ final class SettingsViewModel {
         }
     }
 
+    // MARK: - Export everything
+
+    /// Both collections, whole, in Custom order — the user-authored order
+    /// and the one import appends to (spec P3) — through the very function
+    /// the lists sort "Custom" with, so the files are what the lists would
+    /// export unfiltered (criterion 5).
+    private func everythingInCustomOrder() throws -> (items: [Item], wanted: [WishlistItem]) {
+        let items = try modelContext.fetch(FetchDescriptor<Item>())
+            .sorted(by: ManualOrderHelper.areInCustomOrder)
+        let wanted = try modelContext.fetch(FetchDescriptor<WishlistItem>())
+            .sorted(by: ManualOrderHelper.areInCustomOrder)
+        return (items, wanted)
+    }
+
+    func exportEverythingAsCSV() async {
+        guard canExportEverything, !isBusy else { return }
+        activity = .exportCSV
+        defer { activity = nil }
+
+        do {
+            let (items, wanted) = try everythingInCustomOrder()
+            try await stage([
+                .csv(
+                    ExportSchema.itemsTable(items.map { ItemExportRecord(item: $0) }),
+                    filename: ExportFilename.items(fileExtension: "csv")
+                ),
+                .csv(
+                    ExportSchema.wishlistTable(wanted.map { WishlistExportRecord(item: $0) }),
+                    filename: ExportFilename.wishlist(fileExtension: "csv")
+                ),
+            ])
+        } catch {
+            alert = .exportFailed
+        }
+    }
+
+    /// The covers use the lists' own titles, unfiltered labels, and the
+    /// same total reductions, so each document is the one its list would
+    /// produce with no filter (criterion 6).
+    func exportEverythingAsPDF() async {
+        guard canExportEverything, !isBusy else { return }
+        activity = .exportPDF
+        defer { activity = nil }
+
+        do {
+            let (items, wanted) = try everythingInCustomOrder()
+            let itemsDocument = PDFDocumentModel(
+                cover: CoverSummary(
+                    title: ItemListViewModel.documentTitle,
+                    coverageLabel: ItemListViewModel.wholeCoverageLabel,
+                    generatedAt: .now,
+                    itemCount: items.count,
+                    totals: .items(
+                        currentValueCents: items.compactMap(\.currentValueCents).reduce(0, +),
+                        paidCents: items.reduce(0) { $0 + $1.purchasePriceCents },
+                        unvaluedCount: items.count { $0.currentValueCents == nil }
+                    )
+                ),
+                entries: items.map { PDFEntry(record: ItemExportRecord(item: $0)) }
+            )
+            let wishlistDocument = PDFDocumentModel(
+                cover: CoverSummary(
+                    title: WishlistViewModel.documentTitle,
+                    coverageLabel: WishlistViewModel.wholeCoverageLabel,
+                    generatedAt: .now,
+                    itemCount: wanted.count,
+                    totals: .wishlist(estimatedCostCents: wanted.reduce(0) { $0 + $1.estimatedCostCents })
+                ),
+                entries: wanted.map { PDFEntry(record: WishlistExportRecord(item: $0)) }
+            )
+            try await stage([
+                .pdf(itemsDocument, filename: ExportFilename.items(fileExtension: "pdf")),
+                .pdf(wishlistDocument, filename: ExportFilename.wishlist(fileExtension: "pdf")),
+            ])
+        } catch {
+            alert = .exportFailed
+        }
+    }
+
+    /// One `exportFiles` call for the whole set — never one per file, which
+    /// would purge each other on the live service — then the share sheet.
+    private func stage(_ files: [ExportFile]) async throws {
+        let urls = try await exportService.exportFiles(files)
+        stagedExport = StagedExport(urls: urls, filenames: files.map(\.filename))
+    }
+
     // MARK: - Delete All
 
     func cancelDeleteAll() {

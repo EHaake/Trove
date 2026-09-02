@@ -273,8 +273,13 @@ final class WishlistViewModel {
         }
         let query = SearchMatching.normalized(searchText)
         if !query.isEmpty { parts.append("Search: \u{201C}\(query)\u{201D}") }
-        return parts.isEmpty ? "Whole wishlist" : parts.joined(separator: " · ")
+        return parts.isEmpty ? Self.wholeCoverageLabel : parts.joined(separator: " · ")
     }
+
+    /// See `ItemListViewModel.documentTitle` — one definition for this list
+    /// and for export-everything.
+    static let documentTitle = "Wishlist"
+    static let wholeCoverageLabel = "Whole wishlist"
 
     /// Exports the visible wanted items, in visible order, as the canonical
     /// CSV. Records come from `items` as-is — never a refetch — for the same
@@ -306,7 +311,7 @@ final class WishlistViewModel {
         let records = items.map { WishlistExportRecord(item: $0) }
         let document = PDFDocumentModel(
             cover: CoverSummary(
-                title: "Wishlist",
+                title: Self.documentTitle,
                 coverageLabel: exportCoverageLabel,
                 generatedAt: .now,
                 itemCount: items.count,

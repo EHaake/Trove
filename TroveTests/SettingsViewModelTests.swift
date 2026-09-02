@@ -180,7 +180,7 @@ struct SettingsViewModelSurfaceTests {
         #expect(viewModel.versionLine == "Version 3.1 (42)")
     }
 
-    @Test func cancelClearsTheAlertAndTouchesNothing() throws {
+    @Test func cancelClearsTheAlertAndTouchesNothingElse() throws {
         let container = try makeInMemoryContainer()
         let context = ModelContext(container)
         _ = insertItem("Guitar", into: context)
@@ -194,5 +194,222 @@ struct SettingsViewModelSurfaceTests {
         #expect(viewModel.alert == nil)
         #expect(!viewModel.isBusy)
         #expect(try ModelContext(container).fetchCount(FetchDescriptor<Item>()) == 1)
+    }
+}
+
+// MARK: - T009: export everything
+
+/// 013/T009: both collections, whole, in Custom order, as one file set.
+/// The order guard is an **independently written expectation** over a tie
+/// fixture — after T003 the list and Settings share one comparator, so
+/// equality with the list's table is a second assertion, not the guard
+/// (the review's B1).
+@Suite("SettingsViewModel — export everything")
+struct SettingsViewModelExportTests {
+    /// Equal positions with creation order running against the names, and
+    /// one row placed after them — so a position-only sort, a name sort,
+    /// and a fetch-order sort all fail this.
+    private func seedTieFixture(into context: ModelContext) throws {
+        _ = insertItem("Charlie", order: 0, createdAt: 100, into: context)
+        _ = insertItem("Bravo", order: 0, createdAt: 200, into: context)
+        _ = insertItem("alpha", order: 0, createdAt: 300, into: context)
+        _ = insertItem("Zulu", order: 1, createdAt: 50, into: context)
+        insertWanted("Charlie", order: 0, into: context)
+        insertWanted("alpha", order: 0, into: context)
+        insertWanted("Bravo", order: 0, into: context)
+        insertWanted("Zed", order: 1, into: context)
+        try context.save()
+    }
+
+    @Test func theCSVPairIsBothListsWholeInCustomOrderInOneCall() async throws {
+        let context = try makeInMemoryContext()
+        try seedTieFixture(into: context)
+        let spy = ExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportEverythingAsCSV()
+
+        // One call carrying two files — two calls would purge each other.
+        #expect(spy.fileSets.count == 1)
+        #expect(spy.fileSets.first?.count == 2)
+        let names = spy.tables.map { $0.rows.map { $0[0] } }
+        #expect(names == [["Charlie", "Bravo", "alpha", "Zulu"], ["alpha", "Bravo", "Charlie", "Zed"]])
+        #expect(spy.tables.map(\.headers) == [ExportSchema.itemHeaders, ExportSchema.wishlistHeaders])
+        #expect(spy.filenames == [
+            ExportFilename.items(fileExtension: "csv"),
+            ExportFilename.wishlist(fileExtension: "csv"),
+        ])
+        #expect(viewModel.stagedExport?.filenames == spy.filenames)
+        #expect(viewModel.stagedExport?.urls.count == 2)
+        #expect(viewModel.activity == nil)
+    }
+
+    /// Criterion 5's byte-identity: the items file is what the Items list
+    /// exports with no filter, no search, and Custom sort — and the
+    /// wishlist file what the Wishlist exports likewise.
+    @Test func eachFileIsByteIdenticalToTheListsOwnUnfilteredCustomExport() async throws {
+        let context = try makeInMemoryContext()
+        try seedTieFixture(into: context)
+
+        let settingsSpy = ExportServiceSpy()
+        let settings = SettingsViewModel(modelContext: context, exportService: settingsSpy)
+        settings.load()
+        await settings.exportEverythingAsCSV()
+
+        let itemsSpy = ExportServiceSpy()
+        let itemsList = ItemListViewModel(modelContext: context, exportService: itemsSpy)
+        itemsList.sortOrder = .custom
+        itemsList.load()
+        await itemsList.exportCSV()
+
+        let wishlistSpy = ExportServiceSpy()
+        let wishlist = WishlistViewModel(modelContext: context, exportService: wishlistSpy)
+        wishlist.sortOrder = .custom
+        wishlist.load()
+        await wishlist.exportCSV()
+
+        let itemsTable = try #require(itemsSpy.tables.first)
+        let wishlistTable = try #require(wishlistSpy.tables.first)
+        #expect(CSVWriter.write(settingsSpy.tables[0]) == CSVWriter.write(itemsTable))
+        #expect(CSVWriter.write(settingsSpy.tables[1]) == CSVWriter.write(wishlistTable))
+    }
+
+    /// Criterion 6: the covers are the lists' unfiltered covers in
+    /// everything but the generation instant, and the entries match.
+    @Test func thePDFPairMatchesTheListsUnfilteredDocuments() async throws {
+        let context = try makeInMemoryContext()
+        _ = insertItem("Valued", priceCents: 100_00, valueCents: 150_00, order: 0, into: context)
+        _ = insertItem("Unvalued", priceCents: 50_00, valueCents: nil, order: 1, into: context)
+        insertWanted("Pedal", costCents: 20_00, order: 0, into: context)
+        insertWanted("Amp", costCents: 30_00, order: 1, into: context)
+        try context.save()
+
+        let settingsSpy = ExportServiceSpy()
+        let settings = SettingsViewModel(modelContext: context, exportService: settingsSpy)
+        settings.load()
+        await settings.exportEverythingAsPDF()
+
+        let itemsSpy = ExportServiceSpy()
+        let itemsList = ItemListViewModel(modelContext: context, exportService: itemsSpy)
+        itemsList.sortOrder = .custom
+        itemsList.load()
+        await itemsList.exportPDF()
+
+        let wishlistSpy = ExportServiceSpy()
+        let wishlist = WishlistViewModel(modelContext: context, exportService: wishlistSpy)
+        wishlist.load()
+        await wishlist.exportPDF()
+
+        #expect(settingsSpy.fileSets.count == 1)
+        #expect(settingsSpy.documents.count == 2)
+        let expected = [try #require(itemsSpy.documents.first), try #require(wishlistSpy.documents.first)]
+        for (produced, list) in zip(settingsSpy.documents, expected) {
+            #expect(produced.cover.title == list.cover.title)
+            #expect(produced.cover.coverageLabel == list.cover.coverageLabel)
+            #expect(produced.cover.itemCount == list.cover.itemCount)
+            #expect(produced.entries.map(\.name) == list.entries.map(\.name))
+            switch (produced.cover.totals, list.cover.totals) {
+            case let (.items(value, paid, unvalued), .items(listValue, listPaid, listUnvalued)):
+                #expect((value, paid, unvalued) == (listValue, listPaid, listUnvalued))
+                #expect((value, paid, unvalued) == (150_00, 150_00, 1))
+            case let (.wishlist(cost), .wishlist(listCost)):
+                #expect(cost == listCost)
+                #expect(cost == 50_00)
+            default:
+                Issue.record("cover totals are for different lists")
+            }
+        }
+        #expect(settingsSpy.documents.map(\.cover.coverageLabel) == ["All items", "Whole wishlist"])
+        #expect(settingsSpy.filenames == [
+            ExportFilename.items(fileExtension: "pdf"),
+            ExportFilename.wishlist(fileExtension: "pdf"),
+        ])
+    }
+
+    @Test func nothingIsExportedWhenBothCollectionsAreEmpty() async throws {
+        let spy = ExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: try makeInMemoryContext(), exportService: spy)
+        viewModel.load()
+        try #require(viewModel.canExportEverything == false)
+
+        await viewModel.exportEverythingAsCSV()
+        await viewModel.exportEverythingAsPDF()
+
+        #expect(spy.fileSets.isEmpty)
+        #expect(viewModel.stagedExport == nil)
+        #expect(viewModel.alert == nil)
+    }
+
+    /// Spec P2: one empty collection still means two files — the empty
+    /// one's CSV is header-only (the template's bytes) and its PDF a
+    /// cover-only document saying so.
+    @Test func oneEmptyCollectionStillDeliversTwoFiles() async throws {
+        let context = try makeInMemoryContext()
+        _ = insertItem("Guitar", into: context)
+        try context.save()
+        let spy = ExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportEverythingAsCSV()
+        await viewModel.exportEverythingAsPDF()
+
+        #expect(spy.fileSets.map(\.count) == [2, 2])
+        let wishlistTable = try #require(spy.tables.last)
+        #expect(wishlistTable.headers == ExportSchema.wishlistHeaders)
+        #expect(wishlistTable.rows.isEmpty)
+        #expect(CSVWriter.write(wishlistTable)
+            == "\u{FEFF}" + ExportSchema.wishlistHeaders.joined(separator: ",") + "\r\n")
+        let wishlistDocument = try #require(spy.documents.last)
+        #expect(wishlistDocument.entries.isEmpty)
+        #expect(wishlistDocument.cover.itemCount == 0)
+    }
+
+    @Test func aThrowingServiceSurfacesTheSharedExportCopy() async throws {
+        let context = try makeInMemoryContext()
+        _ = insertItem("Guitar", into: context)
+        try context.save()
+        let viewModel = SettingsViewModel(
+            modelContext: context,
+            exportService: ExportServiceSpy(failsEveryCall: true)
+        )
+        viewModel.load()
+
+        await viewModel.exportEverythingAsCSV()
+
+        #expect(viewModel.alert == .exportFailed)
+        #expect(viewModel.alertTitle == ExportCopy.failureTitle)
+        #expect(viewModel.alertMessage == ExportCopy.failureMessage)
+        #expect(viewModel.stagedExport == nil)
+        #expect(viewModel.activity == nil)
+    }
+
+    /// The gated-spy pattern: `activity` is observable while the set is
+    /// generating, and a second action started mid-flight is refused —
+    /// the spy gates only its first call, so a leaked reentrant call
+    /// fails the count rather than hanging the test.
+    @Test func activityIsObservableMidFlightAndBlocksReentry() async throws {
+        let context = try makeInMemoryContext()
+        _ = insertItem("Guitar", into: context)
+        try context.save()
+        let spy = GatedExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        let inFlight = Task { await viewModel.exportEverythingAsCSV() }
+        for _ in 0..<10_000 where spy.fileSetCalls == 0 { await Task.yield() }
+        try #require(spy.fileSetCalls == 1, "gated export never started")
+
+        #expect(viewModel.activity == .exportCSV)
+        #expect(viewModel.isBusy)
+        await viewModel.exportEverythingAsPDF()
+        #expect(spy.fileSetCalls == 1, "a reentrant action reached the service")
+        #expect(viewModel.activity == .exportCSV)
+
+        spy.release()
+        await inFlight.value
+        #expect(viewModel.activity == nil)
+        #expect(viewModel.stagedExport?.urls.count == 2)
     }
 }
