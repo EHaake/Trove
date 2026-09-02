@@ -30,6 +30,11 @@ nonisolated struct ItemExportRecord: Sendable {
     /// The display-order first photo, chosen at snapshot time on the main
     /// actor (plan.md: `PhotoSelection.inDisplayOrder` is the one definition
     /// of photo order). Only the identifier crosses to the background.
+    ///
+    /// Always `nil` on a record built by `012`'s import pipeline — CSV
+    /// carries no photo representation, so a record is not proof of a live
+    /// snapshot. Export-side code may rely on the *shape*, never on the
+    /// field being populated.
     let firstPhotoID: PersistentIdentifier?
 }
 

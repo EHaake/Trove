@@ -139,6 +139,11 @@ followed by one entry per exported item.
    collection), on all size classes; the sort picker's behavior is
    unchanged. *(Amended 2026-08-30 — see Entry point: on an empty
    collection the control hides with the rest of the header controls.)*
+   *(Superseded in part by `012-data-import` criterion 1, 2026-09-01:
+   the "…" — renamed `OverflowBadge` — now shows regardless of
+   collection size, because its menu carries Import and Get Blank
+   Template and a fresh install must reach them. The export actions'
+   disabled state and the sort badge's hide-when-empty are unchanged.)*
    *Verified: both headers share one visibility gate
    (`ItemListView.header` / `WishlistView.header`);
    `ExportWiringTests.theBadgeIsFedByTheViewModelAndFiresBothIntents`;

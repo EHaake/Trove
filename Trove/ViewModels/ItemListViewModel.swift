@@ -116,20 +116,25 @@ final class ItemListViewModel {
 
     private let exportService: any ExportService
 
+    private let importService: any ImportService
+
     /// - Parameters:
     ///   - syncMonitor: defaults to a store with no mirror, so tests and
     ///     previews get the settled behaviour unless they ask otherwise.
     ///   - exportService: defaults to the live file-staging service over this
     ///     context's container; tests inject a fake and assert on what the
     ///     intents hand over (plan.md's Architecture section).
+    ///   - importService: same injection rule, 012's side of the boundary.
     init(
         modelContext: ModelContext,
         syncMonitor: SyncMonitor = .notSyncing,
-        exportService: (any ExportService)? = nil
+        exportService: (any ExportService)? = nil,
+        importService: (any ImportService)? = nil
     ) {
         self.modelContext = modelContext
         self.syncMonitor = syncMonitor
         self.exportService = exportService ?? FileExportService(container: modelContext.container)
+        self.importService = importService ?? FileImportService()
     }
 
     /// Dragging only makes sense against the real, whole list in its own
@@ -341,8 +346,10 @@ final class ItemListViewModel {
     /// Records are built from `items` as-is — never a refetch: visible order
     /// comes from `isOrderedBefore` over live filter/sort state and is not
     /// reproducible from any `FetchDescriptor` (criteria 3–4).
+    /// `!isBusy` since 012: one operation at a time across export *and*
+    /// import, so their presentations can't race.
     func exportCSV() async {
-        guard canExport, !isExporting else { return }
+        guard canExport, !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
@@ -360,7 +367,7 @@ final class ItemListViewModel {
     /// snapshot rule as `exportCSV`; the cover's figures are this view
     /// model's own arithmetic, which is what criterion 8 measures.
     func exportPDF() async {
-        guard canExport, !isExporting else { return }
+        guard canExport, !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
@@ -385,6 +392,193 @@ final class ItemListViewModel {
             stagedExport = StagedExport(url: url, filename: filename)
         } catch {
             exportFailureMessage = ExportCopy.failureMessage
+        }
+    }
+
+    // MARK: - Import (012)
+
+    /// What the import flow is showing, or nil — one optional drives the one
+    /// import alert (plan §View-model surface: this view already carries
+    /// three presentations, and independent booleans that can go true
+    /// together are how SwiftUI silently drops one). View-settable so
+    /// dismissal writes nil back, the `stagedExport` convention.
+    var importPresentation: ImportPresentation<ItemExportRecord>?
+
+    /// True while a picked file parses or a confirmed batch commits. Not
+    /// `isImporting`, deliberately: "import" already means *CloudKit sync*
+    /// in this file (`mayStillBeImporting`, `completedImports`), and an
+    /// empty collection mid-sync is exactly where both meanings are live
+    /// at once.
+    private(set) var isImportingFile = false
+
+    /// The one busy flag the overflow badge reads. Every export and import
+    /// intent guards on it, which serializes the operations.
+    var isBusy: Bool { isExporting || isImportingFile }
+
+    /// The import alert's title — composed here, not in the view, so the
+    /// copy path stays testable without UI (the `ImportCopy` pattern).
+    var importAlertTitle: String {
+        switch importPresentation {
+        case .confirmation(let preview):
+            ImportCopy.confirmationTitle(importCount: preview.validated.count, target: .items)
+        case .failure(let title, _):
+            title
+        case nil:
+            ""
+        }
+    }
+
+    var importAlertMessage: String {
+        switch importPresentation {
+        case .confirmation(let preview):
+            ImportCopy.confirmationMessage(preview: preview)
+        case .failure(_, let message):
+            message
+        case nil:
+            ""
+        }
+    }
+
+    /// Whether the alert offers an Import action: a confirmation with
+    /// something to import. Zero importable rows is informational only
+    /// (criterion 5).
+    var importOffersConfirmation: Bool {
+        guard case .confirmation(let preview) = importPresentation else { return false }
+        return !preview.validated.isEmpty
+    }
+
+    /// Parses the picked file into a staged preview — nothing is written
+    /// until `confirmImport()` (criterion 5's parse-first gate).
+    func importCSV(from url: URL) async {
+        guard !isBusy else { return }
+        isImportingFile = true
+        defer { isImportingFile = false }
+
+        do {
+            let preview = try await importService.parseItems(at: url, timeZone: .current)
+            importPresentation = .confirmation(preview)
+        } catch let error as ImportError {
+            importPresentation = .failure(
+                title: ImportCopy.failureTitle,
+                message: ImportCopy.failureMessage(for: error, target: .items)
+            )
+        } catch {
+            importPresentation = .failure(
+                title: ImportCopy.failureTitle,
+                message: ImportCopy.unexpectedFailureMessage
+            )
+        }
+    }
+
+    /// Cancel at the confirmation: nothing was written, so there is nothing
+    /// to undo — the store-untouched half of criterion 5.
+    func cancelImport() {
+        importPresentation = nil
+    }
+
+    /// Stages the header-only canonical template through the existing
+    /// export path — the template *is* an export, so no new service
+    /// surface (plan §View-model surface). Deliberately NOT gated on
+    /// `canExport`: an empty collection is the template's whole audience
+    /// (criterion 1). Uses the export progress/staging states because it
+    /// is one.
+    func exportBlankTemplate() async {
+        guard !isBusy else { return }
+        isExporting = true
+        defer { isExporting = false }
+
+        let filename = ExportFilename.itemsTemplate
+        do {
+            let url = try await exportService.exportCSV(
+                CSVTable(headers: ExportSchema.itemHeaders, rows: []),
+                filename: filename
+            )
+            stagedExport = StagedExport(url: url, filename: filename)
+        } catch {
+            exportFailureMessage = ExportCopy.failureMessage
+        }
+    }
+
+    /// Commits the staged preview: real items built from the validated
+    /// records, appended to the end of custom order. On the main actor, on
+    /// this context, deliberately (plan §The commit path): parsing was the
+    /// expensive part and ran off-main; a bulk insert `load()` can see for
+    /// free beats background-context refetch plumbing.
+    /// **Synchronous capture, async commit** — reshaped by a T017 device
+    /// finding: an alert button's dismissal writes nil through the
+    /// presentation binding, and the original `Task`-wrapped async intent
+    /// read `importPresentation` only after that write — the guard failed
+    /// and Import silently did nothing. The unit tests couldn't see it
+    /// (they call with the presentation still staged); only the manual
+    /// pass could. The preview is now captured in the button action's
+    /// synchronous window, so dismissal ordering can't matter; the
+    /// returned task is the commit itself, for tests to await.
+    @discardableResult
+    func confirmImport() -> Task<Void, Never>? {
+        guard !isBusy, case .confirmation(let preview) = importPresentation else { return nil }
+        importPresentation = nil
+        guard !preview.validated.isEmpty else { return nil }
+        isImportingFile = true
+        return Task {
+            defer { isImportingFile = false }
+            // A real suspension before the work, so the badge's spinner renders
+            // a frame — setting the flag alone never draws (criterion 15; the
+            // T056 lesson in reverse).
+            await Task.yield()
+
+            // Placement is computed HERE, never at parse time: a CloudKit
+            // arrival — or a hand-add — between the alert and the confirm must
+            // not stale the base.
+            let existing = (try? modelContext.fetch(FetchDescriptor<Item>())) ?? []
+            let base = ManualOrderHelper.nextPosition(after: existing)
+
+            // The canonical path set is fetched once; the per-row instance
+            // method is a full two-entity fetch per call (T009's reason for
+            // the static). Batch-internal casing resolves by file row order,
+            // first occurrence wins, each resolved path joining the set.
+            // Load-bearing beyond tidiness: chip casing follows the earliest
+            // `createdAt` across both entities, so an import restoring old
+            // dates could otherwise steal an existing path's casing.
+            var knownPaths = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []
+
+            for (offset, validated) in preview.validated.enumerated() {
+                let record = validated.record
+                let path = CategoryPathHelper.canonicalize(record.categoryPath, against: knownPaths)
+                if !path.isEmpty,
+                   !knownPaths.contains(where: { $0.caseInsensitiveCompare(path) == .orderedSame }) {
+                    knownPaths.append(path)
+                }
+                modelContext.insert(Item(
+                    name: record.name,
+                    categoryPath: path,
+                    purchasePriceCents: record.purchasePriceCents,
+                    purchaseDate: record.purchaseDate,
+                    currencyCode: record.currencyCode,
+                    serialNumber: record.serialNumber,
+                    purchaseLocation: record.purchaseLocation,
+                    currentValueCents: record.currentValueCents,
+                    desireToKeep: record.desireToKeep,
+                    condition: Condition(rawValue: record.conditionRawValue) ?? .excellent,
+                    conditionNotes: record.conditionNotes,
+                    notes: record.notes,
+                    sortOrder: base + offset
+                ))
+            }
+
+            do {
+                try modelContext.save()
+            } catch {
+                // Without the rollback, `load()` on this same context would
+                // show the phantom batch — unsaved objects the context happily
+                // returns — which would vanish on relaunch (criterion 14's
+                // "never a partial batch").
+                modelContext.rollback()
+                importPresentation = .failure(
+                    title: ImportCopy.failureTitle,
+                    message: ImportCopy.saveFailureMessage
+                )
+            }
+            load()
         }
     }
 

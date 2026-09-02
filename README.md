@@ -101,6 +101,7 @@ on any future project:
 Trove/                 App source
   App/                 App entry point, ModelContainer setup
   Export/               CSV/PDF export — canonical schema, renderers
+  Import/               CSV import — parser, field policy, service
   Models/               SwiftData models
   ViewModels/            One per screen
   Views/                 Dashboard/, Items/, Wishlist/, Shared/
@@ -117,6 +118,8 @@ design/
   brief.md               Visual/interaction direction
   tokens.md               Colors, type, spacing as implemented
   screens/                Design references
+docs/
+  csv-reference.md       The CSV columns, formats, and Excel caveats
 CLAUDE.md                Project constitution — read this first
 DECISIONS.md             Business/product/process context
 ```
@@ -129,3 +132,6 @@ session. [`DECISIONS.md`](DECISIONS.md) has the business and process
 context that doesn't fit anywhere more structured. Each spec's own
 `spec.md`/`plan.md`/`tasks.md` in `specs/<NNN>-<slug>/` is the detailed
 record of what a feature does and why it's built the way it is.
+[`docs/csv-reference.md`](docs/csv-reference.md) documents the CSV
+layout the export writes and the import reads — columns, formats,
+defaults, and the spreadsheet-app caveats.

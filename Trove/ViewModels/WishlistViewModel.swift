@@ -60,17 +60,22 @@ final class WishlistViewModel {
 
     private let exportService: any ExportService
 
+    private let importService: any ImportService
+
     /// - Parameter exportService: defaults to the live file-staging service,
     ///   injected as a protocol so tests fake it — see
-    ///   `ItemListViewModel.init`, one pattern on both lists.
+    ///   `ItemListViewModel.init`, one pattern on both lists; 012's
+    ///   `importService` follows the same rule.
     init(
         modelContext: ModelContext,
         syncMonitor: SyncMonitor = .notSyncing,
-        exportService: (any ExportService)? = nil
+        exportService: (any ExportService)? = nil,
+        importService: (any ImportService)? = nil
     ) {
         self.modelContext = modelContext
         self.syncMonitor = syncMonitor
         self.exportService = exportService ?? FileExportService(container: modelContext.container)
+        self.importService = importService ?? FileImportService()
     }
 
     /// See `ItemListViewModel.mayStillBeImporting`.
@@ -275,7 +280,8 @@ final class WishlistViewModel {
     /// CSV. Records come from `items` as-is — never a refetch — for the same
     /// criteria-3/4 reason as the item list.
     func exportCSV() async {
-        guard canExport, !isExporting else { return }
+        // `!isBusy` since 012 — see `ItemListViewModel.exportCSV`.
+        guard canExport, !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
@@ -293,7 +299,7 @@ final class WishlistViewModel {
     /// cover totals this view model's own `totalEstimatedCostCents`
     /// (criterion 8).
     func exportPDF() async {
-        guard canExport, !isExporting else { return }
+        guard canExport, !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
@@ -314,6 +320,148 @@ final class WishlistViewModel {
             stagedExport = StagedExport(url: url, filename: filename)
         } catch {
             exportFailureMessage = ExportCopy.failureMessage
+        }
+    }
+
+    // MARK: - Import (012)
+
+    /// See `ItemListViewModel`'s import section — one pattern, both lists.
+    var importPresentation: ImportPresentation<WishlistExportRecord>?
+
+    /// Named against the CloudKit-sync collision, same as the item list's.
+    private(set) var isImportingFile = false
+
+    var isBusy: Bool { isExporting || isImportingFile }
+
+    var importAlertTitle: String {
+        switch importPresentation {
+        case .confirmation(let preview):
+            ImportCopy.confirmationTitle(importCount: preview.validated.count, target: .wishlist)
+        case .failure(let title, _):
+            title
+        case nil:
+            ""
+        }
+    }
+
+    var importAlertMessage: String {
+        switch importPresentation {
+        case .confirmation(let preview):
+            ImportCopy.confirmationMessage(preview: preview)
+        case .failure(_, let message):
+            message
+        case nil:
+            ""
+        }
+    }
+
+    var importOffersConfirmation: Bool {
+        guard case .confirmation(let preview) = importPresentation else { return false }
+        return !preview.validated.isEmpty
+    }
+
+    func importCSV(from url: URL) async {
+        guard !isBusy else { return }
+        isImportingFile = true
+        defer { isImportingFile = false }
+
+        do {
+            let preview = try await importService.parseWishlist(at: url, timeZone: .current)
+            importPresentation = .confirmation(preview)
+        } catch let error as ImportError {
+            importPresentation = .failure(
+                title: ImportCopy.failureTitle,
+                message: ImportCopy.failureMessage(for: error, target: .wishlist)
+            )
+        } catch {
+            importPresentation = .failure(
+                title: ImportCopy.failureTitle,
+                message: ImportCopy.unexpectedFailureMessage
+            )
+        }
+    }
+
+    func cancelImport() {
+        importPresentation = nil
+    }
+
+    /// See `ItemListViewModel.exportBlankTemplate` — the wishlist twin.
+    func exportBlankTemplate() async {
+        guard !isBusy else { return }
+        isExporting = true
+        defer { isExporting = false }
+
+        let filename = ExportFilename.wishlistTemplate
+        do {
+            let url = try await exportService.exportCSV(
+                CSVTable(headers: ExportSchema.wishlistHeaders, rows: []),
+                filename: filename
+            )
+            stagedExport = StagedExport(url: url, filename: filename)
+        } catch {
+            exportFailureMessage = ExportCopy.failureMessage
+        }
+    }
+
+    /// See `ItemListViewModel.confirmImport` — one commit path, both lists,
+    /// with the wishlist's one extra move: `Added` restores `createdAt`.
+    /// **Synchronous capture, async commit** — reshaped by a T017 device
+    /// finding: an alert button's dismissal writes nil through the
+    /// presentation binding, and the original `Task`-wrapped async intent
+    /// read `importPresentation` only after that write — the guard failed
+    /// and Import silently did nothing. The unit tests couldn't see it
+    /// (they call with the presentation still staged); only the manual
+    /// pass could. The preview is now captured in the button action's
+    /// synchronous window, so dismissal ordering can't matter; the
+    /// returned task is the commit itself, for tests to await.
+    @discardableResult
+    func confirmImport() -> Task<Void, Never>? {
+        guard !isBusy, case .confirmation(let preview) = importPresentation else { return nil }
+        importPresentation = nil
+        guard !preview.validated.isEmpty else { return nil }
+        isImportingFile = true
+        return Task {
+            defer { isImportingFile = false }
+            await Task.yield()
+
+            let existing = (try? modelContext.fetch(FetchDescriptor<WishlistItem>())) ?? []
+            let base = ManualOrderHelper.nextPosition(after: existing)
+            var knownPaths = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []
+
+            for (offset, validated) in preview.validated.enumerated() {
+                let record = validated.record
+                let path = CategoryPathHelper.canonicalize(record.categoryPath, against: knownPaths)
+                if !path.isEmpty,
+                   !knownPaths.contains(where: { $0.caseInsensitiveCompare(path) == .orderedSame }) {
+                    knownPaths.append(path)
+                }
+                let wish = WishlistItem(
+                    name: record.name,
+                    categoryPath: path,
+                    estimatedCostCents: record.estimatedCostCents,
+                    currencyCode: record.currencyCode,
+                    notes: record.notes,
+                    desireToOwn: record.desireToOwn,
+                    sortOrder: base + offset
+                )
+                // Assigned after construction deliberately: the init hard-sets
+                // `.now` and has no parameter — `Added` restores when the want
+                // was actually recorded (plan §The commit path; don't "fix"
+                // the init).
+                wish.createdAt = record.createdAt
+                modelContext.insert(wish)
+            }
+
+            do {
+                try modelContext.save()
+            } catch {
+                modelContext.rollback()
+                importPresentation = .failure(
+                    title: ImportCopy.failureTitle,
+                    message: ImportCopy.saveFailureMessage
+                )
+            }
+            load()
         }
     }
 

@@ -781,3 +781,178 @@ struct WishlistViewModelExportTests {
             == "Category: \(categoryLabel) · Search: \u{201C}Summicron\u{201D}")
     }
 }
+
+/// T010's wishlist twin — see `ItemListViewModelImportTests`; one pattern,
+/// both lists, with the wishlist's own target copy.
+struct WishlistViewModelImportTests {
+    private let dummyURL = URL(filePath: "/dev/null/import.csv")
+
+    @Test func isImportingFileIsObservableMidFlightAndBlocksReentry() async throws {
+        let context = try makeInMemoryContext()
+        let spy = GatedImportServiceSpy()
+        let viewModel = WishlistViewModel(modelContext: context, importService: spy)
+
+        let inFlight = Task { await viewModel.importCSV(from: dummyURL) }
+        for _ in 0..<10_000 where spy.wishlistCalls == 0 { await Task.yield() }
+        try #require(spy.wishlistCalls == 1, "gated import never started")
+
+        #expect(viewModel.isImportingFile, "progress state must be visible while parsing")
+
+        await viewModel.importCSV(from: dummyURL)
+        #expect(spy.wishlistCalls == 1)
+
+        spy.release()
+        await inFlight.value
+        #expect(viewModel.isImportingFile == false)
+        guard case .confirmation = viewModel.importPresentation else {
+            Issue.record("expected a staged confirmation")
+            return
+        }
+    }
+
+    @Test func aFailureMapsToTheSharedCopyWithTheWishlistTarget() async throws {
+        let context = try makeInMemoryContext()
+        let spy = ImportServiceSpy(wishlist: .failure(.headerMismatch(wrongList: true)))
+        let viewModel = WishlistViewModel(modelContext: context, importService: spy)
+
+        await viewModel.importCSV(from: dummyURL)
+
+        guard case .failure(let title, let message) = viewModel.importPresentation else {
+            Issue.record("expected a failure presentation")
+            return
+        }
+        #expect(title == ImportCopy.failureTitle)
+        #expect(
+            message
+                == ImportCopy.failureMessage(for: .headerMismatch(wrongList: true), target: .wishlist)
+        )
+        #expect(message.contains("Items export"))
+    }
+
+    @Test func cancelClearsThePresentationWithoutStoreWrites() async throws {
+        let context = try makeInMemoryContext()
+        let spy = ImportServiceSpy(wishlist: .success(wishlistPreview(names: ["OM-1"])))
+        let viewModel = WishlistViewModel(modelContext: context, importService: spy)
+
+        await viewModel.importCSV(from: dummyURL)
+        #expect(viewModel.importPresentation != nil)
+
+        viewModel.cancelImport()
+        #expect(viewModel.importPresentation == nil)
+        #expect(try context.fetch(FetchDescriptor<WishlistItem>()).isEmpty)
+    }
+
+    @Test func alertAccessorsUseTheWishlistNouns() async throws {
+        let context = try makeInMemoryContext()
+        let viewModel = WishlistViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(wishlist: .success(wishlistPreview(names: ["OM-1"])))
+        )
+        await viewModel.importCSV(from: dummyURL)
+
+        #expect(viewModel.importAlertTitle == "Import 1 wishlist item?")
+        #expect(viewModel.importOffersConfirmation)
+    }
+}
+
+/// A validated wishlist preview for staging tests.
+func wishlistPreview(
+    names: [String],
+    categoryPath: String = "Photography/Cameras"
+) -> WishlistImportPreview {
+    ImportPreview(
+        validated: names.enumerated().map { offset, name in
+            ValidatedRow(
+                record: WishlistExportRecord(
+                    name: name, categoryPath: categoryPath,
+                    estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 2,
+                    createdAt: Date(timeIntervalSince1970: 1_500_000_000),
+                    notes: nil, firstPhotoID: nil
+                ),
+                rowNumber: offset + 2,
+                defaultedFieldCount: 0
+            )
+        },
+        skipped: [],
+        defaultedFieldCount: 0
+    )
+}
+
+/// T011's wishlist twin: the commit path with the wishlist's one extra
+/// move — `Added` restoring `createdAt` — and the casing-priority theft
+/// that canonicalization prevents.
+struct WishlistViewModelCommitTests {
+    private let dummyURL = URL(filePath: "/dev/null/import.csv")
+
+    @Test func commitAppendsAndRestoresCreatedAtFromAdded() async throws {
+        // Second-context verification — see the items twin's note (T018's
+        // audit: a same-context refetch passes with `save()` deleted).
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        context.insert(WishlistItem(name: "Existing", sortOrder: 0))
+        try context.save()
+
+        let added = Date(timeIntervalSince1970: 1_500_000_000)
+        let viewModel = WishlistViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(wishlist: .success(wishlistPreview(names: ["OM-1"])))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        let imported = try #require(
+            try ModelContext(container).fetch(FetchDescriptor<WishlistItem>()).first { $0.name == "OM-1" }
+        )
+        #expect(imported.sortOrder == 1)
+        // The fixture's record carries this instant; the init hard-sets
+        // `.now`, so equality here proves the post-construction restore.
+        #expect(imported.createdAt == added)
+        #expect(viewModel.importPresentation == nil)
+    }
+
+    @Test func oldAddedDatesCannotStealAnExistingPathsCasing() async throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(name: "M6", categoryPath: "Photography/Cameras"))
+        try context.save()
+
+        // A 2015-dated wish in lowercase: without canonicalization its old
+        // createdAt would outrank the existing item in the chips' earliest-
+        // casing rule across both entities.
+        let viewModel = WishlistViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(wishlist: .success(wishlistPreview(
+                names: ["Old Wish"], categoryPath: "photography/cameras"
+            )))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        let imported = try #require(
+            try context.fetch(FetchDescriptor<WishlistItem>()).first { $0.name == "Old Wish" }
+        )
+        #expect(imported.categoryPath == "Photography/Cameras")
+        // The chips agree: earliest casing across both entities is still
+        // the existing one, because no lowercase copy ever landed.
+        let helper = CategoryPathHelper(modelContext: context)
+        #expect(try helper.allCategoryPaths() == ["Photography/Cameras"])
+    }
+}
+
+/// T012's wishlist twin — see `ItemListViewModelTemplateTests`.
+struct WishlistViewModelTemplateTests {
+    @Test func theTemplateStagesHeaderOnlyBytesFromAnEmptyCollection() async throws {
+        let context = try makeInMemoryContext()
+        let spy = ExportServiceSpy()
+        let viewModel = WishlistViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+        try #require(viewModel.canExport == false)
+
+        await viewModel.exportBlankTemplate()
+
+        let table = try #require(spy.tables.first)
+        #expect(table.headers == ExportSchema.wishlistHeaders)
+        #expect(table.rows.isEmpty)
+        #expect(spy.filenames == ["Trove-Wishlist-Template.csv"])
+        #expect(viewModel.stagedExport?.filename == ExportFilename.wishlistTemplate)
+    }
+}

@@ -1,0 +1,8 @@
+﻿Name,Category,Purchase Price,Currency,Purchase Date,Purchase Location,Current Value,Desire to Keep,Condition,Condition Notes,Serial Number,Notes
+Zoom H5 Field Recorder,Audio/Recorders,279.00,USD,2022-06-10,,,3,good,,,
+Mystery Amp,Music/Amps,,USD,someday,garage find,,2,fair,,,"No receipt, no idea what I paid"
+Overloved Pedal,Music/Pedals,150.00,USD,2023-02-01,Reverb,120.00,9,mint,,,desire and condition are not valid values
+,Music/Guitars,999.00,USD,2020-01-01,,,3,good,,,this row has no name
+Complete Item,Photography/Tripods,189.00,usd,2024-05-05,B&H Photo,150.00,2,excellent,one sticky leg lock,TR-7745,lowercase currency is fine
+Comma Chameleon,Music/Pedals,89.00,USD,2021-01-01,,,1,good,,,"an unquoted, comma shifted this row",oops
+Short Row Special,Audio/Cables,25.00,USD,2024-08-01

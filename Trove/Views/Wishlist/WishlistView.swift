@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Browse the wishlist, per `design/screens/Trove Wishlist List.png`.
 ///
@@ -23,6 +24,9 @@ struct WishlistView: View {
     /// Whether T035's sort dropdown is open — see ItemListView's twin for
     /// why the screen owns it.
     @State private var isSortMenuOpen = false
+
+    /// Whether 012's file picker is up — see `ItemListView`'s twin.
+    @State private var isPickingImportFile = false
 
     /// The row whose Edit swipe action is open in the form sheet — a
     /// shortcut into the same flow the detail screen offers (T024).
@@ -160,6 +164,33 @@ struct WishlistView: View {
         } message: {
             Text(viewModel.exportFailureMessage ?? ExportCopy.failureMessage)
         }
+        // 012's file picker and import alert — ItemListView's twins; see
+        // the notes there (cancel-safe by construction, one presentation
+        // optional, dismiss-only when nothing is importable).
+        .fileImporter(
+            isPresented: $isPickingImportFile,
+            allowedContentTypes: [.commaSeparatedText, .plainText]
+        ) { result in
+            if case .success(let url) = result {
+                Task { await viewModel.importCSV(from: url) }
+            }
+        }
+        .alert(
+            viewModel.importAlertTitle,
+            isPresented: Binding(
+                get: { viewModel.importPresentation != nil },
+                set: { if !$0 { viewModel.importPresentation = nil } }
+            )
+        ) {
+            if viewModel.importOffersConfirmation {
+                Button("Import") { viewModel.confirmImport() }
+                Button("Cancel", role: .cancel) { viewModel.cancelImport() }
+            } else {
+                Button("OK", role: .cancel) { viewModel.cancelImport() }
+            }
+        } message: {
+            Text(viewModel.importAlertMessage)
+        }
         // T035's dropdown — same screen-level float-and-catcher as
         // ItemListView's, for the same reach reasons.
         .overlay {
@@ -204,24 +235,27 @@ struct WishlistView: View {
 
             Spacer()
 
-            // Nothing to sort — or export — on an empty list; same amended
-            // criterion-1 rule as ItemListView's header.
-            if viewModel.totalCount > 0 {
-                HStack(spacing: 8) {
+            // The "…" shows regardless of collection size since 012
+            // (criterion 1, superseding 011's hide-when-empty); the sort
+            // badge still hides — see ItemListView's header note.
+            HStack(spacing: 8) {
+                if viewModel.totalCount > 0 {
                     sortControl
-                    exportControl
                 }
+                overflowControl
             }
         }
     }
 
-    /// 011's "…" menu — ItemListView's twin.
-    private var exportControl: some View {
-        ExportBadge(
-            isExporting: viewModel.isExporting,
+    /// 012's overflow — ItemListView's twin.
+    private var overflowControl: some View {
+        OverflowBadge(
+            isBusy: viewModel.isBusy,
             canExport: viewModel.canExport,
             exportCSV: { Task { await viewModel.exportCSV() } },
-            exportPDF: { Task { await viewModel.exportPDF() } }
+            exportPDF: { Task { await viewModel.exportPDF() } },
+            importCSV: { isPickingImportFile = true },
+            getTemplate: { Task { await viewModel.exportBlankTemplate() } }
         )
     }
 

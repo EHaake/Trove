@@ -170,14 +170,17 @@ final class ItemFormViewModel {
         photos = item.photos ?? []
     }
 
+    // Delegating to the shared definition since 012/T005: the import
+    // pipeline normalizes cells with the same rules, and two copies of
+    // "what blank means" is exactly the drift the one-definition move
+    // prevents. See FieldNormalization.
     private static func trimmed(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines)
+        FieldNormalization.trimmed(value)
     }
 
     /// Optional-in-the-model fields are plain strings here so they can bind to
     /// text fields; blank means "not provided", not an empty value.
     private static func nilIfBlank(_ value: String) -> String? {
-        let trimmed = trimmed(value)
-        return trimmed.isEmpty ? nil : trimmed
+        FieldNormalization.nilIfBlank(value)
     }
 }

@@ -166,8 +166,21 @@ only a `TimeZone`, making calendar-identifier independence structural,
 the same way integer math makes the money path locale-free.)* Two money formatters
 (display vs. data) is a deliberate split, not duplication: they answer
 different questions and must be allowed to diverge. The invariant `012`
-depends on is the round trip through the existing parse-side helper:
+depends on is the cent-exact round trip:
 `Money.cents(from: Decimal(string: field)) == originalCents`.
+*(Corrected 2026-08-31, during `012` planning: this line originally
+named `Money.cents(from: Decimal(string:))` as `012`'s parse path
+itself. `012` parses with its own strict integer parser instead —
+`Decimal(string:)` is lenient in ways `012`'s spec forbids, stopping
+silently at a thousands separator rather than rejecting the field —
+and preserves this invariant as a test-side equivalence on canonical
+forms. The codebase deliberately carries three money implementations
+at three different boundaries: `Money.cents` for what a user types
+into a form, `ExportSchema.money` writing the canonical format,
+`ImportSchema`'s parser reading only the canonical format — each pair
+tied together by a round-trip test rather than by shared code that
+would blur what each boundary accepts. See `012`'s plan.md, "Money
+and date parsing".)*
 
 ## CSV generation
 

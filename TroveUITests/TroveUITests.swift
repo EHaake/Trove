@@ -226,4 +226,30 @@ final class TroveUITests: XCTestCase {
             "The category field dropped characters while being typed into"
         )
     }
+    /// 012 criterion 1's behavioral half: a fresh install — empty
+    /// collection, in-memory store — still reaches Import and the blank
+    /// template through the "…" badge, with the export actions disabled.
+    /// This is the guard the structural brace-span scan
+    /// (`ImportWiringTests`) can't provide: proof a person can actually
+    /// get there. Re-nesting the overflow control inside the
+    /// `totalCount > 0` gate must turn this red.
+    @MainActor
+    func testEmptyCollectionOffersImportAndTemplateButNotExport() {
+        let app = launchApp()
+        app.buttons["Items"].tap()
+
+        let badge = app.buttons["More actions"]
+        XCTAssertTrue(
+            badge.waitForExistence(timeout: 5),
+            "the overflow badge must exist on an empty collection"
+        )
+        badge.tap()
+
+        let importButton = app.buttons["Import from CSV…"]
+        XCTAssertTrue(importButton.waitForExistence(timeout: 5), "the menu should open")
+        XCTAssertTrue(importButton.isEnabled, "Import must be enabled on an empty collection")
+        XCTAssertTrue(app.buttons["Get Blank Template…"].isEnabled, "the template must be enabled")
+        XCTAssertFalse(app.buttons["Export as CSV…"].isEnabled, "CSV export should disable when empty")
+        XCTAssertFalse(app.buttons["Export as PDF…"].isEnabled, "PDF export should disable when empty")
+    }
 }

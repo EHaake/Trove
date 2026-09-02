@@ -927,3 +927,383 @@ struct ItemListViewModelExportTests {
             == "Category: \(categoryLabel) · Not yet valued · Search: \u{201C}M6\u{201D}")
     }
 }
+
+/// T010's guards: the import surface — mid-flight state and reentry, busy
+/// serialization across export and import, failure mapping onto the shared
+/// copy, cancel leaving the store untouched, and the alert accessors.
+struct ItemListViewModelImportTests {
+    private let dummyURL = URL(filePath: "/dev/null/import.csv")
+
+    @Test func isImportingFileIsObservableMidFlightAndBlocksReentry() async throws {
+        let context = try makeInMemoryContext()
+        let spy = GatedImportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, importService: spy)
+
+        let inFlight = Task { await viewModel.importCSV(from: dummyURL) }
+        for _ in 0..<10_000 where spy.itemCalls == 0 { await Task.yield() }
+        try #require(spy.itemCalls == 1, "gated import never started")
+
+        #expect(viewModel.isImportingFile, "progress state must be visible while parsing")
+        #expect(viewModel.isBusy)
+
+        // The reentrant attempt bounces off the guard without reaching the
+        // service — the spy gates only the first call, so a wrongly-leaked
+        // call would fail this count fast rather than deadlock (T019/S1).
+        await viewModel.importCSV(from: dummyURL)
+        #expect(spy.itemCalls == 1)
+
+        spy.release()
+        await inFlight.value
+        #expect(viewModel.isImportingFile == false)
+        guard case .confirmation = viewModel.importPresentation else {
+            Issue.record("expected a staged confirmation")
+            return
+        }
+    }
+
+    @Test func aBusyImportRefusesExportAndViceVersa() async throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(name: "Telecaster"))
+        try context.save()
+
+        // Import in flight → export refused.
+        let importSpy = GatedImportServiceSpy()
+        let exportSpy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(
+            modelContext: context, exportService: exportSpy, importService: importSpy
+        )
+        viewModel.load()
+
+        let importing = Task { await viewModel.importCSV(from: dummyURL) }
+        for _ in 0..<10_000 where importSpy.itemCalls == 0 { await Task.yield() }
+        await viewModel.exportCSV()
+        #expect(exportSpy.tables.isEmpty, "export must refuse while an import is in flight")
+        importSpy.release()
+        await importing.value
+
+        // Export in flight → import refused.
+        let gatedExport = GatedExportServiceSpy()
+        let secondImportSpy = ImportServiceSpy()
+        let second = ItemListViewModel(
+            modelContext: context, exportService: gatedExport, importService: secondImportSpy
+        )
+        second.load()
+        let exporting = Task { await second.exportCSV() }
+        for _ in 0..<10_000 where gatedExport.csvCalls == 0 { await Task.yield() }
+        await second.importCSV(from: dummyURL)
+        #expect(secondImportSpy.itemURLs.isEmpty, "import must refuse while an export is in flight")
+        gatedExport.release()
+        await exporting.value
+    }
+
+    @Test func aFailureMapsToTheSharedCopy() async throws {
+        let context = try makeInMemoryContext()
+        let spy = ImportServiceSpy(items: .failure(.undecodable))
+        let viewModel = ItemListViewModel(modelContext: context, importService: spy)
+
+        await viewModel.importCSV(from: dummyURL)
+
+        guard case .failure(let title, let message) = viewModel.importPresentation else {
+            Issue.record("expected a failure presentation")
+            return
+        }
+        #expect(title == ImportCopy.failureTitle)
+        #expect(message == ImportCopy.failureMessage(for: .undecodable, target: .items))
+        #expect(viewModel.importAlertTitle == ImportCopy.failureTitle)
+        #expect(viewModel.importOffersConfirmation == false)
+    }
+
+    @Test func cancelClearsThePresentationWithoutStoreWrites() async throws {
+        let context = try makeInMemoryContext()
+        let spy = ImportServiceSpy(items: .success(itemsPreview(names: ["Strat"])))
+        let viewModel = ItemListViewModel(modelContext: context, importService: spy)
+
+        await viewModel.importCSV(from: dummyURL)
+        #expect(viewModel.importPresentation != nil)
+
+        viewModel.cancelImport()
+        #expect(viewModel.importPresentation == nil)
+        #expect(try context.fetch(FetchDescriptor<Item>()).isEmpty)
+    }
+
+    @Test func alertAccessorsComposeThroughImportCopy() async throws {
+        let context = try makeInMemoryContext()
+        let staged = ImportPreview<ItemExportRecord>(
+            validated: itemsPreview(names: ["Strat"]).validated,
+            skipped: [SkippedRow(rowNumber: 7, reason: "no name")],
+            defaultedFieldCount: 2
+        )
+        let viewModel = ItemListViewModel(
+            modelContext: context, importService: ImportServiceSpy(items: .success(staged))
+        )
+        await viewModel.importCSV(from: dummyURL)
+
+        #expect(viewModel.importAlertTitle == "Import 1 item?")
+        #expect(viewModel.importAlertMessage.contains("Row 7 \u{2014} no name"))
+        #expect(viewModel.importAlertMessage.contains("2 missing or unreadable fields"))
+        #expect(viewModel.importOffersConfirmation)
+
+        // The zero-importable case is informational only (criterion 5).
+        viewModel.importPresentation = .confirmation(
+            ImportPreview(validated: [], skipped: staged.skipped, defaultedFieldCount: 0)
+        )
+        #expect(viewModel.importAlertTitle == "Nothing to import")
+        #expect(viewModel.importOffersConfirmation == false)
+    }
+}
+
+/// A validated items preview for staging tests — plain records, no store.
+func itemsPreview(names: [String]) -> ItemsImportPreview {
+    ImportPreview(
+        validated: names.enumerated().map { offset, name in
+            ValidatedRow(
+                record: ItemExportRecord(
+                    name: name, categoryPath: "Music/Guitars", purchasePriceCents: 100_000,
+                    currencyCode: "USD", purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+                    purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
+                    conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
+                    notes: nil, firstPhotoID: nil
+                ),
+                rowNumber: offset + 2,
+                defaultedFieldCount: 0
+            )
+        },
+        skipped: [],
+        defaultedFieldCount: 0
+    )
+}
+
+/// T011's guards: the commit path — placement, canonicalization, rollback,
+/// view-independence, and criterion 11's stated duplicate behavior.
+struct ItemListViewModelCommitTests {
+    private let dummyURL = URL(filePath: "/dev/null/import.csv")
+
+    @Test func commitAppendsAtTheEndPreservingFileOrder() async throws {
+        // A container, not just a context: the verification fetch below
+        // runs on a SECOND context over the same store, because a
+        // same-context refetch returns unsaved inserts and passes with
+        // `save()` deleted — the recorded false-passing persistence shape,
+        // which this suite exhibited until T018's audit ran that exact
+        // mutation and stayed green.
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        context.insert(Item(name: "Existing A", sortOrder: 0))
+        context.insert(Item(name: "Existing B", sortOrder: 1))
+        try context.save()
+
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["One", "Two", "Three"])))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        let ordered = try ModelContext(container).fetch(
+            FetchDescriptor<Item>(sortBy: [SortDescriptor(\.sortOrder)])
+        )
+        #expect(ordered.map(\.name) == ["Existing A", "Existing B", "One", "Two", "Three"])
+        #expect(ordered.map(\.sortOrder) == [0, 1, 2, 3, 4])
+        #expect(viewModel.importPresentation == nil)
+    }
+
+    @Test func thePlacementBaseIsComputedAtCommitTimeNotParseTime() async throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["Imported"])))
+        )
+        await viewModel.importCSV(from: dummyURL)
+
+        // Something lands between the alert and the confirm — a CloudKit
+        // arrival, a hand-add. The batch must still append after it.
+        context.insert(Item(name: "Latecomer", sortOrder: 10))
+        try context.save()
+
+        await viewModel.confirmImport()?.value
+        let imported = try #require(
+            try context.fetch(FetchDescriptor<Item>()).first { $0.name == "Imported" }
+        )
+        #expect(imported.sortOrder == 11)
+    }
+
+    @Test func aLegacyAllZeroStoreStillLandsTheBatchAfterTheLegacyBlock() async throws {
+        // The real state of a pre-010 store: every item at sortOrder 0,
+        // ties falling back to createdAt at sort time.
+        let context = try makeInMemoryContext()
+        for name in ["Legacy A", "Legacy B", "Legacy C"] {
+            context.insert(Item(name: name, sortOrder: 0))
+        }
+        try context.save()
+
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["New One", "New Two"])))
+        )
+        viewModel.sortOrder = .custom
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        #expect(viewModel.items.count == 5)
+        #expect(viewModel.items.suffix(2).map(\.name) == ["New One", "New Two"])
+    }
+
+    @Test func importIsViewIndependentOfTheActiveFilter() async throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(name: "Mixer", categoryPath: "Audio/Desks"))
+        try context.save()
+
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["Strat", "Tele"])))
+        )
+        viewModel.categoryFilter = "Audio/Desks"
+        viewModel.load()
+        try #require(viewModel.totalCount == 1)
+
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        // The batch (Music/Guitars) is outside the filter: not visible,
+        // but fully imported — criterion 10.
+        #expect(viewModel.totalCount == 3)
+        #expect(viewModel.items.map(\.name) == ["Mixer"])
+    }
+
+    @Test func committingTheSameFileTwiceDuplicatesEveryRow() async throws {
+        let context = try makeInMemoryContext()
+        let preview = itemsPreview(names: ["Strat"])
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(preview))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+        viewModel.importPresentation = .confirmation(preview)
+        await viewModel.confirmImport()?.value
+
+        // Stated no-dedupe behavior (criterion 11) — two copies, each with
+        // its own place in the order.
+        let all = try context.fetch(FetchDescriptor<Item>())
+        #expect(all.count == 2)
+        #expect(Set(all.map(\.sortOrder)).count == 2)
+    }
+
+    @Test func canonicalizationPreservesExistingCasingAndBatchFirstWins() async throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(name: "M6", categoryPath: "Photography/Cameras"))
+        try context.save()
+
+        var preview = itemsPreview(names: ["A", "B", "C"])
+        preview = ImportPreview(
+            validated: zip(preview.validated, ["photography/cameras", "guitars", "Guitars"])
+                .map { row, path in
+                    ValidatedRow(
+                        record: ItemExportRecord(
+                            name: row.record.name, categoryPath: path,
+                            purchasePriceCents: 0, currencyCode: "USD",
+                            purchaseDate: row.record.purchaseDate, purchaseLocation: nil,
+                            currentValueCents: nil, desireToKeep: 3,
+                            conditionRawValue: "good", conditionNotes: nil,
+                            serialNumber: nil, notes: nil, firstPhotoID: nil
+                        ),
+                        rowNumber: row.rowNumber,
+                        defaultedFieldCount: 0
+                    )
+                },
+            skipped: [], defaultedFieldCount: 0
+        )
+        let viewModel = ItemListViewModel(
+            modelContext: context, importService: ImportServiceSpy(items: .success(preview))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        let byName = Dictionary(
+            uniqueKeysWithValues: try context.fetch(FetchDescriptor<Item>()).map { ($0.name, $0.categoryPath) }
+        )
+        #expect(byName["A"] == "Photography/Cameras")
+        #expect(byName["B"] == "guitars")
+        #expect(byName["C"] == "guitars")
+    }
+
+    @Test func aZeroImportableConfirmationClearsWithoutWrites() async throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(
+                items: .success(ImportPreview(
+                    validated: [],
+                    skipped: [SkippedRow(rowNumber: 2, reason: "no name")],
+                    defaultedFieldCount: 0
+                ))
+            )
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        #expect(viewModel.importPresentation == nil)
+        #expect(try context.fetch(FetchDescriptor<Item>()).isEmpty)
+    }
+
+    /// The T017 device finding, pinned at the view-model level: the
+    /// alert's isPresented binding writes the presentation nil the moment
+    /// any button is tapped, and that write can land before an async
+    /// intent's body runs. `confirmImport` must capture the preview in its
+    /// synchronous prefix, so a dismissal racing the commit cannot lose it.
+    @Test func aDismissalWriteRacingTheConfirmCannotLoseTheCommit() async throws {
+        let context = try makeInMemoryContext()
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["Strat"])))
+        )
+        await viewModel.importCSV(from: dummyURL)
+
+        let task = viewModel.confirmImport()
+        // The dismissal write, as SwiftUI performs it — immediately after
+        // the button action returns, before the commit task's body runs.
+        viewModel.importPresentation = nil
+        await task?.value
+
+        #expect(try context.fetch(FetchDescriptor<Item>()).count == 1)
+    }
+
+    /// The mechanism `confirmImport`'s catch relies on: rollback clears
+    /// unsaved inserts from this context — paired with the wiring scan in
+    /// `ImportWiringTests`, since a real SwiftData save failure can't be
+    /// forced deterministically (plan §The commit path, stated honestly).
+    @Test func rollbackClearsUnsavedInsertsFromTheContext() throws {
+        let context = try makeInMemoryContext()
+        context.insert(Item(name: "Phantom"))
+        try #require(try context.fetch(FetchDescriptor<Item>()).count == 1)
+
+        context.rollback()
+        #expect(try context.fetch(FetchDescriptor<Item>()).isEmpty)
+    }
+}
+
+
+/// T012's guards: the blank template stages through the existing export
+/// path, ungated by `canExport` — an empty collection is its audience.
+struct ItemListViewModelTemplateTests {
+    @Test func theTemplateStagesHeaderOnlyBytesFromAnEmptyCollection() async throws {
+        let context = try makeInMemoryContext()
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+        try #require(viewModel.canExport == false, "the empty collection is the point")
+
+        await viewModel.exportBlankTemplate()
+
+        let table = try #require(spy.tables.first)
+        #expect(table.headers == ExportSchema.itemHeaders)
+        #expect(table.rows.isEmpty)
+        // The exact bytes: BOM + the header row + one CRLF — the canonical
+        // blank template (verified against CSVWriter, the real serializer).
+        #expect(
+            CSVWriter.write(table)
+                == "\u{FEFF}" + ExportSchema.itemHeaders.joined(separator: ",") + "\r\n"
+        )
+        #expect(spy.filenames == ["Trove-Items-Template.csv"])
+        #expect(viewModel.stagedExport?.filename == ExportFilename.itemsTemplate)
+    }
+}

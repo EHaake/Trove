@@ -13,18 +13,24 @@ struct ExportWiringTests {
         "Trove/Views/Wishlist/WishlistView.swift",
     ]
 
-    /// Each list screen builds exactly one `ExportBadge`, fed by the view
-    /// model's own state and firing both intents — the criterion-1/2 wiring.
+    /// Each list screen builds exactly one `OverflowBadge` (012's rename of
+    /// `ExportBadge`), fed by the view model's own state and firing all
+    /// four intents — 011's criterion-1/2 wiring plus 012's criterion 1.
     @Test(arguments: lists)
-    func theBadgeIsFedByTheViewModelAndFiresBothIntents(path: String) throws {
+    func theBadgeIsFedByTheViewModelAndFiresAllFourIntents(path: String) throws {
         let code = try SourceScan.production(path)
-        let calls = SourceScan.argumentLists(of: "ExportBadge", in: code)
-        #expect(calls.count == 1, "\(path) builds \(calls.count) ExportBadges, expected exactly 1")
+        let calls = SourceScan.argumentLists(of: "OverflowBadge", in: code)
+        #expect(calls.count == 1, "\(path) builds \(calls.count) OverflowBadges, expected exactly 1")
         for call in calls {
-            #expect(call.contains("isExporting: viewModel.isExporting"), "\(path) badge not fed isExporting")
+            #expect(call.contains("isBusy: viewModel.isBusy"), "\(path) badge not fed isBusy")
             #expect(call.contains("canExport: viewModel.canExport"), "\(path) badge not fed canExport")
             #expect(call.contains("viewModel.exportCSV()"), "\(path) badge doesn't fire exportCSV")
             #expect(call.contains("viewModel.exportPDF()"), "\(path) badge doesn't fire exportPDF")
+            #expect(call.contains("isPickingImportFile = true"), "\(path) badge doesn't open the picker")
+            #expect(
+                call.contains("viewModel.exportBlankTemplate()"),
+                "\(path) badge doesn't fire the template intent"
+            )
         }
     }
 
@@ -39,16 +45,22 @@ struct ExportWiringTests {
         #expect(code.contains("viewModel.exportFailureMessage"), "\(path) doesn't wire the failure state")
     }
 
-    /// Criterion 2 inside the badge: exactly the two pinned menu strings,
-    /// each action individually gated on `canExport`.
-    @Test func bothMenuActionsGateOnCanExport() throws {
-        let code = try SourceScan.production("Trove/Views/Shared/ExportBadge.swift")
+    /// The menu's contract after 012: all four pinned strings and the
+    /// divider between the export and import groups; the two *export*
+    /// actions individually gated on `canExport` and — the count being
+    /// exactly 2 — the import actions provably ungated, since an empty
+    /// collection is exactly who they serve (012 criterion 1).
+    @Test func theMenuCarriesFourActionsWithOnlyExportsGated() throws {
+        let code = try SourceScan.production("Trove/Views/Shared/OverflowBadge.swift")
         let literals = SourceScan.stringLiterals(in: code)
         #expect(literals.contains("Export as CSV…"))
         #expect(literals.contains("Export as PDF…"))
+        #expect(literals.contains("Import from CSV…"))
+        #expect(literals.contains("Get Blank Template…"))
+        #expect(code.contains("Divider()"), "the export and import groups must stay visually separated")
         #expect(
             code.ranges(of: ".disabled(!canExport)").count == 2,
-            "each menu action must gate on canExport individually"
+            "exactly the two export actions gate on canExport — imports must stay ungated"
         )
     }
 

@@ -58,6 +58,12 @@ nonisolated enum ExportFilename {
     ) -> String {
         "Trove-Wishlist-\(ExportSchema.day(from: date, timeZone: timeZone)).\(fileExtension)"
     }
+
+    /// 012's blank templates — undated deliberately, since a template is a
+    /// layout, not a snapshot of anything. Named here like every other
+    /// share-sheet file, so this enum stays the single namer.
+    static let itemsTemplate = "Trove-Items-Template.csv"
+    static let wishlistTemplate = "Trove-Wishlist-Template.csv"
 }
 
 /// The live implementation: stages files under one dedicated temp directory,
