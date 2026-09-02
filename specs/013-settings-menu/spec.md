@@ -1,12 +1,14 @@
 # 013 — Settings Menu
 
-Status: **Draft** — pending the person's review (drafted 2026-09-01).
+Status: **Approved** (2026-09-01, same day as drafting, with no
+amendments — the seven drafting proposals P1–P7 in the Decisions record
+became decisions on approval, as that section says they would.)
 Authored in-session at the person's direction — the second use of the
 per-spec venue clause `012` added to the constitution. Every product
 decision below was made by the person in that conversation and is
 listed in the Decisions record; a handful of smaller calls were
 proposed at drafting time and are marked as such there, so the review
-can accept or overturn each one explicitly rather than by omission.
+could accept or overturn each one explicitly rather than by omission.
 
 Depends on: `011-data-export` (the CSV and PDF writers, the share-sheet
 delivery, the staging rules), `012-data-import` (the blank templates,
