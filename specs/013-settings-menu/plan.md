@@ -3,6 +3,9 @@
 Status: **Approved** (2026-09-01, same day as drafting; drafted
 in-session per the authorship split. One copy correction at review —
 the singular Delete All title — recorded under Copy.)
+**Amendment A addendum: Draft** (2026-09-02) — the final section,
+"Amendment A — the Dashboard "…" and bespoke in-page menus"; awaiting
+the person's review.
 
 Grounded in the shipped 011 export module, 012's import surface, and
 the view/VM code as it is on this branch — file references below are
@@ -481,6 +484,11 @@ version literal (criterion 17's "never typed").
 
 ## Entry point and the Settings sheet
 
+*Superseded in part by Amendment A (final section, 2026-09-02): the
+"…" is no longer a system `Menu` — its rows moved to
+`OverflowDropdown` on the Sort By surface, and the root Dashboard has
+its own "…". The rows, their order and their gating are as below.*
+
 - **`OverflowBadge`**: `getTemplate` → `openSettings`. Menu: Export as
   CSV… / Export as PDF… (each `.disabled(!canExport)`) / `Divider()` /
   Import from CSV… / `Divider()` / **Settings** — no ellipsis (it opens
@@ -602,7 +610,9 @@ every claim above gets the test that would catch it false.
   badge fed `openSettings`, no template intent, exactly one badge per
   list; `OverflowBadge.swift` literals — "Settings" present, "Get
   Blank Template…" absent, `Divider()` count 2, `.disabled(!canExport)`
-  count 2, Import's literal precedes Settings'; both lists attach
+  count 2, Import's literal precedes Settings' *(the two counts are
+  superseded by Amendment A's test plan — `startsGroup: true` and
+  `isEnabled: canExport` on `OverflowDropdown.swift`)*; both lists attach
   `.sheet(isPresented: $isShowingSettings, onDismiss: viewModel.load)`
   wrapping `SettingsView(` with all four init arguments;
   `SettingsView.swift`: `ShareSheet(urls:`, exactly one `.alert(`,
@@ -675,5 +685,411 @@ watching for a sheet.
 ## Not in this plan
 
 tasks.md (drafted after plan approval); any implementation; theme
-selection, default currency, account-status queries, an iCloud toggle,
-a Dashboard entry point (spec non-goals).
+selection, default currency, account-status queries, an iCloud toggle
+(spec non-goals). A Dashboard entry point was a non-goal until
+Amendment A — see the final section.
+
+## Amendment A — the Dashboard "…" and bespoke in-page menus
+
+Status: **Draft** (2026-09-02) — drafted in Plan Mode against the
+approved amendment (spec Decisions 15–19, P8–P13, criteria 20–27);
+awaiting the person's review before Phase 6 tasks are drafted. Two
+explorations, an independent design pass on the host mechanism, and
+the `skeptical-reviewer` ran on this section before it was written.
+
+### Skeptical-review record
+
+Seven blockers and twelve second-looks, all acted on. **Sustained**:
+the anchor-preference host with a custom `Layout`; the environment
+dismiss action; `startsGroup` as the group break; the render oracle
+as an instrument; the criterion-26 fact. **Reshaped**: focus-on-open
+targets the first row, not the container (S6); `DismissDropdownAction`
+is a plain struct under the project's `MainActor` default (S7); the
+ORDER BY dropdown composes inline and `SortDropdown` stays sort-only
+with no dead argument (S8); the placement math is a pure function with
+a table test (S1); the tab-bar inset is probed at T020, not eyeballed
+at T025 (S2); the legacy render oracle is deleted after T019 (S3),
+asserts equal dimensions first (S4), and is scoped to drawing, not
+position (S11); accessibility identifiers replace `.firstMatch` (S5);
+the host is asserted after the add-button overlay rather than "last"
+(S10); the 011 note says homogenization, not a tear (S9). **Blockers
+fixed**: the catcher's two-tap consequence for switching was escalated
+and decided (spec Decision 19) and the UI test inverted (B1);
+`MenuPolicyTests`' pattern would have matched `DetailOverflowMenu(` —
+word-bounded and widened to `.pickerStyle(.menu)`/`.contextMenu` (B2);
+the dismiss action's environment default was a silent no-op with no
+named injection point — now loud, injected by the host, scanned (B3);
+`DropdownRow` "verbatim" would draw a doubled hairline at the top of a
+headerless surface — a first-row rule (B4); "exactly one existing test
+goes red" was wrong (two do) and "tap Sort by Custom" named a label
+the fresh install never shows (the default sort is Date) (B5); the new
+drawing — group break, disabled row — had only argument scans, so the
+render instrument now covers `OverflowDropdown` too (B6); the
+criterion-26 correction named a human gate it never posed — posed and
+decided (spec Decision 18) (B7).
+
+### Grounding
+
+- The lists' sort overlay is one duplicated block differing by a
+  single token (`ItemListView.swift:266–292` /
+  `WishlistView.swift:217–243`), anchored by `.padding(.top, 60)`,
+  which decomposes as `sectionGap 24 + badge 30 + gap 6` — exact for
+  the overflow badge's fixed 18×14 + 8/8 frame, a fraction off for the
+  text-driven sort badge — and works only because the lists' headers
+  are pinned outside the `List`.
+- **The Dashboard's header scrolls** (`DashboardView.swift:43–66`) and
+  `orderControl` sits deep in the content at an arbitrary offset, on
+  the root (nav bar hidden) and the drill-down (nav bar shown) alike.
+  The fixed offset can't be reused; the dropdown must position itself
+  against the badge that opened it. None of the four badges is inside
+  a `List`.
+- `SortDropdown` hardcodes "SORT BY" (`SortPicker.swift:69`) and has
+  zero test coverage; `DashboardView.orderControl` likewise — nothing
+  pins its strings, its checkmark, or its options.
+- **Two existing tests go red by construction**, both rewritten below:
+  `ExportWiringTests.theMenuCarriesFiveItemsInThreeGroups` (the
+  `Divider()` count) and
+  `theBadgeIsFedByTheViewModelFiresEveryIntentAndOpensSettings` (the
+  four intents leave the `OverflowBadge(` argument list).
+- Both UI tests locate menu items as `app.buttons["<title>"]` and
+  assert `exists` before `isEnabled == false` on the disabled export
+  rows. `SettingsActionRow` — a `.plain` `Button` with `.disabled` —
+  already satisfies exactly that shape (`TroveUITests.swift:287–290`).
+- `ImportWiringTests` pins the identifiers `overflowControl` and
+  `sortControl` and the literal `if viewModel.totalCount > 0`; all
+  three are kept.
+- 011's plan (`plan.md:320–328`) names the custom dropdown as the
+  fallback **conditionally** — "if the badge's border ever tears". It
+  didn't; this amendment's reason is homogenization, and the note
+  added there says so.
+- Precedents to reuse: the custom-`Layout` shape (`FlowLayout.swift`);
+  `renderBitmap` (`TestSupport.swift:352–360`, `ImageRenderer` under
+  the dark theme, used by `DesireGaugeTests` and `RowThumbnailTests`);
+  the Oklab perceptual-distance helper (`TestSupport.swift:300–338`);
+  a UI test that drives the quick-add form
+  (`testAddingAnItemThroughQuickAddPutsItInTheList`). The Items list's
+  default sort is `.purchaseDate`, badge label "Date".
+
+### Components — `Trove/Views/Shared/`
+
+- **`Dropdown.swift` (new)** — the surface and its rows, extracted
+  from `SortDropdown` so the drawing lives once.
+  - `DropdownSurface<Content>(title: String? = nil)`: 232 wide,
+    `PlateSurface`, `buttonRadius` clip, `divider` hairline border,
+    `.accessibilityElement(children: .contain)`,
+    `.accessibilityAction(.escape)`; the mono-10 / tracking-1.6 /
+    `textQuiet` header row iff `title != nil` — `SortDropdown`'s exact
+    header. Uses `Group(subviews:)` to attach `.accessibilityFocused`
+    to its **first** subview and sets it one run-loop turn after
+    appear, so VoiceOver focus lands on the first row, never on the
+    container.
+  - `DropdownRow(title:, isSelected = false, isEnabled = true,
+    startsGroup = false, hasTopHairline = true, tag: String? = nil,
+    action)`: `SortDropdown.row(for:)`'s body — body font,
+    `textBody`/`accentBrass`, `accentBrassTint` fill, tag and
+    checkmark when selected, `isButton`/`isSelected` traits — with
+    four additions: `.disabled(!isEnabled)` and `textDisabled` text
+    (P11: inert, "dimmed" to VoiceOver, `isEnabled == false` to
+    XCUITest); the top hairline in `divider` instead of
+    `surfaceInset` when `startsGroup` (P10 — one hairline, spec-exact;
+    a standalone break view would stack a second under the next row's
+    own); **no top hairline on the first row of a headerless surface**
+    (`hasTopHairline: false` — otherwise its `surfaceInset` line sits
+    flush under the surface's `divider` border, a doubled line nobody
+    designed; the sort dropdown keeps its header seam); and it reads
+    `@Environment(\.dismissDropdown)` and **calls it before
+    `action()`**, so criterion 23 holds by construction for every row
+    on every screen.
+  - `CheckmarkGlyph` moves here from `SortPicker.swift`.
+- **`SortPicker.swift`** — `SortDropdown` re-composes as
+  `DropdownSurface(title: "SORT BY") { ForEach(options) {
+  DropdownRow(title:, isSelected:, tag: isManualOrder(o) ? "REORDER"
+  : nil) { onSelect(o) } } }` — sort-only, signature unchanged. Same
+  pixels (guarded below). `SortBadge` unchanged.
+- **`OverflowDropdown.swift` (new)** — the lists' five rows, no title
+  (P9): `OverflowDropdown(canExport:, exportCSV:, exportPDF:,
+  importCSV:, openSettings:)` → Export as CSV… (`isEnabled: canExport`,
+  `hasTopHairline: false`) / Export as PDF… (`isEnabled: canExport`) /
+  Import from CSV… (`startsGroup: true`) / Settings (`startsGroup:
+  true`). Five closures as today, so the argument scan carries over.
+  The Dashboard's one-row menu and its ORDER BY dropdown are composed
+  inline from `DropdownSurface` + `DropdownRow`.
+- **`OverflowBadge.swift`** — the pill alone: `OverflowBadge(isBusy:,
+  action:)`; glyph, spinner and border exactly as today, the `Menu`
+  gone; label "More actions"/"Working" plus
+  `.accessibilityHint("Opens more actions")`. Doc comment rewritten
+  (today's argues *for* the system Menu); `DetailOverflowMenu`'s doc
+  comment gets the page/bars rule.
+- **`ThemeMetrics.dropdownGap = 6`** — what the `60` resolves to, with
+  the derivation in its comment; documented in `tokens.md`.
+
+### The host — `DropdownHost.swift` (new)
+
+```swift
+struct DropdownAnchorKey: PreferenceKey        // [AnyHashable: Anchor<CGRect>], reduce = merge
+struct DismissDropdownAction { let run: () -> Void; func callAsFunction() { run() } }
+extension EnvironmentValues {
+    @Entry var dismissDropdown = DismissDropdownAction { assertionFailure("DropdownRow used outside a dropdownHost") }
+}
+extension View {
+    func dropdownAnchor<ID: Hashable>(_ id: ID) -> some View
+    func dropdownHost<ID: Hashable, Menu: View>(
+        open: Binding<ID?>, dismissLabel: @escaping (ID) -> String,
+        @ViewBuilder content: @escaping (ID) -> Menu) -> some View
+}
+```
+
+- `.overlayPreferenceValue(DropdownAnchorKey.self, alignment:
+  .topLeading)`: when `open` is non-nil and its anchor is known, a
+  `GeometryReader` (`.ignoresSafeArea()`) resolves `proxy[anchor]` and
+  lays a `ZStack` — the catcher (today's exact `Color.clear` /
+  `.contentShape(Rectangle())` / `.onTapGesture { open = nil }`,
+  labelled by `dismissLabel(id)`, `.isButton`, an explicit
+  `.accessibilityAction` so activation doesn't synthesize a centre tap,
+  `.accessibilitySortPriority(-1)`) under a `DropdownPlacement` layout
+  holding `content(id)` **with `.environment(\.dismissDropdown,
+  DismissDropdownAction { open = nil })` on it** — the one injection
+  point, scanned. `.transaction { $0.animation = nil }`: no animation,
+  as today. Nothing at rest when `open == nil`.
+- **`DropdownPlacementLayout: Layout`** measures the dropdown
+  synchronously (`subviews.first.sizeThatFits(.unspecified)` — the
+  `FlowLayout` shape; no `@State`, no one-frame jump, no layout cycle)
+  and places it by a **pure static function**
+  `DropdownPlacement.origin(badge:container:insets:size:gutter:gap:)`:
+  trailing edge at the screen's trailing gutter (the spec's rule for
+  every in-page dropdown; the anchor supplies only the vertical);
+  never past the leading gutter; top = `badge.maxY + gap`, **flipped
+  above** the badge when the bottom would fall below
+  `container.maxY - insets.bottom`, pinned to the top safe edge if
+  neither fits. Considered and not taken: `.alignmentGuide` (gets the
+  height synchronously too, but the math can't be extracted and
+  tested).
+- **The tab-bar inset is probed, not eyeballed**: T020 prints
+  `proxy.safeAreaInsets.bottom` as the ignoring reader resolves it and
+  the computed origin, and records the numbers.
+  `ItemListView.swift:401–403` already records that the tab bar sits
+  *over* the last rows, so whether iOS 26's floating bar contributes
+  to the inset is an open fact — settled by a probe on the mechanism
+  at the task that depends on it, the T056 lesson.
+- **Switching** — the catcher covers the badges, so while a dropdown
+  is open a tap on the other badge closes the open one and does not
+  open the other: two taps, as Sort By behaves today (spec Decision
+  19). The one-tap alternative — an even-odd cut-out over the badge
+  anchors — was declined: a hole over a badge inside the Dashboard's
+  `ScrollView` lets a drag scroll the content under an open dropdown,
+  which then needs a close-on-scroll as well.
+- **Accessibility**: the `ZStack` is `.accessibilityElement(children:
+  .contain)` + `.accessibilityAddTraits(.isModal)` (VoiceOver stops
+  reaching what's behind; the catcher is inside the container and
+  stays reachable and labelled; the UIKit tab bar is outside the
+  hosting view and may remain reachable — noted, verified by hand) +
+  `.accessibilityAction(.escape) { close() }`. Focus-on-open is the
+  surface's own doing, on the first row. Badge hints: "Opens sort
+  options" / "Opens more actions" / "Opens order options". Badges also
+  carry **accessibility identifiers** (`moreActions.items`,
+  `moreActions.wishlist`, `moreActions.dashboard`,
+  `sortOptions.items`, `sortOptions.wishlist`), VoiceOver labels
+  unchanged — the UI tests query by identifier, so two "More actions"
+  badges app-wide can never multi-match or, worse, silently match the
+  wrong tab under `.firstMatch`.
+- Not built: an `onPreferenceChange` auto-close when an anchor
+  vanishes while its dropdown is open — the one place the host would
+  write state from a preference, guarding an edge the catcher makes
+  nearly unreachable.
+- Rejected: keeping the fixed-offset overlay on the lists plus a
+  second mechanism for the Dashboard (two state machines for one
+  behavior); an `.overlay` on the badge itself (drawn beneath the
+  UIKit-backed `List`, clipped by `ScrollView`, and still needing a
+  screen-level catcher — the T035 finding); `.popover` with compact
+  adaptation (a system container, arrow and presentation animation,
+  with UIKit-only knobs to change them — not bespoke); a named
+  coordinate space with geometry written into `@State` (per-scroll-
+  frame writes on the Dashboard, the multiple-updates-per-frame
+  shape).
+
+### Screens
+
+- **Both lists**: `isSortMenuOpen` → `@State private var
+  openDropdown: HeaderDropdown?` with `private enum HeaderDropdown:
+  Hashable { case sort, overflow; var dismissLabel }` ("Dismiss sort
+  options" as today / "Dismiss more actions") — one optional per
+  screen is what makes "one open at a time" true by type.
+  `sortControl` → `SortBadge { openDropdown = .sort
+  }.dropdownAnchor(HeaderDropdown.sort)` plus hint and identifier;
+  `overflowControl` → `OverflowBadge(isBusy:) { openDropdown =
+  .overflow }.dropdownAnchor(HeaderDropdown.overflow)` plus
+  identifier. **Identifier names and the `if viewModel.totalCount >
+  0` gate unchanged.** The host replaces the sort overlay block,
+  **after the `AddButton` overlay** so it draws above the add button
+  (presentations don't participate in z-order, so "after the sheets"
+  buys nothing and isn't asserted). Content: `.sort` →
+  `SortDropdown(…) { viewModel.sortOrder = $0; viewModel.load() }`
+  (the row dismissed already); `.overflow` →
+  `OverflowDropdown(canExport: viewModel.canExport, exportCSV: { Task
+  { await viewModel.exportCSV() } }, exportPDF: …, importCSV: {
+  isPickingImportFile = true }, openSettings: { isShowingSettings =
+  true })`.
+- **Dashboard**: `header` becomes `HStack(alignment: .top) {
+  VStack(…); Spacer(); if isRoot { overflowControl } }` — both
+  branches of `body` compose `header`, so the empty state gets the
+  badge for free (criterion 20). `overflowControl` =
+  `OverflowBadge(isBusy: false) { openDropdown = .overflow }` plus
+  anchor and identifier; `orderControl` = a `.plain` `Button` around
+  today's mono label with `.contentShape(Rectangle())`,
+  `.dropdownAnchor(DashboardDropdown.order)`, the existing "Order
+  categories …" label plus the hint. New: `@State openDropdown:
+  DashboardDropdown?`, `@State isShowingSettings`,
+  `@Environment(\.storageMode)` / `\.storageFallbackReason`, and the
+  lists' byte-identical Settings sheet line — `.sheet(isPresented:
+  $isShowingSettings, onDismiss: viewModel.load) { NavigationStack {
+  SettingsView(modelContext:, syncMonitor:, storageMode:,
+  storageFallbackReason:) } }` (`syncMonitor` is already stored).
+  Content: `.overflow` → `DropdownSurface { DropdownRow(title:
+  "Settings", hasTopHairline: false) { isShowingSettings = true } }`;
+  `.order` → `DropdownSurface(title: "ORDER BY") {
+  ForEach(BreakdownOrder.allCases) { DropdownRow(title: $0.label,
+  isSelected: $0 == viewModel.breakdownOrder) {
+  viewModel.breakdownOrder = $0; viewModel.load() } } }` (P12: the
+  same surface and rows Sort By is made of). The drill-down shows no
+  "…" but hosts the order dropdown under its visible nav bar.
+  `.refreshable`, `.onChange(of: viewModel.completedImports)`, and the
+  `DashboardView(` handoffs — all scanned by existing tests — are
+  untouched.
+- **Detail screens**: untouched.
+
+### Docs
+
+- `design/tokens.md`: the "Export badge and menu (`011`)" table — the
+  Menu row rewritten (bespoke, the Sort picker's surface — 013
+  Amendment A), the stale "hidden on an empty collection" sentence
+  corrected (012 overturned it), rows added for the group break
+  (`divider` hairline), the disabled row (`textDisabled`), the hint,
+  and `dropdownGap`; the "Sort picker (`010`)" section reframed as the
+  shared surface (header row SORT BY / ORDER BY, the first-row rule);
+  a line for the Dashboard's badge and order dropdown.
+- `design/brief.md`: a short new section — menus inside the page are
+  Trove's own; chrome in the bars (tab bar, nav-bar buttons and menus,
+  sheet buttons) is the system's. The brief has no such paragraph
+  today.
+- `specs/011-data-export/plan.md:320–328`: a note that Amendment A
+  takes the recorded fallback for homogenization, not because the
+  border tore; `spec.md` lines 152 and 159 cite two test names that no
+  longer exist (`theBadgeIsFedByTheViewModelAndFiresBothIntents`,
+  `bothMenuActionsGateOnCanExport`) — corrected.
+  `specs/012-data-import/spec.md:362–364`'s citation of
+  `theMenuCarriesFiveItemsInThreeGroups` and its "gating count still
+  pinned at exactly 2" — amended to the new proof of grouping.
+- This document: the Entry-point section and the wiring bullet of the
+  test plan carry "superseded in part by Amendment A" notes.
+  `tasks.md`: status back to In progress; Phase 6.
+- ROADMAP and README stay on the post-merge list; ROADMAP 261–265 is
+  now doubly stale ("an open design question", "four actions", "a
+  Dashboard entry point") and is absorbed there.
+
+### Test plan (every guard mutation-verified; red-runs in Done notes)
+
+- **Render oracle for the refactor** (`SortDropdownRenderTests`,
+  T018): today's `SortDropdown` copied verbatim into the test target
+  as `LegacySortDropdown` (private glyph and header included), both
+  rendered through `renderBitmap` for two states (Custom with REORDER;
+  a non-manual selection), **dimensions asserted equal first**, then
+  exact pixel equality — no tolerance: old and new render in the same
+  process and run, so renderer, OS and font drift cancel, and a
+  tolerance would erase the one-point shift the test exists to catch.
+  Rendered twice for determinism. Mutation: change one padding in the
+  production view → red. **Lifetime**: deleted at T019's close-out
+  with its red-run recorded — after T019 the drawing lives once, and a
+  frozen copy would be a second encoding of it. **Scope**: the
+  surface's drawing, not its position; position is the device pass's.
+- **Render guard for the new drawing** (`OverflowDropdownRenderTests`,
+  T021): `OverflowDropdown` rendered on both `canExport` states;
+  sampled pixels assert (a) the two group-break hairlines are
+  perceptually farther from `surface` than a row separator is — the
+  Oklab floor, the desire-dial instrument (the arithmetic puts
+  `divider` at roughly three times `surfaceInset`'s contrast on
+  `surface`, and this makes it a test rather than a sentence); (b) the
+  first row draws no top hairline; (c) a disabled row's title pixels
+  match `textDisabled`, not `textBody`. Mutations: wire `startsGroup`
+  to nothing → red; drop `hasTopHairline` → red; drop the disabled
+  color → red.
+- **Placement math** (`DropdownPlacementTests`, T020):
+  `DropdownPlacement.origin(...)` table-tested — below with room;
+  flipped above when below would cross the bottom inset; pinned to the
+  top inset when neither fits; trailing edge at `container.maxX -
+  insets.trailing - gutter`; never past the leading gutter. Mutation:
+  drop the flip → red.
+- **`MenuPolicyTests`** (T023, criterion 27): a word-boundary pattern
+  `(?<![A-Za-z0-9_])Menu\s*[({]` — so `DetailOverflowMenu(` does not
+  match — plus `.pickerStyle(.menu)` and `.contextMenu`, over every
+  file under `Trove/Views`, allowlist exactly `DetailOverflowMenu.swift`;
+  more than ten files scanned. Mutation: add a `Menu {` to a view →
+  red; and confirm `DetailOverflowMenu(` alone stays green.
+- **`DropdownWiringTests`** (new): per list — exactly one `@State
+  private var openDropdown:`, no `isSortMenuOpen`, `.dropdownHost(open:
+  $openDropdown` once and after `.overlay(alignment: .bottomTrailing)`,
+  `.dropdownAnchor(HeaderDropdown.sort)` and `(HeaderDropdown.overflow)`
+  once each; Dashboard — `.dropdownAnchor(DashboardDropdown.overflow)`
+  inside the `if isRoot` brace span and nowhere else (mutation: move it
+  out → red), `DropdownSurface(title: "ORDER BY")`, the inline Settings
+  row; `OverflowDropdown.swift` — the five literals in order,
+  `startsGroup: true` ×2 on Import and Settings, `isEnabled: canExport`
+  ×2, "Get Blank Template…" absent; `Dropdown.swift` — `DropdownRow`'s
+  button body calls `dismiss()` before `action()` (body order),
+  `.disabled(!isEnabled)`, `Group(subviews:` and `.accessibilityFocused(`
+  in `DropdownSurface`; `DropdownHost.swift` —
+  `.environment(\.dismissDropdown,` injected on the content,
+  `.accessibilityAction(.escape)`, `.isModal`, the catcher's `.isButton`;
+  `SortPicker.swift` — `SortDropdown`'s body composes
+  `DropdownSurface(title: "SORT BY"` and `DropdownRow(`. Each scan reads
+  the body that composes, never a declaration.
+- **Rewritten**: `ExportWiringTests.theBadgeIsFedByTheViewModel…` →
+  `OverflowBadge(` ×1 with `isBusy: viewModel.isBusy`,
+  `OverflowDropdown(` ×1 carrying `canExport: viewModel.canExport`,
+  `viewModel.exportCSV()`, `viewModel.exportPDF()`, `isPickingImportFile
+  = true`, `isShowingSettings = true`; `theMenuCarriesFiveItemsInThreeGroups`
+  → scans `OverflowDropdown.swift`.
+  `SettingsWiringTests.theListAttachesTheSettingsSheetAndReloadsOnDismiss`
+  → arguments gain `DashboardView.swift`.
+- **UI**: the two existing tests pass with the badge query moved to
+  the identifier (UI suite at T021, twice). New
+  `testDashboardOffersSettingsAndNothingElse`: Overview tab →
+  `moreActions.dashboard` → "Settings" enabled, "Import from CSV…"
+  absent → tap → `navigationBars["Settings"]` → Done → badge hittable;
+  mutation: gate the badge behind `!viewModel.isEmpty` → red on the
+  empty store. New `testAnOpenMenuClosesOnAnyOutsideTapIncludingTheOtherBadge`
+  (Decision 19): add one item through the quick-add form so the sort
+  badge shows; tap `sortOptions.items` → the "SORT BY" text exists;
+  tap `moreActions.items` → "SORT BY" is gone **and "Import from CSV…"
+  does not exist**; tap `moreActions.items` again → it exists; tap
+  "Dismiss more actions" → gone. Mutation: give the overflow its own
+  boolean so both can be open → the first pair of assertions goes red.
+- Accessibility *behavior* — focus actually moving, escape, `.isModal`
+  containment — is verified by hand at T025, and criterion 26's
+  verification record says its focus half rests on that, not on the
+  scan.
+
+### Tasks — the shape (Phase 6, drafted after this addendum is approved)
+
+T018 render oracle → T019 `Dropdown.swift` + `SortDropdown`
+re-composed (oracle green, then deleted) + `dropdownGap` → T020
+`DropdownHost` + placement tests + Sort By migrated on both lists +
+the inset probe → T021 `OverflowDropdown` / badge rewrite + the lists'
+"…" + render guard + identifiers (UI suite twice) → T022 Dashboard
+badge + Settings sheet + UI tests → T023 Dashboard order control +
+`MenuPolicyTests` → T024 docs → T025 device pass, criteria 20–27
+record, close-out.
+
+### Verification
+
+Per task: `xcodebuild build` and `xcodebuild test` with
+`-only-testing:TroveTests` (count checked); the UI target at T021,
+T022 and T025, twice back to back. Device pass: both lists' dropdowns
+at both badges (placement against today's, group breaks, disabled rows
+via an empty search result), the Dashboard badge at root and its
+absence on a drill-down, the order dropdown at scroll offsets and
+under a drill-down's nav bar (flip-above near the tab bar, with the
+T020 probe's numbers in hand), two-tap switching, Settings from the
+Dashboard; VoiceOver on the badges, focus-on-open, escape, dimmed
+rows, `.isModal` containment — by hand, recorded as such. Delete All
+reflection on the Dashboard is verified on the `-uiTesting` store,
+never the dev store.

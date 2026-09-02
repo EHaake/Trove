@@ -9,8 +9,8 @@ notes and Decisions 13–14.)
 Amended 2026-09-02 — **Amendment A (Approved the same day)**: the
 Dashboard entry point and bespoke in-page menus. Raised by the person after all
 seventeen tasks were complete and before the merge, and decided in this
-session; recorded as Decisions 15–17, drafting proposals P8–P13, and
-criteria 20–27. Everything outside the sections marked "Amendment A"
+session; recorded as Decisions 15–19 (18–19 added during the
+amendment's planning), drafting proposals P8–P13, and criteria 20–27. Everything outside the sections marked "Amendment A"
 is as approved on 2026-09-01. The person approved the amendment on
 2026-09-02, and P8–P13 became decisions with it; its plan addendum and
 tasks follow the usual gates.
@@ -212,17 +212,22 @@ rather than waiting for it.
 
 ### Behavior shared by every in-page dropdown
 
-- One open at a time per screen. Opening one closes any other; tapping
-  the open badge closes it; tapping anywhere outside closes it;
-  choosing a row closes it. The dropdown floats over the screen's
-  content beneath the header, at the trailing gutter, as Sort By's
-  does today.
+- One open at a time per screen. While a dropdown is open, a tap
+  anywhere outside it — the open badge, the *other* badge, the content
+  beneath — closes it and nothing else; the next tap opens whichever
+  badge it lands on. Two taps to switch, exactly as Sort By behaves
+  today (Decision 19). Choosing a row closes it. The dropdown floats
+  over the screen's content beneath the header, at the trailing
+  gutter, as Sort By's does today.
 - Opening and closing match Sort By's exactly, including whether and
   how they animate — one behavior, not two.
-- VoiceOver: each badge announces as a pop-up button; opening moves
-  focus into the dropdown; the escape gesture closes it; the
-  tap-outside layer is labelled for what it does ("Dismiss more
-  actions", "Dismiss sort options", "Dismiss order options").
+- VoiceOver: each badge is a button whose hint says what it opens
+  ("Opens sort options", "Opens more actions", "Opens order options")
+  — SwiftUI exposes no pop-up-button trait, so that announcement is
+  the system menu's alone (Decision 18); opening moves focus into the
+  dropdown; the escape gesture closes it; the tap-outside layer is
+  labelled for what it does ("Dismiss more actions", "Dismiss sort
+  options", "Dismiss order options").
 
 ## The Settings screen
 
@@ -535,6 +540,23 @@ decisions since the amendment's approval the same day:
 - **P13. A one-row menu on the Dashboard rather than a direct
   button**, for the reasons in the entry-point section.
 
+Added 2026-09-02, during the amendment's planning (escalated as
+spec-level by the skeptical review, decided by the person):
+
+18. **The badges announce as buttons with a hint**, not as pop-up
+    buttons: SwiftUI has no public trait for the pop-up announcement
+    (the system `Menu` gets it from a private one), and building a
+    representation around an empty `Menu` was declined as unverified
+    and as a system menu back inside a page. Criterion 26 reads
+    accordingly.
+19. **Switching menus takes two taps**, as Sort By behaves today: the
+    tap-outside layer covers the badges, so a tap on the other badge
+    only closes the open dropdown; the next tap opens. One-tap
+    switching was declined — it needs a cut-out over each badge, and a
+    hole over a badge inside the Dashboard's scroll view lets a drag
+    scroll the content under an open dropdown, which then needs a
+    close-on-scroll as well.
+
 ## Acceptance criteria
 
 1. [x] Both list screens' "…" menu reads, in order: Export as CSV…,
@@ -622,17 +644,19 @@ Amendment A (2026-09-02) — unchecked until verified:
 23. [ ] Choosing a row closes the dropdown before its action runs;
     during an export the badge shows the spinner and disables exactly
     as before (criterion 14).
-24. [ ] One dropdown at a time: opening "…" while Sort By is open
-    closes Sort By, and the reverse; tapping the open badge, tapping
-    outside, or choosing a row closes the open one. The Sort By
-    dropdown is unchanged to the eye.
+24. [ ] One dropdown at a time: while Sort By is open, a tap on "…"
+    closes Sort By and opens nothing, and the reverse — the next tap
+    opens (Decision 19); tapping the open badge, tapping outside, or
+    choosing a row closes the open one. The Sort By dropdown is
+    unchanged to the eye.
 25. [ ] The Dashboard's category-order control opens the same surface
     with an ORDER BY header and the rows By value and By count, the
     current one tinted and checked; choosing the other reorders the
     breakdown and updates the label.
-26. [ ] VoiceOver: each badge announces as a pop-up button, opening
-    moves focus into the dropdown, the escape gesture closes it, the
-    tap-outside layer is labelled, and disabled rows read as dimmed.
+26. [ ] VoiceOver: each badge announces as a button whose hint says
+    what it opens (Decision 18), opening moves focus into the
+    dropdown, the escape gesture closes it, the tap-outside layer is
+    labelled, and disabled rows read as dimmed.
 27. [ ] The detail screens' "…" is unchanged, and it is the only
     system menu left in the app: no screen presents a system menu
     inside its content.
