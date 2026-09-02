@@ -144,6 +144,9 @@ followed by one entry per exported item.
    collection size, because its menu carries Import and Get Blank
    Template and a fresh install must reach them. The export actions'
    disabled state and the sort badge's hide-when-empty are unchanged.)*
+   *(And since `013-settings-menu`, 2026-09-01: the template lives in
+   Settings › Templates, and the badge stays always visible for Import
+   and Settings.)*
    *Verified: both headers share one visibility gate
    (`ItemListView.header` / `WishlistView.header`);
    `ExportWiringTests.theBadgeIsFedByTheViewModelAndFiresBothIntents`;

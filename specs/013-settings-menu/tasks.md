@@ -520,7 +520,16 @@ anywhere in this spec.
 
 ## Phase 5 — Docs, device pass, close-out
 
-- [ ] **T015 — Docs and supersession notes.**
+- [x] **T015 — Docs and supersession notes.**
+  *Done (2026-09-01)*: `docs/csv-reference.md` (the opening paragraph
+  and the recommended loop now say **⋯ → Settings → Templates**);
+  `README.md`'s Import bullet ("grab a blank template from Settings");
+  `specs/012-data-import/spec.md` superseded-in-part notes on
+  criterion 1, the entry-point bullet, the "Template and reference
+  docs" paragraph, and Decision 8; `specs/011-data-export/spec.md`'s
+  criterion-1 note gained its 013 clause. T001's 011 `plan.md`
+  delivery-section restatement confirmed present. `DocsSampleTests`
+  green throughout (the samples never named the template's home).
   Per plan §Docs and notes. `docs/csv-reference.md` lines 6–7 and
   132 (Settings → Templates); `README.md` line 39;
   `specs/012-data-import/spec.md`: superseded-in-part notes in the

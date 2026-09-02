@@ -3,9 +3,9 @@
 Trove exports and imports the same two CSV layouts — one for owned
 items, one for the wishlist. A file Trove exported imports back
 losslessly, and a file you build by hand imports as long as it uses
-the exact columns below. The easiest way to start one is **⋯ → Get
-Blank Template** on either list screen, which hands you a file with
-the right header row already in place.
+the exact columns below. The easiest way to start one is **⋯ →
+Settings → Templates** on either list screen, which hands you a file
+with the right header row already in place.
 
 Import never modifies or deletes anything you already have: every
 accepted row becomes a **new** entry, appended to the end of your
@@ -129,7 +129,7 @@ says so:
 
 ## The recommended loop
 
-Migrating a spreadsheet in: **⋯ → Get Blank Template**, open it in
+Migrating a spreadsheet in: **⋯ → Settings → Templates**, open it in
 your spreadsheet app, fill a row per item (only Name is required —
 everything else has a sensible default or can stay blank), save as
 CSV (UTF-8), then **⋯ → Import from CSV** and confirm. Nothing is

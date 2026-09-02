@@ -36,7 +36,7 @@ purchases.
   share sheet.
 - **Import** — CSV import of an externally-tracked collection on both
   lists, parsing the same canonical schema export writes: grab a blank
-  template from the "…" menu (or start from a real export), fill it in
+  template from Settings (or start from a real export), fill it in
   any spreadsheet app, and import — everything is validated up front,
   the confirmation itemizes exactly what will be skipped or defaulted
   before a single row is written, and nothing ever modifies existing
