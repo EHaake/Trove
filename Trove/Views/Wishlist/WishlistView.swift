@@ -28,6 +28,9 @@ struct WishlistView: View {
     /// Whether 012's file picker is up — see `ItemListView`'s twin.
     @State private var isPickingImportFile = false
 
+    /// Whether 013's Settings sheet is up — see `ItemListView`'s twin.
+    @State private var isShowingSettings = false
+
     /// The row whose Edit swipe action is open in the form sheet — a
     /// shortcut into the same flow the detail screen offers (T024).
     @State private var itemBeingEdited: WishlistItem?
@@ -46,8 +49,14 @@ struct WishlistView: View {
 
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.storageMode) private var storageMode
+    @Environment(\.storageFallbackReason) private var storageFallbackReason
+
+    /// Kept for the Settings sheet — see `ItemListView`'s twin.
+    private let syncMonitor: SyncMonitor
 
     init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
+        self.syncMonitor = syncMonitor
         _viewModel = State(
             initialValue: WishlistViewModel(modelContext: modelContext, syncMonitor: syncMonitor)
         )
@@ -108,6 +117,18 @@ struct WishlistView: View {
         .sheet(item: $itemBeingEdited, onDismiss: viewModel.load) { item in
             NavigationStack {
                 WishlistFormView(modelContext: modelContext, editing: item)
+            }
+        }
+        // 013's Settings sheet — ItemListView's twin, refetching on dismiss
+        // so a Delete All behind it shows here at once.
+        .sheet(isPresented: $isShowingSettings, onDismiss: viewModel.load) {
+            NavigationStack {
+                SettingsView(
+                    modelContext: modelContext,
+                    syncMonitor: syncMonitor,
+                    storageMode: storageMode,
+                    storageFallbackReason: storageFallbackReason
+                )
             }
         }
         // Values can change on the detail screen — an edit, the gauge, or a
@@ -255,7 +276,7 @@ struct WishlistView: View {
             exportCSV: { Task { await viewModel.exportCSV() } },
             exportPDF: { Task { await viewModel.exportPDF() } },
             importCSV: { isPickingImportFile = true },
-            getTemplate: { Task { await viewModel.exportBlankTemplate() } }
+            openSettings: { isShowingSettings = true }
         )
     }
 

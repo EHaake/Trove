@@ -938,21 +938,5 @@ struct WishlistViewModelCommitTests {
     }
 }
 
-/// T012's wishlist twin — see `ItemListViewModelTemplateTests`.
-struct WishlistViewModelTemplateTests {
-    @Test func theTemplateStagesHeaderOnlyBytesFromAnEmptyCollection() async throws {
-        let context = try makeInMemoryContext()
-        let spy = ExportServiceSpy()
-        let viewModel = WishlistViewModel(modelContext: context, exportService: spy)
-        viewModel.load()
-        try #require(viewModel.canExport == false)
-
-        await viewModel.exportBlankTemplate()
-
-        let table = try #require(spy.tables.first)
-        #expect(table.headers == ExportSchema.wishlistHeaders)
-        #expect(table.rows.isEmpty)
-        #expect(spy.filenames == ["Trove-Wishlist-Template.csv"])
-        #expect(viewModel.stagedExport?.filenames == [ExportFilename.wishlistTemplate])
-    }
-}
+// 012's `WishlistViewModelTemplateTests` moved to
+// `SettingsViewModelTemplateTests` with the intent (013/T010, T013).

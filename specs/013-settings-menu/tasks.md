@@ -441,8 +441,27 @@ anywhere in this spec.
   `.disabled(viewModel.isBusy)` on Done → red; swap two sections →
   red; drop one hint → red.
 
-- [ ] **T013 — The entry point: badge, sheets, and the template's
+- [x] **T013 — The entry point: badge, sheets, and the template's
   departure.**
+  *Done (2026-09-01)*: `OverflowBadge` carries `openSettings` in place
+  of `getTemplate` and the five-item, three-group menu; both lists
+  read the two storage environment values, keep `syncMonitor`, and
+  own the Settings sheet with `onDismiss: viewModel.load`;
+  `exportBlankTemplate` and its two suites left the list view models
+  (a comment marks where each went). `ExportWiringTests`' two badge
+  tests became `…FiresEveryIntentAndOpensSettings` and
+  `theMenuCarriesFiveItemsInThreeGroups` (Settings present, template
+  absent, two dividers, two gates, Import before Settings);
+  `SettingsWiringTests` pins both lists' sheet wiring and all four
+  init arguments. **The fresh-install UI test was updated here rather
+  than at T014** so this commit's full suite is green: it now asserts
+  Settings enabled and the template absent. Full suite: 767 tests /
+  112 suites (two suites moved into Settings) + 6 UI tests green.
+  Mutations, all reverted (batched, disjoint): the template literal
+  back in the menu → the menu test red; `onDismiss: viewModel.load`
+  dropped on the Items sheet → the sheet-wiring test red; the badge
+  re-nested inside the wishlist's `totalCount` gate → the existing
+  outside-the-gate scan red.
   Per plan §Entry point and the Settings sheet. `OverflowBadge`:
   `getTemplate` → `openSettings`; menu = the two exports (gated),
   `Divider()`, Import, `Divider()`, **Settings**; doc comment and

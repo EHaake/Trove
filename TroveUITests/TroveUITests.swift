@@ -226,15 +226,16 @@ final class TroveUITests: XCTestCase {
             "The category field dropped characters while being typed into"
         )
     }
-    /// 012 criterion 1's behavioral half: a fresh install — empty
-    /// collection, in-memory store — still reaches Import and the blank
-    /// template through the "…" badge, with the export actions disabled.
-    /// This is the guard the structural brace-span scan
+    /// 012 criterion 1's behavioral half, as 013 criterion 2 restated it: a
+    /// fresh install — empty collection, in-memory store — reaches Import
+    /// and Settings through the "…" badge, with the export actions
+    /// disabled and the template gone from the menu (it lives in Settings
+    /// now). This is the guard the structural brace-span scan
     /// (`ImportWiringTests`) can't provide: proof a person can actually
     /// get there. Re-nesting the overflow control inside the
     /// `totalCount > 0` gate must turn this red.
     @MainActor
-    func testEmptyCollectionOffersImportAndTemplateButNotExport() {
+    func testEmptyCollectionOffersImportAndSettingsButNotExport() {
         let app = launchApp()
         app.buttons["Items"].tap()
 
@@ -248,7 +249,8 @@ final class TroveUITests: XCTestCase {
         let importButton = app.buttons["Import from CSV…"]
         XCTAssertTrue(importButton.waitForExistence(timeout: 5), "the menu should open")
         XCTAssertTrue(importButton.isEnabled, "Import must be enabled on an empty collection")
-        XCTAssertTrue(app.buttons["Get Blank Template…"].isEnabled, "the template must be enabled")
+        XCTAssertTrue(app.buttons["Settings"].isEnabled, "Settings must be enabled on an empty collection")
+        XCTAssertFalse(app.buttons["Get Blank Template…"].exists, "the template left the menu for Settings")
         XCTAssertFalse(app.buttons["Export as CSV…"].isEnabled, "CSV export should disable when empty")
         XCTAssertFalse(app.buttons["Export as PDF…"].isEnabled, "PDF export should disable when empty")
     }

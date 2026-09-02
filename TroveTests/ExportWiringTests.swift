@@ -14,10 +14,12 @@ struct ExportWiringTests {
     ]
 
     /// Each list screen builds exactly one `OverflowBadge` (012's rename of
-    /// `ExportBadge`), fed by the view model's own state and firing all
-    /// four intents — 011's criterion-1/2 wiring plus 012's criterion 1.
+    /// `ExportBadge`), fed by the view model's own state, firing the three
+    /// list intents and opening Settings — 011's criterion-1/2 wiring,
+    /// 012's criterion 1, and 013's criterion 1, which took the template
+    /// intent out of this menu.
     @Test(arguments: lists)
-    func theBadgeIsFedByTheViewModelAndFiresAllFourIntents(path: String) throws {
+    func theBadgeIsFedByTheViewModelFiresEveryIntentAndOpensSettings(path: String) throws {
         let code = try SourceScan.production(path)
         let calls = SourceScan.argumentLists(of: "OverflowBadge", in: code)
         #expect(calls.count == 1, "\(path) builds \(calls.count) OverflowBadges, expected exactly 1")
@@ -27,9 +29,10 @@ struct ExportWiringTests {
             #expect(call.contains("viewModel.exportCSV()"), "\(path) badge doesn't fire exportCSV")
             #expect(call.contains("viewModel.exportPDF()"), "\(path) badge doesn't fire exportPDF")
             #expect(call.contains("isPickingImportFile = true"), "\(path) badge doesn't open the picker")
+            #expect(call.contains("isShowingSettings = true"), "\(path) badge doesn't open Settings")
             #expect(
-                call.contains("viewModel.exportBlankTemplate()"),
-                "\(path) badge doesn't fire the template intent"
+                !call.contains("exportBlankTemplate"),
+                "\(path) badge still fires the template intent 013 moved to Settings"
             )
         }
     }
@@ -45,23 +48,28 @@ struct ExportWiringTests {
         #expect(code.contains("viewModel.exportFailureMessage"), "\(path) doesn't wire the failure state")
     }
 
-    /// The menu's contract after 012: all four pinned strings and the
-    /// divider between the export and import groups; the two *export*
-    /// actions individually gated on `canExport` and — the count being
-    /// exactly 2 — the import actions provably ungated, since an empty
-    /// collection is exactly who they serve (012 criterion 1).
-    @Test func theMenuCarriesFourActionsWithOnlyExportsGated() throws {
+    /// The menu's contract after 013 (criterion 1): five items in three
+    /// groups — the two exports, Import, Settings — with the template gone
+    /// to Settings; the two *export* actions individually gated on
+    /// `canExport` and, the count being exactly 2, Import and Settings
+    /// provably ungated, since an empty collection is exactly who they
+    /// serve; and Settings last, in its own section.
+    @Test func theMenuCarriesFiveItemsInThreeGroups() throws {
         let code = try SourceScan.production("Trove/Views/Shared/OverflowBadge.swift")
         let literals = SourceScan.stringLiterals(in: code)
         #expect(literals.contains("Export as CSV…"))
         #expect(literals.contains("Export as PDF…"))
         #expect(literals.contains("Import from CSV…"))
-        #expect(literals.contains("Get Blank Template…"))
-        #expect(code.contains("Divider()"), "the export and import groups must stay visually separated")
+        #expect(literals.contains("Settings"))
+        #expect(!literals.contains("Get Blank Template…"), "the template left this menu for Settings")
+        #expect(code.ranges(of: "Divider()").count == 2, "three groups need two dividers")
         #expect(
             code.ranges(of: ".disabled(!canExport)").count == 2,
-            "exactly the two export actions gate on canExport — imports must stay ungated"
+            "exactly the two export actions gate on canExport — Import and Settings must stay ungated"
         )
+        let importIndex = try #require(literals.firstIndex(of: "Import from CSV…"))
+        let settingsIndex = try #require(literals.firstIndex(of: "Settings"))
+        #expect(importIndex < settingsIndex, "Settings belongs at the bottom, below Import")
     }
 
     /// The constitution's UIKit boundary, pinned as a walk: the activity

@@ -101,6 +101,37 @@ struct SettingsWiringTests {
         #expect(code.contains("SyncStatusCopy.status("))
     }
 
+    // MARK: - T013: the entry point
+
+    private nonisolated static let lists = [
+        "Trove/Views/Items/ItemListView.swift",
+        "Trove/Views/Wishlist/WishlistView.swift",
+    ]
+
+    /// Both lists own the Settings sheet the way they own the form sheets
+    /// — refetching on dismiss, so a Delete All behind it shows at once —
+    /// and construct the screen with everything it needs threaded in.
+    @Test(arguments: lists)
+    func theListAttachesTheSettingsSheetAndReloadsOnDismiss(path: String) throws {
+        let code = try SourceScan.production(path)
+        #expect(
+            code.contains(".sheet(isPresented: $isShowingSettings, onDismiss: viewModel.load)"),
+            "\(path) doesn't present Settings as a sheet that reloads on dismiss"
+        )
+        let calls = SourceScan.argumentLists(of: "SettingsView", in: code)
+        #expect(calls.count == 1, "\(path) builds \(calls.count) SettingsViews, expected exactly 1")
+        for call in calls {
+            for argument in [
+                "modelContext: modelContext",
+                "syncMonitor: syncMonitor",
+                "storageMode: storageMode",
+                "storageFallbackReason: storageFallbackReason",
+            ] {
+                #expect(call.contains(argument), "\(path) doesn't pass \(argument) to Settings")
+            }
+        }
+    }
+
     // MARK: - T005, T011
     /// T005: the store's recorded fallback reason reaches the environment.
     /// `TroveStoreTests` pins that the reason isn't thrown away; this pins

@@ -39,11 +39,23 @@ struct ItemListView: View {
     /// URL actually arrives.
     @State private var isPickingImportFile = false
 
+    /// Whether 013's Settings sheet is up — view state like the picker:
+    /// the sheet is navigation, and the view model behind it is its own.
+    @State private var isShowingSettings = false
+
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(AppRouter.self) private var router
+    @Environment(\.storageMode) private var storageMode
+    @Environment(\.storageFallbackReason) private var storageFallbackReason
+
+    /// Kept for the Settings sheet, which is constructor-injected the way
+    /// `ContentView` injects this screen — one delivery mechanism for the
+    /// monitor, never a sheet reading an observable it might not have.
+    private let syncMonitor: SyncMonitor
 
     init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
+        self.syncMonitor = syncMonitor
         _viewModel = State(
             initialValue: ItemListViewModel(modelContext: modelContext, syncMonitor: syncMonitor)
         )
@@ -126,6 +138,19 @@ struct ItemListView: View {
         .sheet(item: $itemBeingEdited, onDismiss: viewModel.load) { item in
             NavigationStack {
                 ItemFormView(modelContext: modelContext, editing: item)
+            }
+        }
+        // 013's Settings sheet. Owned here like the form sheets, for the
+        // same reason: a Delete All behind it has to show on this list the
+        // moment it comes back.
+        .sheet(isPresented: $isShowingSettings, onDismiss: viewModel.load) {
+            NavigationStack {
+                SettingsView(
+                    modelContext: modelContext,
+                    syncMonitor: syncMonitor,
+                    storageMode: storageMode,
+                    storageFallbackReason: storageFallbackReason
+                )
             }
         }
         // Values can change on the detail screen — an edit, or the dial — so
@@ -399,11 +424,12 @@ struct ItemListView: View {
 
             // Nothing to sort on an empty list, so the sort badge still
             // hides — but the "…" shows regardless since 012 (criterion 1,
-            // superseding 011's hide-when-empty rule): its menu now carries
-            // Import and Get Blank Template, and the fresh install with a
-            // spreadsheet in hand is exactly who they serve. Guarded from
-            // both directions — ImportWiringTests' brace-span scan and the
-            // empty-collection UI test.
+            // superseding 011's hide-when-empty rule): its menu carries
+            // Import and, since 013, Settings — where the blank template
+            // now lives — and the fresh install with a spreadsheet in hand
+            // is exactly who they serve. Guarded from both directions —
+            // ImportWiringTests' brace-span scan and the empty-collection
+            // UI test.
             HStack(spacing: 8) {
                 if viewModel.totalCount > 0 {
                     sortControl
@@ -413,10 +439,10 @@ struct ItemListView: View {
         }
     }
 
-    /// 011's export menu grown into 012's overflow. The async intents fire
-    /// into Tasks and `isBusy` drives the spinner; Import opens the file
-    /// picker rather than an intent — the picked URL is what starts the
-    /// view-model flow.
+    /// 011's export menu grown into 012's overflow, with 013's Settings at
+    /// the bottom. The async intents fire into Tasks and `isBusy` drives
+    /// the spinner; Import opens the file picker and Settings opens its
+    /// sheet rather than an intent — navigation is view state here.
     private var overflowControl: some View {
         OverflowBadge(
             isBusy: viewModel.isBusy,
@@ -424,7 +450,7 @@ struct ItemListView: View {
             exportCSV: { Task { await viewModel.exportCSV() } },
             exportPDF: { Task { await viewModel.exportPDF() } },
             importCSV: { isPickingImportFile = true },
-            getTemplate: { Task { await viewModel.exportBlankTemplate() } }
+            openSettings: { isShowingSettings = true }
         )
     }
 

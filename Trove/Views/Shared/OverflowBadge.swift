@@ -12,21 +12,23 @@ import SwiftUI
 /// ever tears the way T029c's did, the custom dropdown is the known
 /// fallback.
 ///
-/// Menu contents per 012 criterion 1: the two export actions, disabled
-/// exactly when the view has nothing to export; a divider; then Import
-/// from CSV… and Get Blank Template…, **always enabled** — an empty
-/// collection is precisely who those two serve, which is also why the
-/// badge itself now shows regardless of collection size (the headers own
-/// that half). The whole control disables behind a compact spinner while
-/// any export or import runs (`isBusy` — criterion 15's progress
-/// affordance).
+/// Menu contents since 013 (criterion 1): the two export actions, disabled
+/// exactly when the view has nothing to export; a divider; Import from
+/// CSV…; a divider; **Settings**, its own section at the bottom. The blank
+/// template left this menu for Settings — the organizing rule 013 settled
+/// is that this menu holds what you do repeatedly with the list in front
+/// of you, and Settings holds whole-collection and one-time things. Import
+/// and Settings are always enabled, which is why the badge itself shows
+/// regardless of collection size (the headers own that half). The whole
+/// control disables behind a compact spinner while any export or import
+/// runs (`isBusy`).
 struct OverflowBadge: View {
     let isBusy: Bool
     let canExport: Bool
     let exportCSV: () -> Void
     let exportPDF: () -> Void
     let importCSV: () -> Void
-    let getTemplate: () -> Void
+    let openSettings: () -> Void
 
     @Environment(\.theme) private var theme
 
@@ -38,7 +40,9 @@ struct OverflowBadge: View {
                 .disabled(!canExport)
             Divider()
             Button("Import from CSV…", action: importCSV)
-            Button("Get Blank Template…", action: getTemplate)
+            Divider()
+            // No ellipsis: it opens a screen, not a flow that needs input.
+            Button("Settings", action: openSettings)
         } label: {
             Group {
                 if isBusy {
@@ -75,12 +79,12 @@ struct OverflowBadge: View {
                 SortBadge(label: "Custom") {}
                 OverflowBadge(
                     isBusy: false, canExport: true,
-                    exportCSV: {}, exportPDF: {}, importCSV: {}, getTemplate: {}
+                    exportCSV: {}, exportPDF: {}, importCSV: {}, openSettings: {}
                 )
             }
             OverflowBadge(
                 isBusy: true, canExport: true,
-                exportCSV: {}, exportPDF: {}, importCSV: {}, getTemplate: {}
+                exportCSV: {}, exportPDF: {}, importCSV: {}, openSettings: {}
             )
         }
     }
