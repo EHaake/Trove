@@ -488,7 +488,22 @@ anywhere in this spec.
   `onDismiss: viewModel.load` on one list → scan red; nest the badge
   back inside the `totalCount` gate → the existing scan red.
 
-- [ ] **T014 — UI tests: the fresh install reaches Settings.**
+- [x] **T014 — UI tests: the fresh install reaches Settings.**
+  *Done (2026-09-01)*: `testEmptyCollectionOffersImportAndSettingsButNotExport`
+  (updated at T013) and the new
+  `testSettingsFromAnEmptyCollectionOffersTemplatesAndNothingElse` —
+  sheet present, both templates enabled, both export-everything rows
+  and both Delete All rows disabled, the iCloud row reading "On this
+  device only" for the in-memory store, Done dismissing back to a
+  hittable badge. The UI target ran **twice back to back**, 7/7 both
+  times, so the `-uiTesting` isolation still holds. Mutations: the
+  first attempt batched the two — re-nesting the badge and dropping
+  the export rows' emptiness gate — and the re-nest failed *both*
+  tests at the badge step, masking the gate check exactly as the
+  review's S6 predicted; re-run with only the gate dropped → the new
+  test red on precisely its two export assertions (lines 282–283),
+  everything else green. Re-nesting alone → the fresh-install test
+  red (and the new one, for the unrelated reason). Both reverted.
   Per plan §Test plan (UI). Rename and update
   `testEmptyCollectionOffersImportAndTemplateButNotExport` →
   `testEmptyCollectionOffersImportAndSettingsButNotExport` (Settings

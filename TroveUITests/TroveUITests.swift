@@ -254,4 +254,41 @@ final class TroveUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Export as CSV…"].isEnabled, "CSV export should disable when empty")
         XCTAssertFalse(app.buttons["Export as PDF…"].isEnabled, "PDF export should disable when empty")
     }
+
+    /// 013's behavioral half for criteria 3, 7, 8 and 11 on a fresh
+    /// install: Settings presents as a sheet from the menu; with nothing in
+    /// the store the two templates are enabled and export-everything and
+    /// both Delete All rows are not; the iCloud row tells the truth about
+    /// the in-memory store; Done returns to the list. Its own mutation:
+    /// dropping the `canExportEverything` gate on the export rows must
+    /// turn this red — re-nesting the badge would fail it for an unrelated
+    /// reason.
+    @MainActor
+    func testSettingsFromAnEmptyCollectionOffersTemplatesAndNothingElse() {
+        let app = launchApp()
+        app.buttons["Items"].tap()
+
+        let badge = app.buttons["More actions"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "the overflow badge must exist")
+        badge.tap()
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5), "the menu should open")
+        settings.tap()
+
+        let sheet = app.navigationBars["Settings"]
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5), "Settings should present as a sheet")
+        XCTAssertTrue(app.buttons["Items Template…"].isEnabled, "the items template must be enabled on an empty collection")
+        XCTAssertTrue(app.buttons["Wishlist Template…"].isEnabled, "the wishlist template must be enabled on an empty collection")
+        XCTAssertFalse(app.buttons["Export All as CSV…"].isEnabled, "nothing to export as CSV")
+        XCTAssertFalse(app.buttons["Export All as PDF…"].isEnabled, "nothing to export as PDF")
+        XCTAssertFalse(app.buttons["Delete All Items…"].isEnabled, "nothing to delete")
+        XCTAssertFalse(app.buttons["Delete All Wishlist Items…"].isEnabled, "nothing to delete on the wishlist")
+        let localOnly = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", "On this device only"))
+        XCTAssertTrue(localOnly.firstMatch.exists, "the in-memory store is local-only and the row must say so")
+
+        app.buttons["Done"].tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings")
+        XCTAssertTrue(badge.isHittable, "Done should return to the list")
+    }
 }
