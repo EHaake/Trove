@@ -540,7 +540,41 @@ anywhere in this spec.
   *Done when*: every listed line changed; `DocsSampleTests` still
   green (the samples never mention the template's home).
 
-- [ ] **T016 — Full verification and manual device pass.**
+- [x] **T016 — Full verification and manual device pass.**
+  *Done (2026-09-02)*: full suite 774 tests green (767 unit / 112
+  suites + 7 UI), then the pass on the iPhone 17 Pro simulator against
+  the ~307-item dev store, every claim checked at the file level where
+  a file was involved. Menu exactly as specced on both lists. Settings
+  as designed: five sections, rust delete rows, "iCloud isn't
+  available" on the signed-out simulator, "Version 1.0 (1)" from the
+  bundle. **Export All as CSV…** — the share sheet's Files picker read
+  "Save as 2 Items"; both landed (`Trove-Items-2026-09-02.csv`, 308
+  lines, BOM, CRLF; `Trove-Wishlist-2026-09-02.csv`, 4 lines); the
+  staging directory held exactly the pair. **Export All as PDF…** —
+  "2 Documents, 195 KB", 116 + 2 pages saved to Files, and the staging
+  listing showed the CSV pair purged by the set. **Wishlist Template…**
+  staged at 68 bytes. **Delete All Wishlist Items** — "Delete all 3
+  wishlist items?" with the full message (the iCloud sentence present:
+  the store is configured for iCloud), Keep reopened at 3, Delete All
+  disabled the row; the next PDF pair's wishlist document was **one
+  cover-only page** (criterion 7). **Delete All Items** at the largest
+  accessibility size — "Delete all 307 items?" with both buttons
+  reachable and the message scrollable — completed within a
+  screenshot's latency; every export and delete row disabled; Done
+  returned to "No gear yet"; the Dashboard read "Nothing tracked yet".
+  Then the round trip: **Import from CSV… of the exported items file
+  read "Import 307 items? No problems found."** and restored 307 items
+  · $545,750 · 5 unvalued, and the wishlist file restored its 3 — the
+  dev store is back as found (sell-plan links excepted: the CSV never
+  carried them, 011's recorded deferral). Honest residuals, recorded:
+  no spinner was observable at these speeds; the caught-up and
+  catching-up iCloud states need a signed-in device and the fallback
+  copy lives only in a preview; AirDrop isn't exercisable on a
+  simulator; "Done mid-export" can't be timed by hand at ~ms
+  generation, so the abandon behavior rests on the sheet's state dying
+  with the view and the purge listing; VoiceOver over the delete rows
+  needs Accessibility Inspector or hands. No surprises — nothing to fix
+  on this branch from the pass.
   Per plan §Verification. Build + full suite (count reported), then
   on the iPhone 17 Pro simulator: Export All as CSV… and …as PDF…
   from the dev store — two files land in Files via Save to Files and
