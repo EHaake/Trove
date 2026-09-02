@@ -177,7 +177,8 @@ each disabled when its list is empty. A section footer under them says
 that Export, above, is how to keep a copy first.
 
 Tapping one shows a confirmation alert whose **title carries the exact
-count** — "Delete all 309 items?", "Delete all 12 wishlist items?" —
+count** — "Delete all 309 items?", "Delete all 12 wishlist items?"; a
+single item reads "Delete your only item?" (decided at plan review) —
 and whose message extends the single-item delete copy the app already
 uses, because none of the consequences are guessable from the button:
 
@@ -379,7 +380,8 @@ skeptical review, decided by the person):
 10. [ ] No iCloud-row state claims other devices have the collection to
     a user who isn't signed in.
 11. [ ] Delete All Items… is disabled at zero items. Otherwise its
-    alert's title carries the exact current count; its message names
+    alert's title carries the exact current count (the singular reads
+    "Delete your only item?"); its message names
     photos, sell plans emptying, and no undo — plus the iCloud
     sentence when, and only when, the store is configured for iCloud
     (Decision 13). Keep changes nothing. Delete All removes every item:

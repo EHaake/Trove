@@ -1,7 +1,8 @@
 # 013 — Settings Menu — Technical Plan
 
-Status: **Draft** — pending the person's review (drafted 2026-09-01,
-in-session per the authorship split)
+Status: **Approved** (2026-09-01, same day as drafting; drafted
+in-session per the authorship split. One copy correction at review —
+the singular Delete All title — recorded under Copy.)
 
 Grounded in the shipped 011 export module, 012's import surface, and
 the view/VM code as it is on this branch — file references below are
@@ -420,9 +421,11 @@ version literal (criterion 17's "never typed").
 - **`DeleteAllCopy`** (`Trove/Models/`, the `ItemDeleteCopy` shape,
   pinned by `DeleteAllCopyTests`):
   - `title(count:target:)` → "Delete all 309 items?" / "Delete all 12
-    wishlist items?", pluralized on count. The singular reads "Delete
-    all 1 item?" — exact by the spec's letter; noted for the person to
-    adjust at review if it grates.
+    wishlist items?". **The singular reads "Delete your only item?" /
+    "Delete your only wishlist item?"** — decided by the person at plan
+    review (2026-09-01): the draft's "Delete all 1 item?" was exact by
+    the spec's letter and not how anyone says it. `DeleteAllCopyTests`
+    pins both forms.
   - `message(for target:, mode:)` — items: "Their photos go too. Every
     sell plan loses its items. [iCloud] This can't be undone.";
     wishlist: "Their photos go too. Their sell plans go with them; the
