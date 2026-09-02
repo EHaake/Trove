@@ -55,6 +55,10 @@ struct TroveApp: App {
                 // What the store actually turned out to be, for the views
                 // that say so out loud — the save bars' captions (T049a).
                 .environment(\.storageMode, store.mode)
+                // 013: why that mode isn't `.cloudKit`, when it isn't — the
+                // Settings screen's iCloud row is the first reader the
+                // store's recorded reason has had since 001.
+                .environment(\.storageFallbackReason, store.cloudKitFailure?.localizedDescription)
                 // How far along this device's copy is, for the empty states
                 // that would otherwise claim an unfinished import is an empty
                 // collection (Phase 12).
