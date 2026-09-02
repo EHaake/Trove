@@ -466,24 +466,13 @@ final class WishlistViewModel {
     }
 
     private func isOrderedBefore(_ lhs: WishlistItem, _ rhs: WishlistItem) -> Bool {
-        // Attribute first, the user's own manual order on any tie — spec.md's
-        // confirmed rule for every non-"Custom" sort, applied through the
-        // shared helper so the tie-break can't drift from the item list's
-        // reading of it. For "Custom" the attribute abstains entirely, so the
-        // manual order *is* the sort.
-        if lhs.sortOrder != rhs.sortOrder || attributeOrder(lhs, rhs) != nil {
-            return ManualOrderHelper.areInOrder(lhs, rhs, primary: attributeOrder)
-        }
-
-        // Tied all the way down — same attribute value *and* a shared manual
-        // position (easy from an older build: two items added in one sitting
-        // both at 0). Name then id keeps the order fully determined by the
-        // data rather than by whatever `FetchDescriptor` returns.
-        let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
-        if byName != .orderedSame {
-            return byName == .orderedAscending
-        }
-        return lhs.id.uuidString < rhs.id.uuidString
+        // Attribute first, the user's own order on any tie — spec.md's
+        // confirmed rule for every non-"Custom" sort; for "Custom" the
+        // attribute abstains entirely, so the manual order *is* the sort.
+        // The order itself — position, then name and id where positions
+        // collide — lives in `ManualOrderHelper` since 013, shared with the
+        // item list and with export-everything.
+        attributeOrder(lhs, rhs) ?? ManualOrderHelper.areInCustomOrder(lhs, rhs)
     }
 
     /// The active sort's own comparison, `nil` on a tie — the shape

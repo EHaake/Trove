@@ -117,4 +117,78 @@ struct ManualOrderHelperTests {
         #expect(ManualOrderHelper.areInOrder(ranked, rankedLater, primary: alwaysTied))
         #expect(!ManualOrderHelper.areInOrder(rankedLater, ranked, primary: alwaysTied))
     }
+
+    // MARK: - Custom order (013)
+
+    private let byName: (Row, Row) -> Bool = { $0.name < $1.name }
+
+    /// Position is the whole answer when positions differ — the tie-break
+    /// must not leak in, or "Custom" would quietly become an alphabetical
+    /// sort for anyone whose rows happen to be numbered.
+    @Test func customOrderIsThePositionWhenPositionsDiffer() {
+        let zed = Row("zed", order: 0)
+        let alpha = Row("alpha", order: 1)
+
+        #expect(ManualOrderHelper.areInCustomOrder(zed, alpha, tieBreak: byName))
+        #expect(!ManualOrderHelper.areInCustomOrder(alpha, zed, tieBreak: byName))
+    }
+
+    @Test func aSharedPositionFallsToTheTieBreak() {
+        let alpha = Row("alpha", order: 0)
+        let bravo = Row("bravo", order: 0)
+
+        #expect(ManualOrderHelper.areInCustomOrder(alpha, bravo, tieBreak: byName))
+        #expect(!ManualOrderHelper.areInCustomOrder(bravo, alpha, tieBreak: byName))
+    }
+
+    /// The items overload: creation order breaks a shared position, and a
+    /// shared instant falls to id — deterministic and antisymmetric, never
+    /// "both before each other".
+    @Test func itemsBreakASharedPositionByCreationThenID() {
+        let older = Item(name: "Older")
+        older.createdAt = Date(timeIntervalSince1970: 1_000)
+        let newer = Item(name: "Newer")
+        newer.createdAt = Date(timeIntervalSince1970: 2_000)
+
+        #expect(ManualOrderHelper.areInCustomOrder(older, newer))
+        #expect(!ManualOrderHelper.areInCustomOrder(newer, older))
+
+        let twinA = Item(name: "Twin")
+        let twinB = Item(name: "Twin")
+        twinA.createdAt = older.createdAt
+        twinB.createdAt = older.createdAt
+        #expect(ManualOrderHelper.areInCustomOrder(twinA, twinB)
+            == (twinA.id.uuidString < twinB.id.uuidString))
+        #expect(ManualOrderHelper.areInCustomOrder(twinA, twinB)
+            != ManualOrderHelper.areInCustomOrder(twinB, twinA))
+    }
+
+    /// Position still wins for the entity overloads: a row the user placed
+    /// first stays first however recently it was created.
+    @Test func positionOutranksCreationForItems() {
+        let placedFirst = Item(name: "Placed first", sortOrder: 0)
+        placedFirst.createdAt = Date(timeIntervalSince1970: 2_000)
+        let placedSecond = Item(name: "Placed second", sortOrder: 1)
+        placedSecond.createdAt = Date(timeIntervalSince1970: 1_000)
+
+        #expect(ManualOrderHelper.areInCustomOrder(placedFirst, placedSecond))
+        #expect(!ManualOrderHelper.areInCustomOrder(placedSecond, placedFirst))
+    }
+
+    /// The wishlist overload: case-insensitive name breaks a shared
+    /// position ("amp" before "Bass"), and identical names fall to id.
+    @Test func wantedItemsBreakASharedPositionByNameThenID() {
+        let amp = WishlistItem(name: "amp")
+        let bass = WishlistItem(name: "Bass")
+
+        #expect(ManualOrderHelper.areInCustomOrder(amp, bass))
+        #expect(!ManualOrderHelper.areInCustomOrder(bass, amp))
+
+        let twinA = WishlistItem(name: "Twin")
+        let twinB = WishlistItem(name: "Twin")
+        #expect(ManualOrderHelper.areInCustomOrder(twinA, twinB)
+            == (twinA.id.uuidString < twinB.id.uuidString))
+        #expect(ManualOrderHelper.areInCustomOrder(twinA, twinB)
+            != ManualOrderHelper.areInCustomOrder(twinB, twinA))
+    }
 }

@@ -101,7 +101,31 @@ anywhere in this spec.
   `uiKitStaysInsideTheFlaggedExceptions` untouched; a one-line unit
   test pins `init(url:filename:)` → one-element arrays.
 
-- [ ] **T003 — `ManualOrderHelper.areInCustomOrder`.**
+- [x] **T003 — `ManualOrderHelper.areInCustomOrder`.**
+  *Done (2026-09-01)*: the generic `areInCustomOrder(_:_:tieBreak:)`
+  is built *on* `areInOrder` — its primary abstains while positions
+  differ and speaks only on a collision — so the `<` on `sortOrder` is
+  written once in the file whose doc comment promises that; the two
+  entity overloads carry the tails and the T039 history comment
+  moved with them. Both `isOrderedBefore`s collapsed to
+  `attributeOrder(lhs, rhs) ?? ManualOrderHelper.areInCustomOrder(lhs, rhs)`
+  — the case analysis (attribute decides / positions differ /
+  positions collide) matches the old three-step bodies line for line,
+  and every existing sort test stayed green as the behavior-preservation
+  proof. Five new helper tests (position wins; a shared position
+  falls to the tail; items by creation then id, antisymmetric; position
+  outranks creation; wanted items by case-insensitive name then id).
+  Mutations, both reverted: **M-a** inverted the items tail → 3 tests
+  red (the helper's creation test plus both list-VM legacy-store
+  tests, `customSortOnAnUnbackfilledStoreFollowsCreationOrder` and
+  `unvaluedItemsAtASharedPositionFollowCreationOrder`); **M-b**
+  dropped the position step → red across the helper, both lists'
+  tie-resolution tests, and every reorder-persistence test — position
+  is load-bearing everywhere, which is the point of one function.
+  Full suite: 710 tests / 106 suites + 6 UI tests green. (Selector
+  trap hit once more: `-only-testing:TroveTests/ItemListViewModelTests`
+  matched no suite — the structs are named per concern — and ran 14
+  tests silently; re-run as the whole unit target.)
   Per plan §Custom order and totals. In `ManualOrderHelper.swift`:
   the generic `areInCustomOrder(_:_:tieBreak:)` (position first, the
   tail on a collision) and the two entity overloads — items:

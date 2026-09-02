@@ -74,4 +74,57 @@ enum ManualOrderHelper {
     ) -> Bool {
         primary(lhs, rhs) ?? (lhs.sortOrder < rhs.sortOrder)
     }
+
+    // MARK: - Custom order (013)
+
+    /// The user's own order, fully determined: manual position first; where
+    /// two rows share a position — the real state of a pre-`010` store,
+    /// every legacy row at 0 until the first drag renumbers — the entity's
+    /// tie-break. Built on `areInOrder` so the position rule is written
+    /// once: the "primary" abstains whenever positions differ, and lets the
+    /// tie-break speak only when they collide.
+    ///
+    /// Both list view models sort "Custom" with this, and so does
+    /// export-everything (`SettingsViewModel`), which has no view to
+    /// follow — one function, not two that happen to agree.
+    static func areInCustomOrder<T: ManuallyOrdered>(
+        _ lhs: T,
+        _ rhs: T,
+        tieBreak: (T, T) -> Bool
+    ) -> Bool {
+        areInOrder(lhs, rhs) { lhs, rhs in
+            lhs.sortOrder == rhs.sortOrder ? tieBreak(lhs, rhs) : nil
+        }
+    }
+
+    /// Items break a shared position by creation order, then id. The
+    /// launch-time backfill that used to assign positions was removed at the
+    /// T039 close-out (2026-08-30): its per-device flag raced CloudKit sync,
+    /// so a second device's upgrade could rewrite an arrangement the first
+    /// had already synced. Falling back to `createdAt` at *sort time* shows
+    /// the same order the backfill wrote — the order things were added —
+    /// with no migration write to race; `id` beneath it keeps even
+    /// same-instant creations deterministic.
+    static func areInCustomOrder(_ lhs: Item, _ rhs: Item) -> Bool {
+        areInCustomOrder(lhs, rhs) { lhs, rhs in
+            if lhs.createdAt != rhs.createdAt {
+                return lhs.createdAt < rhs.createdAt
+            }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+    }
+
+    /// Wanted items break a shared position by name — case-insensitively,
+    /// like every other name comparison in the app — then id, so the order
+    /// is fully determined by the data rather than by whatever
+    /// `FetchDescriptor` happens to return.
+    static func areInCustomOrder(_ lhs: WishlistItem, _ rhs: WishlistItem) -> Bool {
+        areInCustomOrder(lhs, rhs) { lhs, rhs in
+            let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+            if byName != .orderedSame {
+                return byName == .orderedAscending
+            }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+    }
 }

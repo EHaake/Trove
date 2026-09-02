@@ -583,30 +583,16 @@ final class ItemListViewModel {
     }
 
     private func isOrderedBefore(_ lhs: Item, _ rhs: Item) -> Bool {
-        // Attribute first, the user's own manual order on any tie — spec.md's
-        // confirmed rule for every non-"Custom" sort, and the same shared
-        // helper the wishlist reads so the two lists can't drift. plan.md's
-        // Resolved decision 5 left this open and the first implementation
-        // fell back to name instead; T039's review caught the divergence and
-        // the 2026-08-30 close-out decided it: manual order, both lists.
-        if lhs.sortOrder != rhs.sortOrder || attributeOrder(lhs, rhs) != nil {
-            return ManualOrderHelper.areInOrder(lhs, rhs, primary: attributeOrder)
-        }
-
-        // Tied all the way down — same attribute value *and* a shared manual
-        // position, which is the real state of a pre-`010` store: every
-        // legacy item at `sortOrder` 0 until the first drag renumbers. The
-        // launch-time backfill that used to assign positions here was
-        // removed at the T039 close-out (2026-08-30): its per-device flag
-        // raced CloudKit sync, so a second device's upgrade could rewrite an
-        // arrangement the first device had already synced. Falling back to
-        // `createdAt` at *sort time* shows the same order the backfill wrote
-        // — the order things were added — with no migration write to race.
-        // `id` beneath it keeps even same-instant creations deterministic.
-        if lhs.createdAt != rhs.createdAt {
-            return lhs.createdAt < rhs.createdAt
-        }
-        return lhs.id.uuidString < rhs.id.uuidString
+        // Attribute first, the user's own order on any tie — spec.md's
+        // confirmed rule for every non-"Custom" sort (plan.md's Resolved
+        // decision 5 left this open; the first implementation fell back to
+        // name, T039's review caught the divergence, and the 2026-08-30
+        // close-out decided it: manual order, both lists). The order itself
+        // — position, then the creation-then-id tie-break a pre-`010` store
+        // needs — lives in `ManualOrderHelper` since 013, so "Custom" here
+        // and Settings' export-everything sort with one function rather
+        // than two that agree.
+        attributeOrder(lhs, rhs) ?? ManualOrderHelper.areInCustomOrder(lhs, rhs)
     }
 
     /// The active sort's own comparison, `nil` on a tie — the shape
