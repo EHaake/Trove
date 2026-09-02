@@ -161,9 +161,12 @@ nonisolated final class FileExportService: ExportService {
         for file in files {
             // Render, then write, one file at a time — never the whole set
             // as `Data` first, which would double 011's peak memory for two
-            // photo-carrying documents. The purge sits just before the first
-            // write, as it does on the single-file path, so a render that
-            // throws leaves the previous set in place rather than nothing.
+            // photo-carrying documents. The purge sits just before the
+            // *first* write, as on the single-file path: a first-file render
+            // that throws leaves the previous set in place. A later file's
+            // render throwing would leave the new set partially staged —
+            // accepted, since the composer throws only when no graphics
+            // context can be made at all (plan §Export service).
             let data = try render(file, fetcher: fetcher)
             if !prepared {
                 try prepareStagingDirectory()

@@ -79,8 +79,12 @@ struct DeleteAllCopyTests {
             DeleteAllCopy.message(for: .wishlist, count: 1, mode: .localOnly)
                 == "Its photos go too. Anything on its sell plan stays where it is. This can't be undone."
         )
-        #expect(DeleteAllCopy.message(for: .items, count: 1, mode: .cloudKit)
-            .hasPrefix(ItemDeleteCopy.message.prefix(48)))
+        // Shared by pin, not by coincidence: in a local-only mode a list of
+        // one *is* the single-item alert, word for word, on both sides — so
+        // rewording either single-item alert turns this red (the sweep's S6
+        // replaced a magic-number prefix check with these).
+        #expect(DeleteAllCopy.message(for: .items, count: 1, mode: .localOnly) == ItemDeleteCopy.message)
+        #expect(DeleteAllCopy.message(for: .wishlist, count: 1, mode: .localOnly) == WishlistDeleteCopy.message)
     }
 
     @Test func everyMessageEndsWithNoUndo() {

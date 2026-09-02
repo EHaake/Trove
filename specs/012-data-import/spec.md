@@ -332,7 +332,9 @@ by the person):
 12. [x] Get Blank Template… stages a header-only canonical CSV
     (correct name per list) through the share sheet, and that
     template — filled with one valid row in a spreadsheet app and
-    re-saved — imports cleanly.
+    re-saved — imports cleanly. *(Superseded in part by
+    `013-settings-menu`, 2026-09-02: the action is now Settings ›
+    Templates; the bytes, the names and the round trip stand.)*
 13. [x] Wishlist parity: criteria 2–12 hold on the wishlist against
     its 7-column schema, with `Added` restoring the wish's creation
     date.
@@ -357,8 +359,9 @@ broken and what went red). "Device" means the T017 simulator pass.
    `ImportWiringTests.theOverflowControlSitsOutsideEveryEmptyCollectionGate`
    (brace-span scan, both views) + the empty-collection UI test — one
    re-nest mutation turned both red;
-   `ExportWiringTests.theMenuCarriesFourActionsWithOnlyExportsGated`
-   (gating count pinned at exactly 2); 011 spec.md criteria 1–2 carry
+   `ExportWiringTests.theMenuCarriesFiveItemsInThreeGroups` (renamed
+   at `013`/T013 when Settings joined the menu; gating count still
+   pinned at exactly 2); 011 spec.md criteria 1–2 carry
    the superseded-by note; device.
 2. `aTroveExportRoundTripsLosslessly` / `aWishlistExportRoundTripsLosslessly`
    (serialization equality via `ExportSchema.row(from:)`, zero skips,
@@ -394,7 +397,8 @@ broken and what went red). "Device" means the T017 simulator pass.
    `aLegacyAllZeroStoreStillLandsTheBatchAfterTheLegacyBlock`; device.
 10. `importIsViewIndependentOfTheActiveFilter`.
 11. `committingTheSameFileTwiceDuplicatesEveryRow`.
-12. Template twins in both VM test files (byte-exact BOM+header+CRLF,
+12. Template twins — since `013`/T010 living in
+    `SettingsViewModelTemplateTests`, with the intent — (byte-exact BOM+header+CRLF,
     pinned filenames, `canExport` ignored); the closed-loop tests
     (template + one hand row → exactly one record); device (68-byte
     share sheet). Honest partial: the fill-in-a-real-spreadsheet

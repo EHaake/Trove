@@ -251,8 +251,12 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(importButton.isEnabled, "Import must be enabled on an empty collection")
         XCTAssertTrue(app.buttons["Settings"].isEnabled, "Settings must be enabled on an empty collection")
         XCTAssertFalse(app.buttons["Get Blank Template…"].exists, "the template left the menu for Settings")
-        XCTAssertFalse(app.buttons["Export as CSV…"].isEnabled, "CSV export should disable when empty")
-        XCTAssertFalse(app.buttons["Export as PDF…"].isEnabled, "PDF export should disable when empty")
+        // `isEnabled` on a missing element is false, so existence comes
+        // first or a deleted menu item would pass as "disabled".
+        for title in ["Export as CSV…", "Export as PDF…"] {
+            XCTAssertTrue(app.buttons[title].exists, "\(title) should still be in the menu")
+            XCTAssertFalse(app.buttons[title].isEnabled, "\(title) should disable when empty")
+        }
     }
 
     /// 013's behavioral half for criteria 3, 7, 8 and 11 on a fresh
@@ -279,10 +283,11 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(sheet.waitForExistence(timeout: 5), "Settings should present as a sheet")
         XCTAssertTrue(app.buttons["Items Template…"].isEnabled, "the items template must be enabled on an empty collection")
         XCTAssertTrue(app.buttons["Wishlist Template…"].isEnabled, "the wishlist template must be enabled on an empty collection")
-        XCTAssertFalse(app.buttons["Export All as CSV…"].isEnabled, "nothing to export as CSV")
-        XCTAssertFalse(app.buttons["Export All as PDF…"].isEnabled, "nothing to export as PDF")
-        XCTAssertFalse(app.buttons["Delete All Items…"].isEnabled, "nothing to delete")
-        XCTAssertFalse(app.buttons["Delete All Wishlist Items…"].isEnabled, "nothing to delete on the wishlist")
+        // Existence before `isEnabled`, which is false for a missing row.
+        for title in ["Export All as CSV…", "Export All as PDF…", "Delete All Items…", "Delete All Wishlist Items…"] {
+            XCTAssertTrue(app.buttons[title].exists, "\(title) should be on the screen")
+            XCTAssertFalse(app.buttons[title].isEnabled, "\(title) should disable with nothing to act on")
+        }
         let localOnly = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", "On this device only"))
         XCTAssertTrue(localOnly.firstMatch.exists, "the in-memory store is local-only and the row must say so")

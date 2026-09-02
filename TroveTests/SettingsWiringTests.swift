@@ -73,11 +73,39 @@ struct SettingsWiringTests {
     }
 
     /// Criterion 18 rests on explicit hints — the role alone announces
-    /// nothing outside alerts and menus.
-    @Test func bothDeleteRowsCarryAnAccessibilityHint() throws {
+    /// nothing outside alerts and menus. Pinned at both ends: the two
+    /// call sites pass a hint, *and* the row applies it — the
+    /// declaration-vs-composition family the section-order scan fell
+    /// into, caught here by the pre-merge sweep instead.
+    @Test func bothDeleteRowsCarryAnAccessibilityHintAndTheRowAppliesIt() throws {
         let code = try SourceScan.production(Self.settingsView)
         #expect(code.ranges(of: "isDestructive: true").count == 2, "expected exactly two destructive rows")
         #expect(code.ranges(of: "accessibilityHint: \"").count == 2, "both destructive rows must pass a hint")
+        #expect(
+            code.contains(".accessibilityHint(accessibilityHint"),
+            "SettingsActionRow no longer applies the hint it's given"
+        )
+        #expect(
+            code.contains(".accessibilityElement(children: .combine)"),
+            "the iCloud block must read as one element"
+        )
+    }
+
+    /// Criterion 14's view half: every action row disables while anything
+    /// is busy, and each reads its own activity for the spinner. The view
+    /// model's guard refuses a reentrant call regardless, so no unit test
+    /// would notice these bindings going missing (the sweep's B1).
+    @Test func everyActionRowGatesOnBusyAndReadsItsOwnActivity() throws {
+        let code = try SourceScan.production(Self.settingsView)
+        let rows = SourceScan.argumentLists(of: "SettingsActionRow", in: code)
+        #expect(rows.count == 6, "expected six action rows, found \(rows.count)")
+        for row in rows {
+            #expect(row.contains("!viewModel.isBusy"), "a row doesn't disable while busy: \(row.prefix(48))")
+            #expect(
+                row.contains("isActing: viewModel.activity == ."),
+                "a row doesn't read its own activity: \(row.prefix(48))"
+            )
+        }
     }
 
     /// Criterion 17's "never typed": no literal that looks like a version
@@ -153,10 +181,18 @@ struct SettingsWiringTests {
         let code = try SourceScan.production("Trove/ViewModels/SettingsViewModel.swift")
         let bodies = SourceScan.closureBodies(after: "func confirmDeleteAll", in: code)
         try #require(bodies.count == 1, "SettingsViewModel should define exactly one confirmDeleteAll")
-        #expect(bodies[0].contains("modelContext.save()"), "confirmDeleteAll must save once")
         #expect(
-            bodies[0].contains("modelContext.rollback()"),
-            "confirmDeleteAll's failure path must roll back the context"
+            bodies[0].ranges(of: "modelContext.save()").count == 1,
+            "confirmDeleteAll must save exactly once — one save is what makes it all-or-nothing"
         )
+        // The rollback belongs to the failure path and only there: pinned
+        // by extracting the catch block rather than searching the whole
+        // body (the sweep's S4 — `contains` alone would pass a rollback on
+        // the success path, or two saves).
+        let catches = SourceScan.closureBodies(after: "} catch", in: bodies[0])
+        try #require(catches.count == 1, "expected exactly one catch block")
+        #expect(catches[0].contains("modelContext.rollback()"), "the failure path must roll back the context")
+        let outsideCatch = bodies[0].replacingOccurrences(of: catches[0], with: "")
+        #expect(!outsideCatch.contains("rollback()"), "rollback belongs to the failure path only")
     }
 }

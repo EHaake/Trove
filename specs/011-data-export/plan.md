@@ -23,6 +23,7 @@ no UIKit anywhere in the export module. Delivery is the system share
 sheet via a `UIViewControllerRepresentable`-wrapped
 `UIActivityViewController`, this spec's single flagged UIKit exception.
 Temp files live in one dedicated directory purged before every export
+set — a list export being a set of one, since `013`'s `exportFiles` —
 and at launch.
 
 ## Skeptical review record

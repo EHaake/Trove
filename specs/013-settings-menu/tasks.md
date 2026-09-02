@@ -1,7 +1,9 @@
 # 013 — Settings Menu: Tasks
 
-Status: **Approved** (2026-09-01, same day as drafting) — Phase 1 in
-progress
+Status: **Complete** (2026-09-02) — all seventeen tasks done; nineteen
+criteria verified with a per-criterion record in `spec.md`; the T012
+mutation and the T017 sweep each caught a false-passing scan before
+merge; PR #9 ready for review
 
 Drafted against the approved `plan.md` (approved 2026-09-01; drafted
 at `61c208b`). No new technical decisions are made here — every call
@@ -592,7 +594,41 @@ anywhere in this spec.
   *Done when*: every check performed and noted — surprises included —
   in the Done note; timing recorded in plan.md.
 
-- [ ] **T017 — Close-out review.**
+- [x] **T017 — Close-out review.**
+  *Done (2026-09-02)*: all nineteen criteria checked off with a
+  per-criterion Verification record in spec.md, honest partials stated
+  (the signed-in iCloud states, the fallback copy, VoiceOver by hand,
+  AirDrop, the mid-export abandon, and the spinner). The pre-merge
+  skeptical sweep ran over spec/plan/tasks, CLAUDE.md, README, the
+  docs, and the 011/012 notes, and found **two blocking items and
+  twelve second-looks, all acted on**: criterion 14's view half had no
+  guard (the view model refuses a reentrant call whether or not the
+  rows disable) → `everyActionRowGatesOnBusyAndReadsItsOwnActivity`,
+  mutation-red on a dropped busy gate; the spec's §Delete still said
+  "the role VoiceOver reads" after the plan had corrected it → amended
+  inline, the Decisions-13/14 form; the rollback scan tightened to
+  exactly one `save()` and `rollback()` inside the extracted `catch`
+  only (mutation-red on a second save); the hint scan extended to the
+  row's *application* of the hint and the iCloud block's combine
+  (mutation-red on the application removed — the
+  declaration-vs-composition shape, found a second time on this
+  branch); the singular Delete All sentences pinned equal to
+  `ItemDeleteCopy`/`WishlistDeleteCopy` in local-only mode instead of a
+  magic-number prefix (mutation-red on a reword); the UI tests assert
+  existence before `isEnabled` (false for a missing element); the
+  `exportFiles` purge placement recorded as built (first write, not
+  first render) with its mid-set caveat; three test citations this
+  branch had staled in the 011/012 specs corrected and 012's criterion
+  12 given its supersession note; 011 `plan.md`'s second statement of
+  the purge invariant restated; criterion 15's abandon half carried up
+  as a partial; the count-aware singular message noted in spec §Delete;
+  the README Features list and a `README.md` routing line added to the
+  post-merge list. The falsifiability audit over every 013 test found
+  no same-context persistence check (all through a second context), a
+  real tie-break guard, and — the two shapes above — nothing else.
+  Final: build green; full suite 768 tests / 112 suites + 7 UI tests
+  green (the ~100 s environmental stall hit one more full run, 205 s
+  instead of 6, and passed). Status flipped to Complete.
   012's T018 pattern: sweep every Done note against what the code
   actually does; check each of the 19 spec criteria with a
   verification citation (honest partials stated as partials); audit
@@ -614,5 +650,7 @@ After T017: PR #9 leaves draft and merges; then the repo-wide docs
 catch-up on a `fix/` branch per `DECISIONS.md`'s git routing — the
 ROADMAP lines the plan names (221–223, the badge "so a fresh install
 can reach Import and Get Blank Template"; 261–265, the entry point
-"open design question", now decided), the status rows, and the README
-status and tree.
+"open design question", now decided), the status rows, the README
+status, tree, **and Features list** (no entry yet for Settings,
+export-everything, the iCloud row or Delete All), and a `README.md`
+line in `DECISIONS.md`'s git-routing entry.

@@ -232,7 +232,8 @@ followed by one entry per exported item.
 11. [x] Exporting a large collection (hundreds of items, with photos) does
     not block the UI — some progress affordance appears if generation
     is not effectively instant.
-    *Verified: `ExportConcurrencyTests.generationRunsOffTheMainThreadForBothFormats`
+    *Verified: `ExportConcurrencyTests.generationRunsOffTheMainThreadForEveryEntryPoint`
+    (renamed at `013`/T001, when a third entry point joined the probe)
     — instrumented through the `any ExportService` existential, the
     probe recording the actual thread, mutation-verified (stripping
     `@concurrent` put generation back on the main thread and went red);

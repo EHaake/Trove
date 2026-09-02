@@ -172,14 +172,21 @@ may claim "your other devices have this" to someone who isn't.
 - **Delete All Items…**
 - **Delete All Wishlist Items…**
 
-Drawn as destructive rows (the rust accent, the role VoiceOver reads),
+Drawn as destructive rows (the rust accent, the destructive role, and
+an explicit accessibility hint — *corrected at T017, 2026-09-02: the
+draft said "the role VoiceOver reads", but `ButtonRole.destructive`
+isn't documented to announce anything outside alerts and menus; the
+hint is what VoiceOver reads, and criterion 18 rests on it — the plan
+carried this correction from its review and the spec now does too*),
 each disabled when its list is empty. A section footer under them says
 that Export, above, is how to keep a copy first.
 
 Tapping one shows a confirmation alert whose **title carries the exact
 count** — "Delete all 309 items?", "Delete all 12 wishlist items?"; a
-single item reads "Delete your only item?" (decided at plan review) —
-and whose message extends the single-item delete copy the app already
+single item reads "Delete your only item?" (decided at plan review;
+its message likewise reads with the single-item alert's own sentences,
+count-aware as built at T004 in the same spirit) — and whose message
+extends the single-item delete copy the app already
 uses, because none of the consequences are guessable from the button:
 
 - Items: their photos go too; every sell plan loses its items (the
@@ -345,41 +352,41 @@ skeptical review, decided by the person):
 
 ## Acceptance criteria
 
-1. [ ] Both list screens' "…" menu reads, in order: Export as CSV…,
+1. [x] Both list screens' "…" menu reads, in order: Export as CSV…,
    Export as PDF…, a divider, Import from CSV…, a divider, Settings.
    "Get Blank Template…" appears in neither menu.
-2. [ ] On an empty collection the "…" badge is visible; Import from
+2. [x] On an empty collection the "…" badge is visible; Import from
    CSV… and Settings are enabled; both export items are disabled.
-3. [ ] Settings opens as a sheet titled "Settings" with a Done button;
+3. [x] Settings opens as a sheet titled "Settings" with a Done button;
    Done returns to the list with its filter, sort, and search exactly
    as they were. Opening from the Items list and from the Wishlist
    shows the identical screen.
-4. [ ] The screen's sections appear in the order Export, Templates,
+4. [x] The screen's sections appear in the order Export, Templates,
    iCloud, Delete, About.
-5. [ ] Export All as CSV… presents one share sheet containing exactly
+5. [x] Export All as CSV… presents one share sheet containing exactly
    two files, `Trove-Items-YYYY-MM-DD.csv` and
    `Trove-Wishlist-YYYY-MM-DD.csv`. The items file is byte-identical to
    the Items list's own CSV export with no filter, no search, and
    Custom sort; the wishlist file likewise against the Wishlist's.
-6. [ ] Export All as PDF… presents one share sheet containing exactly
+6. [x] Export All as PDF… presents one share sheet containing exactly
    two documents, `Trove-Items-YYYY-MM-DD.pdf` and
    `Trove-Wishlist-YYYY-MM-DD.pdf`, each with the same cover and the
    same entries in the same order as the corresponding list's
    unfiltered Custom-order export.
-7. [ ] Both export-everything actions are disabled when both
+7. [x] Both export-everything actions are disabled when both
    collections are empty. With exactly one collection empty, the
    gesture still delivers two files; the empty one's CSV is
    header-only and its PDF is a cover-only document.
-8. [ ] Items Template… and Wishlist Template… each stage a file
+8. [x] Items Template… and Wishlist Template… each stage a file
    byte-identical to `012`'s blank template, under `012`'s filenames.
-9. [ ] The iCloud row shows a truthful state in each of: configured
+9. [x] The iCloud row shows a truthful state in each of: configured
    for iCloud and caught up; configured and still arriving; configured
    but iCloud unavailable (signed out or unreachable — described
    without claiming to know which); local-only fallback, with the
    recorded reason. It updates while the screen is open.
-10. [ ] No iCloud-row state claims other devices have the collection to
+10. [x] No iCloud-row state claims other devices have the collection to
     a user who isn't signed in.
-11. [ ] Delete All Items… is disabled at zero items. Otherwise its
+11. [x] Delete All Items… is disabled at zero items. Otherwise its
     alert's title carries the exact current count (the singular reads
     "Delete your only item?"); its message names
     photos, sell plans emptying, and no undo — plus the iCloud
@@ -388,28 +395,125 @@ skeptical review, decided by the person):
     the Items list shows its genuine empty state, the Dashboard shows
     its empty state, every wishlist item's sell plan is empty, and no
     wishlist item is touched.
-12. [ ] Delete All Wishlist Items… is the symmetric case: disabled at
+12. [x] Delete All Wishlist Items… is the symmetric case: disabled at
     zero; count in the title; message names photos, sell plans going
     with them and gear staying, no undo, and the iCloud sentence under
     the same rule as criterion 11. Delete All removes
     every wishlist item and no owned item is touched.
-13. [ ] A delete that fails deletes nothing and says "Nothing was
+13. [x] A delete that fails deletes nothing and says "Nothing was
     deleted."
-14. [ ] While any Settings action is in flight, the acting row shows
+14. [x] While any Settings action is in flight, the acting row shows
     the spinner and every other action row is disabled; no second
     action can start. Done remains available.
-15. [ ] A share sheet presented from Settings returns to Settings when
+15. [x] A share sheet presented from Settings returns to Settings when
     dismissed, and nothing staged for it outlives the next export or
     the next launch.
-16. [ ] A failed export-everything shows `011`'s export failure copy.
-17. [ ] About shows the app name, the subtitle, and the running build's
+16. [x] A failed export-everything shows `011`'s export failure copy.
+17. [x] About shows the app name, the subtitle, and the running build's
     version and build number as read from the bundle.
-18. [ ] VoiceOver: every action row is labelled; the delete rows are
+18. [x] VoiceOver: every action row is labelled; the delete rows are
     announced as destructive; the iCloud row reads as one element.
-19. [ ] The wrong-file import alert no longer refers to the "…" menu
+19. [x] The wrong-file import alert no longer refers to the "…" menu
     for the template; it points at Settings › Templates.
     `docs/csv-reference.md` and the README say where the template now
     lives. `012`'s spec carries the superseded-in-part note.
+
+### Verification record (T017, 2026-09-02)
+
+Each criterion above is checked against the test that would catch it
+false and, where a person could see it, against the T016 simulator
+pass on the ~307-item dev store. Honest partials are stated as such.
+
+1. Menu order — `ExportWiringTests.theMenuCarriesFiveItemsInThreeGroups`
+   (Settings present, template absent, two dividers, two gates, Import
+   before Settings); seen on device, both lists.
+2. Empty badge — `ImportWiringTests.theOverflowControlSitsOutsideEveryEmptyCollectionGate`
+   and `testEmptyCollectionOffersImportAndSettingsButNotExport`; seen on
+   device after Delete All: badge present, exports dimmed, Import and
+   Settings live.
+3. Sheet, Done, one screen — `SettingsWiringTests.theListAttachesTheSettingsSheetAndReloadsOnDismiss`
+   (both lists, all four init arguments) and the Settings UI test's Done
+   step; on device, Done returned to the Items list with filter and
+   sort as left.
+4. Section order — `theSectionsAppearInSpecOrder`, reading the body's
+   composition (its first version read declaration order and was caught
+   by its own mutation); seen on device.
+5. CSV pair — `eachFileIsByteIdenticalToTheListsOwnUnfilteredCustomExport`
+   and `theCSVPairIsBothListsWholeInCustomOrderInOneCall` (explicit
+   expected order over a tie fixture); on device the share sheet read
+   "Save as 2 Items", and Files received `Trove-Items-2026-09-02.csv`
+   (308 lines, BOM, CRLF) and `Trove-Wishlist-2026-09-02.csv` (4 lines).
+   The items file then re-imported as "Import 307 items? No problems
+   found." — the round trip, in practice.
+6. PDF pair — `thePDFPairMatchesTheListsUnfilteredDocuments`; on device
+   "2 Documents", 116 pages and 2 pages, both saved to Files.
+7. Both-empty / one-empty — `nothingIsExportedWhenBothCollectionsAreEmpty`,
+   `oneEmptyCollectionStillDeliversTwoFiles`; on device, after the
+   wishlist delete the wishlist PDF came back as one cover-only page,
+   and after the items delete both export rows disabled.
+8. Templates — `SettingsViewModelTemplateTests` (bytes and names, the
+   012 pins re-homed); on device the wishlist template staged at
+   68 bytes, as in 012.
+9. iCloud row — `SyncStatusCopyTests` (full-string table, nil/short/long
+   reasons) and `theICloudRowFollowsTheMonitorLive`; on device the
+   signed-out simulator read "iCloud isn't available". *Honest partial*:
+   caught-up and catching-up need a signed-in device; the local-only
+   fallback copy exists only in a preview (the fallback can't be
+   provoked on demand).
+10. No other-devices claim — `noStateClaimsOtherDevicesHaveTheCollection`
+    over every table cell, plus the whole-string pins.
+11. Delete All Items — `confirmDeletesEveryItemAndOnlyItems` (second
+    context; photos zero; sell plans emptied; wishlist untouched),
+    `requestCarriesTheLiveCount`, `cancelAfterRequestLeavesTheStoreIntact`,
+    `DeleteAllCopyTests`; on device "Delete all 307 items?" with the
+    full message, Delete All → "No gear yet" and "Nothing tracked yet".
+12. Delete All Wishlist Items — `confirmDeletesEveryWishlistItemAndOnlyThose`;
+    on device "Delete all 3 wishlist items?", Keep left the count at 3,
+    Delete All disabled the row and left the 307 items in place.
+13. All-or-nothing — `confirmDeleteAllRollsBackOnSaveFailure` (scan:
+    exactly one `save()` in the body, and `rollback()` present in the
+    extracted `catch` block and nowhere else — tightened at T017 from a
+    `contains` pair the sweep found would pass two saves or a rollback
+    on the success path) and `DeleteAllCopy.failureMessage` ending
+    "Nothing was deleted." *Honest partial*: an in-memory save can't be
+    made to throw, so the failure path is pinned structurally, as 012's
+    was.
+14. Busy — the view-model half by
+    `activityIsObservableMidFlightAndBlocksReentry` and
+    `activityIsSetSynchronouslyAndClearsWhenDone`; the view half by
+    `everyActionRowGatesOnBusyAndReadsItsOwnActivity` (all six rows
+    disable on `isBusy` and read their own `activity` for the spinner —
+    added at T017 after the sweep found nothing guarded the view side,
+    since the view model's guard refuses a reentrant call whether or not
+    the rows disable) and `doneIsNeverDisabled`. *Honest partial*: the
+    spinner itself was not seen on device, and the reason is worth
+    stating precisely — not that it's fast, but that nothing can observe
+    a frame; every action completed within a screenshot's latency and
+    the wiring is what the scan pins.
+15. Share sheet and residue — on device every share sheet returned to
+    Settings, and listing the staging directory showed only the latest
+    set each time (the CSV pair gone once the PDF pair staged); the
+    two-set lifecycle is pinned by `aSecondFileSetLeavesOnlyTheSecondSet`.
+    *Honest partial*: the "dismissing mid-export leaves no sheet later"
+    half can't be exercised by hand at ~ms generation and has no test;
+    it rests on the sheet's state dying with the view, and on the purge
+    listing for the file.
+16. Export failure copy — `aThrowingServiceSurfacesTheSharedExportCopy`,
+    `theFailureAlertsReadTheSharedCopy`, and the `ExportCopy` scan in
+    `theViewModelReadsTheSharedCopy`.
+17. About — `AppVersionTests` (including that the running bundle carries
+    both keys) and `noVersionLiteralInTheSettingsFiles`; on device
+    "Version 1.0 (1)".
+18. VoiceOver — `bothDeleteRowsCarryAnAccessibilityHintAndTheRowAppliesIt`
+    pins the two hints at the call sites *and* their application in the
+    row, plus the iCloud block's `.accessibilityElement(children:
+    .combine)` (both extended at T017 — the sweep found the first
+    version read only the arguments, the declaration-vs-composition
+    shape again). *Honest partial*: not driven with VoiceOver by hand —
+    that needs Accessibility Inspector or a device in someone's hands.
+19. Copy and docs — `theWrongLayoutMessagePointsAtSettingsTemplatesExactlyOnce`
+    (whole-string); `docs/csv-reference.md`, the README, and 012's
+    spec carry the moves (T015).
 
 ## Non-goals (explicit)
 

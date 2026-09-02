@@ -135,11 +135,18 @@ nonisolated enum ExportFile: Sendable {
 @concurrent func exportFiles(_ files: [ExportFile]) async throws -> [URL]
 ```
 
-- `FileExportService.exportFiles`: fire the generation probe once,
-  **`prepareStagingDirectory()` once** (the purge plus create), then
-  for each file in order: render → `write(_:filename:)` → next. Each
-  PDF renders just before its own write, so 011's one-document-in-
-  memory profile holds for a set. One `PhotoFetcher` is shared across
+- `FileExportService.exportFiles`: fire the generation probe once, then
+  for each file in order: render → (before the **first** write only)
+  `prepareStagingDirectory()` → `write(_:filename:)` → next. Each PDF
+  renders just before its own write, so 011's one-document-in-memory
+  profile holds for a set. *As built (T001, restated at T017 after the
+  sweep):* the purge sits just before the first write rather than
+  before the first render, so a first-file render that throws leaves
+  the previous set intact — the single-file path's behavior. A
+  later-file render throwing would leave the new set partially staged;
+  accepted rather than tested, because `PDFComposer.render` throws only
+  when no graphics context can be made at all, and rendering the whole
+  set first would double peak memory. One `PhotoFetcher` is shared across
   the set: its context rotation is per 25 *fetches*, not per document,
   so the ≤25-photos bound is unchanged. Returns URLs in input order.
 - The existing `stage(_:filename:)` becomes prepare + one write — a
@@ -228,9 +235,11 @@ Cover totals — `totalPaidCents`, `totalCurrentValueCents`,
 the list VMs; Settings computes them over its own fetched arrays with
 the same expressions, and a test pins Settings' covers equal to the
 list VMs' unfiltered covers in everything but `generatedAt`. Coverage
-labels reuse the unfiltered strings verbatim (`"All items"`,
-`"Whole wishlist"`), titles `"Owned Items"` / `"Wishlist"`, filenames
-from `ExportFilename.items/wishlist(fileExtension:)`. Criterion 5's
+labels and titles are **shared constants, not repeated literals** (as
+built at T009): `ItemListViewModel.documentTitle` / `wholeCoverageLabel`
+and the `WishlistViewModel` pair, read by each list's own export and by
+Settings, so byte-identity can't drift on a string; filenames from
+`ExportFilename.items/wishlist(fileExtension:)`. Criterion 5's
 byte-identity is by construction — `CategoryPathHelper.path(_:isWithin: "")`
 and `SearchMatching.matches(query: "")` both admit everything, and the
 comparator is a strict total order down to `id` — and proven against
@@ -438,7 +447,11 @@ version literal (criterion 17's "never typed").
     review (2026-09-01): the draft's "Delete all 1 item?" was exact by
     the spec's letter and not how anyone says it. `DeleteAllCopyTests`
     pins both forms.
-  - `message(for target:, mode:)` — items: "Their photos go too. Every
+  - `message(for target:, count:, mode:)` — *as built at T004, count-
+    aware as well as mode-aware*: a list of one reads with the
+    single-item alerts' own sentences ("Its photos go too. Any sell plan
+    it's on drops it."), extending the person's singular-title
+    correction; the plural forms are — items: "Their photos go too. Every
     sell plan loses its items. [iCloud] This can't be undone.";
     wishlist: "Their photos go too. Their sell plans go with them; the
     gear on those plans stays. [iCloud] This can't be undone."; where
@@ -450,6 +463,14 @@ version literal (criterion 17's "never typed").
     `failureMessage = "Deleting failed. Nothing was deleted."`.
   - `DeletionGuardTests`' shared-copy guard grows the third route:
     `SettingsViewModel.swift` must read `DeleteAllCopy`.
+  - The singular sentences are shared with `ItemDeleteCopy` /
+    `WishlistDeleteCopy` **by pin, not by construction** (T017, after
+    the sweep's S6): in a local-only mode a list of one is the
+    single-item alert word for word, and `DeleteAllCopyTests` asserts
+    equality with both constants — so rewording either single-item
+    alert turns red here. Composing the strings from those constants was
+    rejected because they end in the undo sentence that Delete All has
+    to place *after* its iCloud sentence.
 - **`ImportCopy`** `.headerMismatch(wrongList: false)` body → "The
   columns don't match the \(noun) template. A blank template with the
   expected layout is in Settings › Templates." — **body only**: the
@@ -494,7 +515,10 @@ version literal (criterion 17's "never typed").
     tokens — never `.secondary`, which `NoHardcodedColorsTests`
     forbids), `.accessibilityElement(children: .combine)`.
   - Delete footer: `DeleteAllCopy.footer` in `secondary` / `textQuiet`.
-    About: `DetailRow`s for name/subtitle and Version (mono).
+    About: *as built, a block rather than `DetailRow`s* — name in
+    `body`/`textPrimary`, the subtitle in `secondary`/`textQuiet`, and
+    the version line in `monoMeta`/`textMonoMeta` ("Version 1.0 (1)"),
+    since a "Version | Version 1.0 (1)" row would say the word twice.
   - `.sheet(item: $viewModel.stagedExport) { ShareSheet(urls:
     $0.urls).presentationDetents([.medium, .large]) }` — presents over
     Settings, returns to it.
@@ -524,7 +548,12 @@ version literal (criterion 17's "never typed").
   221–223 ("so a fresh install can reach Import and Get Blank
   Template") and 261–265 (the entry point, "an open design question
   for this spec" — now decided); the status rows; README status and
-  tree (which already lacks `012`).
+  tree (which already lacks `012`) **and the README's Features list**,
+  which has no entry for Settings, export-everything, the iCloud row
+  or Delete All (the sweep's S10); and `DECISIONS.md`'s git-routing
+  entry, which names neither bucket for `README.md` — this branch
+  changed a behavior sentence there at T015 while the status and tree
+  wait for the post-merge pass.
 
 ## Test plan
 
@@ -579,9 +608,18 @@ every claim above gets the test that would catch it false.
   `SettingsView.swift`: `ShareSheet(urls:`, exactly one `.alert(`,
   `viewModel.confirmDeleteAll(` present and `await
   viewModel.confirmDeleteAll` absent, `Button("Done")` without
-  `.disabled`, the five section titles in order, `.accessibilityHint`
-  on both delete rows, no version literal; `SettingsViewModel.swift`
-  reads `DeleteAllCopy`, `ExportCopy`, `SyncStatusCopy`;
+  `.disabled`, the five sections in order — *read from the body's
+  composition, not the properties' declaration order: the first
+  version of that scan stayed green when two sections were swapped in
+  the body, its own mutation caught it at T012, and it was rewritten*
+  — `.accessibilityHint` on both delete rows *and applied by the row*,
+  the iCloud block combined into one element, every one of the six
+  action rows gating on `isBusy` and reading its own `activity` (the
+  last three added at T017 from the sweep: nothing else could notice
+  the view's busy bindings going missing, and the hint scan had been
+  reading arguments rather than application), no version literal;
+  `SettingsViewModel.swift` reads `DeleteAllCopy`, `ExportCopy`,
+  `SyncStatusCopy`;
   `TroveApp.swift` forwards `store.cloudKitFailure`; the existing
   overflow-outside-the-gate scan unchanged.
 - **UI** (`TroveUITests`): the fresh-install test becomes
