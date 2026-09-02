@@ -6,6 +6,13 @@ approval, as that section says they would. Two sentences were amended
 the same day during planning, after the skeptical review found each
 one stating something the code couldn't make true — see the inline
 notes and Decisions 13–14.)
+Amended 2026-09-02 — **Amendment A (Draft)**: the Dashboard entry
+point and bespoke in-page menus. Raised by the person after all
+seventeen tasks were complete and before the merge, and decided in this
+session; recorded as Decisions 15–17, drafting proposals P8–P13, and
+criteria 20–27. Everything outside the sections marked "Amendment A"
+is as approved on 2026-09-01. The amendment is Draft until the person
+approves it; its plan addendum and tasks follow the usual gates.
 Authored in-session at the person's direction — the second use of the
 per-spec venue clause `012` added to the constitution. Every product
 decision below was made by the person in that conversation and is
@@ -53,14 +60,15 @@ row in v1 is either an action or a readout. That's the honest shape of
 the app today — the first real preference arrives with `004-themes`,
 and this spec exists partly so that one has a home when it lands.
 
-## Core behavior: one Settings, reached from the lists
+## Core behavior: one Settings, reached from the lists and the Dashboard
 
 Settings is a single modal screen, presented as a sheet over whichever
-list opened it, with a "Settings" title and a Done button in the sheet's
-navigation bar — the same chrome the add/edit forms use. Done returns
-to the list exactly as it was left: filter, sort, and search untouched.
-Opening it from the Items list or from the Wishlist yields the identical
-screen; there is one Settings, not one per tab.
+screen opened it, with a "Settings" title and a Done button in the
+sheet's navigation bar — the same chrome the add/edit forms use. Done
+returns to that screen exactly as it was left: a list's filter, sort,
+and search untouched. Opening it from the Items list, from the
+Wishlist, or — since Amendment A — from the Dashboard yields the
+identical screen; there is one Settings, not one per tab.
 
 Nothing on the screen depends on which list opened it. Export-everything
 exports both collections regardless; the templates come as a pair; the
@@ -94,10 +102,126 @@ without a single item, one tap further for the template than before
 added there as part of this spec's implementation, the way `012` did
 for `011`.
 
-The Dashboard gets no entry point in v1. Design's Dashboard mock draws
-a "…" at the top-right of the TROVE header that has never been built;
-it stays unbuilt and is recorded in the Decisions record and in the
-roadmap rather than forgotten. (Proposed at drafting — see P1.)
+*As approved on 2026-09-01 this section ended: "The Dashboard gets no
+entry point in v1" (P1). Amendment A overturns that — the next
+subsection is the Dashboard's entry point.*
+
+### The Dashboard's "…" (Amendment A)
+
+The root Dashboard — the TROVE screen, not the category drill-down,
+which has a navigation bar and is the same screen narrowed — gains the
+"…" Design's mock draws at the top-right of its header. It is the
+lists' badge: the same bordered brass pill, sized as theirs, in the
+header's trailing position, top-aligned with the wordmark. The mock
+draws the mark bare; the pill is chosen so the three root screens carry
+one control rather than two drawings of it (P8).
+
+Its menu holds one row: **Settings**. A one-row menu is a small wart,
+taken deliberately (P13): the roadmap already holds two Dashboard-only
+occupants for exactly this spot — the Dashboard export and the "Full"
+export, `011`'s deferrals — so the control starts in the shape it will
+keep, and a "…" means the same thing on every screen: a menu, never a
+button that happens to open a screen. If one tap ever matters more,
+the honest form is a different glyph, not a "…" that isn't a menu.
+
+The badge is always visible on the root Dashboard, empty state
+included — the fresh install reaching for a template may well land on
+the Dashboard first. It never shows the busy spinner: nothing runs from
+the Dashboard. Settings opened here is the same sheet, and Done returns
+to the Dashboard with its figures reloaded, so a Delete All is
+reflected at once — the sheet's dismissal runs the same load the
+screen runs on appear, the way the lists' Settings sheet already does.
+
+The question P1 deferred was answered once the sheet existed: the
+whole-collection screen is where whole-collection actions most
+naturally live, and the mock had drawn the mark from the start.
+
+## Menus: bespoke inside the page, system in the bars (Amendment A)
+
+Until this amendment the two badges in each list's header opened two
+visual languages. Sort By opened `010`'s Design-drawn dropdown — the
+232-point surface, the mono header, hairline rows, the brass-tinted
+selected row — while "…" opened a system menu, iOS 26's glass. Drawn as
+one control family and sitting side by side, they didn't read as one.
+The person's call, 2026-09-02: **homogenize on bespoke**, and write
+down the rule that says where bespoke stops.
+
+The rule is the one the app already followed without stating it:
+
+- **Inside the page, menus are Trove's own.** The "…" on both lists
+  and on the Dashboard, the Sort By picker, and the Dashboard's
+  category-order control all open the Sort By dropdown's surface — the
+  same width, background, border, radius, row padding, and row
+  hairlines — differing only in what the rows say. It should look, in
+  the person's words, "exactly like the Sort By options, just with
+  different text."
+- **In the bars, chrome is the system's.** The detail screens' "…"
+  lives in the navigation bar beside the system back chevron, drawn in
+  the system's circle, and stays a system menu — as the tab bar, the
+  floating add button, and the sheets' Done buttons stay system. A
+  bespoke dropdown hung off a bar item, floating over a pushed screen,
+  is the fragile version of this idea and buys nothing the rule needs.
+
+One honest consequence: a "…" in a header and a "…" in a bar open
+different-looking menus. The layer boundary is what justifies it.
+
+Going the other way — both system — was considered and declined.
+`010`'s T029c record is the reason: the sort control *was* a system
+menu, and the menu-dismiss transaction animated its variable-width
+label's bounds from UIKit, tearing the badge's border for about 400 ms
+on every width-growing switch, beyond the reach of any SwiftUI fix. The
+cure was the custom dropdown. Returning to a system menu would reopen
+that defect, discard an approved Design element (a system menu can show
+none of the SORT BY header, the REORDER tag, the tinted row, or the
+app's type), and put a glass material inside a page the brief keeps
+matte — trading design quality, which the constitution names primary,
+for less code.
+
+### What the overflow dropdown looks like
+
+- No header row (P9). Sort By's header names the choice being made;
+  "…" has no word to echo, and the system menu had none.
+- Rows read as the sort dropdown's unselected rows: body type in
+  `textBody`, the same row padding, a `surfaceInset` hairline between
+  rows. Nothing is ever "selected" here, so no tint and no checkmark.
+- The two group breaks of criterion 1 — after the export pair, after
+  Import — are hairlines in `divider`, the surface's own border color,
+  rather than `surfaceInset` (P10): a visibly stronger rule drawn in a
+  color the surface already uses. No new token.
+- A disabled row — the export pair on an empty collection — reads in
+  `textDisabled`, does nothing when tapped, and reads as dimmed to
+  VoiceOver (P11). Criterion 2's rule is unchanged; only its drawing is
+  now the app's.
+- Choosing a row closes the dropdown before the action runs, so the
+  badge's busy spinner (criterion 14, unchanged) is what the user sees
+  during an export, exactly as today.
+
+### What the Dashboard's order dropdown looks like
+
+The "BY VALUE" control keeps its drawing — the mono quiet label the
+mock draws, not a pill — and opens the same surface with a header
+reading **ORDER BY** (matching its VoiceOver name, "Order categories
+…") and its two rows, By value and By count, the current one tinted and
+checked as the sort dropdown draws any selected row. No REORDER tag:
+that belongs to the manual-order option alone, and there is none here
+(P12). This control has carried the exact shape T029c evicted — a
+variable-width label in a system menu — since `001`, unreported only
+because its label has no border to lag; converting it removes the risk
+rather than waiting for it.
+
+### Behavior shared by every in-page dropdown
+
+- One open at a time per screen. Opening one closes any other; tapping
+  the open badge closes it; tapping anywhere outside closes it;
+  choosing a row closes it. The dropdown floats over the screen's
+  content beneath the header, at the trailing gutter, as Sort By's
+  does today.
+- Opening and closing match Sort By's exactly, including whether and
+  how they animate — one behavior, not two.
+- VoiceOver: each badge announces as a pop-up button; opening moves
+  focus into the dropdown; the escape gesture closes it; the
+  tap-outside layer is labelled for what it does ("Dismiss more
+  actions", "Dismiss sort options", "Dismiss order options").
 
 ## The Settings screen
 
@@ -276,6 +400,23 @@ This spec alters things `012` shipped and documented, all in the open:
 Nothing about the CSV schema, the import flow, or the list exports
 changes.
 
+Amendment A adds three more, each visible:
+
+- **Both lists' "…" stops being a system menu.** `011` chose the
+  system `Menu` "deliberately" — `tokens.md`'s "Export badge and menu"
+  table records why: a constant-size label sidestepped T029c. Its
+  items, order, and enablement rules are unchanged (criteria 1–2); its
+  drawing becomes the Sort By surface. That `tokens.md` row is
+  superseded and rewritten as part of the amendment's implementation,
+  and `brief.md` gets the page/bars rule so the next menu doesn't have
+  to rediscover it.
+- **The Dashboard's category-order control stops being a system
+  menu** — same options, same effect, the app's drawing.
+- **The root Dashboard grows a "…"** where it had none.
+
+`010`'s Sort By dropdown is unchanged to the eye; that it becomes the
+shared surface the others draw on is an implementation matter.
+
 ## Design requirements
 
 - Built from the app's existing vocabulary, no separate Design pass:
@@ -290,6 +431,14 @@ changes.
   delete rows carry the destructive role.
 - The busy spinner is the same compact brass spinner the list badges
   use — one idiom for "working" across the app.
+- (Amendment A) In-page menus are the Sort By dropdown's surface with
+  different rows — no new component vocabulary and no Design pass, per
+  the person: "it will look exactly like the Sort By options, just
+  with different text." The one new mark is a group-break hairline in
+  `divider`; the one new state is a disabled row in `textDisabled`;
+  both are existing tokens.
+- (Amendment A) Nav-bar menus stay system, and the rule is written
+  into `brief.md`.
 
 ## Decisions record
 
@@ -349,6 +498,41 @@ skeptical review, decided by the person):
     "nothing is left staged" — generation can't be interrupted, and
     building a cancellation-plus-purge path for a temp file the sweep
     already reclaims isn't worth a new mechanism.
+
+Added 2026-09-02 (Amendment A), decided by the person in this session
+after the seventeen tasks were complete and before the merge:
+
+15. **The screen keeps the name Settings**, although nothing on it is
+    yet a preference. In iOS vocabulary Settings is the app's
+    back-of-house screen, and export, sync status, delete-all, and
+    About are its usual residents; the roadmap's theme selection
+    (`004`) and a currency choice land exactly here and make the word
+    literal. Once real preferences arrive, the export, template, and
+    delete groups may move behind rows of their own — deferred,
+    recorded in Non-goals and the roadmap, not designed now.
+16. **The root Dashboard gets the "…"** the mock draws, holding
+    Settings alone — P1 overturned. Not the category drill-down.
+17. **In-page menus go bespoke; nav-bar menus stay system.** The
+    lists' "…", the Dashboard's "…", Sort By, and the Dashboard's
+    category-order control share the Sort By dropdown's surface; the
+    detail screens' "…" stays a system menu. **No Design pass**: same
+    surface, different text.
+
+Proposed at drafting the amendment, 2026-09-02, by Claude Code. These
+become decisions on the amendment's approval unless overturned:
+
+- **P8. The Dashboard's badge is the lists' bordered pill**, not the
+  mock's bare glyph — one control on three screens.
+- **P9. The overflow dropdown has no header row.**
+- **P10. Group breaks are `divider` hairlines**; row separators stay
+  `surfaceInset`.
+- **P11. Disabled rows are `textDisabled`**, inert, dimmed to
+  VoiceOver.
+- **P12. The order dropdown's header reads ORDER BY**, its selected
+  row tinted and checked, no REORDER tag; its label stays the mock's
+  mono text.
+- **P13. A one-row menu on the Dashboard rather than a direct
+  button**, for the reasons in the entry-point section.
 
 ## Acceptance criteria
 
@@ -417,6 +601,40 @@ skeptical review, decided by the person):
     for the template; it points at Settings › Templates.
     `docs/csv-reference.md` and the README say where the template now
     lives. `012`'s spec carries the superseded-in-part note.
+
+Amendment A (2026-09-02) — unchecked until verified:
+
+20. [ ] The root Dashboard's header shows the "…" badge at its
+    top-right, drawn as the lists' badge, on an empty collection as on
+    a full one; the category drill-down shows none. Its dropdown holds
+    exactly one row, Settings, which opens the identical Settings
+    sheet. Done returns to the Dashboard with its figures reloaded —
+    after Delete All Items, the Dashboard's empty state.
+21. [ ] The "…" on both lists and on the Dashboard opens a dropdown
+    drawn on the Sort By surface — same width, background, border,
+    radius, row padding, and row hairlines — and no system menu. The
+    lists' rows read in criterion 1's order, with the two group breaks
+    drawn as `divider` hairlines and no header row.
+22. [ ] On an empty collection the export rows are drawn in
+    `textDisabled` and tapping one does nothing; Import from CSV… and
+    Settings still act. (Criterion 2, now under the app's drawing.)
+23. [ ] Choosing a row closes the dropdown before its action runs;
+    during an export the badge shows the spinner and disables exactly
+    as before (criterion 14).
+24. [ ] One dropdown at a time: opening "…" while Sort By is open
+    closes Sort By, and the reverse; tapping the open badge, tapping
+    outside, or choosing a row closes the open one. The Sort By
+    dropdown is unchanged to the eye.
+25. [ ] The Dashboard's category-order control opens the same surface
+    with an ORDER BY header and the rows By value and By count, the
+    current one tinted and checked; choosing the other reorders the
+    breakdown and updates the label.
+26. [ ] VoiceOver: each badge announces as a pop-up button, opening
+    moves focus into the dropdown, the escape gesture closes it, the
+    tap-outside layer is labelled, and disabled rows read as dimmed.
+27. [ ] The detail screens' "…" is unchanged, and it is the only
+    system menu left in the app: no screen presents a system menu
+    inside its content.
 
 ### Verification record (T017, 2026-09-02)
 
@@ -523,8 +741,18 @@ pass on the ~307-item dev store. Honest partials are stated as such.
   changing it is a spec of its own, not a settings row.
 - **Import from Settings** — the person's decision: import stays a
   per-list action on the "…" menu.
-- **A Dashboard entry point** — P1; the mock's drawn mark is recorded
-  for a later spec, not built here.
+- **Restructuring Settings into submenus** — once real preferences
+  arrive (`004`'s theme picker first), the export, template, and
+  delete groups may each move behind a row of their own; the person's
+  call on 2026-09-02 was to defer that until there is something to
+  restructure around (Decision 15).
+- **Bespoke menus in the navigation bars** — Decision 17 draws the
+  line at the page; the detail screens' "…" stays system.
+- **A "…" on the Dashboard's category drill-down** — the root screen
+  only (Decision 16); the drill-down is the same screen narrowed, with
+  a navigation bar, and one entry per tab is enough. (The original
+  non-goal here, "A Dashboard entry point", was P1, overturned by
+  Amendment A.)
 - **iCloud account status or a sign-in prompt** — the row reports what
   the app already knows and asks iCloud nothing; querying account
   status, or deep-linking to the system Settings, is a later nicety
@@ -546,6 +774,8 @@ pass on the ~307-item dev store. Honest partials are stated as such.
 
 - `001`'s fixed type sizes (no Dynamic Type) apply to this screen as to
   every other; the accessibility pass it defers is still deferred.
+  Amendment A's dropdowns inherit it exactly as Sort By's does: none
+  of them scrolls, and none needs to until that pass lands.
 - `011`'s timezone-day caveat on CSV dates applies to the
   export-everything files exactly as to the list exports.
 - The store's rule from `001` that being configured for iCloud says
