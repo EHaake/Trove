@@ -3,9 +3,9 @@
 Status: **Approved** (2026-09-01, same day as drafting; drafted
 in-session per the authorship split. One copy correction at review —
 the singular Delete All title — recorded under Copy.)
-**Amendment A addendum: Draft** (2026-09-02) — the final section,
-"Amendment A — the Dashboard "…" and bespoke in-page menus"; awaiting
-the person's review.
+**Amendment A addendum: Approved** (2026-09-02, same day as drafting)
+— the final section, "Amendment A — the Dashboard "…" and bespoke
+in-page menus".
 
 Grounded in the shipped 011 export module, 012's import surface, and
 the view/VM code as it is on this branch — file references below are
@@ -691,9 +691,9 @@ Amendment A — see the final section.
 
 ## Amendment A — the Dashboard "…" and bespoke in-page menus
 
-Status: **Draft** (2026-09-02) — drafted in Plan Mode against the
-approved amendment (spec Decisions 15–19, P8–P13, criteria 20–27);
-awaiting the person's review before Phase 6 tasks are drafted. Two
+Status: **Approved** (2026-09-02, same day as drafting) — drafted in
+Plan Mode against the approved amendment (spec Decisions 15–19,
+P8–P13, criteria 20–27). Two
 explorations, an independent design pass on the host mechanism, and
 the `skeptical-reviewer` ran on this section before it was written.
 

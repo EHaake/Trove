@@ -1,9 +1,10 @@
 # 013 — Settings Menu: Tasks
 
-Status: **Complete** (2026-09-02) — all seventeen tasks done; nineteen
-criteria verified with a per-criterion record in `spec.md`; the T012
-mutation and the T017 sweep each caught a false-passing scan before
-merge; PR #9 ready for review
+Status: **In progress — Amendment A** (2026-09-02): T001–T017 complete
+as recorded below (nineteen criteria verified; the T012 mutation and
+the T017 sweep each caught a false-passing scan); Phase 6, T018–T025,
+drafted against the approved plan addendum for criteria 20–27. PR #9
+stays draft until T025.
 
 Drafted against the approved `plan.md` (approved 2026-09-01; drafted
 at `61c208b`). No new technical decisions are made here — every call
@@ -644,13 +645,278 @@ anywhere in this spec.
   *Done when*: all criteria dispositioned, findings recorded, status
   flipped.
 
+
+## Phase 6 — Amendment A: the Dashboard "…" and bespoke in-page menus
+
+Drafted 2026-09-02 against the approved plan addendum (approved the
+same day; drafted at `298b1a8`). Same house rules as above; every
+call traces to the addendum's sections. Ordering, recorded up front:
+the render oracle lands **first**, while it is trivially green, so
+the refactor it guards can't be committed without it; then the
+surface and rows; then the host, migrating Sort By alone (the one
+dropdown that already exists, so the mechanism is proven on
+unchanged behavior before anything new rides on it); then the lists'
+"…"; then the Dashboard, badge before order control, so the
+Dashboard's first host has one menu; docs after every drawing
+exists; the device pass last. Each commit leaves the app sound —
+T019 injects the dismiss action into the lists' old overlay for the
+one commit before T020 replaces it.
+
+- [ ] **T018 — The render oracle, before anything moves.**
+  Per addendum §Test plan (render oracle). New
+  `TroveTests/SortDropdownRenderTests.swift`: `LegacySortDropdown` —
+  today's `SortDropdown` copied verbatim into the test target, private
+  `CheckmarkGlyph` and header included, its doc comment saying it is
+  010's drawing frozen as the oracle for T019 and deleted at T019's
+  close-out. Render both through `renderBitmap` for two states — Custom
+  selected with the REORDER tag; a non-manual selection — over
+  `ItemListViewModel.SortOrder.allCases`; assert **equal dimensions
+  first**, then exact pixel equality, no tolerance; render each twice
+  and assert the two renders equal (determinism). Trivially green
+  today. Mutation: one padding value changed in the production
+  `SortDropdown` → red; revert. If the twice-render check fails, record
+  it, drop the oracle to the structural scans of T019, and say so in
+  this note — not silently.
+  *Done when*: the suite is green, the mutation red-run is recorded,
+  the determinism result is recorded, `xcodebuild test
+  -only-testing:TroveTests` green with the count.
+
+- [ ] **T019 — `Dropdown.swift`: the surface and the row, and
+  `SortDropdown` re-composed.**
+  Per addendum §Components. New `Trove/Views/Shared/Dropdown.swift`:
+  `DropdownSurface(title:)` (232 wide, `PlateSurface`, `buttonRadius`
+  clip, `divider` border, `.accessibilityElement(children: .contain)`,
+  `.accessibilityAction(.escape)` no-op-safe, the header row iff
+  `title != nil`, and `Group(subviews:)` attaching
+  `.accessibilityFocused` to the first subview, set one run-loop turn
+  after appear); `DropdownRow(title:, isSelected:, isEnabled:,
+  startsGroup:, hasTopHairline:, tag:, action:)` with `.disabled(!isEnabled)`,
+  `textDisabled` when disabled, the top hairline in `divider` when
+  `startsGroup`, none when `!hasTopHairline`, and **`dismiss()` before
+  `action()`** reading `@Environment(\.dismissDropdown)`;
+  `CheckmarkGlyph` moves here. New `Trove/Views/Shared/DropdownHost.swift`
+  holding, for now, only `DismissDropdownAction` (a plain struct) and
+  the `@Entry var dismissDropdown` whose default is
+  `assertionFailure("DropdownRow used outside a dropdownHost")` —
+  the host modifier arrives at T020. `ThemeMetrics.dropdownGap = 6`
+  with the `60 = 24 + 30 + 6` derivation in its comment.
+  `SortDropdown` re-composes on `DropdownSurface(title: "SORT BY")`
+  and `DropdownRow` (tag `"REORDER"` iff `isManualOrder`); `SortBadge`
+  untouched. **Both lists' existing overlay gets
+  `.environment(\.dismissDropdown, DismissDropdownAction {
+  isSortMenuOpen = false })` on the `SortDropdown`** so a tapped row
+  doesn't hit the loud default before T020 — removed at T020.
+  T018's oracle must stay green through this; then its own red-run:
+  one padding in `DropdownRow` changed → red; revert; **then delete
+  `LegacySortDropdown` and its test** with the red-run recorded here.
+  New `TroveTests/DropdownWiringTests.swift`, first cases:
+  `Dropdown.swift` — the `Button`'s body calls `dismiss()` before
+  `action()` (body order, via `SourceScan.closureBodies`),
+  `.disabled(!isEnabled)`, `textDisabled` read, `Group(subviews:` and
+  `.accessibilityFocused(` in `DropdownSurface`; `SortPicker.swift` —
+  `SortDropdown`'s body composes `DropdownSurface(title: "SORT BY"`
+  and `DropdownRow(`. Mutations: swap `dismiss()`/`action()` → red;
+  drop `.disabled` → red.
+  *Done when*: oracle green across the refactor, its red-run and
+  deletion recorded; new scans green and mutation-red; full unit
+  target green with the count; the app runs (Sort By still works on
+  both lists via the old overlay).
+
+- [ ] **T020 — `DropdownHost`: the mechanism, proven on Sort By.**
+  Per addendum §The host and §Screens (lists, sort half). Fill in
+  `DropdownHost.swift`: `DropdownAnchorKey`, `.dropdownAnchor(_:)`,
+  `.dropdownHost(open:dismissLabel:content:)` — the `GeometryReader`
+  (`.ignoresSafeArea()`) resolving `proxy[anchor]`, the catcher
+  (`Color.clear`, `.contentShape(Rectangle())`, `.onTapGesture`,
+  `dismissLabel(id)`, `.isButton`, explicit `.accessibilityAction`,
+  `.accessibilitySortPriority(-1)`), `DropdownPlacementLayout` with the
+  pure `DropdownPlacement.origin(badge:container:insets:size:gutter:gap:)`,
+  the `.environment(\.dismissDropdown, …)` injection on the content,
+  the `ZStack`'s `.accessibilityElement(children: .contain)` +
+  `.isModal` + `.accessibilityAction(.escape)`, `.transaction {
+  $0.animation = nil }`. Both lists: `isSortMenuOpen` →
+  `@State private var openDropdown: HeaderDropdown?` (`private enum
+  HeaderDropdown: Hashable { case sort, overflow; var dismissLabel }`);
+  `sortControl` → `.dropdownAnchor(HeaderDropdown.sort)` + hint "Opens
+  sort options" + identifier `sortOptions.items` / `sortOptions.wishlist`;
+  the old overlay block (and T019's temporary injection) replaced by
+  `.dropdownHost` placed **after** `.overlay(alignment: .bottomTrailing)`,
+  its `.overflow` case a `fatalError`-free placeholder (`EmptyView`) until
+  T021 — `overflowControl` still builds the system-`Menu` badge for one
+  more commit. New `TroveTests/DropdownPlacementTests.swift`: the
+  origin table — below with room; flipped above when below crosses the
+  bottom inset; pinned to the top inset when neither fits; trailing edge
+  at `container.maxX - insets.trailing - gutter`; never past the leading
+  gutter. `DropdownWiringTests` gains: per list exactly one `openDropdown`,
+  no `isSortMenuOpen`, `.dropdownHost(open: $openDropdown` once and after
+  the add-button overlay, `.dropdownAnchor(HeaderDropdown.sort)` once;
+  `DropdownHost.swift` — the environment injection,
+  `.accessibilityAction(.escape)`, `.isModal`, the catcher's `.isButton`.
+  **The inset probe**: a temporary `print` of `proxy.safeAreaInsets.bottom`
+  as the ignoring reader resolves it and the computed origin, run once on
+  the simulator with Sort By open on the Items list, the numbers recorded
+  here, the print removed before commit. **Decision 18's check**: confirm
+  by autocompletion that `AccessibilityTraits` has no pop-up/menu member;
+  record. Mutations: drop the flip in `origin` → placement test red; drop
+  the environment injection → scan red; move the host above the add-button
+  overlay → scan red.
+  *Done when*: placement and wiring tests green and mutation-red; full unit
+  target green with the count; UI target green (7 tests); Sort By opens
+  and closes on both lists exactly as before by eye, the probe's numbers
+  recorded.
+
+- [ ] **T021 — `OverflowDropdown`, the badge as a pill, and the lists'
+  "…".**
+  Per addendum §Components and §Screens (lists, overflow half). New
+  `Trove/Views/Shared/OverflowDropdown.swift`:
+  `OverflowDropdown(canExport:, exportCSV:, exportPDF:, importCSV:,
+  openSettings:)` — Export as CSV… (`isEnabled: canExport`,
+  `hasTopHairline: false`) / Export as PDF… (`isEnabled: canExport`) /
+  Import from CSV… (`startsGroup: true`) / Settings (`startsGroup: true`);
+  doc comment carrying the organizing rule. `OverflowBadge` becomes the
+  pill alone — `OverflowBadge(isBusy:, action:)`, glyph/spinner/border
+  unchanged, label "More actions"/"Working", hint "Opens more actions" —
+  its doc comment rewritten for the page/bars rule; `DetailOverflowMenu`'s
+  doc comment gets the same rule. Both lists: `overflowControl` →
+  `OverflowBadge(isBusy: viewModel.isBusy) { openDropdown = .overflow
+  }.dropdownAnchor(HeaderDropdown.overflow)` + identifier
+  `moreActions.items` / `moreActions.wishlist`; the host's `.overflow`
+  case → `OverflowDropdown(…)` with the four intents exactly as today's
+  badge arguments. Tests: `ExportWiringTests.theBadgeIsFedByTheViewModel…`
+  → `OverflowBadge(` ×1 with `isBusy: viewModel.isBusy`, `OverflowDropdown(`
+  ×1 carrying `canExport: viewModel.canExport`, `viewModel.exportCSV()`,
+  `viewModel.exportPDF()`, `isPickingImportFile = true`, `isShowingSettings
+  = true`; `theMenuCarriesFiveItemsInThreeGroups` → scans
+  `OverflowDropdown.swift` (five literals in order, `startsGroup: true` ×2
+  on Import and Settings, `isEnabled: canExport` ×2, template absent).
+  New `TroveTests/OverflowDropdownRenderTests.swift`: `OverflowDropdown`
+  rendered on both `canExport` states through `renderBitmap`; sampled
+  pixels assert the two group-break hairlines are perceptually farther
+  from `surface` than a row separator (the Oklab helper's floor), the
+  first row draws no top hairline, and a disabled row's title pixels match
+  `textDisabled` not `textBody`. `DropdownWiringTests`:
+  `.dropdownAnchor(HeaderDropdown.overflow)` once per list. UI tests: the
+  badge queries in `testEmptyCollectionOffersImportAndSettingsButNotExport`
+  and `testSettingsFromAnEmptyCollectionOffersTemplatesAndNothingElse`
+  move to `moreActions.items`; everything else in them unchanged — they
+  are the behavioral proof that bespoke rows publish as buttons with the
+  right `isEnabled`. Mutations, **one at a time** (T014's lesson):
+  `startsGroup` wired to nothing → render red; `hasTopHairline` ignored
+  → render red; disabled color dropped → render red; the export rows'
+  gate dropped → the fresh-install UI test red.
+  *Done when*: unit target green with the count; **UI target green twice
+  back to back**; the "…" on both lists opens the new dropdown by eye,
+  group breaks visible, export rows dimmed under an empty search.
+
+- [ ] **T022 — The Dashboard's "…" and its Settings sheet.**
+  Per addendum §Screens (Dashboard, badge half) and spec §The
+  Dashboard's "…". `DashboardView`: `header` → `HStack(alignment: .top)
+  { VStack(…); Spacer(); if isRoot { overflowControl } }`;
+  `overflowControl` = `OverflowBadge(isBusy: false) { openDropdown =
+  .overflow }.dropdownAnchor(DashboardDropdown.overflow)` + identifier
+  `moreActions.dashboard`; `private enum DashboardDropdown: Hashable {
+  case overflow; var dismissLabel }` (`.order` joins at T023); `@State
+  openDropdown`, `@State isShowingSettings`, `@Environment(\.storageMode)`
+  / `\.storageFallbackReason`; the lists' byte-identical Settings sheet
+  line wrapping `SettingsView(` with all four init arguments; the host
+  after `.refreshable` with `.overflow` → `DropdownSurface {
+  DropdownRow(title: "Settings", hasTopHairline: false) {
+  isShowingSettings = true } }`. Tests:
+  `SettingsWiringTests.theListAttachesTheSettingsSheetAndReloadsOnDismiss`'s
+  arguments gain `DashboardView.swift`; `DropdownWiringTests`:
+  `.dropdownAnchor(DashboardDropdown.overflow)` inside the `if isRoot`
+  brace span and nowhere else, `.dropdownHost(` once. New UI tests:
+  `testDashboardOffersSettingsAndNothingElse` (Overview →
+  `moreActions.dashboard` → "Settings" enabled, "Import from CSV…" absent
+  → tap → `navigationBars["Settings"]` → Done → badge hittable) and
+  `testAnOpenMenuClosesOnAnyOutsideTapIncludingTheOtherBadge` (add one
+  item through the quick-add form so the sort badge shows; `sortOptions.items`
+  → "SORT BY" exists; `moreActions.items` → "SORT BY" gone **and**
+  "Import from CSV…" does not exist; `moreActions.items` again → it
+  exists; "Dismiss more actions" → gone). Mutations, one at a time: the
+  badge gated behind `!viewModel.isEmpty` → Dashboard UI test red; the
+  anchor moved out of `if isRoot` → scan red; the overflow given its own
+  boolean so both can be open → the switching test's first pair red.
+  *Done when*: unit target green with the count; **UI target green twice
+  back to back** (9 tests); the badge shows on the root Dashboard, empty
+  and populated, and not on a drill-down, by eye.
+
+- [ ] **T023 — The Dashboard's order control, and the menu policy
+  guard.**
+  Per addendum §Screens (Dashboard, order half) and spec §What the
+  Dashboard's order dropdown looks like. `orderControl` → a `.plain`
+  `Button { openDropdown = .order }` around today's `monoLabel`, with
+  `.contentShape(Rectangle())`, `.dropdownAnchor(DashboardDropdown.order)`,
+  the existing "Order categories …" label and hint "Opens order
+  options"; `DashboardDropdown` gains `.order` ("Dismiss order options");
+  the host's `.order` case → `DropdownSurface(title: "ORDER BY") {
+  ForEach(BreakdownOrder.allCases) { DropdownRow(title: $0.label,
+  isSelected: $0 == viewModel.breakdownOrder) { viewModel.breakdownOrder
+  = $0; viewModel.load() } } }`. The last in-page `Menu` is gone with
+  this, so new `TroveTests/MenuPolicyTests.swift` lands here: over every
+  file under `Trove/Views`, the word-boundary pattern
+  `(?<![A-Za-z0-9_])Menu\s*[({]` plus `.pickerStyle(.menu)` and
+  `.contextMenu`, allowlist exactly `DetailOverflowMenu.swift`, more than
+  ten files scanned. `DropdownWiringTests`: `DropdownSurface(title:
+  "ORDER BY")` and `.dropdownAnchor(DashboardDropdown.order)` in
+  `DashboardView.swift`. Mutations: a `Menu {` added to a view → policy
+  red, and `DetailOverflowMenu(` alone confirmed green; `title: "ORDER
+  BY"` dropped → scan red.
+  *Done when*: unit target green with the count; the order dropdown
+  opens under its label at the top and after scrolling, and flips above
+  when near the tab bar, by eye, on the root and on a drill-down.
+
+- [ ] **T024 — Docs: tokens, the brief's rule, and the three specs'
+  notes.**
+  Per addendum §Docs. `design/tokens.md`: the "Export badge and menu
+  (`011`)" table — the Menu row rewritten (bespoke, the Sort picker's
+  surface, 013 Amendment A), the stale "hidden on an empty collection"
+  sentence corrected, rows for the group break (`divider` hairline), the
+  disabled row (`textDisabled`), the hint, and `dropdownGap`; the "Sort
+  picker (`010`)" section reframed as the shared surface (header row
+  SORT BY / ORDER BY, the first-row rule); a line for the Dashboard's
+  badge and order dropdown. `design/brief.md`: a short new section —
+  menus inside the page are Trove's own, chrome in the bars is the
+  system's. `specs/011-data-export/plan.md` 320–328: the note that
+  Amendment A takes the recorded fallback for homogenization, not
+  because the border tore; `specs/011-data-export/spec.md` lines 152
+  and 159: the dead test names replaced by
+  `theBadgeIsFedByTheViewModelFiresEveryIntentAndOpensSettings` and
+  `theMenuCarriesFiveItemsInThreeGroups`. `specs/012-data-import/spec.md`
+  362–364: the citation amended to the `startsGroup`/`isEnabled` counts.
+  *Done when*: every listed line changed; `DocsSampleTests` still green;
+  no doc still calls the lists' "…" a system menu (grep).
+
+- [ ] **T025 — Device pass, criteria 20–27, close-out.**
+  Per addendum §Verification. On the simulator: both lists' dropdowns
+  at both badges against the pre-T020 placement (a screenshot of
+  `99747d5`'s Sort By beside today's), group breaks, disabled rows via
+  an empty search; the Dashboard badge at root, empty and populated,
+  absent on a drill-down; the order dropdown at scroll offsets and under
+  a drill-down's nav bar, the flip near the tab bar with T020's probe
+  numbers in hand; two-tap switching; Settings from the Dashboard, and
+  Delete All's reflection on the Dashboard **on the `-uiTesting` store
+  only**. Accessibility Inspector on the badges' labels, hints and
+  identifiers, the rows' dimmed state, the catchers' labels; VoiceOver
+  focus-on-open, escape and `.isModal` containment by hand, recorded as
+  such. Then: criteria 20–27 checked off with a per-criterion
+  verification record in spec.md, honest partials stated; the addendum
+  amended in place where as-built differs (the probe numbers above all);
+  the skeptical-reviewer's pre-merge sweep over the amendment's
+  spec/plan/tasks and the docs; full suite (unit + UI twice) with the
+  actual output; this file flipped to Complete and PR #9 marked ready
+  for review.
+  *Done when*: all eight criteria dispositioned, findings recorded,
+  status flipped.
+
 ---
 
-After T017: PR #9 leaves draft and merges; then the repo-wide docs
+After T025: PR #9 leaves draft and merges; then the repo-wide docs
 catch-up on a `fix/` branch per `DECISIONS.md`'s git routing — the
 ROADMAP lines the plan names (221–223, the badge "so a fresh install
 can reach Import and Get Blank Template"; 261–265, the entry point
-"open design question", now decided), the status rows, the README
-status, tree, **and Features list** (no entry yet for Settings,
-export-everything, the iCloud row or Delete All), and a `README.md`
-line in `DECISIONS.md`'s git-routing entry.
+"open design question", now decided twice over — the lists' menu and
+the Dashboard's — and "four always-visible actions", now five), the
+status rows, the README status, tree, **and Features list** (no entry
+yet for Settings, export-everything, the iCloud row or Delete All),
+and a `README.md` line in `DECISIONS.md`'s git-routing entry.
