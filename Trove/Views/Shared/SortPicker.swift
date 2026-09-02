@@ -54,7 +54,10 @@ struct SortBadge: View {
     }
 }
 
-/// The dropdown half — see `SortBadge`.
+/// The dropdown half — see `SortBadge`. Since 013 Amendment A a composition
+/// of `DropdownSurface` and `DropdownRow`, the drawing every in-page menu
+/// shares; only the rows are Sort By's — the selected one tinted and
+/// checked, the manual-order option tagged REORDER.
 struct SortDropdown<Option: Identifiable & Equatable>: View {
     let options: [Option]
     let selection: Option
@@ -62,84 +65,21 @@ struct SortDropdown<Option: Identifiable & Equatable>: View {
     let isManualOrder: (Option) -> Bool
     let onSelect: (Option) -> Void
 
-    @Environment(\.theme) private var theme
-
     var body: some View {
-        VStack(spacing: 0) {
-            Text("SORT BY")
-                .font(ThemeTypography.font(.mono, size: 10))
-                .tracking(1.6)
-                .foregroundStyle(theme.colors.textQuiet)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(EdgeInsets(top: 11, leading: 14, bottom: 9, trailing: 14))
-
+        DropdownSurface(title: "SORT BY") {
             ForEach(options) { option in
-                row(for: option)
-            }
-        }
-        .frame(width: 232)
-        .background { PlateSurface() }
-        .clipShape(RoundedRectangle(cornerRadius: theme.metrics.buttonRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
-                .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
-        )
-    }
-
-    private func row(for option: Option) -> some View {
-        let isSelected = option == selection
-
-        return Button {
-            onSelect(option)
-        } label: {
-            HStack(spacing: 10) {
-                Text(label(option))
-                    .font(theme.typography.body)
-                    .foregroundStyle(isSelected ? theme.colors.accentBrass : theme.colors.textBody)
-
-                Spacer(minLength: 0)
-
-                if isSelected {
-                    // The REORDER tag belongs to the manual option alone —
-                    // it's what tells the user this row is also where
-                    // dragging lives, the job the old standalone button did.
-                    if isManualOrder(option) {
-                        Text("REORDER")
-                            .font(ThemeTypography.font(.mono, size: 9.5))
-                            .tracking(1.14)
-                            .foregroundStyle(theme.colors.textQuiet)
-                    }
-                    CheckmarkGlyph()
-                        .stroke(
-                            theme.colors.accentBrass,
-                            style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round)
-                        )
-                        .frame(width: 12, height: 12)
+                // The REORDER tag belongs to the manual option alone — it's
+                // what tells the user this row is also where dragging
+                // lives, the job the old standalone button did.
+                DropdownRow(
+                    title: label(option),
+                    isSelected: option == selection,
+                    tag: isManualOrder(option) ? "REORDER" : nil
+                ) {
+                    onSelect(option)
                 }
             }
-            .padding(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
-            .background(isSelected ? theme.colors.accentBrassTint : Color.clear)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        // Between rows, and between the header and the first row — the mock
-        // draws both.
-        .overlay(alignment: .top) {
-            theme.colors.surfaceInset.frame(height: theme.metrics.hairline)
-        }
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-    }
-}
-
-/// tokens.md's 12×12 checkmark at 1.6 stroke, drawn rather than borrowed so
-/// the stroke weight is exact.
-private struct CheckmarkGlyph: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX + rect.width * 0.15, y: rect.minY + rect.height * 0.55))
-        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.42, y: rect.minY + rect.height * 0.8))
-        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.85, y: rect.minY + rect.height * 0.25))
-        return path
     }
 }
 
@@ -159,4 +99,5 @@ private struct CheckmarkGlyph: Shape {
         .padding(24)
     }
     .environment(\.theme, .dark)
+    .environment(\.dismissDropdown, DismissDropdownAction {})
 }

@@ -285,6 +285,9 @@ struct ItemListView: View {
                         isSortMenuOpen = false
                         viewModel.load()
                     }
+                    // T019's stopgap until T020's host injects the real one:
+                    // a tapped row dismisses through the environment now.
+                    .environment(\.dismissDropdown, DismissDropdownAction { isSortMenuOpen = false })
                     .padding(.top, 60)
                     .padding(.trailing, theme.metrics.screenGutter)
                 }

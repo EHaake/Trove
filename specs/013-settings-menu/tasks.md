@@ -702,8 +702,47 @@ one commit before T020 replaces it.
   the determinism result is recorded, `xcodebuild test
   -only-testing:TroveTests` green with the count.
 
-- [ ] **T019 — `Dropdown.swift`: the surface and the row, and
+- [x] **T019 — `Dropdown.swift`: the surface and the row, and
   `SortDropdown` re-composed.**
+  *Done (2026-09-02)*: `Dropdown.swift` (`DropdownSurface(title:)`,
+  `DropdownRow` with `isEnabled`/`startsGroup`/`hasTopHairline`/`tag`
+  and dismiss-before-action, `CheckmarkGlyph` moved), `DropdownHost.swift`
+  holding `DismissDropdownAction` and its loud `@Entry` default,
+  `ThemeMetrics.dropdownGap = 6`, `SortDropdown` re-composed on the pair,
+  both lists' old overlay carrying the stopgap
+  `.environment(\.dismissDropdown, …)` until T020, and
+  `DropdownWiringTests` (four scans, bodies not declarations).
+  **The oracle earned its keep on the first run**: the re-composed
+  dropdown came back 232×211 against 232×243 — the *first row was
+  gone*. A PNG dump showed the header and rows two to five, no
+  "Custom"; removing only the focus modifier restored it, and putting
+  the modifier on every row instead left 232×83. So a view carrying an
+  `accessibilityFocused` binding renders as nothing under
+  `ImageRenderer`, which has no focus system — not a `Subview` quirk,
+  a renderer one. As built, therefore: the surface marks its first
+  subview through `\.isFirstDropdownRow` (only `.environment` ever
+  touches a subview), the row applies a `FirstRowFocus` modifier that
+  acts on the first row alone, and a second entry,
+  `\.dropdownFocusesFirstRow` (default on), lets the render tests turn
+  the marking off — the one thing the oracle can't see, so the
+  simulator was made to show it: with the marking on, Sort By on the
+  Items list drew all five rows, "Custom" included, header, tint,
+  checkmark and hairlines in place at the same position, and a row tap
+  closed it through the environment action with no assertion. The
+  plan's "`.accessibilityFocused` on the surface via `Group(subviews:)`"
+  line is superseded by this; recorded for the close-out's as-built
+  pass. Oracle green across the refactor (7 tests / 2 suites with the
+  wiring scans); **its red-run on the new composition**: `DropdownRow`'s
+  top padding 12 → 13 → "legacy 232×243, production 232×248"; then the
+  oracle and its test deleted, as planned. **Wiring mutations**: A,
+  `action()` before `dismiss()` → red on the order assertion
+  ("34 < 13"); B, `.disabled(!isEnabled)` dropped → red on
+  `aDisabledRowIsInertAndDimmed`. One process slip, recorded: the
+  reverts used `git checkout --` on a file git didn't track yet, so the
+  three mutations *stacked* silently until the state check caught it;
+  each was reversed by hand with count-asserted edits, and B was rerun
+  alone for a clean record. Full unit target: **772 tests in 113 suites
+  passed** (770 − 2 oracle + 4 wiring).
   Per addendum §Components. New `Trove/Views/Shared/Dropdown.swift`:
   `DropdownSurface(title:)` (232 wide, `PlateSurface`, `buttonRadius`
   clip, `divider` border, `.accessibilityElement(children: .contain)`,
