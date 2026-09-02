@@ -1,6 +1,7 @@
 # 013 — Settings Menu: Tasks
 
-Status: **Draft** — pending the person's review (drafted 2026-09-01)
+Status: **Approved** (2026-09-01, same day as drafting) — Phase 1 in
+progress
 
 Drafted against the approved `plan.md` (approved 2026-09-01; drafted
 at `61c208b`). No new technical decisions are made here — every call
@@ -31,7 +32,25 @@ anywhere in this spec.
 
 ## Phase 1 — Foundations: export sets and the shared order
 
-- [ ] **T001 — `ExportFile` and `exportFiles`: one purge, many writes.**
+- [x] **T001 — `ExportFile` and `exportFiles`: one purge, many writes.**
+  *Done (2026-09-01)*: `ExportFile` (with a `filename` accessor the
+  spies use) and the `@concurrent exportFiles` requirement;
+  `FileExportService.stage` split into `prepareStagingDirectory()` +
+  `write(_:filename:)`, `exportFiles` rendering each member just
+  before its own write with the purge hoisted to just before the
+  *first* write — so a throwing render leaves the previous set, as the
+  single-file path always has — and one `PhotoFetcher` per set. The
+  invariant restated in the service's doc comment and 011 plan.md's
+  delivery section. Both spies gained `exportFiles` (`fileSets` on the
+  plain spy; first-call-only gating on the gated one, the continuation
+  wait shared). Targeted run: 8 tests / 2 suites green. Mutations, all
+  reverted: **M1** purge before every write → both set tests red (2
+  issues — the first file "couldn't be opened", the second set left
+  one file); **M2** the SE-0461 matrix, confirmed rather than assumed:
+  requirement-only drop → green, implementation-only drop → green,
+  **both dropped → red** with the probe reading `[false, false, true]`
+  — exactly the third call on main. Full suite: 710 tests green
+  (704 unit + 6 UI).
   Per plan §Export service. `Trove/Export/ExportService.swift`:
   `nonisolated enum ExportFile: Sendable { csv(CSVTable, filename:),
   pdf(PDFDocumentModel, filename:) }`; the new requirement

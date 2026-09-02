@@ -428,10 +428,14 @@ Menu strings, exactly: **Export as CSV…**, **Export as PDF…**.
   requires AirDrop/Mail/anything-the-sheet-offers.
 - **Temp lifecycle** (criterion 10): files are written under
   `tmp/Exports/`; the live service purges that directory **before each
-  new export** and **once at app launch** (called from app startup). At
-  most the latest file set ever exists — nothing accumulates — and the
-  OS reclaims `tmp` independently. Canceling the share sheet needs no
-  cleanup hook; the next export or launch sweeps it.
+  new export set** and **once at app launch** (called from app startup).
+  At most the latest file set ever exists — nothing accumulates — and
+  the OS reclaims `tmp` independently. Canceling the share sheet needs
+  no cleanup hook; the next export or launch sweeps it. *(Restated
+  2026-09-01 at `013`/T001: "before each new export" became "before
+  each new export **set**" when `ExportService` gained `exportFiles` —
+  several files for one share sheet, purged once and written together.
+  A list export is a set of one; the rule is the same rule.)*
 
 ## Files
 

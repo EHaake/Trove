@@ -16,6 +16,7 @@ nonisolated final class ExportServiceSpy: ExportService {
         var tables: [CSVTable] = []
         var documents: [PDFDocumentModel] = []
         var filenames: [String] = []
+        var fileSets: [[ExportFile]] = []
     }
 
     private let captured = Mutex(Captured())
@@ -28,6 +29,28 @@ nonisolated final class ExportServiceSpy: ExportService {
     var tables: [CSVTable] { captured.withLock { $0.tables } }
     var documents: [PDFDocumentModel] { captured.withLock { $0.documents } }
     var filenames: [String] { captured.withLock { $0.filenames } }
+    /// Every `exportFiles` call, as handed over — so a test can assert a
+    /// pair arrived in *one* call, not as two single-file exports that would
+    /// purge each other on the live service.
+    var fileSets: [[ExportFile]] { captured.withLock { $0.fileSets } }
+
+    @concurrent func exportFiles(_ files: [ExportFile]) async throws -> [URL] {
+        guard !failsEveryCall else { throw PlannedFailure() }
+        captured.withLock {
+            $0.fileSets.append(files)
+            for file in files {
+                switch file {
+                case .csv(let table, let filename):
+                    $0.tables.append(table)
+                    $0.filenames.append(filename)
+                case .pdf(let document, let filename):
+                    $0.documents.append(document)
+                    $0.filenames.append(filename)
+                }
+            }
+        }
+        return files.map { URL(filePath: "/dev/null/\($0.filename)") }
+    }
 
     @concurrent func exportCSV(_ table: CSVTable, filename: String) async throws -> URL {
         guard !failsEveryCall else { throw PlannedFailure() }
@@ -58,6 +81,7 @@ nonisolated final class GatedExportServiceSpy: ExportService {
     private struct State {
         var csvCalls = 0
         var pdfCalls = 0
+        var fileSetCalls = 0
         var released = false
         var waiter: CheckedContinuation<Void, Never>?
     }
@@ -66,6 +90,32 @@ nonisolated final class GatedExportServiceSpy: ExportService {
 
     var csvCalls: Int { state.withLock { $0.csvCalls } }
     var pdfCalls: Int { state.withLock { $0.pdfCalls } }
+    var fileSetCalls: Int { state.withLock { $0.fileSetCalls } }
+
+    /// 013's set path gates on the same first-call-only rule as `exportCSV`
+    /// below, for the same reason: a reentrant `exportFiles` that reaches the
+    /// spy must fail a count, not hang the test.
+    @concurrent func exportFiles(_ files: [ExportFile]) async throws -> [URL] {
+        let isFirstCall = state.withLock { state -> Bool in
+            state.fileSetCalls += 1
+            return state.fileSetCalls == 1
+        }
+        let urls = files.map { URL(filePath: "/dev/null/\($0.filename)") }
+        guard isFirstCall else { return urls }
+        await waitUntilReleased()
+        return urls
+    }
+
+    private func waitUntilReleased() async {
+        await withCheckedContinuation { continuation in
+            let resumeNow = state.withLock { state -> Bool in
+                guard !state.released else { return true }
+                state.waiter = continuation
+                return false
+            }
+            if resumeNow { continuation.resume() }
+        }
+    }
 
     func release() {
         let waiter = state.withLock { state -> CheckedContinuation<Void, Never>? in
@@ -87,14 +137,7 @@ nonisolated final class GatedExportServiceSpy: ExportService {
         }
         guard isFirstCall else { return URL(filePath: "/dev/null/\(filename)") }
 
-        await withCheckedContinuation { continuation in
-            let resumeNow = state.withLock { state -> Bool in
-                guard !state.released else { return true }
-                state.waiter = continuation
-                return false
-            }
-            if resumeNow { continuation.resume() }
-        }
+        await waitUntilReleased()
         return URL(filePath: "/dev/null/\(filename)")
     }
 
