@@ -236,7 +236,17 @@ anywhere in this spec.
 
 ## Phase 3 — `SettingsViewModel`
 
-- [ ] **T008 — The view model's surface.**
+- [x] **T008 — The view model's surface.**
+  *Done (2026-09-01)*: `SettingsViewModel` with the six-parameter init,
+  `fetchCount`-backed counts, `Activity`/`SettingsAlert`, the three
+  `can…` flags, `syncStatus` (live — the test records a `SyncEvent` on
+  the injected monitor and watches the headline flip), `alertTitle` /
+  `alertMessage` composed from the shared copy with the storage-mode
+  branch as a view-model fact, `versionLine`, `cancelDeleteAll`. Nine
+  tests. Mutations, both reverted: `canExportEverything` from one
+  count → `theFlagsAskThreeDifferentQuestions` red; the export failure
+  title as a literal → `theFailureAlertsReadTheSharedCopy` red. Unit
+  target: 740 tests / 111 suites green.
   Per plan §`SettingsViewModel`. `Trove/ViewModels/SettingsViewModel.swift`:
   the six-parameter init (live `FileExportService(container:)` default,
   `AppVersion.current` default); `load()` refreshing `itemCount` /
