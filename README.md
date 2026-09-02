@@ -34,19 +34,30 @@ purchases.
   schema, or as a print-first PDF collection document — cover summary,
   then one photo-and-fields entry per item — delivered through the
   share sheet.
+- **Import** — CSV import of an externally-tracked collection on both
+  lists, parsing the same canonical schema export writes: grab a blank
+  template from the "…" menu (or start from a real export), fill it in
+  any spreadsheet app, and import — everything is validated up front,
+  the confirmation itemizes exactly what will be skipped or defaulted
+  before a single row is written, and nothing ever modifies existing
+  items. Sample files for every state live in
+  [`docs/samples/`](docs/samples/README.md).
 - **iCloud sync** across your own devices via CloudKit, with real
   handling for the window between signing in and your existing
   collection actually finishing its first download.
 
 ## Status
 
-Three specs shipped: `001-core-inventory` (v1 — item tracking, the
+Four specs shipped: `001-core-inventory` (v1 — item tracking, the
 dashboard, the wishlist, the Sell Plan, CloudKit sync),
 `010-item-management-enhancements` (merged 2026-08-30 — swipe actions,
 drag-to-reorder, duplication, expanded sorting, and a design-depth
-refresh across the app), and `011-data-export` (merged 2026-08-31 —
+refresh across the app), `011-data-export` (merged 2026-08-31 —
 view-scoped CSV and PDF export from both list screens, whose CSV
-schema is the canonical contract the upcoming import spec will parse).
+schema is the canonical contract), and `012-data-import` (merged
+2026-09-01 — the read half of that contract: template-based CSV
+import on both lists with parse-first confirmation, skip-and-report,
+and tested sample files).
 See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.

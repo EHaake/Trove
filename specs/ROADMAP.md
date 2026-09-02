@@ -26,6 +26,7 @@ own.
 | `001-core-inventory` | **Shipped** — merged to `main` 2026-08-23 via [PR #1](https://github.com/EHaake/Trove/pull/1); spec, plan and tasks all Approved in specs/001-core-inventory/ |
 | `010-item-management-enhancements` | **Complete** — all tasks through the Phase 8 close-out done (2026-08-30); twenty acceptance criteria signed off; skeptical-review findings resolved or recorded in `tasks.md` |
 | `011-data-export` | **Shipped** — merged to `main` 2026-08-31 via [PR #5](https://github.com/EHaake/Trove/pull/5); all nineteen tasks done, twelve criteria verified, close-out review findings dispositioned in `tasks.md` |
+| `012-data-import` | **Shipped** — merged to `main` 2026-09-01 via [PR #7](https://github.com/EHaake/Trove/pull/7); all eighteen tasks done, sixteen criteria verified with a per-criterion record in `spec.md`; the T017 device pass and T018 audit each caught and fixed a real defect before merge |
 
 ## Future specs
 
@@ -202,18 +203,25 @@ actually useful once the app is in daily use.
     export-everything occupant and the dashboard-export deferral
     above — scoping should reconcile the three rather than build
     them separately.
-- **`012-data-import`** — CSV import of externally-tracked gear. Aimed
-  at the adoption barrier from the other direction: someone already
-  tracking their collection in a spreadsheet shouldn't have to re-enter
-  it by hand to switch to Trove.
+- **`012-data-import`** (**Shipped 2026-09-01** via
+  [PR #7](https://github.com/EHaake/Trove/pull/7) — see
+  `specs/012-data-import/` for the full record) — CSV import of
+  externally-tracked gear, the adoption barrier from the other
+  direction: a collection already tracked in a spreadsheet comes in
+  without hand re-entry.
 
-  Genuinely harder than `011`, and for reasons that are product
-  decisions more than engineering ones: what happens to malformed or
-  missing data (reject the whole batch, skip and report, or fill
-  defaults); how potential duplicates against an already-populated
-  collection get handled; and — given the bulk-insert risk — almost
-  certainly a preview-before-commit step, the same instinct that's
-  shaped every destructive-action flow already in this app.
+  The product questions flagged below were settled in the spec’s
+  design conversation (run in-session — the venue amendment’s first
+  use): malformed data is **skip-and-report with counted per-field
+  defaults**, never a batch reject; **no duplicate detection** — the
+  user owns the file; and instead of a preview screen, the
+  parse-first **confirmation alert** carries the whole report (counts,
+  skipped rows by spreadsheet number, defaults) before anything is
+  written — the destructive-action instinct satisfied without new UI.
+  Order is positional, appended to the end of custom order; the “…”
+  badge became always-visible so a fresh install can reach Import and
+  **Get Blank Template**; `docs/csv-reference.md` and the test-pinned
+  `docs/samples/` files shipped with it.
 
   Scope decided ahead of the idea conversation, to keep this spec's own
   first version genuinely small: a rigid, Trove-defined column template
@@ -224,10 +232,9 @@ actually useful once the app is in daily use.
   real and valuable, but explicitly deferred — a natural enhancement to
   `012` itself once the rigid-template version has shipped and its
   actual friction is understood, rather than something built blind
-  before knowing whether it's needed. Photos are likely out of scope
-  for a first pass either way — most spreadsheet tracking won't have
-  structured photo references to import from — worth stating as a
-  deliberate non-goal rather than silently omitting.
+  before knowing whether it is needed — **this deferral stands
+  post-ship** and remains the natural next enhancement to `012`.
+  Photos were confirmed a deliberate non-goal.
 
   Soft dependency on `011`, not a hard blocker like `002`→`003`: import
   can reuse whatever canonical schema export settles on for representing
@@ -251,10 +258,11 @@ actually useful once the app is in daily use.
   occupant, not its whole scope; what else belongs in a settings menu
   (theme selection once `004` lands is an obvious candidate) should be
   settled in this spec's own idea conversation rather than accumulated
-  here. Worth noting `011` introduces the app's first "…" overflow
-  menu on the list screens — whether settings lives behind a grown
-  version of that affordance, a Dashboard entry point, or something
-  else entirely is an open design question for this spec.
+  here. Worth noting the list screens’ “…” overflow
+  menu (introduced by `011`, grown to four always-visible actions by
+  `012`) — whether settings lives behind a further-grown version of
+  that affordance, a Dashboard entry point, or something else
+  entirely is an open design question for this spec.
 
 ## Working convention
 
