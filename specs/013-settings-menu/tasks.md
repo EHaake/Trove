@@ -662,7 +662,28 @@ exists; the device pass last. Each commit leaves the app sound —
 T019 injects the dismiss action into the lists' old overlay for the
 one commit before T020 replaces it.
 
-- [ ] **T018 — The render oracle, before anything moves.**
+- [x] **T018 — The render oracle, before anything moves.**
+  *Done (2026-09-02)*: `TroveTests/SortDropdownRenderTests.swift` —
+  `LegacySortDropdown` (today's `SortDropdown` verbatim, its glyph and
+  header included, marked as 010's drawing frozen at `99747d5`) and
+  two parameterized tests over `.custom` and `.currentValue`: equal
+  dimensions asserted first, then the first differing pixel reported
+  with both values; and the same view rendered twice, compared the
+  same way. Green: 2 tests (4 cases) in 1 suite. **Determinism
+  recorded**: both states rendered identically twice — the oracle is
+  usable as an exact comparison, no tolerance. **Mutations, one at a
+  time, both reverted**: **A** the row's top padding 12 → 13 in the
+  production view → red on the size guard first, "legacy 232×243,
+  production 232×248" (five rows, one point each), the determinism
+  test still green; **B** the header's tracking 1.6 → 1.7 (same size,
+  different pixels) → red on the pixel walk at (22, 14), "legacy
+  #31302E, production #242321" — the header text — so both halves of
+  the guard fail on their own. The renders are 232×243 at 1×, the
+  project's `renderBitmap` scale; a one-point shift is a whole pixel
+  row at that scale. Full unit target: **770 tests in 113 suites
+  passed** (768 + 2; one new suite). One compile fix on the way: the
+  suite's `typealias` had to be non-private, since the parameterized
+  test methods use it in their signatures.
   Per addendum §Test plan (render oracle). New
   `TroveTests/SortDropdownRenderTests.swift`: `LegacySortDropdown` —
   today's `SortDropdown` copied verbatim into the test target, private
