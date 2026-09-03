@@ -1,14 +1,15 @@
 # 002 — Market Values
 
-Status: **Draft** (2026-09-03). Authored in-session at the person's
-direction — the third use of the per-spec venue clause — over two days
-of design conversation (2026-09-02/03) that began with a research pass
-into what the marketplaces actually offer, because the answer reshaped
-the feature before a single product question could be asked. Every
-product decision below was made by the person and is listed in the
-Decisions record; a set of smaller calls was proposed at drafting and
-is marked as such there, so the review can accept or overturn each one
-explicitly rather than by omission.
+Status: **Approved** (2026-09-03, the day after drafting; one
+proposal — the year's cap on history — overturned at review as Decision
+16, and the seventeen drafting proposals P1–P17 became decisions on
+approval, as the Decisions record says they would). Authored in-session
+at the person's direction — the third use of the per-spec venue clause —
+over two days of design conversation (2026-09-02/03) that began with a
+research pass into what the marketplaces actually offer, because the
+answer reshaped the feature before a single product question could be
+asked. Every product decision below was made by the person and is
+listed in the Decisions record.
 
 Depends on: `001-core-inventory` (the `Item` and `WishlistItem` models,
 the optional manual value whose `nil` means "unvalued", the Sell Plan's
@@ -272,8 +273,8 @@ Added 2026-09-03, at the draft's review (the person):
     thirty-day rule below is about how long the *last figure* shows as
     current, not about the history.
 
-Proposed at drafting, 2026-09-03, by Claude Code. These become decisions
-on spec approval unless the person overturns them:
+Proposed at drafting, 2026-09-03, by Claude Code, and decisions since
+the spec's approval the same day (P13 as reworded under Decision 16):
 
 - **P1. The match syncs; fetched figures and history don't.** The
   product identifier is the person's own data.
