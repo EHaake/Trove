@@ -66,18 +66,59 @@ struct TroveStore {
     /// known.
     let cloudKitFailure: (any Error)?
 
+    /// The name of the device-local configuration — and, through SwiftData's
+    /// default URL rule, its file: `Application Support/MarketLocal.store`,
+    /// beside the collection's `default.store`. The synced configuration is
+    /// deliberately *unnamed*: naming it would move the shipped collection to
+    /// a new file and the app would open empty. `MarketLocalSchemaTests` pins
+    /// both filenames.
+    static let localStoreName = "MarketLocal"
+
+    /// Three attempts, then throw (plan Q21). The intended pair; the fallback
+    /// pair (sync dropped); and — because a local store that won't open is
+    /// the app's own disposable summaries, not the collection — the fallback
+    /// pair again with the local store recreated. `recreateLocalStore` is a
+    /// parameter so the decision is testable without touching a real file.
     static func make(
         isUITesting: Bool,
-        build: (ModelConfiguration) throws -> ModelContainer = {
-            try ModelContainer(for: TroveSchema.schema, configurations: $0)
-        }
+        build: ([ModelConfiguration]) throws -> ModelContainer = TroveStore.buildContainer,
+        recreateLocalStore: (URL) throws -> Void = TroveStore.removeLocalStoreFiles
     ) throws -> TroveStore {
         let intended = intendedMode(isUITesting: isUITesting)
         do {
-            return TroveStore(container: try build(configuration(for: intended)), mode: intended, cloudKitFailure: nil)
-        } catch {
-            guard let fallback = fallback(after: intended) else { throw error }
-            return TroveStore(container: try build(configuration(for: fallback)), mode: fallback, cloudKitFailure: error)
+            return TroveStore(container: try build(configurations(for: intended)), mode: intended, cloudKitFailure: nil)
+        } catch let firstFailure {
+            guard let fallback = fallback(after: intended) else { throw firstFailure }
+            do {
+                return TroveStore(container: try build(configurations(for: fallback)), mode: fallback, cloudKitFailure: firstFailure)
+            } catch {
+                // Reached only when the synced store also fails without
+                // CloudKit — which, since it is the same file either way,
+                // points at the *other* store in the pair. The reason
+                // recorded is still the first failure: a local-store fault
+                // reported as a CloudKit one is the accepted misattribution
+                // (plan §1); the collection opens, and the next launch asks
+                // for CloudKit again.
+                try recreateLocalStore(localConfiguration().url)
+                return TroveStore(container: try build(configurations(for: fallback)), mode: fallback, cloudKitFailure: firstFailure)
+            }
+        }
+    }
+
+    /// The real builder — one container over the union schema, each model
+    /// owned by exactly one of the configurations.
+    nonisolated static func buildContainer(_ configurations: [ModelConfiguration]) throws -> ModelContainer {
+        try ModelContainer(for: TroveSchema.combinedSchema, configurations: configurations)
+    }
+
+    /// Deletes the local store's file and SQLite's sidecars, if present.
+    /// Never called with the collection's URL — `make` passes only
+    /// `localConfiguration().url`, and `TroveStoreTests` pins that.
+    nonisolated static func removeLocalStoreFiles(at url: URL) throws {
+        let manager = FileManager.default
+        for candidate in [url, URL(filePath: url.path + "-wal"), URL(filePath: url.path + "-shm")]
+        where manager.fileExists(atPath: candidate.path) {
+            try manager.removeItem(at: candidate)
         }
     }
 
@@ -94,30 +135,81 @@ struct TroveStore {
         mode == .cloudKit ? .localOnly : nil
     }
 
-    /// `cloudKitDatabase` is spelled out in all three cases because its default
-    /// is `.automatic`, which means "sync if the app carries an iCloud
-    /// entitlement" — and the app now does. Left implicit, `.localOnly` would
-    /// retry exactly the configuration that just failed, and a UI test would
-    /// reach for the developer's real iCloud container.
-    static func configuration(for mode: StorageMode) -> ModelConfiguration {
+    /// `cloudKitDatabase` is spelled out on every configuration because its
+    /// default is `.automatic`, which means "sync if the app carries an iCloud
+    /// entitlement" — and the app does. Left implicit, `.localOnly` would
+    /// retry exactly the configuration that just failed, a UI test would
+    /// reach for the developer's real iCloud container, and the local store
+    /// would sync the one thing the spec says never syncs. Note that
+    /// `cloudKitContainerIdentifier` reads `nil` for `.automatic` *and* for
+    /// `.none` (checked 2026-09-03), so no test can see a dropped `.none`
+    /// through that property; `MarketLocalSchemaTests` scans this file for
+    /// the label instead.
+    ///
+    /// The two disk modes return a pair: the synced configuration first, the
+    /// device-local `MarketLocal` second. `.ephemeral` is one in-memory
+    /// configuration over everything — two in-memory stores would share
+    /// `/dev/null`, and in memory nothing syncs, so the split has no meaning.
+    /// `directory` exists so a test can build the production pairing into a
+    /// scratch folder (`TwoStoreContainerTests`); the app passes nothing and
+    /// gets SwiftData's default location.
+    static func configurations(for mode: StorageMode, directory: URL? = nil) -> [ModelConfiguration] {
         switch mode {
         case .cloudKit:
-            ModelConfiguration(
-                schema: TroveSchema.schema,
-                cloudKitDatabase: .private(cloudKitContainerIdentifier)
-            )
+            [
+                syncedConfiguration(cloudKitDatabase: .private(cloudKitContainerIdentifier), directory: directory),
+                localConfiguration(directory: directory),
+            ]
         case .localOnly:
+            [
+                syncedConfiguration(cloudKitDatabase: .none, directory: directory),
+                localConfiguration(directory: directory),
+            ]
+        case .ephemeral:
+            [
+                ModelConfiguration(
+                    schema: TroveSchema.combinedSchema,
+                    isStoredInMemoryOnly: true,
+                    cloudKitDatabase: .none
+                ),
+            ]
+        }
+    }
+
+    /// The collection. Unnamed — see `localStoreName`.
+    private static func syncedConfiguration(
+        cloudKitDatabase: ModelConfiguration.CloudKitDatabase,
+        directory: URL?
+    ) -> ModelConfiguration {
+        if let directory {
             ModelConfiguration(
                 schema: TroveSchema.schema,
+                url: directory.appending(path: "default.store"),
+                cloudKitDatabase: cloudKitDatabase
+            )
+        } else {
+            ModelConfiguration(
+                schema: TroveSchema.schema,
+                cloudKitDatabase: cloudKitDatabase
+            )
+        }
+    }
+
+    /// The device-local store (002). Never `.automatic`.
+    static func localConfiguration(directory: URL? = nil) -> ModelConfiguration {
+        if let directory {
+            ModelConfiguration(
+                localStoreName,
+                schema: TroveSchema.localSchema,
+                url: directory.appending(path: "\(localStoreName).store"),
                 cloudKitDatabase: .none
             )
-        case .ephemeral:
+        } else {
             ModelConfiguration(
-                schema: TroveSchema.schema,
-                isStoredInMemoryOnly: true,
+                localStoreName,
+                schema: TroveSchema.localSchema,
                 cloudKitDatabase: .none
             )
         }
     }
 }
-

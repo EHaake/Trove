@@ -1,6 +1,6 @@
 # 002 — Market Values: Tasks
 
-Status: **Draft** (2026-09-03)
+Status: **In progress** (approved 2026-09-03, same day as drafting; T001a started)
 
 Drafted against the approved `plan.md` (approved 2026-09-03; drafted
 at `64d505b`) on branch `002-live-market-value`, based on `main` at
@@ -53,7 +53,61 @@ on something only the person has.
 
 ## Phase 1 — Foundations, no UI
 
-- [ ] **T001a — The two-store pair, and the spike that proves it.**
+- [x] **T001a — The two-store pair, and the spike that proves it.**
+  *Done (2026-09-03)*: `TroveSchema` (now `nonisolated`, so the
+  nonisolated builder can read it) carries `models`, `localModels`,
+  `schema`, `localSchema`, `combinedSchema`; `MarketLocalModels.swift`
+  holds the four models as plan §1 declares them; `TroveStore` gained
+  `localStoreName`, `configurations(for:directory:)` (the pair for the
+  disk modes; `.ephemeral` already one in-memory configuration over the
+  union — T001b keeps its guards), `localConfiguration(directory:)`,
+  the `[ModelConfiguration]` build seam with `buildContainer` as its
+  default, and Q21's `recreateLocalStore` third attempt with
+  `removeLocalStoreFiles` (the two defaults `nonisolated`, since a
+  MainActor static can't stand in for a plain closure). **The spike is
+  green**: `TwoStoreContainerTests` builds the real pairing through the
+  real builder into a scratch directory, saves an `Item` and a
+  `MarketFigureRecord`, and finds the record in `MarketLocal.store`
+  alone and the item — and no record — in `default.store` opened under
+  the union schema. `MarketLocalSchemaTests` G1–G4 and G2b; three Q21
+  tests in `TroveStoreTests`, the existing ones moved to
+  `configurations(for:)[0]`, the two `== nil` tests' doc comments now
+  saying what they can't see. Targeted run: **21 tests in 4 suites**
+  green. Full unit suite: **799 tests in 118 suites passed** (790/116
+  at 013's close, +9/+2). Dev-store launch on the simulator: both
+  `default.store` (434 KB) and `MarketLocal.store` (139 KB) present in
+  the app container. Mutations, each reverted: **M1** `MarketHistoryPoint`
+  in the synced list → G1 red and *only* G1 — `CloudKitSchemaTests`
+  green, as predicted; **M1b** `MarketFigureRecord` (unique-keyed) in
+  the synced list → G1, `CloudKitSchemaTests` and G7 all red with
+  "CloudKit integration does not support unique constraints" — the
+  contrast that says why G1 is needed for the plain model; **M2**
+  `cloudKitDatabase:` dropped from the app's local configuration → the
+  test host itself died at launch in `TroveApp`'s `fatalError` (the
+  store under `.automatic` refused the unique constraints through all
+  three attempts), so no test ran — red by crash; **M2′** the same drop
+  on the directory branch, leaving the host alone → G2b red *and* G7
+  red, the scan seeing what the identifier can't; **M3** the name
+  dropped → G3 red, and the Q21 test red too: with both configurations
+  on `default.store` the recreate hook was handed the collection's URL
+  — the second net the "never the collection" assertion was written for
+  (it deleted the *test host's* `default.store`, nothing of the
+  person's); **M4** `var listingTitle: String?` → G4 red; **M5** one
+  configuration over the union → under `.private` the host crashed
+  (unique constraints, then an index-out-of-range inside SwiftData's
+  CloudKit recovery); scoped to the directory branch with sync off, G7
+  died on an uncaught Core Data `NSInvalidArgumentException` ("Can't
+  assign an object to a store that does not contain the object's
+  entity") and xcodebuild reported **TEST FAILED** with the remaining
+  tests unrun — red by crash, the split assertion itself never reached,
+  recorded as such; **M6** recreate before the fallback pair → three
+  tests red (`aCloudKitFailureLeavesAWorkingLocalStore`,
+  `aBrokenLocalStore…`, `aLaunchThatFailsAllThreeTimes…`); **M7** the
+  third attempt skipped → `aBrokenLocalStore…` red (the corrupt-file
+  error reaches the test). One lesson for the record: Swift Testing
+  prefixes some console lines with a zero-width space, so a `^✘` filter
+  drops them — the first read of M2′ and M6 under-reported for that
+  reason and both were re-run with a plain `✘` grep.
   Per plan §1, §9 (G1–G4, G7) and Q21. `TroveSchema` gains
   `localModels`, `localSchema`, `combinedSchema`; new
   `Trove/Market/MarketLocalModels.swift` with the four `@Model`s exactly
