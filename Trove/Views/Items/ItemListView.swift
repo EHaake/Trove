@@ -3,6 +3,23 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// Browse owned gear, per `design/screens/Trove Item List.png`.
+
+/// The header's two dropdowns. One optional of this type is the screen's
+/// whole open-menu state, which is what makes "one open at a time" true by
+/// type rather than by coordination (013 Amendment A).
+private enum HeaderDropdown: Hashable {
+    case sort
+    case overflow
+
+    /// What the tap-outside layer calls itself to VoiceOver.
+    var dismissLabel: String {
+        switch self {
+        case .sort: "Dismiss sort options"
+        case .overflow: "Dismiss more actions"
+        }
+    }
+}
+
 struct ItemListView: View {
     @State private var viewModel: ItemListViewModel
     @State private var isAddingItem = false
@@ -32,7 +49,7 @@ struct ItemListView: View {
     /// Whether T035's sort dropdown is open. Owned here rather than by the
     /// badge because the dropdown floats over the whole screen and dismisses
     /// on any outside tap — both beyond the header's reach.
-    @State private var isSortMenuOpen = false
+    @State private var openDropdown: HeaderDropdown?
 
     /// Whether 012's file picker is up. View state, not view-model state:
     /// the picker is pure navigation — the view model's flow starts when a
@@ -259,38 +276,28 @@ struct ItemListView: View {
         } message: {
             Text(viewModel.importAlertMessage)
         }
-        // T035's dropdown floats over the whole screen, a full-screen
-        // catcher behind it so any outside tap closes it. Screen-level
-        // rather than anchored to the badge: the header can't reach over
-        // the rows below it.
-        .overlay {
-            if isSortMenuOpen {
-                ZStack(alignment: .topTrailing) {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .ignoresSafeArea()
-                        .onTapGesture { isSortMenuOpen = false }
-                        // The catcher is a real tap target, so VoiceOver
-                        // should call it what it is rather than an unnamed
-                        // element (T039 review, finding 13).
-                        .accessibilityLabel("Dismiss sort options")
-                        .accessibilityAddTraits(.isButton)
-                    SortDropdown(
-                        options: ItemListViewModel.SortOrder.allCases,
-                        selection: viewModel.sortOrder,
-                        label: \.label,
-                        isManualOrder: { $0 == .custom }
-                    ) { option in
-                        viewModel.sortOrder = option
-                        isSortMenuOpen = false
-                        viewModel.load()
-                    }
-                    // T019's stopgap until T020's host injects the real one:
-                    // a tapped row dismisses through the environment now.
-                    .environment(\.dismissDropdown, DismissDropdownAction { isSortMenuOpen = false })
-                    .padding(.top, 60)
-                    .padding(.trailing, theme.metrics.screenGutter)
+        // The header's dropdowns float over the whole screen from here —
+        // T035's screen-level float-and-catcher, now the shared host
+        // (013 Amendment A): it finds the open badge by its anchor, so the
+        // header needn't reach over the rows below it, and it closes on
+        // any outside tap. Placed after the add button's overlay so the
+        // dropdown draws above it.
+        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
+            switch dropdown {
+            case .sort:
+                SortDropdown(
+                    options: ItemListViewModel.SortOrder.allCases,
+                    selection: viewModel.sortOrder,
+                    label: \.label,
+                    isManualOrder: { $0 == .custom }
+                ) { option in
+                    // The row has already closed the dropdown.
+                    viewModel.sortOrder = option
+                    viewModel.load()
                 }
+            case .overflow:
+                // T021: the "…" moves onto this host.
+                EmptyView()
             }
         }
     }
@@ -476,9 +483,12 @@ struct ItemListView: View {
     /// machinery, so the badge simply hugs its label again).
     private var sortControl: some View {
         SortBadge(label: viewModel.sortOrder.label) {
-            isSortMenuOpen.toggle()
+            openDropdown = .sort
         }
+        .dropdownAnchor(HeaderDropdown.sort)
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+        .accessibilityHint("Opens sort options")
+        .accessibilityIdentifier("sortOptions.items")
     }
 
     // MARK: - Filter

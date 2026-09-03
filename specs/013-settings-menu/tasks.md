@@ -782,7 +782,57 @@ one commit before T020 replaces it.
   target green with the count; the app runs (Sort By still works on
   both lists via the old overlay).
 
-- [ ] **T020 — `DropdownHost`: the mechanism, proven on Sort By.**
+- [x] **T020 — `DropdownHost`: the mechanism, proven on Sort By.**
+  *Done (2026-09-02)*: `DropdownHost.swift` grew the mechanism —
+  `DropdownAnchorKey`, `.dropdownAnchor(_:)`, `.dropdownHost(open:
+  dismissLabel:content:)` with the catcher, the `.contain` + `.isModal`
+  + escape container, the one real `dismissDropdown` injection, and
+  `DropdownPlacementLayout` over the pure `DropdownPlacement.origin`;
+  both lists run Sort By on it off `openDropdown: HeaderDropdown?`, the
+  boolean and T019's stopgap gone, the sort badge anchored with its
+  hint and identifier; `DropdownPlacementTests` (seven cases) and two
+  more `DropdownWiringTests`. **The probe earned its place** — three
+  rounds, each on the real screen with Sort By open: (1) a reader that
+  *ignored* the safe area reported `insets = 0` on iOS 26 and bounds
+  of the full 402×874, so "read the ignored insets back" — the plan's
+  mechanism for the flip — does not exist here; (2) with the reader
+  kept inside the safe area it reported the real insets (top **62**,
+  bottom **83** — the floating tab bar *is* in the inset; bounds 402×
+  729) but adding them to bounds that already exclude them pinned the
+  dropdown two points low (origin 124 vs the natural 122.33) — the
+  T020 fix: the pure function takes only the **region** the dropdown
+  may occupy, no insets, and the layout places relative to its own
+  origin because the second layout pass hands it bounds at y = 62 in a
+  different space; (3) final: region (0, 0, 402, 729), badge (259.3,
+  24, 68.7, 30.3), size 232×241.3, origin (146, 60.33) → 122.33 on
+  screen, the old `60`'s 122 plus the badge's real third of a point,
+  and the screenshot's plate edge at the same pixel row as T019's.
+  The placement table was rewritten to the region shape (safe region
+  729 tall; flip past its bottom; pin to its top; a region with a
+  non-zero origin measures from itself). **Decision 18's check**:
+  SwiftUICore's `AccessibilityTraits` exposes seventeen static members
+  (`allowsDirectInteraction causesPageTurn isButton isHeader isImage
+  isKeyboardKey isLink isModal isSearchField isSelected isStaticText
+  isSummaryElement isTabBar isToggle playsSound startsMediaSession
+  updatesFrequently`) — nothing pop-up, and "popup" appears nowhere in
+  its interface; SwiftUI's own carries only the macOS
+  `PopUpButtonPickerStyle`. Two toolchain traps on the way, both
+  recorded: `Layout` methods are nonisolated, so the pure function
+  had to be `nonisolated` under the project's `MainActor` default; and
+  `#expect(x == 83 + 30 + 6)` types the literal arithmetic as `Int`
+  and never equals a `CGFloat` (a lone literal does) — the table
+  compares against explicit `CGFloat` constants. Live checks: Sort By
+  on both lists opens at the old position, all rows drawn, closes on
+  an outside tap and on a row tap. **Mutations, one at a time, each
+  reversed by count-asserted edits** (the files carry uncommitted work
+  a `git checkout` would have wiped — T019's lesson applied): the flip
+  dropped → three placement cases red (flip, pin, offset region); the
+  dismiss injection dropped → `theHostInjectsDismissAndContainsVoiceOver`
+  red; the host moved above the add button's overlay → the Items
+  list's ordering assertion red. UI target: 7 tests, 0 failures. Full
+  unit target: **781 tests in 114 suites passed** (772 + 7 + 2). The
+  plan's "reader ignores the safe area and reads the insets" line is
+  superseded by (1)–(3); recorded for the close-out's as-built pass.
   Per addendum §The host and §Screens (lists, sort half). Fill in
   `DropdownHost.swift`: `DropdownAnchorKey`, `.dropdownAnchor(_:)`,
   `.dropdownHost(open:dismissLabel:content:)` — the `GeometryReader`

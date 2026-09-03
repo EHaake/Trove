@@ -16,6 +16,23 @@ import UniformTypeIdentifiers
 /// criterion forbids text implying the user is expected to cover the full
 /// cost. The mock's arithmetic also measures one sellable pool against every
 /// wishlist item independently, so the same gear reads as funding all four.
+
+/// The header's two dropdowns. One optional of this type is the screen's
+/// whole open-menu state, which is what makes "one open at a time" true by
+/// type rather than by coordination (013 Amendment A).
+private enum HeaderDropdown: Hashable {
+    case sort
+    case overflow
+
+    /// What the tap-outside layer calls itself to VoiceOver.
+    var dismissLabel: String {
+        switch self {
+        case .sort: "Dismiss sort options"
+        case .overflow: "Dismiss more actions"
+        }
+    }
+}
+
 struct WishlistView: View {
     @State private var viewModel: WishlistViewModel
     @State private var isAddingItem = false
@@ -23,7 +40,7 @@ struct WishlistView: View {
 
     /// Whether T035's sort dropdown is open — see ItemListView's twin for
     /// why the screen owns it.
-    @State private var isSortMenuOpen = false
+    @State private var openDropdown: HeaderDropdown?
 
     /// Whether 012's file picker is up — see `ItemListView`'s twin.
     @State private var isPickingImportFile = false
@@ -212,36 +229,24 @@ struct WishlistView: View {
         } message: {
             Text(viewModel.importAlertMessage)
         }
-        // T035's dropdown — same screen-level float-and-catcher as
-        // ItemListView's, for the same reach reasons.
-        .overlay {
-            if isSortMenuOpen {
-                ZStack(alignment: .topTrailing) {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .ignoresSafeArea()
-                        .onTapGesture { isSortMenuOpen = false }
-                        // The catcher is a real tap target, so VoiceOver
-                        // should call it what it is rather than an unnamed
-                        // element (T039 review, finding 13).
-                        .accessibilityLabel("Dismiss sort options")
-                        .accessibilityAddTraits(.isButton)
-                    SortDropdown(
-                        options: WishlistViewModel.SortOrder.allCases,
-                        selection: viewModel.sortOrder,
-                        label: \.label,
-                        isManualOrder: { $0 == .custom }
-                    ) { option in
-                        viewModel.sortOrder = option
-                        isSortMenuOpen = false
-                        viewModel.load()
-                    }
-                    // T019's stopgap until T020's host injects the real one:
-                    // a tapped row dismisses through the environment now.
-                    .environment(\.dismissDropdown, DismissDropdownAction { isSortMenuOpen = false })
-                    .padding(.top, 60)
-                    .padding(.trailing, theme.metrics.screenGutter)
+        // The header's dropdowns — the same shared host as ItemListView's,
+        // for the same reach reasons (013 Amendment A).
+        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
+            switch dropdown {
+            case .sort:
+                SortDropdown(
+                    options: WishlistViewModel.SortOrder.allCases,
+                    selection: viewModel.sortOrder,
+                    label: \.label,
+                    isManualOrder: { $0 == .custom }
+                ) { option in
+                    // The row has already closed the dropdown.
+                    viewModel.sortOrder = option
+                    viewModel.load()
                 }
+            case .overflow:
+                // T021: the "…" moves onto this host.
+                EmptyView()
             }
         }
     }
@@ -294,9 +299,12 @@ struct WishlistView: View {
     /// ItemListView's twin for the note on why the system `Menu` left.
     private var sortControl: some View {
         SortBadge(label: viewModel.sortOrder.label) {
-            isSortMenuOpen.toggle()
+            openDropdown = .sort
         }
+        .dropdownAnchor(HeaderDropdown.sort)
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+        .accessibilityHint("Opens sort options")
+        .accessibilityIdentifier("sortOptions.wishlist")
     }
 
     // MARK: - Rows

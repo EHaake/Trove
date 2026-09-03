@@ -75,6 +75,45 @@ struct DropdownWiringTests {
         #expect(!dropdown.contains("PlateSurface"), "the plate is the surface's to draw, not Sort By's")
     }
 
+    // MARK: - The host and its screens
+
+    private nonisolated static let lists = [
+        "Trove/Views/Items/ItemListView.swift",
+        "Trove/Views/Wishlist/WishlistView.swift",
+    ]
+
+    /// One optional is the screen's whole open-menu state: exactly one
+    /// `openDropdown`, no surviving boolean, and a host bound to it — placed
+    /// after the add button's overlay so the dropdown draws above it.
+    @Test(arguments: lists)
+    func eachListHostsItsDropdownsOffOneOptional(path: String) throws {
+        let code = try SourceScan.production(path)
+        #expect(code.ranges(of: "@State private var openDropdown: HeaderDropdown?").count == 1, "\(path): one optional, declared once")
+        #expect(!code.contains("isSortMenuOpen"), "\(path): the boolean must be gone")
+        let hosts = code.ranges(of: ".dropdownHost(open: $openDropdown")
+        #expect(hosts.count == 1, "\(path) attaches \(hosts.count) hosts, expected exactly 1")
+        let addButton = try #require(code.range(of: ".overlay(alignment: .bottomTrailing)"), "\(path): no add-button overlay?")
+        if let host = hosts.first {
+            #expect(host.lowerBound > addButton.upperBound, "\(path): the host must come after the add button's overlay")
+        }
+        #expect(code.ranges(of: ".dropdownAnchor(HeaderDropdown.sort)").count == 1, "\(path): the sort badge must be anchored, once")
+    }
+
+    /// The host is where the dismiss action becomes real, where VoiceOver is
+    /// kept inside the open dropdown, and where the escape gesture and the
+    /// labelled catcher live. Read from the modifier's body.
+    @Test func theHostInjectsDismissAndContainsVoiceOver() throws {
+        let code = try SourceScan.production("Trove/Views/Shared/DropdownHost.swift")
+        let host = try #require(structSource("DropdownHost", in: code), "no DropdownHost modifier")
+        let body = try #require(SourceScan.closureBodies(after: "func body(content host: Content)", in: host).first)
+        #expect(body.contains(".environment(\\.dismissDropdown, DismissDropdownAction { close() })"), "the host must inject the real dismiss action")
+        #expect(body.contains(".accessibilityAddTraits(.isModal)"), "VoiceOver must stay inside the open dropdown")
+        #expect(body.contains(".accessibilityAction(.escape) { close() }"), "escape must close it")
+        #expect(body.contains(".accessibilityAddTraits(.isButton)"), "the catcher is a real tap target and must say so")
+        #expect(body.contains(".accessibilityLabel(dismissLabel(id))"), "the catcher must be labelled per menu")
+        #expect(!body.contains("withAnimation"), "opening and closing don't animate, as Sort By never has")
+    }
+
     // MARK: - Helpers
 
     /// The text of one top-level `struct <name>` declaration, up to the next
