@@ -13,9 +13,12 @@ audiophile gear) and regularly buy and sell within their hobby. Core loop: track
 track what you want to buy next, and use the gap between current value and
 original cost to plan sales that fund future purchases. Design quality —
 visual polish and low-friction interaction — is a primary requirement, not
-a nice-to-have. A likely future extension is pulling live/estimated resale
-values from marketplaces (eBay, Reverb, Facebook Marketplace); the initial
-data model should not preclude that, but it is not in scope for v1.
+a nice-to-have. Pulling resale values from marketplaces, first
+imagined as an eBay/Reverb/Facebook extension, ships in `002` as a
+**Reverb asking-price indicator beside the person's value** — never a
+replacement for it, and never a sold price, because no source offers
+one to a non-partner app; eBay is its own follow-up spec with
+prerequisites of its own (amended 2026-09-03, spec `002` Decision 19).
 
 ## Platform
 
@@ -56,6 +59,16 @@ data model should not preclude that, but it is not in scope for v1.
     types, so they can be faked in tests.
 - No Combine. Use Swift concurrency (`async`/`await`, `AsyncSequence`) for
   everything asynchronous.
+- **Networking** (from `002`, amended 2026-09-03): every remote service
+  sits behind a `nonisolated protocol …: Sendable` whose requirements
+  are `@concurrent` (on the requirement and the implementation, for the
+  reason `ExportService` records), constructor-injected as
+  `(any X)? = nil` → the live implementation. Decoding and computation
+  are tested against fixtures recorded from real responses by a script
+  under `scripts/`, trimmed to the fields the app reads and committed
+  under `TroveTests/Fixtures/`. No test in `TroveTests` opens a network
+  connection; the live API is exercised by hand at a spec's device
+  pass, and the recording script is run by hand, never by the build.
 
 ## Testing
 
