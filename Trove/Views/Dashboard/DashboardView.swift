@@ -14,11 +14,13 @@ import SwiftUI
 /// type, as on the lists.
 private enum DashboardDropdown: Hashable {
     case overflow
+    case order
 
     /// What the tap-outside layer calls itself to VoiceOver.
     var dismissLabel: String {
         switch self {
         case .overflow: "Dismiss more actions"
+        case .order: "Dismiss order options"
         }
     }
 }
@@ -137,6 +139,18 @@ struct DashboardView: View {
                 DropdownSurface {
                     DropdownRow(title: "Settings") {
                         isShowingSettings = true
+                    }
+                }
+            case .order:
+                // The same surface and rows Sort By is made of, under its
+                // own header (spec P12): the current order tinted and
+                // checked, no REORDER tag — there is no manual order here.
+                DropdownSurface(title: "ORDER BY") {
+                    ForEach(DashboardViewModel.BreakdownOrder.allCases) { order in
+                        DropdownRow(title: order.label, isSelected: order == viewModel.breakdownOrder) {
+                            viewModel.breakdownOrder = order
+                            viewModel.load()
+                        }
                     }
                 }
             }
@@ -381,24 +395,25 @@ struct DashboardView: View {
         }
     }
 
+    /// Design's "BY VALUE" control: the mono label the mock draws, not a
+    /// pill (spec P12), opening the shared surface under ORDER BY on the
+    /// host. A system `Menu` from `001` to 013 Amendment A — the exact
+    /// variable-width-label-in-a-`Menu` shape T029c evicted from the list
+    /// headers, unreported here only because this label has no border to
+    /// lag. Converting it removed the risk rather than waiting for it.
     private var orderControl: some View {
-        Menu {
-            ForEach(DashboardViewModel.BreakdownOrder.allCases) { order in
-                Button {
-                    viewModel.breakdownOrder = order
-                    viewModel.load()
-                } label: {
-                    if viewModel.breakdownOrder == order {
-                        Label(order.label, systemImage: "checkmark")
-                    } else {
-                        Text(order.label)
-                    }
-                }
-            }
+        Button {
+            openDropdown = .order
         } label: {
-            Text(viewModel.breakdownOrder.label).monoLabel(color: theme.colors.textQuiet)
+            Text(viewModel.breakdownOrder.label)
+                .monoLabel(color: theme.colors.textQuiet)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .dropdownAnchor(DashboardDropdown.order)
         .accessibilityLabel("Order categories \(viewModel.breakdownOrder.label)")
+        .accessibilityHint("Opens order options")
+        .accessibilityIdentifier("orderOptions.dashboard")
     }
 
     /// Design's proportion bar. Widths track each category's share of value, so

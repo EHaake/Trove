@@ -1036,8 +1036,44 @@ one commit before T020 replaces it.
   back to back** (9 tests); the badge shows on the root Dashboard, empty
   and populated, and not on a drill-down, by eye.
 
-- [ ] **T023 — The Dashboard's order control, and the menu policy
+- [x] **T023 — The Dashboard's order control, and the menu policy
   guard.**
+  *Done (2026-09-02)*: `orderControl` is a `.plain` `Button` around the
+  mock's mono label (P12 — no pill), anchored as `DashboardDropdown.order`
+  with the existing "Order categories …" label, hint "Opens order
+  options", identifier `orderOptions.dashboard`; the host's `.order`
+  case composes `DropdownSurface(title: "ORDER BY")` with a
+  `DropdownRow` per `BreakdownOrder`, the current one selected, choosing
+  setting the order and reloading exactly as the `Menu` did. That was
+  the app's last in-page system menu, so `MenuPolicyTests` lands here:
+  a walk over every file under `Trove/Views` through
+  `SourceScan.production`, a word-boundary match for `Menu {`/`Menu(`
+  spelled as "start of text or a non-identifier character" — Swift's
+  `Regex` has no lookbehind, the first draft's `(?<!…)` threw at
+  runtime — plus `.pickerStyle(.menu)` and `.contextMenu`, allowlist
+  exactly `DetailOverflowMenu.swift`, which must still host one (a
+  stale allowlist fails too), more than ten files scanned.
+  `DropdownWiringTests` gained the order scan: anchor once, the
+  control's body opening `.order` with a `monoLabel` and no `Badge(`,
+  the host's `.order` case composing the ORDER BY surface and the
+  selected-row `DropdownRow` with the reorder-and-reload. **Mutations,
+  one at a time**: A, a `Menu {` added to a page view → the policy red
+  naming `Shared/AddButton.swift` — **on the second try**: the first
+  appended the menu *after* the file's `#Preview`, where every
+  `SourceScan` deliberately stops reading, and the guard stayed green
+  for a reason that was the mutation's, not the guard's; recorded
+  because a production `Menu` written after a preview would evade the
+  scan the same way, an accepted edge of the instrument; B, `title:
+  "ORDER BY"` dropped → the wiring scan red. Live: the root control
+  opens the ORDER BY surface under its label at the gutter, By value
+  tinted and checked; choosing By count closes it, reorders, and the
+  label reads BY COUNT; on a drill-down the control opens under the
+  visible nav bar. **The flip-above branch could not be provoked**: at
+  fixed type sizes the control never sits within a dropdown's height of
+  the tab bar on this screen (drill-down: 566 + 20 + 6 + 117 = 709 of a
+  729-point region), so that branch rests on `DropdownPlacementTests`,
+  stated here rather than claimed seen. Full unit target: **787 tests
+  in 116 suites passed** (785 + 1 + 1).
   Per addendum §Screens (Dashboard, order half) and spec §What the
   Dashboard's order dropdown looks like. `orderControl` → a `.plain`
   `Button { openDropdown = .order }` around today's `monoLabel`, with

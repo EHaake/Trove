@@ -155,6 +155,26 @@ struct DropdownWiringTests {
         #expect(!hosts[0].contains("Menu {"), "no system menu inside the Dashboard's host")
     }
 
+    /// The Dashboard's category-order control (spec P12, criterion 25): the
+    /// mono label stays a label — no pill — and opens the shared surface
+    /// under ORDER BY, its rows the shared row with the current order
+    /// selected. Read from the control's body and the host's `.order` case.
+    @Test func theDashboardOrderControlOpensTheSharedSurfaceUnderOrderBy() throws {
+        let code = try SourceScan.production("Trove/Views/Dashboard/DashboardView.swift")
+        #expect(code.ranges(of: ".dropdownAnchor(DashboardDropdown.order)").count == 1, "the order control must be anchored, once")
+        let control = try #require(SourceScan.closureBodies(after: "private var orderControl: some View", in: code).first)
+        #expect(control.contains("openDropdown = .order"), "the control must open the order dropdown")
+        #expect(control.contains(".monoLabel("), "the label stays the mock's mono text (P12)")
+        #expect(!control.contains("Badge("), "the order control is not a pill (P12)")
+
+        let host = try #require(SourceScan.closureBodies(after: ".dropdownHost(open: $openDropdown", in: code).first)
+        let orderCase = try #require(host.range(of: "case .order:"), "the host must compose the order dropdown")
+        let composition = String(host[orderCase.upperBound...])
+        #expect(composition.contains("DropdownSurface(title: \"ORDER BY\")"), "the order dropdown opens under ORDER BY")
+        #expect(composition.contains("DropdownRow(title: order.label, isSelected: order == viewModel.breakdownOrder)"), "the rows are the shared row, the current order selected")
+        #expect(composition.contains("viewModel.breakdownOrder = order") && composition.contains("viewModel.load()"), "choosing must reorder and reload")
+    }
+
     // MARK: - Helpers
 
     /// The text of one top-level `struct <name>` declaration, up to the next
