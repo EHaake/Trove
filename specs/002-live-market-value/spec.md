@@ -11,6 +11,12 @@ answer reshaped the feature before a single product question could be
 asked. Every product decision below was made by the person and is
 listed in the Decisions record.
 
+Amended 2026-09-03 at the plan review: Decisions 17–28 (below) were
+made by the person against `plan.md`'s escalations, and criteria 10,
+12, 14, 15 and 18, proposals P6, P9 and P11, the retention table and
+the Copy section are reworded to match. `plan.md`'s proposals Q1–Q20
+become decisions on plan approval, as P1–P17 did on this spec's.
+
 Depends on: `001-core-inventory` (the `Item` and `WishlistItem` models,
 the optional manual value whose `nil` means "unvalued", the Sell Plan's
 ranking hook), `010-item-management-enhancements` (the sort picker both
@@ -106,10 +112,10 @@ with one tap (Decision 2).
   their custom order (Decision 9).
 - **Dashboard**: a market variant of the current-value figure — the sum
   of market medians over the owned items that have one — **with its
-  coverage stated** ("12 of 34 items matched"), never presented as
-  comparable to the total without that qualifier (Decision 15; form
-  from the design pass, P5). Spent and gain stay on the person's
-  values.
+  coverage stated** ("12 of 34 items" — the items in the sum, Decision
+  22), never presented as comparable to the total without that
+  qualifier (Decision 15; form from the design pass, P5). Spent and
+  gain stay on the person's values.
 
 ### Adopting
 
@@ -134,10 +140,11 @@ with one tap (Decision 2).
 
 ### History and trend
 
-- Every refresh keeps its summary — median, low, high, count, and when
-  — on the device, from the first refresh on (Decision 7). Nothing from
-  the listings themselves (no listing, seller, title or image) is kept
-  (P14).
+- Every refresh that yields a median keeps its summary — median, low,
+  high, count, and when — on the device, from the first refresh on
+  (Decision 7; a withheld refresh adds no point, Decision 23). Nothing
+  from the listings themselves (no listing, seller, title or image) is
+  kept (P14).
 - The **trend** exists once two points at least seven days apart exist,
   comparing the latest to the previous such point: up at 5 % or more,
   down at −5 % or less, flat between — and flat shows nothing (P12).
@@ -145,8 +152,10 @@ with one tap (Decision 2).
   device builds its own. It is kept for **as long as the item stays
   matched — no time limit** (Decision 16): the longer it runs, the more
   `003`'s trend analysis has to work with. Separately, a displayed
-  figure older than thirty days is no longer shown as current, only its
-  history point kept (P13). Unmatching an item clears its history (P11).
+  figure older than thirty days is no longer shown as current — nor
+  sorted or summed (Decision 21) — only its history point kept (P13).
+  Unmatching an item, or changing its match to a different product,
+  clears its history (P11, Decision 26).
 
 ### Retention, sync and privacy — what is stored where
 
@@ -154,6 +163,7 @@ with one tap (Decision 2).
 |---|---|---|
 | The match (Reverb product identifier) | on the item | yes — the person's own data |
 | The last figure (median, low, high, count, fetched-at) | on the device | no |
+| The matched product's catalog slug and title, for the link-back (Decision 20) | on the device | no |
 | The history of figures | on the device | no |
 | Anything from a listing (title, seller, image, listing id) | nowhere | — |
 | The person's value, adopted or typed | on the item, as today | yes, as today |
@@ -173,8 +183,10 @@ Settings › About and the market section (research record, below):
 - a displayed contact email — a dedicated address for the app
   (Decision 12; the address itself is fixed at planning);
 - a privacy policy of the app's own — `PRIVACY.md` in the repository,
-  published through GitHub Pages and linked from About (Decision 13);
-- a link back to the product on Reverb wherever its data is shown (P9).
+  published through GitHub Pages and linked from About (Decision 13;
+  the GitHub blob URL first, Pages later — Decision 18);
+- a link back to the product on Reverb wherever its data is shown, the
+  candidate picker included (P9, Decision 28).
 
 And two things the app must not do: keep Reverb's content beyond a
 reasonable period (the retention rules above are the reading), and use
@@ -198,11 +210,19 @@ nothing crosses items (see Non-goals).
   **Continue** and **Not now** (P15).
 - Failure: "Couldn't reach Reverb. The figure below is from {age}."
 - Rate limit: "Reverb is asking us to slow down. Try again in a while."
-- The dashboard variant: "Market · $18,400 · 12 of 34 matched".
+- The Settings walk stopped by any other failure: "Couldn't reach
+  Reverb. 3 of 12 refreshed." (Decision 27).
+- The dashboard variant: "Market · $18,400 · 12 of 34 items" (Decision
+  22).
+- Copy this spec doesn't give — the never-refreshed line, the wanted
+  item's withheld sentence, the picker's strings, the link label — is
+  proposed in `plan.md` (Q7) and joins this section on plan approval.
 
 ## Design requirements
 
-- A **Design pass, in-session with the `design` skill** (Decision 10),
+- A **Design pass, in-session with the `design` skill** (Decision 10;
+  run through `/design` by the person with a prompt Claude Code writes
+  at the design task — Decision 17),
   for the three new surfaces: the candidate picker (title, brand, image,
   price, count — a designed choice, not a list of rows), the detail
   screens' Market section (a figure, a spread, an age, an external
@@ -273,6 +293,48 @@ Added 2026-09-03, at the draft's review (the person):
     thirty-day rule below is about how long the *last figure* shows as
     current, not about the history.
 
+Added 2026-09-03, at the plan review (the person), against `plan.md`'s
+escalations:
+
+17. **The Design pass runs through `/design`, invoked by the person**
+    with a prompt Claude Code writes at the design task; the exports
+    land under `design/elements/002-market-values/` as 010's did, and
+    `tokens.md` is sourced from them.
+18. **The privacy policy links to the GitHub blob URL first**
+    (`https://github.com/EHaake/Trove/blob/main/PRIVACY.md`), which
+    works the moment the branch merges; GitHub Pages later, as one
+    `fix/` commit swapping the URL. Decision 13's venue is deferred,
+    not dropped.
+19. **`CLAUDE.md` is amended now, in its own commit on the branch,
+    before implementation** — the constitution's "amend first" rule
+    wins over `DECISIONS.md`'s post-merge routing for an amendment a
+    spec contradicts; `DECISIONS.md` records the reconciliation
+    post-merge.
+20. **The device stores the matched product's catalog slug and title**
+    (with its lowest used price and when taken), unsynced, because the
+    link-back is slug-based and Decision 4 forbids fetching on appear.
+    Criterion 18 says so.
+21. **Stale figures (over thirty days) drop out everywhere**: the sort,
+    the dashboard sum and the section. Criteria 14 and 15 read
+    "current".
+22. **The dashboard's N counts the items in the sum**, and the copy
+    reads "12 of 34 items", so the word and the number agree.
+23. **A withheld refresh adds no history point**; it still updates the
+    section's age and lowest-used figure and counts for the hour
+    budget. Criterion 12 reads "each refresh that yields a median".
+24. **P6 is scoped to owned items**: adopting bumps the edited time
+    where the item has one; `WishlistItem` gains no field.
+25. **The contact address is supplied by the person before the copy
+    task**; a test fails on any placeholder, so it cannot ship unfilled.
+26. **Changing the match to a different product clears the history**;
+    re-picking the same product keeps it. History belongs to the match.
+27. **The Settings walk stops on the first failure of any kind**, with
+    "Couldn't reach Reverb. 3 of 12 refreshed." for a failure that is
+    not the rate limit. Criterion 10 says so.
+28. **Candidates in the picker link back to Reverb**; P9 reads
+    "wherever Reverb's data is shown". The Design pass decides the
+    form.
+
 Proposed at drafting, 2026-09-03, by Claude Code, and decisions since
 the spec's approval the same day (P13 as reworded under Decision 16):
 
@@ -290,19 +352,21 @@ the spec's approval the same day (P13 as reworded under Decision 16):
   line under the current-value figure or a toggle — but the coverage
   qualifier is mandatory and inseparable from the number.
 - **P6. Adopting** writes the whole-currency median, bumps the item's
-  edited time, records no provenance, and leaves the history alone.
+  edited time where it has one (owned items — Decision 24), records no
+  provenance, and leaves the history alone.
 - **P7. Budget**: an item refreshed within the hour isn't re-fetched;
   the Settings action walks matched items in sequence, shows progress,
   and stops at the first rate-limit answer with the copy above.
 - **P8. Failure** leaves the last figure with its age and says why.
 - **P9. Attribution and link-back** as the terms state: the attribution
-  line in About, a link to the product on Reverb wherever a figure is
-  shown.
+  line in About, a link to the product on Reverb wherever Reverb's data
+  is shown — a figure, or a candidate in the picker (Decision 28).
 - **P10. Vocabulary**: "Market", "On Reverb", "asking prices" — never
   "value", "worth" or "price" for the fetched figure; the sort reads
   "Market ↓" / "Market ↑".
-- **P11. Re-match and unmatch** from the section; unmatching clears the
-  item's history.
+- **P11. Re-match and unmatch** from the section; unmatching, or
+  changing to a different product, clears the item's history (Decision
+  26).
 - **P12. Trend**: latest median against the previous point at least
   seven days older; up at +5 % or more, down at −5 % or less; flat shows
   nothing.
@@ -359,22 +423,26 @@ the spec's approval the same day (P13 as reworded under Decision 16):
    section's action or Settings' **Refresh market values**.
 10. [ ] Settings' refresh walks every matched item with visible
     progress and stops cleanly, with the rate-limit copy, when Reverb
-    answers with its limit; items already refreshed stay refreshed.
+    answers with its limit — and, with "Couldn't reach Reverb. N of M
+    refreshed.", on the first failure of any other kind (Decision 27);
+    items already refreshed stay refreshed.
 11. [ ] Offline, the last figure stays with its age and the failure
     copy; nothing is cleared.
-12. [ ] Each refresh adds a history point on the device; a second
+12. [ ] Each refresh that yields a median adds a history point on the
+    device, and a withheld refresh adds none (Decision 23); a second
     device shows no history from the first; the history never appears
     in the CloudKit store.
 13. [ ] With two points at least seven days apart, the row shows an up
     arrow at +5 % or more, a down arrow at −5 % or less, and nothing
     between; with one point, or two closer than a week, nothing.
-14. [ ] The Market sort orders matched items by their latest median,
-    descending and ascending, with unmatched and withheld items last in
-    custom order, on both lists.
-15. [ ] The dashboard shows the market variant as the sum of medians
-    over matched owned items with a figure, always with "N of M
-    matched"; spent, gain and the category breakdown stay on the
-    person's values.
+14. [ ] The Market sort orders matched items by their current median
+    (under thirty days old — Decision 21), descending and ascending,
+    with unmatched, withheld and stale items last in custom order, on
+    both lists.
+15. [ ] The dashboard shows the market variant as the sum of current
+    medians over matched owned items with one, always with "N of M
+    items" where N is the items in the sum (Decisions 21–22); spent,
+    gain and the category breakdown stay on the person's values.
 16. [ ] A displayed figure older than thirty days is no longer shown
     as current; history is never trimmed by age; unmatching clears the
     item's history and figure.
@@ -384,8 +452,8 @@ the spec's approval the same day (P13 as reworded under Decision 16):
     device and what is stored.
 18. [ ] Nothing from a listing — title, seller, image, listing
     identifier — is stored anywhere; a scan of the persisted data after
-    a refresh finds only the app's summary numbers and the product
-    identifier.
+    a refresh finds only the app's summary numbers, the product
+    identifier, and the product's catalog slug and title (Decision 20).
 19. [ ] The canonical CSV gains the product-identifier column at the
     end; an export followed by an import restores the match; the
     fetched figures appear in neither the CSV nor the PDF.
