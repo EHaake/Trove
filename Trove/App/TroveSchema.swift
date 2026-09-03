@@ -36,4 +36,7 @@ nonisolated enum TroveSchema {
 
     /// What the one `ModelContainer` is built over.
     static var combinedSchema: Schema { Schema(models + localModels) }
+
+    /// The same union as a type list, for `.modelContainer(for:inMemory:)`.
+    static var allModels: [any PersistentModel.Type] { models + localModels }
 }

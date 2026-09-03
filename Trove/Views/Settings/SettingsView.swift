@@ -267,8 +267,8 @@ private struct SettingsActionRow: View {
 
 @MainActor
 private func previewContainer(populated: Bool) -> ModelContainer {
-    let configuration = ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: TroveSchema.schema, configurations: configuration)
+    let configuration = ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: TroveSchema.combinedSchema, configurations: configuration)
     if populated {
         let context = container.mainContext
         context.insert(Item(name: "Telecaster", categoryPath: "Music/Guitars", purchasePriceCents: 1_200_00, currentValueCents: 1_450_00))

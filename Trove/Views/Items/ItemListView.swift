@@ -706,8 +706,8 @@ struct ItemListView: View {
 
 #Preview {
     let container = try! ModelContainer(
-        for: TroveSchema.schema,
-        configurations: ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
+        for: TroveSchema.combinedSchema,
+        configurations: ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true)
     )
     let context = ModelContext(container)
     for item in [

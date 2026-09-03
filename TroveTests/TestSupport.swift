@@ -258,8 +258,16 @@ func makeInMemoryContext() throws -> ModelContext {
 /// "persists on every change" tests — they read as persistence checks and
 /// weren't. A second context sees only what actually reached the store.
 func makeInMemoryContainer() throws -> ModelContainer {
-    let configuration = ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
-    return try ModelContainer(for: TroveSchema.schema, configurations: configuration)
+    // The union, as the app's own `.ephemeral` configuration is (002/T001b):
+    // a view model that reads a market row through the context it already
+    // holds would otherwise crash here and nowhere else. `cloudKitDatabase`
+    // spelled out for the reason `TroveStore` gives.
+    let configuration = ModelConfiguration(
+        schema: TroveSchema.combinedSchema,
+        isStoredInMemoryOnly: true,
+        cloudKitDatabase: .none
+    )
+    return try ModelContainer(for: TroveSchema.combinedSchema, configurations: configuration)
 }
 
 /// The perceptual colour model the design-correctness tests measure against.

@@ -91,4 +91,59 @@ struct MarketLocalSchemaTests {
             #expect(entity.relationships.isEmpty, "\(entity.name) declares a relationship — local rows are keyed by UUID, never related")
         }
     }
+
+    // G6 — `-uiTesting`: one configuration, in memory, no CloudKit, and it
+    // carries every model, local ones included — a UI-test launch that
+    // fetched a market row from a store without the entity would crash
+    // there and nowhere else.
+    @Test func uiTestsKeepEveryModelInMemory() throws {
+        let configurations = TroveStore.configurations(for: .ephemeral)
+        try #require(!configurations.isEmpty)
+
+        var covered = Set<String>()
+        for configuration in configurations {
+            #expect(configuration.isStoredInMemoryOnly)
+            #expect(configuration.cloudKitContainerIdentifier == nil)
+            covered.formUnion(try #require(configuration.schema).entities.map(\.name))
+        }
+        #expect(covered == Self.syncedNames.union(Self.localNames), "The ephemeral store is missing \(Self.syncedNames.union(Self.localNames).subtracting(covered).sorted())")
+    }
+
+    // G8 — the container's schema is exactly the two lists together; a
+    // model in `localModels` but not here fails at the first fetch.
+    @Test func theCombinedSchemaIsTheUnion() {
+        let combined = Set(TroveSchema.combinedSchema.entities.map(\.name))
+        #expect(combined == Self.syncedNames.union(Self.localNames))
+        #expect(Set(TroveSchema.allModels.map { ObjectIdentifier($0) })
+            == Set((TroveSchema.models + TroveSchema.localModels).map { ObjectIdentifier($0) }))
+    }
+
+    // G9 — every container built outside `TroveSchema`/`TroveStore`/tests
+    // (the previews, `ContentView`'s) is over the union. Read raw, not
+    // through `SourceScan.production`, because the construction sites are
+    // *inside* `#Preview` blocks — exactly what `production` strips.
+    @Test func previewsAndContentViewUseTheCombinedSchema() throws {
+        let root = URL(filePath: "\(#filePath)")
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        var files = try FileManager.default.subpathsOfDirectory(atPath: root.appending(path: "Trove/Views").path)
+            .filter { $0.hasSuffix(".swift") }
+            .map { "Trove/Views/\($0)" }
+        files.append("Trove/App/ContentView.swift")
+        try #require(files.count > 10, "scanned only \(files.count) files — wrong root?")
+
+        var offenders: [String] = []
+        var builders = 0
+        for file in files {
+            let source = try String(contentsOf: root.appending(path: file), encoding: .utf8)
+            if source.contains("TroveSchema.schema") || source.contains("TroveSchema.models") {
+                offenders.append(file)
+            }
+            if source.contains("TroveSchema.combinedSchema") || source.contains("TroveSchema.allModels") {
+                builders += 1
+            }
+        }
+        #expect(offenders.isEmpty, "containers over the synced schema alone — a fetch of a market row would crash: \(offenders)")
+        #expect(builders >= 8, "only \(builders) files build a container — the previews moved somewhere this scan can't see")
+    }
 }

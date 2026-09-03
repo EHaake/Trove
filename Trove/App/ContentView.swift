@@ -48,5 +48,5 @@ struct ContentView: View {
     ContentView()
         .environment(\.theme, .dark)
         .environment(SyncMonitor.notSyncing)
-        .modelContainer(for: TroveSchema.models, inMemory: true)
+        .modelContainer(for: TroveSchema.allModels, inMemory: true)
 }

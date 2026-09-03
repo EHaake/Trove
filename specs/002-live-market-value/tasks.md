@@ -152,7 +152,33 @@ on something only the person has.
   in the app container. **If G7 cannot be made green, stop and report —
   the plan's fallback (b) is a plan change, not a task.**
 
-- [ ] **T001b — The union everywhere.**
+- [x] **T001b — The union everywhere.**
+  *Done (2026-09-03)*: `makeInMemoryContainer()` on `combinedSchema`
+  with `cloudKitDatabase: .none`; the eight preview files' sixteen
+  `TroveSchema.schema` sites and `ContentView`'s `.modelContainer(for:
+  inMemory:)` moved to the union — the latter through a new
+  `TroveSchema.allModels`, since that modifier takes types, not a
+  schema; G6 (`uiTestsKeepEveryModelInMemory`), G8
+  (`theCombinedSchemaIsTheUnion`, both the schema and `allModels`) and
+  G9 (`previewsAndContentViewUseTheCombinedSchema`) appended to
+  `MarketLocalSchemaTests` — G9 reads the files raw, because
+  `SourceScan.production` strips from the first `#Preview`, which is
+  exactly where every construction site lives; it also requires at
+  least eight files to build a container, so a moved preview can't
+  make it pass over nothing. Targeted run: 24 tests in 4 suites green.
+  Full unit suite: **802 tests in 118 suites passed** (+3). Under
+  `-uiTesting` the app launched on the simulator and was still running
+  five seconds later, no fatal line in its log. Every preview compiles;
+  the canvas itself was not exercised. Mutations, each reverted: **M8**
+  the ephemeral configuration over the synced schema → G6 red ("covered
+  → [WishlistItem, Photo, Item]"); **M9** a local model dropped from
+  `combinedSchema` → the test host died at launch with
+  `configurationSchemaNotFoundInContainerSchema` (the local
+  configuration names an entity the container doesn't have) — red by
+  crash, and the runtime failure G8 exists to pre-empt, so **M9′** the
+  same drop on `allModels` alone → G8 red by its assertion; **M10**
+  one preview left on `TroveSchema.schema` → G9 red naming
+  `SettingsView.swift`.
   Per plan §1 and §9 (G6, G8, G9). `.ephemeral` becomes one in-memory
   configuration over `combinedSchema`; `makeInMemoryContainer()` in
   `TestSupport` builds the union with `cloudKitDatabase: .none`; every

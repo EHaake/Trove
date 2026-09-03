@@ -461,8 +461,8 @@ struct ItemFormView: View {
         ItemFormView(
             modelContext: ModelContext(
                 try! ModelContainer(
-                    for: TroveSchema.schema,
-                    configurations: ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
+                    for: TroveSchema.combinedSchema,
+                    configurations: ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true)
                 )
             )
         )
