@@ -27,6 +27,7 @@ own.
 | `010-item-management-enhancements` | **Complete** — all tasks through the Phase 8 close-out done (2026-08-30); twenty acceptance criteria signed off; skeptical-review findings resolved or recorded in `tasks.md` |
 | `011-data-export` | **Shipped** — merged to `main` 2026-08-31 via [PR #5](https://github.com/EHaake/Trove/pull/5); all nineteen tasks done, twelve criteria verified, close-out review findings dispositioned in `tasks.md` |
 | `012-data-import` | **Shipped** — merged to `main` 2026-09-01 via [PR #7](https://github.com/EHaake/Trove/pull/7); all eighteen tasks done, sixteen criteria verified with a per-criterion record in `spec.md`; the T017 device pass and T018 audit each caught and fixed a real defect before merge |
+| `013-settings-menu` | **Shipped** — merged to `main` 2026-09-02 via [PR #9](https://github.com/EHaake/Trove/pull/9); seventeen tasks plus Amendment A's nine (the Dashboard "…" and bespoke in-page menus, decided after the first close-out and before merge), twenty-seven criteria verified with per-criterion records in `spec.md`; three false-passing guards caught across the two phases, and the render oracle, the frame-by-frame recording and the safe-area probe each overturned a plan claim before it shipped |
 
 ## Future specs
 
@@ -177,7 +178,10 @@ actually useful once the app is in daily use.
     own content (summary figures plus supporting detail), distinct
     from the list exports; the Dashboard has no view context for the
     export-follows-view rule to act on, so it needs its own designed
-    shape rather than inheriting this spec's.
+    shape rather than inheriting this spec's. *(Since `013` Amendment
+    A the root Dashboard has a "…" holding Settings alone — kept a
+    menu rather than a direct button precisely so this export can
+    join it.)*
   - **Per-item export from the detail screens** — per-item PDF spec
     sheets as a refinement of the collection document; plausibly
     lands alongside or after `013`'s export-everything, whenever an
@@ -202,7 +206,9 @@ actually useful once the app is in daily use.
     export whose value grows most with them). It overlaps `013`'s
     export-everything occupant and the dashboard-export deferral
     above — scoping should reconcile the three rather than build
-    them separately.
+    them separately. *(`013` shipped export-everything as Settings'
+    CSV and PDF pairs; the Dashboard's "…" now exists to hang a
+    Dashboard-shaped export on.)*
 - **`012-data-import`** (**Shipped 2026-09-01** via
   [PR #7](https://github.com/EHaake/Trove/pull/7) — see
   `specs/012-data-import/` for the full record) — CSV import of
@@ -220,8 +226,10 @@ actually useful once the app is in daily use.
   written — the destructive-action instinct satisfied without new UI.
   Order is positional, appended to the end of custom order; the “…”
   badge became always-visible so a fresh install can reach Import and
-  **Get Blank Template**; `docs/csv-reference.md` and the test-pinned
-  `docs/samples/` files shipped with it.
+  **Get Blank Template** (the templates moved to Settings › Templates
+  at `013`; the badge stayed always-visible for Import and Settings);
+  `docs/csv-reference.md` and the test-pinned `docs/samples/` files
+  shipped with it.
 
   Scope decided ahead of the idea conversation, to keep this spec's own
   first version genuinely small: a rigid, Trove-defined column template
@@ -248,21 +256,36 @@ actually useful once the app is in daily use.
   row order, empty-cell-vs-zero semantics, locale-free money, the
   local-day date caveat, and the append-only growth rule for future
   columns. `ExportSchema.swift` carries the same constants in code.
-- **`013-settings-menu`** — A settings surface for the app, which
-  doesn't exist yet in any form. Deferred out of `011-data-export`'s
-  scoping (2026-08-30): `011` deliberately has no "export everything"
-  — export follows the current view — and the export-everything action
-  (both collections, from anywhere, in one gesture) was parked here
-  rather than bolted onto a list screen where it would break that
-  rule. That makes export-everything this spec's first motivating
-  occupant, not its whole scope; what else belongs in a settings menu
-  (theme selection once `004` lands is an obvious candidate) should be
-  settled in this spec's own idea conversation rather than accumulated
-  here. Worth noting the list screens’ “…” overflow
-  menu (introduced by `011`, grown to four always-visible actions by
-  `012`) — whether settings lives behind a further-grown version of
-  that affordance, a Dashboard entry point, or something else
-  entirely is an open design question for this spec.
+- **`013-settings-menu`** (**Shipped 2026-09-02** via
+  [PR #9](https://github.com/EHaake/Trove/pull/9) — see
+  `specs/013-settings-menu/` for the full record) — the app's Settings
+  sheet, one screen reached from every root: the lists' "…" (a fourth
+  section at the bottom, below Import) and, since the spec's Amendment
+  A, the Dashboard's own "…", which Design's mock always drew and
+  which holds Settings alone. Its occupants, decided in the spec
+  conversation: **export everything** as two actions (the CSV pair
+  and the PDF pair, one share sheet with two files each — `011`'s
+  deferral landed), the **blank templates** moved here from the lists'
+  menu, a live **iCloud** status row (the store's fallback reason
+  finally read, after sitting unread since `001`), **Delete All** per
+  list (all-or-nothing, count in the title, the iCloud sentence only
+  when the store is configured for iCloud), and **About**. The name
+  stayed *Settings* although nothing on it is yet a preference: in
+  iOS vocabulary it is the back-of-house screen, and `004`'s theme
+  selection and a currency choice land exactly here. Amendment A also
+  settled a rule the app had followed without stating it — **bespoke
+  inside the page, system in the bars**: Sort By, both "…" badges and
+  the Dashboard's category-order control open one shared dropdown
+  surface (grown out of the badge with a fade, since the person found
+  the still version stiff), while the detail screens' nav-bar "…"
+  stays the app's one system menu, guarded by `MenuPolicyTests`.
+  Deferred from here, recorded so they aren't lost: **restructuring
+  Settings into submenus** (export, templates and delete each behind a
+  row of their own) once real preferences arrive — the person's call,
+  nothing to restructure around yet; **theme selection** to `004`; a
+  **default-currency** setting and **iCloud account status / an iCloud
+  toggle** to specs of their own; the **Dashboard export** and the
+  "**Full**" export above, which now have a menu to live in.
 
 ## Working convention
 

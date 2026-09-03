@@ -68,10 +68,20 @@ ends up being.
 ## Process and tooling notes
 
 - **Git routing**: edits to `CLAUDE.md`, `specs/ROADMAP.md`, and this
-  file go to `main` directly (repo-wide). Edits inside
-  `specs/<feature>/` go to that feature's own branch. See `CLAUDE.md`'s
-  Git conventions section for the full branch-per-spec / draft-PR
-  workflow this implements.
+  file go to `main` directly (repo-wide) — in practice through a
+  `fix/docs-<spec>-shipped` branch and PR right after each merge, never
+  a direct push. Edits inside `specs/<feature>/` go to that feature's
+  own branch. Three more buckets, settled by how `011`–`013` actually
+  moved (recorded 2026-09-02): **`design/`** (`brief.md`, `tokens.md`)
+  and **`docs/`** travel with the feature branch that changes what
+  they describe — tokens are "as implemented", the CSV reference is
+  the contract's paper half; **`README.md`** splits — a feature
+  sentence that becomes true on the branch (T015 of `013` reworded the
+  import bullet when the template moved) goes with the branch, while
+  the Status paragraph, the tree and the specs listing wait for the
+  post-merge docs pass, since they describe what `main` has. See
+  `CLAUDE.md`'s Git conventions section for the full
+  branch-per-spec / draft-PR workflow this implements.
 - **Model and effort**: originally tiered per phase (Opus 5 for
   foundational/logic-dense phases, Sonnet 5 for mechanical ones — see
   `tasks.md`'s "Model and effort per phase" table). Later switched to
