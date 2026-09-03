@@ -1097,8 +1097,34 @@ one commit before T020 replaces it.
   opens under its label at the top and after scrolling, and flips above
   when near the tab bar, by eye, on the root and on a drill-down.
 
-- [ ] **T024 — Docs: tokens, the brief's rule, and the three specs'
+- [x] **T024 — Docs: tokens, the brief's rule, and the three specs'
   notes.**
+  *Done (2026-09-02)*: `design/tokens.md` — the Sort picker section
+  reframed as the shared surface (header row SORT BY / ORDER BY / none
+  on the "…" menus) with three rows added for the group break, the
+  disabled row (the token *under* the button's measured 0.5 dimming,
+  stated as measured, not designed) and the placement (`dropdownGap`,
+  gutter, flip, no animation); the "Export badge and menu (`011`)"
+  section's stale "hidden on an empty collection" sentence corrected to
+  `012`'s always-visible rule, its Menu row rewritten as bespoke with
+  the history and the page/bars rule, and rows added for the hint
+  (Decision 18) and the Dashboard order control (P12) — plus the
+  Dashboard's own pill (P8). `design/brief.md` — a new "Menus and
+  chrome" section stating the rule, before Voice. `specs/011-data-
+  export/plan.md` — a dated note under the original "system `Menu`"
+  bullet: the fallback taken for homogenization, not a tear, the state
+  machine now one shared host, the scans' new names; `spec.md` —
+  criteria 1 and 2's two dead test citations replaced
+  (`…FiresBothIntents` → `theBadgeOpensTheDropdownWhichFiresEveryIntentAndOpensSettings`,
+  `bothMenuActionsGateOnCanExport` → `theMenuCarriesFiveItemsInThreeGroups`).
+  `specs/012-data-import/spec.md` — the verification citation amended
+  to the `OverflowDropdown.swift` scan. The grep the task asked for
+  leaves exactly one "system `Menu`" outside the `013` files and the
+  task histories: `011` plan.md's original decision sentence, kept as
+  written with the supersession note directly beneath it — this repo
+  records reversals, it doesn't rewrite shipped plans. `DocsSampleTests`
+  green: 5 tests in 1 suite (count checked; the samples never named a
+  menu).
   Per addendum §Docs. `design/tokens.md`: the "Export badge and menu
   (`011`)" table — the Menu row rewritten (bespoke, the Sort picker's
   surface, 013 Amendment A), the stale "hidden on an empty collection"

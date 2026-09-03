@@ -149,15 +149,19 @@ followed by one entry per exported item.
    and Settings.)*
    *Verified: both headers share one visibility gate
    (`ItemListView.header` / `WishlistView.header`);
-   `ExportWiringTests.theBadgeIsFedByTheViewModelAndFiresBothIntents`;
+   `ExportWiringTests.theBadgeOpensTheDropdownWhichFiresEveryIntentAndOpensSettings`
+   (renamed at `013`/T013 and again at `013` Amendment A/T021, when the
+   badge and its menu split);
    simulator checks at T012/T013. The layout is intrinsic (no
    size-class branching exists to diverge).*
 2. [x] The "…" menu shows exactly two actions, Export as CSV… and Export
    as PDF…, both disabled when the current view is empty (a filter or
    search matching nothing; the entirely-empty collection is covered by
    criterion 1's visibility rule). *(Amended 2026-08-30, same decision.)*
-   *Verified: `ExportWiringTests.bothMenuActionsGateOnCanExport` (two
-   pinned strings, each individually gated);
+   *Verified: `ExportWiringTests.theMenuCarriesFiveItemsInThreeGroups`
+   (renamed at `013`/T013; the two export rows pinned as the only two
+   gated on `canExport`, since `013` Amendment A/T021 as
+   `isEnabled: canExport` on `OverflowDropdown.swift`);
    `canExportTracksTheVisibleListNotTheStore` and
    `nothingIsExportedWhenTheViewIsEmpty` in both view-model suites.*
 2a. [x] A failed export shows a plain alert and delivers nothing. *(Added

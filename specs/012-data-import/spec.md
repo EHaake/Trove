@@ -360,9 +360,11 @@ broken and what went red). "Device" means the T017 simulator pass.
    (brace-span scan, both views) + the empty-collection UI test — one
    re-nest mutation turned both red;
    `ExportWiringTests.theMenuCarriesFiveItemsInThreeGroups` (renamed
-   at `013`/T013 when Settings joined the menu; gating count still
-   pinned at exactly 2); 011 spec.md criteria 1–2 carry
-   the superseded-by note; device.
+   at `013`/T013 when Settings joined the menu; since `013` Amendment
+   A/T021 it scans `OverflowDropdown.swift`, the gate pinned as
+   `isEnabled: canExport` on exactly the two export rows and the groups
+   as `startsGroup` on Import and Settings); 011 spec.md criteria 1–2
+   carry the superseded-by note; device.
 2. `aTroveExportRoundTripsLosslessly` / `aWishlistExportRoundTripsLosslessly`
    (serialization equality via `ExportSchema.row(from:)`, zero skips,
    zero defaults); order by `commitAppendsAtTheEndPreservingFileOrder`

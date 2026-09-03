@@ -152,7 +152,7 @@ bevel does the separating, so a border now draws **only** for state — rust
 when a field is invalid, and brass when the category field is focused —
 never as resting chrome.
 
-### Sort picker (`010`)
+### Sort picker (`010`) — and the shared dropdown surface (`013` Amendment A)
 
 Same component now used on both `ItemListView` and `WishlistView`,
 extended to hold four options each rather than redesigned — a compact
@@ -160,6 +160,14 @@ badge showing the current selection, opening a dropdown on tap. Its
 footprint doesn't grow with option count, which is what resolved the
 earlier open question about whether four options would crowd either
 header.
+
+Since `013` Amendment A the dropdown is the **shared surface every
+in-page menu opens** — `DropdownSurface` and `DropdownRow` in code: the
+lists' and the Dashboard's "…" and the Dashboard's category-order
+control draw on it too, differing only in their rows and in whether
+they carry a header. Sort By's rows are the selected/REORDER shape
+below; the additions the other menus need — a group break, a disabled
+row, the placement — follow the table.
 
 | Property | Value |
 |---|---|
@@ -169,11 +177,14 @@ header.
 | Badge sort-icon | three horizontal bars, widths `10px`/`7px`/`4px`, `1.5px` tall, `2.5px` gap, `currentColor` |
 | Dropdown width | `232px` |
 | Dropdown background/border | `surface` (`#201F1D`) / `1px solid divider` (`#3A3B3E`), `3px` radius |
-| "SORT BY" header | padding `11px 14px 9px`, IBM Plex Mono `10px`, letter-spacing `0.16em`, `textQuiet` |
+| Header row — "SORT BY" here, "ORDER BY" on the Dashboard's order dropdown, none on the "…" menus | padding `11px 14px 9px`, IBM Plex Mono `10px`, letter-spacing `0.16em`, `textQuiet` |
 | Row padding | `12px 14px`, `1px solid surfaceInset` top border between rows |
 | Selected row | text `accentBrass`, `13.5px`, background `accentBrassTint` |
 | Selected row, "Custom" specifically | adds a "REORDER" label (IBM Plex Mono `9.5px`, letter-spacing `0.12em`, `textQuiet`) and a `12×12` brass checkmark, `1.6px` stroke — the other three options show no such label |
 | Unselected row | text `textBody` (`rgba(242,237,228,0.75)`), `13.5px` |
+| Group break (`013` A, P10) | the row's own top border drawn in `divider` (`#3A3B3E`) instead of `surfaceInset` — one hairline, three times the separator's contrast on `surface`; the "…" menus' three groups |
+| Disabled row (`013` A, P11) | text `textDisabled` (`rgba(242,237,228,0.35)`) *under* the button's own disabled dimming (a further `0.5` on the alpha, composited in sRGB — measured, not designed); the compound `SettingsActionRow` ships. Inert, dimmed to VoiceOver |
+| Placement (`013` A) | trailing edge at the screen gutter (`24px`), whatever badge opened it; `6px` below the badge (`dropdownGap` — what the lists' old fixed `60px` offset resolved to), or above it when it would run past the tab bar; no animation |
 
 The "REORDER" label appearing only on the "Custom" row (not on every
 row's selected state generically) is what replaces the old standalone
@@ -183,8 +194,11 @@ button — see `plan.md`'s Resolved decisions.
 
 The "…" overflow control, sitting right of the sort badge on both list
 screens and drawn to its proportions so the pair reads as one control
-family. It follows the sort badge's visibility rule (hidden on an empty
-collection — `011`'s amended criterion 1).
+family. It shows regardless of collection size since `012` (criterion
+1, superseding `011`'s hide-when-empty rule): its menu carries Import
+and, since `013`, Settings, both always enabled. Since `013` Amendment
+A the same pill sits at the root Dashboard's top-right (P8), holding
+Settings alone.
 
 | Property | Value |
 |---|---|
@@ -192,7 +206,9 @@ collection — `011`'s amended criterion 1).
 | Badge padding | `8px 12px` — the sort badge's |
 | Badge glyph | SF `ellipsis`, `15px` semibold, `accentBrass`, in an `18×14` frame sized against the sort badge's text row |
 | Exporting state | glyph swaps to a small `ProgressView` tinted brass; whole control disabled |
-| Menu | **system `Menu`**, deliberately — its label is a constant-size glyph, the `DetailOverflowMenu` shape, not the variable-width label T029c evicted from this header. Items disable individually when the view is empty. |
+| Menu | **bespoke since `013` Amendment A** — `OverflowDropdown` on the Sort picker's surface above, opened on the screen's dropdown host: five rows in three groups (the two exports, disabled when the view is empty; Import; Settings), no header row (P9), the group breaks as above. From `011` to `013` it was a system `Menu`, safe from the T029c tear because its label is a constant-size glyph; the amendment's rule — **bespoke inside the page, system in the bars** — ended that, so the two badges side by side open one visual language. `DetailOverflowMenu`, in the navigation bar, is the app's one system menu. |
+| Hint | "Opens more actions" — a button with a hint; SwiftUI has no pop-up trait to give it (`013` Decision 18). The sort badge's is "Opens sort options", the Dashboard order control's "Opens order options" |
+| Dashboard order control (`013` A, P12) | Design's "BY VALUE" label as drawn — `monoLabel` in `textQuiet`, no pill — opening the shared surface under an "ORDER BY" header, the current order tinted and checked, no REORDER tag |
 
 ### Print palette and type scale — PDF export (`011`)
 

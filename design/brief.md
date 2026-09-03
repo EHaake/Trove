@@ -175,6 +175,19 @@ screen needs, this is the visual/layout brief for each:
 9. **Empty states** — items list, wishlist, and dashboard with no data
    yet. Should point at the add action, not just say "nothing here."
 
+## Menus and chrome
+
+**Bespoke inside the page, system in the bars** (`013` Amendment A).
+Every menu drawn inside a page's content — Sort By, the lists' and the
+Dashboard's "…", the Dashboard's category-order control — is Trove's own
+dropdown surface (tokens.md's Sort picker), never a system menu: iOS
+26's glass is a rendered material the skeuomorphism rule above keeps out
+of the page, and two badges side by side must open one visual language.
+The bars are the system's: the tab bar, the navigation bar's back
+chevron and the detail screens' "…" beside it, a sheet's Done. That a
+"…" in a bar and a "…" in a header open different-looking menus is what
+the layer boundary buys; `MenuPolicyTests` holds the line.
+
 ## Voice
 
 Plain, direct, no filler. Name things by what the person controls, not

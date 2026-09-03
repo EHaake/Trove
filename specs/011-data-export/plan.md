@@ -326,6 +326,14 @@ picker" is the custom `SortBadge` inside each screen's hand-built header
   overlay-and-catcher state machine to each screen for no design gain;
   if the badge's border ever tears the way T029c's did, that custom
   dropdown is the known fallback.
+  *(2026-09-02, `013` Amendment A: the fallback was taken — not because
+  the border tore, which it never did, but to homogenize the two header
+  badges on one surface, the lists' Sort By dropdown, under the rule
+  "bespoke inside the page, system in the bars"; see `013`'s plan
+  addendum. The one state machine is now a shared screen-level host,
+  not one per screen. This section's `Divider()`/`.disabled(!canExport)`
+  scans became `startsGroup`/`isEnabled: canExport` counts on
+  `OverflowDropdown.swift`.)*
 - **[escalated → decided] Visibility**: the badge appears exactly when
   the sort badge does (`totalCount > 0`) — on an entirely empty
   collection the whole control row is hidden and the empty state owns
