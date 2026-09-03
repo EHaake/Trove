@@ -141,9 +141,11 @@ with one tap (Decision 2).
   comparing the latest to the previous such point: up at 5 % or more,
   down at −5 % or less, flat between — and flat shows nothing (P12).
 - History stays on the device and does not sync (Decision 7): a second
-  device builds its own. It is kept for a year, and a displayed figure
-  older than thirty days is no longer displayed, only its history point
-  kept (P13). Unmatching an item clears its history (P11).
+  device builds its own. It is kept for **as long as the item stays
+  matched — no time limit** (Decision 16): the longer it runs, the more
+  `003`'s trend analysis has to work with. Separately, a displayed
+  figure older than thirty days is no longer shown as current, only its
+  history point kept (P13). Unmatching an item clears its history (P11).
 
 ### Retention, sync and privacy — what is stored where
 
@@ -262,6 +264,14 @@ Made by the person, 2026-09-02/03, in the design conversation:
 15. **A market variant of the dashboard's current-value figure**, with
     its coverage stated.
 
+Added 2026-09-03, at the draft's review (the person):
+
+16. **History has no time limit.** The draft proposed keeping a year;
+    the person extended it: a matched item's history is kept for as
+    long as the match exists, and only unmatching clears it. The
+    thirty-day rule below is about how long the *last figure* shows as
+    current, not about the history.
+
 Proposed at drafting, 2026-09-03, by Claude Code. These become decisions
 on spec approval unless the person overturns them:
 
@@ -295,9 +305,13 @@ on spec approval unless the person overturns them:
 - **P12. Trend**: latest median against the previous point at least
   seven days older; up at +5 % or more, down at −5 % or less; flat shows
   nothing.
-- **P13. Retention**: history for a year; a displayed figure no older
-  than thirty days. The reading of "reasonable periods" in Reverb's
-  terms — planning's skeptical review confirms it or tightens it.
+- **P13. Freshness**: a displayed figure no older than thirty days —
+  after that the section shows only that a refresh is due, and the
+  figure survives as a history point. (The draft also proposed a
+  one-year cap on history; Decision 16 removed it.) The history holds
+  the app's own summary numbers, not Reverb's content, which is the
+  reading of "reasonable periods" in Reverb's terms that planning's
+  skeptical review confirms or tightens.
 - **P14. Nothing from a listing is stored** — only the app's own
   summary numbers and the product identifier.
 - **P15. The notice's copy** as written above.
@@ -360,9 +374,9 @@ on spec approval unless the person overturns them:
     over matched owned items with a figure, always with "N of M
     matched"; spent, gain and the category breakdown stay on the
     person's values.
-16. [ ] A displayed figure older than thirty days is no longer
-    displayed; history older than a year is gone; unmatching clears
-    the item's history and figure.
+16. [ ] A displayed figure older than thirty days is no longer shown
+    as current; history is never trimmed by age; unmatching clears the
+    item's history and figure.
 17. [ ] Settings › About shows the attribution line verbatim, the
     contact address, and a link to the privacy policy; the policy
     exists in the repository, is published, and states what leaves the
