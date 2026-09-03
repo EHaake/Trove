@@ -42,22 +42,37 @@ purchases.
   before a single row is written, and nothing ever modifies existing
   items. Sample files for every state live in
   [`docs/samples/`](docs/samples/README.md).
+- **Settings** — one sheet, reached from the "…" on either list or on
+  the dashboard: export *everything* as a CSV pair or a PDF pair (one
+  share sheet, two files), the blank import templates, a live iCloud
+  status row that says what the app actually knows, Delete All for
+  either list (all-or-nothing, the count in the title, with "Export
+  first if you want a copy" right there), and About.
+- **Menus that are the app's own** — every menu inside a page (Sort
+  By, both "…" badges, the dashboard's category order) opens one
+  shared dropdown surface in Trove's own type and tokens, growing out
+  of its badge; the one system menu left is in the navigation bar,
+  where the system's chrome belongs.
 - **iCloud sync** across your own devices via CloudKit, with real
   handling for the window between signing in and your existing
   collection actually finishing its first download.
 
 ## Status
 
-Four specs shipped: `001-core-inventory` (v1 — item tracking, the
+Five specs shipped: `001-core-inventory` (v1 — item tracking, the
 dashboard, the wishlist, the Sell Plan, CloudKit sync),
 `010-item-management-enhancements` (merged 2026-08-30 — swipe actions,
 drag-to-reorder, duplication, expanded sorting, and a design-depth
 refresh across the app), `011-data-export` (merged 2026-08-31 —
 view-scoped CSV and PDF export from both list screens, whose CSV
-schema is the canonical contract), and `012-data-import` (merged
+schema is the canonical contract), `012-data-import` (merged
 2026-09-01 — the read half of that contract: template-based CSV
 import on both lists with parse-first confirmation, skip-and-report,
-and tested sample files).
+and tested sample files), and `013-settings-menu` (merged 2026-09-02
+— the Settings sheet with export-everything, the templates, iCloud
+status, Delete All and About, reached from every root's "…"; and, by
+its Amendment A, the dashboard's "…" and every in-page menu on one
+bespoke dropdown surface).
 See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.
@@ -115,7 +130,7 @@ Trove/                 App source
   Import/               CSV import — parser, field policy, service
   Models/               SwiftData models
   ViewModels/            One per screen
-  Views/                 Dashboard/, Items/, Wishlist/, Shared/
+  Views/                 Dashboard/, Items/, Wishlist/, Settings/, Shared/
   Extensions/            Small, flagged UIKit-bridge exceptions live here
 Trove/Fonts/            Bundled type (Archivo, IBM Plex Sans/Mono)
 TroveTests/             Swift Testing, one file per view model
@@ -124,6 +139,8 @@ specs/
   001-core-inventory/    Shipped v1 — spec, plan, tasks
   010-.../               Shipped — item management + design refresh
   011-data-export/       Shipped — CSV + PDF export, canonical schema
+  012-data-import/       Shipped — CSV import against that schema
+  013-settings-menu/     Shipped — Settings, and the bespoke in-page menus
   ROADMAP.md             Backlog of future specs
 design/
   brief.md               Visual/interaction direction
