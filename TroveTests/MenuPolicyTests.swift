@@ -23,10 +23,16 @@ struct MenuPolicyTests {
         let root = URL(filePath: "\(#filePath)")
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let viewsRoot = root.appending(path: "Trove/Views")
-        let files = try FileManager.default.subpathsOfDirectory(atPath: viewsRoot.path)
-            .filter { $0.hasSuffix(".swift") }
-            .sorted()
+        // Every screen: the views, and the app folder that composes them
+        // (`ContentView` is a screen too).
+        var files: [String] = []
+        for folder in ["Trove/Views", "Trove/App"] {
+            let url = root.appending(path: folder)
+            files += try FileManager.default.subpathsOfDirectory(atPath: url.path)
+                .filter { $0.hasSuffix(".swift") }
+                .map { "\(folder)/\($0)" }
+        }
+        files.sort()
         try #require(files.count > 10, "scanned only \(files.count) view files — wrong root?")
 
         let systemMenu = try Regex(#"(?:^|[^A-Za-z0-9_])Menu\s*[({]"#)
@@ -35,7 +41,7 @@ struct MenuPolicyTests {
 
         for file in files {
             let name = (file as NSString).lastPathComponent
-            let code = try SourceScan.production("Trove/Views/\(file)")
+            let code = try SourceScan.production(file)
             let hostsOne = code.contains(systemMenu)
                 || code.contains(".pickerStyle(.menu)")
                 || code.contains(".contextMenu")

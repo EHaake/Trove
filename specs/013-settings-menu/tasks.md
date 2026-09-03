@@ -1,10 +1,11 @@
 # 013 — Settings Menu: Tasks
 
-Status: **In progress — Amendment A** (2026-09-02): T001–T017 complete
-as recorded below (nineteen criteria verified; the T012 mutation and
-the T017 sweep each caught a false-passing scan); Phase 6, T018–T025,
-drafted against the approved plan addendum for criteria 20–27. PR #9
-stays draft until T025.
+Status: **Complete** (2026-09-02) — T001–T017 (nineteen criteria) and
+Amendment A's T018–T025 with T024a (criteria 20–27) all done, each
+with a per-criterion record in `spec.md`; three false-passing guards
+caught before merge across the two phases (T012, T017, and T021's dim
+guard) and the T025 sweep's three blockers acted on; full suite at
+close 790 tests in 116 suites + UI 9 tests, 0 failures twice; PR #9 ready for review.
 
 Drafted against the approved `plan.md` (approved 2026-09-01; drafted
 at `61c208b`). No new technical decisions are made here — every call
@@ -1180,7 +1181,46 @@ one commit before T020 replaces it.
   ~100 s environmental stall hit twice, 206 s). UI target: 9 tests, 0
   failures — the 150 ms close sits well inside the tests' waits.
 
-- [ ] **T025 — Device pass, criteria 20–27, close-out.**
+- [x] **T025 — Device pass, criteria 20–27, close-out.**
+  *Done (2026-09-02)*: criteria 20–27 checked off with a per-criterion
+  verification record in spec.md, two honest partials stated (23's
+  spinner not re-exercised live, a synchronous export being
+  unobservable by screenshot; 26's focus, escape, `.isModal` and dimmed
+  announcement composed and scanned but not exercised — no VoiceOver
+  from here). Live at this pass: two-tap switching by hand on Items;
+  Delete All's reflection on the **`-uiTesting` store only** — one
+  item added, Settings › Delete All Items… → "Delete your only item?"
+  → Delete All → Done → "0 ITEMS", "Nothing tracked yet", the badge
+  still there; the empty-state badge; the root Dashboard scrolling and
+  pulling to refresh under the always-present reader. The plan
+  addendum gained its "As built" section (focus via the row under a
+  switch; the reader inside the safe area with a region and no insets;
+  `hasTopHairline` gone; the disabled compound; no `title:` on
+  `SortDropdown`; the animation; the unreachable flip; the identifiers;
+  the toolchain facts) with inline pointers at the four superseded
+  lines. **The pre-merge skeptical sweep found three blockers and nine
+  second-looks, all acted on**: B1, the badge hints were claimed
+  scanned and weren't → `everyBadgeCarriesItsHintAndIdentifier` reads
+  all three hints and all six identifiers from the controls' bodies
+  (mutation: a hint dropped → red); B2, the rewritten pill's body was
+  scanned by nothing → `theBadgeShowsTheSpinnerAndDisablesWhileBusy`
+  (mutation: `.disabled(isBusy)` dropped → red) and criterion 23's
+  record reworded; B3, 013's own T017 record cited the sheet test by
+  its old name → corrected; S1, the injection scan now asserts the
+  dismiss action is attached directly to the dropdown content, not
+  merely present; S2, `MenuPolicyTests` walks `Trove/App` too; S3, the
+  catcher moved from "not exercised" to exercised (the switching UI
+  test taps it) and `orderOptions.dashboard` joined the plan's
+  identifiers; S4, the focus switch's default is asserted on
+  (mutation: flipped → red); S5, four stale doc comments fixed and the
+  three screens' docs re-attached to their structs; S6, the spec's
+  header caught up with Decision 20 and the verified state; S7, "the
+  app's snappy spring" reworded (0.25 s against the app's 0.2 s idiom)
+  and the host's numbers pinned by scan; S8, the scroll check above;
+  S9, Decision 15's roadmap claim moved to the post-merge list, which
+  gained the sweep's full list. **Full suite at close: unit target
+  790 tests in 116 suites passed; UI target 9 tests, 0 failures, twice back to back.** Status flipped
+  to Complete; PR #9 marked ready for review.
   Per addendum §Verification. On the simulator: both lists' dropdowns
   at both badges against the pre-T020 placement (a screenshot of
   `99747d5`'s Sort By beside today's), group breaks, disabled rows via
@@ -1213,3 +1253,13 @@ the Dashboard's — and "four always-visible actions", now five), the
 status rows, the README status, tree, **and Features list** (no entry
 yet for Settings, export-everything, the iCloud row or Delete All),
 and a `README.md` line in `DECISIONS.md`'s git-routing entry.
+Amendment A adds (the T025 sweep's list): `ROADMAP.md`'s status table
+has no row at all for `013`; its "Dashboard export" (~176–180) and
+"Full export" (~199–205) entries still read as though the Dashboard
+has no entry point to hang an export on — it has one now; the
+submenu-restructuring deferral (spec Decision 15) needs its roadmap
+entry; `README.md`'s tree lacks `Views/Settings/` and its specs
+listing lacks `012` and `013`, and nothing there describes the
+"…"/bespoke-menu surface; and `DECISIONS.md`'s routing entry names
+neither `design/` nor `docs/`, both edited on this branch — fix all
+three buckets, not `README.md` alone.

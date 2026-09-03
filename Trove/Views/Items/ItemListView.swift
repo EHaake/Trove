@@ -2,8 +2,6 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Browse owned gear, per `design/screens/Trove Item List.png`.
-
 /// The header's two dropdowns. One optional of this type is the screen's
 /// whole open-menu state, which is what makes "one open at a time" true by
 /// type rather than by coordination (013 Amendment A).
@@ -20,6 +18,7 @@ private enum HeaderDropdown: Hashable {
     }
 }
 
+/// Browse owned gear, per `design/screens/Trove Item List.png`.
 struct ItemListView: View {
     @State private var viewModel: ItemListViewModel
     @State private var isAddingItem = false
@@ -46,9 +45,11 @@ struct ItemListView: View {
     /// collide with one — no real path is empty *and* prefixed like this.
     private static let unvaluedChipID = "\u{0}unvalued"
 
-    /// Whether T035's sort dropdown is open. Owned here rather than by the
-    /// badge because the dropdown floats over the whole screen and dismisses
-    /// on any outside tap — both beyond the header's reach.
+    /// Which header dropdown is open — Sort By or the "…" — or neither.
+    /// Owned here rather than by a badge because the dropdown floats over
+    /// the whole screen and dismisses on any outside tap, both beyond the
+    /// header's reach; one optional, so only one can be open (T035, then
+    /// 013 Amendment A).
     @State private var openDropdown: HeaderDropdown?
 
     /// Whether 012's file picker is up. View state, not view-model state:

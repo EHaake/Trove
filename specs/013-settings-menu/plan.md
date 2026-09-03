@@ -782,7 +782,9 @@ decided (spec Decision 18) (B7).
     header. Uses `Group(subviews:)` to attach `.accessibilityFocused`
     to its **first** subview and sets it one run-loop turn after
     appear, so VoiceOver focus lands on the first row, never on the
-    container.
+    container. *(As built at T019: the surface only marks its first
+    subview through the environment; the row applies the focus binding
+    itself, under a switch the render tests turn off — see "As built".)*
   - `DropdownRow(title:, isSelected = false, isEnabled = true,
     startsGroup = false, hasTopHairline = true, tag: String? = nil,
     action)`: `SortDropdown.row(for:)`'s body — body font,
@@ -796,7 +798,8 @@ decided (spec Decision 18) (B7).
     own); **no top hairline on the first row of a headerless surface**
     (`hasTopHairline: false` — otherwise its `surfaceInset` line sits
     flush under the surface's `divider` border, a doubled line nobody
-    designed; the sort dropdown keeps its header seam); and it reads
+    designed; the sort dropdown keeps its header seam — *as built at
+    T021: no such rule exists, see "As built"*); and it reads
     `@Environment(\.dismissDropdown)` and **calls it before
     `action()`**, so criterion 23 holds by construction for every row
     on every screen.
@@ -841,7 +844,9 @@ extension View {
 
 - `.overlayPreferenceValue(DropdownAnchorKey.self, alignment:
   .topLeading)`: when `open` is non-nil and its anchor is known, a
-  `GeometryReader` (`.ignoresSafeArea()`) resolves `proxy[anchor]` and
+  `GeometryReader` (`.ignoresSafeArea()` — *as built at T020: inside
+  the safe area, always present since T024a; see "As built"*)
+  resolves `proxy[anchor]` and
   lays a `ZStack` — the catcher (today's exact `Color.clear` /
   `.contentShape(Rectangle())` / `.onTapGesture { open = nil }`,
   labelled by `dismissLabel(id)`, `.isButton`, an explicit
@@ -1015,7 +1020,9 @@ extension View {
   first row draws no top hairline; (c) a disabled row's title pixels
   match `textDisabled`, not `textBody`. Mutations: wire `startsGroup`
   to nothing → red; drop `hasTopHairline` → red; drop the disabled
-  color → red.
+  color → red. *(As built at T021: (b) does not exist and (c) measures
+  ink fractions against the token's alpha under the button's own
+  dimming — see "As built".)*
 - **Placement math** (`DropdownPlacementTests`, T020):
   `DropdownPlacement.origin(...)` table-tested — below with room;
   flipped above when below would cross the bottom inset; pinned to the
@@ -1097,3 +1104,66 @@ Dashboard; VoiceOver on the badges, focus-on-open, escape, dimmed
 rows, `.isModal` containment — by hand, recorded as such. Delete All
 reflection on the Dashboard is verified on the `-uiTesting` store,
 never the dev store.
+
+### As built (T025, 2026-09-02)
+
+Where the implementation departed from this addendum, each with the
+task that found the reason. The inline notes above point here.
+
+- **Focus-on-open (T019).** Not `.accessibilityFocused` on the surface
+  via `Group(subviews:)`: T018's oracle showed a view carrying an
+  accessibility-focus binding renders as *nothing* under
+  `ImageRenderer`, which has no focus system — the first row vanished,
+  then most rows when every row carried it. As built, the surface marks
+  its first subview through `\.isFirstDropdownRow` (only
+  `.environment` ever touches a subview), `DropdownRow` applies a
+  `FirstRowFocus` modifier that acts on the first row alone, and
+  `\.dropdownFocusesFirstRow` (default on) lets the render tests turn
+  the marking off. The simulator showed the marked row draws.
+- **The reader and the safe area (T020).** The plan had the reader
+  ignore the safe area and read the insets back; on iOS 26 such a
+  reader reports zero insets. As built the reader sits inside the safe
+  area (its bounds *are* the region: 402 × 729 under a 62-point status
+  bar and above the 83-point tab bar), `DropdownPlacement.origin` takes
+  a `region` and no insets — adding them to bounds that already
+  excluded them had pinned the dropdown two points low — and the layout
+  places relative to its own origin because the second layout pass
+  hands it bounds in a different space. Placement matches the old
+  offset to a third of a point. Since T024a the reader is always
+  present, empty at rest.
+- **`hasTopHairline` (T021).** Review B4's "doubled line" doesn't
+  materialize: the border overlay draws over the first row's hairline,
+  and a byte comparison of the two renders found four corner pixels
+  differing by ΔE ≈ 0.03 against the 0.06 floor. Removed.
+- **The disabled compound (T021).** SwiftUI dims a disabled `.plain`
+  button's label by half on its own, composited in sRGB (`#454340`
+  measured, `#45` predicted). The `textDisabled` token applies under
+  it — the look `SettingsActionRow` already ships. The render guard
+  measures ink fractions; its first form could not fail.
+- **`SortDropdown` has no `title:` (S8, T019/T023).** The Dashboard's
+  ORDER BY dropdown composes `DropdownSurface(title:)` + `DropdownRow`
+  inline; `SortDropdown` stays sort-only.
+- **Animation (T024a, spec Decision 20).** The "no animation" line is
+  gone: the dropdown grows out of the badge with a fade on
+  `.snappy(duration: 0.25)`, closes on `.easeOut(duration: 0.15)`,
+  opacity alone under Reduce Motion — the transition on the view the
+  conditional inserts (a nested one never runs; a frame-by-frame
+  recording showed the step), the animation scoped to the host's
+  overlay, never around a screen's write.
+- **Identifiers (T021–T023).** Six ship, not the five the addendum
+  lists: `moreActions.items` / `.wishlist` / `.dashboard`,
+  `sortOptions.items` / `.wishlist`, and `orderOptions.dashboard`,
+  which T023 added with the order control. All six, and the three
+  hints, are scanned at their controls' bodies since T025.
+- **The flip-above branch** is unreachable on the Dashboard's layouts
+  at fixed type sizes (T023: 709 of 729 on the drill-down); it rests on
+  `DropdownPlacementTests`.
+- **The Dashboard scan (T022)** watches the host's body for system
+  menus; the file-wide rule is `MenuPolicyTests`' (T023), whose pattern
+  spells the word boundary out because Swift's `Regex` has no
+  lookbehind.
+- **Test-file facts learned along the way**: a parameterized test's
+  argument table must be `nonisolated`; `#expect(x == 83 + 30 + 6)`
+  types the literal arithmetic as `Int`; `#require` can't nest; every
+  `SourceScan` stops at a file's first `#Preview`, so a mutation
+  appended after one is invisible (T023's first try).

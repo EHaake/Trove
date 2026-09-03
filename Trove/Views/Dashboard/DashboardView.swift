@@ -1,14 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The overview screen, per `design/screens/Trove Dashboard.png`: what the
-/// collection is worth, what it cost, what's missing from that figure, and how
-/// it splits by category.
-///
-/// Also serves the category drill-down spec.md asks for — "the same numbers
-/// scoped to it". Tapping a breakdown row pushes this same view with a
-/// narrower scope, so "what have I spent on guitars specifically" is the
-/// overview again rather than a second screen that could drift from it.
 /// The root Dashboard's dropdowns (013 Amendment A). One optional of this
 /// type is the screen's whole open-menu state — "one at a time" true by
 /// type, as on the lists.
@@ -25,6 +17,14 @@ private enum DashboardDropdown: Hashable {
     }
 }
 
+/// The overview screen, per `design/screens/Trove Dashboard.png`: what the
+/// collection is worth, what it cost, what's missing from that figure, and how
+/// it splits by category.
+///
+/// Also serves the category drill-down spec.md asks for — "the same numbers
+/// scoped to it". Tapping a breakdown row pushes this same view with a
+/// narrower scope, so "what have I spent on guitars specifically" is the
+/// overview again rather than a second screen that could drift from it.
 struct DashboardView: View {
     @State private var viewModel: DashboardViewModel
     @State private var openDropdown: DashboardDropdown?

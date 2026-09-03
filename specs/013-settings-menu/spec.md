@@ -6,11 +6,13 @@ approval, as that section says they would. Two sentences were amended
 the same day during planning, after the skeptical review found each
 one stating something the code couldn't make true — see the inline
 notes and Decisions 13–14.)
-Amended 2026-09-02 — **Amendment A (Approved the same day)**: the
-Dashboard entry point and bespoke in-page menus. Raised by the person after all
+Amended 2026-09-02 — **Amendment A (Approved the same day; implemented
+and verified the same day, T018–T025 with T024a)**: the Dashboard entry point and
+bespoke in-page menus. Raised by the person after all
 seventeen tasks were complete and before the merge, and decided in this
-session; recorded as Decisions 15–19 (18–19 added during the
-amendment's planning), drafting proposals P8–P13, and criteria 20–27. Everything outside the sections marked "Amendment A"
+session; recorded as Decisions 15–20 (18–19 added during the
+amendment's planning, 20 after T024's device look), drafting proposals
+P8–P13, and criteria 20–27. Everything outside the sections marked "Amendment A"
 is as approved on 2026-09-01. The person approved the amendment on
 2026-09-02, and P8–P13 became decisions with it; its plan addendum and
 tasks follow the usual gates.
@@ -222,7 +224,9 @@ rather than waiting for it.
 - Opening and closing match Sort By's exactly, including whether and
   how they animate — one behavior, not two. Since Decision 20 that
   behavior is an animation: the dropdown grows out of the badge and
-  fades in on the app's snappy spring, and fades out faster; under
+  fades in on a snappy spring over a quarter second (the app's
+  0.2-second idiom, a touch longer for a surface this size), and fades
+  out faster; under
   Reduce Motion, the fade alone.
 - VoiceOver: each badge is a button whose hint says what it opens
   ("Opens sort options", "Opens more actions", "Opens order options")
@@ -518,7 +522,8 @@ after the seventeen tasks were complete and before the merge:
     (`004`) and a currency choice land exactly here and make the word
     literal. Once real preferences arrive, the export, template, and
     delete groups may move behind rows of their own — deferred,
-    recorded in Non-goals and the roadmap, not designed now.
+    recorded in Non-goals here and, in the post-merge docs pass, in the
+    roadmap — not designed now.
 16. **The root Dashboard gets the "…"** the mock draws, holding
     Settings alone — P1 overturned. Not the category drill-down.
 17. **In-page menus go bespoke; nav-bar menus stay system.** The
@@ -567,7 +572,8 @@ person):
     never had one — the three dropdowns read as stiff beside the
     system menus they replaced. Every in-page dropdown now grows out
     of its badge: a scale from the badge's trailing edge with a fade,
-    on the app's snappy spring opening (a quarter second) and a
+    on a snappy spring opening (a quarter second — the app's 0.2-second
+    idiom, a touch longer for a surface this size) and a
     shorter ease-out closing; under Reduce Motion, the fade alone. One
     animation for all of them, applied by the shared host and scoped
     to it, so no screen's own state write is ever animated — the sort
@@ -643,42 +649,124 @@ person):
     `docs/csv-reference.md` and the README say where the template now
     lives. `012`'s spec carries the superseded-in-part note.
 
-Amendment A (2026-09-02) — unchecked until verified:
+Amendment A (2026-09-02) — verified at T025; the record follows the list:
 
-20. [ ] The root Dashboard's header shows the "…" badge at its
+20. [x] The root Dashboard's header shows the "…" badge at its
     top-right, drawn as the lists' badge, on an empty collection as on
     a full one; the category drill-down shows none. Its dropdown holds
     exactly one row, Settings, which opens the identical Settings
     sheet. Done returns to the Dashboard with its figures reloaded —
     after Delete All Items, the Dashboard's empty state.
-21. [ ] The "…" on both lists and on the Dashboard opens a dropdown
+21. [x] The "…" on both lists and on the Dashboard opens a dropdown
     drawn on the Sort By surface — same width, background, border,
     radius, row padding, and row hairlines — and no system menu. The
     lists' rows read in criterion 1's order, with the two group breaks
     drawn as `divider` hairlines and no header row.
-22. [ ] On an empty collection the export rows are drawn in
+22. [x] On an empty collection the export rows are drawn in
     `textDisabled` and tapping one does nothing; Import from CSV… and
     Settings still act. (Criterion 2, now under the app's drawing.)
-23. [ ] Choosing a row closes the dropdown before its action runs;
+23. [x] Choosing a row closes the dropdown before its action runs;
     during an export the badge shows the spinner and disables exactly
     as before (criterion 14).
-24. [ ] One dropdown at a time: while Sort By is open, a tap on "…"
+24. [x] One dropdown at a time: while Sort By is open, a tap on "…"
     closes Sort By and opens nothing, and the reverse — the next tap
     opens (Decision 19); tapping the open badge, tapping outside, or
     choosing a row closes the open one. The Sort By dropdown's drawing
     is unchanged; it opens and closes with the same animation as every
     in-page dropdown (Decision 20).
-25. [ ] The Dashboard's category-order control opens the same surface
+25. [x] The Dashboard's category-order control opens the same surface
     with an ORDER BY header and the rows By value and By count, the
     current one tinted and checked; choosing the other reorders the
     breakdown and updates the label.
-26. [ ] VoiceOver: each badge announces as a button whose hint says
+26. [x] VoiceOver: each badge announces as a button whose hint says
     what it opens (Decision 18), opening moves focus into the
     dropdown, the escape gesture closes it, the tap-outside layer is
     labelled, and disabled rows read as dimmed.
-27. [ ] The detail screens' "…" is unchanged, and it is the only
+27. [x] The detail screens' "…" is unchanged, and it is the only
     system menu left in the app: no screen presents a system menu
     inside its content.
+
+### Verification record — Amendment A (T025, 2026-09-02)
+
+How each of criteria 20–27 was checked, and where a check stops short.
+The instruments: the unit target (790 tests in 116 suites at close), the UI target
+(9 tests, 0 failures — run twice back to back at close, and twice per UI task), the
+simulator on the dev
+store and — for anything destructive — on the `-uiTesting` store only,
+and for two claims a frame-by-frame screen recording.
+
+- **20** — The root Dashboard's badge: on the empty state (T022's UI
+  test; by hand on the `-uiTesting` store at T025) and on the 307-item
+  dev store (T022, by hand); the drill-down shows the back chevron and
+  none (T022, by hand; the `isRoot` gate scanned). One row, Settings →
+  the identical sheet (UI test; by hand). Done reloads: on the
+  `-uiTesting` store, one item added, Settings › Delete All Items… →
+  "Delete your only item?" → Delete All → Done → "0 ITEMS", "Nothing
+  tracked yet", the badge still there (T025, by hand). Never on the
+  dev store. The root Dashboard scrolls and pulls to refresh under
+  the host's always-present reader (T025, by hand — the reader is
+  empty at rest and drags reach the scroll view through it).
+- **21** — The lists' and the Dashboard's "…" open the shared surface
+  (`sortByComposesTheSharedSurface`,
+  `theOverflowDropdownIsHeaderlessOnTheSharedSurface`, the host
+  composition scans; by hand at T021/T022). No system menu:
+  `MenuPolicyTests` (criterion 27). Criterion 1's order and the two
+  group breaks on exactly the Import and Settings rows:
+  `theMenuCarriesFiveItemsInThreeGroups`; the breaks drawn as `divider`
+  hairlines and visibly stronger than the row separator:
+  `OverflowDropdownRenderTests` (Oklab floor, on pixels); no header
+  row: the headerless scan. Seen by hand on both lists.
+- **22** — Under an empty search the export rows dim while Import and
+  Settings stay bright (T021, by hand); the fresh-install UI test
+  asserts the export rows exist and are disabled and Import and
+  Settings enabled. The disabled drawing is pinned on pixels
+  (`theExportRowsDimWhenThereIsNothingToExport`) — **as built, the
+  `textDisabled` token under the button's own dimming**, the compound
+  `SettingsActionRow` ships; recorded in the plan's As built.
+- **23** — Every row closes before it acts: `everyRowDismissesBeforeItActs`
+  reads the button's action in order; the host's injection is scanned
+  as attached to the dropdown content. The badge's spinner and
+  disable: the pill is new code since T021, so its body is scanned
+  (`theBadgeShowsTheSpinnerAndDisablesWhileBusy` — the busy branch
+  draws the spinner, the idle one the glyph, the whole control
+  disables); the busy *path* through the view model is 013's T016
+  verification. **Not re-exercised live** at this pass: a synchronous
+  export completes within a frame, and its spinner is unobservable by
+  screenshot (T056).
+- **24** — Two taps to switch (Decision 19):
+  `testAnOpenMenuClosesOnAnyOutsideTapIncludingTheOtherBadge`, and by
+  hand at T025 on the Items list. Outside tap, badge tap, row choice
+  all close (the catcher, by hand at T020/T021; rows by scan). Sort
+  By's drawing: pixel-identical to the frozen original through the
+  T018/T019 oracle, then deleted as planned; its position within a
+  third of a point of the old offset (T020's probe, screenshots on the
+  same pixel row). Its opening and closing now animate (Decision 20) —
+  a screen recording at T024a shows the ramp.
+- **25** — ORDER BY, By value / By count, the current one tinted and
+  checked; By count reorders and the label reads BY COUNT (T023, by
+  hand); the composition scanned
+  (`theDashboardOrderControlOpensTheSharedSurfaceUnderOrderBy`). On the
+  drill-down it opens under the nav bar (by hand). The flip-above
+  branch is unreachable on this screen's layouts and rests on
+  `DropdownPlacementTests`.
+- **26** — **Partial.** Labels and enabled states are proven by the
+  UI tests' queries (`isEnabled` asserted on rows found by title);
+  three of the six identifiers by the same queries, and all six with
+  the three hints by `everyBadgeCarriesItsHintAndIdentifier`'s reading of
+  each control's body. The labelled catcher is exercised: the
+  switching UI test taps "Dismiss more actions". Focus moving to the
+  first row on open, the escape gesture, the `.isModal` containment
+  and the dimmed announcement are **composed and scanned**
+  (`theSurfaceMarksItsFirstRowWhichTakesFocusAndClosesOnEscape`,
+  `theHostInjectsDismissAndContainsVoiceOver`) but **not exercised**:
+  no VoiceOver and no Accessibility Inspector from this environment.
+  For the person's hands — the same honest partial 013's first pass
+  recorded for VoiceOver.
+- **27** — `MenuPolicyTests` walks every view file; exactly
+  `DetailOverflowMenu.swift` may host a system menu and must; mutation
+  red on a planted `Menu` (on the second try — a mutation placed after
+  a `#Preview` is invisible to every `SourceScan`, recorded). The
+  detail screens' "…" is untouched but for its doc comment (git).
 
 ### Verification record (T017, 2026-09-02)
 
@@ -693,7 +781,7 @@ pass on the ~307-item dev store. Honest partials are stated as such.
    and `testEmptyCollectionOffersImportAndSettingsButNotExport`; seen on
    device after Delete All: badge present, exports dimmed, Import and
    Settings live.
-3. Sheet, Done, one screen — `SettingsWiringTests.theListAttachesTheSettingsSheetAndReloadsOnDismiss`
+3. Sheet, Done, one screen — `SettingsWiringTests.theScreenAttachesTheSettingsSheetAndReloadsOnDismiss` (renamed at Amendment A/T022, when the Dashboard joined)
    (both lists, all four init arguments) and the Settings UI test's Done
    step; on device, Done returned to the Items list with filter and
    sort as left.

@@ -13,9 +13,11 @@ import SwiftUI
 /// animates that this view doesn't animate — so the badge simply hugs its
 /// label.
 ///
-/// The two list screens own the open/close state and the full-screen
-/// tap-to-dismiss layer, because the dropdown has to float over content the
-/// badge can't reach from inside the header.
+/// The screen owns the open/close state and, since 013 Amendment A, hands
+/// the floating and the tap-to-dismiss layer to the shared `dropdownHost`,
+/// because the dropdown has to float over content the badge can't reach
+/// from inside the header. The same host serves the "…" badges and the
+/// Dashboard's order control.
 struct SortBadge: View {
     let label: String
     let action: () -> Void

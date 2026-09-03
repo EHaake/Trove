@@ -2,21 +2,6 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Browse the wishlist, per `design/screens/Trove Wishlist List.png`.
-///
-/// Follows the item list's standing layout rule from plan.md — title, summary,
-/// search and chips stay fixed, only the rows scroll — so the two list screens
-/// behave the same way.
-///
-/// **Design's per-row "59% / $990 short / $360 surplus" progress bars, and the
-/// "SELLABLE VALUE AGAINST WISHLIST" card above them, are deliberately not
-/// built.** spec.md rules out exactly that framing three times over: the Sell
-/// Plan is "advisory, not a target to hit", "full cost covered, or explicitly
-/// falling short" is named as the thing it must not imply, and an acceptance
-/// criterion forbids text implying the user is expected to cover the full
-/// cost. The mock's arithmetic also measures one sellable pool against every
-/// wishlist item independently, so the same gear reads as funding all four.
-
 /// The header's two dropdowns. One optional of this type is the screen's
 /// whole open-menu state, which is what makes "one open at a time" true by
 /// type rather than by coordination (013 Amendment A).
@@ -33,13 +18,27 @@ private enum HeaderDropdown: Hashable {
     }
 }
 
+/// Browse the wishlist, per `design/screens/Trove Wishlist List.png`.
+///
+/// Follows the item list's standing layout rule from plan.md — title, summary,
+/// search and chips stay fixed, only the rows scroll — so the two list screens
+/// behave the same way.
+///
+/// **Design's per-row "59% / $990 short / $360 surplus" progress bars, and the
+/// "SELLABLE VALUE AGAINST WISHLIST" card above them, are deliberately not
+/// built.** spec.md rules out exactly that framing three times over: the Sell
+/// Plan is "advisory, not a target to hit", "full cost covered, or explicitly
+/// falling short" is named as the thing it must not imply, and an acceptance
+/// criterion forbids text implying the user is expected to cover the full
+/// cost. The mock's arithmetic also measures one sellable pool against every
+/// wishlist item independently, so the same gear reads as funding all four.
 struct WishlistView: View {
     @State private var viewModel: WishlistViewModel
     @State private var isAddingItem = false
     @State private var selectedItemID: UUID?
 
-    /// Whether T035's sort dropdown is open — see ItemListView's twin for
-    /// why the screen owns it.
+    /// Which header dropdown is open — Sort By or the "…" — or neither;
+    /// see ItemListView's twin for why the screen owns it.
     @State private var openDropdown: HeaderDropdown?
 
     /// Whether 012's file picker is up — see `ItemListView`'s twin.
