@@ -850,7 +850,11 @@ extension View {
   holding `content(id)` **with `.environment(\.dismissDropdown,
   DismissDropdownAction { open = nil })` on it** — the one injection
   point, scanned. `.transaction { $0.animation = nil }`: no animation,
-  as today. Nothing at rest when `open == nil`.
+  as today. Nothing at rest when `open == nil`. *(Superseded at T024a
+  by spec Decision 20: the dropdown now transitions — a scale from the
+  badge's trailing edge, `DropdownPlacement.growthAnchor`, with a fade —
+  on an animation scoped to the host's overlay; the transaction line is
+  gone.)*
 - **`DropdownPlacementLayout: Layout`** measures the dropdown
   synchronously (`subviews.first.sizeThatFits(.unspecified)` — the
   `FlowLayout` shape; no `@State`, no one-frame jump, no layout cycle)

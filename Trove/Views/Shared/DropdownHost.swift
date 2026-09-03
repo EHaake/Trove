@@ -70,58 +70,95 @@ private struct DropdownHost<ID: Hashable, Dropdown: View>: ViewModifier {
     let content: (ID) -> Dropdown
 
     @Environment(\.theme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Open on the app's snappy spring, close on a shorter ease-out (spec
+    /// Decision 20). Scoped to the overlay with `.animation(_:value:)`,
+    /// never `withAnimation` around the screens' writes: the sort badge's
+    /// label changes in the same instant a row is chosen, and animating
+    /// that write would tween its border against a snapping label — the
+    /// T029c tear, from the other direction.
+    private var animation: Animation {
+        open == nil ? .easeOut(duration: 0.15) : .snappy(duration: 0.25)
+    }
+
+    /// Grows out of the badge — a scale from the badge's trailing edge with
+    /// a fade — or, under Reduce Motion, the fade alone.
+    private func transition(growingFrom anchor: UnitPoint) -> AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .scale(scale: 0.92, anchor: anchor).combined(with: .opacity)
+    }
 
     func body(content host: Content) -> some View {
         host.overlayPreferenceValue(DropdownAnchorKey.self, alignment: .topLeading) { anchors in
-            if let id = open, let anchor = anchors[AnyHashable(id)] {
-                // The reader stays inside the safe area on purpose: its
-                // bounds then end where the tab bar begins and start under
-                // the status bar, which is what the flip-above rule needs.
-                // A reader that ignored the safe area reported zero insets
-                // on iOS 26 (T020's probe), so "read the ignored insets
-                // back" is not a mechanism this host can lean on. Only the
-                // catcher reaches the screen's edges.
-                GeometryReader { proxy in
-                    ZStack(alignment: .topLeading) {
-                        // The tap-outside layer. It covers the badges too —
-                        // that is what makes "tapping the open badge closes
-                        // it" true, exactly as T035's catcher did, and why
-                        // switching menus takes two taps (spec Decision 19).
-                        // A real tap target, so VoiceOver calls it what it is
-                        // (T039 review, finding 13), with an explicit action
-                        // so activation never synthesizes a centre tap that
-                        // could land on the plate.
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .ignoresSafeArea()
-                            .onTapGesture { close() }
-                            .accessibilityLabel(dismissLabel(id))
-                            .accessibilityAddTraits(.isButton)
-                            .accessibilityAction { close() }
-                            .accessibilitySortPriority(-1)
-
-                        DropdownPlacementLayout(
-                            badge: proxy[anchor],
-                            region: CGRect(origin: .zero, size: proxy.size),
-                            gutter: theme.metrics.screenGutter,
-                            gap: theme.metrics.dropdownGap
-                        ) {
-                            self.content(id)
-                                // The one place the dismiss action is real.
-                                .environment(\.dismissDropdown, DismissDropdownAction { close() })
-                        }
+            // The reader stays inside the safe area on purpose: its bounds
+            // then end where the tab bar begins and start under the status
+            // bar, which is what the flip-above rule needs. A reader that
+            // ignored the safe area reported zero insets on iOS 26 (T020's
+            // probe), so "read the ignored insets back" is not a mechanism
+            // this host can lean on. Only the catcher reaches the screen's
+            // edges. Always present — empty at rest, so nothing to hit —
+            // because the transition below runs only on the view the
+            // conditional itself inserts, and that view needs the reader's
+            // geometry for its anchor (T024a: a transition nested inside
+            // the inserted view never ran; a recording showed a step).
+            GeometryReader { proxy in
+                ZStack(alignment: .topLeading) {
+                    if let id = open, let anchor = anchors[AnyHashable(id)] {
+                        let badge = proxy[anchor]
+                        let region = CGRect(origin: .zero, size: proxy.size)
+                        dropdown(id, badge: badge, region: region)
+                            // The inserted view fills the region, so a scale
+                            // anchored at the badge's edge as a point of the
+                            // region scales the placed dropdown about that
+                            // edge — below or flipped above alike, no flip
+                            // knowledge needed. The catcher scales with it,
+                            // invisibly.
+                            .transition(transition(growingFrom: DropdownPlacement.growthAnchor(badge: badge, region: region)))
                     }
-                    // VoiceOver stays inside the dropdown and its catcher;
-                    // the badges, rows and fields behind are unreachable
-                    // until it closes. The escape gesture closes it.
-                    .accessibilityElement(children: .contain)
-                    .accessibilityAddTraits(.isModal)
-                    .accessibilityAction(.escape) { close() }
                 }
-                // No animation on open or close, as Sort By has never had.
-                .transaction { $0.animation = nil }
+                .animation(animation, value: open)
             }
         }
+    }
+
+    /// The open dropdown and its tap-outside layer, in the reader's space.
+    private func dropdown(_ id: ID, badge: CGRect, region: CGRect) -> some View {
+        ZStack(alignment: .topLeading) {
+            // The tap-outside layer. It covers the badges too — that is what
+            // makes "tapping the open badge closes it" true, exactly as
+            // T035's catcher did, and why switching menus takes two taps
+            // (spec Decision 19). A real tap target, so VoiceOver calls it
+            // what it is (T039 review, finding 13), with an explicit action
+            // so activation never synthesizes a centre tap that could land
+            // on the plate.
+            Color.clear
+                .contentShape(Rectangle())
+                .ignoresSafeArea()
+                .onTapGesture { close() }
+                .accessibilityLabel(dismissLabel(id))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { close() }
+                .accessibilitySortPriority(-1)
+
+            DropdownPlacementLayout(
+                badge: badge,
+                region: region,
+                gutter: theme.metrics.screenGutter,
+                gap: theme.metrics.dropdownGap
+            ) {
+                self.content(id)
+                    // The one place the dismiss action is real.
+                    .environment(\.dismissDropdown, DismissDropdownAction { close() })
+            }
+        }
+        // VoiceOver stays inside the dropdown and its catcher; the badges,
+        // rows and fields behind are unreachable until it closes. The
+        // escape gesture closes it.
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
+        .accessibilityAction(.escape) { close() }
     }
 
     private func close() {
@@ -162,6 +199,19 @@ enum DropdownPlacement {
         y = max(y, region.minY)
 
         return CGPoint(x: x, y: y)
+    }
+
+    /// Where a dropdown grows from and shrinks to (spec Decision 20): the
+    /// badge's trailing edge at its vertical centre, as a point of the
+    /// region — a scale anchored there, applied to a view that fills the
+    /// region, scales the dropdown about the badge whether it hangs below
+    /// or flips above. Clamped, so a badge scrolled past the region's edge
+    /// still anchors at that edge.
+    nonisolated static func growthAnchor(badge: CGRect, region: CGRect) -> UnitPoint {
+        guard region.width > 0, region.height > 0 else { return .topTrailing }
+        let x = (badge.maxX - region.minX) / region.width
+        let y = (badge.midY - region.minY) / region.height
+        return UnitPoint(x: min(max(x, 0), 1), y: min(max(y, 0), 1))
     }
 }
 

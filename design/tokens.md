@@ -184,7 +184,7 @@ row, the placement — follow the table.
 | Unselected row | text `textBody` (`rgba(242,237,228,0.75)`), `13.5px` |
 | Group break (`013` A, P10) | the row's own top border drawn in `divider` (`#3A3B3E`) instead of `surfaceInset` — one hairline, three times the separator's contrast on `surface`; the "…" menus' three groups |
 | Disabled row (`013` A, P11) | text `textDisabled` (`rgba(242,237,228,0.35)`) *under* the button's own disabled dimming (a further `0.5` on the alpha, composited in sRGB — measured, not designed); the compound `SettingsActionRow` ships. Inert, dimmed to VoiceOver |
-| Placement (`013` A) | trailing edge at the screen gutter (`24px`), whatever badge opened it; `6px` below the badge (`dropdownGap` — what the lists' old fixed `60px` offset resolved to), or above it when it would run past the tab bar; no animation |
+| Placement (`013` A) | trailing edge at the screen gutter (`24px`), whatever badge opened it; `6px` below the badge (`dropdownGap` — what the lists' old fixed `60px` offset resolved to), or above it when it would run past the tab bar. **Animation** (`013` Decision 20): grows out of the badge — a scale from `0.92` anchored at the badge's trailing edge, with a fade — on `.snappy(duration: 0.25)` opening and `.easeOut(duration: 0.15)` closing; the fade alone under Reduce Motion |
 
 The "REORDER" label appearing only on the "Custom" row (not on every
 row's selected state generically) is what replaces the old standalone

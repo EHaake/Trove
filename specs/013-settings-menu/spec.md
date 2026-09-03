@@ -220,7 +220,10 @@ rather than waiting for it.
   over the screen's content beneath the header, at the trailing
   gutter, as Sort By's does today.
 - Opening and closing match Sort By's exactly, including whether and
-  how they animate — one behavior, not two.
+  how they animate — one behavior, not two. Since Decision 20 that
+  behavior is an animation: the dropdown grows out of the badge and
+  fades in on the app's snappy spring, and fades out faster; under
+  Reduce Motion, the fade alone.
 - VoiceOver: each badge is a button whose hint says what it opens
   ("Opens sort options", "Opens more actions", "Opens order options")
   — SwiftUI exposes no pop-up-button trait, so that announcement is
@@ -557,6 +560,21 @@ spec-level by the skeptical review, decided by the person):
     scroll the content under an open dropdown, which then needs a
     close-on-scroll as well.
 
+Added 2026-09-02, after T024's device look (raised and decided by the
+person):
+
+20. **In-page dropdowns animate.** Built without animation — Sort By
+    never had one — the three dropdowns read as stiff beside the
+    system menus they replaced. Every in-page dropdown now grows out
+    of its badge: a scale from the badge's trailing edge with a fade,
+    on the app's snappy spring opening (a quarter second) and a
+    shorter ease-out closing; under Reduce Motion, the fade alone. One
+    animation for all of them, applied by the shared host and scoped
+    to it, so no screen's own state write is ever animated — the sort
+    badge's label still snaps, and its border with it (the T029c
+    lesson). The exact system presentation isn't replicable, being
+    private; its feel is the target.
+
 ## Acceptance criteria
 
 1. [x] Both list screens' "…" menu reads, in order: Export as CSV…,
@@ -647,8 +665,9 @@ Amendment A (2026-09-02) — unchecked until verified:
 24. [ ] One dropdown at a time: while Sort By is open, a tap on "…"
     closes Sort By and opens nothing, and the reverse — the next tap
     opens (Decision 19); tapping the open badge, tapping outside, or
-    choosing a row closes the open one. The Sort By dropdown is
-    unchanged to the eye.
+    choosing a row closes the open one. The Sort By dropdown's drawing
+    is unchanged; it opens and closes with the same animation as every
+    in-page dropdown (Decision 20).
 25. [ ] The Dashboard's category-order control opens the same surface
     with an ORDER BY header and the rows By value and By count, the
     current one tinted and checked; choosing the other reorders the

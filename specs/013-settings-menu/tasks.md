@@ -1144,6 +1144,42 @@ one commit before T020 replaces it.
   *Done when*: every listed line changed; `DocsSampleTests` still green;
   no doc still calls the lists' "…" a system menu (grep).
 
+- [x] **T024a — The dropdowns animate (spec Decision 20).**
+  *Added and done (2026-09-02)*: raised by the person after T024's
+  device look — the three dropdowns read as stiff beside the system
+  menus they replaced — and decided as Decision 20; the flip anchor
+  left to Claude Code. `DropdownHost`: the dropdown grows out of the
+  badge — a `.scale(0.92)` anchored at `DropdownPlacement.growthAnchor`
+  (the badge's trailing edge at its vertical centre, as a point of the
+  region, so below and flipped-above alike need no flip knowledge)
+  combined with `.opacity`; the fade alone under Reduce Motion; on
+  `.snappy(duration: 0.25)` opening and `.easeOut(duration: 0.15)`
+  closing, scoped to the overlay with `.animation(_:value: open)` and
+  never `withAnimation` around a screen's write — the sort badge's
+  label still snaps, and its border with it (T029c). The `.transaction
+  { $0.animation = nil }` line is gone. **The first build didn't
+  animate, and only a recording said so**: a `simctl` screen recording
+  analysed frame by frame (`AVAssetImageGenerator` + `CIAreaAverage`
+  over three strips of the dropdown's area — the T029c instrument)
+  showed the open at one frame, +20 in a strip, and the close the
+  same. The transition sat on a view *nested inside* the one the
+  conditional inserts, with `.identity` on the inserted root, and a
+  nested transition never runs. Restructured: the reader is always
+  present (empty at rest, nothing to hit), the conditional's own root
+  carries the transition, and the second recording shows the open as
+  a ramp across six sampled frames and the close as a shorter one.
+  `growthAnchor` table-tested (the gutter pill at 378/402; a badge
+  scrolled off the top clamps to 0). The wiring scan now reads the
+  modifier's body for the scoped animation and the inserted view for
+  the transition, and still forbids `withAnimation`; mutation: the
+  `.animation` line dropped → red. Spec: Decision 20, the shared-
+  behavior bullet, criterion 24's "unchanged to the eye" → "drawing
+  unchanged; animates as every in-page dropdown does"; tokens.md's
+  placement row; the plan addendum's "no animation" line superseded.
+  Full unit target: **788 tests in 116 suites passed** (787 + 1; the
+  ~100 s environmental stall hit twice, 206 s). UI target: 9 tests, 0
+  failures — the 150 ms close sits well inside the tests' waits.
+
 - [ ] **T025 — Device pass, criteria 20–27, close-out.**
   Per addendum §Verification. On the simulator: both lists' dropdowns
   at both badges against the pre-T020 placement (a screenshot of

@@ -81,6 +81,22 @@ struct DropdownPlacementTests {
         #expect(origin(badge: badge, region: narrow).x == 24)
     }
 
+    /// The growth anchor (Decision 20): the badge's trailing edge at its
+    /// vertical centre, as a point of the region — so the "…" pill at the
+    /// gutter anchors at x = 378/402, and a badge scrolled off the top of
+    /// the region anchors at the top edge rather than above it.
+    @Test func growsFromTheBadgesTrailingEdge() {
+        let badge = CGRect(x: 328, y: 24, width: 50, height: 30)
+        let anchor = DropdownPlacement.growthAnchor(badge: badge, region: region)
+        let expectedX: CGFloat = 378 / 402
+        let expectedY: CGFloat = 39 / 729
+        #expect(abs(anchor.x - expectedX) < 0.0001)
+        #expect(abs(anchor.y - expectedY) < 0.0001)
+
+        let scrolledOff = CGRect(x: 328, y: -80, width: 50, height: 30)
+        #expect(DropdownPlacement.growthAnchor(badge: scrolledOff, region: region).y == 0)
+    }
+
     /// A region with a non-zero origin (a pushed screen's content under its
     /// nav bar, say) measures its gutters and edges from its own origin.
     @Test func measuresFromTheRegionsOwnOrigin() {

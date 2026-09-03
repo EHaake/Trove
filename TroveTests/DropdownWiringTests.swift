@@ -121,13 +121,31 @@ struct DropdownWiringTests {
     @Test func theHostInjectsDismissAndContainsVoiceOver() throws {
         let code = try SourceScan.production("Trove/Views/Shared/DropdownHost.swift")
         let host = try #require(structSource("DropdownHost", in: code), "no DropdownHost modifier")
+        // The modifier's body composes the open dropdown through a helper;
+        // the helper's body is where the catcher and the injection live.
         let body = try #require(SourceScan.closureBodies(after: "func body(content host: Content)", in: host).first)
-        #expect(body.contains(".environment(\\.dismissDropdown, DismissDropdownAction { close() })"), "the host must inject the real dismiss action")
-        #expect(body.contains(".accessibilityAddTraits(.isModal)"), "VoiceOver must stay inside the open dropdown")
-        #expect(body.contains(".accessibilityAction(.escape) { close() }"), "escape must close it")
-        #expect(body.contains(".accessibilityAddTraits(.isButton)"), "the catcher is a real tap target and must say so")
-        #expect(body.contains(".accessibilityLabel(dismissLabel(id))"), "the catcher must be labelled per menu")
-        #expect(!body.contains("withAnimation"), "opening and closing don't animate, as Sort By never has")
+        #expect(body.contains("dropdown(id, badge: badge, region: region)"), "the body must compose the dropdown for the open id")
+        // Decision 20: the transition sits on the view the conditional
+        // inserts — nested any deeper it never runs (T024a's recording).
+        let inserted = try #require(SourceScan.closureBodies(after: "if let id = open, let anchor = anchors[AnyHashable(id)]", in: body).first)
+        #expect(inserted.contains(".transition(transition(growingFrom: DropdownPlacement.growthAnchor("), "the inserted view must carry the transition, growing from the badge")
+        let dropdown = try #require(
+            SourceScan.closureBodies(after: "private func dropdown(_ id: ID, badge: CGRect, region: CGRect) -> some View", in: host).first,
+            "no dropdown helper"
+        )
+        #expect(dropdown.contains(".environment(\\.dismissDropdown, DismissDropdownAction { close() })"), "the host must inject the real dismiss action")
+        #expect(dropdown.contains(".accessibilityAddTraits(.isModal)"), "VoiceOver must stay inside the open dropdown")
+        #expect(dropdown.contains(".accessibilityAction(.escape) { close() }"), "escape must close it")
+        #expect(dropdown.contains(".accessibilityAddTraits(.isButton)"), "the catcher is a real tap target and must say so")
+        #expect(dropdown.contains(".accessibilityLabel(dismissLabel(id))"), "the catcher must be labelled per menu")
+        // Decision 20: the dropdown grows out of the badge and fades, on an
+        // animation scoped to the host's overlay — never `withAnimation`
+        // around a screen's write, which would tween the sort badge's
+        // border against its snapping label (T029c).
+        #expect(body.contains(".animation(animation, value: open)"), "the animation must be scoped to the overlay, keyed on the open state")
+        #expect(host.contains("accessibilityReduceMotion"), "Reduce Motion must be honoured")
+        #expect(!host.contains("withAnimation"), "no screen write is ever animated — the animation is the host's alone")
+        #expect(!host.contains("$0.animation = nil"), "the transaction's animation is no longer stripped")
     }
 
     /// The root Dashboard alone carries the "…" (spec Decision 16): the
