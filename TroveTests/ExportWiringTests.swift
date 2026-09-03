@@ -14,25 +14,33 @@ struct ExportWiringTests {
     ]
 
     /// Each list screen builds exactly one `OverflowBadge` (012's rename of
-    /// `ExportBadge`), fed by the view model's own state, firing the three
-    /// list intents and opening Settings — 011's criterion-1/2 wiring,
-    /// 012's criterion 1, and 013's criterion 1, which took the template
-    /// intent out of this menu.
+    /// `ExportBadge`; since 013 Amendment A the pill alone), fed the view
+    /// model's busy state and opening the overflow on the screen's host —
+    /// and exactly one `OverflowDropdown`, fed `canExport` and firing the
+    /// three list intents and Settings: 011's criterion-1/2 wiring, 012's
+    /// criterion 1, and 013's criterion 1, which took the template intent
+    /// out of this menu.
     @Test(arguments: lists)
-    func theBadgeIsFedByTheViewModelFiresEveryIntentAndOpensSettings(path: String) throws {
+    func theBadgeOpensTheDropdownWhichFiresEveryIntentAndOpensSettings(path: String) throws {
         let code = try SourceScan.production(path)
-        let calls = SourceScan.argumentLists(of: "OverflowBadge", in: code)
-        #expect(calls.count == 1, "\(path) builds \(calls.count) OverflowBadges, expected exactly 1")
-        for call in calls {
-            #expect(call.contains("isBusy: viewModel.isBusy"), "\(path) badge not fed isBusy")
-            #expect(call.contains("canExport: viewModel.canExport"), "\(path) badge not fed canExport")
-            #expect(call.contains("viewModel.exportCSV()"), "\(path) badge doesn't fire exportCSV")
-            #expect(call.contains("viewModel.exportPDF()"), "\(path) badge doesn't fire exportPDF")
-            #expect(call.contains("isPickingImportFile = true"), "\(path) badge doesn't open the picker")
-            #expect(call.contains("isShowingSettings = true"), "\(path) badge doesn't open Settings")
+
+        let badges = SourceScan.argumentLists(of: "OverflowBadge", in: code)
+        #expect(badges.count == 1, "\(path) builds \(badges.count) OverflowBadges, expected exactly 1")
+        #expect(badges.first?.contains("isBusy: viewModel.isBusy") == true, "\(path) badge not fed isBusy")
+        let opens = SourceScan.closureBodies(after: "OverflowBadge(isBusy: viewModel.isBusy)", in: code)
+        #expect(opens.first?.contains("openDropdown = .overflow") == true, "\(path) badge doesn't open the overflow")
+
+        let dropdowns = SourceScan.argumentLists(of: "OverflowDropdown", in: code)
+        #expect(dropdowns.count == 1, "\(path) builds \(dropdowns.count) OverflowDropdowns, expected exactly 1")
+        for call in dropdowns {
+            #expect(call.contains("canExport: viewModel.canExport"), "\(path) dropdown not fed canExport")
+            #expect(call.contains("viewModel.exportCSV()"), "\(path) dropdown doesn't fire exportCSV")
+            #expect(call.contains("viewModel.exportPDF()"), "\(path) dropdown doesn't fire exportPDF")
+            #expect(call.contains("isPickingImportFile = true"), "\(path) dropdown doesn't open the picker")
+            #expect(call.contains("isShowingSettings = true"), "\(path) dropdown doesn't open Settings")
             #expect(
                 !call.contains("exportBlankTemplate"),
-                "\(path) badge still fires the template intent 013 moved to Settings"
+                "\(path) dropdown still fires the template intent 013 moved to Settings"
             )
         }
     }
@@ -48,28 +56,34 @@ struct ExportWiringTests {
         #expect(code.contains("viewModel.exportFailureMessage"), "\(path) doesn't wire the failure state")
     }
 
-    /// The menu's contract after 013 (criterion 1): five items in three
-    /// groups — the two exports, Import, Settings — with the template gone
-    /// to Settings; the two *export* actions individually gated on
-    /// `canExport` and, the count being exactly 2, Import and Settings
-    /// provably ungated, since an empty collection is exactly who they
-    /// serve; and Settings last, in its own section.
+    /// The menu's contract after 013 (criterion 1), on the surface Amendment
+    /// A moved it to: five items in three groups — the two exports, Import,
+    /// Settings — with the template gone to Settings; the two *export* rows
+    /// individually gated on `canExport` and, the count being exactly 2,
+    /// Import and Settings provably ungated, since an empty collection is
+    /// exactly who they serve; the two group breaks on exactly the Import
+    /// and Settings rows (`startsGroup`, which replaced the system menu's
+    /// two `Divider()`s); and Settings last, in its own group.
     @Test func theMenuCarriesFiveItemsInThreeGroups() throws {
-        let code = try SourceScan.production("Trove/Views/Shared/OverflowBadge.swift")
+        let code = try SourceScan.production("Trove/Views/Shared/OverflowDropdown.swift")
         let literals = SourceScan.stringLiterals(in: code)
         #expect(literals.contains("Export as CSV…"))
         #expect(literals.contains("Export as PDF…"))
         #expect(literals.contains("Import from CSV…"))
         #expect(literals.contains("Settings"))
         #expect(!literals.contains("Get Blank Template…"), "the template left this menu for Settings")
-        #expect(code.ranges(of: "Divider()").count == 2, "three groups need two dividers")
+
+        let rows = SourceScan.argumentLists(of: "DropdownRow", in: code)
+        try #require(rows.count == 4, "four rows, found \(rows.count)")
+        #expect(rows[0].contains("Export as CSV…") && rows[0].contains("isEnabled: canExport"))
+        #expect(rows[1].contains("Export as PDF…") && rows[1].contains("isEnabled: canExport"))
+        #expect(rows[2].contains("Import from CSV…") && rows[2].contains("startsGroup: true"))
+        #expect(rows[3].contains("Settings") && rows[3].contains("startsGroup: true"))
         #expect(
-            code.ranges(of: ".disabled(!canExport)").count == 2,
-            "exactly the two export actions gate on canExport — Import and Settings must stay ungated"
+            code.ranges(of: "isEnabled: canExport").count == 2,
+            "exactly the two export rows gate on canExport — Import and Settings must stay ungated"
         )
-        let importIndex = try #require(literals.firstIndex(of: "Import from CSV…"))
-        let settingsIndex = try #require(literals.firstIndex(of: "Settings"))
-        #expect(importIndex < settingsIndex, "Settings belongs at the bottom, below Import")
+        #expect(code.ranges(of: "startsGroup: true").count == 2, "three groups need two breaks")
     }
 
     /// The constitution's UIKit boundary, pinned as a walk: the activity

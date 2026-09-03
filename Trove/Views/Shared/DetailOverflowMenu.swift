@@ -12,6 +12,13 @@ import SwiftUI
 /// draw it in red and separate it from the rest of the menu. That's the only
 /// signal a menu row has, so it isn't decorative.
 ///
+/// **This is the app's one system menu, deliberately** (013 Amendment A,
+/// Decision 17): bespoke inside the page, system in the bars. It lives in
+/// the navigation bar beside the system back chevron, drawn in the
+/// system's circle, and stays the system's — while every menu drawn inside
+/// a page's content is Trove's own `DropdownSurface`. `MenuPolicyTests`
+/// pins this file as the only one that may host a `Menu`.
+///
 /// This changes how Edit and Delete are *reached*, and nothing else. Each
 /// screen still owns its own edit sheet and its own delete confirmation —
 /// including `WishlistDetailView`'s alert about the cascade/nullify asymmetry,

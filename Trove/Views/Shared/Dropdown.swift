@@ -79,11 +79,17 @@ extension EnvironmentValues {
 
 /// One row on a `DropdownSurface`: `010`'s sort row — body type, the brass
 /// selected state with its tint and drawn checkmark, an optional mono tag
-/// (REORDER) — plus what the other menus need: a disabled state (P11), a
+/// (REORDER) — plus what the other menus need: a disabled state (P11) and a
 /// group break drawn as the row's own top hairline in `divider` rather
 /// than `surfaceInset` (P10, one hairline — a separate break view would
-/// stack a second under this one), and no hairline at all on the first row
-/// of a headerless surface, where it would double the border.
+/// stack a second under this one). A first row's hairline sits under the
+/// surface's border, which draws over it: T021 measured the difference at
+/// four corner pixels, below the perceptual floor, so no first-row rule.
+///
+/// Disabled: the `textDisabled` token *and* the button's own disabled
+/// dimming, which SwiftUI applies to a `.plain` button's label regardless —
+/// measured at T021 as a further 0.5 on the token's alpha, in sRGB. The
+/// same compound `SettingsActionRow` ships; the render test pins it.
 ///
 /// Every row dismisses the dropdown **before** its action runs, through the
 /// environment's `dismissDropdown` — criterion 23 holds by construction
@@ -93,7 +99,6 @@ struct DropdownRow: View {
     var isSelected = false
     var isEnabled = true
     var startsGroup = false
-    var hasTopHairline = true
     var tag: String? = nil
     let action: () -> Void
 
@@ -138,10 +143,8 @@ struct DropdownRow: View {
         // the row stays in the tree so a test can see it is disabled.
         .disabled(!isEnabled)
         .overlay(alignment: .top) {
-            if hasTopHairline {
-                (startsGroup ? theme.colors.divider : theme.colors.surfaceInset)
-                    .frame(height: theme.metrics.hairline)
-            }
+            (startsGroup ? theme.colors.divider : theme.colors.surfaceInset)
+                .frame(height: theme.metrics.hairline)
         }
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .modifier(FirstRowFocus(isFirst: isFirst, focus: $isFocused))
@@ -192,7 +195,7 @@ private struct CheckmarkGlyph: Shape {
     ZStack {
         Theme.dark.colors.background.ignoresSafeArea()
         DropdownSurface {
-            DropdownRow(title: "Export as CSV…", isEnabled: false, hasTopHairline: false) {}
+            DropdownRow(title: "Export as CSV…", isEnabled: false) {}
             DropdownRow(title: "Export as PDF…", isEnabled: false) {}
             DropdownRow(title: "Import from CSV…", startsGroup: true) {}
             DropdownRow(title: "Settings", startsGroup: true) {}

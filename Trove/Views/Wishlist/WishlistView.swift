@@ -245,8 +245,13 @@ struct WishlistView: View {
                     viewModel.load()
                 }
             case .overflow:
-                // T021: the "…" moves onto this host.
-                EmptyView()
+                OverflowDropdown(
+                    canExport: viewModel.canExport,
+                    exportCSV: { Task { await viewModel.exportCSV() } },
+                    exportPDF: { Task { await viewModel.exportPDF() } },
+                    importCSV: { isPickingImportFile = true },
+                    openSettings: { isShowingSettings = true }
+                )
             }
         }
     }
@@ -278,14 +283,11 @@ struct WishlistView: View {
 
     /// 012's overflow — ItemListView's twin.
     private var overflowControl: some View {
-        OverflowBadge(
-            isBusy: viewModel.isBusy,
-            canExport: viewModel.canExport,
-            exportCSV: { Task { await viewModel.exportCSV() } },
-            exportPDF: { Task { await viewModel.exportPDF() } },
-            importCSV: { isPickingImportFile = true },
-            openSettings: { isShowingSettings = true }
-        )
+        OverflowBadge(isBusy: viewModel.isBusy) {
+            openDropdown = .overflow
+        }
+        .dropdownAnchor(HeaderDropdown.overflow)
+        .accessibilityIdentifier("moreActions.wishlist")
     }
 
     /// Design's "4 WANTED · $4,740".

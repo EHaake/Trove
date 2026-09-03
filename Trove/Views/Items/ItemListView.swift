@@ -296,8 +296,13 @@ struct ItemListView: View {
                     viewModel.load()
                 }
             case .overflow:
-                // T021: the "…" moves onto this host.
-                EmptyView()
+                OverflowDropdown(
+                    canExport: viewModel.canExport,
+                    exportCSV: { Task { await viewModel.exportCSV() } },
+                    exportPDF: { Task { await viewModel.exportPDF() } },
+                    importCSV: { isPickingImportFile = true },
+                    openSettings: { isShowingSettings = true }
+                )
             }
         }
     }
@@ -450,18 +455,17 @@ struct ItemListView: View {
     }
 
     /// 011's export menu grown into 012's overflow, with 013's Settings at
-    /// the bottom. The async intents fire into Tasks and `isBusy` drives
-    /// the spinner; Import opens the file picker and Settings opens its
-    /// sheet rather than an intent — navigation is view state here.
+    /// the bottom — since Amendment A a badge that opens `OverflowDropdown`
+    /// on the screen's host. The async intents fire into Tasks and
+    /// `isBusy` drives the spinner; Import opens the file picker and
+    /// Settings opens its sheet rather than an intent — navigation is view
+    /// state here.
     private var overflowControl: some View {
-        OverflowBadge(
-            isBusy: viewModel.isBusy,
-            canExport: viewModel.canExport,
-            exportCSV: { Task { await viewModel.exportCSV() } },
-            exportPDF: { Task { await viewModel.exportPDF() } },
-            importCSV: { isPickingImportFile = true },
-            openSettings: { isShowingSettings = true }
-        )
+        OverflowBadge(isBusy: viewModel.isBusy) {
+            openDropdown = .overflow
+        }
+        .dropdownAnchor(HeaderDropdown.overflow)
+        .accessibilityIdentifier("moreActions.items")
     }
 
     /// Design's "34 ITEMS · $18,420", plus a count of what the total leaves

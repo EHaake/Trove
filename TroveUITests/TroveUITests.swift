@@ -239,7 +239,9 @@ final class TroveUITests: XCTestCase {
         let app = launchApp()
         app.buttons["Items"].tap()
 
-        let badge = app.buttons["More actions"]
+        // By identifier: the Dashboard has a "More actions" badge too since
+        // 013 Amendment A, and a label query could match the wrong tab.
+        let badge = app.buttons["moreActions.items"]
         XCTAssertTrue(
             badge.waitForExistence(timeout: 5),
             "the overflow badge must exist on an empty collection"
@@ -272,7 +274,7 @@ final class TroveUITests: XCTestCase {
         let app = launchApp()
         app.buttons["Items"].tap()
 
-        let badge = app.buttons["More actions"]
+        let badge = app.buttons["moreActions.items"]
         XCTAssertTrue(badge.waitForExistence(timeout: 5), "the overflow badge must exist")
         badge.tap()
         let settings = app.buttons["Settings"]

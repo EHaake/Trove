@@ -875,8 +875,54 @@ one commit before T020 replaces it.
   and closes on both lists exactly as before by eye, the probe's numbers
   recorded.
 
-- [ ] **T021 — `OverflowDropdown`, the badge as a pill, and the lists'
+- [x] **T021 — `OverflowDropdown`, the badge as a pill, and the lists'
   "…".**
+  *Done (2026-09-02)*: `OverflowDropdown.swift` (five closures, four
+  rows on the headerless surface, the two group breaks as `startsGroup`
+  on Import and Settings); `OverflowBadge` reduced to the pill —
+  `isBusy` and an action, label "More actions"/"Working", hint "Opens
+  more actions", its doc comment now arguing the page/bars rule rather
+  than for the system menu, and `DetailOverflowMenu`'s naming itself
+  the app's one system menu; both lists anchor the badge
+  (`HeaderDropdown.overflow`, identifiers `moreActions.items` /
+  `moreActions.wishlist`) and compose `OverflowDropdown` in the host's
+  `.overflow` case with the four intents exactly as the old badge's
+  arguments; `ExportWiringTests`' two badge tests rewritten to the
+  badge/dropdown split (the rows scanned as `DropdownRow(` argument
+  lists, so `startsGroup` and the gate are pinned *to the rows they
+  belong on*); `OverflowDropdownRenderTests`; `DropdownWiringTests`
+  gained the overflow anchor, the host's two-case composition, and the
+  headerless check; the two UI tests query the badge by identifier.
+  **Three things the instruments settled, against the plan**: (1) the
+  plan's `hasTopHairline: false` first-row rule (review B4, "a doubled
+  line") **does not materialize** — the surface's border overlay draws
+  over the first row's hairline; a byte comparison of the two renders
+  found exactly four corner pixels differing, `#252526` vs `#2C2C2F`,
+  ΔE ≈ 0.03 against the project's 0.06 floor — so the parameter was
+  removed rather than shipped as a rule nobody can see; (2) a disabled
+  `.plain` button's label is dimmed by SwiftUI itself, measured as a
+  further **0.5 on the text's alpha, composited in sRGB** (predicted
+  `#45` from 32 + 0.175 × 210, measured `#454340`) — the `textDisabled`
+  token applies *under* it, the compound `SettingsActionRow` already
+  ships, recorded as-built; and my first dim guard ("closer to the
+  disabled token than the body one") was **false-passing** for exactly
+  that reason — dropping the token left the title at the token's own
+  brightness — caught by mutation C and rewritten to measure each
+  title's ink fraction over the surface against the token's alpha (and
+  the 0.5); (3) my headerless scan tripped on the rows' own `title:`
+  arguments — fixed to `DropdownSurface(title:`. **Mutations, one at a
+  time, hand-reverted where the file carried uncommitted work**: A,
+  `startsGroup` wired to nothing → the break test red on both
+  assertions (ΔE 0.0 to the separator); C, the disabled token dropped →
+  the ink-fraction guard red by 0.20; D, the export gate dropped
+  (`isEnabled: true`) → the UI target red with the two export rows'
+  enabled assertions failing. Live on the simulator: the Items "…"
+  opens the four rows at the gutter with the two breaks reading as
+  stronger rules; under an empty search the export rows dim while
+  Import and Settings stay bright; the Wishlist "…" the same. **UI
+  target green twice back to back**: 7 tests, 0 failures, both runs.
+  Full unit target: **784 tests in 115 suites passed** (781 + 2 render
+  + 1 wiring).
   Per addendum §Components and §Screens (lists, overflow half). New
   `Trove/Views/Shared/OverflowDropdown.swift`:
   `OverflowDropdown(canExport:, exportCSV:, exportPDF:, importCSV:,

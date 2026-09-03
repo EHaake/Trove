@@ -97,6 +97,22 @@ struct DropdownWiringTests {
             #expect(host.lowerBound > addButton.upperBound, "\(path): the host must come after the add button's overlay")
         }
         #expect(code.ranges(of: ".dropdownAnchor(HeaderDropdown.sort)").count == 1, "\(path): the sort badge must be anchored, once")
+        #expect(code.ranges(of: ".dropdownAnchor(HeaderDropdown.overflow)").count == 1, "\(path): the overflow badge must be anchored, once")
+        let host = try #require(SourceScan.closureBodies(after: ".dropdownHost(open: $openDropdown", in: code).first)
+        #expect(host.contains("case .sort:") && host.contains("SortDropdown("), "\(path): the host must compose Sort By")
+        #expect(host.contains("case .overflow:") && host.contains("OverflowDropdown("), "\(path): the host must compose the overflow")
+    }
+
+    /// The overflow dropdown is the shared surface with no header (P9),
+    /// read from its body — and nothing in its file draws a plate of its
+    /// own.
+    @Test func theOverflowDropdownIsHeaderlessOnTheSharedSurface() throws {
+        let code = try SourceScan.production("Trove/Views/Shared/OverflowDropdown.swift")
+        let dropdown = try #require(structSource("OverflowDropdown", in: code), "no OverflowDropdown")
+        let body = try #require(SourceScan.closureBodies(after: "var body: some View", in: dropdown).first)
+        #expect(body.contains("DropdownSurface {"), "the overflow must open the shared surface, headerless")
+        #expect(!body.contains("DropdownSurface(title:"), "the overflow dropdown carries no header row")
+        #expect(!dropdown.contains("PlateSurface") && !dropdown.contains("Menu {"), "the plate is the surface's to draw; no system menu")
     }
 
     /// The host is where the dismiss action becomes real, where VoiceOver is
