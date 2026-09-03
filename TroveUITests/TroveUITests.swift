@@ -261,6 +261,90 @@ final class TroveUITests: XCTestCase {
         }
     }
 
+    /// 013 Amendment A, criterion 20 on a fresh install: the root Dashboard's
+    /// "…" — present on the empty state — opens a one-row menu holding
+    /// Settings and nothing else, Settings presents as the same sheet, and
+    /// Done returns to the Dashboard. Its own mutation: gating the badge on
+    /// a non-empty collection must turn this red, since the store is empty.
+    @MainActor
+    func testDashboardOffersSettingsAndNothingElse() {
+        let app = launchApp()
+        XCTAssertTrue(
+            app.staticTexts["Nothing tracked yet"].waitForExistence(timeout: 5),
+            "Expected the first-run dashboard."
+        )
+
+        let badge = app.buttons["moreActions.dashboard"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "the Dashboard's badge must exist on the empty state")
+        badge.tap()
+
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5), "the menu should open")
+        XCTAssertTrue(settings.isEnabled, "Settings must be enabled")
+        XCTAssertFalse(app.buttons["Import from CSV…"].exists, "the Dashboard's menu holds Settings alone")
+        XCTAssertFalse(app.buttons["Export as CSV…"].exists, "the Dashboard's menu holds Settings alone")
+        settings.tap()
+
+        let sheet = app.navigationBars["Settings"]
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5), "Settings should present as a sheet from the Dashboard")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings")
+        XCTAssertTrue(badge.isHittable, "Done should return to the Dashboard")
+    }
+
+    /// 013 Amendment A, criterion 24 as Decision 19 fixed it: while a
+    /// dropdown is open, a tap anywhere outside it — the other badge
+    /// included — only closes it; the next tap opens. One item is added
+    /// through the quick-add path so the sort badge exists at all. Its own
+    /// mutation: a tap-outside layer that no longer closes must turn the
+    /// first pair red.
+    @MainActor
+    func testAnOpenMenuClosesOnAnyOutsideTapIncludingTheOtherBadge() {
+        let app = launchApp()
+        XCTAssertTrue(app.staticTexts["Nothing tracked yet"].waitForExistence(timeout: 5), "Expected the first-run dashboard.")
+        app.buttons["Items"].tap()
+
+        let addButton = app.buttons["Add item"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5))
+        addButton.tap()
+        let nameField = app.textFields["Name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5), "The add-item sheet didn't present")
+        nameField.tap()
+        nameField.typeText("Rolleiflex")
+        let categoryField = app.textFields["Category"]
+        categoryField.tap()
+        categoryField.typeText("Photography/Cameras")
+        let priceField = app.textFields["Price paid"]
+        priceField.tap()
+        priceField.typeText("1850")
+        app.buttons["Save item"].tap()
+        XCTAssertTrue(app.buttons["Save item"].waitForNonExistence(timeout: 5), "The sheet stayed up")
+
+        let sortBadge = app.buttons["sortOptions.items"]
+        XCTAssertTrue(sortBadge.waitForExistence(timeout: 5), "one item is enough for the sort badge to show")
+        let overflowBadge = app.buttons["moreActions.items"]
+        XCTAssertTrue(overflowBadge.waitForExistence(timeout: 5))
+        // Captured before anything opens: while a dropdown is open the badge
+        // sits under the tap-outside layer, and a coordinate tap is how a
+        // person's finger lands there regardless.
+        let overflowCentre = overflowBadge.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+
+        sortBadge.tap()
+        let sortHeader = app.staticTexts["SORT BY"]
+        XCTAssertTrue(sortHeader.waitForExistence(timeout: 5), "Sort By should open")
+
+        // The other badge, while Sort By is open: closes, opens nothing.
+        overflowCentre.tap()
+        XCTAssertTrue(sortHeader.waitForNonExistence(timeout: 5), "the tap on the other badge must close Sort By")
+        XCTAssertFalse(app.buttons["Import from CSV…"].exists, "…and must not open the overflow in the same tap (Decision 19)")
+
+        // The next tap opens.
+        overflowCentre.tap()
+        XCTAssertTrue(app.buttons["Import from CSV…"].waitForExistence(timeout: 5), "the second tap opens the overflow")
+        app.buttons["Dismiss more actions"].tap()
+        XCTAssertTrue(app.buttons["Import from CSV…"].waitForNonExistence(timeout: 5), "the labelled catcher closes it")
+    }
+
     /// 013's behavioral half for criteria 3, 7, 8 and 11 on a fresh
     /// install: Settings presents as a sheet from the menu; with nothing in
     /// the store the two templates are enabled and export-everything and

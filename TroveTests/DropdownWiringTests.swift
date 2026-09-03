@@ -130,6 +130,31 @@ struct DropdownWiringTests {
         #expect(!body.contains("withAnimation"), "opening and closing don't animate, as Sort By never has")
     }
 
+    /// The root Dashboard alone carries the "…" (spec Decision 16): the
+    /// anchor sits inside exactly one `if isRoot` span and nowhere else,
+    /// the screen's open-menu state is one optional, and the host composes
+    /// the one-row Settings menu on the shared surface.
+    @Test func theDashboardAnchorsItsBadgeOnTheRootAloneAndComposesSettings() throws {
+        let code = try SourceScan.production("Trove/Views/Dashboard/DashboardView.swift")
+        let anchor = ".dropdownAnchor(DashboardDropdown.overflow)"
+        #expect(code.ranges(of: anchor).count == 1, "the Dashboard badge must be anchored, once")
+        let rootSpans = SourceScan.closureBodies(after: "if isRoot", in: code)
+        try #require(!rootSpans.isEmpty, "no `if isRoot` gates — wrong scan target?")
+        #expect(rootSpans.filter { $0.contains("overflowControl") }.count == 1, "the badge must be gated on isRoot, in exactly one span")
+        // The control's body carries the anchor; the gate carries the control.
+        let control = try #require(SourceScan.closureBodies(after: "private var overflowControl: some View", in: code).first)
+        #expect(control.contains(anchor) && control.contains("openDropdown = .overflow"), "the badge must open the overflow and be anchored")
+
+        #expect(code.ranges(of: "@State private var openDropdown: DashboardDropdown?").count == 1, "one optional, declared once")
+        let hosts = SourceScan.closureBodies(after: ".dropdownHost(open: $openDropdown", in: code)
+        try #require(hosts.count == 1, "the Dashboard attaches \(hosts.count) hosts, expected exactly 1")
+        #expect(hosts[0].contains("case .overflow:") && hosts[0].contains("DropdownSurface {") && hosts[0].contains("DropdownRow(title: \"Settings\")"), "the host must compose the one-row Settings menu")
+        #expect(hosts[0].contains("isShowingSettings = true"), "the Settings row must open the sheet")
+        // The order control's system menu leaves at T023; `MenuPolicyTests`
+        // owns that rule. This host, at least, composes no system menu.
+        #expect(!hosts[0].contains("Menu {"), "no system menu inside the Dashboard's host")
+    }
+
     // MARK: - Helpers
 
     /// The text of one top-level `struct <name>` declaration, up to the next

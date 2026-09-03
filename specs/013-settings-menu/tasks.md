@@ -964,7 +964,46 @@ one commit before T020 replaces it.
   back to back**; the "…" on both lists opens the new dropdown by eye,
   group breaks visible, export rows dimmed under an empty search.
 
-- [ ] **T022 — The Dashboard's "…" and its Settings sheet.**
+- [x] **T022 — The Dashboard's "…" and its Settings sheet.**
+  *Done (2026-09-02)*: `DashboardView` — `header` is an
+  `HStack(alignment: .top)` with the badge on the root alone (`if
+  isRoot { overflowControl }`), the lists' pill (P8) anchored as
+  `DashboardDropdown.overflow` with identifier `moreActions.dashboard`,
+  never busy; `openDropdown: DashboardDropdown?` (`.overflow` only —
+  `.order` joins at T023), `isShowingSettings`, the two storage
+  environment values, the lists' byte-identical Settings sheet line
+  after `.refreshable`, and the host last with the one-row
+  `DropdownSurface { DropdownRow(title: "Settings") … }` (P13).
+  `SettingsWiringTests`' sheet test now runs over three screens
+  (`settingsHosts`); `DropdownWiringTests` gained the Dashboard scan —
+  anchor once, gated in exactly one `if isRoot` span, the control's own
+  body carrying the anchor and the open, one optional, one host
+  composing the Settings row; the scan's first draft forbade any
+  `Menu {` on the Dashboard and was red on the order control the plan
+  converts at T023 — scoped to the host's body, where `MenuPolicyTests`
+  takes over at T023. Two UI tests:
+  `testDashboardOffersSettingsAndNothingElse` (empty state → badge →
+  Settings alone, no Import, no Export → the sheet → Done → the badge
+  hittable) and `testAnOpenMenuClosesOnAnyOutsideTapIncludingTheOtherBadge`
+  (Decision 19: one item through quick-add so the sort badge exists;
+  Sort By open → a coordinate tap on the "…" — captured before anything
+  opens, since the badge sits under the tap-outside layer once a
+  dropdown is up — closes Sort By and opens nothing; the next tap
+  opens; "Dismiss more actions" closes). **Mutations, one at a time**:
+  A, the badge gated behind `!viewModel.isEmpty` → the Dashboard UI
+  test red ("No matches found for moreActions.dashboard"); B, the
+  anchor moved out of the `isRoot` gate → the wiring scan red (zero
+  gated spans carry the control); C, the tap-outside layer's close
+  removed (`.onTapGesture { }`) → the switching test red, the overflow
+  never opening past a Sort By that never closed. A and B hand-reverted
+  (uncommitted work in those files); C via `git checkout` on the host,
+  which carried none. Live: the root Dashboard shows the pill beside
+  the wordmark on the 307-item store; its menu is the one Settings row
+  at the gutter; Settings presents from it, the identical sheet; a
+  category drill-down shows the back chevron and no badge. **UI target
+  green twice back to back**: 9 tests, 0 failures, both runs (~107 s
+  each — the quick-add path is the long one). Full unit target: **785
+  tests in 115 suites passed** (784 + 1).
   Per addendum §Screens (Dashboard, badge half) and spec §The
   Dashboard's "…". `DashboardView`: `header` → `HStack(alignment: .top)
   { VStack(…); Spacer(); if isRoot { overflowControl } }`;

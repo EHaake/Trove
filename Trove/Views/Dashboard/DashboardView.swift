@@ -9,13 +9,36 @@ import SwiftUI
 /// scoped to it". Tapping a breakdown row pushes this same view with a
 /// narrower scope, so "what have I spent on guitars specifically" is the
 /// overview again rather than a second screen that could drift from it.
+/// The root Dashboard's dropdowns (013 Amendment A). One optional of this
+/// type is the screen's whole open-menu state — "one at a time" true by
+/// type, as on the lists.
+private enum DashboardDropdown: Hashable {
+    case overflow
+
+    /// What the tap-outside layer calls itself to VoiceOver.
+    var dismissLabel: String {
+        switch self {
+        case .overflow: "Dismiss more actions"
+        }
+    }
+}
+
 struct DashboardView: View {
     @State private var viewModel: DashboardViewModel
+    @State private var openDropdown: DashboardDropdown?
+    /// 013 Amendment A: the "…" the mock always drew, holding Settings.
+    @State private var isShowingSettings = false
 
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(AppRouter.self) private var router
+    @Environment(\.storageMode) private var storageMode
+    @Environment(\.storageFallbackReason) private var storageFallbackReason
 
+    /// Kept for the Settings sheet as well as the view model: constructor-
+    /// injected the way `ContentView` injects this screen — one delivery
+    /// mechanism for the monitor, never a sheet reading an observable it
+    /// might not have.
     private let syncMonitor: SyncMonitor
 
     init(modelContext: ModelContext, scope: String = "", syncMonitor: SyncMonitor = .notSyncing) {
@@ -88,26 +111,78 @@ struct DashboardView: View {
             // underneath the still-animating spinner — see RefreshPacing.
             await RefreshPacing.hold()
         }
+        // 013's Settings sheet, reached from the root "…" since Amendment A.
+        // Owned here like the lists own theirs, for the same reason: a
+        // Delete All behind it has to show on this screen the moment it
+        // comes back — the sheet's dismissal runs the same load appear does.
+        .sheet(isPresented: $isShowingSettings, onDismiss: viewModel.load) {
+            NavigationStack {
+                SettingsView(
+                    modelContext: modelContext,
+                    syncMonitor: syncMonitor,
+                    storageMode: storageMode,
+                    storageFallbackReason: storageFallbackReason
+                )
+            }
+        }
+        // The root "…"'s dropdown floats over the whole screen from here —
+        // the same host as the lists' (013 Amendment A). The header scrolls
+        // on this screen, which is exactly why the host finds the badge by
+        // its anchor rather than by a fixed offset.
+        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
+            switch dropdown {
+            case .overflow:
+                // One row, deliberately a menu rather than a direct button
+                // (spec P13): the roadmap's Dashboard exports land here.
+                DropdownSurface {
+                    DropdownRow(title: "Settings") {
+                        isShowingSettings = true
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Header
 
+    /// The wordmark and its meta line — and, on the root alone, the "…"
+    /// Design's mock drew at the top-right, built at 013 Amendment A: the
+    /// lists' bordered pill (spec P8), always visible, empty state included,
+    /// since both branches of `body` compose this header. The drill-down is
+    /// the same screen narrowed, with a navigation bar; one entry per tab.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if isRoot {
-                Text("TROVE")
-                    .font(theme.typography.wordmark)
-                    .tracking(theme.metrics.wordmarkTracking)
-                    .foregroundStyle(theme.colors.textPrimary)
-            } else {
-                CategoryPathLabel(path: viewModel.scope)
-                    .font(theme.typography.screenTitle)
-                    .foregroundStyle(theme.colors.textPrimary)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
+                if isRoot {
+                    Text("TROVE")
+                        .font(theme.typography.wordmark)
+                        .tracking(theme.metrics.wordmarkTracking)
+                        .foregroundStyle(theme.colors.textPrimary)
+                } else {
+                    CategoryPathLabel(path: viewModel.scope)
+                        .font(theme.typography.screenTitle)
+                        .foregroundStyle(theme.colors.textPrimary)
+                }
+
+                Text(headerMeta).monoLabel()
             }
 
-            Text(headerMeta).monoLabel()
+            Spacer()
+
+            if isRoot {
+                overflowControl
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Never busy: nothing runs from the Dashboard. The badge only opens the
+    /// one-row menu on the host.
+    private var overflowControl: some View {
+        OverflowBadge(isBusy: false) {
+            openDropdown = .overflow
+        }
+        .dropdownAnchor(DashboardDropdown.overflow)
+        .accessibilityIdentifier("moreActions.dashboard")
     }
 
     /// Design's "34 ITEMS · 4 CATEGORIES".

@@ -136,11 +136,16 @@ struct SettingsWiringTests {
         "Trove/Views/Wishlist/WishlistView.swift",
     ]
 
-    /// Both lists own the Settings sheet the way they own the form sheets
-    /// — refetching on dismiss, so a Delete All behind it shows at once —
-    /// and construct the screen with everything it needs threaded in.
-    @Test(arguments: lists)
-    func theListAttachesTheSettingsSheetAndReloadsOnDismiss(path: String) throws {
+    /// The three screens that reach Settings — both lists and, since 013
+    /// Amendment A, the root Dashboard.
+    private nonisolated static let settingsHosts = lists + ["Trove/Views/Dashboard/DashboardView.swift"]
+
+    /// Every screen that opens Settings owns the sheet the way the lists
+    /// own their form sheets — refetching on dismiss, so a Delete All
+    /// behind it shows at once — and constructs the screen with everything
+    /// it needs threaded in.
+    @Test(arguments: settingsHosts)
+    func theScreenAttachesTheSettingsSheetAndReloadsOnDismiss(path: String) throws {
         let code = try SourceScan.production(path)
         #expect(
             code.contains(".sheet(isPresented: $isShowingSettings, onDismiss: viewModel.load)"),
