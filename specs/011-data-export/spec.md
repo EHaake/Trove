@@ -144,17 +144,24 @@ followed by one entry per exported item.
    collection size, because its menu carries Import and Get Blank
    Template and a fresh install must reach them. The export actions'
    disabled state and the sort badge's hide-when-empty are unchanged.)*
+   *(And since `013-settings-menu`, 2026-09-01: the template lives in
+   Settings › Templates, and the badge stays always visible for Import
+   and Settings.)*
    *Verified: both headers share one visibility gate
    (`ItemListView.header` / `WishlistView.header`);
-   `ExportWiringTests.theBadgeIsFedByTheViewModelAndFiresBothIntents`;
+   `ExportWiringTests.theBadgeOpensTheDropdownWhichFiresEveryIntentAndOpensSettings`
+   (renamed at `013`/T013 and again at `013` Amendment A/T021, when the
+   badge and its menu split);
    simulator checks at T012/T013. The layout is intrinsic (no
    size-class branching exists to diverge).*
 2. [x] The "…" menu shows exactly two actions, Export as CSV… and Export
    as PDF…, both disabled when the current view is empty (a filter or
    search matching nothing; the entirely-empty collection is covered by
    criterion 1's visibility rule). *(Amended 2026-08-30, same decision.)*
-   *Verified: `ExportWiringTests.bothMenuActionsGateOnCanExport` (two
-   pinned strings, each individually gated);
+   *Verified: `ExportWiringTests.theMenuCarriesFiveItemsInThreeGroups`
+   (renamed at `013`/T013; the two export rows pinned as the only two
+   gated on `canExport`, since `013` Amendment A/T021 as
+   `isEnabled: canExport` on `OverflowDropdown.swift`);
    `canExportTracksTheVisibleListNotTheStore` and
    `nothingIsExportedWhenTheViewIsEmpty` in both view-model suites.*
 2a. [x] A failed export shows a plain alert and delivers nothing. *(Added
@@ -229,7 +236,8 @@ followed by one entry per exported item.
 11. [x] Exporting a large collection (hundreds of items, with photos) does
     not block the UI — some progress affordance appears if generation
     is not effectively instant.
-    *Verified: `ExportConcurrencyTests.generationRunsOffTheMainThreadForBothFormats`
+    *Verified: `ExportConcurrencyTests.generationRunsOffTheMainThreadForEveryEntryPoint`
+    (renamed at `013`/T001, when a third entry point joined the probe)
     — instrumented through the `any ExportService` existential, the
     probe recording the actual thread, mutation-verified (stripping
     `@concurrent` put generation back on the main thread and went red);

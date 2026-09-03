@@ -92,8 +92,12 @@ nonisolated enum ImportCopy {
             body = "This looks like a \(target.other.noun) export. "
                 + "Import it from the \(target.other.screenName) screen instead."
         case .headerMismatch(wrongList: false):
+            // 013 moved the blank template out of the "…" menu; the
+            // sentence moved with it. Body only — the guarantee below is
+            // appended once, and `ImportCopyTests` pins the whole string so
+            // a second copy of it can't slip past the suffix check.
             body = "The columns don't match the \(target.noun) template. "
-                + "Get Blank Template\u{2026} in the \u{2026} menu shows the expected layout."
+                + "A blank template with the expected layout is in Settings \u{203A} Templates."
         }
         return body + " Nothing was imported."
     }

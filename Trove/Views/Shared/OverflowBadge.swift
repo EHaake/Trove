@@ -1,45 +1,30 @@
 import SwiftUI
 
-/// The list headers' "…" overflow control — 011's `ExportBadge`, renamed at
-/// 012/T013 when the import actions joined its menu and the old name became
-/// a lie (`DetailOverflowMenu` already established the vocabulary).
+/// The header's "…" badge — 011's `ExportBadge`, renamed at 012/T013 when
+/// the import actions joined its menu, and since 013 Amendment A a plain
+/// button that opens `OverflowDropdown` on the screen's dropdown host.
 ///
-/// Hosts a **system `Menu`**, not a `SortDropdown` clone, and the T029c
-/// history says why that's safe here: the Menu was evicted from this header
-/// because UIKit animated its *variable-width label's* bounds outside
-/// SwiftUI's reach — this label is a constant-size glyph, the exact shape
-/// `DetailOverflowMenu` already runs safely in production. If the border
-/// ever tears the way T029c's did, the custom dropdown is the known
-/// fallback.
+/// It hosted a system `Menu` from 011 to 013: safe from the T029c tear
+/// because its label is a constant-size glyph, and chosen then so the
+/// header wouldn't carry a second overlay-and-catcher state machine. The
+/// amendment's rule ended that — **bespoke inside the page, system in the
+/// bars** — so the two badges that sit side by side open one visual
+/// language, and the host is the one state machine for both. The detail
+/// screens' nav-bar "…" (`DetailOverflowMenu`) stays a system menu: that's
+/// the bar's chrome, beside the system back chevron.
 ///
-/// Menu contents per 012 criterion 1: the two export actions, disabled
-/// exactly when the view has nothing to export; a divider; then Import
-/// from CSV… and Get Blank Template…, **always enabled** — an empty
-/// collection is precisely who those two serve, which is also why the
-/// badge itself now shows regardless of collection size (the headers own
-/// that half). The whole control disables behind a compact spinner while
-/// any export or import runs (`isBusy` — criterion 15's progress
-/// affordance).
+/// The whole control disables behind a compact spinner while any export or
+/// import runs (`isBusy`). The badge shows regardless of collection size:
+/// its menu carries Import and Settings, always enabled, and the fresh
+/// install with a spreadsheet in hand is exactly who they serve.
 struct OverflowBadge: View {
     let isBusy: Bool
-    let canExport: Bool
-    let exportCSV: () -> Void
-    let exportPDF: () -> Void
-    let importCSV: () -> Void
-    let getTemplate: () -> Void
+    let action: () -> Void
 
     @Environment(\.theme) private var theme
 
     var body: some View {
-        Menu {
-            Button("Export as CSV…", action: exportCSV)
-                .disabled(!canExport)
-            Button("Export as PDF…", action: exportPDF)
-                .disabled(!canExport)
-            Divider()
-            Button("Import from CSV…", action: importCSV)
-            Button("Get Blank Template…", action: getTemplate)
-        } label: {
+        Button(action: action) {
             Group {
                 if isBusy {
                     ProgressView()
@@ -62,8 +47,12 @@ struct OverflowBadge: View {
             )
             .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .disabled(isBusy)
         .accessibilityLabel(isBusy ? "Working" : "More actions")
+        // A button whose hint says what it opens — SwiftUI has no pop-up
+        // trait to give it (spec Decision 18).
+        .accessibilityHint("Opens more actions")
     }
 }
 
@@ -73,15 +62,9 @@ struct OverflowBadge: View {
         VStack(spacing: 12) {
             HStack(spacing: 8) {
                 SortBadge(label: "Custom") {}
-                OverflowBadge(
-                    isBusy: false, canExport: true,
-                    exportCSV: {}, exportPDF: {}, importCSV: {}, getTemplate: {}
-                )
+                OverflowBadge(isBusy: false) {}
             }
-            OverflowBadge(
-                isBusy: true, canExport: true,
-                exportCSV: {}, exportPDF: {}, importCSV: {}, getTemplate: {}
-            )
+            OverflowBadge(isBusy: true) {}
         }
     }
     .environment(\.theme, .dark)

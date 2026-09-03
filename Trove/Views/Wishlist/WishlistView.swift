@@ -2,6 +2,22 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// The header's two dropdowns. One optional of this type is the screen's
+/// whole open-menu state, which is what makes "one open at a time" true by
+/// type rather than by coordination (013 Amendment A).
+private enum HeaderDropdown: Hashable {
+    case sort
+    case overflow
+
+    /// What the tap-outside layer calls itself to VoiceOver.
+    var dismissLabel: String {
+        switch self {
+        case .sort: "Dismiss sort options"
+        case .overflow: "Dismiss more actions"
+        }
+    }
+}
+
 /// Browse the wishlist, per `design/screens/Trove Wishlist List.png`.
 ///
 /// Follows the item list's standing layout rule from plan.md — title, summary,
@@ -21,12 +37,15 @@ struct WishlistView: View {
     @State private var isAddingItem = false
     @State private var selectedItemID: UUID?
 
-    /// Whether T035's sort dropdown is open — see ItemListView's twin for
-    /// why the screen owns it.
-    @State private var isSortMenuOpen = false
+    /// Which header dropdown is open — Sort By or the "…" — or neither;
+    /// see ItemListView's twin for why the screen owns it.
+    @State private var openDropdown: HeaderDropdown?
 
     /// Whether 012's file picker is up — see `ItemListView`'s twin.
     @State private var isPickingImportFile = false
+
+    /// Whether 013's Settings sheet is up — see `ItemListView`'s twin.
+    @State private var isShowingSettings = false
 
     /// The row whose Edit swipe action is open in the form sheet — a
     /// shortcut into the same flow the detail screen offers (T024).
@@ -46,8 +65,14 @@ struct WishlistView: View {
 
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.storageMode) private var storageMode
+    @Environment(\.storageFallbackReason) private var storageFallbackReason
+
+    /// Kept for the Settings sheet — see `ItemListView`'s twin.
+    private let syncMonitor: SyncMonitor
 
     init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
+        self.syncMonitor = syncMonitor
         _viewModel = State(
             initialValue: WishlistViewModel(modelContext: modelContext, syncMonitor: syncMonitor)
         )
@@ -110,6 +135,18 @@ struct WishlistView: View {
                 WishlistFormView(modelContext: modelContext, editing: item)
             }
         }
+        // 013's Settings sheet — ItemListView's twin, refetching on dismiss
+        // so a Delete All behind it shows here at once.
+        .sheet(isPresented: $isShowingSettings, onDismiss: viewModel.load) {
+            NavigationStack {
+                SettingsView(
+                    modelContext: modelContext,
+                    syncMonitor: syncMonitor,
+                    storageMode: storageMode,
+                    storageFallbackReason: storageFallbackReason
+                )
+            }
+        }
         // Values can change on the detail screen — an edit, the gauge, or a
         // deletion — so the list refetches whenever it comes back into view.
         .onAppear(perform: viewModel.load)
@@ -150,7 +187,7 @@ struct WishlistView: View {
         // 011's share sheet and failure alert — ItemListView's twins, off
         // the same view-model state shape.
         .sheet(item: $viewModel.stagedExport) { staged in
-            ShareSheet(url: staged.url)
+            ShareSheet(urls: staged.urls)
                 .presentationDetents([.medium, .large])
         }
         .alert(
@@ -191,33 +228,29 @@ struct WishlistView: View {
         } message: {
             Text(viewModel.importAlertMessage)
         }
-        // T035's dropdown — same screen-level float-and-catcher as
-        // ItemListView's, for the same reach reasons.
-        .overlay {
-            if isSortMenuOpen {
-                ZStack(alignment: .topTrailing) {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .ignoresSafeArea()
-                        .onTapGesture { isSortMenuOpen = false }
-                        // The catcher is a real tap target, so VoiceOver
-                        // should call it what it is rather than an unnamed
-                        // element (T039 review, finding 13).
-                        .accessibilityLabel("Dismiss sort options")
-                        .accessibilityAddTraits(.isButton)
-                    SortDropdown(
-                        options: WishlistViewModel.SortOrder.allCases,
-                        selection: viewModel.sortOrder,
-                        label: \.label,
-                        isManualOrder: { $0 == .custom }
-                    ) { option in
-                        viewModel.sortOrder = option
-                        isSortMenuOpen = false
-                        viewModel.load()
-                    }
-                    .padding(.top, 60)
-                    .padding(.trailing, theme.metrics.screenGutter)
+        // The header's dropdowns — the same shared host as ItemListView's,
+        // for the same reach reasons (013 Amendment A).
+        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
+            switch dropdown {
+            case .sort:
+                SortDropdown(
+                    options: WishlistViewModel.SortOrder.allCases,
+                    selection: viewModel.sortOrder,
+                    label: \.label,
+                    isManualOrder: { $0 == .custom }
+                ) { option in
+                    // The row has already closed the dropdown.
+                    viewModel.sortOrder = option
+                    viewModel.load()
                 }
+            case .overflow:
+                OverflowDropdown(
+                    canExport: viewModel.canExport,
+                    exportCSV: { Task { await viewModel.exportCSV() } },
+                    exportPDF: { Task { await viewModel.exportPDF() } },
+                    importCSV: { isPickingImportFile = true },
+                    openSettings: { isShowingSettings = true }
+                )
             }
         }
     }
@@ -249,14 +282,11 @@ struct WishlistView: View {
 
     /// 012's overflow — ItemListView's twin.
     private var overflowControl: some View {
-        OverflowBadge(
-            isBusy: viewModel.isBusy,
-            canExport: viewModel.canExport,
-            exportCSV: { Task { await viewModel.exportCSV() } },
-            exportPDF: { Task { await viewModel.exportPDF() } },
-            importCSV: { isPickingImportFile = true },
-            getTemplate: { Task { await viewModel.exportBlankTemplate() } }
-        )
+        OverflowBadge(isBusy: viewModel.isBusy) {
+            openDropdown = .overflow
+        }
+        .dropdownAnchor(HeaderDropdown.overflow)
+        .accessibilityIdentifier("moreActions.wishlist")
     }
 
     /// Design's "4 WANTED · $4,740".
@@ -270,9 +300,12 @@ struct WishlistView: View {
     /// ItemListView's twin for the note on why the system `Menu` left.
     private var sortControl: some View {
         SortBadge(label: viewModel.sortOrder.label) {
-            isSortMenuOpen.toggle()
+            openDropdown = .sort
         }
+        .dropdownAnchor(HeaderDropdown.sort)
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+        .accessibilityHint("Opens sort options")
+        .accessibilityIdentifier("sortOptions.wishlist")
     }
 
     // MARK: - Rows

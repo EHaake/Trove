@@ -273,6 +273,23 @@ struct ImportCopyTests {
         #expect(onWishlist.contains("Items export"))
     }
 
+    /// 013/T007: the template moved to Settings, and this sentence with
+    /// it. A **whole-string** pin, deliberately: the guarantee sentence is
+    /// appended by the function, so a body that carried its own copy would
+    /// read "…imported. Nothing was imported." and still pass the suffix
+    /// check above — the review's B6, and the reason `contains` isn't
+    /// enough here.
+    @Test func theWrongLayoutMessagePointsAtSettingsTemplatesExactlyOnce() {
+        for target in [ImportTarget.items, .wishlist] {
+            #expect(
+                ImportCopy.failureMessage(for: .headerMismatch(wrongList: false), target: target)
+                    == "The columns don't match the \(target.noun) template. "
+                    + "A blank template with the expected layout is in Settings \u{203A} Templates. "
+                    + "Nothing was imported."
+            )
+        }
+    }
+
     private func preview(
         skipped: [SkippedRow] = [],
         defaulted: Int = 0

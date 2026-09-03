@@ -17,19 +17,47 @@ import SwiftData
 nonisolated protocol ExportService: Sendable {
     @concurrent func exportCSV(_ table: CSVTable, filename: String) async throws -> URL
     @concurrent func exportPDF(_ document: PDFDocumentModel, filename: String) async throws -> URL
+
+    /// Several files staged together for one share sheet — 013's
+    /// export-everything. The staging directory is purged once, then every
+    /// file is written; URLs come back in input order. This can't be two
+    /// single-file calls: each of those purges, so the second would delete
+    /// the file the first just returned.
+    @concurrent func exportFiles(_ files: [ExportFile]) async throws -> [URL]
 }
 
-/// A generated file waiting for the share sheet — what a view model stages
-/// and a view presents. Foundation-only on purpose: it lives in view-model
-/// state, and view models import no SwiftUI.
+/// One member of a staged set: what to generate, and what to call it.
+nonisolated enum ExportFile: Sendable {
+    case csv(CSVTable, filename: String)
+    case pdf(PDFDocumentModel, filename: String)
+
+    var filename: String {
+        switch self {
+        case .csv(_, let filename), .pdf(_, let filename):
+            filename
+        }
+    }
+}
+
+/// A generated file set waiting for the share sheet — what a view model
+/// stages and a view presents. Foundation-only on purpose: it lives in
+/// view-model state, and view models import no SwiftUI.
+///
+/// A set since 013, when export-everything started handing one share sheet
+/// two files; a list export is a set of one, through the single-file
+/// initializer, so nothing on the list side changed shape.
 nonisolated struct StagedExport: Identifiable, Sendable, Equatable {
     let id = UUID()
-    let url: URL
-    let filename: String
+    let urls: [URL]
+    let filenames: [String]
+
+    init(urls: [URL], filenames: [String]) {
+        self.urls = urls
+        self.filenames = filenames
+    }
 
     init(url: URL, filename: String) {
-        self.url = url
-        self.filename = filename
+        self.init(urls: [url], filenames: [filename])
     }
 }
 
@@ -67,9 +95,11 @@ nonisolated enum ExportFilename {
 }
 
 /// The live implementation: stages files under one dedicated temp directory,
-/// purged before every export and once at launch — so at most the latest
-/// file set ever exists and canceling the share sheet needs no cleanup hook
-/// (criterion 10; plan.md's "Delivery and temp-file lifecycle").
+/// purged before every export *set* — one file for a list export, the
+/// several 013's export-everything hands one share sheet — and once at
+/// launch, so at most the latest set ever exists and canceling the share
+/// sheet needs no cleanup hook (criterion 10; plan.md's "Delivery and
+/// temp-file lifecycle").
 nonisolated final class FileExportService: ExportService {
     /// Held for the PDF path's background photo fetches (T008) — the
     /// container is `Sendable`; contexts are made fresh where they're used.
@@ -120,13 +150,50 @@ nonisolated final class FileExportService: ExportService {
         )
     }
 
+    @concurrent func exportFiles(_ files: [ExportFile]) async throws -> [URL] {
+        generationProbe?(Self.onMainThread())
+        // One fetcher for the whole set: its context rotates every 25
+        // fetches regardless of document boundaries, so the photo-memory
+        // bound is per set exactly as it was per document.
+        let fetcher = PhotoFetcher(container: container)
+        var urls: [URL] = []
+        var prepared = false
+        for file in files {
+            // Render, then write, one file at a time — never the whole set
+            // as `Data` first, which would double 011's peak memory for two
+            // photo-carrying documents. The purge sits just before the
+            // *first* write, as on the single-file path: a first-file render
+            // that throws leaves the previous set in place. A later file's
+            // render throwing would leave the new set partially staged —
+            // accepted, since the composer throws only when no graphics
+            // context can be made at all (plan §Export service).
+            let data = try render(file, fetcher: fetcher)
+            if !prepared {
+                try prepareStagingDirectory()
+                prepared = true
+            }
+            urls.append(try write(data, filename: file.filename))
+        }
+        return urls
+    }
+
+    private func render(_ file: ExportFile, fetcher: PhotoFetcher) throws -> Data {
+        switch file {
+        case .csv(let table, _):
+            Data(CSVWriter.write(table).utf8)
+        case .pdf(let document, _):
+            try PDFComposer.render(document) { fetcher.imageData(for: $0) }
+        }
+    }
+
     /// `Thread.isMainThread` is `noasync`; sampling it through a synchronous
     /// helper is the supported way to read the actual thread from an async
     /// body — and the actual thread is exactly what the probe is for.
     private static func onMainThread() -> Bool { Thread.isMainThread }
 
-    /// Empties the staging directory. Called by `stage` before every write,
-    /// and — via `purgeAtLaunch` — once at app startup.
+    /// Empties the staging directory. Called through
+    /// `prepareStagingDirectory` before every export set, and — via
+    /// `purgeAtLaunch` — once at app startup.
     func purge() throws {
         try Self.purge(directory: directory)
     }
@@ -145,9 +212,20 @@ nonisolated final class FileExportService: ExportService {
         try FileManager.default.removeItem(at: directory)
     }
 
+    /// The single-file path: one purge, one write. `exportFiles` is the same
+    /// two steps with the purge hoisted above its loop — one implementation
+    /// of "at most the latest set exists", not two.
     private func stage(_ data: Data, filename: String) throws -> URL {
+        try prepareStagingDirectory()
+        return try write(data, filename: filename)
+    }
+
+    private func prepareStagingDirectory() throws {
         try purge()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    }
+
+    private func write(_ data: Data, filename: String) throws -> URL {
         let url = directory.appending(path: filename)
         try data.write(to: url)
         return url

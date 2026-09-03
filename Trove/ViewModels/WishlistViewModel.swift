@@ -273,8 +273,13 @@ final class WishlistViewModel {
         }
         let query = SearchMatching.normalized(searchText)
         if !query.isEmpty { parts.append("Search: \u{201C}\(query)\u{201D}") }
-        return parts.isEmpty ? "Whole wishlist" : parts.joined(separator: " · ")
+        return parts.isEmpty ? Self.wholeCoverageLabel : parts.joined(separator: " · ")
     }
+
+    /// See `ItemListViewModel.documentTitle` — one definition for this list
+    /// and for export-everything.
+    static let documentTitle = "Wishlist"
+    static let wholeCoverageLabel = "Whole wishlist"
 
     /// Exports the visible wanted items, in visible order, as the canonical
     /// CSV. Records come from `items` as-is — never a refetch — for the same
@@ -306,7 +311,7 @@ final class WishlistViewModel {
         let records = items.map { WishlistExportRecord(item: $0) }
         let document = PDFDocumentModel(
             cover: CoverSummary(
-                title: "Wishlist",
+                title: Self.documentTitle,
                 coverageLabel: exportCoverageLabel,
                 generatedAt: .now,
                 itemCount: items.count,
@@ -385,23 +390,8 @@ final class WishlistViewModel {
         importPresentation = nil
     }
 
-    /// See `ItemListViewModel.exportBlankTemplate` — the wishlist twin.
-    func exportBlankTemplate() async {
-        guard !isBusy else { return }
-        isExporting = true
-        defer { isExporting = false }
-
-        let filename = ExportFilename.wishlistTemplate
-        do {
-            let url = try await exportService.exportCSV(
-                CSVTable(headers: ExportSchema.wishlistHeaders, rows: []),
-                filename: filename
-            )
-            stagedExport = StagedExport(url: url, filename: filename)
-        } catch {
-            exportFailureMessage = ExportCopy.failureMessage
-        }
-    }
+    // The wishlist template intent moved to `SettingsViewModel` with 013,
+    // alongside the items one.
 
     /// See `ItemListViewModel.confirmImport` — one commit path, both lists,
     /// with the wishlist's one extra move: `Added` restores `createdAt`.
@@ -466,24 +456,13 @@ final class WishlistViewModel {
     }
 
     private func isOrderedBefore(_ lhs: WishlistItem, _ rhs: WishlistItem) -> Bool {
-        // Attribute first, the user's own manual order on any tie — spec.md's
-        // confirmed rule for every non-"Custom" sort, applied through the
-        // shared helper so the tie-break can't drift from the item list's
-        // reading of it. For "Custom" the attribute abstains entirely, so the
-        // manual order *is* the sort.
-        if lhs.sortOrder != rhs.sortOrder || attributeOrder(lhs, rhs) != nil {
-            return ManualOrderHelper.areInOrder(lhs, rhs, primary: attributeOrder)
-        }
-
-        // Tied all the way down — same attribute value *and* a shared manual
-        // position (easy from an older build: two items added in one sitting
-        // both at 0). Name then id keeps the order fully determined by the
-        // data rather than by whatever `FetchDescriptor` returns.
-        let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
-        if byName != .orderedSame {
-            return byName == .orderedAscending
-        }
-        return lhs.id.uuidString < rhs.id.uuidString
+        // Attribute first, the user's own order on any tie — spec.md's
+        // confirmed rule for every non-"Custom" sort; for "Custom" the
+        // attribute abstains entirely, so the manual order *is* the sort.
+        // The order itself — position, then name and id where positions
+        // collide — lives in `ManualOrderHelper` since 013, shared with the
+        // item list and with export-everything.
+        attributeOrder(lhs, rhs) ?? ManualOrderHelper.areInCustomOrder(lhs, rhs)
     }
 
     /// The active sort's own comparison, `nil` on a tie — the shape

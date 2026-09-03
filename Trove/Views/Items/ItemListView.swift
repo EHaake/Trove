@@ -2,6 +2,22 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// The header's two dropdowns. One optional of this type is the screen's
+/// whole open-menu state, which is what makes "one open at a time" true by
+/// type rather than by coordination (013 Amendment A).
+private enum HeaderDropdown: Hashable {
+    case sort
+    case overflow
+
+    /// What the tap-outside layer calls itself to VoiceOver.
+    var dismissLabel: String {
+        switch self {
+        case .sort: "Dismiss sort options"
+        case .overflow: "Dismiss more actions"
+        }
+    }
+}
+
 /// Browse owned gear, per `design/screens/Trove Item List.png`.
 struct ItemListView: View {
     @State private var viewModel: ItemListViewModel
@@ -29,21 +45,35 @@ struct ItemListView: View {
     /// collide with one — no real path is empty *and* prefixed like this.
     private static let unvaluedChipID = "\u{0}unvalued"
 
-    /// Whether T035's sort dropdown is open. Owned here rather than by the
-    /// badge because the dropdown floats over the whole screen and dismisses
-    /// on any outside tap — both beyond the header's reach.
-    @State private var isSortMenuOpen = false
+    /// Which header dropdown is open — Sort By or the "…" — or neither.
+    /// Owned here rather than by a badge because the dropdown floats over
+    /// the whole screen and dismisses on any outside tap, both beyond the
+    /// header's reach; one optional, so only one can be open (T035, then
+    /// 013 Amendment A).
+    @State private var openDropdown: HeaderDropdown?
 
     /// Whether 012's file picker is up. View state, not view-model state:
     /// the picker is pure navigation — the view model's flow starts when a
     /// URL actually arrives.
     @State private var isPickingImportFile = false
 
+    /// Whether 013's Settings sheet is up — view state like the picker:
+    /// the sheet is navigation, and the view model behind it is its own.
+    @State private var isShowingSettings = false
+
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(AppRouter.self) private var router
+    @Environment(\.storageMode) private var storageMode
+    @Environment(\.storageFallbackReason) private var storageFallbackReason
+
+    /// Kept for the Settings sheet, which is constructor-injected the way
+    /// `ContentView` injects this screen — one delivery mechanism for the
+    /// monitor, never a sheet reading an observable it might not have.
+    private let syncMonitor: SyncMonitor
 
     init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
+        self.syncMonitor = syncMonitor
         _viewModel = State(
             initialValue: ItemListViewModel(modelContext: modelContext, syncMonitor: syncMonitor)
         )
@@ -128,6 +158,19 @@ struct ItemListView: View {
                 ItemFormView(modelContext: modelContext, editing: item)
             }
         }
+        // 013's Settings sheet. Owned here like the form sheets, for the
+        // same reason: a Delete All behind it has to show on this list the
+        // moment it comes back.
+        .sheet(isPresented: $isShowingSettings, onDismiss: viewModel.load) {
+            NavigationStack {
+                SettingsView(
+                    modelContext: modelContext,
+                    syncMonitor: syncMonitor,
+                    storageMode: storageMode,
+                    storageFallbackReason: storageFallbackReason
+                )
+            }
+        }
         // Values can change on the detail screen — an edit, or the dial — so
         // the list refetches whenever it comes back into view.
         // Applied here rather than written into the view model by the router:
@@ -185,7 +228,7 @@ struct ItemListView: View {
         // intent stays a testable method; dismissal writes nil back through
         // the binding.
         .sheet(item: $viewModel.stagedExport) { staged in
-            ShareSheet(url: staged.url)
+            ShareSheet(urls: staged.urls)
                 .presentationDetents([.medium, .large])
         }
         // Criterion 2a: a failed export says so plainly — shared copy, so
@@ -234,35 +277,33 @@ struct ItemListView: View {
         } message: {
             Text(viewModel.importAlertMessage)
         }
-        // T035's dropdown floats over the whole screen, a full-screen
-        // catcher behind it so any outside tap closes it. Screen-level
-        // rather than anchored to the badge: the header can't reach over
-        // the rows below it.
-        .overlay {
-            if isSortMenuOpen {
-                ZStack(alignment: .topTrailing) {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .ignoresSafeArea()
-                        .onTapGesture { isSortMenuOpen = false }
-                        // The catcher is a real tap target, so VoiceOver
-                        // should call it what it is rather than an unnamed
-                        // element (T039 review, finding 13).
-                        .accessibilityLabel("Dismiss sort options")
-                        .accessibilityAddTraits(.isButton)
-                    SortDropdown(
-                        options: ItemListViewModel.SortOrder.allCases,
-                        selection: viewModel.sortOrder,
-                        label: \.label,
-                        isManualOrder: { $0 == .custom }
-                    ) { option in
-                        viewModel.sortOrder = option
-                        isSortMenuOpen = false
-                        viewModel.load()
-                    }
-                    .padding(.top, 60)
-                    .padding(.trailing, theme.metrics.screenGutter)
+        // The header's dropdowns float over the whole screen from here —
+        // T035's screen-level float-and-catcher, now the shared host
+        // (013 Amendment A): it finds the open badge by its anchor, so the
+        // header needn't reach over the rows below it, and it closes on
+        // any outside tap. Placed after the add button's overlay so the
+        // dropdown draws above it.
+        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
+            switch dropdown {
+            case .sort:
+                SortDropdown(
+                    options: ItemListViewModel.SortOrder.allCases,
+                    selection: viewModel.sortOrder,
+                    label: \.label,
+                    isManualOrder: { $0 == .custom }
+                ) { option in
+                    // The row has already closed the dropdown.
+                    viewModel.sortOrder = option
+                    viewModel.load()
                 }
+            case .overflow:
+                OverflowDropdown(
+                    canExport: viewModel.canExport,
+                    exportCSV: { Task { await viewModel.exportCSV() } },
+                    exportPDF: { Task { await viewModel.exportPDF() } },
+                    importCSV: { isPickingImportFile = true },
+                    openSettings: { isShowingSettings = true }
+                )
             }
         }
     }
@@ -399,11 +440,12 @@ struct ItemListView: View {
 
             // Nothing to sort on an empty list, so the sort badge still
             // hides — but the "…" shows regardless since 012 (criterion 1,
-            // superseding 011's hide-when-empty rule): its menu now carries
-            // Import and Get Blank Template, and the fresh install with a
-            // spreadsheet in hand is exactly who they serve. Guarded from
-            // both directions — ImportWiringTests' brace-span scan and the
-            // empty-collection UI test.
+            // superseding 011's hide-when-empty rule): its menu carries
+            // Import and, since 013, Settings — where the blank template
+            // now lives — and the fresh install with a spreadsheet in hand
+            // is exactly who they serve. Guarded from both directions —
+            // ImportWiringTests' brace-span scan and the empty-collection
+            // UI test.
             HStack(spacing: 8) {
                 if viewModel.totalCount > 0 {
                     sortControl
@@ -413,19 +455,18 @@ struct ItemListView: View {
         }
     }
 
-    /// 011's export menu grown into 012's overflow. The async intents fire
-    /// into Tasks and `isBusy` drives the spinner; Import opens the file
-    /// picker rather than an intent — the picked URL is what starts the
-    /// view-model flow.
+    /// 011's export menu grown into 012's overflow, with 013's Settings at
+    /// the bottom — since Amendment A a badge that opens `OverflowDropdown`
+    /// on the screen's host. The async intents fire into Tasks and
+    /// `isBusy` drives the spinner; Import opens the file picker and
+    /// Settings opens its sheet rather than an intent — navigation is view
+    /// state here.
     private var overflowControl: some View {
-        OverflowBadge(
-            isBusy: viewModel.isBusy,
-            canExport: viewModel.canExport,
-            exportCSV: { Task { await viewModel.exportCSV() } },
-            exportPDF: { Task { await viewModel.exportPDF() } },
-            importCSV: { isPickingImportFile = true },
-            getTemplate: { Task { await viewModel.exportBlankTemplate() } }
-        )
+        OverflowBadge(isBusy: viewModel.isBusy) {
+            openDropdown = .overflow
+        }
+        .dropdownAnchor(HeaderDropdown.overflow)
+        .accessibilityIdentifier("moreActions.items")
     }
 
     /// Design's "34 ITEMS · $18,420", plus a count of what the total leaves
@@ -447,9 +488,12 @@ struct ItemListView: View {
     /// machinery, so the badge simply hugs its label again).
     private var sortControl: some View {
         SortBadge(label: viewModel.sortOrder.label) {
-            isSortMenuOpen.toggle()
+            openDropdown = .sort
         }
+        .dropdownAnchor(HeaderDropdown.sort)
         .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+        .accessibilityHint("Opens sort options")
+        .accessibilityIdentifier("sortOptions.items")
     }
 
     // MARK: - Filter

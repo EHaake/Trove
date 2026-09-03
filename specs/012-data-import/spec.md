@@ -57,7 +57,10 @@ introduced and expected to accumulate actions — gains two:
 - **Get Blank Template…** — stages a header-only canonical CSV through
   the share sheet (`Trove-Items-Template.csv` /
   `Trove-Wishlist-Template.csv`), so a spreadsheet of gear can be
-  built against the exact expected columns.
+  built against the exact expected columns. *(Superseded in part by
+  `013-settings-menu`, 2026-09-01: the two templates moved to
+  Settings › Templates — same bytes, same names; this menu item is
+  gone, and Settings took its place in the menu.)*
 
 **The badge becomes always visible.** `011` hid the "…" with the rest
 of the header controls on an empty collection, which was right when
@@ -223,7 +226,8 @@ confirmation step's count is the guard against doing it by accident.
 
 ## Template and reference docs
 
-"Get Blank Template…" is the in-app half. The repo half is a
+"Get Blank Template…" — since `013`, the two Templates rows on the
+Settings screen — is the in-app half. The repo half is a
 README-style column reference (exact location decided at plan time)
 documenting each column's format, the blank-vs-default behavior above,
 and the Excel caveats (date rewriting, long serial numbers) — the
@@ -254,7 +258,9 @@ All made by the person, 2026-08-31, in the design conversation:
 8. Empty-collection access: **the "…" badge becomes always visible**,
    export actions stay disabled when there's nothing to export, and
    the menu gains **Get Blank Template…** — superseding `011`'s
-   hide-when-empty rule, recorded there.
+   hide-when-empty rule, recorded there. *(`013` moved the template
+   into Settings, 2026-09-01; the always-visible badge now serves
+   Import and Settings.)*
 
 Added 2026-08-31, during planning (escalated as spec-level, decided
 by the person):
@@ -276,7 +282,11 @@ by the person):
    collection is empty. Export as CSV/PDF keep exactly their existing
    disabled behavior; Import from CSV… and Get Blank Template… are
    always enabled. `011` `spec.md` criteria 1–2 carry a superseded-by
-   note pointing here.
+   note pointing here. *(Superseded in part by `013-settings-menu`
+   criterion 1, 2026-09-01: Get Blank Template… left this menu for
+   Settings › Templates; the always-visible badge and the export
+   gating stand, and Settings joined Import as the always-enabled
+   pair.)*
 2. [x] **Round trip**: a file exported by `011` from a populated
    collection imports into an empty collection with zero skips and
    zero defaults, and the resulting list in custom order shows the
@@ -322,7 +332,9 @@ by the person):
 12. [x] Get Blank Template… stages a header-only canonical CSV
     (correct name per list) through the share sheet, and that
     template — filled with one valid row in a spreadsheet app and
-    re-saved — imports cleanly.
+    re-saved — imports cleanly. *(Superseded in part by
+    `013-settings-menu`, 2026-09-02: the action is now Settings ›
+    Templates; the bytes, the names and the round trip stand.)*
 13. [x] Wishlist parity: criteria 2–12 hold on the wishlist against
     its 7-column schema, with `Added` restoring the wish's creation
     date.
@@ -347,9 +359,12 @@ broken and what went red). "Device" means the T017 simulator pass.
    `ImportWiringTests.theOverflowControlSitsOutsideEveryEmptyCollectionGate`
    (brace-span scan, both views) + the empty-collection UI test — one
    re-nest mutation turned both red;
-   `ExportWiringTests.theMenuCarriesFourActionsWithOnlyExportsGated`
-   (gating count pinned at exactly 2); 011 spec.md criteria 1–2 carry
-   the superseded-by note; device.
+   `ExportWiringTests.theMenuCarriesFiveItemsInThreeGroups` (renamed
+   at `013`/T013 when Settings joined the menu; since `013` Amendment
+   A/T021 it scans `OverflowDropdown.swift`, the gate pinned as
+   `isEnabled: canExport` on exactly the two export rows and the groups
+   as `startsGroup` on Import and Settings); 011 spec.md criteria 1–2
+   carry the superseded-by note; device.
 2. `aTroveExportRoundTripsLosslessly` / `aWishlistExportRoundTripsLosslessly`
    (serialization equality via `ExportSchema.row(from:)`, zero skips,
    zero defaults); order by `commitAppendsAtTheEndPreservingFileOrder`
@@ -384,7 +399,8 @@ broken and what went red). "Device" means the T017 simulator pass.
    `aLegacyAllZeroStoreStillLandsTheBatchAfterTheLegacyBlock`; device.
 10. `importIsViewIndependentOfTheActiveFilter`.
 11. `committingTheSameFileTwiceDuplicatesEveryRow`.
-12. Template twins in both VM test files (byte-exact BOM+header+CRLF,
+12. Template twins — since `013`/T010 living in
+    `SettingsViewModelTemplateTests`, with the intent — (byte-exact BOM+header+CRLF,
     pinned filenames, `canExport` ignored); the closed-loop tests
     (template + one hand row → exactly one record); device (68-byte
     share sheet). Honest partial: the fill-in-a-real-spreadsheet

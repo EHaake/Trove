@@ -1,6 +1,22 @@
 import SwiftData
 import SwiftUI
 
+/// The root Dashboard's dropdowns (013 Amendment A). One optional of this
+/// type is the screen's whole open-menu state — "one at a time" true by
+/// type, as on the lists.
+private enum DashboardDropdown: Hashable {
+    case overflow
+    case order
+
+    /// What the tap-outside layer calls itself to VoiceOver.
+    var dismissLabel: String {
+        switch self {
+        case .overflow: "Dismiss more actions"
+        case .order: "Dismiss order options"
+        }
+    }
+}
+
 /// The overview screen, per `design/screens/Trove Dashboard.png`: what the
 /// collection is worth, what it cost, what's missing from that figure, and how
 /// it splits by category.
@@ -11,11 +27,20 @@ import SwiftUI
 /// overview again rather than a second screen that could drift from it.
 struct DashboardView: View {
     @State private var viewModel: DashboardViewModel
+    @State private var openDropdown: DashboardDropdown?
+    /// 013 Amendment A: the "…" the mock always drew, holding Settings.
+    @State private var isShowingSettings = false
 
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(AppRouter.self) private var router
+    @Environment(\.storageMode) private var storageMode
+    @Environment(\.storageFallbackReason) private var storageFallbackReason
 
+    /// Kept for the Settings sheet as well as the view model: constructor-
+    /// injected the way `ContentView` injects this screen — one delivery
+    /// mechanism for the monitor, never a sheet reading an observable it
+    /// might not have.
     private let syncMonitor: SyncMonitor
 
     init(modelContext: ModelContext, scope: String = "", syncMonitor: SyncMonitor = .notSyncing) {
@@ -88,26 +113,90 @@ struct DashboardView: View {
             // underneath the still-animating spinner — see RefreshPacing.
             await RefreshPacing.hold()
         }
+        // 013's Settings sheet, reached from the root "…" since Amendment A.
+        // Owned here like the lists own theirs, for the same reason: a
+        // Delete All behind it has to show on this screen the moment it
+        // comes back — the sheet's dismissal runs the same load appear does.
+        .sheet(isPresented: $isShowingSettings, onDismiss: viewModel.load) {
+            NavigationStack {
+                SettingsView(
+                    modelContext: modelContext,
+                    syncMonitor: syncMonitor,
+                    storageMode: storageMode,
+                    storageFallbackReason: storageFallbackReason
+                )
+            }
+        }
+        // The root "…"'s dropdown floats over the whole screen from here —
+        // the same host as the lists' (013 Amendment A). The header scrolls
+        // on this screen, which is exactly why the host finds the badge by
+        // its anchor rather than by a fixed offset.
+        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
+            switch dropdown {
+            case .overflow:
+                // One row, deliberately a menu rather than a direct button
+                // (spec P13): the roadmap's Dashboard exports land here.
+                DropdownSurface {
+                    DropdownRow(title: "Settings") {
+                        isShowingSettings = true
+                    }
+                }
+            case .order:
+                // The same surface and rows Sort By is made of, under its
+                // own header (spec P12): the current order tinted and
+                // checked, no REORDER tag — there is no manual order here.
+                DropdownSurface(title: "ORDER BY") {
+                    ForEach(DashboardViewModel.BreakdownOrder.allCases) { order in
+                        DropdownRow(title: order.label, isSelected: order == viewModel.breakdownOrder) {
+                            viewModel.breakdownOrder = order
+                            viewModel.load()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Header
 
+    /// The wordmark and its meta line — and, on the root alone, the "…"
+    /// Design's mock drew at the top-right, built at 013 Amendment A: the
+    /// lists' bordered pill (spec P8), always visible, empty state included,
+    /// since both branches of `body` compose this header. The drill-down is
+    /// the same screen narrowed, with a navigation bar; one entry per tab.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if isRoot {
-                Text("TROVE")
-                    .font(theme.typography.wordmark)
-                    .tracking(theme.metrics.wordmarkTracking)
-                    .foregroundStyle(theme.colors.textPrimary)
-            } else {
-                CategoryPathLabel(path: viewModel.scope)
-                    .font(theme.typography.screenTitle)
-                    .foregroundStyle(theme.colors.textPrimary)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
+                if isRoot {
+                    Text("TROVE")
+                        .font(theme.typography.wordmark)
+                        .tracking(theme.metrics.wordmarkTracking)
+                        .foregroundStyle(theme.colors.textPrimary)
+                } else {
+                    CategoryPathLabel(path: viewModel.scope)
+                        .font(theme.typography.screenTitle)
+                        .foregroundStyle(theme.colors.textPrimary)
+                }
+
+                Text(headerMeta).monoLabel()
             }
 
-            Text(headerMeta).monoLabel()
+            Spacer()
+
+            if isRoot {
+                overflowControl
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Never busy: nothing runs from the Dashboard. The badge only opens the
+    /// one-row menu on the host.
+    private var overflowControl: some View {
+        OverflowBadge(isBusy: false) {
+            openDropdown = .overflow
+        }
+        .dropdownAnchor(DashboardDropdown.overflow)
+        .accessibilityIdentifier("moreActions.dashboard")
     }
 
     /// Design's "34 ITEMS · 4 CATEGORIES".
@@ -306,24 +395,25 @@ struct DashboardView: View {
         }
     }
 
+    /// Design's "BY VALUE" control: the mono label the mock draws, not a
+    /// pill (spec P12), opening the shared surface under ORDER BY on the
+    /// host. A system `Menu` from `001` to 013 Amendment A — the exact
+    /// variable-width-label-in-a-`Menu` shape T029c evicted from the list
+    /// headers, unreported here only because this label has no border to
+    /// lag. Converting it removed the risk rather than waiting for it.
     private var orderControl: some View {
-        Menu {
-            ForEach(DashboardViewModel.BreakdownOrder.allCases) { order in
-                Button {
-                    viewModel.breakdownOrder = order
-                    viewModel.load()
-                } label: {
-                    if viewModel.breakdownOrder == order {
-                        Label(order.label, systemImage: "checkmark")
-                    } else {
-                        Text(order.label)
-                    }
-                }
-            }
+        Button {
+            openDropdown = .order
         } label: {
-            Text(viewModel.breakdownOrder.label).monoLabel(color: theme.colors.textQuiet)
+            Text(viewModel.breakdownOrder.label)
+                .monoLabel(color: theme.colors.textQuiet)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .dropdownAnchor(DashboardDropdown.order)
         .accessibilityLabel("Order categories \(viewModel.breakdownOrder.label)")
+        .accessibilityHint("Opens order options")
+        .accessibilityIdentifier("orderOptions.dashboard")
     }
 
     /// Design's proportion bar. Widths track each category's share of value, so

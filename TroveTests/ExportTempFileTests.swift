@@ -45,6 +45,46 @@ struct ExportTempFileTests {
         #expect(remaining == [second.lastPathComponent])
     }
 
+    /// 013's set path: one share sheet, several files. The directory is
+    /// purged once, then every member is written — both present afterwards,
+    /// exact bytes, URLs in input order.
+    @Test func exportFilesPreparesOnceAndWritesEveryFile() async throws {
+        let (service, scratch) = try makeService()
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        let wishlist = CSVTable(headers: ["B"], rows: [["2"]])
+
+        let urls = try await service.exportFiles([
+            .csv(table, filename: "Trove-Items-2026-08-30.csv"),
+            .csv(wishlist, filename: "Trove-Wishlist-2026-08-30.csv"),
+        ])
+
+        #expect(urls.map(\.lastPathComponent)
+            == ["Trove-Items-2026-08-30.csv", "Trove-Wishlist-2026-08-30.csv"])
+        #expect(try Data(contentsOf: urls[0]) == Data(CSVWriter.write(table).utf8))
+        #expect(try Data(contentsOf: urls[1]) == Data(CSVWriter.write(wishlist).utf8))
+        let remaining = try FileManager.default.contentsOfDirectory(atPath: scratch.path).sorted()
+        #expect(remaining == ["Trove-Items-2026-08-30.csv", "Trove-Wishlist-2026-08-30.csv"])
+    }
+
+    /// `aSecondExportLeavesExactlyOneFileSet`, generalized to sets: nothing
+    /// accumulates across them either.
+    @Test func aSecondFileSetLeavesOnlyTheSecondSet() async throws {
+        let (service, scratch) = try makeService()
+        defer { try? FileManager.default.removeItem(at: scratch) }
+
+        _ = try await service.exportFiles([
+            .csv(table, filename: "Trove-Items-2026-08-30.csv"),
+            .csv(table, filename: "Trove-Wishlist-2026-08-30.csv"),
+        ])
+        let second = try await service.exportFiles([
+            .csv(table, filename: "Trove-Items-2026-08-31.csv"),
+            .csv(table, filename: "Trove-Wishlist-2026-08-31.csv"),
+        ])
+
+        let remaining = try FileManager.default.contentsOfDirectory(atPath: scratch.path).sorted()
+        #expect(remaining == second.map(\.lastPathComponent).sorted())
+    }
+
     @Test func purgeRemovesEverythingAndToleratesAMissingDirectory() async throws {
         let (service, scratch) = try makeService()
         defer { try? FileManager.default.removeItem(at: scratch) }
@@ -70,6 +110,15 @@ struct ExportTempFileTests {
         FileExportService.purgeAtLaunch()
 
         #expect(!FileManager.default.fileExists(atPath: stale.path))
+    }
+
+    /// 013/T002: the single-file initializer the list view models keep
+    /// using is a one-element set — the two shapes can't disagree.
+    @Test func aSingleStagedFileIsAOneElementSet() {
+        let url = URL(filePath: "/dev/null/Trove-Items-2026-08-30.csv")
+        let staged = StagedExport(url: url, filename: "Trove-Items-2026-08-30.csv")
+        #expect(staged.urls == [url])
+        #expect(staged.filenames == ["Trove-Items-2026-08-30.csv"])
     }
 
     @Test func filenamesCarryTheLocalDay() throws {

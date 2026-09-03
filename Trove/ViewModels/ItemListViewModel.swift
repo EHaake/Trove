@@ -339,8 +339,14 @@ final class ItemListViewModel {
         if showsOnlyUnvalued { parts.append("Not yet valued") }
         let query = SearchMatching.normalized(searchText)
         if !query.isEmpty { parts.append("Search: \u{201C}\(query)\u{201D}") }
-        return parts.isEmpty ? "All items" : parts.joined(separator: " · ")
+        return parts.isEmpty ? Self.wholeCoverageLabel : parts.joined(separator: " · ")
     }
+
+    /// The document title and the unfiltered coverage label, named once so
+    /// export-everything (`SettingsViewModel`, 013) and this list's own
+    /// export can't drift — criterion 5's byte-identity rests on it.
+    static let documentTitle = "Owned Items"
+    static let wholeCoverageLabel = "All items"
 
     /// Exports the visible items, in visible order, as the canonical CSV.
     /// Records are built from `items` as-is — never a refetch: visible order
@@ -374,7 +380,7 @@ final class ItemListViewModel {
         let records = items.map { ItemExportRecord(item: $0) }
         let document = PDFDocumentModel(
             cover: CoverSummary(
-                title: "Owned Items",
+                title: Self.documentTitle,
                 coverageLabel: exportCoverageLabel,
                 generatedAt: .now,
                 itemCount: items.count,
@@ -476,28 +482,9 @@ final class ItemListViewModel {
         importPresentation = nil
     }
 
-    /// Stages the header-only canonical template through the existing
-    /// export path — the template *is* an export, so no new service
-    /// surface (plan §View-model surface). Deliberately NOT gated on
-    /// `canExport`: an empty collection is the template's whole audience
-    /// (criterion 1). Uses the export progress/staging states because it
-    /// is one.
-    func exportBlankTemplate() async {
-        guard !isBusy else { return }
-        isExporting = true
-        defer { isExporting = false }
-
-        let filename = ExportFilename.itemsTemplate
-        do {
-            let url = try await exportService.exportCSV(
-                CSVTable(headers: ExportSchema.itemHeaders, rows: []),
-                filename: filename
-            )
-            stagedExport = StagedExport(url: url, filename: filename)
-        } catch {
-            exportFailureMessage = ExportCopy.failureMessage
-        }
-    }
+    // 012's `exportBlankTemplate()` lived here until 013 moved the template
+    // into Settings (`SettingsViewModel.exportItemsTemplate`); its tests
+    // moved with it.
 
     /// Commits the staged preview: real items built from the validated
     /// records, appended to the end of custom order. On the main actor, on
@@ -583,30 +570,16 @@ final class ItemListViewModel {
     }
 
     private func isOrderedBefore(_ lhs: Item, _ rhs: Item) -> Bool {
-        // Attribute first, the user's own manual order on any tie — spec.md's
-        // confirmed rule for every non-"Custom" sort, and the same shared
-        // helper the wishlist reads so the two lists can't drift. plan.md's
-        // Resolved decision 5 left this open and the first implementation
-        // fell back to name instead; T039's review caught the divergence and
-        // the 2026-08-30 close-out decided it: manual order, both lists.
-        if lhs.sortOrder != rhs.sortOrder || attributeOrder(lhs, rhs) != nil {
-            return ManualOrderHelper.areInOrder(lhs, rhs, primary: attributeOrder)
-        }
-
-        // Tied all the way down — same attribute value *and* a shared manual
-        // position, which is the real state of a pre-`010` store: every
-        // legacy item at `sortOrder` 0 until the first drag renumbers. The
-        // launch-time backfill that used to assign positions here was
-        // removed at the T039 close-out (2026-08-30): its per-device flag
-        // raced CloudKit sync, so a second device's upgrade could rewrite an
-        // arrangement the first device had already synced. Falling back to
-        // `createdAt` at *sort time* shows the same order the backfill wrote
-        // — the order things were added — with no migration write to race.
-        // `id` beneath it keeps even same-instant creations deterministic.
-        if lhs.createdAt != rhs.createdAt {
-            return lhs.createdAt < rhs.createdAt
-        }
-        return lhs.id.uuidString < rhs.id.uuidString
+        // Attribute first, the user's own order on any tie — spec.md's
+        // confirmed rule for every non-"Custom" sort (plan.md's Resolved
+        // decision 5 left this open; the first implementation fell back to
+        // name, T039's review caught the divergence, and the 2026-08-30
+        // close-out decided it: manual order, both lists). The order itself
+        // — position, then the creation-then-id tie-break a pre-`010` store
+        // needs — lives in `ManualOrderHelper` since 013, so "Custom" here
+        // and Settings' export-everything sort with one function rather
+        // than two that agree.
+        attributeOrder(lhs, rhs) ?? ManualOrderHelper.areInCustomOrder(lhs, rhs)
     }
 
     /// The active sort's own comparison, `nil` on a tie — the shape

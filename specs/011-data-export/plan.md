@@ -23,6 +23,7 @@ no UIKit anywhere in the export module. Delivery is the system share
 sheet via a `UIViewControllerRepresentable`-wrapped
 `UIActivityViewController`, this spec's single flagged UIKit exception.
 Temp files live in one dedicated directory purged before every export
+set — a list export being a set of one, since `013`'s `exportFiles` —
 and at launch.
 
 ## Skeptical review record
@@ -325,6 +326,14 @@ picker" is the custom `SortBadge` inside each screen's hand-built header
   overlay-and-catcher state machine to each screen for no design gain;
   if the badge's border ever tears the way T029c's did, that custom
   dropdown is the known fallback.
+  *(2026-09-02, `013` Amendment A: the fallback was taken — not because
+  the border tore, which it never did, but to homogenize the two header
+  badges on one surface, the lists' Sort By dropdown, under the rule
+  "bespoke inside the page, system in the bars"; see `013`'s plan
+  addendum. The one state machine is now a shared screen-level host,
+  not one per screen. This section's `Divider()`/`.disabled(!canExport)`
+  scans became `startsGroup`/`isEnabled: canExport` counts on
+  `OverflowDropdown.swift`.)*
 - **[escalated → decided] Visibility**: the badge appears exactly when
   the sort badge does (`totalCount > 0`) — on an entirely empty
   collection the whole control row is hidden and the empty state owns
@@ -428,10 +437,14 @@ Menu strings, exactly: **Export as CSV…**, **Export as PDF…**.
   requires AirDrop/Mail/anything-the-sheet-offers.
 - **Temp lifecycle** (criterion 10): files are written under
   `tmp/Exports/`; the live service purges that directory **before each
-  new export** and **once at app launch** (called from app startup). At
-  most the latest file set ever exists — nothing accumulates — and the
-  OS reclaims `tmp` independently. Canceling the share sheet needs no
-  cleanup hook; the next export or launch sweeps it.
+  new export set** and **once at app launch** (called from app startup).
+  At most the latest file set ever exists — nothing accumulates — and
+  the OS reclaims `tmp` independently. Canceling the share sheet needs
+  no cleanup hook; the next export or launch sweeps it. *(Restated
+  2026-09-01 at `013`/T001: "before each new export" became "before
+  each new export **set**" when `ExportService` gained `exportFiles` —
+  several files for one share sheet, purged once and written together.
+  A list export is a set of one; the rule is the same rule.)*
 
 ## Files
 

@@ -17,7 +17,7 @@ struct ExportConcurrencyTests {
         var sawMainThread: [Bool] { state.withLock { $0 } }
     }
 
-    @Test func generationRunsOffTheMainThreadForBothFormats() async throws {
+    @Test func generationRunsOffTheMainThreadForEveryEntryPoint() async throws {
         let probe = Probe()
         let scratch = FileManager.default.temporaryDirectory
             .appending(path: "ExportConcurrencyTests-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -44,8 +44,14 @@ struct ExportConcurrencyTests {
         #expect(sampledOnMainThread())
         _ = try await service.exportCSV(CSVTable(headers: ["A"], rows: [["1"]]), filename: "probe.csv")
         _ = try await service.exportPDF(minimalDocument, filename: "probe.pdf")
+        // 013's set path is a third `@concurrent` requirement with the same
+        // silent failure mode; the probe fires once per generation body.
+        _ = try await service.exportFiles([
+            .csv(CSVTable(headers: ["A"], rows: [["1"]]), filename: "set.csv"),
+            .pdf(minimalDocument, filename: "set.pdf"),
+        ])
 
-        #expect(probe.sawMainThread == [false, false])
+        #expect(probe.sawMainThread == [false, false, false])
     }
 
     private nonisolated func sampledOnMainThread() -> Bool { Thread.isMainThread }
