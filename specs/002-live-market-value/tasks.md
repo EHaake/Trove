@@ -43,6 +43,21 @@ anywhere in this spec. **No test opens a network connection**, ever
 (CLAUDE.md's Networking rule, T000). Tasks marked **[person]** block
 on something only the person has.
 
+Cadence (amended 2026-09-03, when the constitution adopted the
+product-owner involvement level): the `skeptical-reviewer` reviews after
+each foundational task, scoped to that task's diff, the plan section it
+implements, and the acceptance criteria it serves; its verdicts stay
+between the implementer and the reviewer, and only "needs the person"
+comes forward. Execution pauses for the person after each phase, and
+whenever something unexpected bears on spec adherence — never after an
+individual task. Every pause produces a report in this shape, in this
+order: **why this pause** (a phase boundary, a spec-adherence question,
+or an escalation trigger — one line); **what you can now do** (behavior
+that exists, as a user would experience it, so attestation is
+possible); **where execution deviated from the spec, and why** (every
+place, never silently); **what needs your decision** (product questions
+only — technical detail lives in `plan.md` and the commit log).
+
 ## Phase 0 — The constitution
 
 - [x] **T000 — `CLAUDE.md` amended, own commit (spec Decision 19).**
