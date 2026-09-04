@@ -1,0 +1,121 @@
+{
+  "comparison_shopping_pages": [
+    {
+      "id": 126161,
+      "slug": "fender-american-professional-ii-telecaster",
+      "title": "Fender American Professional II Telecaster",
+      "brand": {
+        "name": "Fender"
+      },
+      "photos": [
+        {
+          "_links": {
+            "small_crop": {
+              "href": "https://rvb-img.reverb.com/i/s--wIG_Kown--/quality=medium-low,height=400,width=400,fit=cover,gravity=bottom/wh9wg67nlpmflmb77xic.jpg"
+            }
+          }
+        }
+      ],
+      "used_low_price": {
+        "amount_cents": 100000,
+        "currency": "USD"
+      },
+      "used_total": 109,
+      "new_low_price": {
+        "amount_cents": 153900,
+        "currency": "USD"
+      },
+      "new_total": 229,
+      "root_category_slug": "electric-guitars",
+      "_links": {
+        "web": {
+          "href": "https://reverb.com/p/fender-american-professional-ii-telecaster"
+        },
+        "self": {
+          "href": "https://api.reverb.com/api/comparison_shopping_pages/126161"
+        },
+        "listings": {
+          "href": "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855&cp_ids%5B%5D=320856&cp_ids%5B%5D=320857&cp_ids%5B%5D=320858&cp_ids%5B%5D=320859&cp_ids%5B%5D=320860&cp_ids%5B%5D=320861&cp_ids%5B%5D=320862&cp_ids%5B%5D=320863&cp_ids%5B%5D=320864&cp_ids%5B%5D=320865&cp_ids%5B%5D=361336&cp_ids%5B%5D=362108&cp_ids%5B%5D=491887"
+        }
+      }
+    },
+    {
+      "id": 126159,
+      "slug": "fender-american-professional-ii-telecaster-deluxe",
+      "title": "Fender American Professional II Telecaster Deluxe",
+      "brand": {
+        "name": "Fender"
+      },
+      "photos": [
+        {
+          "_links": {
+            "small_crop": {
+              "href": "https://rvb-img.reverb.com/i/s--ly2oAlcq--/quality=medium-low,height=400,width=400,fit=cover,gravity=bottom/masd6cvhmebpdukehkvq.jpg"
+            }
+          }
+        }
+      ],
+      "used_low_price": {
+        "amount_cents": 110000,
+        "currency": "USD"
+      },
+      "used_total": 35,
+      "new_low_price": {
+        "amount_cents": 168999,
+        "currency": "USD"
+      },
+      "new_total": 44,
+      "root_category_slug": "electric-guitars",
+      "_links": {
+        "web": {
+          "href": "https://reverb.com/p/fender-american-professional-ii-telecaster-deluxe"
+        },
+        "self": {
+          "href": "https://api.reverb.com/api/comparison_shopping_pages/126159"
+        },
+        "listings": {
+          "href": "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320845&cp_ids%5B%5D=320846&cp_ids%5B%5D=320847&cp_ids%5B%5D=320848&cp_ids%5B%5D=320849&cp_ids%5B%5D=320850"
+        }
+      }
+    },
+    {
+      "id": 6663,
+      "slug": "fender-american-pro-series-telecaster",
+      "title": "Fender American Professional Series Telecaster",
+      "brand": {
+        "name": "Fender"
+      },
+      "photos": [
+        {
+          "_links": {
+            "small_crop": {
+              "href": "https://rvb-img.reverb.com/i/s--S_GrNpGP--/quality=medium-low,height=400,width=400,fit=cover,gravity=bottom/j1d9qzt0qz7xxjba2xx1.png"
+            }
+          }
+        }
+      ],
+      "used_low_price": {
+        "amount_cents": 76400,
+        "currency": "USD"
+      },
+      "used_total": 40,
+      "new_low_price": {
+        "amount_cents": 229518,
+        "currency": "USD"
+      },
+      "new_total": 1,
+      "root_category_slug": "electric-guitars",
+      "_links": {
+        "web": {
+          "href": "https://reverb.com/p/fender-american-pro-series-telecaster"
+        },
+        "self": {
+          "href": "https://api.reverb.com/api/comparison_shopping_pages/6663"
+        },
+        "listings": {
+          "href": "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=59009&cp_ids%5B%5D=59010&cp_ids%5B%5D=59011&cp_ids%5B%5D=59012&cp_ids%5B%5D=59013&cp_ids%5B%5D=59014&cp_ids%5B%5D=59015&cp_ids%5B%5D=59016&cp_ids%5B%5D=59017&cp_ids%5B%5D=59018&cp_ids%5B%5D=59019&cp_ids%5B%5D=142503&cp_ids%5B%5D=199413&cp_ids%5B%5D=248043"
+        }
+      }
+    }
+  ]
+}

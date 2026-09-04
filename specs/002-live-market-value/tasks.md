@@ -193,7 +193,27 @@ on something only the person has.
   *Done when*: green and mutation-red; full suite green with count; the
   app launches under `-uiTesting` and every preview renders.
 
-- [ ] **T002 — The fixture script and the recorded fixtures. [person: runs it]**
+- [x] **T002 — The fixture script and the recorded fixtures. [person: runs it]**
+  *Done (2026-09-03, two commits)*: `scripts/record-reverb-fixtures.sh`
+  (python's `urllib` under a bash shim, no third-party anything) and
+  the three hand-built fixtures first (`73320dd`), so the person could
+  pull it; then the recording, run on the Mac at the person's word
+  while they followed remotely — their own connection wouldn't run it.
+  Twelve files: the search (three candidates, 126161 first), the
+  product (`used_total` 109, the fourteen-`cp_ids` listings link, the
+  slug-based web link), the 404 body, and seven listing pages (50 × 6
+  + 38 = 338; `next` present on p1–p6, absent on p7; every listing
+  trimmed to `id`, `title`, `price`, `listing_currency`, `condition`,
+  `state`). 168 KB. The README's oracle block, USD by both fields:
+  excellent n=35 median 139999 low 115200 high 325000; very-good 14;
+  mint-inventory 14; mint 7; b-stock 5; good 3; brand-new 182; owned
+  buckets new 208 / excellent 35 / good 17 / fair 0 / broken 0; wanted
+  **73** (median 149999) — the plan's 151 had ignored the currency
+  filter and is corrected there with the date; no slug outside the
+  known set. The four sample-row ids chosen and recorded (the Strat's
+  abbreviated CSV name found nothing; the spelled-out name did — a
+  note for the picker's empty-state copy). Nothing under `Trove/`
+  changed; every file parses.
   Per plan §3 (Fixtures). New `scripts/record-reverb-fixtures.sh`
   (curl + a python trim; the three headers; `sleep` between calls):
   writes `TroveTests/Fixtures/Reverb/csps-search-telecaster.json`

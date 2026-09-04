@@ -1,0 +1,617 @@
+{
+  "total": 338,
+  "current_page": 7,
+  "per_page": 50,
+  "total_pages": 7,
+  "listings": [
+    {
+      "id": 37799033,
+      "title": "Fender American Professional II Telecaster 3 Color Sunburst 2020 with case",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 38082251,
+      "title": "Fender American Professional II Telecaster Guitar - Maple Fingerboard, Sienna Sunburst w/ Case",
+      "price": {
+        "amount_cents": 173999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 38050563,
+      "title": "Fender American Professional II Telecaster - Black with Maple Fingerboard",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 38050587,
+      "title": "Fender American Professional II Telecaster - Mystic Surf Green with Rosewood Fingerboard",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 38050571,
+      "title": "Fender American Professional II Telecaster - Sienna Sunburst with Maple Fingerboard",
+      "price": {
+        "amount_cents": 173999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 38050586,
+      "title": "Fender American Professional II Telecaster - 3-color Sunburst with Rosewood Fingerboard",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 38050568,
+      "title": "Fender American Professional II Telecaster - 3-color Sunburst with Maple Fingerboard",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 38050584,
+      "title": "Fender American Professional II Telecaster - Dark Night with Rosewood Fingerboard",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 38050560,
+      "title": "Fender American Professional II Telecaster - Butterscotch Blonde with Maple Fingerboard",
+      "price": {
+        "amount_cents": 173999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 37977586,
+      "title": "Fender American Professional II Telecaster, Rosewood Fingerboard, Mystic Surf Green w. Deluxe Molde",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 37669057,
+      "title": "Fender American Professional II Telecaster®, Maple Fingerboard, Miami Blue w/ Deluxe Molded Case",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 37743897,
+      "title": "Fender American Professional II Telecaster Black 2021 with Fender case",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 37475986,
+      "title": "Fender American Professional II Telecaster, Maple FB, Roasted Pine",
+      "price": {
+        "amount_cents": 193999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 37369873,
+      "title": "Fender American Professional II Telecaster, Rosewood Fingerboard - 3-Color Sunburst",
+      "price": {
+        "amount_cents": 181644,
+        "currency": "USD"
+      },
+      "listing_currency": "CAD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 37358409,
+      "title": "Fender American Professional II Telecaster - Maple Fingerboard, Miami Blue",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36232459,
+      "title": "Fender American Professional II Telecaster Guitar Rosewood Fingerboard, Mercury w/ Case",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 37176984,
+      "title": "Fender American Professional II Telecaster® Electric Guitar, Black",
+      "price": {
+        "amount_cents": 183999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36292208,
+      "title": "Fender American Professional II Telecaster Electric Guitar, Rosewood Fingerboard, 3-Color Sunburst",
+      "price": {
+        "amount_cents": 183999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36238377,
+      "title": "Fender American Professional II Telecaster, Rosewood Fingerboard, Olympic White",
+      "price": {
+        "amount_cents": 183999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36828999,
+      "title": "Fender American Professional II Telecaster - Black w/ Maple FB",
+      "price": {
+        "amount_cents": 183999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36828998,
+      "title": "Fender American Professional II Telecaster - 3-Color Sunburst w/Rosewood FB",
+      "price": {
+        "amount_cents": 183999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36829001,
+      "title": "Fender American Professional II Telecaster - Dark Night w/ Rosewood FB",
+      "price": {
+        "amount_cents": 183999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36829000,
+      "title": "Fender American Professional II Telecaster - 3-Color Sunburst w/ Maple FB",
+      "price": {
+        "amount_cents": 183999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36678795,
+      "title": "Fender American Professional II Telecaster Guitar - Butterscotch Blonde",
+      "price": {
+        "amount_cents": 193999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36678790,
+      "title": "Fender American Professional II Telecaster Guitar - Dark Night",
+      "price": {
+        "amount_cents": 183999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36646504,
+      "title": "Fender American Professional II Telecaster RW 3-color Sunburst",
+      "price": {
+        "amount_cents": 183999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36600410,
+      "title": "Fender American Professional II Telecaster Roasted Pine with Fender Case.",
+      "price": {
+        "amount_cents": 173999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36489086,
+      "title": "Fender American Professional II Telecaster® Maple Fingerboard, Butterscotch Blonde",
+      "price": {
+        "amount_cents": 253955,
+        "currency": "USD"
+      },
+      "listing_currency": "GBP",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36292209,
+      "title": "Fender American Professional II Telecaster Electric Guitar, Rosewood Fingerboard, Dark Night",
+      "price": {
+        "amount_cents": 183999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36144859,
+      "title": "Fender American Professional II Telecaster Guitar Rosewood Fingerboard, Dark Night w/ Case",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36251956,
+      "title": "FENDER - American Professional 2 II Telecaster MN Butterscotch Blonde 0113942750",
+      "price": {
+        "amount_cents": 212646,
+        "currency": "USD"
+      },
+      "listing_currency": "EUR",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36239428,
+      "title": "Fender American Professional II Telecaster - Roasted Pine w/ Maple FB",
+      "price": {
+        "amount_cents": 193999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36239429,
+      "title": "Fender American Professional II Telecaster - Butterscotch Blonde w/ Maple FB",
+      "price": {
+        "amount_cents": 193999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36238144,
+      "title": "Fender American Professional II Telecaster Guitar - Roasted Pine",
+      "price": {
+        "amount_cents": 193999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36236742,
+      "title": "Fender American Professional II Telecaster Electric Guitar, Maple Fingerboard, Miami Blue",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36234906,
+      "title": "Fender American Professional II Telecaster Rosewood - Mystic Surf Green",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36151609,
+      "title": "Fender American Professional II Telecaster Olympic White",
+      "price": {
+        "amount_cents": 183999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 36151611,
+      "title": "Fender American Professional II Telecaster Butterscotch Blonde",
+      "price": {
+        "amount_cents": 193999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    }
+  ],
+  "_links": {}
+}

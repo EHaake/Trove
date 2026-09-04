@@ -1,0 +1,39 @@
+{
+  "id": 126161,
+  "slug": "fender-american-professional-ii-telecaster",
+  "title": "Fender American Professional II Telecaster",
+  "brand": {
+    "name": "Fender"
+  },
+  "photos": [
+    {
+      "_links": {
+        "small_crop": {
+          "href": "https://rvb-img.reverb.com/i/s--wIG_Kown--/quality=medium-low,height=400,width=400,fit=cover,gravity=bottom/wh9wg67nlpmflmb77xic.jpg"
+        }
+      }
+    }
+  ],
+  "used_low_price": {
+    "amount_cents": 100000,
+    "currency": "USD"
+  },
+  "used_total": 109,
+  "new_low_price": {
+    "amount_cents": 153900,
+    "currency": "USD"
+  },
+  "new_total": 229,
+  "root_category_slug": "electric-guitars",
+  "_links": {
+    "web": {
+      "href": "https://reverb.com/p/fender-american-professional-ii-telecaster"
+    },
+    "self": {
+      "href": "https://api.reverb.com/api/comparison_shopping_pages/126161"
+    },
+    "listings": {
+      "href": "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855&cp_ids%5B%5D=320856&cp_ids%5B%5D=320857&cp_ids%5B%5D=320858&cp_ids%5B%5D=320859&cp_ids%5B%5D=320860&cp_ids%5B%5D=320861&cp_ids%5B%5D=320862&cp_ids%5B%5D=320863&cp_ids%5B%5D=320864&cp_ids%5B%5D=320865&cp_ids%5B%5D=361336&cp_ids%5B%5D=362108&cp_ids%5B%5D=491887"
+    }
+  }
+}
