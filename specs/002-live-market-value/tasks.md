@@ -368,7 +368,50 @@ on something only the person has.
   *Done when*: green, mutations recorded, full suite green with count.
   **Blocks until the address is supplied.**
 
-- [ ] **T005 — Computation, trend, freshness, adoption.**
+- [x] **T005 — Computation, trend, freshness, adoption.**
+  *Done (2026-09-03)*: `MarketFigure.swift` — `MarketSubject`,
+  `MarketConditionMap` (Q1's buckets; `newStockSlugs`; `.wanted` = not
+  new stock, failure-open), `MarketYearCoverage` (a hand parser, no
+  regex: four digits, `YYYY - YYYY`, `YYYY - Present` to the current
+  year, `YYYYs`; anything else a mismatch; blank unstated), `YearScope`
+  (`.any` / `.year` / `.allYears(fallbackFrom:)`), `MarketFigure`,
+  `MarketReading` (withheld carries the scope it ended on),
+  `MarketFigureComputation.compute(listings:subject:year:product:fetchedAt:now:)`
+  and `median(sortedCents:)`; `MarketTrend.swift` — `MarketHistoryEntry`,
+  `MarketTrend` (integer arithmetic, most-recent qualifying previous),
+  `MarketFreshness` (`isCurrent`, `currentMedianCents` — the one
+  predicate), `MarketAdoption` (`NSDecimalRound` `.bankers`). Tests: 34
+  in 3 suites — the oracle from the README (excellent 34 / 139999 /
+  115200 / 325000; good 17; new 208; wanted 72 with `used_total` 108
+  recorded as larger, not equal; fair and broken withheld at 0 with
+  100000), every recorded slug known, two vs three, the even median,
+  dollars only, unknown slug out for owned and in for wanted, new stock
+  never for wanted, disjoint non-empty buckets covering exactly the
+  known set, truncation carried; the D-18-shaped set narrowed to 1975 →
+  17 (twelve in range, three singles, two unstated; the six 1973s out)
+  and to 1999 → the all-years fallback over 23; no year → the oracle
+  untouched; the Telecaster narrowed to 2021 against an expected count
+  derived from the raw fixture years by an independent list (24 of 34);
+  a withheld reading carrying `.allYears`; the coverage table with the
+  three recorded oddities plus `seventies`, `19750`, `197`, a backwards
+  range; the trend at 7 d exactly and 7 d − 1 s, ±5 % on both sides
+  (1050 up, 1049 flat, 950 down, 951 flat), the 20/8/1-day pick, order
+  independence, one point / too close / zero previous; freshness at
+  30 d − 1 s and 30 d; the predicate nil when withheld or stale;
+  adoption's formatter-equality table over eight values and the
+  half-to-even pair (145_050 → 145_000, 145_150 → 145_200). Mutations,
+  each reverted: **M1** mean for median → five oracle tests red; **M2**
+  currency filter dropped → seven red (excellent 45 not 34, wanted 103);
+  **M3** `good` in two buckets → the disjointness test red and the fair
+  withheld case red; **M4** `.wanted` failure-closed → the unknown-slug
+  test red; **M5** oldest previous point → the 20/8/1 test red (`.up`
+  not `.flat`); **M6** `>` at the seven-day boundary → three red; **M7**
+  adoption half-up → the equality table red at 145_050 and 50, and the
+  pair test; **M8** unreadable → `.unstated` → the six oddities and the
+  backwards range red; **M9** unstated excluded → the D-18 count 15 not
+  17, the Telecaster 14 not 24; **M10** withhold instead of fall back →
+  the two fallback tests red. Full unit suite: **859 tests in 125
+  suites, 858 passed** — the one red is still T004's address guard.
   Per plan §4. New `Trove/Market/MarketFigure.swift`
   (`MarketSubject`, `MarketConditionMap` per Q1 — `newStockSlugs`,
   failure-open `.wanted`; `MarketFigureComputation.compute`; `median`)
