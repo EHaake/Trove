@@ -1,5 +1,5 @@
 {
-  "total": 338,
+  "total": 337,
   "current_page": 1,
   "per_page": 50,
   "total_pages": 7,
@@ -12,6 +12,7 @@
         "currency": "USD"
       },
       "listing_currency": "GBP",
+      "year": "2020 - Present",
       "condition": {
         "slug": "very-good",
         "display_name": "Very Good"
@@ -28,6 +29,7 @@
         "currency": "USD"
       },
       "listing_currency": "GBP",
+      "year": "2020 - Present",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -44,6 +46,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - Present",
       "condition": {
         "slug": "very-good",
         "display_name": "Very Good"
@@ -60,6 +63,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -76,6 +80,7 @@
         "currency": "USD"
       },
       "listing_currency": "JPY",
+      "year": "2020",
       "condition": {
         "slug": "very-good",
         "display_name": "Very Good"
@@ -92,6 +97,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - 2023",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -108,6 +114,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -124,6 +131,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - Present",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -140,6 +148,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - 2023",
       "condition": {
         "slug": "very-good",
         "display_name": "Very Good"
@@ -156,6 +165,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -172,6 +182,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2022",
       "condition": {
         "slug": "b-stock",
         "display_name": "B-Stock"
@@ -188,6 +199,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - Present",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -204,6 +216,7 @@
         "currency": "USD"
       },
       "listing_currency": "GBP",
+      "year": "2020 - Present",
       "condition": {
         "slug": "mint",
         "display_name": "Mint"
@@ -220,6 +233,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "good",
         "display_name": "Good"
@@ -236,6 +250,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2021",
       "condition": {
         "slug": "very-good",
         "display_name": "Very Good"
@@ -252,6 +267,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -268,6 +284,7 @@
         "currency": "USD"
       },
       "listing_currency": "GBP",
+      "year": "",
       "condition": {
         "slug": "very-good",
         "display_name": "Very Good"
@@ -284,6 +301,7 @@
         "currency": "USD"
       },
       "listing_currency": "GBP",
+      "year": "2022",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -300,6 +318,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "very-good",
         "display_name": "Very Good"
@@ -316,6 +335,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "2020 - Present",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -332,6 +352,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - 2023",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -348,6 +369,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2025",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -364,6 +386,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -380,6 +403,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2022",
       "condition": {
         "slug": "very-good",
         "display_name": "Very Good"
@@ -396,6 +420,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "mint",
         "display_name": "Mint"
@@ -412,6 +437,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - Present",
       "condition": {
         "slug": "very-good",
         "display_name": "Very Good"
@@ -428,6 +454,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -444,6 +471,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -460,6 +488,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -476,6 +505,7 @@
         "currency": "USD"
       },
       "listing_currency": "CAD",
+      "year": "2022",
       "condition": {
         "slug": "good",
         "display_name": "Good"
@@ -492,6 +522,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "2022",
       "condition": {
         "slug": "mint",
         "display_name": "Mint"
@@ -508,6 +539,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -524,6 +556,7 @@
         "currency": "USD"
       },
       "listing_currency": "GBP",
+      "year": "2023",
       "condition": {
         "slug": "very-good",
         "display_name": "Very Good"
@@ -540,6 +573,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2023",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -556,6 +590,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -572,6 +607,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "2024",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -588,6 +624,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2023",
       "condition": {
         "slug": "very-good",
         "display_name": "Very Good"
@@ -604,6 +641,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - Present",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -620,6 +658,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2025",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -636,6 +675,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -652,6 +692,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - Present",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -668,6 +709,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - Present",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -684,6 +726,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -700,6 +743,7 @@
         "currency": "USD"
       },
       "listing_currency": "GBP",
+      "year": "2020 - Present",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -716,6 +760,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2026",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -732,6 +777,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -748,6 +794,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -764,6 +811,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2024",
       "condition": {
         "slug": "mint-inventory",
         "display_name": "Mint"
@@ -780,6 +828,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - Present",
       "condition": {
         "slug": "excellent",
         "display_name": "Excellent"
@@ -796,6 +845,7 @@
         "currency": "USD"
       },
       "listing_currency": "JPY",
+      "year": "",
       "condition": {
         "slug": "good",
         "display_name": "Good"

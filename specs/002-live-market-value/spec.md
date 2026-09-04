@@ -17,6 +17,12 @@ made by the person against `plan.md`'s escalations, and criteria 10,
 the Copy section are reworded to match. `plan.md`'s proposals Q1–Q20
 become decisions on plan approval, as P1–P17 did on this spec's.
 
+Amended again 2026-09-03, during implementation (after T002): the
+person folded **year narrowing** into this spec as Decision 29 — an
+optional year on both kinds of item narrows the listings a figure is
+computed from — with the details proposed as P18–P22 and the plan's
+Amendment A. Criteria 21–22 added; criterion 19 and P17 reworded.
+
 Depends on: `001-core-inventory` (the `Item` and `WishlistItem` models,
 the optional manual value whose `nil` means "unvalued", the Sell Plan's
 ranking hook), `010-item-management-enhancements` (the sort picker both
@@ -95,6 +101,13 @@ with one tap (Decision 2).
   says so and offers the catalog's overall lowest used asking price
   instead, labelled as such (Decision 6).
 - Only listings priced in the app's currency count (P3).
+- An item with a **year** — optional, on owned and wanted items alike —
+  narrows the listings to those whose stated year covers it: a single
+  year, a range ("1970 - 1984", "2020 - Present") or a decade ("1970s").
+  A listing that states no year still counts; only a stated mismatch is
+  excluded (Decision 29). If fewer than three listings remain after
+  narrowing, the figure is computed over all years and the section says
+  so (Decision 29; P19).
 - The figure is always framed as **asking prices on Reverb** — never as
   the item's value, worth, or price (P10). It carries its age ("as of
   2 hours ago") and a link to the product on Reverb (P9).
@@ -162,7 +175,8 @@ with one tap (Decision 2).
 | What | Where | Syncs? |
 |---|---|---|
 | The match (Reverb product identifier) | on the item | yes — the person's own data |
-| The last figure (median, low, high, count, fetched-at) | on the device | no |
+| The item's year, when the person gives one | on the item | yes — the person's own data |
+| The last figure (median, low, high, count, fetched-at, the year it narrowed to) | on the device | no |
 | The matched product's catalog slug and title, for the link-back (Decision 20) | on the device | no |
 | The history of figures | on the device | no |
 | Anything from a listing (title, seller, image, listing id) | nowhere | — |
@@ -170,7 +184,9 @@ with one tap (Decision 2).
 
 What leaves the device: an item's name (search) and a product
 identifier plus a condition filter (refresh), to Reverb, only when the
-person acts. The privacy policy says exactly this (Decision 13).
+person acts. The year never leaves the device: narrowing is done on the
+listings after they arrive (Decision 29). The privacy policy says
+exactly this (Decision 13).
 
 ### Settings › About, and the terms
 
@@ -196,11 +212,17 @@ nothing crosses items (see Non-goals).
 
 ## Copy
 
-- Section title **Market**; source line **On Reverb**; the figure as
+- Section title **Market**; source line **On Reverb** — with the
+  product's title and, when the item has a year, the year: "On Reverb ·
+  Martin D-18 · 1975" (Decisions 20, 29); the figure as
   "$1,450 · 12 listed"; the spread as "$1,100–$2,000"; the age "as of 2
   hours ago" / "as of 3 days ago".
 - Withheld: "Too few listings in this condition to say. The lowest used
   asking price on Reverb is $1,100."
+- Narrowed to all years (Decision 29): "Too few 1975 listings in this
+  condition — all years shown." above the figure, which is then the
+  all-years figure.
+- The year field, on both forms: label **Year**, optional, four digits.
 - Actions: **Find on Reverb…** (unmatched), **Refresh**, **Use as my
   value** / **Use as estimated cost**, **Change match…**, **Remove
   match**.
@@ -234,6 +256,12 @@ nothing crosses items (see Non-goals).
   tones — moss up, rust down, as the value delta already reads.
 - The new sort option joins the existing dropdown as two rows in the
   vocabulary `010` set.
+- The **Year** field joins both forms' Details in the forms' existing
+  field style — no Design pass (Decision 29).
+- The candidate picker shows each candidate's **whole title**, never
+  truncated — Reverb's variants differ by a suffix ("Left-Handed",
+  "FSR Limited Edition", "1970 - 1984") — and asks for enough
+  candidates that the exact variant is on the list when Reverb has it.
 - Every action is a single tap; the Reverb link opens the product page
   in the browser.
 
@@ -335,6 +363,22 @@ escalations:
     "wherever Reverb's data is shown". The Design pass decides the
     form.
 
+Added 2026-09-03, during implementation (the person):
+
+29. **Year narrowing, in this spec.** Reverb's catalog separates many
+    variants (the D-18 alone is three products), so the pick carries
+    most of the precision; where a catalog product lumps years, an
+    optional **year** on the item narrows the listings a figure is
+    computed from. Two rules the person chose against a live probe
+    (Telecaster listings: about half state no year; the rest single
+    years, ranges and decades; a vintage D-18: nearly all labelled):
+    a listing with no stated year **still counts**, only a stated
+    mismatch is excluded; and when fewer than three remain, the figure
+    **falls back to all years and says so**, rather than withholding.
+    The year is the person's own data and syncs; it never leaves the
+    device. The field is optional on both kinds of item and gets no
+    Design pass.
+
 Proposed at drafting, 2026-09-03, by Claude Code, and decisions since
 the spec's approval the same day (P13 as reworded under Decision 16):
 
@@ -383,11 +427,32 @@ the spec's approval the same day (P13 as reworded under Decision 16):
 - **P16. Wanted items** use all used listings of the product, since
   they carry no condition.
 - **P17. Export carries the match, not the figures.** The canonical CSV
-  gains one column, the Reverb product identifier, so an export and
-  re-import restores matches; adopted values are already there. Fetched
+  gains two columns, the Reverb product identifier and the year
+  (Decision 29), so an export and re-import restores matches and years;
+  adopted values are already there. Fetched
   figures and history are not exported, in either format — they are
   Reverb-derived and time-bound. `011`'s append-only rule applies:
   the column lands together with `012`'s parser.
+
+Proposed 2026-09-03 with Decision 29, by Claude Code (approved with
+the plan's Amendment A):
+
+- **P18. The year** is a whole number of four digits, optional, on
+  `Item` and `WishlistItem`; blank means "any year". The forms validate
+  it as 1900 through next year.
+- **P19. Coverage**: a listing's stated year covers the item's year when
+  it is that year, a range containing it ("1970 - 1984"; "2020 -
+  Present" reaches the current year), or its decade ("1970s"). A stated
+  year that cannot be read counts as a mismatch. Narrowing runs after
+  the currency and condition filters.
+- **P20. The fallback figure** is the same computation over all years,
+  shown under the all-years copy; it sorts, sums and adopts as any
+  figure does, and its history point is an ordinary point.
+- **P21. Changing the year** does not clear the history — the match is
+  the same product. The figure remembers the year it narrowed to, so the
+  section can say so after the item's year changes.
+- **P22. The picker** asks Reverb for fifteen candidates and shows each
+  title whole.
 
 ## Acceptance criteria
 
@@ -454,13 +519,21 @@ the spec's approval the same day (P13 as reworded under Decision 16):
     identifier — is stored anywhere; a scan of the persisted data after
     a refresh finds only the app's summary numbers, the product
     identifier, and the product's catalog slug and title (Decision 20).
-19. [ ] The canonical CSV gains the product-identifier column at the
-    end; an export followed by an import restores the match; the
-    fetched figures appear in neither the CSV nor the PDF.
+19. [ ] The canonical CSV gains the product-identifier and year
+    columns at the end; an export followed by an import restores the
+    match and the year; the fetched figures appear in neither the CSV
+    nor the PDF.
 20. [ ] VoiceOver: the Market section reads as its parts — the figure,
     the spread, the count, the age — every action is labelled, the
     trend arrow reads "trending up" / "trending down", and the Reverb
     link says it leaves the app.
+21. [ ] An item with a year computes its figure over the listings whose
+    stated year covers it plus those stating none; a listing stating a
+    year that does not cover it is excluded, and the count says how many
+    counted. An item without a year is unchanged.
+22. [ ] With fewer than three listings after narrowing, the section
+    shows the all-years figure under the all-years copy; clearing the
+    year restores the plain figure on the next refresh.
 
 ## Non-goals (explicit)
 

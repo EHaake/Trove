@@ -1,7 +1,9 @@
 # 002 — Market Values — Technical Plan
 
 Status: **Approved** (2026-09-03, same day as drafting — Q1–Q20 approved
-with it, per the Proposed-at-planning section; drafted
+with it, per the Proposed-at-planning section; **Amendment A — year
+narrowing** added the same day during implementation, after T002, against
+spec Decision 29; drafted
 in-session per the authorship split, in Plan Mode, against the approved
 spec and the code as it is on this branch). Two skeptical-review passes
 ran on the three design reports before this document was written; their
@@ -188,7 +190,7 @@ nonisolated enum MarketError: Error, Equatable, Sendable { case rateLimited, pro
 
 `MarketSubject = .owned(condition:) | .wanted`. `MarketConditionMap.reverbSlugs(for:)` per Q1; `newStockSlugs = {brand-new, b-stock}`; `counts(listing, for:)`: `.owned` → slug ∈ the condition's set; `.wanted` → slug ∉ newStock. `MarketFigureComputation.compute(listings:subject:product:fetchedAt:) -> MarketReading` (`.figure(MarketFigure)` | `.withheld(count:usedLowCents:fetchedAt:)`): currency first, then condition; sort; median = middle, or `(a + b + 1) / 2` for even counts; low/high; withheld below three. A test asserts `knownSlugs ⊇ every slug in the recorded fixtures` so drift shows as red.
 
-Oracle tests over the seven decoded pages, **numbers from the fixtures README** (recorded 2026-09-03; the September 2 probe's figures below were dollars, and its `.wanted` arithmetic — 340 − 184 − 5 = 151 — ignored the currency filter): `.owned(.excellent)` → count 35, median 139_999, low 115_200, high 325_000; `.owned(.good)` → 17, median 139_999; `.owned(.new)` → 208 (182 + 7 + 14 + 5); `.wanted` → **73** USD listings, median 149_999, low 100_000, high 325_000, against the product's `used_total` of 109 (all currencies) and `used_low_price` 100_000; `.owned(.fair)` and `.owned(.broken)` → withheld at zero (a test comparing our used count to `used_total` records the gap either way); synthetic: two listings → withheld with the product's `usedLowCents`; three → a figure; even-count median; a EUR listing and a converted-price listing excluded and the count says so; an unknown slug excluded for `.owned(.excellent)` and **included** for `.wanted`; `Condition.allCases` map to non-empty, pairwise-disjoint sets. Mutations: mean for median; drop the currency filter; put `good` in two buckets; make `.wanted` failure-closed → each red.
+Oracle tests over the seven decoded pages, **numbers from the fixtures README** (recorded 2026-09-03; the September 2 probe's figures below were dollars, and its `.wanted` arithmetic — 340 − 184 − 5 = 151 — ignored the currency filter): `.owned(.excellent)` → count 34, median 139_999, low 115_200, high 325_000; `.owned(.good)` → 17, median 139_999; `.owned(.new)` → 208 (182 + 7 + 14 + 5); `.wanted` → **72** USD listings, median 149_999, low 100_000, high 325_000, against the product's `used_total` of 108 (all currencies) and `used_low_price` 100_000; `.owned(.fair)` and `.owned(.broken)` → withheld at zero (a test comparing our used count to `used_total` records the gap either way); synthetic: two listings → withheld with the product's `usedLowCents`; three → a figure; even-count median; a EUR listing and a converted-price listing excluded and the count says so; an unknown slug excluded for `.owned(.excellent)` and **included** for `.wanted`; `Condition.allCases` map to non-empty, pairwise-disjoint sets. Mutations: mean for median; drop the currency filter; put `good` in two buckets; make `.wanted` failure-closed → each red.
 
 `MarketTrend: String { up, down, flat }` + `Optional` (nil = no trend yet — one spelling). `compute(history:)`: latest = last by `fetchedAt`; previous = the **most recent** point ≥ 7 days older (Q6); nil if none or previous median ≤ 0; `20 * (latest − previous) >= previous` → `.up`; the mirror → `.down`; else `.flat` (drawn as nothing). Boundary tests: 7 d exactly → a trend; 7 d − 1 s → nil; 1000→1050 up, →1049 flat, →950 down, →951 flat; points 20 d / 8 d / 1 d old compare against the 8 d point (mutation: pick the oldest → red); one point → nil.
 
@@ -321,3 +323,93 @@ Per task: `xcodebuild build` and `xcodebuild test -only-testing:TroveTests` with
 ## Not in this plan
 
 eBay (its own spec, two prerequisites); `003`'s trend-aware ranking (this spec builds its input); GitHub Pages (Decision 18's later flip); currency conversion; a stubbed Reverb under `-uiTesting` (Q13); a launch sweep of local rows (Q18).
+
+---
+
+## Amendment A — year narrowing (spec Decision 29, P18–P22; 2026-09-03)
+
+Folded in after T002 at the person's direction. Grounded in a live
+probe of Reverb's listing `year` field (free text: blank on about half
+the modern Telecaster's listings; single years; ranges like
+`1970 - 1984` and `2020 - Present`; decades like `2020s`; and oddities
+— `0`, `2003-04`, `LATE 2000’s`) and on the catalog itself, which
+already separates many variants (the D-18 is three products, the Blues
+Junior IV three, the Stratocaster two), so the pick carries most of the
+precision and narrowing is for the lumped cases.
+
+### Models, forms, contract
+
+- `var year: Int?` on `Item` and `WishlistItem` (after
+  `reverbProductID`; trailing defaulted init parameter; CloudKit-clean).
+  `ItemExportRecord`/`WishlistExportRecord` gain `year: Int?`.
+- **The Year field** on both forms' Details, the forms' existing field
+  style, optional, numeric keyboard, validated 1900…next year (P18);
+  `ItemFormViewModel`/`WishlistFormViewModel` gain the field and its
+  validation error ("Year should be four digits, 1900 to <next year>");
+  saved as `Int?`. Tests: blank → nil; "1975" → 1975; "75", "abc",
+  "1899", "<next year + 1>" → the error; round-trip on a second context.
+- **CSV**: `Year` appended after `Reverb Product ID` on both lists (14
+  and 9 columns); the boundaries stay `[12]` / `[7]` — both new columns
+  append past the shipped layout, so the legacy tolerance covers both;
+  import parses four digits in P18's range, blank → nil silent, else nil
+  **counted**. `docs/csv-reference.md` gains the row; the samples' music
+  rows carry plausible years; the PDF carve-out extends to the year
+  (data, not a presented field — the PDF's `Bought` line already says
+  when it was bought, and a model year beside it is a design question
+  this amendment doesn't open).
+
+### Client and computation
+
+- `MarketListing` gains `year: String?` (four members; G10 → 4); the
+  wire struct reads `year`. The fixtures carry it (re-recorded).
+- `MarketYearCoverage.covers(stated: String?, year: Int, now: Date) ->
+  Coverage` with `.unstated` (nil or blank after trimming), `.covers`,
+  `.mismatch` — a pure, `nonisolated` parser: a four-digit year; `YYYY -
+  YYYY` (any spacing around the dash); `YYYY - Present` / `Present`
+  reaching the current year; `YYYYs` for a decade; anything else
+  (including `0`, `2003-04`, `LATE 2000’s`) → `.mismatch` (P19).
+- `MarketFigureComputation.compute` gains `year: Int?`: after currency
+  and condition, drop listings whose coverage is `.mismatch`; if the
+  survivors number fewer than three **and a year was given**, recompute
+  over the unnarrowed set and mark the reading `.allYears(fallbackFrom:
+  year)`; the reading's `yearScope` is `.any` (no year), `.year(Int)`, or
+  `.allYears(fallbackFrom: Int)`. Withheld applies to whatever set was
+  finally used (P20).
+- `MarketFigureRecord` gains `yearFilter: Int?` and
+  `isAllYearsFallback: Bool = false` (G4's allowlist grows by two; P21).
+  `MarketHistoryPoint` unchanged. `MarketRefreshTarget.subject` carries
+  the year.
+
+### Section and copy
+
+- The source line reads `On Reverb · {title} · {year}` when the item has
+  a year. Under an all-years fallback, one line above the figure:
+  `MarketCopy.allYearsFallback(year:)` — "Too few 1975 listings in this
+  condition — all years shown." (wanted items: "Too few 1975 used
+  listings — all years shown."). The figure beneath is an ordinary
+  current figure: it sorts, sums and adopts (P20).
+- Nothing new leaves the device; the notice and the policy stand.
+
+### Tests and mutations (added to the tasks they belong to)
+
+`MarketYearCoverageTests`: the table above, each recorded oddity, a
+trailing space, `2020 - Present` at the current year and at next year's
+item; mutation: treat unreadable as `.unstated` → the `0` case red.
+Computation: the D-18-shaped synthetic set (twelve `1970 - 1984`, singles,
+two blank) narrowed to 1975 → the twelve range listings, the 1975
+singles and the two blanks count, 1973 excluded (mutation: drop the
+blank-counts rule → red); a year with two survivors → `.allYears`
+fallback over the full set (mutation: withhold instead → red); no year →
+unchanged oracle numbers. Records: the two new fields on a second
+context; the fallback flag round-trips. Forms: the validation table.
+CSV: the fourteen-/nine-column layouts, the legacy tolerance still
+passing at 12/7, a year of "75" counted as unmatched-year.
+
+### Skeptical-review note
+
+Not re-run for this amendment: it adds a field, a pure parser and one
+reading, on the mechanisms the two plan reviews already covered; the
+one genuinely new call — blank years count, thin years fall back — was
+the person's, made against the probe. If the parser turns out to need
+more shapes than the fixture shows, that is a data question for the
+device pass, not a design change.

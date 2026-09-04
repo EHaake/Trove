@@ -1,25 +1,9 @@
 {
-  "total": 338,
+  "total": 337,
   "current_page": 6,
   "per_page": 50,
   "total_pages": 7,
   "listings": [
-    {
-      "id": 56463949,
-      "title": "Fender American Professional II Telecaster - Maple Fingerboard, Roasted Pine",
-      "price": {
-        "amount_cents": 173999,
-        "currency": "USD"
-      },
-      "listing_currency": "USD",
-      "condition": {
-        "slug": "brand-new",
-        "display_name": "Brand New"
-      },
-      "state": {
-        "slug": "live"
-      }
-    },
     {
       "id": 51550306,
       "title": "Fender American Pro II Telecaster Maple Neck Black W/C",
@@ -28,6 +12,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -44,6 +29,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -60,6 +46,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -76,6 +63,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "mint-inventory",
         "display_name": "Mint"
@@ -92,6 +80,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "mint-inventory",
         "display_name": "Mint"
@@ -108,6 +97,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "mint-inventory",
         "display_name": "Mint"
@@ -124,6 +114,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "mint-inventory",
         "display_name": "Mint"
@@ -140,6 +131,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -156,6 +148,7 @@
         "currency": "USD"
       },
       "listing_currency": "CAD",
+      "year": "2020 - Present",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -172,6 +165,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "2020 - Present",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -188,6 +182,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "mint-inventory",
         "display_name": "Mint"
@@ -204,6 +199,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020 - Present",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -220,6 +216,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -236,6 +233,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -252,6 +250,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -268,6 +267,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -284,6 +284,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -300,6 +301,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -316,6 +318,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -332,6 +335,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -348,6 +352,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "mint-inventory",
         "display_name": "Mint"
@@ -364,6 +369,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2021",
       "condition": {
         "slug": "b-stock",
         "display_name": "B-Stock"
@@ -380,6 +386,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2021",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -396,6 +403,7 @@
         "currency": "USD"
       },
       "listing_currency": "AUD",
+      "year": "2021",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -412,6 +420,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -428,6 +437,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "mint-inventory",
         "display_name": "Mint"
@@ -444,6 +454,7 @@
         "currency": "USD"
       },
       "listing_currency": "CAD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -460,6 +471,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -476,6 +488,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -492,6 +505,7 @@
         "currency": "USD"
       },
       "listing_currency": "CAD",
+      "year": "2020 - 2021",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -508,6 +522,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "mint-inventory",
         "display_name": "Mint"
@@ -524,6 +539,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -540,6 +556,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -556,6 +573,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -572,6 +590,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -588,6 +607,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -604,6 +624,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -620,6 +641,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2021",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -636,6 +658,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -652,6 +675,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -668,6 +692,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -684,6 +709,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -700,6 +726,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -716,6 +743,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2025",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -732,6 +760,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -748,6 +777,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -764,6 +794,7 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "2020",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"
@@ -780,6 +811,7 @@
         "currency": "USD"
       },
       "listing_currency": "EUR",
+      "year": "2020",
       "condition": {
         "slug": "mint",
         "display_name": "Mint"
@@ -796,6 +828,24 @@
         "currency": "USD"
       },
       "listing_currency": "USD",
+      "year": "",
+      "condition": {
+        "slug": "brand-new",
+        "display_name": "Brand New"
+      },
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 37799033,
+      "title": "Fender American Professional II Telecaster 3 Color Sunburst 2020 with case",
+      "price": {
+        "amount_cents": 163999,
+        "currency": "USD"
+      },
+      "listing_currency": "USD",
+      "year": "2020",
       "condition": {
         "slug": "brand-new",
         "display_name": "Brand New"

@@ -1,6 +1,6 @@
 # 002 — Market Values: Tasks
 
-Status: **In progress** (approved 2026-09-03, same day as drafting; T001a started)
+Status: **In progress** (approved 2026-09-03, same day as drafting; **Amendment A — year narrowing** folded in after T002 per spec Decision 29 and plan Amendment A — the tasks it touches say so)
 
 Drafted against the approved `plan.md` (approved 2026-09-03; drafted
 at `64d505b`) on branch `002-live-market-value`, based on `main` at
@@ -213,7 +213,11 @@ on something only the person has.
   known set. The four sample-row ids chosen and recorded (the Strat's
   abbreviated CSV name found nothing; the spelled-out name did — a
   note for the picker's empty-state copy). Nothing under `Trove/`
-  changed; every file parses.
+  changed; every file parses. **Amendment A**: re-recorded minutes
+  later with `year` kept (the first trim had dropped it) — one
+  excellent listing had sold in between (34, not 35; wanted 72;
+  `used_total` 108); the README records both runs and the `year`
+  values seen, three of them unreadable on purpose.
   Per plan §3 (Fixtures). New `scripts/record-reverb-fixtures.sh`
   (curl + a python trim; the three headers; `sleep` between calls):
   writes `TroveTests/Fixtures/Reverb/csps-search-telecaster.json`
@@ -242,12 +246,12 @@ on something only the person has.
   full suite count unchanged.
 
 - [ ] **T003 — The synced match field, and the records that mirror it.**
-  Per plan §2. `var reverbProductID: Int?` on `Item` and `WishlistItem`
-  after `sortOrder`, doc comments per plan, trailing `reverbProductID:
-  Int? = nil` init parameters; `ItemExportRecord`/`WishlistExportRecord`
-  gain `let reverbProductID: Int?` (memberwise — no default, or
-  `init(item:)` couldn't set it) and their `init(item:)` snapshots copy
-  it — **not** the headers, `row(from:)` or the parser's reading of it
+  Per plan §2 and Amendment A. `var reverbProductID: Int?` **and `var
+  year: Int?`** on `Item` and `WishlistItem` after `sortOrder`, doc
+  comments per plan, trailing defaulted init parameters for both;
+  `ItemExportRecord`/`WishlistExportRecord` gain `let reverbProductID:
+  Int?` and `let year: Int?` (memberwise — no default, or `init(item:)`
+  couldn't set them) and their `init(item:)` snapshots copy them — **not** the headers, `row(from:)` or the parser's reading of it
   (T016a, together or not at all). Two **production** construction
   sites must compile: `ImportSchema.itemsPreview` (`:326–340`) and
   `wishlistPreview` (`:434–443`) pass `reverbProductID: nil` — a
@@ -275,9 +279,10 @@ on something only the person has.
   `ReverbMarketServiceTests.swift` (`.serialized`, `StubURLProtocol`
   keyed by URL over an ephemeral configuration, no sockets) and
   `ReverbDecodingTests.swift` over every fixture; the concurrency probe
-  in the `ExportConcurrencyTests` shape; **G10** (three members on
-  `MarketListing`; a decoded title-bearing page retains no string but
-  currencies and slugs). Cases per plan §3: headers present and the
+  in the `ExportConcurrencyTests` shape; **G10** (four members on
+  `MarketListing` — price, currency, condition slug, year (Amendment
+  A); a decoded title-bearing page retains no string but currencies,
+  slugs and years). Cases per plan §3: headers present and the
   User-Agent **contains `MarketCopy.contactAddress`**, no
   `Authorization`, the punctuation-heavy name, `query` + `per_page`
   only, 404 / 429 / 500 / offline mapping, seven pages in order,
@@ -311,7 +316,13 @@ on something only the person has.
   ⊇` every fixture slug; the trend boundary table (7 d exactly, 7 d −
   1 s, ±5 % both sides, the 20/8/1-day pick, one point, previous ≤ 0);
   freshness at 30 d − 1 s / 30 d; the formatter-equality table for
-  adoption (145_050, 145_150, 145_049, 145_151). Mutations: mean for
+  adoption (145_050, 145_150, 145_049, 145_151). **Amendment A**:
+  `MarketYearCoverage` and its table (`MarketYearCoverageTests`,
+  every recorded oddity), `compute(year:)` narrowing after currency
+  and condition, the all-years fallback under three, the reading's
+  `yearScope`; the D-18-shaped synthetic set and the no-year oracle
+  unchanged (mutations: unreadable → `.unstated` → red; blank-counts
+  rule dropped → red; withhold instead of fall back → red). Mutations: mean for
   median; currency filter dropped; `good` in two buckets; `.wanted`
   failure-closed; oldest point picked; `<` to `<=` at the 7-day
   boundary; adoption half-up → the equality table red.
@@ -321,8 +332,10 @@ on something only the person has.
 - [ ] **T006a — The local store helpers, the index, the spies.**
   Per plan §1 (helpers) and §5 (index). New `MarketLocalStore.swift`
   (the static helpers; `record` as the single writer of the cached
-  trend; a point only when the reading has a median — Decision 23; the
-  snapshot refreshed on every record and written by `recordMatch`;
+  trend, storing the reading's `yearFilter` and `isAllYearsFallback`
+  (Amendment A; G4's allowlist grows by two); a point only when the
+  reading has a median — Decision 23; the snapshot refreshed on every
+  record and written by `recordMatch`;
   `hasAcknowledgedNotice` reading a swallowed error as false;
   `clear`/`clearAll` without saving) and `MarketIndex.swift`
   (`load(from:)`; `MarketSectionState.resolve` lives here too, for
@@ -377,8 +390,10 @@ on something only the person has.
   `MarketCopyTests` (every string whole; 1/2 listings; the en dash by
   code point; withheld with/without a price and the wanted variant; the
   notice reassembly; the dashboard line; the candidate reading both
-  branches; progress), `MarketAgeTests` (the table incl. a future
-  date), `MarketVocabularyTests` — allowlist-then-regex over a **named
+  branches; progress; **Amendment A**: the source line with a year,
+  `allYearsFallback(year:)` owned and wanted, the Year field's
+  label and validation error), `MarketAgeTests` (the table incl. a
+  future date), `MarketVocabularyTests` — allowlist-then-regex over a **named
   file list** (`MarketCopy.swift` now; `MarketSection.swift`,
   `MarketNoticeView.swift`, `MarketMatchView.swift`, `TrendArrow.swift`
   added to the list by the tasks that create them, with the
@@ -413,6 +428,22 @@ on something only the person has.
 
 ## Phase 3 — Screens
 
+- [ ] **T009a — The Year field on both forms (Amendment A).**
+  Per plan Amendment A (Models, forms). `ItemFormViewModel` and
+  `WishlistFormViewModel` gain `yearText`, validation (P18: four digits,
+  1900 through next year, blank allowed) and the save into `year: Int?`;
+  `ItemFormView`/`WishlistFormView` gain the **Year** field in Details
+  in the forms' existing field style, numeric keyboard, label and error
+  from `MarketCopy`. Tests in both form suites: the validation table;
+  blank → nil; edit round-trip on a second context; the error string
+  pinned. Wiring: both forms compose the field once, reading
+  `MarketCopy.yearLabel`. Mutations: accept "75" → red; drop the save →
+  the round-trip red; inline the label → the no-space rule red (the form
+  files join the vocabulary scan's list for this field only — state the
+  scope in the test).
+  *Done when*: green, mutations recorded, full suite green with count;
+  the field checked by eye on both forms.
+
 - [ ] **T009 — The detail view models: state, intents, the notice sequence.**
   Per plan §6 (detail VMs). Both `ItemDetailViewModel` and
   `WishlistDetailViewModel`: injection (`marketService`, `now`), the
@@ -444,8 +475,9 @@ on something only the person has.
   their doc comment, **and the stale comment at `:128`** go. The `Link`
   labelled "View on Reverb" with the hint; `.contain` on the root with
   the explicit per-part labels; two plain buttons for the match actions;
-  Refresh disabled within the hour with the hint (Q8). New
-  `MarketWiringTests`: both detail views compose `MarketSection(` once
+  Refresh disabled within the hour with the hint (Q8); the source line
+  carries the year and the all-years line sits above a fallback figure
+  (Amendment A). New `MarketWiringTests`: both detail views compose `MarketSection(` once
   inside `content(for:)`; `WishlistDetailView.swift` contains none of
   `marketPricePlaceholder` / `"Market price"` / `"Not tracked yet"`;
   `MarketSection.swift` has `Link(` (non-identifier-boundary regex), no
@@ -558,15 +590,17 @@ on something only the person has.
 ## Phase 4 — Contract and policy
 
 - [ ] **T016a — The CSV column and the header tolerance — the atomic commit.**
-  Per plan §7 and Q16. `ExportSchema`: the header appended on both
-  lists, `itemSchemaBoundaries`/`wishlistSchemaBoundaries`, `row(from:)`;
+  Per plan §7, Q16 and Amendment A. `ExportSchema`: the two headers
+  appended on both lists (`Reverb Product ID`, `Year` — 14 and 9
+  columns; boundaries stay `[12]`/`[7]`), `itemSchemaBoundaries`/`wishlistSchemaBoundaries`, `row(from:)`;
   `ImportSchema`: `requireHeader` accepting boundaries and returning the
   width, both previews using it for the extra-columns guard,
   `reverbProductID(from:)` replacing T003's `nil`, the field policy row;
   the commit paths in both list VMs; `PDFEntry`'s carve-out comment.
   Every test in plan §7's list rewritten or added (incl. the
   legacy-layout literal pin and the PDF carve-out); the samples
-  regenerated at 13/8 with T002's ids on the four music rows,
+  regenerated at 14/9 with T002's ids and plausible years on the four
+  music rows,
   **`items-partial.csv` untouched at 12** with its test gaining the two
   assertions; `DocsSampleTests.itemsFullImportsCleanly`'s field loop
   excludes `reverbProductID` and gains "exactly four rows carry an id".
@@ -617,7 +651,10 @@ on something only the person has.
   Telecaster (the notice once; Not now first, then Continue — and after
   Continue, a second item's Find on Reverb… shows no notice, across a
   relaunch); the picker's search, cards, per-card link, the pick; the
-  section's title and link before any refresh; refresh — the figure
+  section's title and link before any refresh; a year set on the
+  Telecaster (2021) and on a vintage match — the count narrowing and
+  the all-years fallback on a thin year (Amendment A); refresh — the
+  figure
   against the oracle within reason, the spread, the count, the age, the
   link opening reverb.com; withheld on a sparse product (a rare pedal);
   the hour rule (Refresh disabled with the hint); Link Conditioner 100 %

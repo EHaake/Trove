@@ -14,9 +14,9 @@ removed at recording.
 ## The oracle (`MarketFigureComputationTests` pins these)
 
 ```
-listings fetched: 338 over 7 pages; USD (listing_currency and price.currency): 260
+listings fetched: 337 over 7 pages; USD (listing_currency and price.currency): 259
 brand-new       n=182 median=183999 low=153900 high=256999
-excellent       n=35 median=139999 low=115200 high=325000
+excellent       n=34 median=139999 low=115200 high=325000
 very-good       n=14 median=141000 low=100000 high=159999
 mint-inventory  n=14 median=154999 low=144319 high=164999
 mint            n=7 median=149999 low=119800 high=169999
@@ -24,11 +24,11 @@ b-stock         n=5 median=156599 low=147599 high=184000
 good            n=3 median=118900 low=114900 high=170000
 
 owned(.new)          n=208 median=183999 low=119800 high=256999
-owned(.excellent)    n=35 median=139999 low=115200 high=325000
+owned(.excellent)    n=34 median=139999 low=115200 high=325000
 owned(.good)         n=17 median=139999 low=100000 high=170000
 owned(.fair)         n=0 (withheld)
 owned(.broken)       n=0 (withheld)
-wanted               n=73 median=149999 low=100000 high=325000   (product used_total = 109; used_low_price = 100000)
+wanted               n=72 median=149999 low=100000 high=325000   (product used_total = 108; used_low_price = 100000)
 slugs outside the known set: none
 ```
 
@@ -73,6 +73,15 @@ Worth knowing for the picker: an abbreviation Reverb's catalog doesn't
 use ("AV II") finds nothing, while the brand and model spelled out find
 it first — the empty-state copy's "the brand and model are enough" is
 the right advice.
+
+### The `year` field, as recorded (Decision 29)
+
+Free text. Across the seven Telecaster pages: 194 blank, then
+`2020 - Present`, single years, `2020 - 2023`, `2020s`, and three
+oddities worth a test each — `0`, `2003-04`, `LATE 2000’s` — which P19
+reads as unreadable, so a mismatch. This recording is the second of the
+day: the first dropped `year`, and in the minutes between one excellent
+listing sold (34, not 35; `used_total` 108, not 109).
 
 ## Hand-built, not recorded
 

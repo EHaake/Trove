@@ -11,7 +11,8 @@
 # act: the diff under TroveTests/Fixtures/Reverb/ is the review.
 #
 # What it writes (every response trimmed to the fields the app reads —
-# shop, seller and photo fields removed from listings; listing *titles*
+# shop, seller and photo fields removed from listings; `year` kept for
+# Decision 29's narrowing; listing *titles*
 # kept on purpose, as the tripwire the persisted-content byte scan looks
 # for and must never find):
 #
@@ -78,6 +79,7 @@ def trim_listing(l):
         "id": l["id"], "title": l.get("title"),
         "price": {"amount_cents": l["price"]["amount_cents"], "currency": l["price"]["currency"]},
         "listing_currency": l.get("listing_currency"),
+        "year": l.get("year"),
         "condition": {"slug": (l.get("condition") or {}).get("slug"), "display_name": (l.get("condition") or {}).get("display_name")},
         "state": {"slug": (l.get("state") or {}).get("slug")},
     }
