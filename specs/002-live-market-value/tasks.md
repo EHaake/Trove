@@ -606,7 +606,37 @@ only — technical detail lives in `plan.md` and the commit log).
   recorded).
   *Done when*: green, five mutations recorded, full suite green.
 
-- [ ] **T007 — `MarketCopy` in full, `MarketAge`, and the vocabulary scan.**
+- [x] **T007 — `MarketCopy` in full, `MarketAge`, and the vocabulary scan.**
+  *Done (2026-09-03)*: `MarketCopy` grew from the one address to every
+  string — section (`sourceLine(title:year:)`, `median`, `listed`,
+  `figure` composed from the parts, `spread` with U+2013, `age`,
+  `withheld(usedLowCents:wanted:)` dropping its second sentence with no
+  catalog price, `allYearsFallback(year:wanted:)`, `refreshDue`,
+  `notRefreshedHere`), actions, the notice, failure
+  (`unreachable(fetchedAt:at:)`, `unreachableNoFigure`, `rateLimited`,
+  `productGone`), sort, `dashboardLine` ("12 of 34 items"), the picker,
+  Settings, About (`attribution` verbatim, `contactURL`,
+  `privacyPolicyTitle`/`Filename`/`URL` — the blob URL, Decision 18),
+  the year field (`yearLabel`, `yearValidationError(nextYear:)`), and
+  accessibility. `MarketAge.description(of:at:)` — just now / minutes /
+  hours / days, a future date as now. Tests: `MarketCopyTests` (19 —
+  every string whole, the composed forms at 1 and 2 listings, the en
+  dash by scalar, the notice reassembly, both withheld and fallback
+  variants, the address guard still red by design), `MarketAgeTests`
+  (a fifteen-row table; the tuple table had to be typed and
+  `nonisolated static` for the macro), `MarketVocabularyTests` (rule 1
+  over a named file list with a `#require` it isn't empty — allowed
+  phrases stripped, then `\b(value|values|valued|valuation|worth|price|prices|priced|sold)\b`;
+  rule 2 the framing in use; rule 3 no spaced literal in the Market
+  view files — the view list starts empty and T009a/T010–T012 grow it).
+  Targeted: 23 tests in 3 suites, 22 green. Full unit suite: **912
+  tests in 131 suites, 911 passed** (the address guard). Mutations, each
+  reverted: **M1** "$1,450 value" → the scan red naming the literal;
+  **M2** "lowest used price" → red; **M3** every "asking price" renamed
+  → rule 2 red (and four whole-string pins); **M4** the copy file list
+  emptied → the `#require` red; **M5** the age boundary `> 60` → the
+  60-second row red. **Phase 1 closes here**; the reviewer pass over
+  the phase's diff and the phase report follow.
   Per plan §6 (Copy and vocabulary). `MarketCopy.swift` grows to every
   string in the spec's Copy section as amended, Q7's additions, the
   notice, sort labels, dashboard line, picker, Settings, About
