@@ -245,7 +245,26 @@ on something only the person has.
   the README's oracle block is written; nothing in `Trove/` changed;
   full suite count unchanged.
 
-- [ ] **T003 — The synced match field, and the records that mirror it.**
+- [x] **T003 — The synced match field, and the records that mirror it.**
+  *Done (2026-09-03)*: `reverbProductID: Int?` and `year: Int?` on
+  `Item` and `WishlistItem` after `sortOrder`, each with its doc comment
+  and a trailing defaulted init parameter; `ItemExportRecord` and
+  `WishlistExportRecord` gained both as `let`s with their snapshots
+  copying them; `ImportSchema`'s two production construction sites pass
+  `nil` with a comment saying T016a replaces it; seventeen memberwise
+  sites across six test files gained the two arguments (nine multi-line
+  by a line insertion, eight inline by a second pass — the first regex
+  missed the inline ones, and the build said so). New
+  `MarketFieldsTests` (four tests: defaults nil on both kinds; the init
+  parameters set both; a save-and-refetch on a second context; the
+  records snapshot both). Targeted run: 81 tests in 6 suites green. Full
+  unit suite: **806 tests in 119 suites passed** (+4, +1). **The
+  CloudKit red run**: `reverbProductID` declared `Int` with no default →
+  `CloudKitSchemaTests` red, the validator naming it — "CloudKit
+  integration requires that all attributes be optional, or have a
+  default value set … Item: reverbProductID" — reverted. Between here
+  and T016a `aTroveExportRoundTripsLosslessly` keeps its name while the
+  CSV drops both fields, as the task said it would.
   Per plan §2 and Amendment A. `var reverbProductID: Int?` **and `var
   year: Int?`** on `Item` and `WishlistItem` after `sortOrder`, doc
   comments per plan, trailing defaulted init parameters for both;

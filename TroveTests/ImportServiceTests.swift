@@ -17,7 +17,7 @@ struct ImportServiceTests {
                 purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
                 purchaseLocation: "KEH", currentValueCents: 345_000, desireToKeep: 5,
                 conditionRawValue: "excellent", conditionNotes: nil,
-                serialNumber: nil, notes: "body, cap", firstPhotoID: nil
+                serialNumber: nil, notes: "body, cap", reverbProductID: nil, year: nil, firstPhotoID: nil
             ),
         ], timeZone: zone)
         let url = try write(CSVWriter.write(table))
@@ -37,7 +37,7 @@ struct ImportServiceTests {
                 name: "OM-1", categoryPath: "Photography/Cameras",
                 estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 3,
                 createdAt: Date(timeIntervalSince1970: 1_500_000_000),
-                notes: nil, firstPhotoID: nil
+                notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
             ),
         ], timeZone: zone)
         let url = try write(CSVWriter.write(table))

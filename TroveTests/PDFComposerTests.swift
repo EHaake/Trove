@@ -111,6 +111,8 @@ struct PDFComposerTests {
             conditionNotes: nil,
             serialNumber: serial,
             notes: notes,
+            reverbProductID: nil,
+            year: nil,
             firstPhotoID: nil
         ))
     }

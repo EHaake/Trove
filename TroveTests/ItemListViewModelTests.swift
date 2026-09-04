@@ -1062,7 +1062,7 @@ func itemsPreview(names: [String]) -> ItemsImportPreview {
                     currencyCode: "USD", purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
                     purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
                     conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
-                    notes: nil, firstPhotoID: nil
+                    notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
                 ),
                 rowNumber: offset + 2,
                 defaultedFieldCount: 0
@@ -1204,7 +1204,7 @@ struct ItemListViewModelCommitTests {
                             purchaseDate: row.record.purchaseDate, purchaseLocation: nil,
                             currentValueCents: nil, desireToKeep: 3,
                             conditionRawValue: "good", conditionNotes: nil,
-                            serialNumber: nil, notes: nil, firstPhotoID: nil
+                            serialNumber: nil, notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
                         ),
                         rowNumber: row.rowNumber,
                         defaultedFieldCount: 0

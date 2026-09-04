@@ -110,6 +110,8 @@ struct ExportSchemaTests {
             conditionNotes: "New seals",
             serialNumber: "2244668",
             notes: "Body only",
+            reverbProductID: nil,
+            year: nil,
             firstPhotoID: nil
         )
 
@@ -135,6 +137,8 @@ struct ExportSchemaTests {
             conditionNotes: nil,
             serialNumber: nil,
             notes: nil,
+            reverbProductID: nil,
+            year: nil,
             firstPhotoID: nil
         )
 
@@ -159,6 +163,8 @@ struct ExportSchemaTests {
             desireToOwn: 3,
             createdAt: added,
             notes: nil,
+            reverbProductID: nil,
+            year: nil,
             firstPhotoID: nil
         )
 
@@ -196,6 +202,8 @@ struct ExportSchemaTests {
             conditionNotes: nil,
             serialNumber: nil,
             notes: nil,
+            reverbProductID: nil,
+            year: nil,
             firstPhotoID: nil
         )
 
@@ -225,6 +233,8 @@ struct ExportSchemaTests {
             desireToOwn: 3,
             createdAt: .now,
             notes: "Custom, not C2",
+            reverbProductID: nil,
+            year: nil,
             firstPhotoID: nil
         )
 

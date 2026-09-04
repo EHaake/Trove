@@ -26,6 +26,12 @@ nonisolated struct ItemExportRecord: Sendable {
     let conditionNotes: String?
     let serialNumber: String?
     let notes: String?
+    /// 002: the match and the year — carried by the CSV (P17, Decision
+    /// 29) so a re-import restores them; `nil` on an unmatched or
+    /// year-less item, and always `nil` from a file written before the
+    /// columns existed. Not presented by the PDF.
+    let reverbProductID: Int?
+    let year: Int?
 
     /// The display-order first photo, chosen at snapshot time on the main
     /// actor (plan.md: `PhotoSelection.inDisplayOrder` is the one definition
@@ -47,6 +53,9 @@ nonisolated struct WishlistExportRecord: Sendable {
     let desireToOwn: Int
     let createdAt: Date
     let notes: String?
+    /// As on `ItemExportRecord` (002).
+    let reverbProductID: Int?
+    let year: Int?
     let firstPhotoID: PersistentIdentifier?
 }
 
@@ -128,6 +137,8 @@ extension ItemExportRecord {
             conditionNotes: item.conditionNotes,
             serialNumber: item.serialNumber,
             notes: item.notes,
+            reverbProductID: item.reverbProductID,
+            year: item.year,
             firstPhotoID: PhotoSelection.inDisplayOrder(item.photos ?? []).first?.persistentModelID
         )
     }
@@ -146,6 +157,8 @@ extension WishlistExportRecord {
             desireToOwn: item.desireToOwn,
             createdAt: item.createdAt,
             notes: item.notes,
+            reverbProductID: item.reverbProductID,
+            year: item.year,
             firstPhotoID: PhotoSelection.inDisplayOrder(item.photos ?? []).first?.persistentModelID
         )
     }

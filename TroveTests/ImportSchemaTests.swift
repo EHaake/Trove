@@ -404,7 +404,7 @@ struct ImportSchemaTests {
                 currencyCode: "USD", purchaseDate: Date(timeIntervalSince1970: 1_600_000_000),
                 purchaseLocation: "Sweetwater", currentValueCents: 35_000, desireToKeep: 5,
                 conditionRawValue: "new", conditionNotes: "still sealed",
-                serialNumber: "SN=1+2", notes: nil, firstPhotoID: nil
+                serialNumber: "SN=1+2", notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
             ),
         ]
         let text = CSVWriter.write(ExportSchema.itemsTable(originals, timeZone: zone))
@@ -507,13 +507,13 @@ struct ImportSchemaTests {
                 name: "OM-1", categoryPath: "Photography/Cameras",
                 estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 3,
                 createdAt: Date(timeIntervalSince1970: 1_500_000_000),
-                notes: "wants: \"clean glass\", meter\nworking", firstPhotoID: nil
+                notes: "wants: \"clean glass\", meter\nworking", reverbProductID: nil, year: nil, firstPhotoID: nil
             ),
             WishlistExportRecord(
                 name: "Big Muff", categoryPath: "Music/Pedals",
                 estimatedCostCents: 9_900, currencyCode: "USD", desireToOwn: 1,
                 createdAt: Date(timeIntervalSince1970: 1_650_000_000),
-                notes: nil, firstPhotoID: nil
+                notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
             ),
         ]
         let text = CSVWriter.write(ExportSchema.wishlistTable(originals, timeZone: zone))
@@ -612,6 +612,8 @@ struct ImportSchemaTests {
             conditionNotes: nil,
             serialNumber: nil,
             notes: notes.isEmpty ? nil : notes,
+            reverbProductID: nil,
+            year: nil,
             firstPhotoID: nil
         )
     }

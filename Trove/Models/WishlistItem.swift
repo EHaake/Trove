@@ -33,6 +33,12 @@ final class WishlistItem {
     /// User-adjustable manual ordering of the wishlist.
     var sortOrder: Int = 0
 
+    /// 002: the matched Reverb product, as on `Item.reverbProductID`.
+    var reverbProductID: Int?
+
+    /// 002, Decision 29: the wanted instrument's year, as on `Item.year`.
+    var year: Int?
+
     var createdAt: Date = Date.now
 
     /// Optional for the same CloudKit reason as `Item.photos` — read it as
@@ -65,7 +71,9 @@ final class WishlistItem {
         desireToOwn: Int = 2,
         sortOrder: Int = 0,
         photos: [Photo]? = [],
-        plannedSaleItems: [Item]? = []
+        plannedSaleItems: [Item]? = [],
+        reverbProductID: Int? = nil,
+        year: Int? = nil
     ) {
         self.name = name
         self.categoryPath = categoryPath
@@ -76,6 +84,8 @@ final class WishlistItem {
         self.sortOrder = sortOrder
         self.photos = photos
         self.plannedSaleItems = plannedSaleItems
+        self.reverbProductID = reverbProductID
+        self.year = year
         self.createdAt = .now
     }
 }

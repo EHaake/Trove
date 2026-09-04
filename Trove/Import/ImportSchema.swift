@@ -336,6 +336,10 @@ nonisolated enum ImportSchema {
                 conditionNotes: FieldNormalization.nilIfBlank(cells[conditionNotesColumn]),
                 serialNumber: FieldNormalization.nilIfBlank(cells[serialColumn]),
                 notes: FieldNormalization.nilIfBlank(cells[notesColumn]),
+                // 002/T003: hard-coded until T016a reads the two columns —
+                // a nil here carries no CSV meaning.
+                reverbProductID: nil,
+                year: nil,
                 firstPhotoID: nil
             )
             validated.append(
@@ -439,6 +443,10 @@ nonisolated enum ImportSchema {
                 desireToOwn: desireToOwn,
                 createdAt: createdAt,
                 notes: FieldNormalization.nilIfBlank(cells[notesColumn]),
+                // 002/T003: hard-coded until T016a reads the two columns —
+                // a nil here carries no CSV meaning.
+                reverbProductID: nil,
+                year: nil,
                 firstPhotoID: nil
             )
             validated.append(

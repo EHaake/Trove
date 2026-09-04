@@ -867,7 +867,7 @@ func wishlistPreview(
                     name: name, categoryPath: categoryPath,
                     estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 2,
                     createdAt: Date(timeIntervalSince1970: 1_500_000_000),
-                    notes: nil, firstPhotoID: nil
+                    notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
                 ),
                 rowNumber: offset + 2,
                 defaultedFieldCount: 0
