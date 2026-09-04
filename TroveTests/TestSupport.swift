@@ -258,16 +258,12 @@ func makeInMemoryContext() throws -> ModelContext {
 /// "persists on every change" tests — they read as persistence checks and
 /// weren't. A second context sees only what actually reached the store.
 func makeInMemoryContainer() throws -> ModelContainer {
-    // The union, as the app's own `.ephemeral` configuration is (002/T001b):
-    // a view model that reads a market row through the context it already
-    // holds would otherwise crash here and nowhere else. `cloudKitDatabase`
-    // spelled out for the reason `TroveStore` gives.
-    let configuration = ModelConfiguration(
-        schema: TroveSchema.combinedSchema,
-        isStoredInMemoryOnly: true,
-        cloudKitDatabase: .none
-    )
-    return try ModelContainer(for: TroveSchema.combinedSchema, configurations: configuration)
+    // Exactly the app's `-uiTesting` shape (002/T006a): the synced and the
+    // local configuration as a pair, in memory. A single in-memory
+    // configuration over the union cannot hold a local model once the test
+    // host's own two-store container exists in the process — see
+    // `TroveStore.configurations(for:)`.
+    try TroveStore.buildContainer(TroveStore.configurations(for: .ephemeral))
 }
 
 /// The perceptual colour model the design-correctness tests measure against.
@@ -541,5 +537,123 @@ enum SourceScan {
         }
 
         return results
+    }
+}
+
+// MARK: - Market service doubles (002)
+
+/// Answers `MarketService` from scripts — one result per expected call, in
+/// order — and records every call. An **exhausted script throws**, so a view
+/// model that calls once more than the test expected fails on that call
+/// rather than passing on a repeated answer. Capture behind a `Mutex`
+/// because the requirements are `@concurrent`.
+nonisolated final class MarketServiceSpy: MarketService {
+    enum Call: Equatable, Sendable {
+        case search(String)
+        case product(Int)
+        case listings(productID: Int)
+    }
+
+    struct ScriptExhausted: Error, Equatable {
+        let call: Call
+    }
+
+    private struct State {
+        var calls: [Call] = []
+        var search: [Result<[MarketCandidate], MarketError>]
+        var products: [Result<MarketProduct, MarketError>]
+        var listings: [Result<MarketListings, MarketError>]
+    }
+
+    private let state: Mutex<State>
+
+    init(
+        search: [Result<[MarketCandidate], MarketError>] = [],
+        products: [Result<MarketProduct, MarketError>] = [],
+        listings: [Result<MarketListings, MarketError>] = []
+    ) {
+        state = Mutex(State(search: search, products: products, listings: listings))
+    }
+
+    var calls: [Call] { state.withLock { $0.calls } }
+
+    @concurrent func searchProducts(named query: String) async throws -> [MarketCandidate] {
+        try next(.search(query)) { $0.search.isEmpty ? nil : $0.search.removeFirst() }
+    }
+
+    @concurrent func product(id: Int) async throws -> MarketProduct {
+        try next(.product(id)) { $0.products.isEmpty ? nil : $0.products.removeFirst() }
+    }
+
+    @concurrent func listings(for product: MarketProduct) async throws -> MarketListings {
+        try next(.listings(productID: product.id)) { $0.listings.isEmpty ? nil : $0.listings.removeFirst() }
+    }
+
+    private func next<T>(_ call: Call, _ pop: @Sendable (inout State) -> Result<T, MarketError>?) throws -> T {
+        let scripted = state.withLock { state -> Result<T, MarketError>? in
+            state.calls.append(call)
+            return pop(&state)
+        }
+        guard let scripted else { throw ScriptExhausted(call: call) }
+        return try scripted.get()
+    }
+}
+
+/// The `GatedExportServiceSpy` shape for the market: only the **first**
+/// `listings` call gates, so a reentrant refresh that wrongly reaches the
+/// spy fails a call count fast instead of deadlocking the test. Search and
+/// product answer at once from one scripted value each.
+nonisolated final class GatedMarketServiceSpy: MarketService {
+    private struct State {
+        var listingsCalls = 0
+        var released = false
+        var waiter: CheckedContinuation<Void, Never>?
+    }
+
+    private let state = Mutex(State())
+    private let candidates: [MarketCandidate]
+    private let productAnswer: Result<MarketProduct, MarketError>
+    private let listingsAnswer: Result<MarketListings, MarketError>
+
+    init(candidates: [MarketCandidate] = [], product: Result<MarketProduct, MarketError>, listings: Result<MarketListings, MarketError>) {
+        self.candidates = candidates
+        self.productAnswer = product
+        self.listingsAnswer = listings
+    }
+
+    var listingsCalls: Int { state.withLock { $0.listingsCalls } }
+
+    @concurrent func searchProducts(named query: String) async throws -> [MarketCandidate] { candidates }
+
+    @concurrent func product(id: Int) async throws -> MarketProduct { try productAnswer.get() }
+
+    @concurrent func listings(for product: MarketProduct) async throws -> MarketListings {
+        let isFirstCall = state.withLock { state -> Bool in
+            state.listingsCalls += 1
+            return state.listingsCalls == 1
+        }
+        guard isFirstCall else { return try listingsAnswer.get() }
+        await waitUntilReleased()
+        return try listingsAnswer.get()
+    }
+
+    private func waitUntilReleased() async {
+        await withCheckedContinuation { continuation in
+            let resumeNow = state.withLock { state -> Bool in
+                guard !state.released else { return true }
+                state.waiter = continuation
+                return false
+            }
+            if resumeNow { continuation.resume() }
+        }
+    }
+
+    func release() {
+        let waiter = state.withLock { state -> CheckedContinuation<Void, Never>? in
+            state.released = true
+            defer { state.waiter = nil }
+            return state.waiter
+        }
+        waiter?.resume()
     }
 }

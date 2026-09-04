@@ -146,13 +146,19 @@ struct TroveStore {
     /// through that property; `MarketLocalSchemaTests` scans this file for
     /// the label instead.
     ///
-    /// The two disk modes return a pair: the synced configuration first, the
-    /// device-local `MarketLocal` second. `.ephemeral` is one in-memory
-    /// configuration over everything — two in-memory stores would share
-    /// `/dev/null`, and in memory nothing syncs, so the split has no meaning.
-    /// `directory` exists so a test can build the production pairing into a
-    /// scratch folder (`TwoStoreContainerTests`); the app passes nothing and
-    /// gets SwiftData's default location.
+    /// Every mode returns the same pair: the synced configuration first, the
+    /// device-local `MarketLocal` second — `.ephemeral` in memory. **Not one
+    /// in-memory configuration over the union**, which the plan first
+    /// proposed: once a multi-configuration container has assigned a model
+    /// type to a store in a process, SwiftData routes that type by that
+    /// assignment for the rest of the process, and a single-configuration
+    /// container over the union can no longer hold it ("Can't assign an
+    /// object to a store that does not contain the object's entity" — found
+    /// at 002/T006a in the test host, reproduced standalone). Two in-memory
+    /// stores coexist fine; the `/dev/null` worry was unfounded. `directory`
+    /// exists so a test can build the production pairing into a scratch
+    /// folder (`TwoStoreContainerTests`); the app passes nothing and gets
+    /// SwiftData's default location.
     static func configurations(for mode: StorageMode, directory: URL? = nil) -> [ModelConfiguration] {
         switch mode {
         case .cloudKit:
@@ -168,7 +174,13 @@ struct TroveStore {
         case .ephemeral:
             [
                 ModelConfiguration(
-                    schema: TroveSchema.combinedSchema,
+                    schema: TroveSchema.schema,
+                    isStoredInMemoryOnly: true,
+                    cloudKitDatabase: .none
+                ),
+                ModelConfiguration(
+                    localStoreName,
+                    schema: TroveSchema.localSchema,
                     isStoredInMemoryOnly: true,
                     cloudKitDatabase: .none
                 ),

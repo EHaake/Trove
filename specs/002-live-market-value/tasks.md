@@ -193,6 +193,14 @@ on something only the person has.
   *Done when*: green and mutation-red; full suite green with count; the
   app launches under `-uiTesting` and every preview renders.
 
+  **Corrected at T006a**: the single in-memory configuration over the
+  union cannot hold a local model once the app's two-store container
+  exists in the process (SwiftData keeps the model → store assignment
+  for the process); `.ephemeral` and `makeInMemoryContainer()` are now
+  the pair, in memory — two in-memory stores coexist, the `/dev/null`
+  worry was unfounded. The previews still build a single union
+  configuration and are fine until one inserts a local model; the
+  Market section's preview (T010) builds the pair.
 - [x] **T002 — The fixture script and the recorded fixtures. [person: runs it]**
   *Done (2026-09-03, two commits)*: `scripts/record-reverb-fixtures.sh`
   (python's `urllib` under a bash shim, no third-party anything) and
@@ -445,7 +453,44 @@ on something only the person has.
   *Done when*: green, every mutation recorded, full suite green with
   count.
 
-- [ ] **T006a — The local store helpers, the index, the spies.**
+- [x] **T006a — The local store helpers, the index, the spies.**
+  *Done (2026-09-03)*: `MarketLocalStore.swift` (`MarketSubjectKey`;
+  reads `figure`/`snapshot`/`history`/`historyEntries`/
+  `hasAcknowledgedNotice` (a failed fetch reads false); writes
+  `recordMatch`, `record` — upsert the row, a point iff the reading has
+  a median (Decision 23), the trend recomputed over the whole history
+  incl. the pending insert, the snapshot refreshed, `yearFilter` and
+  `isAllYearsFallback` from the scope — `clear`, `clearAll`,
+  `acknowledgeNotice`; **no helper saves**); `MarketFigureRecord` gained
+  `yearFilter: Int?` and `isAllYearsFallback: Bool` (G4's allowlist
+  grew by two); `MarketIndex.swift` (`MarketSnapshotValue` with
+  `currentMedianCents(now:)` through the one predicate, `MarketIndex.load`,
+  `MarketSectionState.resolve` with `MarketMatchDisplay` and
+  `MarketMatchSnapshotValue` — the web URL composed from the slug);
+  `TestSupport` gained `MarketServiceSpy` (scripts per method, an
+  exhausted script throws `ScriptExhausted(call:)`) and
+  `GatedMarketServiceSpy` (first `listings` call gates). Tests:
+  `MarketLocalStoreTests` (9) and `MarketIndexTests` (7), every
+  persistence assertion on a second context. **The finding**: the first
+  run died in the test host with "Can't assign an object to a store that
+  does not contain the object's entity" on inserting a local model into
+  `makeInMemoryContainer()`'s single union configuration — the same
+  exception T001a's M5 mutation had shown. Bisected standalone on macOS
+  with two throwaway models, eight variants each in its own process:
+  every single-configuration shape works in a fresh process; after a
+  two-configuration container has assigned a type to a store, a later
+  single-configuration union container cannot hold that type, while a
+  later two-configuration one (in memory too) can. So `.ephemeral` and
+  `makeInMemoryContainer()` are now the pair in memory; plan §1 and R2
+  corrected with the date, T001b's note amended. Targeted: 39 tests in 5
+  suites green after the fix. Full unit suite: **875 tests in 127
+  suites, 874 passed** (the address guard). Mutations, each reverted:
+  **M1** a point appended when withheld → red; **M2** the trend not
+  stored → both trend assertions red; **M3** acknowledge always inserts →
+  red on "the first time is kept" — the count stayed 1 because the
+  unique key turned the second insert into an overwrite, the structural
+  guarantee doing its job, so the test's second assertion is the one
+  that matters; **M4** clear leaves the snapshot → red.
   Per plan §1 (helpers) and §5 (index). New `MarketLocalStore.swift`
   (the static helpers; `record` as the single writer of the cached
   trend, storing the reading's `yearFilter` and `isAllYearsFallback`

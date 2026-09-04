@@ -47,6 +47,11 @@ final class MarketFigureRecord {
     /// The trend, recomputed from history on every refresh by
     /// `MarketLocalStore.record` — its single writer — so lists read one row.
     var trendRawValue: String?
+    /// The year the figure narrowed to, if the item had one (Decision 29,
+    /// P21) — so the section can still say so after the item's year changes.
+    var yearFilter: Int?
+    /// Narrowing left fewer than three, so every year counted (P20).
+    var isAllYearsFallback: Bool = false
 
     init(subjectID: UUID, subjectKind: MarketSubjectKind, productID: Int, fetchedAt: Date) {
         self.subjectID = subjectID
