@@ -512,7 +512,39 @@ on something only the person has.
   second device row → red.
   *Done when*: green, mutations recorded, full suite green with count.
 
-- [ ] **T006b — The refresher, and the byte scan of the store.**
+- [x] **T006b — The refresher, and the byte scan of the store.**
+  *Done (2026-09-03)*: `MarketRefresher.swift` — `MarketRefreshTarget`
+  (key, product, subject, year), `MarketRefresher` (MainActor;
+  `Outcome` = refreshed / stillFresh / failed / **superseded** / saveFailed;
+  `refresh(_:)` in the plan's order with the item re-read after the
+  awaits — its condition and year as they are *now* — and a rollback on a
+  failed save; `targets(in:)` matched owned in custom order then matched
+  wanted, the one definition of "matched"). Tests: `MarketRefresherTests`
+  (10: within the hour nothing is sent; at the hour it fetches product
+  then listings; a refresh writes figure, point, snapshot in one save
+  with `hasChanges == false`; the item's year narrows; a withheld
+  reading saved without a point; each of four failures leaves the record
+  field by field on a second context; an unmatch and a re-match during a
+  gated fetch both drop the result, leaving no row; targets in order
+  with kinds, subjects and years) and `MarketPersistedContentTests`
+  (**G5′**, disk I/O: a refresh against the seven fixture pages into a
+  two-store scratch container, then the bytes of `default.store` and
+  `MarketLocal.store` with their `-wal`/`-shm` — the catalog title in the
+  local file and not the collection, the item's own name in the
+  collection so the scan is known to read something, and none of 300+
+  listing titles anywhere; titles the catalog title itself contains are
+  skipped, since three listings are titled with the product's own name
+  and the first run flagged exactly those). Targeted: 10 tests in 2
+  suites green. Full unit suite: **885 tests in 129 suites, 884 passed**
+  (the address guard). Mutations, each reverted: **M1** the freshness
+  guard dropped → `withinTheHourNothingIsSent` red on both assertions;
+  **M2** the record cleared before fetching → the four failure cases red
+  (the row gone); **M3** a listing title smuggled — the decoder putting
+  the title in `year` and the refresher naming the product after a
+  listing — → G5′ red naming the leaked title, and two refresher tests
+  red beside it. Not written: a foreign (non-`MarketError`) error from
+  the service, which the spy's `Result` type can't produce; the mapping
+  to `.malformedResponse` is a two-line catch, read rather than tested.
   Per plan §5 and §9 (G5′). New `MarketRefresher.swift` (`refresh(_:)`
   in plan §5's seven steps; `targets(in:)`). `MarketRefresherTests`:
   the hour budget (59 min → `.stillFresh`, spy uncalled; 60 → fetches);
