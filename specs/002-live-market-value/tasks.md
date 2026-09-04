@@ -284,6 +284,60 @@ on something only the person has.
   *Done when*: green, red run recorded, full suite count +3 or so.
 
 - [ ] **T004 — `MarketService`, `ReverbMarketService`, decoding. [person: the contact address]**
+  *Done except the address (2026-09-03, `partial`)*: `MarketService`
+  (three `@concurrent` requirements), `MarketCandidate`, `MarketProduct`,
+  `MarketListing` (four members: `priceCents`, `currency`,
+  `conditionSlug`, `year` — `currency` becomes a two-currency marker like
+  `GBP≠USD` when Reverb's display conversion makes `listing_currency`
+  and `price.currency` disagree, so such a listing counts for no
+  currency), `MarketListings`, `MarketError`; `ReverbAPI` (host, base
+  URL, headers, `perPage` 50, `pageCap` 10, `searchCount` 15 per P22,
+  timeouts, `userAgent(version:)` reading `MarketCopy.contactAddress`,
+  `productURL(slug:)`, the one `request(for:)`); `ReverbMarketService`
+  (`sharedSession` ephemeral with `waitsForConnectivity` off;
+  `makeSession(protocolClasses:)` for the stub; `URLComponents` for every
+  URL; `withPerPage`; the walk stopping at the cap or at a `next` off
+  Reverb's host — both marked truncated; `fetch` mapping `URLError` →
+  `.unreachable`, 429 → `.rateLimited`, 404 → the caller's meaning, else
+  `.serverError`); `ReverbDecoding` (explicit keys, a `Lossy` wrapper
+  per listing, a listing without a price or a slug dropped, the year
+  trimmed with blank → nil). `AppVersion` became `nonisolated` — the
+  user agent's default reads it from a nonisolated context — with its
+  tests unchanged. Tests: `ReverbDecodingTests` (7: the search's three
+  candidates with the Telecaster first and an image on `rvb-img`; the
+  product's listings link on Reverb's host, `used_total` 108,
+  `used_low_price` 100000; a product without a listings link is
+  malformed; the seven pages link forward until the last, 50 × 6 + 37;
+  the mixed page keeps four and marks `GBP≠USD`; a year trims; **G10**
+  — four members by `Mirror`, and no string member but a currency, a
+  slug or a year on a title-bearing page), `ReverbMarketServiceTests`
+  (11, `.serialized`, `StubURLProtocol` keyed by host + path + sorted
+  query with a `Mutex`-held table, an unregistered URL failing as
+  `.unsupportedURL`: the three headers and the address in the user
+  agent and no `Authorization`; the punctuation-heavy name round-trips
+  and `query` + `per_page` are the only items; 404 → `.productNotFound`;
+  429 → `.rateLimited`; 500 → `.serverError(500)`; offline →
+  `.unreachable`; seven pages in order at `per_page=50` on Reverb's
+  host, 337 listings, not truncated; `pageCap: 2` → 100 and truncated;
+  the foreign `next` not followed, one request, truncated; the mixed
+  page reaches the caller with four; the probe through the existential
+  from the main actor reads `[false, false, false]`), `MarketCopyTests`
+  (the placeholder guard — written without a closure inside `#expect`,
+  which trips the macro's throwing inference; three tries to find that).
+  Mutations, each reverted: **M1** host check dropped → the foreign-next
+  test red (the stub refuses the unregistered example.com page:
+  `.unreachable`); **M2a** `@concurrent` off the requirements only →
+  green; **M2b** off the implementations only → green; **M2c** off both
+  → the probe red with `[true, true, true]` — the SE-0461 matrix, as
+  012 established; **M3** the search URL interpolated → the punctuation
+  test red (`&` and `#` broke the query); **M4** an `Authorization`
+  header added → red. Targeted: 24 tests in 4 suites, one red. Full
+  unit suite: **825 tests in 122 suites, 824 passed** — the one red is
+  `theContactAddressIsARealOne`, by design, until the person supplies
+  the address (Decision 25; they chose to commit without it for now).
+  **Open**: the address. When it lands: fill `MarketCopy.contactAddress`,
+  rerun `MarketCopyTests` and `ReverbMarketServiceTests` green, tick
+  this task.
   Per plan §3 and Decision 25. New `Trove/Models/MarketCopy.swift`
   **minimal** — `contactAddress` (from the person) and its placeholder
   test (one `@`, no whitespace, no `TODO`/`example.com`) — the rest of
