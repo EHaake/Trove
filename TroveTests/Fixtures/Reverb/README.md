@@ -85,6 +85,24 @@ reads as unreadable, so a mismatch. This recording is the second of the
 day: the first dropped `year`, and in the minutes between one excellent
 listing sold (34, not 35; `used_total` 108, not 109).
 
+### The condition filter, as probed (Phase 1 review)
+
+The product-scoped listings endpoint the app walks
+(`/api/listings/all?cp_ids[]=…`) **ignores a condition filter** — the
+total and the first page's condition mix are identical with and without
+one, in every spelling Reverb's docs and the keyword search use. So the
+condition is applied on the device after the listings arrive, and
+nothing about the item's condition is sent (the notice's wording is a
+spec question the Phase 1 report carries). Re-run by hand on
+2026-09-03, the same day as the recording:
+
+```
+(no filter)                      total= 336 first page slugs={'b-stock': 1, 'brand-new': 7, 'excellent': 24, 'good': 3, 'mint': 3, 'mint-inventory': 1, 'very-good': 11}
+&condition=excellent             total= 336 first page slugs={'b-stock': 1, 'brand-new': 7, 'excellent': 24, 'good': 3, 'mint': 3, 'mint-inventory': 1, 'very-good': 11}
+&condition%5B%5D=excellent       total= 336 first page slugs={'b-stock': 1, 'brand-new': 7, 'excellent': 24, 'good': 3, 'mint': 3, 'mint-inventory': 1, 'very-good': 11}
+&conditions%5B%5D=excellent      total= 336 first page slugs={'b-stock': 1, 'brand-new': 7, 'excellent': 24, 'good': 3, 'mint': 3, 'mint-inventory': 1, 'very-good': 11}
+```
+
 ## Hand-built, not recorded
 
 - `rate-limited-429.json` — the shape of Reverb's 429 body.

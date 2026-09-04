@@ -92,13 +92,14 @@ struct TroveStore {
             do {
                 return TroveStore(container: try build(configurations(for: fallback)), mode: fallback, cloudKitFailure: firstFailure)
             } catch {
-                // Reached only when the synced store also fails without
-                // CloudKit — which, since it is the same file either way,
-                // points at the *other* store in the pair. The reason
-                // recorded is still the first failure: a local-store fault
-                // reported as a CloudKit one is the accepted misattribution
-                // (plan §1); the collection opens, and the next launch asks
-                // for CloudKit again.
+                // Reached when the pair still won't load without CloudKit.
+                // Usually that is the local store — the synced file is the
+                // same in both attempts — but a corrupt collection reaches
+                // here too and loses the local store on the way (accepted,
+                // plan Q21). The reason recorded is still the first failure:
+                // a local-store fault reported as a CloudKit one is the
+                // accepted misattribution (plan Q21); the collection opens,
+                // and the next launch asks for CloudKit again.
                 try recreateLocalStore(localConfiguration().url)
                 return TroveStore(container: try build(configurations(for: fallback)), mode: fallback, cloudKitFailure: firstFailure)
             }
