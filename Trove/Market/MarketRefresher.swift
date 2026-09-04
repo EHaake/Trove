@@ -71,13 +71,14 @@ final class MarketRefresher {
             return .superseded
         }
 
+        let fetchedAt = now()
         let reading = MarketFigureComputation.compute(
             listings: listings,
             subject: current.subject,
             year: current.year,
             product: product,
-            fetchedAt: now(),
-            now: now()
+            fetchedAt: fetchedAt,
+            now: fetchedAt
         )
         do {
             try MarketLocalStore.record(reading, product: product, for: current.key, in: modelContext)

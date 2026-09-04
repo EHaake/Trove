@@ -166,17 +166,17 @@ struct ReverbMarketServiceTests {
         #expect(StubURLProtocol.seen.count == 1, "the client left Reverb's host: \(StubURLProtocol.seen.compactMap(\.url))")
     }
 
-    @Test func theMixedPageReachesTheCallerWithFourListings() async throws {
+    @Test func theMixedPageReachesTheCallerWithFiveListings() async throws {
         let service = service()
         let product = MarketProduct(
-            id: 900_000, slug: "fixture", title: "Fixture", usedLowCents: nil, usedTotal: 6,
+            id: 900_000, slug: "fixture", title: "Fixture", usedLowCents: nil, usedTotal: 7,
             listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=900000")!
         )
         StubURLProtocol.register(ReverbMarketService.withPerPage(product.listingsURL), status: 200, body: try reverbFixture("listings-mixed.json"))
 
         let listings = try await service.listings(for: product)
 
-        #expect(listings.listings.count == 4)
+        #expect(listings.listings.count == 5)
         #expect(!listings.isTruncated)
     }
 

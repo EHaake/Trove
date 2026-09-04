@@ -1,5 +1,5 @@
 {
-  "total": 6,
+  "total": 7,
   "current_page": 1,
   "per_page": 50,
   "total_pages": 1,
@@ -7,51 +7,110 @@
     {
       "id": 900001,
       "title": "Fixture Telecaster, excellent, USD",
-      "price": { "amount_cents": 140000, "currency": "USD" },
+      "price": {
+        "amount_cents": 140000,
+        "currency": "USD"
+      },
       "listing_currency": "USD",
-      "condition": { "slug": "excellent", "display_name": "Excellent" },
-      "state": { "slug": "live" }
+      "condition": {
+        "slug": "excellent",
+        "display_name": "Excellent"
+      },
+      "state": {
+        "slug": "live"
+      }
     },
     {
       "id": 900002,
       "title": "Fixture Telecaster, excellent, priced in EUR",
-      "price": { "amount_cents": 129000, "currency": "EUR" },
+      "price": {
+        "amount_cents": 129000,
+        "currency": "EUR"
+      },
       "listing_currency": "EUR",
-      "condition": { "slug": "excellent", "display_name": "Excellent" },
-      "state": { "slug": "live" }
+      "condition": {
+        "slug": "excellent",
+        "display_name": "Excellent"
+      },
+      "state": {
+        "slug": "live"
+      }
     },
     {
       "id": 900003,
       "title": "Fixture Telecaster, excellent, converted for display",
-      "price": { "amount_cents": 141000, "currency": "USD" },
+      "price": {
+        "amount_cents": 141000,
+        "currency": "USD"
+      },
       "listing_currency": "GBP",
-      "condition": { "slug": "excellent", "display_name": "Excellent" },
-      "state": { "slug": "live" }
+      "condition": {
+        "slug": "excellent",
+        "display_name": "Excellent"
+      },
+      "state": {
+        "slug": "live"
+      }
     },
     {
       "id": 900004,
       "title": "Fixture Telecaster, a slug Reverb added later",
-      "price": { "amount_cents": 135000, "currency": "USD" },
+      "price": {
+        "amount_cents": 135000,
+        "currency": "USD"
+      },
       "listing_currency": "USD",
-      "condition": { "slug": "player-grade", "display_name": "Player Grade" },
-      "state": { "slug": "live" }
+      "condition": {
+        "slug": "player-grade",
+        "display_name": "Player Grade"
+      },
+      "state": {
+        "slug": "live"
+      }
     },
     {
       "id": 900005,
       "title": "Fixture Telecaster, no price",
       "listing_currency": "USD",
-      "condition": { "slug": "excellent", "display_name": "Excellent" },
-      "state": { "slug": "live" }
+      "condition": {
+        "slug": "excellent",
+        "display_name": "Excellent"
+      },
+      "state": {
+        "slug": "live"
+      }
     },
     {
       "id": 900006,
       "title": "Fixture Telecaster, no condition",
-      "price": { "amount_cents": 138000, "currency": "USD" },
+      "price": {
+        "amount_cents": 138000,
+        "currency": "USD"
+      },
       "listing_currency": "USD",
-      "state": { "slug": "live" }
+      "state": {
+        "slug": "live"
+      }
+    },
+    {
+      "id": 900007,
+      "title": "Fixture Telecaster, no listing_currency at all",
+      "price": {
+        "amount_cents": 137000,
+        "currency": "USD"
+      },
+      "condition": {
+        "slug": "excellent",
+        "display_name": "Excellent"
+      },
+      "state": {
+        "slug": "live"
+      }
     }
   ],
   "_links": {
-    "self": { "href": "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=900000&per_page=50&page=1" }
+    "self": {
+      "href": "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=900000&per_page=50&page=1"
+    }
   }
 }

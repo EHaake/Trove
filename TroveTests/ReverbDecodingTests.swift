@@ -56,12 +56,13 @@ struct ReverbDecodingTests {
     @Test func theMixedPageDropsWhatCannotCountAndMarksADisagreeingCurrency() throws {
         let page = try ReverbDecoding.page(from: try reverbFixture("listings-mixed.json"))
 
-        // Six raw: the no-price and the no-condition listings are dropped.
-        #expect(page.listings.count == 4)
+        // Seven raw: the no-price and the no-condition listings are dropped.
+        #expect(page.listings.count == 5)
         let currencies = page.listings.map(\.currency)
         #expect(currencies.contains("USD"))
         #expect(currencies.contains("EUR"))
         #expect(currencies.contains("GBP≠USD"), "a converted price counts for no currency: \(currencies)")
+        #expect(currencies.contains("?≠USD"), "a missing listing_currency is unknown, never USD: \(currencies)")
         #expect(page.listings.map(\.conditionSlug).contains("player-grade"), "an unknown slug is the computation's to judge, not the decoder's")
     }
 

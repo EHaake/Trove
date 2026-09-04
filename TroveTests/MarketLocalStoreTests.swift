@@ -76,6 +76,25 @@ struct MarketLocalStoreTests {
         #expect(row.trendRawValue == MarketTrend.compute(history: try MarketLocalStore.historyEntries(for: key.subjectID, in: elsewhere))?.rawValue)
     }
 
+    /// Decision 16, criterion 16: history is never trimmed by age — a point
+    /// four hundred days old survives the next refresh. The one place the
+    /// no-time-limit decision is enforced, and `003`'s raw material.
+    @Test func historyIsNeverTrimmedByAge() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let key = MarketSubjectKey(subjectID: UUID(), kind: .owned)
+        let longAgo = t0.addingTimeInterval(-400 * day)
+
+        try MarketLocalStore.record(figure(median: 100_000, at: longAgo), product: product, for: key, in: context)
+        try context.save()
+        try MarketLocalStore.record(figure(median: 120_000, at: t0), product: product, for: key, in: context)
+        try context.save()
+
+        let points = try MarketLocalStore.history(for: key.subjectID, in: ModelContext(container))
+        #expect(points.map(\.fetchedAt) == [longAgo, t0])
+        #expect(try MarketLocalStore.figure(for: key.subjectID, in: ModelContext(container))?.trendRawValue == MarketTrend.up.rawValue, "a 400-day-old point is still the previous point (plan Q6)")
+    }
+
     /// Decision 23: a withheld refresh updates the row — the age, the
     /// catalog's lowest used price — and adds no point.
     @Test func aWithheldRefreshUpdatesTheRowAndAddsNoPoint() throws {

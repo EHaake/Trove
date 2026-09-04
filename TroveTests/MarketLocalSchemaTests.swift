@@ -93,8 +93,8 @@ struct MarketLocalSchemaTests {
         }
     }
 
-    // G6 — `-uiTesting`: one configuration, in memory, no CloudKit, and it
-    // carries every model, local ones included — a UI-test launch that
+    // G6 — `-uiTesting`: the pair, in memory, no CloudKit, and between them
+    // every model, local ones included — a UI-test launch that
     // fetched a market row from a store without the entity would crash
     // there and nowhere else.
     @Test func uiTestsKeepEveryModelInMemory() throws {

@@ -22,6 +22,7 @@ struct TwoStoreContainerTests {
 
         let itemID = UUID()
         let subjectID = UUID()
+        let sentinel = "G7-SENTINEL-\(UUID().uuidString)"
 
         do {
             let container = try TroveStore.buildContainer(TroveStore.configurations(for: .cloudKit, directory: directory))
@@ -29,7 +30,9 @@ struct TwoStoreContainerTests {
             let item = Item(name: "Telecaster", categoryPath: "Music/Guitars", purchasePriceCents: 1_500_00, condition: .excellent)
             item.id = itemID
             context.insert(item)
-            context.insert(MarketFigureRecord(subjectID: subjectID, subjectKind: .owned, productID: 126_161, fetchedAt: .now))
+            let record = MarketFigureRecord(subjectID: subjectID, subjectKind: .owned, productID: 126_161, fetchedAt: .now)
+            record.trendRawValue = sentinel
+            context.insert(record)
             try context.save()
         }
 
@@ -51,21 +54,34 @@ struct TwoStoreContainerTests {
             #expect(records.map(\.subjectID) == [subjectID])
         }
 
-        // The collection's file alone, opened with the *union* schema so a
-        // record could be found if it had landed there: the item is present,
-        // no record is.
+        // The collection's file alone, under the synced schema: the item.
         do {
             let collection = try ModelContainer(
-                for: TroveSchema.combinedSchema,
-                configurations: ModelConfiguration(
-                    schema: TroveSchema.combinedSchema,
-                    url: directory.appending(path: "default.store"),
-                    cloudKitDatabase: .none
-                )
+                for: TroveSchema.schema,
+                configurations: ModelConfiguration(schema: TroveSchema.schema, url: directory.appending(path: "default.store"), cloudKitDatabase: .none)
             )
-            let context = ModelContext(collection)
-            #expect(try context.fetch(FetchDescriptor<Item>()).map(\.id) == [itemID])
-            #expect(try context.fetchCount(FetchDescriptor<MarketFigureRecord>()) == 0, "A market record reached the synced collection")
+            #expect(try ModelContext(collection).fetch(FetchDescriptor<Item>()).map(\.id) == [itemID])
         }
+
+        // The split half of the spike, by bytes. A SwiftData reader over the
+        // collection's file can't be trusted to see a local model another
+        // configuration wrote there (T006a's routing finding, and the Phase 1
+        // review's mutation showed exactly that), so this reads the files
+        // themselves: a sentinel written on the record must be in the local
+        // file with its sidecars and nowhere in the collection's.
+        func bytes(of name: String) throws -> Data {
+            var data = Data()
+            for suffix in ["", "-wal", "-shm"] {
+                let url = directory.appending(path: name + suffix)
+                if FileManager.default.fileExists(atPath: url.path) { data += try Data(contentsOf: url) }
+            }
+            return data
+        }
+        let needle = Data(sentinel.utf8)
+        let local = try bytes(of: "MarketLocal.store")
+        let collection = try bytes(of: "default.store")
+        #expect(local.range(of: needle) != nil, "the record's sentinel is not in the local store's bytes — the scan reads nothing")
+        #expect(collection.range(of: Data("Telecaster".utf8)) != nil, "the item's name is not in the collection's bytes — the scan reads nothing")
+        #expect(collection.range(of: needle) == nil, "A market record reached the synced collection")
     }
 }

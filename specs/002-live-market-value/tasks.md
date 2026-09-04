@@ -635,31 +635,27 @@ only — technical detail lives in `plan.md` and the commit log).
   **M2** "lowest used price" → red; **M3** every "asking price" renamed
   → rule 2 red (and four whole-string pins); **M4** the copy file list
   emptied → the `#require` red; **M5** the age boundary `> 60` → the
-  60-second row red. **Phase 1 closes here**; the reviewer pass over
-  the phase's diff and the phase report follow.
-  Per plan §6 (Copy and vocabulary). `MarketCopy.swift` grows to every
-  string in the spec's Copy section as amended, Q7's additions, the
-  notice, sort labels, dashboard line, picker, Settings, About
-  (`attribution` verbatim, `privacyPolicyURL` = the blob URL,
-  `privacyPolicyFilename`), and the accessibility strings **including
-  the trend arrow's "trending up"/"trending down"** (their single home;
-  `TrendArrow` reads them at T012); `figure` composed from
-  `median`/`separator`/`listed`. New `MarketAge.swift`. Tests:
-  `MarketCopyTests` (every string whole; 1/2 listings; the en dash by
-  code point; withheld with/without a price and the wanted variant; the
-  notice reassembly; the dashboard line; the candidate reading both
-  branches; progress; **Amendment A**: the source line with a year,
-  `allYearsFallback(year:)` owned and wanted, the Year field's
-  label and validation error), `MarketAgeTests` (the table incl. a
-  future date), `MarketVocabularyTests` — allowlist-then-regex over a **named
-  file list** (`MarketCopy.swift` now; `MarketSection.swift`,
-  `MarketNoticeView.swift`, `MarketMatchView.swift`, `TrendArrow.swift`
-  added to the list by the tasks that create them, with the
-  `MenuPolicyTests` shape: every named file must exist and be scanned,
-  `#require` on the count), plus the no-space structural rule over the
-  Market view files. Mutations: "$1,450 value" → red; "lowest used
-  price" → red; a file removed from the list → the count red.
-  *Done when*: green, mutations recorded, full suite green with count.
+  60-second row red. **Phase 1 closes here.** *The reviewer pass over the phase (2026-09-03)*:
+  two blockers and five reshapes, all folded, plus two items for the
+  person carried into the phase report. **B1** — G7's "no record in the
+  collection" assertion had no red run, and its mutation (the record
+  moved to the synced list, unique key dropped so the pair loads) showed
+  a SwiftData reader over the collection's file returning nothing even
+  for its own positive control — so the split half is now proven by
+  **bytes**: a sentinel on the record found in `MarketLocal.store` and
+  absent from `default.store`, red at that exact assertion under the
+  mutation (the sentinel at offset 28608 of the collection). **B2** —
+  criterion 16's "never trimmed by age" had no guard: a 400-day-old
+  point now survives the next refresh (mutation: a thirty-day prune →
+  red, both assertions). **S1** — a missing `listing_currency` now counts
+  for no currency (`?≠USD`), a seventh listing in `listings-mixed.json`
+  pins it, the mixed-page tests read five. **S2** — the recorder splices
+  its block between `<!-- recorded:start/end -->` markers so the README's
+  hand-written sections survive a re-record. **S3/S4** — Q21's two
+  accepted costs and three as-built details recorded in the plan. **N3**
+  — one `now()` after the awaits. **N6** — G6's comment. Full unit suite
+  after the fold: **913 tests in 131 suites, 912 passed** (the address
+  guard). Sent back for re-review.
 
 ## Phase 2 — Design
 

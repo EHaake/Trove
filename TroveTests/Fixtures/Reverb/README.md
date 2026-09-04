@@ -1,5 +1,6 @@
 # Reverb fixtures
 
+<!-- recorded:start -->
 Recorded 2026-09-03 by `scripts/record-reverb-fixtures.sh` from the public
 Reverb API, unauthenticated, trimmed to the fields the app reads. Read
 by `TroveTests` through `#filePath`, the way `DocsSampleTests` reads
@@ -49,6 +50,7 @@ slugs outside the known set: none
     17  Strymon Timeline Delay  (used from 25500 cents, 89 listed)
     189120  Strymon TimeLine MX Delay  (used from 59000 cents, 4 listed)
 ```
+<!-- recorded:end -->
 
 ### Chosen for the four rows (by hand, after the run)
 
@@ -87,7 +89,8 @@ listing sold (34, not 35; `used_total` 108, not 109).
 
 - `rate-limited-429.json` — the shape of Reverb's 429 body.
 - `listings-mixed.json` — one page carrying a EUR listing, a listing whose
-  `price.currency` disagrees with `listing_currency`, an unknown condition
-  slug, a listing with no price, and one with no condition.
+  `price.currency` disagrees with `listing_currency`, one with no
+  `listing_currency` at all, an unknown condition slug, a listing with no
+  price, and one with no condition.
 - `listings-next-elsewhere.json` — a page whose `_links.next` points at
   another host, which the client must refuse to follow.

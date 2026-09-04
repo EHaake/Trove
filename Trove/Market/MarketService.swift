@@ -50,8 +50,9 @@ nonisolated struct MarketProduct: Sendable, Equatable {
 ///
 /// `currency` is the listing's own currency when Reverb's `listing_currency`
 /// and `price.currency` agree. When they disagree — Reverb converts prices
-/// for display — it is a two-currency marker that never equals a real
-/// currency code, so the listing counts for no currency (P3).
+/// for display — or `listing_currency` is missing, it is a two-currency
+/// marker that never equals a real currency code, so the listing counts
+/// for no currency (P3).
 nonisolated struct MarketListing: Sendable, Equatable {
     let priceCents: Int
     let currency: String

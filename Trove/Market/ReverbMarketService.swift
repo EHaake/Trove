@@ -216,8 +216,10 @@ nonisolated enum ReverbDecoding {
         let wire = try decode(PageWire.self, from: data)
         let listings = wire.listings.compactMap(\.value).compactMap { listing -> MarketListing? in
             guard let price = listing.price, let slug = listing.condition?.slug, !slug.isEmpty else { return nil }
-            let listingCurrency = listing.listingCurrency ?? price.currency
-            let currency = listingCurrency == price.currency ? price.currency : "\(listingCurrency)≠\(price.currency)"
+            // Both fields must agree for the listing to be priced in a
+            // currency at all (plan §3): a missing `listing_currency` is
+            // unknown, not the display currency, so it counts for none.
+            let currency = listing.listingCurrency == price.currency ? price.currency : "\(listing.listingCurrency ?? "?")≠\(price.currency)"
             let year = listing.year?.trimmingCharacters(in: .whitespacesAndNewlines)
             return MarketListing(
                 priceCents: price.amountCents,

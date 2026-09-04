@@ -166,8 +166,8 @@ candidates = "\n".join(cands)
 print(candidates)
 
 today = datetime.date.today().isoformat()
-(OUT / "README.md").write_text(f"""# Reverb fixtures
-
+START, END = "<!-- recorded:start -->", "<!-- recorded:end -->"
+generated = f"""{START}
 Recorded {today} by `scripts/record-reverb-fixtures.sh` from the public
 Reverb API, unauthenticated, trimmed to the fields the app reads. Read
 by `TroveTests` through `#filePath`, the way `DocsSampleTests` reads
@@ -190,15 +190,15 @@ removed at recording.
 ```
 {candidates}
 ```
-
-## Hand-built, not recorded
-
-- `rate-limited-429.json` — the shape of Reverb's 429 body.
-- `listings-mixed.json` — one page carrying a EUR listing, a listing whose
-  `price.currency` disagrees with `listing_currency`, an unknown condition
-  slug, a listing with no price, and one with no condition.
-- `listings-next-elsewhere.json` — a page whose `_links.next` points at
-  another host, which the client must refuse to follow.
-""")
-print("wrote", OUT / "README.md")
+{END}"""
+readme = OUT / "README.md"
+# Everything outside the markers is written by hand and survives a re-record.
+if readme.exists() and START in readme.read_text() and END in readme.read_text():
+    text = readme.read_text()
+    before, rest = text.split(START, 1)
+    _, after = rest.split(END, 1)
+    readme.write_text(before + generated + after)
+else:
+    readme.write_text("# Reverb fixtures\n\n" + generated + "\n")
+print("wrote", readme, "(hand-written sections outside the markers kept)")
 PY
