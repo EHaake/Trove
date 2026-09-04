@@ -51,8 +51,11 @@ final class ItemDetailViewModel {
         deleteFailureMessage = nil
         guard let item else { return false }
 
+        // 002: the device's market rows for this item go with it, in the
+        // same save (plan §1, "who clears").
         modelContext.delete(item)
         do {
+            try MarketLocalStore.clear(subjectID: item.id, in: modelContext)
             try modelContext.save()
             self.item = nil
             return true

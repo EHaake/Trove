@@ -195,6 +195,49 @@ struct SettingsViewModelSurfaceTests {
         #expect(!viewModel.isBusy)
         #expect(try ModelContext(container).fetchCount(FetchDescriptor<Item>()) == 1)
     }
+
+    /// 002/T006c: the device's market rows for the item — figure, history,
+    /// snapshot — go with it, in the same save, read back on a second context.
+    private func seedMarketRows(for id: UUID, in context: ModelContext) throws {
+        let product = MarketProduct(id: 126_161, slug: "fender-american-professional-ii-telecaster", title: "Fender American Professional II Telecaster", usedLowCents: 100_000, usedTotal: 108, listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!)
+        let figure = MarketFigure(medianCents: 140_000, lowCents: 130_000, highCents: 150_000, count: 12, fetchedAt: .now, isTruncated: false, yearScope: .any)
+        try MarketLocalStore.record(.figure(figure), product: product, for: MarketSubjectKey(subjectID: id, kind: .owned), in: context)
+    }
+
+    private func marketRowsRemain(for id: UUID, in container: ModelContainer) throws -> Bool {
+        let fresh = ModelContext(container)
+        let figure = try MarketLocalStore.figure(for: id, in: fresh)
+        let snapshot = try MarketLocalStore.snapshot(for: id, in: fresh)
+        let history = try MarketLocalStore.history(for: id, in: fresh)
+        return figure != nil || snapshot != nil || !history.isEmpty
+    }
+
+    /// 002/T006c: Delete All empties every local market table — rows of both
+    /// kinds, and the notice flag — whichever list was chosen.
+    @Test(arguments: [DeleteTarget.items, .wishlist])
+    func confirmDeleteAllEmptiesEveryLocalMarketTable(target: DeleteTarget) async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let item = Item(name: "Telecaster", reverbProductID: 126_161)
+        let wanted = WishlistItem(name: "D-18", reverbProductID: 182_769)
+        context.insert(item); context.insert(wanted)
+        try seedMarketRows(for: item.id, in: context)
+        try MarketLocalStore.acknowledgeNotice(at: .now, in: context)
+        try context.save()
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+        viewModel.requestDeleteAll(target)
+
+        await viewModel.confirmDeleteAll(target)?.value
+
+        let fresh = ModelContext(container)
+        #expect(try fresh.fetchCount(FetchDescriptor<MarketFigureRecord>()) == 0)
+        #expect(try fresh.fetchCount(FetchDescriptor<MarketHistoryPoint>()) == 0)
+        #expect(try fresh.fetchCount(FetchDescriptor<MarketMatchSnapshot>()) == 0)
+        #expect(!MarketLocalStore.hasAcknowledgedNotice(in: fresh))
+        #expect(viewModel.alert == nil)
+    }
+
 }
 
 // MARK: - T009: export everything

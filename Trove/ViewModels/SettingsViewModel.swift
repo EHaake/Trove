@@ -306,6 +306,12 @@ final class SettingsViewModel {
                         modelContext.delete(wanted)
                     }
                 }
+                // 002: every device-local market row goes too — figures,
+                // history, snapshots and the notice flag — whichever list
+                // is being emptied; the rows are keyed by items that are
+                // now gone or about to be irrelevant, and Delete All is the
+                // one "start over" the app offers.
+                try MarketLocalStore.clearAll(in: modelContext)
                 try modelContext.save()
             } catch {
                 // Without this, load() on the same context would show the

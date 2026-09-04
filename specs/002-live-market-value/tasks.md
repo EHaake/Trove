@@ -561,7 +561,27 @@ on something only the person has.
   persist a listing title (temporarily widen the DTO) → G5′ red.
   *Done when*: green, mutations recorded, full suite green with count.
 
-- [ ] **T006c — Who clears: every local deletion path.**
+- [x] **T006c — Who clears: every local deletion path.**
+  *Done (2026-09-03)*: `ItemDetailViewModel.delete`,
+  `WishlistDetailViewModel.delete`, `ItemListViewModel.delete(id:)`,
+  `WishlistViewModel.delete(id:)` call `MarketLocalStore.clear` inside
+  their existing `do` before the save (a thrown clear takes the failure
+  path the save already had); `SettingsViewModel.confirmDeleteAll` calls
+  `clearAll` — figures, history, snapshots and the notice flag, whichever
+  list is emptied, because Delete All is the one "start over" the app
+  offers and the rows are keyed by items that are gone or about to be
+  irrelevant. Each of the five suites gained one test (a private
+  `seedMarketRows`/`marketRowsRemain` pair per file, reading back on a
+  second context; the Settings one parameterised over both targets and
+  asserting all four local tables empty). Targeted: 44 tests in 4
+  suites green plus the Settings suite (`SettingsViewModelSurfaceTests`
+  — its struct name differs from its file, so a file-named selector
+  silently ran the whole suite; noted for the memory file). Full unit
+  suite: **890 tests in 129 suites, 889 passed** (the address guard).
+  Mutations, each reverted: dropping the clear from each of the five
+  paths → that path's new test red on "the deleted item's market rows
+  survived it" (the survivor assertion stayed green throughout, so the
+  test can tell "cleared the wrong rows" from "cleared none").
   Per plan §1 (who clears). `ItemDetailViewModel.delete`,
   `WishlistDetailViewModel.delete`, both lists' `delete(id:)`,
   `SettingsViewModel.confirmDeleteAll` (→ `clearAll`) each call the

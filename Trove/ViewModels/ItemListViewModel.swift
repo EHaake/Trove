@@ -202,6 +202,8 @@ final class ItemListViewModel {
 
         modelContext.delete(item)
         do {
+            // 002: the device's market rows for this item go with it.
+            try MarketLocalStore.clear(subjectID: id, in: modelContext)
             try modelContext.save()
         } catch {
             loadFailureMessage = error.localizedDescription
