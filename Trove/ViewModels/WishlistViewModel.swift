@@ -168,13 +168,15 @@ final class WishlistViewModel {
         }
     }
 
-    /// See `ItemListViewModel.summaries(for:in:now:)` — one fetch of the
-    /// figure rows, a failed read taken as "nothing stored".
+    /// One fetch of the figure rows, narrowed to the wanted items just
+    /// fetched.
+    ///
+    /// The derivation itself lives on `MarketSummary` (002/T013), the same
+    /// as `ItemListViewModel.summaries(for:in:now:)`, so no surface that
+    /// reads a figure per row carries its own copy of the step — including
+    /// its rule that a read which throws reads as "nothing stored".
     private static func summaries(for items: [WishlistItem], in context: ModelContext, now: Date) -> [UUID: MarketSummary] {
-        let figures = ((try? MarketIndex.load(from: context)) ?? .empty).figures
-        return Dictionary(uniqueKeysWithValues: items.compactMap { item in
-            figures[item.id].map { (item.id, MarketSummary(snapshot: $0, now: now)) }
-        })
+        MarketSummary.summaries(forSubjects: items.map(\.id), in: context, now: now)
     }
 
     /// See `ItemListViewModel.trend(for:)`.

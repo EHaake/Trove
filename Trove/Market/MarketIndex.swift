@@ -54,8 +54,9 @@ struct MarketSummary: Equatable, Sendable {
 
     /// One fetch of the figure rows, narrowed to the subjects just fetched —
     /// what every surface that reads a figure per row goes through
-    /// (`ItemListViewModel.load()`, `DashboardViewModel.load()`), so the
-    /// lists and the dashboard can never derive a figure differently.
+    /// (`ItemListViewModel.load()`, `WishlistViewModel.load()`,
+    /// `DashboardViewModel.load()`), so the lists and the dashboard can never
+    /// derive a figure differently.
     ///
     /// A read that throws reads as "nothing stored" — the same direction
     /// `MarketSectionState.resolve(subjectID:…)` takes, and for the same

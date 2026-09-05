@@ -98,6 +98,13 @@ struct DashboardHeadlineTests {
 
     /// The property that makes the screen readable: whatever the figures are,
     /// the two above always account for the third.
+    ///
+    /// Asserted against literals written out by hand from the fixture above,
+    /// not against the view model's own arithmetic. The previous form —
+    /// `totalCurrentValueCents - totalSpentCents == valueDeltaCents` — was a
+    /// tautology, since `valueDeltaCents` *is* that subtraction: found at
+    /// 002/T013, where a mutation making the value total read the market
+    /// medians instead of the person's values left this test green.
     @Test func theThreeHeadlineFiguresAlwaysReconcile() throws {
         let context = try makeInMemoryContext()
         insertItem("A", paidCents: 12_345, valueCents: 20_000, into: context)
@@ -109,9 +116,11 @@ struct DashboardHeadlineTests {
         let viewModel = DashboardViewModel(modelContext: context)
         viewModel.load()
 
-        #expect(
-            viewModel.totalCurrentValueCents - viewModel.totalSpentCents == viewModel.valueDeltaCents
-        )
+        // A, B and D are valued; C is not, so neither its value nor its
+        // 7,777 of spend belongs to any of the three.
+        #expect(viewModel.totalCurrentValueCents == 20_000 + 5_000 + 999)
+        #expect(viewModel.totalSpentCents == 12_345 + 90_000 + 400)
+        #expect(viewModel.valueDeltaCents == (20_000 + 5_000 + 999) - (12_345 + 90_000 + 400))
     }
 
     @Test func everythingIsZeroWhenNoItemHasAValue() throws {

@@ -1068,6 +1068,13 @@ only — technical detail lives in `plan.md` and the commit log).
   dashboard test exercises the catch). Full unit suite (orchestrator's
   run): **1030 tests in 144 suites, all passed**. The line on the device
   with a real refreshed figure is T018's.
+  *Follow-up (same day)*: `theThreeHeadlineFiguresAlwaysReconcile`
+  restructured against hand-written literals (red under the T013
+  mutation at two of its three assertions — the suite's four other
+  headline tests had caught that mutation all along; the tautology was
+  one named guard, not an unguarded total); `WishlistViewModel` folded
+  onto `MarketSummary.summaries(forSubjects:in:now:)`, now the one
+  derivation with all three callers. Count unchanged, 1030 in 144.
   Per plan §6 (dashboard), Decisions 21–22, T008's form.
   `DashboardViewModel.apply` gains `marketTotalCents`,
   `marketFigureCount`, `hasMarketFigures`, `marketLine`; the `load()`
@@ -1417,3 +1424,4 @@ previous spec of similar size before treating the policy as settled.
 | T010 | opus (`sdd-implementer`) | 206,241 | verified first try; renders seen by the orchestrator; one finding (Link ink), recorded in plan §6 |
 | T011 | opus (`sdd-implementer`) | 161,355 | verified first try; the notice flow seen on the simulator |
 | T013 | opus (`sdd-implementer`) | 105,112 | verified first try; one finding (a tautological existing test), fixed in the follow-up |
+| T013 follow-up | opus (`sdd-implementer`) | 45,933 | verified first try; the reconcile test now red under the T013 mutation |
