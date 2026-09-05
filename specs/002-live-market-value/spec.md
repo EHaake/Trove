@@ -408,6 +408,14 @@ skeptical-reviewer escalated):
     privacy policy." The retention paragraph and `PRIVACY.md` (T018)
     say the same.
 
+Added 2026-09-05, at the Phase 4 pause (the person):
+
+32. **The year is the year the piece was made.** A 2023 reissue of a
+    1961 model carries 2023; that it is a reissue of a '61 belongs in
+    the item's name or notes, not the year. This is what the listing
+    narrowing needs (Reverb's listing years are build years) and what
+    `docs/csv-reference.md` already said at T016b; P18 now says it too.
+
 Proposed at drafting, 2026-09-03, by Claude Code, and decisions since
 the spec's approval the same day (P13 as reworded under Decision 16):
 
@@ -468,7 +476,9 @@ the plan's Amendment A):
 
 - **P18. The year** is a whole number of four digits, optional, on
   `Item` and `WishlistItem`; blank means "any year". The forms validate
-  it as 1900 through next year.
+  it as 1900 through next year. It is **the year the piece was made**
+  (Decision 32): a 2023 reissue of a 1961 model is 2023 — that it is a
+  reissue belongs in the name or the notes.
 - **P19. Coverage**: a listing's stated year covers the item's year when
   it is that year, a range containing it ("1970 - 1984"; "2020 -
   Present" reaches the current year), or its decade ("1970s"). A stated
