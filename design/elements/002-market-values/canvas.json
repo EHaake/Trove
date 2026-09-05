@@ -1,0 +1,173 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 393,
+      "h": 1000,
+      "title": "Item · matched, current"
+    },
+    {
+      "file": "ItemUnmatched.dc.html",
+      "x": 493,
+      "y": 0,
+      "w": 393,
+      "h": 1000,
+      "title": "Item · unmatched"
+    },
+    {
+      "file": "ItemNeverRefreshed.dc.html",
+      "x": 986,
+      "y": 0,
+      "w": 393,
+      "h": 1000,
+      "title": "Item · never refreshed here"
+    },
+    {
+      "file": "ItemWithheld.dc.html",
+      "x": 1479,
+      "y": 0,
+      "w": 393,
+      "h": 1000,
+      "title": "Item · withheld"
+    },
+    {
+      "file": "ItemStale.dc.html",
+      "x": 1972,
+      "y": 0,
+      "w": 393,
+      "h": 1000,
+      "title": "Item · stale"
+    },
+    {
+      "file": "ItemAllYears.dc.html",
+      "x": 2465,
+      "y": 0,
+      "w": 393,
+      "h": 1000,
+      "title": "Item · narrowed to all years"
+    },
+    {
+      "file": "ItemJustRefreshed.dc.html",
+      "x": 3451,
+      "y": 0,
+      "w": 393,
+      "h": 1000,
+      "title": "Item · just refreshed (Refresh disabled)"
+    },
+    {
+      "file": "ItemFailure.dc.html",
+      "x": 2958,
+      "y": 0,
+      "w": 393,
+      "h": 1000,
+      "title": "Item · failure overlay"
+    },
+    {
+      "file": "WishlistCurrent.dc.html",
+      "x": 0,
+      "y": 1140,
+      "w": 393,
+      "h": 1060,
+      "title": "Wishlist · matched, current"
+    },
+    {
+      "file": "MarketStates.dc.html",
+      "x": 493,
+      "y": 1140,
+      "w": 800,
+      "h": 900,
+      "title": "Market section · states sheet"
+    },
+    {
+      "file": "PickerNotice.dc.html",
+      "x": 0,
+      "y": 2340,
+      "w": 393,
+      "h": 852,
+      "title": "Picker · the one-time notice"
+    },
+    {
+      "file": "PickerResults.dc.html",
+      "x": 493,
+      "y": 2340,
+      "w": 393,
+      "h": 852,
+      "title": "Picker · results"
+    },
+    {
+      "file": "PickerSearching.dc.html",
+      "x": 986,
+      "y": 2340,
+      "w": 393,
+      "h": 852,
+      "title": "Picker · searching"
+    },
+    {
+      "file": "PickerEmpty.dc.html",
+      "x": 1479,
+      "y": 2340,
+      "w": 393,
+      "h": 852,
+      "title": "Picker · no matches"
+    },
+    {
+      "file": "PickerFailed.dc.html",
+      "x": 1972,
+      "y": 2340,
+      "w": 393,
+      "h": 852,
+      "title": "Picker · failed"
+    },
+    {
+      "file": "DashboardMarketLine.dc.html",
+      "x": 0,
+      "y": 3332,
+      "w": 393,
+      "h": 1000,
+      "title": "Dashboard · market line (recommended)"
+    },
+    {
+      "file": "DashboardToggle.dc.html",
+      "x": 493,
+      "y": 3332,
+      "w": 393,
+      "h": 1000,
+      "title": "Dashboard · toggle (alternative, not recommended)"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "row-market",
+      "x": -720,
+      "y": 0,
+      "w": 620,
+      "text": "Surface 1 — the Market section, on the item detail. One unbroken block in the DETAILS / NOTES rhythm, not a card: the two plated cards above (WORTH NOW · PAID, DESIRE TO KEEP) stay the screen's weight. Rule for the buttons: filled brass = writes the person's data (the adopt action only); outlined brass = fetches; text = manages the match, rust for Remove. The age sits at the right of the reading's row, three lines above the actions; the just-refreshed frame shows the disabled Refresh with 'as of just now' in view, so it never reads as broken."
+    },
+    {
+      "id": "row-wishlist",
+      "x": -720,
+      "y": 1140,
+      "w": 620,
+      "text": "Surface 1 on the wishlist detail, where the market-price ghost was (after NOTES, before the sell-plan CTA), and the states sheet: Refresh's three looks, the four failure lines, every reading without a figure, the all-years lines, the picker's status and failures."
+    },
+    {
+      "id": "row-picker",
+      "x": -720,
+      "y": 2340,
+      "w": 620,
+      "text": "Surface 2 — one sheet, two phases. The notice at a medium detent; the picker at large. The sheet's bar (Cancel, title) is system chrome and drawn in the system face on purpose — bespoke inside the page, system in the bars. The card body picks; the footer strip under the hairline is the only place the outward link lives. Thumbnails are flat silhouettes standing in for Reverb's photos."
+    },
+    {
+      "id": "row-dashboard",
+      "x": -720,
+      "y": 3332,
+      "w": 620,
+      "text": "Surface 3 — recommended: one mono line under the ruler, in the meta register with only the amount lifted to body ivory. Never brass, never Archivo, so it cannot read as the total; one string with no wrapping, so the coverage travels with the number. The toggle beside it is drawn to show why not: it hides the person's total behind a state, puts a second figure in the hero's slot, adds a control to the most-seen screen, and — as drawn — splits the amount from its coverage into two elements, which spec P5 forbids."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

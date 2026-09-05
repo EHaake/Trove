@@ -693,6 +693,27 @@ only — technical detail lives in `plan.md` and the commit log).
   `tokens.md:145`** are retired; `design/brief.md` gains the "Market
   figures" paragraph. **If the pass proposes new copy, that is a spec
   question — escalate, don't absorb.**
+  *In progress (2026-09-04)*: the brief written (`brief.md`, commit
+  `b9b2c63`); the person ran `/design` in this session and the pass was
+  drafted here against the `010` artboard sources and the shipped
+  tokens — seventeen `.dc.html` artboards plus `canvas.json` in the same
+  folder: the Market section in every state on the item detail (matched
+  current, unmatched, never refreshed, withheld, stale, narrowed to all
+  years, just refreshed with Refresh disabled, the failure overlay), the
+  wishlist detail with **Use as estimated cost**, a states sheet (the
+  Refresh looks, the four failure lines, every reading without a figure,
+  the all-years lines, the picker's status and failures), the notice and
+  picker sheet (notice, results, searching, no matches, failed), and the
+  dashboard's market line with the toggle drawn beside it as the
+  rejected alternative. Design calls to record in `tokens.md` on
+  approval: the section is an unbroken block, not a card; filled brass =
+  writes the person's data (adopt only), outlined brass = fetches, text =
+  match actions with rust for Remove; the median is IBM Plex Mono 500
+  19px, the count and spread 12.5/11.5 mono at 45 %, the age 11px mono at
+  40 % right-aligned on the reading's row; the dashboard line is 12.5px
+  mono at 45 % with the amount at 500/75 %. No new copy was needed. The
+  canvas: https://claude.ai/code/artifact/772b2eee-d238-4a56-8a63-faf17c1926ba
+  — PNG export per artboard is the person's step from the canvas toolbar.
   *Done when*: artboards and PNGs committed, tokens section written, the
   person's approval recorded in this Done note.
 
