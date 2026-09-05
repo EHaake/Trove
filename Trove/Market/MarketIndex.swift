@@ -120,3 +120,78 @@ struct MarketMatchSnapshotValue: Equatable, Sendable {
         self.takenAt = takenAt
     }
 }
+
+extension MarketSectionState {
+    /// The same derivation, read from the device's own rows — the step both
+    /// detail view models share (plan §6, "the derivation written once"), so
+    /// the two screens can never map the store to a reading differently.
+    /// A read that throws reads as "nothing stored", which resolves to
+    /// `.none` under a match: the safe direction, and never a wrong figure.
+    static func resolve(subjectID: UUID, productID: Int?, in context: ModelContext, now: Date) -> MarketSectionState {
+        resolve(
+            productID: productID,
+            figure: (try? MarketLocalStore.figure(for: subjectID, in: context)).map(MarketSnapshotValue.init(record:)),
+            snapshot: (try? MarketLocalStore.snapshot(for: subjectID, in: context)).map(MarketMatchSnapshotValue.init(record:)),
+            now: now
+        )
+    }
+
+    /// The fetch time behind the reading, whatever kind it is — what
+    /// `canRefresh` measures the hour against, so a withheld or stale
+    /// reading counts as a fetch and doesn't re-offer the button. Nil when
+    /// nothing has been fetched here. Not what the unreachable line dates
+    /// itself by: see `currentFigureFetchedAt`.
+    var lastFetchedAt: Date? {
+        guard case .matched(let display) = self else { return nil }
+        switch display.reading {
+        case .none: return nil
+        case .current(let figure), .withheld(let figure): return figure.fetchedAt
+        case .stale(let fetchedAt): return fetchedAt
+        }
+    }
+
+    /// The fetch time behind the figure the section is actually *showing* —
+    /// the date the unreachable line dates itself by, since its copy reads
+    /// "the figure below is from {age}" and only a `.current` reading puts a
+    /// figure below it (plan §6). `.withheld`, `.stale` and `.none` carry no
+    /// date, so that line falls back to "Couldn't reach Reverb." on its own.
+    var currentFigureFetchedAt: Date? {
+        guard case .matched(let display) = self, case .current(let figure) = display.reading else { return nil }
+        return figure.fetchedAt
+    }
+}
+
+/// What the Market section is doing right now (plan §6). One case today;
+/// an enum rather than a `Bool` so a second activity doesn't reshape the
+/// state — the shape `SettingsViewModel.Activity` already uses.
+enum MarketActivity: Equatable, Sendable {
+    case refreshing
+}
+
+/// The one rust line above the actions when a refresh didn't land (spec
+/// criterion 11, Q3): the reading beneath it is left exactly as it was.
+enum MarketNotice: Equatable, Sendable {
+    /// Offline, a server error, or a body we couldn't read — dated by the
+    /// figure that is still showing, when there is one.
+    case unreachable(lastFetchedAt: Date?)
+    case rateLimited
+    /// Reverb no longer has the matched product; the match stays (Q3).
+    case productGone
+
+    /// One refresh's outcome as the section's notice — written once so both
+    /// detail view models map it identically. A `saveFailed` reads as
+    /// unreachable: nothing new is showing either way, and the person's next
+    /// move is the same.
+    static func notice(for outcome: MarketRefresher.Outcome, lastFetchedAt: Date?) -> MarketNotice? {
+        switch outcome {
+        case .refreshed, .stillFresh, .superseded:
+            return nil
+        case .failed(.rateLimited):
+            return .rateLimited
+        case .failed(.productNotFound):
+            return .productGone
+        case .failed(.unreachable), .failed(.serverError), .failed(.malformedResponse), .saveFailed:
+            return .unreachable(lastFetchedAt: lastFetchedAt)
+        }
+    }
+}

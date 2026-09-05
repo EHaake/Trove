@@ -762,15 +762,59 @@ only — technical detail lives in `plan.md` and the commit log).
   *Done when*: green, mutations recorded, full suite green with count;
   the field checked by eye on both forms.
 
-- [ ] **T009 — The detail view models: state, intents, the notice sequence.**
+- [x] **T009 — The detail view models: state, intents, the notice sequence.**
+  *Done (2026-09-04)* — dispatched to `sdd-implementer`, verified by the
+  orchestrator's own runs, reviewed three rounds by the
+  `skeptical-reviewer` at its default tier. As built: injection
+  (`marketService`, `now`) in the `SettingsViewModel` shape; the shared
+  pieces plan §6 calls "the derivation written once" live beside
+  `MarketSectionState` in `MarketIndex.swift` — `resolve(subjectID:
+  productID:in:now:)`, `lastFetchedAt` (the hour gate's input),
+  `currentFigureFetchedAt` (the notice's date, a `.current` reading
+  only), `MarketActivity`, `MarketNotice` with `notice(for:lastFetchedAt:)`
+  mapping every refresher outcome; every intent per plan §6, one save
+  each; `WishlistItem` has no `updatedAt` (Decision 24), said at each
+  wanted intent; `setMatch`/`removeMatch` also clear the notice; a
+  refused save rolls back the shared context and re-derives with no
+  message (plan §6 as-built paragraph — **for the Phase 3 report**: a
+  failed Remove match looks like a no-op, by transcription, since the
+  spec gives no copy for it). `makeMatchViewModel()` moved to T011.
+  Tests: 31 across two new suites (`ItemDetailViewModelMarketTests`,
+  `WishlistDetailViewModelMarketTests`) — the eight-row state table,
+  `loadNeverFetches` with a yield pump and a third assertion that the
+  hour gate wasn't what kept the spy quiet, the hour boundary proven on
+  both sides (the button and the refresher agree at exactly 3600 s),
+  the gated mid-flight state with a bounded spin, unreachable /
+  rate-limited / product-gone leaving the figure, the stale-plus-failure
+  notice carrying no date, adopt on a second context with the formatter
+  equality and `updatedAt` on owned only, adopt refused when withheld
+  or stale, remove in one save, change vs same product, the notice
+  sequence with a new VM over the same container, the ten-row outcome
+  table, `bothDetailViewModelsResolveTheSameState`. Mutations, each red
+  then reverted: drop `isCurrent` → stale rows red (and `canAdopt`'s
+  refusal with them); withheld before stale → row 8 red; drop `save()`
+  in adopt → red; append a point in adopt → red; `refresh` from `load`
+  → red; drop `clear` on a changed match → red; drop `acknowledgeNotice`
+  → the new-VM test red; `.superseded` → `.rateLimited` → the table red;
+  stop clearing the notice in `removeMatch` → red; refresher `<` → `<=`
+  → the boundary red; pass the date for a stale reading → red. Review
+  rounds: 1 — two blockers (wishlist `updatedAt` unrecorded; the notice
+  table untested) and six should-fixes, all folded; 2 — the task line
+  still named `makeMatchViewModel()` (moved to T011) and the stale-date
+  bug (fixed); 3 — signed off, with one doc-comment word changed by the
+  orchestrator. Findings recorded: plan §5 (the refresher's `subject`/
+  `year` inputs never reach the computation), plan §6 (as-built
+  paragraph). Full unit suite (orchestrator's run): **950 tests in 133
+  suites, all passed**.
   Per plan §6 (detail VMs). Both `ItemDetailViewModel` and
   `WishlistDetailViewModel`: injection (`marketService`, `now`), the
   state set, `loadMarket()` at the end of `load()` (never a fetch),
   `findMatch`, `continueFromNotice`, `declineNotice`, `setMatch`
   (a different product clears — Decision 26; one save), `refresh`,
   `adopt` (Q15; `updatedAt` on owned only — Decision 24; no history
-  write, no fetch), `removeMatch` (one save after both mutations),
-  `makeMatchViewModel()`. Tests mirrored across both suites per plan
+  write, no fetch), `removeMatch` (one save after both mutations). (`makeMatchViewModel()`
+  moved to T011 at the 2026-09-04 review: the type it returns is created
+  there.) Tests mirrored across both suites per plan
   §6's list (the resolve table; `loadNeverFetches`; the hour skip; gated
   mid-flight state and reentry; unreachable / rate-limited / product-gone
   leave the figure; adopt on a second context with the formatter
@@ -812,6 +856,9 @@ only — technical detail lives in `plan.md` and the commit log).
   store and a temporary preview, removed before commit).
 
 - [ ] **T011 — The notice sheet and the candidate picker — one sheet, both phases.**
+  Includes `makeMatchViewModel()` on both detail VMs — moved here from
+  T009 at the 2026-09-04 review, since `MarketMatchViewModel` is created
+  in this task.
   Per plan §6 (notice, picker), Q5, Q9, Q10, Decision 28. New
   `MarketNoticeView.swift`, `Trove/ViewModels/MarketMatchViewModel.swift`,
   `Trove/Views/Market/MarketMatchView.swift` (SearchField, `.onSubmit`,
@@ -1060,3 +1107,9 @@ previous spec of similar size before treating the policy as settled.
 | Task / invocation | Tier | Tokens | Outcome / miss reason |
 |---|---|---|---|
 | T009a | opus (`sdd-implementer`) | 102,544 | verified first try; one finding (the "75" mutation), recorded in plan Amendment A |
+| T009 | opus (`sdd-implementer`) | 141,105 | verified first try; reviewer: fix and re-review |
+| T009 review 1 | opus (`skeptical-reviewer`) | 62,672 | fix and re-review — B1, B2, S1–S6 |
+| T009 fix pass 2 | opus (`sdd-implementer`) | 92,792 | verified first try; one finding (refresher inputs), recorded in plan §5 |
+| T009 review 2 | opus (`skeptical-reviewer`) | 64,507 | fix and re-review — the task line (orchestrator's tasks.md gap) and the stale-date bug |
+| T009 fix pass 3 | opus (`sdd-implementer`) | 49,214 | verified first try |
+| T009 review 3 | opus (`skeptical-reviewer`) | 23,862 | signed off |
