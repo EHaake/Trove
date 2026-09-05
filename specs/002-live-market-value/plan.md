@@ -233,7 +233,7 @@ Tests (mirrored): the resolve table (8 rows, mutations: drop `isCurrent` → sta
 | matched, stale | title; source; "A refresh is due." + `as of 34 days ago`; link; Refresh; the match actions — no figure, no adopt |
 | any + notice | one rust line above the actions: unreachable / rate-limited / product gone; the reading beneath unchanged (criterion 11) |
 
-Match actions are two plain buttons (rust for Remove match, brass otherwise) — not a menu, so not a `DropdownSurface`; `MenuPolicyTests` is untouched. The link is SwiftUI `Link` (`.isLink` trait) labelled "View on Reverb" with the hint "Opens reverb.com in your browser." (criterion 20); its ink is render-checked against `accentBrass` (whether `.buttonStyle(.plain)` styles a `Link` is verified, not assumed). The section root is `.accessibilityElement(children: .contain)` with explicit labels per part ("Median asking price $1,450", "from 12 listings", "Asking prices from $1,100 to $2,000", "As of 2 hours ago"). Placement: `ItemDetailView` after `details`, before Notes; `WishlistDetailView` where `marketPricePlaceholder` was (which goes, with its `tokens.md` ghost row). `MarketSection` takes one `MarketSectionActions` value (find/refresh/adopt/change/remove closures) so wiring is compiler-checked, not text-scanned.
+Match actions are two plain buttons (rust for Remove match, brass otherwise) — not a menu, so not a `DropdownSurface`; `MenuPolicyTests` is untouched. The link is SwiftUI `Link` (`.isLink` trait) labelled "View on Reverb" with the hint "Opens reverb.com in your browser." (criterion 20); its ink is render-checked against `accentBrass` (whether `.buttonStyle(.plain)` styles a `Link` is verified, not assumed). **Answered at T010 (2026-09-05):** a SwiftUI `Link` takes its label's `foregroundStyle` — measured ΔE 4e-8 from `accentBrass` with no `.buttonStyle(.plain)`; T011's per-card links can rely on it. Two things a render test cannot see: `ImageRenderer` draws `ProgressView` as a missing-symbol box, so the refreshing spinner is a T018 line; and the failure line sits *below* the figure (between the link and the actions, as the approved artboard draws it) while `MarketCopy.unreachable` says "The figure below is from …" — the copy imagined the line at the top of the section. A copy-or-layout question carried to the Phase 3 report. The section root is `.accessibilityElement(children: .contain)` with explicit labels per part ("Median asking price $1,450", "from 12 listings", "Asking prices from $1,100 to $2,000", "As of 2 hours ago"). Placement: `ItemDetailView` after `details`, before Notes; `WishlistDetailView` where `marketPricePlaceholder` was (which goes, with its `tokens.md` ghost row). `MarketSection` takes one `MarketSectionActions` value (find/refresh/adopt/change/remove closures) so wiring is compiler-checked, not text-scanned.
 
 ### The notice and the picker
 
@@ -405,7 +405,12 @@ precision and narrowing is for the lumped cases.
   `MarketCopy.allYearsFallback(year:)` — "Too few 1975 listings in this
   condition — all years shown." (wanted items: "Too few 1975 used
   listings — all years shown."). The figure beneath is an ordinary
-  current figure: it sorts, sums and adopts (P20).
+  current figure: it sorts, sums and adopts (P20). **Copy rule, settled at T010
+  (2026-09-05, orchestrator):** the all-years line describes a figure that
+  is shown, so it appears only over a current figure; a reading that is
+  withheld after the fallback shows the withheld sentence(s) alone, never
+  both — the withheld copy already says "too few listings in this
+  condition" and stacking the two would say it twice.
 - Nothing new leaves the device; the notice and the policy stand.
 
 ### Tests and mutations (added to the tasks they belong to)

@@ -84,6 +84,7 @@ struct ItemDetailView: View {
                 statPair(for: item)
                 desireCard(for: item)
                 details(for: item)
+                marketSection(for: item)
 
                 if let notes = item.notes, !notes.isEmpty {
                     DetailSection(title: "Notes") { DetailProse(text: notes) }
@@ -240,6 +241,34 @@ struct ItemDetailView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Market (002)
+
+    /// Reverb's asking price beside the person's own figure — never in
+    /// place of it (spec 002, plan §6). Placed after DETAILS and before
+    /// NOTES, and given the view model's state rather than any derivation
+    /// of its own.
+    private func marketSection(for item: Item) -> some View {
+        MarketSection(
+            state: viewModel.marketState,
+            activity: viewModel.marketActivity,
+            notice: viewModel.marketNotice,
+            year: item.year,
+            isWanted: false,
+            canRefresh: viewModel.canRefresh,
+            canAdopt: viewModel.canAdopt,
+            actions: MarketSectionActions(
+                find: viewModel.findMatch,
+                refresh: viewModel.refresh,
+                // Adopt reports its own failure through the view model;
+                // the result is the intent's, not the view's.
+                adopt: { _ = viewModel.adopt() },
+                // Change match… is Find on Reverb… over an existing match.
+                changeMatch: viewModel.findMatch,
+                removeMatch: viewModel.removeMatch
+            )
+        )
     }
 
     /// Reachable once sync is on and another device deletes the item while

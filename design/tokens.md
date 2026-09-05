@@ -398,24 +398,24 @@ the two plated cards above stay the screen's weight.
 
 | Property | Value | As implemented |
 |---|---|---|
-| Header | `monoLabel` "MARKET", `10px` gap to the body (DETAILS' `fieldGap + 2`) | |
-| Body rhythm | `12px` between rows | |
-| Source line | IBM Plex Sans `12.5px`, line-height `1.45`, `textLabelSecondary` (55 %); "On Reverb · {title} · {year}", wraps | |
-| All-years line | same register, `4px` under the source line, above the figure | |
-| Median | IBM Plex Mono 500 `19px`, `textPrimary`, tabular — the PAID cell's register, never Archivo or brass | |
-| Separator and count | IBM Plex Mono `12.5px`, `textMonoMeta` (45 %), `8px` gaps, baseline-aligned with the median | |
-| Reading row | spread left — IBM Plex Mono `11.5px` `textMonoMeta`; age right — IBM Plex Mono `11px` `textQuiet` (40 %), `white-space: nowrap`; withheld and stale readings put their sentence (IBM Plex Sans `13.5px`, line-height `1.5`, `textBody`) on the left | |
-| Never-refreshed line | IBM Plex Sans `13.5px`, `textLabelSecondary` | |
-| Link | "View on Reverb" + `arrow.up.right` glyph (`11px`, `1.6` stroke), IBM Plex Sans 500 `13px`, `accentBrass`, `5px` gap, `44pt` hit height — the app's first external link, visually distinct from the in-place buttons | |
-| Failure line | IBM Plex Sans `12.5px`, line-height `1.45`, `accentRustText`, between the link and the actions; the reading beneath unchanged | |
-| Button rule | filled brass = writes the person's data (the adopt action only); outlined brass = fetches (Refresh); text = manages the match, rust for Remove | |
-| Filled button | `accentBrass` fill, `background` ink, IBM Plex Sans 600 `13.5px`, `44pt` tall, `3px` radius, grows to fill the row | |
-| Outlined button | `1px accentBrass` border, brass text 500 `13.5px`, `44pt`, `3px`, `0 16px` padding, hugs its label (grows when alone) | |
-| Refresh · disabled (within the hour) | border ivory 16 %, text `textDisabled` (35 %); the age line above says why | |
-| Refresh · refreshing | border brass 50 %, text brass 60 %, a `12px` arc spinner before the label | |
-| Text buttons | IBM Plex Sans 500 `13px`, brass / `accentRustText`, `44pt` hit height on a `32px` visual row (`-6px` margins), Change match… left, Remove match right | |
-| Find on Reverb… (unmatched) | the outlined button alone under the header, hugging its label | |
-| Adopt label | "Use as my value" (item) / "Use as estimated cost" (wishlist) | |
+| Header | `monoLabel` "MARKET", `10px` gap to the body (DETAILS' `fieldGap + 2`) | as designed — `DetailSection(title: MarketCopy.sectionTitle)`, so the block sits in the DETAILS/NOTES rhythm by construction |
+| Body rhythm | `12px` between rows | as designed — `MarketSection.rowGap`, a file constant: 12 has no metrics token and this is the section's own rhythm |
+| Source line | IBM Plex Sans `12.5px`, line-height `1.45`, `textLabelSecondary` (55 %); "On Reverb · {title} · {year}", wraps | as designed — `typography.secondary` (12.5) + `textLabelSecondary`; leading as `.lineSpacing(3)`, SwiftUI's nearest to a 1.45 line-height |
+| All-years line | same register, `4px` under the source line, above the figure | as designed — `MarketSection.tightGap`; drawn only over a **current** figure (plan Amendment A's copy rule), never over a withheld one |
+| Median | IBM Plex Mono 500 `19px`, `textPrimary`, tabular — the PAID cell's register, never Archivo or brass | `typography.monoValue` (mono 500 **15**) + `textPrimary`, `.monospacedDigit()` — the PAID cell's register *as built*: `ItemDetailView.statPair` has drawn PAID at `monoValue` since 010, so matching the artboard's 19 here would have made the market figure larger than the person's own |
+| Separator and count | IBM Plex Mono `12.5px`, `textMonoMeta` (45 %), `8px` gaps, baseline-aligned with the median | `typography.monoMeta` (11.5) + `textMonoMeta`, `metrics.fieldGap` (8), `.firstTextBaseline` — no 12.5 mono role exists and one wasn't worth adding for a 1pt difference |
+| Reading row | spread left — IBM Plex Mono `11.5px` `textMonoMeta`; age right — IBM Plex Mono `11px` `textQuiet` (40 %), `white-space: nowrap`; withheld and stale readings put their sentence (IBM Plex Sans `13.5px`, line-height `1.5`, `textBody`) on the left | as designed, with the age at `monoMeta` (11.5, no 11 role) + `textQuiet` and `.fixedSize()` for the nowrap; the sentence is `typography.body` + `textBody`. Withheld puts its sentence on its own line with the age right-aligned beneath (the `ItemWithheld` artboard); stale shares one baseline row |
+| Never-refreshed line | IBM Plex Sans `13.5px`, `textLabelSecondary` | as designed — `typography.body` + `textLabelSecondary` |
+| Link | "View on Reverb" + `arrow.up.right` glyph (`11px`, `1.6` stroke), IBM Plex Sans 500 `13px`, `accentBrass`, `5px` gap, `44pt` hit height — the app's first external link, visually distinct from the in-place buttons | as designed — `MarketReverbLink`: `typography.buttonCompact` (new role, sans 500 13), `accentBrass`, `linkGap` 5, `.frame(minHeight: 44)` with `-8` vertical padding so the target doesn't stretch the rhythm. **A SwiftUI `Link` takes the label's `foregroundStyle`** — measured, not assumed, in `MarketLinkRenderTests` (ΔE 4e-8 from the token); no `.buttonStyle(.plain)` needed. The glyph is the SF symbol, so the artboard's 1.6 stroke reads as `.font(.system(size: 11, weight: .medium))` |
+| Failure line | IBM Plex Sans `12.5px`, line-height `1.45`, `accentRustText`, between the link and the actions; the reading beneath unchanged | as designed — `typography.secondary` + `accentRustText`, drawn after the link and before the action rows |
+| Button rule | filled brass = writes the person's data (the adopt action only); outlined brass = fetches (Refresh); text = manages the match, rust for Remove | as designed — one filled button in the section, and it is the adopt action |
+| Filled button | `accentBrass` fill, `background` ink, IBM Plex Sans 600 `13.5px`, `44pt` tall, `3px` radius, grows to fill the row | as designed — `typography.buttonProminent` (new role, sans 600 13.5), `metrics.buttonRadius` (3), `cardPadding` (16) horizontal, `.frame(maxWidth: .infinity, minHeight: 44)`. Disabled while a refresh is in flight (`canAdopt` is false there): the component sheet's three Refresh looks specify Refresh, not adopt, and a live button whose action the view model refuses would be a dead tap |
+| Outlined button | `1px accentBrass` border, brass text 500 `13.5px`, `44pt`, `3px`, `0 16px` padding, hugs its label (grows when alone) | as designed — `typography.button` (new role, sans 500 13.5), `metrics.hairline` border, `buttonRadius`, `cardPadding`; the artboards' `flex` is `fills:` — it grows exactly when no adopt button sits beside it. `.contentShape(Rectangle())`, since an outline's interior isn't hit-testable |
+| Refresh · disabled (within the hour) | border ivory 16 %, text `textDisabled` (35 %); the age line above says why | as designed — `textPrimary.opacity(0.16)` (no ivory-16 % token but `gaugeTrack`, which is a gauge's track) and `textDisabled`; carries `MarketCopy.refreshWithinHourHint` for VoiceOver (Q8) |
+| Refresh · refreshing | border brass 50 %, text brass 60 %, a `12px` arc spinner before the label | as designed — `accentBrass.opacity(0.5)` / `.opacity(0.6)`, and `ProgressView().controlSize(.small).tint(…)` for the spinner, the `SettingsActionRow` pattern. Note for the device pass: `ImageRenderer` draws that spinner as an unavailable-symbol box in stills, which is a renderer artifact, not the running app |
+| Text buttons | IBM Plex Sans 500 `13px`, brass / `accentRustText`, `44pt` hit height on a `32px` visual row (`-6px` margins), Change match… left, Remove match right | as designed — `typography.buttonCompact`, `.frame(minHeight: 44)` with `-6` vertical padding, `Spacer` between them |
+| Find on Reverb… (unmatched) | the outlined button alone under the header, hugging its label | as designed — the same outlined chrome with `fills: false`, and nothing else in the section (criterion 1) |
+| Adopt label | "Use as my value" (item) / "Use as estimated cost" (wishlist) | as designed — `MarketCopy.useAsMyValue` / `.useAsEstimatedCost`, chosen by the section's `isWanted` |
 
 **The candidate picker** — one sheet, two phases, over a `rgba(0,0,0,0.45)`
 scrim; the sheet's bar (Cancel, title) is system chrome.

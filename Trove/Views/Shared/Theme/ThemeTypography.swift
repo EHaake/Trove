@@ -82,6 +82,18 @@ struct ThemeTypography: Sendable {
     /// under it reads as two screens stacked.
     let emptyStateTitle: Font
     let rowTitle: Font
+    /// The three button registers `tokens.md` gives the Market section
+    /// (`002`), and the first named button roles in the theme: every button
+    /// before them reused `body` or `rowTitle`, which have no weight to
+    /// carry the filled/outlined/text hierarchy the section's button rule
+    /// depends on. Added here rather than inlined as point sizes so the
+    /// rule stays readable at the call site.
+    /// Filled — the action that writes the person's own number.
+    let buttonProminent: Font
+    /// Outlined — the action that only fetches.
+    let button: Font
+    /// Text buttons and the outward link.
+    let buttonCompact: Font
     let body: Font
     let secondary: Font
     /// Money.
@@ -137,6 +149,9 @@ extension ThemeTypography {
         formInput: font(.body, size: 19),
         emptyStateTitle: font(.display, size: 19, weight: .semibold),
         rowTitle: font(.body, size: 15, weight: .medium),
+        buttonProminent: font(.body, size: 13.5, weight: .semibold),
+        button: font(.body, size: 13.5, weight: .medium),
+        buttonCompact: font(.body, size: 13, weight: .medium),
         body: font(.body, size: 13.5),
         secondary: font(.body, size: 12.5),
         monoValue: font(.mono, size: 15, weight: .medium),

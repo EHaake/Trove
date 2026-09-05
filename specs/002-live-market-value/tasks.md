@@ -838,7 +838,56 @@ only — technical detail lives in `plan.md` and the commit log).
   red; drop `acknowledgeNotice` → the new-VM test red.
   *Done when*: green, mutations recorded, full suite green with count.
 
-- [ ] **T010 — `MarketSection` on both detail screens.**
+- [x] **T010 — `MarketSection` on both detail screens.**
+  *Done (2026-09-05)* — dispatched to `sdd-implementer`, verified by the
+  orchestrator's own run; not foundational, so no per-task review. As
+  built: `Trove/Views/Market/MarketSection.swift` — `MarketSectionActions`
+  (five closures, `refresh` async), the section as a `DetailSection`
+  block with every reading, the notice line, Refresh's three looks, the
+  six identifiers, `MarketReverbLink` as its own type so its ink can be
+  sampled; three typography roles added (`buttonProminent` sans 600
+  13.5, `button` sans 500 13.5, `buttonCompact` sans 500 13 — no
+  existing role carried the design's weight hierarchy). Composed as
+  `marketSection(for:)` after `details` on the item screen and where the
+  ghost was on the wishlist screen; the ghost, `placeholderBarHeights`,
+  their doc comment and the stale `:128` comment gone (the live half of
+  that comment, on "Your estimate", reworded). Deviations from the
+  artboards, recorded in `tokens.md`'s "As implemented" cells: the
+  median at `monoValue` 15 pt, not 19 — tokens.md defines it as "the
+  PAID cell's register" and PAID has shipped at `monoValue` since 010,
+  so 19 would have set Reverb's figure larger than the person's own;
+  count/separator at `monoMeta` 11.5 (12.5 drawn), age 11.5 (11 drawn);
+  adopt dims while a refresh is in flight (`canAdopt`), where the states
+  sheet drew it full. Tests: +9 — `MarketWiringTests` (both screens
+  compose `marketSection(for: item)` inside `content(for:)` and
+  `MarketSection(` once per file; the wishlist file free of the ghost's
+  three tells; `Link(` by the boundary regex, no `openURL`, `.contain`
+  present and `.combine` absent, the hint, all six identifiers) and
+  `MarketLinkRenderTests` (the link's ink within ΔE 0.02 of
+  `accentBrass` — a `Link` takes its label's `foregroundStyle`, measured
+  4e-8; plan §6's open question answered). `MarketSection.swift` joined
+  the vocabulary scan. Mutations, each red then reverted: the ghost
+  restored → red; the hint dropped → red; the link a `Button` → the
+  `Link(` scan red; an inline `Text("Find on Reverb…")` → the no-space
+  rule red; the link's ink `textPrimary` → ΔE red. Full unit suite
+  (orchestrator's run): **1006 tests in 141 suites, all passed**.
+  **The eye check** (renders at 2× from a temporary harness, deleted
+  before commit, seen by the orchestrator against the artboards):
+  *unmatched* — MARKET and the outlined Find on Reverb… alone;
+  *current* — source line, `$1,450 · 12 listed`, spread left and age
+  right, the brass link with its glyph, outlined Refresh beside filled
+  Use as my value, Change match… / Remove match in brass and rust;
+  *withheld* — the two-sentence reading with $2,850, the age alone at
+  right, Refresh full-width, no adopt; *all years* — the fallback line
+  under "On Reverb · Martin D-18 · 1975" above the $2,950 figure;
+  *failure* — the rust line between the link and the actions, the
+  figure untouched above it; *wishlist current* — Use as estimated cost.
+  `never`, `stale`, `justRefreshed` (disabled Refresh) and `refreshing`
+  rendered too. Two things a render cannot show, carried to T018: the
+  refreshing spinner (`ImageRenderer` draws `ProgressView` as a box),
+  and — **for the Phase 3 report** — the failure copy says "The figure
+  below is from …" while the approved layout puts the line below the
+  figure.
   Per plan §6 (the section table) and T008's artboards. New
   `Trove/Views/Market/MarketSection.swift` taking one
   `MarketSectionActions` value. `ItemDetailView` composes it after
@@ -1293,3 +1342,4 @@ previous spec of similar size before treating the policy as settled.
 | T016a review 2 | opus (`skeptical-reviewer`) | 83,464 | signed off; second-look items folded |
 | T016a fix pass 3 | opus (`sdd-implementer`) | 59,318 | verified first try |
 | T017 | opus (`sdd-implementer`) | 57,759 | verified first try; the policy read by the orchestrator |
+| T010 | opus (`sdd-implementer`) | 206,241 | verified first try; renders seen by the orchestrator; one finding (Link ink), recorded in plan §6 |
