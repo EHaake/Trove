@@ -306,8 +306,8 @@ only — technical detail lives in `plan.md` and the commit log).
   declare it `Int` with no default → the validator throws; revert.
   *Done when*: green, red run recorded, full suite count +3 or so.
 
-- [ ] **T004 — `MarketService`, `ReverbMarketService`, decoding. [person: the contact address]**
-  *Done except the address (2026-09-03, `partial`)*: `MarketService`
+- [x] **T004 — `MarketService`, `ReverbMarketService`, decoding. [person: the contact address]**
+  *Done (2026-09-03; the address 2026-09-04)*: `MarketService`
   (three `@concurrent` requirements), `MarketCandidate`, `MarketProduct`,
   `MarketListing` (four members: `priceCents`, `currency`,
   `conditionSlug`, `year` — `currency` becomes a two-currency marker like
@@ -358,7 +358,13 @@ only — technical detail lives in `plan.md` and the commit log).
   unit suite: **825 tests in 122 suites, 824 passed** — the one red is
   `theContactAddressIsARealOne`, by design, until the person supplies
   the address (Decision 25; they chose to commit without it for now).
-  **Open**: the address. When it lands: fill `MarketCopy.contactAddress`,
+  **Closed 2026-09-04**: the person supplied a provisional personal
+  address, to be replaced with a dedicated one before the app is
+  published (Decision 25's dated note); `MarketCopy.contactAddress`
+  filled, `MarketCopyTests` and `ReverbMarketServiceTests` green (30
+  tests in 2 suites) — the guard had been the one red of every full run
+  since T004 landed, so its red run needs no separate mutation. The
+  note as written while open: fill `MarketCopy.contactAddress`,
   rerun `MarketCopyTests` and `ReverbMarketServiceTests` green, tick
   this task.
   Per plan §3 and Decision 25. New `Trove/Models/MarketCopy.swift`

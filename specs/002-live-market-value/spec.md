@@ -355,6 +355,9 @@ escalations:
     where the item has one; `WishlistItem` gains no field.
 25. **The contact address is supplied by the person before the copy
     task**; a test fails on any placeholder, so it cannot ship unfilled.
+    Supplied 2026-09-04 as a **provisional** personal address; the
+    person will replace it with a dedicated one before the app is
+    published (one constant, `MarketCopy.contactAddress`).
 26. **Changing the match to a different product clears the history**;
     re-picking the same product keeps it. History belongs to the match.
 27. **The Settings walk stops on the first failure of any kind**, with

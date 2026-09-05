@@ -157,9 +157,11 @@ nonisolated enum MarketCopy {
     /// The dedicated contact address for the app (spec Decisions 12 and 25):
     /// shown in Settings › About, named in `PRIVACY.md`, and sent in the
     /// Reverb client's `User-Agent` — one constant, so the placeholder guard
-    /// in `MarketCopyTests` covers every copy. Supplied by the person; until
-    /// then this value fails that guard on purpose.
-    static let contactAddress = "TODO@example.com"
+    /// in `MarketCopyTests` covers every copy. Supplied by the person
+    /// 2026-09-04 as a **provisional** personal address, to be swapped for a
+    /// dedicated one before the app is published — one edit here, and the
+    /// whole-string pins in `MarketCopyTests` move with it.
+    static let contactAddress = "canadianfishturkey@gmail.com"
 
     static var contactURL: URL { URL(string: "mailto:\(contactAddress)")! }
 
