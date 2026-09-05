@@ -951,7 +951,39 @@ only — technical detail lives in `plan.md` and the commit log).
   red — record both); drop the gate → scan red.
   *Done when*: green, mutations recorded; tokens rows filled.
 
-- [ ] **T014 — Settings: Refresh market values, and About.**
+- [x] **T014 — Settings: Refresh market values, and About.**
+  *Done (2026-09-04)* — dispatched to `sdd-implementer`, verified by the
+  orchestrator's own run; not foundational, so no per-task review. As
+  built: `Activity.refreshMarket`; `marketService`/`now` injected in the
+  `exportService` shape; `matchedCount` from `MarketRefresher.targets`
+  (every matched item — the row's gate) while the walk's `total` counts
+  only the due ones (plan §6 as-built note: everything fresh → an
+  enabled row whose walk visits nothing and says nothing; a T018 line);
+  `refreshMarketValues()` sequential over the due targets with progress
+  after each, stopping at the rate limit with `MarketCopy.rateLimited`
+  and at any other failure with `refreshStoppedUnreachable(done:total:)`,
+  `defer` clearing activity and progress and reloading. The view: the
+  Market section between Templates and iCloud, `SettingsActionRow`'s new
+  `detail:` in mono meta before the spinner, a rust status line under
+  the row (both statuses are failures), About's attribution and two
+  `Link`s with identifiers `about.contact`/`about.privacy`, no literal
+  "reverb"/"mailto"/"http" in the view (a preview item was renamed off
+  "Deluxe Reverb" so the scan stays honest). Wiring constants moved
+  together: sections + `marketSection`, rows 6 → 7, `Link(` == 2 by the
+  boundary regex, hint count still 2. Tests: +8 in 1 suite
+  (`SettingsViewModelMarketRefreshTests`: the walk over both kinds in
+  custom order skipping unmatched and within-the-hour; gated progress
+  and refused reentry; the rate-limit stop keeping earlier figures and
+  never calling the third; the unreachable stop with "1 of 3";
+  `matchedCount` over both kinds) and the three wiring scans.
+  Mutations, each red then reverted: walk past the rate limit → red
+  (the third target's call observed, its figure absent); items only →
+  red; inline the privacy URL → the literal scan red (and the two-links
+  scan); rows back to 6 with seven present → red. Full unit suite
+  (orchestrator's run): **979 tests in 138 suites, all passed**. By eye
+  on the simulator: the Market section between Templates and iCloud,
+  its row disabled with nothing matched; About's three lines. The
+  progress row advancing is T018's live check.
   Per plan §6 (Settings and About), Decisions 25, 27, Q12.
   `SettingsViewModel`: `Activity.refreshMarket`, `matchedCount` from
   `MarketRefresher.targets(in:)`, `canRefreshMarketValues`, progress,
@@ -1145,3 +1177,4 @@ previous spec of similar size before treating the policy as settled.
 | T009 fix pass 3 | opus (`sdd-implementer`) | 49,214 | verified first try |
 | T009 review 3 | opus (`skeptical-reviewer`) | 23,862 | signed off |
 | T012 | opus (`sdd-implementer`) | 174,621 | verified first try; one finding (summaries before the sort), recorded in plan §6 |
+| T014 | opus (`sdd-implementer`) | 144,577 | verified first try; two findings (matched vs due counts; the comment stripper), recorded in plan §6 |

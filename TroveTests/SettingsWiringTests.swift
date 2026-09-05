@@ -62,7 +62,7 @@ struct SettingsWiringTests {
             in: code
         )
         let body = try #require(stacks.first, "body's section stack not found")
-        let sections = ["exportSection", "templatesSection", "iCloudSection", "deleteSection", "aboutSection"]
+        let sections = ["exportSection", "templatesSection", "marketSection", "iCloudSection", "deleteSection", "aboutSection"]
         let positions = try sections.map { name in
             try #require(body.range(of: name)?.lowerBound, "body doesn't compose \(name)")
         }
@@ -70,6 +70,12 @@ struct SettingsWiringTests {
         for title in ["Export", "Templates", "iCloud", "Delete", "About"] {
             #expect(code.contains("DetailSection(title: \"\(title)\")"), "missing section \(title)")
         }
+        // 002/Q12: the Market section sits between Templates and iCloud, and
+        // its title is the copy constant, not a sixth typed literal.
+        #expect(
+            code.contains("DetailSection(title: MarketCopy.settingsSectionTitle)"),
+            "the Market section doesn't read its title from MarketCopy"
+        )
     }
 
     /// Criterion 18 rests on explicit hints — the role alone announces
@@ -98,7 +104,7 @@ struct SettingsWiringTests {
     @Test func everyActionRowGatesOnBusyAndReadsItsOwnActivity() throws {
         let code = try SourceScan.production(Self.settingsView)
         let rows = SourceScan.argumentLists(of: "SettingsActionRow", in: code)
-        #expect(rows.count == 6, "expected six action rows, found \(rows.count)")
+        #expect(rows.count == 7, "expected seven action rows, found \(rows.count)")
         for row in rows {
             #expect(row.contains("!viewModel.isBusy"), "a row doesn't disable while busy: \(row.prefix(48))")
             #expect(
@@ -127,6 +133,63 @@ struct SettingsWiringTests {
         #expect(code.contains("ExportCopy.failureTitle"))
         #expect(code.contains("ExportCopy.failureMessage"))
         #expect(code.contains("SyncStatusCopy.status("))
+    }
+
+    // MARK: - 002/T014: the Market row and About
+
+    /// The walk's row reads every string from `MarketCopy`, shows the
+    /// progress through the row's new `detail:`, and reports its outcome as
+    /// an inline status line — never a second alert (Q12; the single-alert
+    /// scan above is the other half of that rule).
+    @Test func theMarketRowIsWiredToTheWalkAndItsStatusLine() throws {
+        let code = try SourceScan.production(Self.settingsView)
+        let rows = SourceScan.argumentLists(of: "SettingsActionRow", in: code)
+        let market = rows.filter { $0.contains("MarketCopy.refreshAll") }
+        try #require(market.count == 1, "expected exactly one Refresh market values row")
+        #expect(market[0].contains("MarketCopy.progress(done:"), "the row doesn't show the walk's progress")
+        #expect(code.contains("await viewModel.refreshMarketValues()"), "the row doesn't run the walk")
+        #expect(code.contains("viewModel.marketRefreshStatus"), "no status line under the row")
+        #expect(code.contains("theme.colors.accentRustText"), "the status line isn't in the failure colour")
+        #expect(code.contains("settings.refreshMarket"), "the row carries no identifier")
+        #expect(
+            code.contains("Text(detail)"),
+            "SettingsActionRow no longer draws the detail it's given"
+        )
+    }
+
+    /// Criterion 17's About half: Reverb's attribution and exactly two
+    /// links — the contact address and the privacy policy. Counted with a
+    /// non-identifier boundary so `NavigationLink(` could never stand in
+    /// for one (the `MenuPolicyTests` regex).
+    @Test func aboutCarriesTheAttributionAndExactlyTwoLinks() throws {
+        let code = try SourceScan.production(Self.settingsView)
+        let link = try Regex(#"(?:^|[^A-Za-z0-9_])Link\("#)
+        let links = code.ranges(of: link).count
+        #expect(links == 2, "expected two links in Settings, found \(links)")
+        for symbol in [
+            "MarketCopy.attribution",
+            "MarketCopy.contactAddress",
+            "MarketCopy.contactURL",
+            "MarketCopy.privacyPolicyTitle",
+            "MarketCopy.privacyPolicyURL",
+        ] {
+            #expect(code.contains(symbol), "About doesn't read \(symbol)")
+        }
+        #expect(code.contains("about.contact"))
+        #expect(code.contains("about.privacy"))
+    }
+
+    /// Decisions 12, 18 and 25 keep the address, the policy URL and the
+    /// source's name in `MarketCopy` — one place each. So the screen may
+    /// carry no literal naming Reverb, and no URL or mailto of its own.
+    @Test func theScreenTypesNoAddressURLOrSourceName() throws {
+        let code = try SourceScan.production(Self.settingsView)
+        let forbidden = ["reverb", "mailto", "http"]
+        let offenders = SourceScan.stringLiterals(in: code).filter { literal in
+            let lowered = literal.lowercased()
+            return forbidden.contains { lowered.contains($0) }
+        }
+        #expect(offenders.isEmpty, "SettingsView types what MarketCopy owns: \(offenders)")
     }
 
     // MARK: - T013: the entry point

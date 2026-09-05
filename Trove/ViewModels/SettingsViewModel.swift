@@ -25,6 +25,8 @@ final class SettingsViewModel {
         case wishlistTemplate
         case deleteItems
         case deleteWishlist
+        /// 002: the walk over every matched item (spec criterion 10).
+        case refreshMarket
     }
 
     /// The one alert the screen presents, in its three shapes. One optional
@@ -41,12 +43,29 @@ final class SettingsViewModel {
     private let storageMode: StorageMode
     private let storageFallbackReason: String?
     private let exportService: any ExportService
+    private let marketService: any MarketService
+    private let now: () -> Date
     private let appVersion: AppVersion
 
     /// Whole-store counts — `fetchCount`, never a loaded array: the rows
     /// only need to know whether there's anything to act on, and how many.
     private(set) var itemCount = 0
     private(set) var wishlistCount = 0
+
+    /// 002: how many items — owned and wanted together — carry a Reverb
+    /// match, counted through `MarketRefresher.targets(in:)` so Settings
+    /// and the walk share the one definition of "matched".
+    private(set) var matchedCount = 0
+
+    /// The walk's position while it runs: `nil` when nothing is walking.
+    /// Written after each item, and every `await` in the walk is a real
+    /// suspension, so the row re-renders as it advances (the T056 lesson).
+    private(set) var marketRefreshProgress: (done: Int, total: Int)?
+
+    /// The one line under the row when a walk stops early (spec criterion
+    /// 10, Decision 27) — the rate limit's words, or "Couldn't reach
+    /// Reverb. 3 of 12 refreshed.". A completed walk says nothing.
+    private(set) var marketRefreshStatus: String?
 
     private(set) var activity: Activity?
 
@@ -64,6 +83,8 @@ final class SettingsViewModel {
         storageMode: StorageMode = .cloudKit,
         storageFallbackReason: String? = nil,
         exportService: (any ExportService)? = nil,
+        marketService: (any MarketService)? = nil,
+        now: @escaping () -> Date = Date.init,
         appVersion: AppVersion = .current
     ) {
         self.modelContext = modelContext
@@ -71,6 +92,8 @@ final class SettingsViewModel {
         self.storageMode = storageMode
         self.storageFallbackReason = storageFallbackReason
         self.exportService = exportService ?? FileExportService(container: modelContext.container)
+        self.marketService = marketService ?? ReverbMarketService()
+        self.now = now
         self.appVersion = appVersion
     }
 
@@ -81,6 +104,7 @@ final class SettingsViewModel {
     func load() {
         itemCount = (try? modelContext.fetchCount(FetchDescriptor<Item>())) ?? 0
         wishlistCount = (try? modelContext.fetchCount(FetchDescriptor<WishlistItem>())) ?? 0
+        matchedCount = ((try? MarketRefresher.targets(in: modelContext)) ?? []).count
     }
 
     // MARK: - Derived state
@@ -94,6 +118,10 @@ final class SettingsViewModel {
 
     var canDeleteItems: Bool { itemCount > 0 }
     var canDeleteWishlist: Bool { wishlistCount > 0 }
+
+    /// Nothing matched, nothing to refresh — and never while another action
+    /// runs (spec §Busy and failure states).
+    var canRefreshMarketValues: Bool { matchedCount > 0 && !isBusy }
 
     /// Live: `SyncMonitor` is `@Observable`, so reading its phase here is
     /// what makes the row update while the sheet is open.
@@ -253,6 +281,65 @@ final class SettingsViewModel {
     private func stage(_ files: [ExportFile]) async throws {
         let urls = try await exportService.exportFiles(files)
         stagedExport = StagedExport(urls: urls, filenames: files.map(\.filename))
+    }
+
+    // MARK: - Refresh market values (002)
+
+    /// Every matched item, one at a time, in the lists' own order (spec
+    /// criterion 10): owned in Custom order, then wanted — the order
+    /// `MarketRefresher.targets(in:)` defines, so this walk and the
+    /// section's own Refresh agree on what "matched" means.
+    ///
+    /// Only the *due* ones are walked — an item refreshed within the hour
+    /// is skipped rather than sent (spec criterion 9, P7), so "3 of 12"
+    /// counts the ones this walk will actually ask about. The walk stops at
+    /// the first failure and says which: Reverb's rate limit gets its own
+    /// words, anything else the count it reached (Decision 27). Items
+    /// already refreshed keep what they got.
+    func refreshMarketValues() async {
+        guard canRefreshMarketValues else { return }
+        activity = .refreshMarket
+        marketRefreshStatus = nil
+        defer {
+            activity = nil
+            marketRefreshProgress = nil
+            load()
+        }
+
+        let due = (try? dueTargets()) ?? []
+        let total = due.count
+        marketRefreshProgress = (done: 0, total: total)
+
+        let refresher = MarketRefresher(modelContext: modelContext, service: marketService, now: now)
+        var done = 0
+        for target in due {
+            switch await refresher.refresh(target) {
+            case .failed(.rateLimited):
+                marketRefreshStatus = MarketCopy.rateLimited
+                return
+            case .failed, .saveFailed:
+                marketRefreshStatus = MarketCopy.refreshStoppedUnreachable(done: done, total: total)
+                return
+            case .refreshed, .superseded, .stillFresh:
+                // `.stillFresh` can only arrive from a race with another
+                // refresh; the item is current either way, so it counts.
+                done += 1
+                marketRefreshProgress = (done: done, total: total)
+            }
+        }
+    }
+
+    /// The matched items whose figure is older than the hour, or that have
+    /// no figure on this device at all — read through the same stored
+    /// `fetchedAt` and window the refresher itself budgets against.
+    private func dueTargets() throws -> [MarketRefreshTarget] {
+        let moment = now()
+        return try MarketRefresher.targets(in: modelContext).filter { target in
+            guard let stored = try? MarketLocalStore.figure(for: target.key.subjectID, in: modelContext) else {
+                return true
+            }
+            return moment.timeIntervalSince(stored.fetchedAt) >= MarketRefresher.freshnessWindow
+        }
     }
 
     // MARK: - Delete All

@@ -716,3 +716,223 @@ struct SettingsViewModelDeleteTests {
         #expect(viewModel.alert == nil)
     }
 }
+
+// MARK: - T014: Refresh market values (002)
+
+/// 002/T014, plan §6: Settings' one walk over every matched item — owned in
+/// Custom order then wanted, the within-the-hour ones skipped (criterion 9),
+/// the progress observable while it runs, and a stop at the first failure
+/// with the words Decision 27 gives it. The scripted spy answers in call
+/// order and **throws when its script runs out**, so a walk that visits one
+/// item more than the test expects fails on that call.
+@Suite("SettingsViewModel — market refresh")
+struct SettingsViewModelMarketRefreshTests {
+    private let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+    private let minute: TimeInterval = 60
+
+    private func product(_ id: Int) -> MarketProduct {
+        MarketProduct(
+            id: id,
+            slug: "product-\(id)",
+            title: "Product \(id)",
+            usedLowCents: 100_000,
+            usedTotal: 12,
+            listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=\(id)")!
+        )
+    }
+
+    /// Three USD listings in one condition — enough for a figure, so a
+    /// refreshed item is visible as a median rather than a withheld row.
+    private func listings(median: Int) -> MarketListings {
+        let prices = [median - 40_000, median, median + 40_000]
+        return MarketListings(
+            listings: prices.map { MarketListing(priceCents: $0, currency: "USD", conditionSlug: "excellent", year: nil) },
+            reportedTotal: prices.count,
+            isTruncated: false
+        )
+    }
+
+    private func viewModel(_ context: ModelContext, service: any MarketService, now: Date? = nil) -> SettingsViewModel {
+        let clock = now ?? t0
+        let viewModel = SettingsViewModel(modelContext: context, marketService: service, now: { clock })
+        viewModel.load()
+        return viewModel
+    }
+
+    /// A stored figure at `fetchedAt`, written through the store's own
+    /// writer — the same row the hour budget reads.
+    private func seedFigure(for id: UUID, kind: MarketSubjectKind, productID: Int, at fetchedAt: Date, in context: ModelContext) throws {
+        let figure = MarketFigure(medianCents: 111_000, lowCents: 100_000, highCents: 120_000, count: 12, fetchedAt: fetchedAt, isTruncated: false, yearScope: .any)
+        try MarketLocalStore.record(.figure(figure), product: product(productID), for: MarketSubjectKey(subjectID: id, kind: kind), in: context)
+        try context.save()
+    }
+
+    private func storedMedian(for id: UUID, in container: ModelContainer) throws -> Int? {
+        try MarketLocalStore.figure(for: id, in: ModelContext(container))?.medianCents
+    }
+
+    // MARK: - The walk
+
+    /// Both kinds, in the lists' own order, with the unmatched ones absent
+    /// and the within-the-hour one skipped: the spy's call log is the
+    /// assertion, so an extra visit and a missing one are each red.
+    @Test func theWalkVisitsEveryDueMatchInOrderAcrossBothLists() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let second = Item(name: "Amp", sortOrder: 1, reverbProductID: 111)
+        let first = Item(name: "Telecaster", sortOrder: 0, reverbProductID: 222)
+        let unmatched = Item(name: "Pedal", sortOrder: 2)
+        let fresh = Item(name: "Bass", sortOrder: 3, reverbProductID: 555)
+        let wanted = WishlistItem(name: "D-18", sortOrder: 0, reverbProductID: 444)
+        let unmatchedWanted = WishlistItem(name: "Pedal Steel", sortOrder: 1)
+        for model in [second, first, unmatched, fresh] { context.insert(model) }
+        context.insert(wanted); context.insert(unmatchedWanted)
+        try context.save()
+        // Refreshed half an hour ago: skipped, not sent (criterion 9, P7).
+        try seedFigure(for: fresh.id, kind: .owned, productID: 555, at: t0.addingTimeInterval(-30 * minute), in: context)
+
+        let spy = MarketServiceSpy(
+            products: [.success(product(222)), .success(product(111)), .success(product(444))],
+            listings: [.success(listings(median: 140_000)), .success(listings(median: 90_000)), .success(listings(median: 200_000))]
+        )
+        let viewModel = viewModel(context, service: spy)
+        #expect(viewModel.matchedCount == 4, "the fresh item is still matched — only the walk skips it")
+
+        await viewModel.refreshMarketValues()
+
+        #expect(spy.calls == [
+            .product(222), .listings(productID: 222),
+            .product(111), .listings(productID: 111),
+            .product(444), .listings(productID: 444),
+        ], "the walk visited the wrong items, or in the wrong order")
+        #expect(viewModel.marketRefreshStatus == nil, "a walk that finished said something")
+        #expect(viewModel.marketRefreshProgress == nil, "the progress outlived the walk")
+        #expect(!viewModel.isBusy)
+        #expect(try storedMedian(for: first.id, in: container) == 140_000)
+        #expect(try storedMedian(for: second.id, in: container) == 90_000)
+        #expect(try storedMedian(for: wanted.id, in: container) == 200_000)
+        #expect(try storedMedian(for: fresh.id, in: container) == 111_000, "the skipped item was refreshed anyway")
+    }
+
+    /// The row's "3 of 12" while it runs, and no second walk behind it: the
+    /// gated spy holds the first `listings` call open, and only that one, so
+    /// a reentrant walk shows up as a second call rather than a deadlock.
+    @Test func theProgressIsObservableMidFlightAndASecondWalkIsRefused() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        context.insert(Item(name: "Telecaster", sortOrder: 0, reverbProductID: 111))
+        context.insert(Item(name: "Amp", sortOrder: 1, reverbProductID: 222))
+        try context.save()
+
+        let gated = GatedMarketServiceSpy(product: .success(product(111)), listings: .success(listings(median: 140_000)))
+        let viewModel = viewModel(context, service: gated)
+        #expect(viewModel.canRefreshMarketValues)
+
+        let task = Task { await viewModel.refreshMarketValues() }
+        // Bounded: a walk that never reaches the spy turns the require
+        // below red instead of spinning the suite forever.
+        var yields = 0
+        while gated.listingsCalls == 0 && yields < 10_000 {
+            await Task.yield()
+            yields += 1
+        }
+        try #require(gated.listingsCalls == 1)
+
+        #expect(viewModel.activity == .refreshMarket)
+        #expect(viewModel.isBusy)
+        #expect(!viewModel.canRefreshMarketValues, "a walk in flight offered another")
+        let midFlight = viewModel.marketRefreshProgress
+        #expect(midFlight?.done == 0)
+        #expect(midFlight?.total == 2)
+        await viewModel.refreshMarketValues()
+        #expect(gated.listingsCalls == 1, "the reentrant walk reached Reverb")
+
+        gated.release()
+        await task.value
+
+        #expect(gated.listingsCalls == 2, "the walk didn't reach the second item")
+        #expect(viewModel.marketRefreshProgress == nil)
+        #expect(viewModel.marketRefreshStatus == nil)
+        #expect(viewModel.activity == nil)
+    }
+
+    // MARK: - Stopping (criterion 10, Decision 27)
+
+    /// Reverb's limit stops the walk where it stands, in its own words, and
+    /// what was already refreshed stays refreshed (P8).
+    @Test func theRateLimitStopsTheWalkAndKeepsTheEarlierFigures() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let first = Item(name: "Telecaster", sortOrder: 0, reverbProductID: 111)
+        let second = Item(name: "Amp", sortOrder: 1, reverbProductID: 222)
+        let third = Item(name: "Bass", sortOrder: 2, reverbProductID: 333)
+        for model in [first, second, third] { context.insert(model) }
+        try context.save()
+
+        let spy = MarketServiceSpy(
+            products: [.success(product(111)), .success(product(222)), .success(product(333))],
+            listings: [.success(listings(median: 140_000)), .failure(.rateLimited), .success(listings(median: 200_000))]
+        )
+        let viewModel = viewModel(context, service: spy)
+
+        await viewModel.refreshMarketValues()
+
+        #expect(viewModel.marketRefreshStatus == MarketCopy.rateLimited)
+        #expect(spy.calls == [
+            .product(111), .listings(productID: 111),
+            .product(222), .listings(productID: 222),
+        ], "the walk carried on past the rate limit")
+        #expect(try storedMedian(for: first.id, in: container) == 140_000, "the figure fetched before the limit was lost")
+        #expect(try storedMedian(for: third.id, in: container) == nil)
+        #expect(viewModel.marketRefreshProgress == nil)
+        #expect(!viewModel.isBusy)
+    }
+
+    /// Any other failure stops it too, and says how far it got — Decision
+    /// 27's line, with the count over the due ones.
+    @Test func anUnreachableFailureStopsTheWalkAndSaysHowFarItGot() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let first = Item(name: "Telecaster", sortOrder: 0, reverbProductID: 111)
+        let second = Item(name: "Amp", sortOrder: 1, reverbProductID: 222)
+        let third = Item(name: "Bass", sortOrder: 2, reverbProductID: 333)
+        for model in [first, second, third] { context.insert(model) }
+        try context.save()
+
+        let spy = MarketServiceSpy(
+            products: [.success(product(111)), .failure(.unreachable), .success(product(333))],
+            listings: [.success(listings(median: 140_000)), .success(listings(median: 200_000))]
+        )
+        let viewModel = viewModel(context, service: spy)
+
+        await viewModel.refreshMarketValues()
+
+        #expect(viewModel.marketRefreshStatus == MarketCopy.refreshStoppedUnreachable(done: 1, total: 3))
+        #expect(spy.calls == [.product(111), .listings(productID: 111), .product(222)], "the walk carried on past the failure")
+        #expect(try storedMedian(for: first.id, in: container) == 140_000)
+        #expect(try storedMedian(for: third.id, in: container) == nil)
+    }
+
+    // MARK: - The count
+
+    /// One definition of "matched", `MarketRefresher.targets(in:)`, so the
+    /// row's count and the walk can't disagree — and both lists count.
+    @Test func matchedCountCountsBothKindsAndGatesTheRow() throws {
+        let context = try makeInMemoryContext()
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+        #expect(viewModel.matchedCount == 0)
+        #expect(!viewModel.canRefreshMarketValues, "the row offered a walk with nothing matched")
+
+        context.insert(Item(name: "Telecaster", sortOrder: 0, reverbProductID: 111))
+        context.insert(Item(name: "Amp", sortOrder: 1, reverbProductID: 222))
+        context.insert(Item(name: "Pedal", sortOrder: 2))
+        context.insert(WishlistItem(name: "D-18", sortOrder: 0, reverbProductID: 444))
+        context.insert(WishlistItem(name: "Pedal Steel", sortOrder: 1))
+        try context.save()
+        viewModel.load()
+
+        #expect(viewModel.matchedCount == 3, "the count misses one of the two lists")
+        #expect(viewModel.canRefreshMarketValues)
+    }
+}
