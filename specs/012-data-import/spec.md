@@ -74,7 +74,9 @@ actions are always enabled. This supersedes the visibility half of
 `spec.md` as part of this spec's implementation.
 
 Each screen imports its own kind: the Items list imports the 12-column
-items schema, the Wishlist the 7-column wishlist schema. A file whose
+items schema, the Wishlist the 7-column wishlist schema *(14 and 9
+columns since `002`; these widths are the shipped boundaries the gate
+still accepts — 2026-09-05)*. A file whose
 header row belongs to the other list fails the header gate like any
 other wrong file (the alert should recognize this case and say so —
 it's the most likely wrong-file mistake).
@@ -90,7 +92,14 @@ memory before anything touches the store:
    Extra, missing, renamed, or reordered columns fail the whole file —
    a plain alert names the problem and nothing is imported. This is
    what "rigid template" means; it is also what keeps `011`'s
-   append-only schema-growth rule enforceable.
+   append-only schema-growth rule enforceable. *(Superseded in part by
+   `002-live-market-value`, 2026-09-05: the gate also accepts a header
+   cut at a **shipped boundary width** — the 12-column items and
+   7-column wishlist layouts this spec parses, recorded in `011`'s
+   plan — so a file written before `002` appended `Reverb Product ID`
+   and `Year` still imports, with those two columns blank. Only those
+   exact widths; extra, missing, renamed and reordered columns fail
+   the whole file exactly as stated above.)*
 2. **Row validation.** Every data row is parsed against the field
    policy below. Rows are never silently altered: every skipped row
    and every defaulted field is counted for the confirmation.
@@ -336,7 +345,7 @@ by the person):
     `013-settings-menu`, 2026-09-02: the action is now Settings ›
     Templates; the bytes, the names and the round trip stand.)*
 13. [x] Wishlist parity: criteria 2–12 hold on the wishlist against
-    its 7-column schema, with `Added` restoring the wish's creation
+    its 7-column schema *(9 columns since `002`; 7 is the accepted legacy width — 2026-09-05)*, with `Added` restoring the wish's creation
     date.
 14. [x] A failed import (unreadable file, undecodable text, header
     mismatch, an unclosed quote, a file beyond the defensive size
@@ -403,8 +412,11 @@ broken and what went red). "Device" means the T017 simulator pass.
     `SettingsViewModelTemplateTests`, with the intent — (byte-exact BOM+header+CRLF,
     pinned filenames, `canExport` ignored); the closed-loop tests
     (template + one hand row → exactly one record); device (68-byte
-    share sheet). Honest partial: the fill-in-a-real-spreadsheet
-    re-save needs Numbers/Excel hands — the transport fixtures cover
+    share sheet — the historical figure: BOM + the 7-column wishlist
+    header + CRLF, this spec's width. At `002`'s nine columns the same
+    template is 91 bytes, and the items template 172; the arithmetic is
+    the one `SettingsViewModelTemplateTests` pins). Honest partial:
+    the fill-in-a-real-spreadsheet re-save needs Numbers/Excel hands — the transport fixtures cover
     the file shapes those apps produce.
 13. The wishlist halves of everything above +
     `commitAppendsAndRestoresCreatedAtFromAdded` and

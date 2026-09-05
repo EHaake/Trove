@@ -17,12 +17,40 @@ struct ExportSchemaTests {
         #expect(ExportSchema.itemHeaders == [
             "Name", "Category", "Purchase Price", "Currency", "Purchase Date",
             "Purchase Location", "Current Value", "Desire to Keep", "Condition",
-            "Condition Notes", "Serial Number", "Notes",
+            "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
+            "Year",
         ])
         #expect(ExportSchema.wishlistHeaders == [
             "Name", "Category", "Estimated Cost", "Currency", "Desire to Own",
+            "Added", "Notes", "Reverb Product ID", "Year",
+        ])
+    }
+
+    /// The historical fact the boundary tolerance assumes (002, plan §7):
+    /// the twelve and seven names Trove shipped *before* `Reverb Product ID`
+    /// and `Year` were appended, typed out here rather than sliced from the
+    /// arrays under test. Renaming or reordering any legacy column turns
+    /// this red — which is the point: the gate accepts these prefixes as
+    /// "a file an older Trove wrote", so they are no longer free to change.
+    @Test func theLegacyLayoutsArePinnedByLiteralName() {
+        #expect(Array(ExportSchema.itemHeaders.prefix(12)) == [
+            "Name", "Category", "Purchase Price", "Currency", "Purchase Date",
+            "Purchase Location", "Current Value", "Desire to Keep", "Condition",
+            "Condition Notes", "Serial Number", "Notes",
+        ])
+        #expect(Array(ExportSchema.wishlistHeaders.prefix(7)) == [
+            "Name", "Category", "Estimated Cost", "Currency", "Desire to Own",
             "Added", "Notes",
         ])
+        // The boundaries name those widths, oldest first.
+        #expect(ExportSchema.itemSchemaBoundaries == [12])
+        #expect(ExportSchema.wishlistSchemaBoundaries == [7])
+        // Append-only: a boundary is always shorter than the live layout.
+        #expect(ExportSchema.itemSchemaBoundaries.allSatisfy { $0 < ExportSchema.itemHeaders.count })
+        #expect(
+            ExportSchema.wishlistSchemaBoundaries
+                .allSatisfy { $0 < ExportSchema.wishlistHeaders.count }
+        )
     }
 
     // MARK: - Money
@@ -110,8 +138,8 @@ struct ExportSchemaTests {
             conditionNotes: "New seals",
             serialNumber: "2244668",
             notes: "Body only",
-            reverbProductID: nil,
-            year: nil,
+            reverbProductID: 160_322,
+            year: 1984,
             firstPhotoID: nil
         )
 
@@ -119,6 +147,7 @@ struct ExportSchemaTests {
         #expect(row == [
             "Leica M6", "Photography/Cameras", "2900.00", "USD", "2026-03-09",
             "KEH", "3450.50", "5", "excellent", "New seals", "2244668", "Body only",
+            "160322", "1984",
         ])
         #expect(row.count == ExportSchema.itemHeaders.count)
     }
@@ -150,6 +179,10 @@ struct ExportSchemaTests {
         #expect(try cell(row, "Condition Notes", of: headers) == "")
         #expect(try cell(row, "Serial Number", of: headers) == "")
         #expect(try cell(row, "Notes", of: headers) == "")
+        // Unmatched is not product 0, and no year is not year 0 (002).
+        #expect(try cell(row, "Reverb Product ID", of: headers) == "")
+        #expect(try cell(row, "Year", of: headers) == "")
+        #expect(row.count == ExportSchema.itemHeaders.count)
     }
 
     @Test func wishlistRowCarriesEveryColumnInHeaderOrder() throws {
@@ -163,13 +196,16 @@ struct ExportSchemaTests {
             desireToOwn: 3,
             createdAt: added,
             notes: nil,
-            reverbProductID: nil,
-            year: nil,
+            reverbProductID: 232,
+            year: 2019,
             firstPhotoID: nil
         )
 
         let row = ExportSchema.row(from: record, timeZone: zone("America/New_York"))
-        #expect(row == ["Vox AC15", "Music/Amps", "1050.00", "USD", "3", "2026-08-30", ""])
+        #expect(row == [
+            "Vox AC15", "Music/Amps", "1050.00", "USD", "3", "2026-08-30", "",
+            "232", "2019",
+        ])
         #expect(row.count == ExportSchema.wishlistHeaders.count)
     }
 

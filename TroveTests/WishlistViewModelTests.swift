@@ -1044,6 +1044,55 @@ func wishlistPreview(
 struct WishlistViewModelCommitTests {
     private let dummyURL = URL(filePath: "/dev/null/import.csv")
 
+    /// 002/T016a: the items twin's guard, wishlist side — the match and the
+    /// year come back with the row (criterion 19).
+    @Test func commitRestoresTheReverbMatchAndTheYear() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let preview = ImportPreview(
+            validated: [
+                ValidatedRow(
+                    record: WishlistExportRecord(
+                        name: "Deluxe Reverb", categoryPath: "Music/Amps",
+                        estimatedCostCents: 124_999, currencyCode: "USD", desireToOwn: 3,
+                        createdAt: Date(timeIntervalSince1970: 1_500_000_000),
+                        notes: nil, reverbProductID: 232, year: 1966, firstPhotoID: nil
+                    ),
+                    rowNumber: 2,
+                    defaultedFieldCount: 0
+                ),
+                ValidatedRow(
+                    record: WishlistExportRecord(
+                        name: "Unmatched", categoryPath: "Music/Amps",
+                        estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 2,
+                        createdAt: Date(timeIntervalSince1970: 1_500_000_000),
+                        notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
+                    ),
+                    rowNumber: 3,
+                    defaultedFieldCount: 0
+                ),
+            ],
+            skipped: [],
+            defaultedFieldCount: 0
+        )
+
+        let viewModel = WishlistViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(wishlist: .success(preview))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        let saved = try ModelContext(container).fetch(
+            FetchDescriptor<WishlistItem>(sortBy: [SortDescriptor(\.sortOrder)])
+        )
+        #expect(saved.map(\.name) == ["Deluxe Reverb", "Unmatched"])
+        #expect(saved[0].reverbProductID == 232)
+        #expect(saved[0].year == 1966)
+        #expect(saved[1].reverbProductID == nil)
+        #expect(saved[1].year == nil)
+    }
+
     @Test func commitAppendsAndRestoresCreatedAtFromAdded() async throws {
         // Second-context verification — see the items twin's note (T018's
         // audit: a same-context refetch passes with `save()` deleted).

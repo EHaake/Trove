@@ -19,7 +19,7 @@ step's count is the guard against doing that by accident.
 |---|---|---|
 | Export filename | `Trove-Items-YYYY-MM-DD.csv` | `Trove-Wishlist-YYYY-MM-DD.csv` |
 | Template filename | `Trove-Items-Template.csv` | `Trove-Wishlist-Template.csv` |
-| Columns | 12 | 7 |
+| Columns | 14 | 9 |
 
 Encoding is UTF-8. Trove writes a byte-order mark and CRLF line
 endings for Excel's sake; on import both are optional, and any
@@ -29,7 +29,13 @@ alert points you to the right screen.
 
 ## Items columns
 
-The header row must contain exactly these names, in this order.
+The header row must contain exactly these names, in this order — with
+one kept exception. A header that stops after the twelfth column
+(`Notes`) is the layout Trove wrote before it knew about Reverb, and it
+still imports: the two newer columns simply arrive blank. The wishlist
+keeps the same door open for a header that stops after its seventh
+column. Nothing else is accepted — a header one column short of either
+of those widths fails like any other mismatch.
 
 | # | Column | Format | If blank | If unreadable |
 |---|--------|--------|----------|---------------|
@@ -45,12 +51,22 @@ The header row must contain exactly these names, in this order.
 | 10 | `Condition Notes` | text | empty | — |
 | 11 | `Serial Number` | text | empty | — |
 | 12 | `Notes` | text, line breaks fine inside quotes | empty | — |
+| 13 | `Reverb Product ID` | positive whole number — the product on Reverb this item is matched to, e.g. `160322` | no match | no match † |
+| 14 | `Year` | four digits, `1900` through next year | no year | no year † |
 
 † counted and shown in the confirmation as a field that will use a
 default. Blank optional fields (and a blank currency) import
 silently — empty is a legitimate value there. A blank `Current
 Value` means "not yet valued," which Trove treats differently from
-worth zero.
+worth zero. A blank match or year is the same kind of ordinary answer:
+the item just isn't matched, or its year isn't known.
+
+Export carries an item's Reverb match, never the fetched figures. The
+two columns say *which* Reverb product an item is matched to and what
+year the piece is — the keys a re-import needs to restore the match.
+The asking prices Trove fetches against that match are live numbers
+belonging to Reverb's listings, not to your item, and they appear in
+neither the CSV nor the PDF.
 
 ## Wishlist columns
 
@@ -63,6 +79,8 @@ worth zero.
 | 5 | `Desire to Own` | whole number `1`–`3` | `2` † | `2` † |
 | 6 | `Added` | `yyyy-MM-dd` — becomes the wish's creation date | today † | today † |
 | 7 | `Notes` | text | empty | — |
+| 8 | `Reverb Product ID` | positive whole number, as above | no match | no match † |
+| 9 | `Year` | four digits, as above | no year | no year † |
 
 ## Rows that are skipped
 
@@ -95,6 +113,15 @@ lists the first five skipped rows with reasons, then "and N more."
 - **Condition** matches its five words in any casing.
 - **Currency** is any three letters, stored uppercased. Trove's v1
   displays everything as USD; the code is kept with the item.
+- **`Reverb Product ID`** is a positive whole number — digits only,
+  Reverb's own identifier for the product an item is matched to
+  (`160322`). No `#`, no dashes, no pasted URL, and `0` is not an
+  identifier: anything but digits reads as no match, counted. Leave it
+  blank for an unmatched item.
+- **`Year`** is exactly four digits, `1900` through next year — the
+  year the piece was *made*, not the year of the design it copies: a
+  2023 reissue of a 1961 model is `2023`. Anything else reads as no
+  year, counted; blank means the year isn't known.
 
 ## What fails the whole file
 
@@ -102,7 +129,9 @@ These stop the import entirely — nothing is imported, and the alert
 says so:
 
 - The header row doesn't match the template (missing, renamed,
-  extra, or reordered columns).
+  extra, or reordered columns). The one exception is the older,
+  narrower layout described above — 12 items columns, 7 wishlist
+  columns — which still imports.
 - The file isn't UTF-8 text (see the Excel note below).
 - An unclosed quote — one runaway `"` swallows the rest of the file,
   so there is nothing safe to salvage.

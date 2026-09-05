@@ -71,6 +71,14 @@ name did, re-queried by hand the same day:
 | Fender Blues Junior IV | 80684 | Fender Blues Junior IV 15-Watt 1x12" Guitar Combo |
 | Strymon Timeline | 17 | Strymon Timeline Delay |
 
+The wishlist sample needed one matched want and the recording had no
+candidate for any of its rows, so `Fender Deluxe Reverb '65 RI` was
+queried by hand on 2026-09-05 (T016a), same endpoint, unauthenticated:
+
+| CSV row (`docs/samples/wishlist.csv`) | Reverb Product ID | Title on Reverb |
+|---|---|---|
+| Fender Deluxe Reverb '65 RI | 232 | Fender '65 Deluxe Reverb Reissue 22-Watt 1x12" Guitar Combo |
+
 Worth knowing for the picker: an abbreviation Reverb's catalog doesn't
 use ("AV II") finds nothing, while the brand and model spelled out find
 it first — the empty-state copy's "the brand and model are enough" is

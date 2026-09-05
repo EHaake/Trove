@@ -271,6 +271,8 @@ List VMs: `marketSummaries: [UUID: MarketSummary { medianCents: Int?, trend }]` 
 
 ## 7. The contract — CSV, import, PDF
 
+*Counts in this section are as first planned — 13 items / 8 wishlist columns, `Reverb Product ID` alone. Amendment A (below) appends `Year` after it on both lists, so the shipped counts are **14 / 9**; the boundaries stay `[12]` / `[7]`. Where this section says 13/8, read 14/9 (noted 2026-09-05 at T016a's review).*
+
 - `ExportSchema.itemHeaders` += `"Reverb Product ID"` (13); `wishlistHeaders` += the same (8); `itemSchemaBoundaries = [12]`, `wishlistSchemaBoundaries = [7]` — "every column count at which a shipped layout ended, oldest first". `row(from:)` appends `record.reverbProductID.map(String.init) ?? ""`.
 - `ImportSchema.requireHeader` accepts the pinned headers or `prefix(n)` for any boundary `n`, **returns the matched width**; `wrongList` if the cells equal the other list's headers at any of its widths; else `mismatch`. The previews use the returned width for the extra-columns guard and still pad to `headers.count` — so a legacy 12-column file imports with every match empty, and its 13-cell row is still "more columns than the template" (the `items-partial.csv` row 7 case). `reverbProductID(from:)`: ASCII digits only, overflow-checked, `> 0`; blank → nil silent; else nil counted. Commit paths set the field. A literal test pins `Array(itemHeaders.prefix(12))` against the twelve legacy names typed out — the historical fact the boundary rule assumes.
 - `PDFEntry`'s comment gains the carve-out ("less the Reverb product identifier — a key the CSV carries so a re-import restores the match, not a field the person reads"); `theEntryNeverCarriesTheReverbIdentifier` builds entries from records with an id and asserts no label or value contains "Reverb" or the digits (mutation: add a `PDFField` → red).
@@ -356,7 +358,14 @@ precision and narrowing is for the lumped cases.
   importer's parse (T016a) needs the same case. The parse lives in both
   form view models by the task's instruction; if the importer becomes a
   third copy, `FieldNormalization` is the precedent home for a shared
-  `year(from:)`.
+  `year(from:)`. *T016a (2026-09-05)*: the importer is that third copy —
+  `ImportSchema.year(from:timeZone:)`, `nonisolated`, taking its
+  `TimeZone` and building a Gregorian calendar the way `day(from:)` does,
+  where the forms use `Calendar.current`. Kept local by the task's
+  footprint; the extraction is a close-out candidate, not a defect. The
+  wishlist sample's Reverb id (232, the '65 Deluxe Reverb reissue) was
+  looked up by hand at T016a and is recorded in the fixtures README —
+  the chosen-ids section covered only the four items-full rows. The lower bound now lives once, `FieldNormalization.earliestYear`, read by both forms and the importer (T016a's review); the one other `1900` is inside `MarketCopy.yearValidationError` — copy, pinned whole by its test — and would silently disagree if the bound ever moved: a close-out note, not a defect. The importer's upper bound takes `now` and `timeZone` as parameters; its table pins past instants (1999) and a Tokyo row — whose mutation-killing power depends on the machine's zone being west of Tokyo (the assertion itself is zone-independent), a CI note.
 - **CSV**: `Year` appended after `Reverb Product ID` on both lists (14
   and 9 columns); the boundaries stay `[12]` / `[7]` — both new columns
   append past the shipped layout, so the legacy tolerance covers both;

@@ -1017,7 +1017,54 @@ only — technical detail lives in `plan.md` and the commit log).
 
 ## Phase 4 — Contract and policy
 
-- [ ] **T016a — The CSV column and the header tolerance — the atomic commit.**
+- [x] **T016a — The CSV column and the header tolerance — the atomic commit.**
+  *Done (2026-09-05, one commit with T016b)* — dispatched to
+  `sdd-implementer` (three passes), verified by the orchestrator's own
+  runs, reviewed two rounds by the `skeptical-reviewer` at its default
+  tier. As built: `itemHeaders` 14 / `wishlistHeaders` 9 (plan §7's 13/8
+  carry a superseded note); `itemSchemaBoundaries = [12]` /
+  `wishlistSchemaBoundaries = [7]`; `requireHeader` accepts the full
+  header or a boundary prefix and nothing else, returns the width
+  (`@discardableResult`), and reports `wrongList` for the other list's
+  full and boundary widths; both previews guard extra columns by the
+  matched width while padding to `headers.count`; `reverbProductID(from:)`
+  (ASCII digits, overflow-checked, > 0, trimmed) and `year(from:
+  timeZone:now:)` (four digits, `FieldNormalization.earliestYear`…next
+  year of the given clock and zone) — blank silent, unreadable counted;
+  both list VMs' commit paths set the two fields; `PDFEntry`'s carve-out
+  comment. `FieldNormalization.earliestYear` is the one lower bound, read
+  by both forms and the importer. Samples at 14/9 (`items-full.csv`: the
+  four music rows 160322/2023, 182769/2018, 80684/2021, 17/2015;
+  `wishlist.csv`: one matched, 232/2019 — the '65 Deluxe Reverb reissue,
+  looked up by hand and recorded in the fixtures README; the three
+  `bad-*` files); **`items-partial.csv` untouched at 12**. Tests: +11
+  (the legacy literal pins for both lists; `theLegacyLayoutStillPasses`;
+  legacy imports with no match and no year on both lists; the overlong
+  legacy row; the other list's legacy headers as `wrongList`; the two
+  parse tables — "01975", a Tokyo instant at the year's turn, past pins
+  that can never come true; the round trips carrying both fields; the
+  14/9-cell hand rows; the PDF carve-out; both commit paths on a second
+  context; DocsSampleTests' four-ids / years-by-value / one-matched-wish
+  assertions and items-partial's 12-cell header and all-nil rows).
+  Mutations, each red then reverted: tolerance removed → the legacy
+  sample red; any prefix → `prefix(11)` red; width guard on
+  `headers.count` → items-partial's row-7 count red; a `PDFField` for
+  the id → red; a legacy header renamed → the literal pin red; the ids
+  blanked → the four-rows assertion red; pad to the matched width →
+  index-out-of-range (attribution proven by disabling the new test);
+  `.now` for `now` → the pinned table red; trim dropped → red; the bound
+  → 1901 → red at all three call sites; the zone assignment dropped →
+  the Tokyo row red. Review round 1: one blocker (the docs — resolved by
+  landing T016b in the same commit) and four should-fixes, all folded;
+  round 2: signed off, its second-look items folded in a third pass;
+  two of them carried forward — **for the Phase 4 report**: the docs
+  now say `Year` is the year the piece was made (a 2023 reissue of a
+  1961 model is 2023), a semantic the spec leaves unstated (a P18
+  clarification for the person), and the boundary tolerance supersedes
+  012's "missing columns fail the file" in the one legacy case (Q16,
+  recorded in the 012 spec). Full unit suite (orchestrator's run):
+  **990 tests in 138 suites, all passed**. Templates in Settings read
+  the header arrays directly (their byte-pinning tests held).
   Per plan §7, Q16 and Amendment A. `ExportSchema`: the two headers
   appended on both lists (`Reverb Product ID`, `Year` — 14 and 9
   columns; boundaries stay `[12]`/`[7]`), `itemSchemaBoundaries`/`wishlistSchemaBoundaries`, `row(from:)`;
@@ -1041,12 +1088,27 @@ only — technical detail lives in `plan.md` and the commit log).
   show the new column; export → re-import restoring the match is
   **T018's** by-hand check.
 
-- [ ] **T016b — The contract's paper half.**
+- [x] **T016b — The contract's paper half.**
+  *Done (2026-09-05, one commit with T016a)* — dispatched to
+  `sdd-implementer`; the docs describe what T016a shipped: 14/9 columns
+  and their rows, the one kept exception (a header cut at 12 / 7 — the
+  layout Trove wrote before 002 — still imports with the new columns
+  blank; one column short still fails), the positive-whole-number and
+  four-digit-year lines with what `Year` means, "Export carries an
+  item's Reverb match, never the fetched figures"; the samples README's
+  rows (`items-partial.csv` "written at the 12-column width of Trove
+  before `002` — the layout the import still accepts"); the 011 plan's
+  dated boundaries-rule entry; the 012 spec's superseded-in-part note on
+  the header gate, its two width statements annotated, and the "68
+  bytes" citation kept as the historical figure beside 91 (wishlist) and
+  172 (items), computed as BOM + header + CRLF and checked by the
+  reviewer to the byte. Suite count unchanged (990 in 138).
   Per plan §7 (docs). `docs/samples/README.md` (the regenerated rows;
   `items-partial.csv` "written at the 12-column width of Trove before
   `002` — the layout the import still accepts"), `docs/csv-reference.md`
-  (counts 13/8, the two new rows, the "exactly these names — with one
-  kept exception" sentence, "What fails the whole file", the
+  (counts **14/9** — the task text said 13/8 before Amendment A added
+  `Year`; corrected 2026-09-05 — the two new rows, the "exactly these
+  names — with one kept exception" sentence, "What fails the whole file", the
   positive-whole-number line, "Export carries an item's Reverb match,
   never the fetched figures"), the 011 plan note (the boundaries rule,
   dated) and the 012 spec's superseded-in-part notes and "68 bytes"
@@ -1102,6 +1164,13 @@ only — technical detail lives in `plan.md` and the commit log).
   numbers seen.
 
 - [ ] **T019 — Close-out.**
+  *Sweep list, added 2026-09-05 at T016a's review*: stale statements
+  outside 002's own documents that the contract change left behind —
+  `specs/012-data-import/plan.md` (~line 99: the re-save fixture as "12
+  columns plus four trailing commas"; it is 14 now), `specs/013-settings-
+  menu/spec.md` (~line 806: "the wishlist template staged at 68 bytes";
+  91 since 002). Annotate them dated, alongside plan §8's post-merge
+  ROADMAP/README/DECISIONS list.
   Criteria 1–20 ticked in `spec.md` with citations, honest partials
   named (a real 429 if none was seen; the second-device history check;
   "is published" pending merge); the skeptical-reviewer sweep over the
@@ -1178,3 +1247,9 @@ previous spec of similar size before treating the policy as settled.
 | T009 review 3 | opus (`skeptical-reviewer`) | 23,862 | signed off |
 | T012 | opus (`sdd-implementer`) | 174,621 | verified first try; one finding (summaries before the sort), recorded in plan §6 |
 | T014 | opus (`sdd-implementer`) | 144,577 | verified first try; two findings (matched vs due counts; the comment stripper), recorded in plan §6 |
+| T016a | opus (`sdd-implementer`) | 160,964 | verified first try; reviewer: fix and re-review |
+| T016a review 1 | opus (`skeptical-reviewer`) | 75,007 | fix and re-review — B1 (the docs: T016b's), S1–S4 |
+| T016a fix pass 2 | opus (`sdd-implementer`) | 71,937 | verified first try; a false-passing pinned year caught and re-pinned |
+| T016b | opus (`sdd-implementer`) | 70,898 | verified (count unchanged); two stale 012-spec widths left to the orchestrator |
+| T016a review 2 | opus (`skeptical-reviewer`) | 83,464 | signed off; second-look items folded |
+| T016a fix pass 3 | opus (`sdd-implementer`) | 59,318 | verified first try |

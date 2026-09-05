@@ -119,20 +119,34 @@ struct ImportSchemaTests {
         try ImportSchema.requireItemsHeader(try #require(shaped.first))
     }
 
+    /// Re-scoped for 002's boundary tolerance: "missing" now means an
+    /// *interior* column dropped (removing the last one would be a prefix,
+    /// and prefixes are the tolerance's business), and `prefix(11)` — one
+    /// column short of the shipped boundary — must still be a mismatch. The
+    /// second case is what fails if the tolerance is ever widened to "any
+    /// prefix", which would silently blank whatever a truncated file lost.
     @Test func missingExtraRenamedAndReorderedColumnsAllMismatch() {
         var missing = ExportSchema.itemHeaders
-        missing.removeLast()
+        missing.remove(at: 3)
         var extra = ExportSchema.itemHeaders
         extra.append("Photos")
         var renamed = ExportSchema.itemHeaders
         renamed[0] = "Item Name"
         var reordered = ExportSchema.itemHeaders
         reordered.swapAt(0, 1)
+        let shortOfTheBoundary = Array(ExportSchema.itemHeaders.prefix(11))
+        let pastTheBoundary = Array(ExportSchema.itemHeaders.prefix(13))
 
-        for cells in [missing, extra, renamed, reordered] {
+        for cells in [missing, extra, renamed, reordered, shortOfTheBoundary, pastTheBoundary] {
             #expect(throws: ImportSchema.HeaderError.mismatch) {
                 try ImportSchema.requireItemsHeader(CSVRow(number: 1, cells: cells))
             }
+        }
+        // The wishlist's own near-boundary width, same rule.
+        #expect(throws: ImportSchema.HeaderError.mismatch) {
+            try ImportSchema.requireWishlistHeader(
+                CSVRow(number: 1, cells: Array(ExportSchema.wishlistHeaders.prefix(6)))
+            )
         }
     }
 
@@ -144,6 +158,113 @@ struct ImportSchemaTests {
         }
         #expect(throws: ImportSchema.HeaderError.wrongList) {
             try ImportSchema.requireWishlistHeader(CSVRow(number: 1, cells: ExportSchema.itemHeaders))
+        }
+    }
+
+    // MARK: - The legacy-layout tolerance (002/T016a, Q16)
+
+    /// A file written by Trove before `Reverb Product ID` and `Year` were
+    /// appended still passes, and the gate answers the width it matched —
+    /// 12 for items, 7 for the wishlist — while the current layout answers
+    /// its own. Mutation: drop the boundaries and this goes red, along with
+    /// `DocsSampleTests.itemsPartial…` on the committed legacy sample.
+    @Test func theLegacyLayoutStillPasses() throws {
+        let legacyItems = Array(ExportSchema.itemHeaders.prefix(12))
+        let legacyWishlist = Array(ExportSchema.wishlistHeaders.prefix(7))
+
+        #expect(try ImportSchema.requireItemsHeader(CSVRow(number: 1, cells: legacyItems)) == 12)
+        #expect(
+            try ImportSchema.requireWishlistHeader(CSVRow(number: 1, cells: legacyWishlist)) == 7
+        )
+        #expect(
+            try ImportSchema.requireItemsHeader(CSVRow(number: 1, cells: ExportSchema.itemHeaders))
+                == ExportSchema.itemHeaders.count
+        )
+        #expect(
+            try ImportSchema.requireWishlistHeader(
+                CSVRow(number: 1, cells: ExportSchema.wishlistHeaders)
+            ) == ExportSchema.wishlistHeaders.count
+        )
+    }
+
+    /// And it imports: every column the old layout carried lands, the two
+    /// it never had arrive empty — not defaulted, not counted.
+    @Test func aLegacyFileImportsWithNoMatchAndNoYear() throws {
+        let legacy = [
+            CSVRow(number: 1, cells: Array(ExportSchema.itemHeaders.prefix(12))),
+            CSVRow(number: 2, cells: Array(cells().prefix(12))),
+        ]
+        let preview = try ImportSchema.itemsPreview(from: legacy, timeZone: utc())
+        let row = try #require(preview.validated.first)
+        #expect(preview.skipped.isEmpty)
+        #expect(preview.defaultedFieldCount == 0)
+        #expect(row.record.name == "Leica M6")
+        #expect(row.record.serialNumber == "1234567")
+        #expect(row.record.reverbProductID == nil)
+        #expect(row.record.year == nil)
+    }
+
+    /// The wishlist twin: a seven-column file from before the two columns
+    /// were appended imports the same way, its match and year empty rather
+    /// than defaulted. Not a redundant copy of the items case — the two
+    /// pipelines are parallel implementations, each with its own padding and
+    /// its own extra-columns guard, so each needs its own coverage: pad a row
+    /// out to the *matched* width instead of `headers.count` in either one
+    /// and only that one's test catches it.
+    @Test func aLegacyWishlistFileImportsWithNoMatchAndNoYear() throws {
+        let legacy = [
+            CSVRow(number: 1, cells: Array(ExportSchema.wishlistHeaders.prefix(7))),
+            CSVRow(number: 2, cells: Array(wishlistCells().prefix(7))),
+        ]
+        let preview = try ImportSchema.wishlistPreview(from: legacy, timeZone: utc())
+        let row = try #require(preview.validated.first)
+        #expect(preview.skipped.isEmpty)
+        #expect(preview.defaultedFieldCount == 0)
+        #expect(row.record.name == "OM-1")
+        #expect(row.record.desireToOwn == 3)
+        #expect(row.record.notes == "meter working")
+        #expect(row.record.reverbProductID == nil)
+        #expect(row.record.year == nil)
+    }
+
+    /// The `items-partial.csv` row-7 case as a unit: in a 12-column file a
+    /// 13-cell row is a stray comma, not a Reverb id — the extra-columns
+    /// guard is judged against the *matched* width, never the current
+    /// header count. Mutation: guard on `headers.count` and this goes red.
+    @Test func aLegacyFilesOverlongRowIsStillExtraColumns() throws {
+        let legacy = [
+            CSVRow(number: 1, cells: Array(ExportSchema.itemHeaders.prefix(12))),
+            CSVRow(number: 2, cells: Array(cells().prefix(12)) + ["oops"]),
+        ]
+        let preview = try ImportSchema.itemsPreview(from: legacy, timeZone: utc())
+        #expect(preview.validated.isEmpty)
+        #expect(preview.skipped == [
+            SkippedRow(rowNumber: 2, reason: "more columns than the template"),
+        ])
+
+        let legacyWishlist = [
+            CSVRow(number: 1, cells: Array(ExportSchema.wishlistHeaders.prefix(7))),
+            CSVRow(number: 2, cells: Array(wishlistCells().prefix(7)) + ["oops"]),
+        ]
+        let wishlistPreview = try ImportSchema.wishlistPreview(from: legacyWishlist, timeZone: utc())
+        #expect(wishlistPreview.validated.isEmpty)
+        #expect(wishlistPreview.skipped == [
+            SkippedRow(rowNumber: 2, reason: "more columns than the template"),
+        ])
+    }
+
+    /// Criterion 4 survives the tolerance: an *old* wishlist export offered
+    /// to the items screen is still "wrong list", not "wrong columns".
+    @Test func theOtherListsLegacyHeadersAreAlsoWrongList() {
+        #expect(throws: ImportSchema.HeaderError.wrongList) {
+            try ImportSchema.requireItemsHeader(
+                CSVRow(number: 1, cells: Array(ExportSchema.wishlistHeaders.prefix(7)))
+            )
+        }
+        #expect(throws: ImportSchema.HeaderError.wrongList) {
+            try ImportSchema.requireWishlistHeader(
+                CSVRow(number: 1, cells: Array(ExportSchema.itemHeaders.prefix(12)))
+            )
         }
     }
 
@@ -261,6 +382,110 @@ struct ImportSchemaTests {
         #expect(ImportSchema.currencyCode(from: "") == nil)
     }
 
+    // MARK: - The Reverb match and the year (T016a)
+
+    /// The match column: ASCII digits, overflow-checked, positive — and the
+    /// 012 `Current Value` split, blank silent, unreadable counted.
+    @Test func reverbProductIDBlankIsSilentAndGarbageCounts() throws {
+        #expect(ImportSchema.reverbProductID(from: "160322") == 160_322)
+        #expect(ImportSchema.reverbProductID(from: "17") == 17)
+        // Untrimmed input is the number, as on `year(from:)` — the two
+        // columns cannot differ about a stray space in a hand-edited cell.
+        #expect(ImportSchema.reverbProductID(from: " 17") == 17)
+        #expect(ImportSchema.reverbProductID(from: "17 ") == 17)
+        for field in ["", "abc", "-1", "0", "12.5", "1e5", "١٧",
+                      String(repeating: "9", count: 20)] {
+            #expect(ImportSchema.reverbProductID(from: field) == nil, "\(field)")
+        }
+
+        // Blank is "not matched" — an ordinary answer, silent.
+        let blank = try ImportSchema.itemsPreview(
+            from: itemsFile([cells(["Reverb Product ID": ""])]), timeZone: utc()
+        )
+        #expect(blank.defaultedFieldCount == 0)
+        #expect(blank.validated.first?.record.reverbProductID == nil)
+
+        for field in ["abc", "-1", "0", "12.5", "99999999999999999999"] {
+            let preview = try ImportSchema.itemsPreview(
+                from: itemsFile([cells(["Reverb Product ID": field])]), timeZone: utc()
+            )
+            #expect(preview.defaultedFieldCount == 1, "\(field)")
+            #expect(preview.validated.first?.record.reverbProductID == nil, "\(field)")
+
+            let wishlist = try ImportSchema.wishlistPreview(
+                from: wishlistFile([wishlistCells(["Reverb Product ID": field])]), timeZone: utc()
+            )
+            #expect(wishlist.defaultedFieldCount == 1, "\(field)")
+            #expect(wishlist.validated.first?.record.reverbProductID == nil, "\(field)")
+        }
+    }
+
+    /// The year column: exactly four ASCII digits after trimming, 1900
+    /// through next calendar year — the rule the forms apply to a typed
+    /// field. `"01975"` is the case that falsifies the four-digit check;
+    /// `"75"` cannot, since the lower bound rejects it either way (plan
+    /// Amendment A's note from T009a).
+    @Test func yearBlankIsSilentAndOutOfRangeCounts() throws {
+        // The instant is pinned, not read from the clock: "next year" is a
+        // moving number, and a table that computes its own expectations
+        // from the same clock the code reads asserts nothing on a real
+        // 31 December — the two can disagree by a year mid-test.
+        //
+        // Pinned to a year the real clock is nowhere near, deliberately: if
+        // `now` were ignored and the bound read `.now` instead, 2001 would
+        // be in range and these rejections would pass anyway. A pin in the
+        // past rather than the future so it can never come true.
+        let midYear = instant(year: 1999, month: 6, day: 1)
+
+        #expect(ImportSchema.year(from: "1975", timeZone: utc(), now: midYear) == 1975)
+        #expect(ImportSchema.year(from: " 1975 ", timeZone: utc(), now: midYear) == 1975)
+        #expect(ImportSchema.year(from: "1900", timeZone: utc(), now: midYear) == 1900)
+        #expect(ImportSchema.year(from: "2000", timeZone: utc(), now: midYear) == 2000)
+        for field in ["", "75", "01975", "abc", "1899", "19 5", "1975.0", "2001"] {
+            #expect(ImportSchema.year(from: field, timeZone: utc(), now: midYear) == nil, "\(field)")
+        }
+
+        // The year's last second in the zone it was handed: next year is
+        // still accepted, the one after still isn't. The bound is the
+        // calendar's answer for that instant, not a rounded-up guess.
+        let yearsEnd = instant(year: 1999, month: 12, day: 31, hour: 23, minute: 59, second: 59)
+        #expect(ImportSchema.year(from: "2000", timeZone: utc(), now: yearsEnd) == 2000)
+        #expect(ImportSchema.year(from: "2001", timeZone: utc(), now: yearsEnd) == nil)
+
+        // And the bound is read in the zone it was *handed*, not the one the
+        // process happens to be in: this instant is still 31 December in UTC
+        // and already 1 January in Tokyo, so the same `now` admits 2001 there
+        // and rejects it here. Mutation: drop `calendar.timeZone = timeZone`
+        // and the Tokyo row goes red.
+        let tokyo = TimeZone(identifier: "Asia/Tokyo")!
+        let newYearInTokyo = instant(year: 1999, month: 12, day: 31, hour: 23, minute: 30)
+        #expect(ImportSchema.year(from: "2001", timeZone: tokyo, now: newYearInTokyo) == 2001)
+        #expect(ImportSchema.year(from: "2002", timeZone: tokyo, now: newYearInTokyo) == nil)
+        #expect(ImportSchema.year(from: "2001", timeZone: utc(), now: newYearInTokyo) == nil)
+
+        let blank = try ImportSchema.itemsPreview(
+            from: itemsFile([cells(["Year": ""])]), timeZone: utc()
+        )
+        #expect(blank.defaultedFieldCount == 0)
+        #expect(blank.validated.first?.record.year == nil)
+
+        // The previews take no instant — they read the real clock, as the
+        // app does — so the above-range row is one no clock accepts.
+        for field in ["75", "01975", "abc", "1899", "2999"] {
+            let preview = try ImportSchema.itemsPreview(
+                from: itemsFile([cells(["Year": field])]), timeZone: utc()
+            )
+            #expect(preview.defaultedFieldCount == 1, "\(field)")
+            #expect(preview.validated.first?.record.year == nil, "\(field)")
+
+            let wishlist = try ImportSchema.wishlistPreview(
+                from: wishlistFile([wishlistCells(["Year": field])]), timeZone: utc()
+            )
+            #expect(wishlist.defaultedFieldCount == 1, "\(field)")
+            #expect(wishlist.validated.first?.record.year == nil, "\(field)")
+        }
+    }
+
     // MARK: - Items row validation (T005)
 
     @Test func aFullyValidRowValidatesWithNoDefaults() throws {
@@ -274,6 +499,8 @@ struct ImportSchemaTests {
         #expect(row.record.currentValueCents == 345_000)
         #expect(row.record.conditionRawValue == "excellent")
         #expect(row.record.purchaseLocation == "KEH")
+        #expect(row.record.reverbProductID == 160_322)
+        #expect(row.record.year == 1984)
         #expect(row.record.firstPhotoID == nil)
     }
 
@@ -317,6 +544,7 @@ struct ImportSchemaTests {
         let preview = try ImportSchema.itemsPreview(from: itemsFile([cells([
             "Purchase Location": "", "Current Value": "", "Currency": "",
             "Condition Notes": "", "Serial Number": "", "Notes": " ",
+            "Reverb Product ID": "", "Year": " ",
         ])]), timeZone: utc())
         let row = try #require(preview.validated.first)
         #expect(preview.defaultedFieldCount == 0)
@@ -324,6 +552,9 @@ struct ImportSchemaTests {
         #expect(row.record.currentValueCents == nil)
         #expect(row.record.purchaseLocation == nil)
         #expect(row.record.notes == nil)
+        // Unmatched and year-less are ordinary answers, not defects.
+        #expect(row.record.reverbProductID == nil)
+        #expect(row.record.year == nil)
     }
 
     @Test func requiredBlanksAndUnparseablesDefaultAndCount() throws {
@@ -404,7 +635,8 @@ struct ImportSchemaTests {
                 currencyCode: "USD", purchaseDate: Date(timeIntervalSince1970: 1_600_000_000),
                 purchaseLocation: "Sweetwater", currentValueCents: 35_000, desireToKeep: 5,
                 conditionRawValue: "new", conditionNotes: "still sealed",
-                serialNumber: "SN=1+2", notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
+                serialNumber: "SN=1+2", notes: nil, reverbProductID: 160_322, year: 1984,
+                firstPhotoID: nil
             ),
         ]
         let text = CSVWriter.write(ExportSchema.itemsTable(originals, timeZone: zone))
@@ -413,6 +645,12 @@ struct ImportSchemaTests {
         #expect(preview.skipped.isEmpty)
         #expect(preview.defaultedFieldCount == 0)
         #expect(preview.validated.count == originals.count)
+        // The two 002 keys survive the loop by value, not just by
+        // serialization: the match and the year come back (criterion 19).
+        #expect(preview.validated[2].record.reverbProductID == 160_322)
+        #expect(preview.validated[2].record.year == 1984)
+        #expect(preview.validated[0].record.reverbProductID == nil)
+        #expect(preview.validated[0].record.year == nil)
         for (validated, original) in zip(preview.validated, originals) {
             #expect(
                 ExportSchema.row(from: validated.record, timeZone: zone)
@@ -427,7 +665,8 @@ struct ImportSchemaTests {
     /// parser tied together with neither as the other's oracle.
     @Test func theBlankTemplatePlusOneHandRowImportsCleanly() throws {
         let template = CSVWriter.write(CSVTable(headers: ExportSchema.itemHeaders, rows: []))
-        let file = template + "Strat,Music/Guitars,1200.00,USD,2025-06-01,,,4,good,,,\r\n"
+        // Fourteen cells, hand-typed — the 002 layout, match and year filled.
+        let file = template + "Strat,Music/Guitars,1200.00,USD,2025-06-01,,,4,good,,,,160322,2023\r\n"
         let preview = try ImportSchema.itemsPreview(from: try CSVParser.parse(file), timeZone: utc())
 
         #expect(preview.skipped.isEmpty)
@@ -439,6 +678,8 @@ struct ImportSchemaTests {
         #expect(row.record.desireToKeep == 4)
         #expect(row.record.conditionRawValue == "good")
         #expect(row.record.currentValueCents == nil)
+        #expect(row.record.reverbProductID == 160_322)
+        #expect(row.record.year == 2023)
     }
 
     // MARK: - Wishlist row validation (T006)
@@ -453,6 +694,8 @@ struct ImportSchemaTests {
         #expect(row.record.name == "OM-1")
         #expect(row.record.estimatedCostCents == 45_000)
         #expect(row.record.desireToOwn == 3)
+        #expect(row.record.reverbProductID == 232)
+        #expect(row.record.year == 1975)
         // Added restores the wish's creation date, not the import moment.
         #expect(row.record.createdAt == ImportSchema.day(from: "2024-05-10", timeZone: utc()))
     }
@@ -507,7 +750,8 @@ struct ImportSchemaTests {
                 name: "OM-1", categoryPath: "Photography/Cameras",
                 estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 3,
                 createdAt: Date(timeIntervalSince1970: 1_500_000_000),
-                notes: "wants: \"clean glass\", meter\nworking", reverbProductID: nil, year: nil, firstPhotoID: nil
+                notes: "wants: \"clean glass\", meter\nworking", reverbProductID: 232, year: 1966,
+                firstPhotoID: nil
             ),
             WishlistExportRecord(
                 name: "Big Muff", categoryPath: "Music/Pedals",
@@ -522,6 +766,10 @@ struct ImportSchemaTests {
         #expect(preview.skipped.isEmpty)
         #expect(preview.defaultedFieldCount == 0)
         #expect(preview.validated.count == originals.count)
+        #expect(preview.validated[0].record.reverbProductID == 232)
+        #expect(preview.validated[0].record.year == 1966)
+        #expect(preview.validated[1].record.reverbProductID == nil)
+        #expect(preview.validated[1].record.year == nil)
         for (validated, original) in zip(preview.validated, originals) {
             #expect(
                 ExportSchema.row(from: validated.record, timeZone: zone)
@@ -532,7 +780,9 @@ struct ImportSchemaTests {
 
     @Test func theBlankWishlistTemplatePlusOneHandRowImportsCleanly() throws {
         let template = CSVWriter.write(CSVTable(headers: ExportSchema.wishlistHeaders, rows: []))
-        let file = template + "Jazzmaster,Music/Guitars,1800.00,USD,2,2026-01-15,someday fund\r\n"
+        // Nine cells — the 002 wishlist layout.
+        let file = template
+            + "Jazzmaster,Music/Guitars,1800.00,USD,2,2026-01-15,someday fund,232,1966\r\n"
         let preview = try ImportSchema.wishlistPreview(from: try CSVParser.parse(file), timeZone: utc())
 
         #expect(preview.skipped.isEmpty)
@@ -543,12 +793,25 @@ struct ImportSchemaTests {
         #expect(row.record.estimatedCostCents == 180_000)
         #expect(row.record.desireToOwn == 2)
         #expect(row.record.notes == "someday fund")
+        #expect(row.record.reverbProductID == 232)
+        #expect(row.record.year == 1966)
         #expect(row.record.createdAt == ImportSchema.day(from: "2026-01-15", timeZone: utc()))
     }
 
     // MARK: - Fixtures
 
     private func utc() -> TimeZone { TimeZone(identifier: "UTC")! }
+
+    /// A fixed instant in `utc()`, for the year bound's clock seam.
+    private func instant(
+        year: Int, month: Int, day: Int, hour: Int = 12, minute: Int = 0, second: Int = 0
+    ) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = utc()
+        return calendar.date(from: DateComponents(
+            year: year, month: month, day: day, hour: hour, minute: minute, second: second
+        ))!
+    }
 
     private func wishlistFile(_ dataRows: [[String]]) -> [CSVRow] {
         [CSVRow(number: 1, cells: ExportSchema.wishlistHeaders)]
@@ -564,6 +827,8 @@ struct ImportSchemaTests {
             "Desire to Own": "3",
             "Added": "2024-05-10",
             "Notes": "meter working",
+            "Reverb Product ID": "232",
+            "Year": "1975",
         ]
         for (header, value) in changes { byHeader[header] = value }
         return ExportSchema.wishlistHeaders.map { byHeader[$0]! }
@@ -593,6 +858,8 @@ struct ImportSchemaTests {
             "Condition Notes": "",
             "Serial Number": "1234567",
             "Notes": "body only",
+            "Reverb Product ID": "160322",
+            "Year": "1984",
         ]
         for (header, value) in changes { byHeader[header] = value }
         return ExportSchema.itemHeaders.map { byHeader[$0]! }

@@ -592,7 +592,12 @@ final class ItemListViewModel {
                     condition: Condition(rawValue: record.conditionRawValue) ?? .excellent,
                     conditionNotes: record.conditionNotes,
                     notes: record.notes,
-                    sortOrder: base + offset
+                    sortOrder: base + offset,
+                    // 002/T016a: the CSV's two appended columns restore the
+                    // Reverb match and the year, so a re-imported item asks
+                    // the same question of the market as before it left.
+                    reverbProductID: record.reverbProductID,
+                    year: record.year
                 ))
             }
 

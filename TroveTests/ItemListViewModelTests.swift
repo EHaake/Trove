@@ -1303,6 +1303,53 @@ struct ItemListViewModelCommitTests {
         #expect(viewModel.importPresentation == nil)
     }
 
+    /// 002/T016a: the commit carries the CSV's two appended columns onto
+    /// the model, so a re-imported item asks the market the same question it
+    /// asked before it left (criterion 19). Verified on a second context
+    /// over the same store — a same-context refetch would pass with
+    /// `save()` deleted.
+    @Test func commitRestoresTheReverbMatchAndTheYear() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        var preview = itemsPreview(names: ["Matched", "Unmatched"])
+        preview = ImportPreview(
+            validated: [
+                ValidatedRow(
+                    record: ItemExportRecord(
+                        name: "Matched", categoryPath: "Music/Guitars",
+                        purchasePriceCents: 100_000, currencyCode: "USD",
+                        purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+                        purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
+                        conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
+                        notes: nil, reverbProductID: 182_769, year: 1984, firstPhotoID: nil
+                    ),
+                    rowNumber: 2,
+                    defaultedFieldCount: 0
+                ),
+                preview.validated[1],
+            ],
+            skipped: [],
+            defaultedFieldCount: 0
+        )
+
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(preview))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        let saved = try ModelContext(container).fetch(
+            FetchDescriptor<Item>(sortBy: [SortDescriptor(\.sortOrder)])
+        )
+        #expect(saved.map(\.name) == ["Matched", "Unmatched"])
+        #expect(saved[0].reverbProductID == 182_769)
+        #expect(saved[0].year == 1984)
+        // An unmatched row stays unmatched — no id invented, no year.
+        #expect(saved[1].reverbProductID == nil)
+        #expect(saved[1].year == nil)
+    }
+
     @Test func thePlacementBaseIsComputedAtCommitTimeNotParseTime() async throws {
         let context = try makeInMemoryContext()
         let viewModel = ItemListViewModel(

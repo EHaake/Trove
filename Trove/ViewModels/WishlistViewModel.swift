@@ -467,7 +467,11 @@ final class WishlistViewModel {
                     currencyCode: record.currencyCode,
                     notes: record.notes,
                     desireToOwn: record.desireToOwn,
-                    sortOrder: base + offset
+                    sortOrder: base + offset,
+                    // As on the items side (002/T016a): the match and the
+                    // year come back with the row.
+                    reverbProductID: record.reverbProductID,
+                    year: record.year
                 )
                 // Assigned after construction deliberately: the init hard-sets
                 // `.now` and has no parameter — `Added` restores when the want

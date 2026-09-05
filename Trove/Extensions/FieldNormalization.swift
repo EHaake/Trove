@@ -23,4 +23,13 @@ nonisolated enum FieldNormalization {
         let trimmed = trimmed(value)
         return trimmed.isEmpty ? nil : trimmed
     }
+
+    /// P18's lower bound on a year, here for the reason `trimmed(_:)` is
+    /// here: the two form view models and the import pipeline all apply it,
+    /// and a hand-typed year and an imported cell must not be able to
+    /// disagree about the range. Only the lower bound is shared — the upper
+    /// one moves with the calendar, and each caller reads a clock of its own
+    /// (the forms `Calendar.current`, `ImportSchema.year(from:)` the time
+    /// zone and instant it is handed).
+    static let earliestYear = 1900
 }

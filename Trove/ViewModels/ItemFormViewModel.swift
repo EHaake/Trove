@@ -26,11 +26,6 @@ final class ItemFormViewModel {
 
     static let desireToKeepRange = 1...5
 
-    /// P18's lower bound. The upper bound moves with the calendar, so it's
-    /// computed rather than stored — a next-year model is a real thing to own
-    /// before the year turns.
-    static let earliestYear = 1900
-
     var name: String = ""
     var categoryPath: String = ""
     /// Optional so a new form starts blank rather than pre-filled with `0`.
@@ -173,7 +168,8 @@ final class ItemFormViewModel {
     private var parsedYear: Int? {
         let text = Self.trimmed(yearText)
         guard text.count == 4, text.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
-        guard let value = Int(text), (Self.earliestYear...maximumYear).contains(value) else { return nil }
+        guard let value = Int(text),
+              (FieldNormalization.earliestYear...maximumYear).contains(value) else { return nil }
         return value
     }
 
