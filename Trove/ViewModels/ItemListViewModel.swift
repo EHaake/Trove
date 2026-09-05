@@ -214,15 +214,12 @@ final class ItemListViewModel {
 
     /// One fetch of the figure rows, narrowed to the items just fetched.
     ///
-    /// A read that throws reads as "nothing stored" — the same direction
-    /// `MarketSectionState.resolve(subjectID:…)` takes, and for the same
-    /// reason: the device's own market rows are an addition to the
-    /// collection, so a local-store problem must not empty the list.
+    /// The derivation itself lives on `MarketSummary` (002/T013), so the
+    /// dashboard's totals read the store through the same step this list
+    /// does rather than a second copy of it — including its rule that a
+    /// read which throws reads as "nothing stored".
     private static func summaries(for items: [Item], in context: ModelContext, now: Date) -> [UUID: MarketSummary] {
-        let figures = ((try? MarketIndex.load(from: context)) ?? .empty).figures
-        return Dictionary(uniqueKeysWithValues: items.compactMap { item in
-            figures[item.id].map { (item.id, MarketSummary(snapshot: $0, now: now)) }
-        })
+        MarketSummary.summaries(forSubjects: items.map(\.id), in: context, now: now)
     }
 
     /// The trend the row's arrow draws, or nil for an unmatched item, one

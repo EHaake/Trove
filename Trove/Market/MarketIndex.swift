@@ -51,6 +51,22 @@ struct MarketSummary: Equatable, Sendable {
         medianCents = snapshot.currentMedianCents(now: now)
         trend = snapshot.trend
     }
+
+    /// One fetch of the figure rows, narrowed to the subjects just fetched —
+    /// what every surface that reads a figure per row goes through
+    /// (`ItemListViewModel.load()`, `DashboardViewModel.load()`), so the
+    /// lists and the dashboard can never derive a figure differently.
+    ///
+    /// A read that throws reads as "nothing stored" — the same direction
+    /// `MarketSectionState.resolve(subjectID:…)` takes, and for the same
+    /// reason: the device's own market rows are an addition to the
+    /// collection, so a local-store problem must not empty the screen.
+    static func summaries(forSubjects ids: [UUID], in context: ModelContext, now: Date) -> [UUID: MarketSummary] {
+        let figures = ((try? MarketIndex.load(from: context)) ?? .empty).figures
+        return Dictionary(uniqueKeysWithValues: ids.compactMap { id in
+            figures[id].map { (id, MarketSummary(snapshot: $0, now: now)) }
+        })
+    }
 }
 
 /// Every figure row, keyed by the item it belongs to — one fetch per

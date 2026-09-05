@@ -1035,7 +1035,39 @@ only — technical detail lives in `plan.md` and the commit log).
   *Done when*: green, mutations recorded; the seven-row Sort By still
   hangs below the badge on both lists by eye.
 
-- [ ] **T013 — The dashboard's market variant.**
+- [x] **T013 — The dashboard's market variant.**
+  *Done (2026-09-05)* — dispatched to `sdd-implementer`, verified by the
+  orchestrator's own run; not foundational, so no per-task review. As
+  built: `MarketSummary.summaries(forSubjects:in:now:)` in
+  `MarketIndex.swift` is the one derivation (the item list VM delegates
+  to it); `DashboardViewModel` gains `now`, `marketTotalCents`,
+  `marketFigureCount`, `hasMarketFigures`, `marketLine` (whole string
+  through `MarketCopy.dashboardLine`, M = `totalItemCount`), the
+  summaries built over the scoped ids **before** `apply` (T012's
+  ordering), the `catch` resetting both; `DashboardView.headline`
+  composes `if viewModel.hasMarketFigures { marketLine }` after the
+  if/else — one `Text` over an `AttributedString` at `monoMeta` /
+  `textMonoMeta` with the amount's range lifted to medium / `textBody`,
+  `.lineLimit(1)` + `.minimumScaleFactor(0.6)` so the coverage shrinks
+  with the number and never leaves it (P5). Register 11.5 against the
+  design's 12.5, recorded in `tokens.md`. Tests: +8 in 2 suites — the
+  sum over current medians only (withheld, stale, unmatched and
+  out-of-scope excluded), wishlist figures never reaching the total, the
+  whole-string line, `marketFiguresLeaveEveryOtherFigureAlone`,
+  `hasMarketFigures` false with nothing matched and false when every
+  figure is withheld or stale; the gate scan and a no-"Market"-literal
+  scan on the dashboard. Mutations, each red then reverted: the
+  existing total made to read medians → the leave-alone test red plus
+  two existing headline tests — **but `theThreeHeadlineFiguresAlwaysReconcile`
+  stayed green: it asserts `total − spent == delta` where `delta` is
+  defined as that subtraction, a tautology; the plan's claimed red run
+  was wrong, and it is rewritten in the follow-up pass below**; stale
+  and withheld included in the sum → red; the gate dropped → red;
+  `Text("Market")` typed in the view → red. The `load()` catch's reset
+  of the two figures is implemented but unreachable from tests (no
+  dashboard test exercises the catch). Full unit suite (orchestrator's
+  run): **1030 tests in 144 suites, all passed**. The line on the device
+  with a real refreshed figure is T018's.
   Per plan §6 (dashboard), Decisions 21–22, T008's form.
   `DashboardViewModel.apply` gains `marketTotalCents`,
   `marketFigureCount`, `hasMarketFigures`, `marketLine`; the `load()`
@@ -1297,6 +1329,8 @@ only — technical detail lives in `plan.md` and the commit log).
   (written at T017, before T010/T011/T013 built the screens) against the
   shipped behavior, and note that swapping the provisional contact
   address is a two-file edit (`MarketCopy.contactAddress`, `PRIVACY.md`).
+  T018 also checks the dashboard line's lifted amount reads as a real
+  medium weight on the device (T013 finding).
   Criteria 1–20 ticked in `spec.md` with citations, honest partials
   named (a real 429 if none was seen; the second-device history check;
   "is published" pending merge); the skeptical-reviewer sweep over the
@@ -1382,3 +1416,4 @@ previous spec of similar size before treating the policy as settled.
 | T017 | opus (`sdd-implementer`) | 57,759 | verified first try; the policy read by the orchestrator |
 | T010 | opus (`sdd-implementer`) | 206,241 | verified first try; renders seen by the orchestrator; one finding (Link ink), recorded in plan §6 |
 | T011 | opus (`sdd-implementer`) | 161,355 | verified first try; the notice flow seen on the simulator |
+| T013 | opus (`sdd-implementer`) | 105,112 | verified first try; one finding (a tautological existing test), fixed in the follow-up |

@@ -442,9 +442,9 @@ coverage, which P5 forbids).
 
 | Property | Value | As implemented |
 |---|---|---|
-| Position | one line directly under the ruler, `8px` gap (`4px` extra top), above SPENT / GAIN | |
-| Register | IBM Plex Mono `12.5px`, `textMonoMeta` (45 %), tabular, `white-space: nowrap`; the amount alone at 500 in `textBody` (75 %) — never brass, never Archivo, so it cannot read as the total | |
-| Inseparability | one string, one line; if it must shrink, the whole line scales — the coverage never wraps or clips away from the number | |
+| Position | one line directly under the ruler, `8px` gap (`4px` extra top), above SPENT / GAIN | as designed — last in `DashboardView.headline`'s `VStack` (`fieldGap` 8) with `.padding(.top, 4)`, so it sits inside the headline block and above the SPENT / GAIN plate by construction. Drawn under "Not yet valued" too, on the same gap: a matched, refreshed item's asking price exists whether or not the person has priced anything |
+| Register | IBM Plex Mono `12.5px`, `textMonoMeta` (45 %), tabular, `white-space: nowrap`; the amount alone at 500 in `textBody` (75 %) — never brass, never Archivo, so it cannot read as the total | `typography.monoMeta` (mono **11.5**) + `textMonoMeta`, `.monospacedDigit()`; the amount's run gets `monoMeta.weight(.medium)` + `textBody`. The nearest existing role, not a new one: the alternatives are `monoValue` (15, the PAID cell's register — far too loud for a line that must not read as the total) and a twelfth mono size for one line. Colours are the designed tokens exactly |
+| Inseparability | one string, one line; if it must shrink, the whole line scales — the coverage never wraps or clips away from the number | as designed — one `Text` over one `AttributedString` built from `viewModel.marketLine` (`MarketCopy.dashboardLine`), so it is one accessibility element and the view never composes the parts; `.lineLimit(1)` + `.minimumScaleFactor(0.6)`. The lift is a range search for `MarketCopy.median(cents:)` inside the line, falling back to the uniform line if it isn't found — legible rather than wrong |
 
 ### Market trend arrow (`002`)
 

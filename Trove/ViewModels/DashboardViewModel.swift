@@ -64,6 +64,18 @@ final class DashboardViewModel {
     private(set) var breakdown: [CategorySlice] = []
     private(set) var loadFailureMessage: String?
 
+    /// The asking-price variant beside the person's own total (002,
+    /// criterion 15, Decision 22): the sum of this device's *current*
+    /// medians over the scoped owned items that have one.
+    ///
+    /// Never mixed into `totalCurrentValueCents` — that figure, what was
+    /// spent, the gain and the breakdown all stay the person's own values.
+    /// Withheld, stale (Decision 21) and unmatched items carry no median
+    /// and are simply absent from the sum, which is why the count travels
+    /// with it: the line says how much of the collection it covers.
+    private(set) var marketTotalCents = 0
+    private(set) var marketFigureCount = 0
+
     /// The only un-valued item, when there is exactly one.
     ///
     /// Held so `unvaluedDestination` can name it. Not exposed directly: the
@@ -75,10 +87,21 @@ final class DashboardViewModel {
 
     private let syncMonitor: SyncMonitor
 
-    init(modelContext: ModelContext, scope: String = "", syncMonitor: SyncMonitor = .notSyncing) {
+    /// The clock the market figures' freshness is measured against —
+    /// injected in the shape `ItemListViewModel` takes, so a test can make
+    /// "thirty-one days old" a fact about its fixture.
+    private let now: () -> Date
+
+    init(
+        modelContext: ModelContext,
+        scope: String = "",
+        syncMonitor: SyncMonitor = .notSyncing,
+        now: @escaping () -> Date = Date.init
+    ) {
         self.modelContext = modelContext
         self.scope = scope
         self.syncMonitor = syncMonitor
+        self.now = now
     }
 
     /// Where the "Value →" callout should go.
@@ -136,6 +159,28 @@ final class DashboardViewModel {
     /// — so the screen gates its money-derived parts on this instead.
     var hasAnyValues: Bool { valuedCount > 0 }
 
+    /// Whether the market line has anything to say.
+    ///
+    /// Gated rather than printed empty: "Market · $0 · 0 of 34 items" is a
+    /// claim that the collection is worth nothing on Reverb, the same
+    /// mistake `hasAnyValues` exists to prevent one line above.
+    var hasMarketFigures: Bool { marketFigureCount > 0 }
+
+    /// Decision 22's whole line — "Market · $18,400 · 12 of 34 items".
+    ///
+    /// One string, composed here rather than in the view: the amount and
+    /// the coverage it covers are one statement (spec P5), and a view that
+    /// assembled them from parts could drop the qualifier. `totalCount` is
+    /// the scoped item count the screen already shows, valued and un-valued
+    /// alike.
+    var marketLine: String {
+        MarketCopy.dashboardLine(
+            totalCents: marketTotalCents,
+            count: marketFigureCount,
+            totalCount: totalItemCount
+        )
+    }
+
     /// Worth now against what was paid.
     ///
     /// **Every figure here — `totalSpentCents` included — covers valued items
@@ -167,19 +212,26 @@ final class DashboardViewModel {
         loadFailureMessage = nil
         do {
             let all = try modelContext.fetch(FetchDescriptor<Item>())
-            apply(all.filter { CategoryPathHelper.path($0.categoryPath, isWithin: scope) })
+            let scoped = all.filter { CategoryPathHelper.path($0.categoryPath, isWithin: scope) }
+            // Built before `apply`, never inside it: the figures are read
+            // while the totals are computed, and a market read that arrives
+            // after its readers is the T012 defect (plan §6).
+            let summaries = MarketSummary.summaries(forSubjects: scoped.map(\.id), in: modelContext, now: now())
+            apply(scoped, marketSummaries: summaries)
         } catch {
             loadFailureMessage = error.localizedDescription
             valuedCount = 0
             unvaluedCount = 0
             totalCurrentValueCents = 0
             totalSpentCents = 0
+            marketTotalCents = 0
+            marketFigureCount = 0
             breakdown = []
             soleUnvaluedItemID = nil
         }
     }
 
-    private func apply(_ items: [Item]) {
+    private func apply(_ items: [Item], marketSummaries: [UUID: MarketSummary]) {
         let valued = items.filter { $0.currentValueCents != nil }
         let unvalued = items.filter { $0.currentValueCents == nil }
 
@@ -189,6 +241,12 @@ final class DashboardViewModel {
         totalCurrentValueCents = valued.compactMap(\.currentValueCents).reduce(0, +)
         totalSpentCents = valued.reduce(0) { $0 + $1.purchasePriceCents }
         breakdown = makeBreakdown(items)
+
+        // Over every scoped item, valued or not: a market figure exists
+        // independently of whether the person has priced the thing.
+        let medians = items.compactMap { marketSummaries[$0.id]?.medianCents }
+        marketFigureCount = medians.count
+        marketTotalCents = medians.reduce(0, +)
     }
 
     private func makeBreakdown(_ items: [Item]) -> [CategorySlice] {

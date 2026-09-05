@@ -319,3 +319,46 @@ struct MarketLinkRenderTests {
         return try #require(strongest, "the link drew no ink at all")
     }
 }
+
+// MARK: - 002/T013: the dashboard's market line
+
+/// Where the dashboard's market line is drawn, and what it is allowed to
+/// be (002 criterion 15, Decision 22, plan §6) — the half
+/// `DashboardMarketTests` can't see, since a view model whose line no
+/// screen composes still composes a perfect line.
+///
+/// Each scan names the mutation it dies to: drop the `hasMarketFigures`
+/// gate and `theMarketLineIsGatedOnHavingFigures` goes red; type the word
+/// "Market" into the screen and `theDashboardTypesNoMarketCopyOfItsOwn`
+/// does.
+@Suite("Dashboard market line wiring")
+struct DashboardMarketWiringTests {
+    private static let dashboard = "Trove/Views/Dashboard/DashboardView.swift"
+
+    /// The gate and the line are one construction: the line is drawn inside
+    /// `if viewModel.hasMarketFigures`, inside `headline`'s own body.
+    /// Scanning the whole file would be satisfied by a gate somewhere else
+    /// entirely — or by a helper nobody calls, the dead-guard shape this
+    /// project has shipped twice.
+    @Test func theMarketLineIsGatedOnHavingFigures() throws {
+        let code = try SourceScan.production(Self.dashboard)
+        let headline = try #require(
+            SourceScan.closureBodies(after: "private var headline: some View", in: code).first,
+            "the headline block is gone"
+        )
+        let gated = SourceScan.closureBodies(after: "if viewModel.hasMarketFigures", in: headline)
+        #expect(
+            gated.contains { $0.contains("viewModel.marketLine") },
+            "headline draws no market line behind `if viewModel.hasMarketFigures`"
+        )
+    }
+
+    /// The words come from `MarketCopy` through `marketLine`, never from the
+    /// screen — so spec P10's vocabulary scan covers them (it reads
+    /// `MarketCopy.swift`, not this file).
+    @Test func theDashboardTypesNoMarketCopyOfItsOwn() throws {
+        let code = try SourceScan.production(Self.dashboard)
+        let typed = SourceScan.stringLiterals(in: code).filter { $0.contains("Market") }
+        #expect(typed.isEmpty, "the dashboard types market copy of its own: \(typed)")
+    }
+}
