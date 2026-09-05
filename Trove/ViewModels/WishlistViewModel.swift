@@ -29,6 +29,8 @@ final class WishlistViewModel {
         case custom
         case cost
         case costDescending
+        case marketFigure
+        case marketFigureAscending
         case desire
         case alphabetical
 
@@ -39,6 +41,10 @@ final class WishlistViewModel {
             case .custom: "Custom"
             case .cost: "Cost ↑"
             case .costDescending: "Cost ↓"
+            // The Market pair sits straight after the Cost pair, same order
+            // on both lists (002 Q11), labelled from `MarketCopy`.
+            case .marketFigure: MarketCopy.sortDescending
+            case .marketFigureAscending: MarketCopy.sortAscending
             case .desire: "Desire"
             case .alphabetical: "Alphabetical"
             }
@@ -50,6 +56,10 @@ final class WishlistViewModel {
     var sortOrder: SortOrder = .custom
 
     private(set) var items: [WishlistItem] = []
+
+    /// See `ItemListViewModel.marketSummaries` — one rule, both lists.
+    private(set) var marketSummaries: [UUID: MarketSummary] = [:]
+
     private(set) var categoryOptions: [String] = []
     private(set) var categoryLabels: [String: String] = [:]
     private(set) var loadFailureMessage: String?
@@ -62,20 +72,26 @@ final class WishlistViewModel {
 
     private let importService: any ImportService
 
+    private let now: () -> Date
+
     /// - Parameter exportService: defaults to the live file-staging service,
     ///   injected as a protocol so tests fake it — see
     ///   `ItemListViewModel.init`, one pattern on both lists; 012's
     ///   `importService` follows the same rule.
+    /// - Parameter now: the clock the market figures' freshness is measured
+    ///   against — see `ItemListViewModel.init`.
     init(
         modelContext: ModelContext,
         syncMonitor: SyncMonitor = .notSyncing,
         exportService: (any ExportService)? = nil,
-        importService: (any ImportService)? = nil
+        importService: (any ImportService)? = nil,
+        now: @escaping () -> Date = Date.init
     ) {
         self.modelContext = modelContext
         self.syncMonitor = syncMonitor
         self.exportService = exportService ?? FileExportService(container: modelContext.container)
         self.importService = importService ?? FileImportService()
+        self.now = now
     }
 
     /// See `ItemListViewModel.mayStillBeImporting`.
@@ -126,6 +142,8 @@ final class WishlistViewModel {
         do {
             let all = try modelContext.fetch(FetchDescriptor<WishlistItem>())
             totalCount = all.count
+            // Before the sort, not after: the Market orders read these.
+            marketSummaries = Self.summaries(for: all, in: modelContext, now: now())
             items = all
                 .filter { CategoryPathHelper.path($0.categoryPath, isWithin: categoryFilter) }
                 // Name only. A wishlist item has no serial number — it isn't
@@ -146,7 +164,22 @@ final class WishlistViewModel {
             items = []
             categoryOptions = []
             categoryLabels = [:]
+            marketSummaries = [:]
         }
+    }
+
+    /// See `ItemListViewModel.summaries(for:in:now:)` — one fetch of the
+    /// figure rows, a failed read taken as "nothing stored".
+    private static func summaries(for items: [WishlistItem], in context: ModelContext, now: Date) -> [UUID: MarketSummary] {
+        let figures = ((try? MarketIndex.load(from: context)) ?? .empty).figures
+        return Dictionary(uniqueKeysWithValues: items.compactMap { item in
+            figures[item.id].map { (item.id, MarketSummary(snapshot: $0, now: now)) }
+        })
+    }
+
+    /// See `ItemListViewModel.trend(for:)`.
+    func trend(for id: UUID) -> MarketTrend? {
+        marketSummaries[id]?.trend
     }
 
     /// Applies a drag through `ManualOrderHelper`, which renumbers every row
@@ -485,6 +518,16 @@ final class WishlistViewModel {
             return sortOrder == .cost
                 ? lhs.estimatedCostCents < rhs.estimatedCostCents
                 : lhs.estimatedCostCents > rhs.estimatedCostCents
+        case .marketFigure, .marketFigureAscending:
+            // The nil-last block, mirrored from `ItemListViewModel`: a wanted
+            // item with no current median — unmatched, never refreshed here,
+            // withheld, or stale (Decision 21) — sorts last either way.
+            let leftMedian = marketSummaries[lhs.id]?.medianCents
+            let rightMedian = marketSummaries[rhs.id]?.medianCents
+            guard leftMedian != rightMedian else { return nil }
+            guard let left = leftMedian else { return false }
+            guard let right = rightMedian else { return true }
+            return sortOrder == .marketFigure ? left > right : left < right
         case .desire:
             guard lhs.desireToOwn != rhs.desireToOwn else { return nil }
             return lhs.desireToOwn > rhs.desireToOwn

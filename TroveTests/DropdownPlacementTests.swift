@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import SwiftUI
 import Testing
 @testable import Trove
@@ -12,11 +13,15 @@ import Testing
 /// floating tab bar), so its top is the status bar's bottom edge and its
 /// bottom is the tab bar's top edge. Badges are in the same space: the
 /// lists' header badges sit at y = 24, the section gap. The gutter is 24,
-/// the gap 6, and the dropdown 232 × 243 (the Sort By surface at five rows).
+/// the gap 6, and the dropdown 232 × 327 — the Sort By surface at seven
+/// rows, which is what both lists show since the Market pair joined them
+/// (002/T012). Not a remembered number — the last case in this suite
+/// renders the real surface and pins it — so the arithmetic in the cases
+/// below can't quietly describe a dropdown that no longer exists.
 @Suite("Dropdown placement")
 struct DropdownPlacementTests {
     private let region = CGRect(x: 0, y: 0, width: 402, height: 729)
-    private let size = CGSize(width: 232, height: 243)
+    private let size = CGSize(width: 232, height: 327)
     private let gutter: CGFloat = 24
     private let gap: CGFloat = 6
 
@@ -52,17 +57,17 @@ struct DropdownPlacementTests {
     /// the region's bottom, so the dropdown flips above the badge.
     @Test func flipsAboveWhenBelowWouldRunPastTheBottom() {
         let badge = CGRect(x: 300, y: 600, width: 78, height: 20)
-        // Below: 600 + 20 + 6 + 243 = 869 > 729 → above.
-        let above: CGFloat = 600 - 6 - 243
+        // Below: 600 + 20 + 6 + 327 = 953 > 729 → above.
+        let above: CGFloat = 600 - 6 - 327
         #expect(origin(badge: badge).y == above)
     }
 
     /// Exactly at the bottom is still "fits": the dropdown's bottom edge may
     /// touch the tab bar's top edge, not cross it.
     @Test func touchingTheBottomStillHangsBelow() {
-        // maxY + 6 + 243 must equal 729 → maxY = 480.
-        let badge = CGRect(x: 300, y: 460, width: 78, height: 20)
-        let below: CGFloat = 480 + 6
+        // maxY + 6 + 327 must equal 729 → maxY = 396.
+        let badge = CGRect(x: 300, y: 376, width: 78, height: 20)
+        let below: CGFloat = 396 + 6
         #expect(origin(badge: badge).y == below)
     }
 
@@ -79,6 +84,38 @@ struct DropdownPlacementTests {
         let narrow = CGRect(x: 0, y: 0, width: 260, height: 729)
         let badge = CGRect(x: 200, y: 24, width: 36, height: 30)
         #expect(origin(badge: badge, region: narrow).x == 24)
+    }
+
+    /// The size every case above is arithmetic about, measured rather than
+    /// remembered: the real Sort By surface at the seven rows both lists now
+    /// carry, rendered at 1×. A row added or a row's height changed moves
+    /// this number, and this is where that is noticed — the placement cases
+    /// would otherwise keep passing about a dropdown of the wrong height.
+    @Test func theSortBySurfaceIsTheSizeThisSuiteMeasuresAgainst() throws {
+        try #require(ItemListViewModel.SortOrder.allCases.count == 7)
+        try #require(WishlistViewModel.SortOrder.allCases.count == 7)
+
+        let surface = SortDropdown(
+            options: ItemListViewModel.SortOrder.allCases,
+            selection: ItemListViewModel.SortOrder.custom,
+            label: \.label,
+            isManualOrder: { $0 == .custom },
+            onSelect: { _ in }
+        )
+        // The first row's focus marking off, as every render test must be
+        // (see `DropdownSurface`), and a dismiss action to stand in for the
+        // host's.
+        let image = try #require(
+            renderBitmap(
+                surface
+                    .environment(\.dropdownFocusesFirstRow, false)
+                    .environment(\.dismissDropdown, DismissDropdownAction {})
+            ),
+            "ImageRenderer produced nothing to measure."
+        )
+
+        #expect(CGFloat(image.width) == size.width)
+        #expect(CGFloat(image.height) == size.height)
     }
 
     /// The growth anchor (Decision 20): the badge's trailing edge at its

@@ -490,6 +490,166 @@ struct WishlistOrderingTests {
 /// Filter chips come from the screen's own rows, while autocomplete spans both
 /// entities. Same distinction as prefix-versus-scope matching: one rule was
 /// serving two jobs that want opposite answers.
+/// The Market sort and the row's trend on the wanted list (002/T012, spec
+/// criteria 13–14, Decision 21) — the mirror of
+/// `ItemListViewModelMarketSortTests`. Written out rather than shared: the
+/// two lists have one rule, and the way that rule stays true is that both
+/// suites can fail independently.
+@Suite("WishlistViewModel — the Market sort")
+struct WishlistMarketSortTests {
+    private let clock = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private func product(_ id: Int) -> MarketProduct {
+        MarketProduct(
+            id: id,
+            slug: "martin-d-18",
+            title: "Martin D-18",
+            usedLowCents: 100_000,
+            usedTotal: 108,
+            listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
+        )
+    }
+
+    /// One recorded refresh for a wanted item — the `.wanted` half of the
+    /// same writer the owned suite uses.
+    private func record(
+        _ medianCents: Int?,
+        for id: UUID,
+        fetchedAt: Date,
+        productID: Int = 182_769,
+        in context: ModelContext
+    ) throws {
+        let reading: MarketReading
+        if let medianCents {
+            reading = .figure(MarketFigure(
+                medianCents: medianCents,
+                lowCents: medianCents - 10_000,
+                highCents: medianCents + 10_000,
+                count: 12,
+                fetchedAt: fetchedAt,
+                isTruncated: false,
+                yearScope: .any
+            ))
+        } else {
+            reading = .withheld(count: 2, usedLowCents: 100_000, fetchedAt: fetchedAt, yearScope: .any)
+        }
+        try MarketLocalStore.record(
+            reading,
+            product: product(productID),
+            for: MarketSubjectKey(subjectID: id, kind: .wanted),
+            in: context
+        )
+    }
+
+    private func viewModel(over context: ModelContext) -> WishlistViewModel {
+        WishlistViewModel(modelContext: context, now: { self.clock })
+    }
+
+    private func id(of name: String, in context: ModelContext) throws -> UUID {
+        let items = try context.fetch(FetchDescriptor<WishlistItem>())
+        return try #require(items.first(where: { $0.name == name })?.id, "\(name) wasn't inserted")
+    }
+
+    /// See the owned list's twin: a current median leads; withheld, stale
+    /// and unmatched fall to the bottom in the person's own order. The stale
+    /// figure is the largest number here too.
+    @Test func theMarketSortLeadsWithTheDearestCurrentMedianAndSinksTheRest() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Cheap", order: 5, into: context)
+        insertWanted("Dear", order: 6, into: context)
+        insertWanted("Stale", order: 0, into: context)
+        insertWanted("Withheld", order: 1, into: context)
+        insertWanted("Unmatched", order: 2, into: context)
+        try record(50_000, for: try id(of: "Cheap", in: context), fetchedAt: clock, in: context)
+        try record(200_000, for: try id(of: "Dear", in: context), fetchedAt: clock, in: context)
+        try record(900_000, for: try id(of: "Stale", in: context), fetchedAt: clock.addingTimeInterval(-31 * 24 * 60 * 60), in: context)
+        try record(nil, for: try id(of: "Withheld", in: context), fetchedAt: clock, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.sortOrder = .marketFigure
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Dear", "Cheap", "Stale", "Withheld", "Unmatched"])
+    }
+
+    @Test func theAscendingMarketSortLeadsWithTheCheapestAndStillSinksTheRest() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Cheap", order: 5, into: context)
+        insertWanted("Dear", order: 6, into: context)
+        insertWanted("Stale", order: 0, into: context)
+        insertWanted("Withheld", order: 1, into: context)
+        insertWanted("Unmatched", order: 2, into: context)
+        try record(50_000, for: try id(of: "Cheap", in: context), fetchedAt: clock, in: context)
+        try record(200_000, for: try id(of: "Dear", in: context), fetchedAt: clock, in: context)
+        try record(900_000, for: try id(of: "Stale", in: context), fetchedAt: clock.addingTimeInterval(-31 * 24 * 60 * 60), in: context)
+        try record(nil, for: try id(of: "Withheld", in: context), fetchedAt: clock, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.sortOrder = .marketFigureAscending
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Cheap", "Dear", "Stale", "Withheld", "Unmatched"])
+    }
+
+    /// Insertion order, name order and manual order all differ here, so the
+    /// tie-break is the only rule that produces this answer.
+    @Test func marketFigureTiesResolveByManualOrder() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("alpha", order: 2, into: context)
+        insertWanted("Charlie", order: 0, into: context)
+        insertWanted("Bravo", order: 1, into: context)
+        for name in ["alpha", "Charlie", "Bravo"] {
+            try record(140_000, for: try id(of: name, in: context), fetchedAt: clock, in: context)
+        }
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.sortOrder = .marketFigure
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Charlie", "Bravo", "alpha"])
+    }
+
+    @Test func unmatchedItemsShowNoTrend() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Unmatched", into: context)
+        insertWanted("Matched", into: context)
+        try record(140_000, for: try id(of: "Matched", in: context), fetchedAt: clock, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(viewModel.trend(for: try id(of: "Unmatched", in: context)) == nil)
+        #expect(viewModel.marketSummaries[try id(of: "Unmatched", in: context)] == nil)
+    }
+
+    @Test func aMatchedItemWithARisingHistoryReadsUp() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("D-18", into: context)
+        let id = try id(of: "D-18", in: context)
+        try record(100_000, for: id, fetchedAt: clock.addingTimeInterval(-14 * 24 * 60 * 60), in: context)
+        try record(110_000, for: id, fetchedAt: clock, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(viewModel.trend(for: id) == .up)
+    }
+
+    /// Q11's positions on this list: the Market pair straight after the Cost
+    /// pair, descending first — the labels themselves are pinned once, in
+    /// `theMarketSortLabelsComeFromMarketCopyOnBothLists`.
+    @Test func theMarketPairFollowsTheCostPairInTheMenu() {
+        #expect(WishlistViewModel.SortOrder.allCases == [
+            .custom, .cost, .costDescending, .marketFigure, .marketFigureAscending, .desire, .alphabetical,
+        ])
+    }
+}
+
 @Suite("Category chips are per-screen")
 struct CategoryChipScopeTests {
     @Test func theWishlistOffersOnlyCategoriesItsOwnEntriesUse() throws {

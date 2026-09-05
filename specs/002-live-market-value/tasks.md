@@ -801,8 +801,8 @@ only — technical detail lives in `plan.md` and the commit log).
   rounds: 1 — two blockers (wishlist `updatedAt` unrecorded; the notice
   table untested) and six should-fixes, all folded; 2 — the task line
   still named `makeMatchViewModel()` (moved to T011) and the stale-date
-  bug (fixed); 3 — signed off, with one doc-comment word changed by the
-  orchestrator. Findings recorded: plan §5 (the refresher's `subject`/
+  bug (fixed); 3 — signed off; its one note (the `lastFetchedAt` doc comment's nil
+  case) applied by the orchestrator with T012's commit. Findings recorded: plan §5 (the refresher's `subject`/
   `year` inputs never reach the computation), plan §6 (as-built
   paragraph). Full unit suite (orchestrator's run): **950 tests in 133
   suites, all passed**.
@@ -883,7 +883,38 @@ only — technical detail lives in `plan.md` and the commit log).
   Continue opens the picker seeded with the name (the search itself
   fails offline and says so — the live pick is **T018's**, by hand).
 
-- [ ] **T012 — Rows, the trend arrow, and the Market sort.**
+- [x] **T012 — Rows, the trend arrow, and the Market sort.**
+  *Done (2026-09-04)* — dispatched to `sdd-implementer`, verified by the
+  orchestrator's own run; not foundational, so no per-task review. As
+  built: `TrendArrow.swift` (new, through the synchronized group) reads
+  `MarketCopy.trendUp/trendDown` and the theme's `*Text` lifts;
+  `MarketSummary` beside `MarketSnapshotValue` in `MarketIndex.swift`,
+  built through `MarketFreshness.currentMedianCents` so stale and
+  withheld sort last; both list VMs gain `marketSummaries` (assigned
+  right after the fetch, **before** the sort — assigned after, every
+  pair tied and the Market sort silently became manual order; the sort
+  tests caught it; plan §6 note for T013), `trend(for:)`, a `now` clock,
+  the two `SortOrder` cases in Q11's positions with `MarketCopy` labels
+  and the nil-last block; `ItemRow` draws the arrow last in both
+  `valueLine` branches, `WishlistRow` after the cost; both lists pass
+  the VM's trend (a defaulted parameter, so a scan pins the call sites).
+  `DropdownPlacementTests`: the seven-row surface **measured at 232 ×
+  327**, `size` and the two derived literals updated, plus a case that
+  renders the real seven-row `SortDropdown` and pins `size` to it (243
+  put back → red at 327 ≠ 243). `tokens.md` gains the trend-arrow table
+  and the reserved-slot row now says what it was for.
+  `MarketVocabularyTests.viewFiles` has its first file, so rule 3 stops
+  being vacuous. Tests: +21 in 4 suites (`TrendArrowRenderTests`,
+  `TrendArrowWiringTests`, `ItemListViewModelMarketSortTests`,
+  `WishlistMarketSortTests`). Mutations, each red then reverted: the up
+  fill → brass → ΔE red (and "neither is brass" red); drop the tie
+  guard → the tie tests red in both suites; `trend(for:)` nil always →
+  the rising-history test red in both; drop one `valueLine` arrow →
+  the wiring scan red; `"market value"` in `TrendArrow.swift` → both
+  vocabulary rules red. Full unit suite (orchestrator's run): **971
+  tests in 137 suites, all passed**. By eye on the simulator: the
+  seven-row Sort By hangs below the badge on both lists, Market ↓ /
+  Market ↑ after Value / Cost.
   Per plan §6 (rows and sort), Q11. New `TrendArrow.swift` reading its
   labels from `MarketCopy`; `ItemRow` gains `trend` with the arrow last
   in both branches; `WishlistRow` wraps its cost with the arrow
@@ -1113,3 +1144,4 @@ previous spec of similar size before treating the policy as settled.
 | T009 review 2 | opus (`skeptical-reviewer`) | 64,507 | fix and re-review — the task line (orchestrator's tasks.md gap) and the stale-date bug |
 | T009 fix pass 3 | opus (`sdd-implementer`) | 49,214 | verified first try |
 | T009 review 3 | opus (`skeptical-reviewer`) | 23,862 | signed off |
+| T012 | opus (`sdd-implementer`) | 174,621 | verified first try; one finding (summaries before the sort), recorded in plan §6 |

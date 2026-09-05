@@ -6,6 +6,11 @@ import SwiftUI
 struct ItemRow: View {
     let item: Item
 
+    /// The market trend for this item, from the list's own view model
+    /// (002/T012). Defaults to nothing so a caller with no market summaries
+    /// — the previews, and any future list — reads as "no trend yet".
+    var trend: MarketTrend?
+
     @Environment(\.theme) private var theme
 
     var body: some View {
@@ -64,6 +69,8 @@ struct ItemRow: View {
                         .lineLimit(1)
                         .layoutPriority(-1)
                 }
+
+                TrendArrow(trend: trend)
             } else {
                 // Design never drew this case, but most items start here: a
                 // value is optional at creation. Saying so plainly beats
@@ -71,6 +78,12 @@ struct ItemRow: View {
                 Text("Not yet valued")
                     .font(theme.typography.monoMeta)
                     .foregroundStyle(theme.colors.textQuiet)
+
+                // Beside "Not yet valued" too: the arrow describes the
+                // market, not the person's own figure, so an item they
+                // haven't valued still shows where the asking prices went.
+                TrendArrow(trend: trend)
+
             }
         }
     }

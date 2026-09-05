@@ -378,7 +378,34 @@ the app bundle, no licensing step needed.
 | Reserved trend-indicator slot | 12×14 |
 
 That reserved slot is the future-proofing space asked for in the design
-brief — confirms it made it into the actual build.
+brief — confirms it made it into the actual build. `002` is what it was
+reserved for: the market trend arrow below, which ships on the two list
+rows (`002`/T012). The Sell Plan's own candidate rows keep the slot
+empty for now.
+
+### Market trend arrow (`002`)
+
+`TrendArrow` — the market's direction beside a row's own figure (spec
+`002` criterion 13, Decision 8). One glyph, no label, nothing at all when
+the trend is flat or not yet known.
+
+| Token | Value | As implemented |
+|---|---|---|
+| Glyph, rising | `arrowtriangle.up.fill` | `TrendArrow.swift` |
+| Glyph, falling | `arrowtriangle.down.fill` | `TrendArrow.swift` |
+| Size | 9 pt | `.font(.system(size: 9))` |
+| Rising tone | `accentMossText` | ΔE-checked against the token in `TrendArrowRenderTests` |
+| Falling tone | `accentRustText` | ΔE-checked against the token in `TrendArrowRenderTests` |
+| Flat / unknown | draws nothing, takes no width | measured in `TrendArrowRenderTests` |
+| Accessibility label | "trending up" / "trending down" | `MarketCopy.trendUp` / `.trendDown`, joined into the row's combined label |
+| Placement, owned row | last on the value line, in both its branches | `ItemRow.valueLine` |
+| Placement, wanted row | after the estimated cost, so the cost's own label reads first | `WishlistRow` |
+
+The tones are the `*Text` pair rather than the base accents — the arrow
+sits on a row plate at 9 pt, which is what that pair exists for — and
+they are the same two tones the owned row's "vs paid" delta already
+wears, deliberately: one voice for "up" and one for "down" on the same
+line.
 
 ## Corner radii
 

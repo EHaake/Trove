@@ -22,7 +22,7 @@ import Testing
 struct MarketVocabularyTests {
     /// Grown by the tasks that create the files (T010–T012, T009a).
     private static let copyFiles = ["Trove/Models/MarketCopy.swift"]
-    private static let viewFiles: [String] = []
+    private static let viewFiles: [String] = ["Trove/Views/Shared/TrendArrow.swift"]
 
     /// The two forms carrying the Year field (T009a). Kept apart from
     /// `viewFiles` on purpose — see `bothFormsReadTheYearFieldsCopyFromMarketCopy`.

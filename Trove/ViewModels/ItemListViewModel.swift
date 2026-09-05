@@ -29,6 +29,8 @@ final class ItemListViewModel {
         case purchaseDate
         case currentValue
         case currentValueAscending
+        case marketFigure
+        case marketFigureAscending
         case desireToKeep
 
         var id: String { rawValue }
@@ -41,6 +43,11 @@ final class ItemListViewModel {
             case .purchaseDate: "Date"
             case .currentValue: "Value ↓"
             case .currentValueAscending: "Value ↑"
+            // The Market pair sits straight after the Value pair, same
+            // order (002 Q11), and reads its labels from `MarketCopy` —
+            // "Market", never "value", is what the figure is called.
+            case .marketFigure: MarketCopy.sortDescending
+            case .marketFigureAscending: MarketCopy.sortAscending
             case .desireToKeep: "Desire"
             }
         }
@@ -67,6 +74,12 @@ final class ItemListViewModel {
 
     private(set) var items: [Item] = []
     private(set) var loadFailureMessage: String?
+
+    /// This device's market figures for the items on screen, rebuilt on
+    /// every `load()` from one fetch of the figure rows (plan §5) — never
+    /// the history. What the rows' arrows and the Market sort read, and the
+    /// only place either of them gets a figure, so the two can't disagree.
+    private(set) var marketSummaries: [UUID: MarketSummary] = [:]
 
     /// Every category path in use, for the filter chips. Includes paths whose
     /// items the current filter or search excludes — otherwise choosing one
@@ -118,6 +131,8 @@ final class ItemListViewModel {
 
     private let importService: any ImportService
 
+    private let now: () -> Date
+
     /// - Parameters:
     ///   - syncMonitor: defaults to a store with no mirror, so tests and
     ///     previews get the settled behaviour unless they ask otherwise.
@@ -125,16 +140,21 @@ final class ItemListViewModel {
     ///     context's container; tests inject a fake and assert on what the
     ///     intents hand over (plan.md's Architecture section).
     ///   - importService: same injection rule, 012's side of the boundary.
+    ///   - now: the clock the market figures' freshness is measured
+    ///     against (002/T012), injected so a test can age a figure past the
+    ///     thirty-day window without waiting a month.
     init(
         modelContext: ModelContext,
         syncMonitor: SyncMonitor = .notSyncing,
         exportService: (any ExportService)? = nil,
-        importService: (any ImportService)? = nil
+        importService: (any ImportService)? = nil,
+        now: @escaping () -> Date = Date.init
     ) {
         self.modelContext = modelContext
         self.syncMonitor = syncMonitor
         self.exportService = exportService ?? FileExportService(container: modelContext.container)
         self.importService = importService ?? FileImportService()
+        self.now = now
     }
 
     /// Dragging only makes sense against the real, whole list in its own
@@ -163,6 +183,8 @@ final class ItemListViewModel {
         do {
             let all = try modelContext.fetch(FetchDescriptor<Item>())
             totalCount = all.count
+            // Before the sort, not after: the Market orders read these.
+            marketSummaries = Self.summaries(for: all, in: modelContext, now: now())
             items = all
                 // `isWithin`, not `matchesPrefix`: a chip is a category that
                 // exists, so "Music/Amps" must not also match
@@ -186,7 +208,27 @@ final class ItemListViewModel {
             items = []
             categoryOptions = []
             categoryLabels = [:]
+            marketSummaries = [:]
         }
+    }
+
+    /// One fetch of the figure rows, narrowed to the items just fetched.
+    ///
+    /// A read that throws reads as "nothing stored" — the same direction
+    /// `MarketSectionState.resolve(subjectID:…)` takes, and for the same
+    /// reason: the device's own market rows are an addition to the
+    /// collection, so a local-store problem must not empty the list.
+    private static func summaries(for items: [Item], in context: ModelContext, now: Date) -> [UUID: MarketSummary] {
+        let figures = ((try? MarketIndex.load(from: context)) ?? .empty).figures
+        return Dictionary(uniqueKeysWithValues: items.compactMap { item in
+            figures[item.id].map { (item.id, MarketSummary(snapshot: $0, now: now)) }
+        })
+    }
+
+    /// The trend the row's arrow draws, or nil for an unmatched item, one
+    /// with no figure fetched here, or one whose history can't say yet.
+    func trend(for id: UUID) -> MarketTrend? {
+        marketSummaries[id]?.trend
     }
 
     /// Deletes an owned item by id, on the same shape as
@@ -604,6 +646,17 @@ final class ItemListViewModel {
             guard let left = lhs.currentValueCents else { return false }
             guard let right = rhs.currentValueCents else { return true }
             return sortOrder == .currentValue ? left > right : left < right
+        case .marketFigure, .marketFigureAscending:
+            // The same nil-last block, over the device's own figure: an item
+            // with no current median — unmatched, never refreshed here,
+            // withheld, or stale past thirty days (Decision 21) — is unknown
+            // rather than cheap, so it sorts last in either direction.
+            let leftMedian = marketSummaries[lhs.id]?.medianCents
+            let rightMedian = marketSummaries[rhs.id]?.medianCents
+            guard leftMedian != rightMedian else { return nil }
+            guard let left = leftMedian else { return false }
+            guard let right = rightMedian else { return true }
+            return sortOrder == .marketFigure ? left > right : left < right
         case .desireToKeep:
             guard lhs.desireToKeep != rhs.desireToKeep else { return nil }
             return lhs.desireToKeep > rhs.desireToKeep

@@ -36,6 +36,23 @@ struct MarketSnapshotValue: Equatable, Sendable {
     }
 }
 
+/// What a list row and the Market sort read for one item (plan §6): the
+/// median they may show — nil when the figure is withheld or no longer
+/// current, through the one freshness predicate, so stale and withheld
+/// items fall into the sort's nil-last block (spec Decision 21) — and the
+/// trend the row's arrow draws, which is the figure row's stored trend
+/// (`MarketLocalStore.record` is its single writer, so it can never
+/// disagree with the history it was computed over).
+struct MarketSummary: Equatable, Sendable {
+    let medianCents: Int?
+    let trend: MarketTrend?
+
+    init(snapshot: MarketSnapshotValue, now: Date) {
+        medianCents = snapshot.currentMedianCents(now: now)
+        trend = snapshot.trend
+    }
+}
+
 /// Every figure row, keyed by the item it belongs to — one fetch per
 /// `load()`, never the history (plan §5). A row whose item was deleted on
 /// another device is simply never looked up (Q18).
@@ -141,6 +158,9 @@ extension MarketSectionState {
     /// reading counts as a fetch and doesn't re-offer the button. Nil when
     /// nothing has been fetched here. Not what the unreachable line dates
     /// itself by: see `currentFigureFetchedAt`.
+    /// Nil when nothing has been fetched here — or when nothing readable is
+    /// stored: a throwing store read degrades to `.none`, and the button is
+    /// re-offered; the refresher answers `.stillFresh` if it was a fetch.
     var lastFetchedAt: Date? {
         guard case .matched(let display) = self else { return nil }
         switch display.reading {
