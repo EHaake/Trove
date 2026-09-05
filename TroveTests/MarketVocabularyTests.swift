@@ -24,6 +24,13 @@ struct MarketVocabularyTests {
     private static let copyFiles = ["Trove/Models/MarketCopy.swift"]
     private static let viewFiles: [String] = []
 
+    /// The two forms carrying the Year field (T009a). Kept apart from
+    /// `viewFiles` on purpose — see `bothFormsReadTheYearFieldsCopyFromMarketCopy`.
+    private static let yearFieldFiles = [
+        "Trove/Views/Items/ItemFormView.swift",
+        "Trove/Views/Wishlist/WishlistFormView.swift",
+    ]
+
     private static let allowedPhrases = ["asking prices", "asking price", "use as my value", "refresh market values", "market values"]
     private static let forbidden = try! Regex(#"(?i)\b(value|values|valued|valuation|worth|price|prices|priced|sold)\b"#)
 
@@ -45,6 +52,28 @@ struct MarketVocabularyTests {
         let code = try SourceScan.production("Trove/Models/MarketCopy.swift")
         #expect(code.ranges(of: "asking price").count >= 2, "the copy no longer says what the figure is")
         #expect(code.contains("\"On Reverb\""), "the source line is gone")
+    }
+
+    /// The Year field's wiring (002 Amendment A, T009a), scoped to that one
+    /// field: the two form files are *not* in `viewFiles`, because they are
+    /// ordinary forms full of legitimate copy — the no-space rule would fire
+    /// on every placeholder they already carry. So this checks only what the
+    /// year field is allowed to be: the label and the validation message come
+    /// from `MarketCopy`, and neither form types the word itself.
+    @Test func bothFormsReadTheYearFieldsCopyFromMarketCopy() throws {
+        for file in Self.yearFieldFiles {
+            let code = try SourceScan.production(file)
+            #expect(code.contains("MarketCopy.yearLabel"), "\(file): the year label isn't wired")
+            #expect(
+                code.contains("MarketCopy.yearValidationError"),
+                "\(file): the year validation message isn't wired"
+            )
+
+            let inlined = SourceScan.stringLiterals(in: code).filter {
+                $0 == "Year" || $0.hasPrefix("Year should")
+            }
+            #expect(inlined.isEmpty, "\(file): the year copy is typed inline: \(inlined)")
+        }
     }
 
     /// Rule 3: no string literal with a space in a Market view file —

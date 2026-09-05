@@ -18,9 +18,18 @@ final class ItemFormViewModel {
         case priceMissing
         case priceNegative
         case currentValueNegative
+        /// 002 Amendment A (P18): something was typed in the year field that
+        /// isn't four digits between 1900 and next year. Blank is not this —
+        /// the field is optional, and blank means "any year".
+        case yearInvalid
     }
 
     static let desireToKeepRange = 1...5
+
+    /// P18's lower bound. The upper bound moves with the calendar, so it's
+    /// computed rather than stored — a next-year model is a real thing to own
+    /// before the year turns.
+    static let earliestYear = 1900
 
     var name: String = ""
     var categoryPath: String = ""
@@ -36,6 +45,10 @@ final class ItemFormViewModel {
     var purchasePrice: Decimal?
     var purchaseDate: Date = .now
     var serialNumber: String = ""
+    /// Held as text, not `Int?`, so a half-typed "19" is a state the field can
+    /// be in and be told about, rather than something the binding silently
+    /// discards. Parsed at save time into `Item.year`.
+    var yearText: String = ""
     var purchaseLocation: String = ""
     var currentValue: Decimal?
     var condition: Condition = .excellent
@@ -70,6 +83,11 @@ final class ItemFormViewModel {
 
     var isEditing: Bool { editingItem != nil }
 
+    /// The year field's upper bound, and the number the validation message
+    /// names. Read from the calendar each time rather than captured at init,
+    /// so a form left open across midnight on 31 December isn't stale.
+    var maximumYear: Int { Calendar.current.component(.year, from: .now) + 1 }
+
     init(modelContext: ModelContext, editing item: Item? = nil) {
         self.modelContext = modelContext
         self.editingItem = item
@@ -97,6 +115,7 @@ final class ItemFormViewModel {
         item.purchasePriceCents = Money.cents(from: purchasePrice ?? 0)
         item.purchaseDate = purchaseDate
         item.serialNumber = Self.nilIfBlank(serialNumber)
+        item.year = parsedYear
         item.purchaseLocation = Self.nilIfBlank(purchaseLocation)
         item.currentValueCents = currentValue.map(Money.cents(from:))
         item.desireToKeep = desireToKeep
@@ -144,7 +163,18 @@ final class ItemFormViewModel {
             errors.insert(.priceMissing)
         }
         if let currentValue, currentValue < 0 { errors.insert(.currentValueNegative) }
+        if !Self.trimmed(yearText).isEmpty, parsedYear == nil { errors.insert(.yearInvalid) }
         return errors
+    }
+
+    /// The typed year, or `nil` when the field is blank *or* unusable. Which
+    /// of the two it is, `validate()` decides — a blank field is the "any
+    /// year" answer, anything else that fails to parse is an error.
+    private var parsedYear: Int? {
+        let text = Self.trimmed(yearText)
+        guard text.count == 4, text.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        guard let value = Int(text), (Self.earliestYear...maximumYear).contains(value) else { return nil }
+        return value
     }
 
     /// Canonicalized at save time, per plan.md — reusing an existing path's
@@ -161,6 +191,7 @@ final class ItemFormViewModel {
         purchasePrice = Money.amount(fromCents: item.purchasePriceCents)
         purchaseDate = item.purchaseDate
         serialNumber = item.serialNumber ?? ""
+        yearText = item.year.map(String.init) ?? ""
         purchaseLocation = item.purchaseLocation ?? ""
         currentValue = item.currentValueCents.map(Money.amount(fromCents:))
         desireToKeep = item.desireToKeep

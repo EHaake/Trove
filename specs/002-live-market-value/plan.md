@@ -349,6 +349,14 @@ precision and narrowing is for the lumped cases.
   validation error ("Year should be four digits, 1900 to <next year>");
   saved as `Int?`. Tests: blank → nil; "1975" → 1975; "75", "abc",
   "1899", "<next year + 1>" → the error; round-trip on a second context.
+  *Found at T009a (2026-09-04)*: "75" is rejected by the 1900 lower
+  bound whatever the digit rule says, so it cannot detect the four-digit
+  check being dropped — the falsifying case is a five-digit string in
+  range once parsed, "01975", which both form tables now carry; the CSV
+  importer's parse (T016a) needs the same case. The parse lives in both
+  form view models by the task's instruction; if the importer becomes a
+  third copy, `FieldNormalization` is the precedent home for a shared
+  `year(from:)`.
 - **CSV**: `Year` appended after `Reverb Product ID` on both lists (14
   and 9 columns); the boundaries stay `[12]` / `[7]` — both new columns
   append past the shipped layout, so the legacy tolerance covers both;

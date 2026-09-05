@@ -21,6 +21,10 @@ final class WishlistFormViewModel {
         /// field is not.
         case costMissing
         case costNegative
+        /// 002 Amendment A (P18), as on the item form: something was typed in
+        /// the year field that isn't four digits between 1900 and next year.
+        /// Blank is not this — the field is optional.
+        case yearInvalid
     }
 
     /// Design's row of quick-pick amounts under the cost field. Fixed rather
@@ -31,9 +35,17 @@ final class WishlistFormViewModel {
 
     static let desireToOwnRange = 1...3
 
+    /// P18's lower bound; the upper bound moves with the calendar. Same pair
+    /// the item form uses.
+    static let earliestYear = 1900
+
     var name: String = ""
     var categoryPath: String = ""
     var estimatedCost: Decimal?
+    /// Held as text rather than `Int?` for the reason the item form's does — a
+    /// half-typed year is a state the field can be in. Parsed at save time
+    /// into `WishlistItem.year`.
+    var yearText: String = ""
     var notes: String = ""
 
     /// Same `PhotoPickerField` binding the item form uses. A wanted item's
@@ -66,6 +78,10 @@ final class WishlistFormViewModel {
 
     var isEditing: Bool { editingItem != nil }
 
+    /// The year field's upper bound, and the number the validation message
+    /// names — read from the calendar each time, as on the item form.
+    var maximumYear: Int { Calendar.current.component(.year, from: .now) + 1 }
+
     init(modelContext: ModelContext, editing item: WishlistItem? = nil) {
         self.modelContext = modelContext
         self.editingItem = item
@@ -96,6 +112,7 @@ final class WishlistFormViewModel {
         item.name = Self.trimmed(name)
         item.categoryPath = canonicalCategoryPath()
         item.estimatedCostCents = Money.cents(from: estimatedCost ?? 0)
+        item.year = parsedYear
         item.notes = Self.nilIfBlank(notes)
         item.desireToOwn = desireToOwn
         // Assigning the whole set, not appending: SwiftData sets each photo's
@@ -137,7 +154,17 @@ final class WishlistFormViewModel {
         } else {
             errors.insert(.costMissing)
         }
+        if !Self.trimmed(yearText).isEmpty, parsedYear == nil { errors.insert(.yearInvalid) }
         return errors
+    }
+
+    /// The typed year, or `nil` when the field is blank *or* unusable —
+    /// `validate()` tells the two apart. Mirrors the item form exactly.
+    private var parsedYear: Int? {
+        let text = Self.trimmed(yearText)
+        guard text.count == 4, text.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        guard let value = Int(text), (Self.earliestYear...maximumYear).contains(value) else { return nil }
+        return value
     }
 
     private func nextSortOrder() -> Int {
@@ -155,6 +182,7 @@ final class WishlistFormViewModel {
         name = item.name
         categoryPath = item.categoryPath
         estimatedCost = Money.amount(fromCents: item.estimatedCostCents)
+        yearText = item.year.map(String.init) ?? ""
         notes = item.notes ?? ""
         photos = item.photos ?? []
         desireToOwn = item.desireToOwn

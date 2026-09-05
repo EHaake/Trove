@@ -719,7 +719,34 @@ only — technical detail lives in `plan.md` and the commit log).
 
 ## Phase 3 — Screens
 
-- [ ] **T009a — The Year field on both forms (Amendment A).**
+- [x] **T009a — The Year field on both forms (Amendment A).**
+  *Done (2026-09-04)* — the first task under the model policy: dispatched
+  to `sdd-implementer`, verified by the orchestrator's own run. Both
+  form VMs gained `yearText`, a `yearInvalid` validation case, a
+  `parsedYear` (trimmed, exactly four ASCII digits, 1900…next year) and
+  the `year` write/load; the item form's Year field sits after Serial
+  number through `labelledField`/`plainTextField` (`labelledField` gained
+  an `isInvalid` parameter so the year can wear the form's rust border);
+  the wishlist form writes its field out in its `notesField` shape,
+  between the photo picker and Notes; both append
+  `MarketCopy.yearValidationError(nextYear:)` to the save caption (the
+  caption's `monoLabel` style uppercases it on screen, as it does the
+  existing "NEEDS …" line — a surface to look at on the device pass).
+  Placeholder empty: the spec gives the field no placeholder copy.
+  Tests: a shared `YearCase` table ("" and whitespace → nil; "1975" →
+  1975; "75", "abc", "1899", next year + 1, **"01975"** → the error), the
+  message pinned, the round-trip on a second context, and a targeted
+  wiring scan in `MarketVocabularyTests` over the two form files
+  (`MarketCopy.yearLabel`/`yearValidationError` present, no inlined
+  `"Year"`) — the forms stay out of `viewFiles`, since the whole-file
+  no-space rule would fail on their existing placeholders. Mutations,
+  each red then reverted: accept "75" → the "75" rows red; **the task's
+  "drop the four-digit check" mutation was not falsifiable as written**
+  ("75" fails the 1900 bound regardless) — the "01975" row was added and
+  goes red on it; drop the `year` write → the round-trip red; inline the
+  label → the wiring scan red. Full unit suite (orchestrator's run):
+  **919 tests in 131 suites, all passed**. Checked by eye on the
+  simulator: the Year field on both forms in the field style.
   Per plan Amendment A (Models, forms). `ItemFormViewModel` and
   `WishlistFormViewModel` gain `yearText`, validation (P18: four digits,
   1900 through next year, blank allowed) and the save into `year: Int?`;
@@ -1017,3 +1044,19 @@ only — technical detail lives in `plan.md` and the commit log).
   live (the width-guard one fires on `items-partial.csv` row 7); Q15's
   premise (Foundation's `.fractionLength(0)` rounds half-to-even); the
   no-socket test design; no `.pbxproj` edit anywhere.
+
+## Tier log (the first spec under the model policy)
+
+The constitution's model policy (amended 2026-09-04) decides which tier
+runs each task at dispatch time. This table is the evidence: token
+usage from each subagent return — implementer runs and reviewer
+invocations alike — any escape-hatch miss (a task the orchestrator had
+to redo at the top tier, and why). The third tier is off for this
+spec. T001a through T008 predate the policy: they ran at the top tier
+in the orchestrating session itself, with no per-task token figure to
+record, so the log begins at T009a. Compare the spec's total against a
+previous spec of similar size before treating the policy as settled.
+
+| Task / invocation | Tier | Tokens | Outcome / miss reason |
+|---|---|---|---|
+| T009a | opus (`sdd-implementer`) | 102,544 | verified first try; one finding (the "75" mutation), recorded in plan Amendment A |

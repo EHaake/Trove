@@ -312,6 +312,17 @@ struct ItemFormView: View {
                 plainTextField("If it has one", label: "Serial number",
                                text: $viewModel.serialNumber, isMono: true)
             }
+            // 002 Amendment A: optional, four digits, no prompt — the spec
+            // gives this field a label and nothing else, and an invented
+            // sample year would read as a default.
+            labelledField(
+                MarketCopy.yearLabel,
+                isInvalid: viewModel.validationErrors.contains(.yearInvalid)
+            ) {
+                plainTextField("", label: MarketCopy.yearLabel,
+                               text: $viewModel.yearText, isMono: true)
+                    .keyboardType(.numberPad)
+            }
             labelledField("Bought from") {
                 plainTextField("Reverb, a shop, a person", label: "Bought from",
                                text: $viewModel.purchaseLocation)
@@ -393,7 +404,15 @@ struct ItemFormView: View {
         if errors.contains(.priceNegative) { missing.append("a price of zero or more") }
         if errors.contains(.currentValueNegative) { missing.append("a value of zero or more") }
 
-        return "Needs \(missing.formatted(.list(type: .and)))"
+        // The year's message is a whole sentence from MarketCopy rather than
+        // one more item for the "Needs" list, so it's appended to the caption
+        // instead of folded into it. The caption is still the form's only
+        // error surface.
+        let needs = missing.isEmpty ? nil : "Needs \(missing.formatted(.list(type: .and)))"
+        let year = errors.contains(.yearInvalid)
+            ? MarketCopy.yearValidationError(nextYear: viewModel.maximumYear)
+            : nil
+        return [needs, year].compactMap { $0 }.joined(separator: " ")
     }
 
     private func save() {
@@ -418,8 +437,12 @@ struct ItemFormView: View {
         }
     }
 
+    /// - Parameter isInvalid: defaults to `false` because most optional
+    ///   fields can't be wrong; the year can (002 Amendment A), and it wears
+    ///   the same rust border the required fields above use.
     private func labelledField<Content: View>(
         _ label: String,
+        isInvalid: Bool = false,
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
@@ -428,7 +451,7 @@ struct ItemFormView: View {
                 .padding(.vertical, theme.metrics.fieldPaddingVertical)
                 .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
                 .background(fieldBackground)
-                .overlay(fieldBorder(isInvalid: false))
+                .overlay(fieldBorder(isInvalid: isInvalid))
         }
     }
 
