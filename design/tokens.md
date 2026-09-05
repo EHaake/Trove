@@ -142,8 +142,8 @@ Four surfaces are deliberately outside the rule, all because they have no
 fill to plate: capsule chips (category, condition, cost presets) are
 outlined pills; the dashboard's un-valued callout is unfilled by design —
 the mock distinguishes it from the figures card above by outlining it
-rather than raising it; and the wishlist detail's market-price ghost and
-sell-plan CTA are outlined, unfilled surfaces for the same reason (added
+rather than raising it; and the wishlist detail's sell-plan CTA (and, until `002`
+replaced it, its market-price ghost) are outlined, unfilled surfaces for the same reason (added
 to this list at the T039 review — the rule as first written didn't cover
 them, and a literal reading would have plated both).
 
@@ -309,7 +309,7 @@ row is omitted as redundant with it.
 | Cost value | Archivo 600 `34px`, line-height `1`, `accentBrass`, tabular |
 | Cost sub-line | IBM Plex Mono `11px`, letter-spacing `0.06em`, `textMonoMeta` — "YOUR ESTIMATE · ADDED …" |
 | DETAILS / NOTES | identical treatment to the item detail's tables above (shared `DetailSection` / `DetailRow` / `DetailProse`), including its mono-heading divergence; rows Category and Added only — the estimated cost is the screen's headline figure already, and printing it again to the cent under a whole-dollar hero was removed at `T044` |
-| Market-price ghost | `1px dashed divider`, `3px` radius, padding `18px`, `12px` gap; header pair `10px` 600 `0.14em` `textQuiet` / mono `10px` `0.1em` `textInactive`; ghost bars `divider` at `35%` opacity, `40px` tall field; note `12px` line-height `1.5` `textQuiet` |
+| Market-price ghost | **Retired in `002`** — replaced by the Market section (below); the dashed placeholder and its ghost bars are gone |
 | Sell-plan CTA | `1px solid accentBrass`, `3px` radius, padding `16px 18px`; heading "Find items to sell" `14.5px` 600 `accentBrass`; subtitle `11.5px` `#F2EDE4 @ 50%`; trailing "→" mono `15px` `accentBrass` |
 | CTA subtitle copy | "Browse your lowest desire-to-keep items" — accurate today: `SellPlanViewModel` ranks candidates lowest-desire-first |
 
@@ -382,6 +382,69 @@ brief — confirms it made it into the actual build. `002` is what it was
 reserved for: the market trend arrow below, which ships on the two list
 rows (`002`/T012). The Sell Plan's own candidate rows keep the slot
 empty for now.
+
+### Market section, candidate picker, dashboard variant (`002`)
+
+Source: `design/elements/002-market-values/` — seventeen `.dc.html`
+artboards and their PNGs, approved 2026-09-05 (spec Decision 17; the
+pass ran through `/design` in the implementing session against the `010`
+artboard sources and this file). Every string is a `MarketCopy` string.
+"As implemented" columns are filled by T010–T013 where the build departs.
+
+**The Market section** (both detail screens; item: after DETAILS, before
+NOTES; wishlist: after NOTES, before the sell-plan CTA, where the ghost
+was). One unbroken block in the DETAILS/NOTES rhythm — not a card — so
+the two plated cards above stay the screen's weight.
+
+| Property | Value | As implemented |
+|---|---|---|
+| Header | `monoLabel` "MARKET", `10px` gap to the body (DETAILS' `fieldGap + 2`) | |
+| Body rhythm | `12px` between rows | |
+| Source line | IBM Plex Sans `12.5px`, line-height `1.45`, `textLabelSecondary` (55 %); "On Reverb · {title} · {year}", wraps | |
+| All-years line | same register, `4px` under the source line, above the figure | |
+| Median | IBM Plex Mono 500 `19px`, `textPrimary`, tabular — the PAID cell's register, never Archivo or brass | |
+| Separator and count | IBM Plex Mono `12.5px`, `textMonoMeta` (45 %), `8px` gaps, baseline-aligned with the median | |
+| Reading row | spread left — IBM Plex Mono `11.5px` `textMonoMeta`; age right — IBM Plex Mono `11px` `textQuiet` (40 %), `white-space: nowrap`; withheld and stale readings put their sentence (IBM Plex Sans `13.5px`, line-height `1.5`, `textBody`) on the left | |
+| Never-refreshed line | IBM Plex Sans `13.5px`, `textLabelSecondary` | |
+| Link | "View on Reverb" + `arrow.up.right` glyph (`11px`, `1.6` stroke), IBM Plex Sans 500 `13px`, `accentBrass`, `5px` gap, `44pt` hit height — the app's first external link, visually distinct from the in-place buttons | |
+| Failure line | IBM Plex Sans `12.5px`, line-height `1.45`, `accentRustText`, between the link and the actions; the reading beneath unchanged | |
+| Button rule | filled brass = writes the person's data (the adopt action only); outlined brass = fetches (Refresh); text = manages the match, rust for Remove | |
+| Filled button | `accentBrass` fill, `background` ink, IBM Plex Sans 600 `13.5px`, `44pt` tall, `3px` radius, grows to fill the row | |
+| Outlined button | `1px accentBrass` border, brass text 500 `13.5px`, `44pt`, `3px`, `0 16px` padding, hugs its label (grows when alone) | |
+| Refresh · disabled (within the hour) | border ivory 16 %, text `textDisabled` (35 %); the age line above says why | |
+| Refresh · refreshing | border brass 50 %, text brass 60 %, a `12px` arc spinner before the label | |
+| Text buttons | IBM Plex Sans 500 `13px`, brass / `accentRustText`, `44pt` hit height on a `32px` visual row (`-6px` margins), Change match… left, Remove match right | |
+| Find on Reverb… (unmatched) | the outlined button alone under the header, hugging its label | |
+| Adopt label | "Use as my value" (item) / "Use as estimated cost" (wishlist) | |
+
+**The candidate picker** — one sheet, two phases, over a `rgba(0,0,0,0.45)`
+scrim; the sheet's bar (Cancel, title) is system chrome.
+
+| Property | Value | As implemented |
+|---|---|---|
+| Sheet | `background` fill, `12px` top radius, `36×5` grabber at ivory 30 %; notice at a medium detent (~`300px`), picker at large (~`780px`) | |
+| Notice body | IBM Plex Sans `15px`, line-height `1.55`, `textBody`; "See the privacy policy" inline in brass 500; `22px 24px 32px` padding, `24px` to the buttons | |
+| Notice buttons | Continue filled brass, Not now outlined, each `48pt`, stacked with `8px` gap; swipe-down = Not now | |
+| Search field | the plated card, `44pt`, `0 14px` padding, `10px` gaps; magnifier `15px` ivory 40 %; text IBM Plex Sans `13.5px` `textPrimary`, brass caret `1.5×18`; clear glyph ivory 40 % | |
+| Status line | IBM Plex Mono `11.5px` `textQuiet` with the `12px` spinner, `8px` gap | |
+| Candidate card | plated, `3px`; body `13px` padding and gap (the row treatment); the body picks | |
+| Thumbnail | `64×64`, `2px` radius, `surfaceInset`; `RowThumbnail`'s hairline placeholder when there is no image | |
+| Title | IBM Plex Sans 500 `14.5px`, line-height `1.3`, `textPrimary`, **wraps in full** | |
+| Brand | IBM Plex Sans `12.5px`, `textLabelSecondary` | |
+| Reading | IBM Plex Mono `11.5px`, `textMonoMeta`, `2px` above | |
+| Card footer | `1px surfaceInset` top hairline, `0 13px`, the link right-aligned at `40pt` — the only outward target on the card | |
+| Empty / failed | `EmptyStateView`: `34px` light glyph ivory 30 %, Archivo 600 `19px` headline, IBM Plex Sans `13.5px` `textQuiet` detail, the outlined "Try again" at `44pt` | |
+
+**The dashboard's market line** (recommended form; the toggle was drawn
+beside it and rejected — it hides the person's total behind a state,
+puts a second figure in the hero's slot, and splits the amount from its
+coverage, which P5 forbids).
+
+| Property | Value | As implemented |
+|---|---|---|
+| Position | one line directly under the ruler, `8px` gap (`4px` extra top), above SPENT / GAIN | |
+| Register | IBM Plex Mono `12.5px`, `textMonoMeta` (45 %), tabular, `white-space: nowrap`; the amount alone at 500 in `textBody` (75 %) — never brass, never Archivo, so it cannot read as the total | |
+| Inseparability | one string, one line; if it must shrink, the whole line scales — the coverage never wraps or clips away from the number | |
 
 ### Market trend arrow (`002`)
 

@@ -675,7 +675,17 @@ only — technical detail lives in `plan.md` and the commit log).
 
 ## Phase 2 — Design
 
-- [ ] **T008 — The Design pass. [person: invokes `/design`, approves]**
+- [x] **T008 — The Design pass. [person: invokes `/design`, approves]**
+  *Done (2026-09-05)* — **approved by the person 2026-09-05** ("I'm
+  signing off on the designs"). PNGs rendered by the orchestrator from
+  the artboards at 2× through a WebKit snapshot script (the canvas's own
+  export runs through a save dialog), one per frame, named by the frame's
+  stem, in the same folder. `tokens.md` gained the "Market section,
+  candidate picker, dashboard variant (`002`)" section with "as
+  implemented" columns for T010–T013; the market-price ghost row is
+  retired and its prose mention reworded; `brief.md` gained the "Market
+  figures" paragraph. Top tier, in session (the pass predates the model
+  policy's first dispatch).
   Per plan Decision 17, Q19, and §6's content contracts. Claude Code
   writes the `/design` prompt into `design/elements/002-market-values/
   brief.md`: the three surfaces (the Market section in its five states
