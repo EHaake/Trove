@@ -83,7 +83,10 @@ nonisolated enum MarketCopy {
 
     // MARK: - The one-time notice (Decision 14, P15)
 
-    static let noticeBody = "Finding a match sends this item\u{2019}s name to Reverb \u{2014} nothing else about it. Refreshing later sends only the product and your item\u{2019}s condition."
+    /// Decision 31: the second sentence names what the refresh request
+    /// carries — the product identifier alone; the condition and the year
+    /// are applied on the device, to the listings after they arrive.
+    static let noticeBody = "Finding a match sends this item\u{2019}s name to Reverb \u{2014} nothing else about it. Refreshing later sends only which product it is \u{2014} your item\u{2019}s details stay on this device."
     static let noticeLinkTitle = "See the privacy policy"
     static let noticeContinue = "Continue"
     static let noticeNotNow = "Not now"

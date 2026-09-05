@@ -127,14 +127,6 @@ enum MarketLocalStore {
         for point in try history(for: subjectID, in: context) { context.delete(point) }
     }
 
-    /// Delete All (Settings): every local row, the device state included.
-    static func clearAll(in context: ModelContext) throws {
-        try context.delete(model: MarketFigureRecord.self)
-        try context.delete(model: MarketHistoryPoint.self)
-        try context.delete(model: MarketMatchSnapshot.self)
-        try context.delete(model: MarketDeviceState.self)
-    }
-
     static func acknowledgeNotice(at now: Date, in context: ModelContext) throws {
         let state = try deviceState(in: context) ?? insert(MarketDeviceState(), into: context)
         if state.noticeAcknowledgedAt == nil {

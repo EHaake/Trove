@@ -162,23 +162,6 @@ struct MarketLocalStoreTests {
         #expect(try MarketLocalStore.history(for: kept.subjectID, in: elsewhere).count == 2)
     }
 
-    @Test func clearAllEmptiesEveryLocalTable() throws {
-        let container = try makeInMemoryContainer()
-        let context = ModelContext(container)
-        try MarketLocalStore.record(figure(median: 100_000, at: t0), product: product, for: MarketSubjectKey(subjectID: UUID(), kind: .owned), in: context)
-        try MarketLocalStore.acknowledgeNotice(at: t0, in: context)
-        try context.save()
-
-        try MarketLocalStore.clearAll(in: context)
-        try context.save()
-
-        let elsewhere = ModelContext(container)
-        #expect(try elsewhere.fetchCount(FetchDescriptor<MarketFigureRecord>()) == 0)
-        #expect(try elsewhere.fetchCount(FetchDescriptor<MarketHistoryPoint>()) == 0)
-        #expect(try elsewhere.fetchCount(FetchDescriptor<MarketMatchSnapshot>()) == 0)
-        #expect(!MarketLocalStore.hasAcknowledgedNotice(in: elsewhere))
-    }
-
     // MARK: - The notice flag
 
     @Test func theNoticeStartsUnacknowledgedAndStaysSoUntilSaved() throws {

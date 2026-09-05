@@ -183,9 +183,9 @@ with one tap (Decision 2).
 | The person's value, adopted or typed | on the item, as today | yes, as today |
 
 What leaves the device: an item's name (search) and a product
-identifier plus a condition filter (refresh), to Reverb, only when the
-person acts. The year never leaves the device: narrowing is done on the
-listings after they arrive (Decision 29). The privacy policy says
+identifier (refresh), to Reverb, only when the person acts. Neither the
+condition nor the year leaves the device: both are applied on the
+listings after they arrive (Decisions 29, 31). The privacy policy says
 exactly this (Decision 13).
 
 ### Settings › About, and the terms
@@ -227,9 +227,10 @@ nothing crosses items (see Non-goals).
   value** / **Use as estimated cost**, **Change match…**, **Remove
   match**.
 - The one-time notice: "Finding a match sends this item's name to
-  Reverb — nothing else about it. Refreshing later sends only the
-  product and your item's condition. See the privacy policy." with
-  **Continue** and **Not now** (P15).
+  Reverb — nothing else about it. Refreshing later sends only which
+  product it is — your item's details stay on this device. See the
+  privacy policy." with **Continue** and **Not now** (P15; wording
+  Decision 31).
 - Failure: "Couldn't reach Reverb. The figure below is from {age}."
 - Rate limit: "Reverb is asking us to slow down. Try again in a while."
 - The Settings walk stopped by any other failure: "Couldn't reach
@@ -378,6 +379,31 @@ Added 2026-09-03, during implementation (the person):
     The year is the person's own data and syncs; it never leaves the
     device. The field is optional on both kinds of item and gets no
     Design pass.
+
+Added 2026-09-04, at the Phase 1 pause (the person, on two items the
+skeptical-reviewer escalated):
+
+30. **Delete All clears only what it deletes.** Emptying a list from
+    Settings clears the device's market rows — figure, history,
+    snapshot — for the items it deletes, and nothing more: the other
+    list's rows and the one-time notice's acknowledgement stay. Delete
+    All removes these items; it does not reset the device, and the
+    notice was acknowledged once per device for terms that haven't
+    changed. The alternative — every local table and the flag,
+    whichever list is emptied — was what Phase 1 shipped and is
+    reversed here.
+31. **The notice's second sentence names what actually leaves.** A
+    refresh sends Reverb the product identifier and nothing about the
+    item: the condition, like the year, is applied on the device to the
+    listings after they arrive (the product-scoped listings endpoint
+    ignores condition parameters, so the client sends none — recorded
+    in the fixtures' README at T002). The earlier wording, "sends only
+    the product and your item's condition", overstated what leaves.
+    The notice now reads: "Finding a match sends this item's name to
+    Reverb — nothing else about it. Refreshing later sends only which
+    product it is — your item's details stay on this device. See the
+    privacy policy." The retention paragraph and `PRIVACY.md` (T018)
+    say the same.
 
 Proposed at drafting, 2026-09-03, by Claude Code, and decisions since
 the spec's approval the same day (P13 as reworded under Decision 16):

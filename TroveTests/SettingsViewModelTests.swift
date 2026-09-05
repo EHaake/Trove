@@ -212,16 +212,21 @@ struct SettingsViewModelSurfaceTests {
         return figure != nil || snapshot != nil || !history.isEmpty
     }
 
-    /// 002/T006c: Delete All empties every local market table — rows of both
-    /// kinds, and the notice flag — whichever list was chosen.
+    /// 002/T006c, narrowed by spec Decision 30 (2026-09-04): Delete All
+    /// clears the market rows of the items it deletes and nothing else —
+    /// the other list's rows and the notice's acknowledgement survive it.
+    /// Both directions are asserted, so "cleared everything" and "cleared
+    /// nothing" are each red.
     @Test(arguments: [DeleteTarget.items, .wishlist])
-    func confirmDeleteAllEmptiesEveryLocalMarketTable(target: DeleteTarget) async throws {
+    func confirmDeleteAllClearsOnlyTheDeletedItemsMarketRows(target: DeleteTarget) async throws {
         let container = try makeInMemoryContainer()
         let context = ModelContext(container)
         let item = Item(name: "Telecaster", reverbProductID: 126_161)
         let wanted = WishlistItem(name: "D-18", reverbProductID: 182_769)
         context.insert(item); context.insert(wanted)
-        try seedMarketRows(for: item.id, in: context)
+        let itemID = item.id, wantedID = wanted.id
+        try seedMarketRows(for: itemID, in: context)
+        try seedMarketRows(for: wantedID, in: context)
         try MarketLocalStore.acknowledgeNotice(at: .now, in: context)
         try context.save()
         let viewModel = SettingsViewModel(modelContext: context)
@@ -230,11 +235,13 @@ struct SettingsViewModelSurfaceTests {
 
         await viewModel.confirmDeleteAll(target)?.value
 
-        let fresh = ModelContext(container)
-        #expect(try fresh.fetchCount(FetchDescriptor<MarketFigureRecord>()) == 0)
-        #expect(try fresh.fetchCount(FetchDescriptor<MarketHistoryPoint>()) == 0)
-        #expect(try fresh.fetchCount(FetchDescriptor<MarketMatchSnapshot>()) == 0)
-        #expect(!MarketLocalStore.hasAcknowledgedNotice(in: fresh))
+        let deleted = target == .items ? itemID : wantedID
+        let survivor = target == .items ? wantedID : itemID
+        let deletedRowsRemain = try marketRowsRemain(for: deleted, in: container)
+        let survivorRowsRemain = try marketRowsRemain(for: survivor, in: container)
+        #expect(!deletedRowsRemain, "the deleted list's market rows survived Delete All")
+        #expect(survivorRowsRemain, "the other list's market rows were cleared too")
+        #expect(MarketLocalStore.hasAcknowledgedNotice(in: ModelContext(container)), "Delete All reset the notice flag")
         #expect(viewModel.alert == nil)
     }
 

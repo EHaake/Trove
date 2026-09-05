@@ -597,6 +597,13 @@ only — technical detail lives in `plan.md` and the commit log).
   paths → that path's new test red on "the deleted item's market rows
   survived it" (the survivor assertion stayed green throughout, so the
   test can tell "cleared the wrong rows" from "cleared none").
+  *Corrected 2026-09-04 (spec Decision 30)*: Delete All now clears per
+  deleted item through `clear(subjectID:)` and leaves the other list's
+  rows and the notice flag alone; `clearAll` and its store test are
+  gone. The Settings test asserts the deleted rows gone **and** the
+  survivor's rows and the flag intact (mutations: clear every table →
+  the survivor and flag assertions red; drop the clear → the deleted
+  rows red).
   Per plan §1 (who clears). `ItemDetailViewModel.delete`,
   `WishlistDetailViewModel.delete`, both lists' `delete(id:)`,
   `SettingsViewModel.confirmDeleteAll` (→ `clearAll`) each call the
@@ -637,7 +644,10 @@ only — technical detail lives in `plan.md` and the commit log).
   emptied → the `#require` red; **M5** the age boundary `> 60` → the
   60-second row red. **Phase 1 closes here.** *The reviewer pass over the phase (2026-09-03)*:
   two blockers and five reshapes, all folded, plus two items for the
-  person carried into the phase report. **B1** — G7's "no record in the
+  person carried into the phase report (decided 2026-09-04 as spec
+  Decisions 30 and 31: Delete All narrowed to the deleted items' rows;
+  the notice's second sentence reworded — `noticeBody`, its test, the
+  spec's Copy and retention paragraphs changed together). **B1** — G7's "no record in the
   collection" assertion had no red run, and its mutation (the record
   moved to the synced list, unique key dropped so the pair loads) showed
   a SwiftData reader over the collection's file returning nothing even

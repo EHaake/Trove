@@ -74,7 +74,7 @@ struct MarketCopyTests {
     /// draws separately.
     @Test func theNoticeReassemblesToTheSpecsSentence() {
         #expect(MarketCopy.noticeBody + " " + MarketCopy.noticeLinkTitle + "."
-            == "Finding a match sends this item’s name to Reverb — nothing else about it. Refreshing later sends only the product and your item’s condition. See the privacy policy.")
+            == "Finding a match sends this item’s name to Reverb — nothing else about it. Refreshing later sends only which product it is — your item’s details stay on this device. See the privacy policy.")
         #expect(MarketCopy.noticeContinue == "Continue")
         #expect(MarketCopy.noticeNotNow == "Not now")
     }

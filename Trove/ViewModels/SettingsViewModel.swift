@@ -297,21 +297,22 @@ final class SettingsViewModel {
             await Task.yield()
             do {
                 switch target {
+                // 002 (spec Decision 30): each deleted item's device-local
+                // market rows — figure, history, snapshot — go with it, and
+                // nothing else does: the other list's rows and the one-time
+                // notice's acknowledgement stay. Delete All removes these
+                // items; it does not reset the device.
                 case .items:
                     for item in try modelContext.fetch(FetchDescriptor<Item>()) {
+                        try MarketLocalStore.clear(subjectID: item.id, in: modelContext)
                         modelContext.delete(item)
                     }
                 case .wishlist:
                     for wanted in try modelContext.fetch(FetchDescriptor<WishlistItem>()) {
+                        try MarketLocalStore.clear(subjectID: wanted.id, in: modelContext)
                         modelContext.delete(wanted)
                     }
                 }
-                // 002: every device-local market row goes too — figures,
-                // history, snapshots and the notice flag — whichever list
-                // is being emptied; the rows are keyed by items that are
-                // now gone or about to be irrelevant, and Delete All is the
-                // one "start over" the app offers.
-                try MarketLocalStore.clearAll(in: modelContext)
                 try modelContext.save()
             } catch {
                 // Without this, load() on the same context would show the
