@@ -1116,7 +1116,32 @@ only — technical detail lives in `plan.md` and the commit log).
   *Done when*: the docs describe what T016a shipped; nothing in the
   targets changed; full suite count unchanged.
 
-- [ ] **T017 — `PRIVACY.md`, its guard, and the README's feature sentences.**
+- [x] **T017 — `PRIVACY.md`, its guard, and the README's feature sentences.**
+  *Done (2026-09-05)* — dispatched to `sdd-implementer`, verified by the
+  orchestrator's own run and a read of the policy itself (prose; the
+  guard can't judge it). `PRIVACY.md` at the root: the lead (no
+  accounts, nothing collected, one outside service beyond Apple's iCloud
+  sync), one table of what is stored where — the person's own data
+  synced to their private iCloud database, then the spec's retention
+  rows including the catalog slug and title (Decision 20), the
+  listing-content row as "nowhere" — the notice body quoted verbatim,
+  what searching and refreshing send (the condition and year applied on
+  the device), the User-Agent's contents, nothing on launch or in the
+  background, Reverb's attribution verbatim, iCloud, nothing else,
+  contact as a mailto link, changes. `PrivacyPolicyTests` (7): the file
+  exists under `MarketCopy.privacyPolicyFilename`; quotes `noticeBody`,
+  `contactAddress` and `attribution` verbatim; carries the retention
+  nouns; no placeholder; a dated "Last updated" line; the blob URL's
+  last path component is the filename. README: the Market values bullet,
+  the dashboard's Market-line clause, the export bullet's "match and
+  year, never the fetched figures", the Market sort clause, the
+  Documentation line. Mutations, each red then reverted: the file
+  renamed → six of seven red (only the URL test reads no file); one word
+  of the quoted notice changed → exactly the verbatim test red. Full
+  unit suite (orchestrator's run): **997 tests in 139 suites, all
+  passed**. "Is published" is T018's post-merge line; the address swap
+  is now a two-file edit and the README bullet gets a close-out re-read
+  (both noted in T019).
   Per plan §8, Decisions 18, 20, 25, Q20. The policy at the repo root
   quoting `MarketCopy.noticeBody` verbatim, the refresh sentence, the
   retention table as amended (the catalog slug and title row), iCloud,
@@ -1171,6 +1196,10 @@ only — technical detail lives in `plan.md` and the commit log).
   menu/spec.md` (~line 806: "the wishlist template staged at 68 bytes";
   91 since 002). Annotate them dated, alongside plan §8's post-merge
   ROADMAP/README/DECISIONS list.
+  Also re-read the README's Market values bullet and dashboard clause
+  (written at T017, before T010/T011/T013 built the screens) against the
+  shipped behavior, and note that swapping the provisional contact
+  address is a two-file edit (`MarketCopy.contactAddress`, `PRIVACY.md`).
   Criteria 1–20 ticked in `spec.md` with citations, honest partials
   named (a real 429 if none was seen; the second-device history check;
   "is published" pending merge); the skeptical-reviewer sweep over the
@@ -1253,3 +1282,4 @@ previous spec of similar size before treating the policy as settled.
 | T016b | opus (`sdd-implementer`) | 70,898 | verified (count unchanged); two stale 012-spec widths left to the orchestrator |
 | T016a review 2 | opus (`skeptical-reviewer`) | 83,464 | signed off; second-look items folded |
 | T016a fix pass 3 | opus (`sdd-implementer`) | 59,318 | verified first try |
+| T017 | opus (`sdd-implementer`) | 57,759 | verified first try; the policy read by the orchestrator |
