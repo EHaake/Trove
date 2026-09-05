@@ -9,6 +9,8 @@ struct ItemDetailView: View {
     @State private var selectedPhotoIndex = 0
     @State private var isEditing = false
     @State private var isConfirmingDelete = false
+    /// The match sheet's detent, driven by which phase it is showing.
+    @State private var matchDetent: PresentationDetent = .medium
 
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -45,6 +47,14 @@ struct ItemDetailView: View {
                 }
             }
         }
+        // 002 (plan §6, Q9): one sheet, two phases. An alert can hold no
+        // link, and branching the *content* rather than swapping
+        // presentations means no binding is written mid-flight. Swipe-down
+        // over the notice is Not now by construction — only
+        // `continueFromNotice()` acknowledges anything.
+        .sheet(isPresented: $viewModel.isFindingMatch, onDismiss: viewModel.load) {
+            matchSheet
+        }
         // An alert rather than a confirmation dialog: presented from a toolbar
         // button, the dialog renders as an anchored popover that drops the
         // cancel button entirely, leaving "Delete" as the only thing to press
@@ -64,6 +74,30 @@ struct ItemDetailView: View {
             Text(ItemDeleteCopy.message)
         }
         .onAppear(perform: viewModel.load)
+    }
+
+    /// The notice first, once per device, then the picker (spec Decision
+    /// 14). The detent follows the phase: the notice is a short read, the
+    /// picker wants the whole sheet.
+    private var matchSheet: some View {
+        Group {
+            if viewModel.noticeIsPending {
+                MarketNoticeView(
+                    continueAction: viewModel.continueFromNotice,
+                    declineAction: viewModel.declineNotice
+                )
+            } else {
+                MarketMatchView(
+                    viewModel: viewModel.makeMatchViewModel(),
+                    pick: viewModel.setMatch,
+                    cancel: { viewModel.isFindingMatch = false }
+                )
+            }
+        }
+        .presentationDetents([.medium, .large], selection: $matchDetent)
+        .onChange(of: viewModel.noticeIsPending, initial: true) { _, isPending in
+            matchDetent = isPending ? .medium : .large
+        }
     }
 
     private func content(for item: Item) -> some View {

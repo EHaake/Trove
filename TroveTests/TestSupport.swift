@@ -603,9 +603,17 @@ nonisolated final class MarketServiceSpy: MarketService {
 /// `listings` call gates, so a reentrant refresh that wrongly reaches the
 /// spy fails a call count fast instead of deadlocking the test. Search and
 /// product answer at once from one scripted value each.
+///
+/// `gatesSearch` moves the gate to the **first** `searchProducts` call
+/// instead (002/T011), for the picker's reentry guard — the same question
+/// one call further out, so it belongs on this double rather than in a
+/// second one. Only one gate is ever open at a time, and `release()`
+/// releases whichever it is.
 nonisolated final class GatedMarketServiceSpy: MarketService {
     private struct State {
         var listingsCalls = 0
+        var searchCalls = 0
+        var queries: [String] = []
         var released = false
         var waiter: CheckedContinuation<Void, Never>?
     }
@@ -614,16 +622,33 @@ nonisolated final class GatedMarketServiceSpy: MarketService {
     private let candidates: [MarketCandidate]
     private let productAnswer: Result<MarketProduct, MarketError>
     private let listingsAnswer: Result<MarketListings, MarketError>
+    private let gatesSearch: Bool
 
-    init(candidates: [MarketCandidate] = [], product: Result<MarketProduct, MarketError>, listings: Result<MarketListings, MarketError>) {
+    init(
+        candidates: [MarketCandidate] = [],
+        product: Result<MarketProduct, MarketError>,
+        listings: Result<MarketListings, MarketError>,
+        gatesSearch: Bool = false
+    ) {
         self.candidates = candidates
         self.productAnswer = product
         self.listingsAnswer = listings
+        self.gatesSearch = gatesSearch
     }
 
     var listingsCalls: Int { state.withLock { $0.listingsCalls } }
+    var searchCalls: Int { state.withLock { $0.searchCalls } }
+    var queries: [String] { state.withLock { $0.queries } }
 
-    @concurrent func searchProducts(named query: String) async throws -> [MarketCandidate] { candidates }
+    @concurrent func searchProducts(named query: String) async throws -> [MarketCandidate] {
+        let isFirstCall = state.withLock { state -> Bool in
+            state.searchCalls += 1
+            state.queries.append(query)
+            return state.searchCalls == 1
+        }
+        if gatesSearch, isFirstCall { await waitUntilReleased() }
+        return candidates
+    }
 
     @concurrent func product(id: Int) async throws -> MarketProduct { try productAnswer.get() }
 

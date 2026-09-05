@@ -914,7 +914,45 @@ only — technical detail lives in `plan.md` and the commit log).
   artboard on the simulator (states forced through the `-uiTesting`
   store and a temporary preview, removed before commit).
 
-- [ ] **T011 — The notice sheet and the candidate picker — one sheet, both phases.**
+- [x] **T011 — The notice sheet and the candidate picker — one sheet, both phases.**
+  *Done (2026-09-05)* — dispatched to `sdd-implementer`, verified by the
+  orchestrator's own run; not foundational, so no per-task review. As
+  built: `MarketMatchViewModel` (`@Observable`, no SwiftUI; `query`,
+  `phase`, `search()` trimmed, blank → `.idle` with no call,
+  reentry-guarded; only `.rateLimited` is its own failure, every other
+  error `.unreachable`); `MarketNoticeView` (the body, the privacy
+  `Link` **under** the paragraph — a `Link` is a view and cannot flow
+  inside `Text`, and markdown-in-`Text` would give up the `.isLink`
+  trait; recorded in `tokens.md`), Continue filled / Not now outlined at
+  48 pt; `MarketMatchView` (`NavigationStack`, Cancel, the shared
+  `SearchField` at its 40 pt, the seeded `.task` search, `.onSubmit`,
+  the status line, `EmptyStateView` for empty and failed, cards with
+  `AsyncImage`, wrapping title, brand, the reading, a footer `Link` to
+  `ReverbAPI.productURL(slug:)` — the body picks); `MarketButtons.swift`
+  holds the filled/outlined chrome as `ViewModifier`s shared with
+  `MarketSection`; both detail views attach the one `.sheet(isPresented:
+  $viewModel.isFindingMatch, onDismiss: viewModel.load)` as `matchSheet`,
+  branching on `noticeIsPending`, detents `[.medium, .large]` with
+  `selection:` following the phase; `makeMatchViewModel()` on both VMs,
+  seeded with the item's name. `GatedMarketServiceSpy` gained
+  `gatesSearch:`. Tests: +16 in 1 suite (`MarketMatchViewModelTests`: the
+  seed from both VMs and from Change match…; blank/cleared/trimmed
+  queries; results and empty phases; the five-case error table; a
+  non-`MarketError` → unreachable; reentry) plus five wiring scans (the
+  sheet once per screen with `onDismiss` and the branch; the notice's
+  `Link(` to the policy URL; the per-card `Link(`; `AsyncImage(` in
+  exactly one file under `Trove/Views`, found by walking the directory;
+  the identifiers). Mutations, each red then reverted: acknowledge on
+  Not now → T009's notice-sequence test red; drop `onDismiss` → red;
+  append the category to the seed → red; `.rateLimited` → `.unreachable`
+  → red; the card's link a `Button` → red. Full unit suite
+  (orchestrator's run): **1022 tests in 142 suites, all passed**. **On
+  the `-uiTesting` simulator (orchestrator):** the notice showed at the
+  medium detent on the first Find on Reverb…; Not now closed it and the
+  next Find on Reverb… showed it again; Continue opened the picker at the
+  large detent seeded with "Fender Telecaster" — and, the simulator being
+  online, one live search returned real candidates with photos, brand,
+  readings and per-card links (the live half T018 repeats by hand).
   Includes `makeMatchViewModel()` on both detail VMs — moved here from
   T009 at the 2026-09-04 review, since `MarketMatchViewModel` is created
   in this task.
@@ -1343,3 +1381,4 @@ previous spec of similar size before treating the policy as settled.
 | T016a fix pass 3 | opus (`sdd-implementer`) | 59,318 | verified first try |
 | T017 | opus (`sdd-implementer`) | 57,759 | verified first try; the policy read by the orchestrator |
 | T010 | opus (`sdd-implementer`) | 206,241 | verified first try; renders seen by the orchestrator; one finding (Link ink), recorded in plan §6 |
+| T011 | opus (`sdd-implementer`) | 161,355 | verified first try; the notice flow seen on the simulator |

@@ -174,6 +174,14 @@ final class WishlistDetailViewModel {
         isFindingMatch = false
     }
 
+    /// The picker's view model, seeded with the item's **name** — the whole
+    /// of what a search sends (spec criterion 3). Change match… seeds the
+    /// same way, not from the matched product's title (Q10), so a bad match
+    /// can't narrow the next search after itself.
+    func makeMatchViewModel() -> MarketMatchViewModel {
+        MarketMatchViewModel(seed: item?.name ?? "", service: marketService)
+    }
+
     /// The pick. A *different* product's figure and history describe
     /// something else, so they go first (spec Decision 26); re-picking the
     /// same product keeps them.

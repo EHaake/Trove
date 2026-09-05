@@ -58,7 +58,7 @@ struct MarketSection: View {
     /// 44pt targets from stretching the rhythm they sit in.
     fileprivate static let rowGap: CGFloat = 12
     fileprivate static let tightGap: CGFloat = 4
-    fileprivate static let hitHeight: CGFloat = 44
+    fileprivate static let hitHeight: CGFloat = MarketButtons.hitHeight
     fileprivate static let linkGap: CGFloat = 5
     fileprivate static let linkOverhang: CGFloat = 8
     fileprivate static let textButtonOverhang: CGFloat = 6
@@ -284,13 +284,7 @@ struct MarketSection: View {
         Button(action: actions.adopt) {
             Text(isWanted ? MarketCopy.useAsEstimatedCost : MarketCopy.useAsMyValue)
                 .font(theme.typography.buttonProminent)
-                .foregroundStyle(theme.colors.background)
-                .padding(.horizontal, theme.metrics.cardPadding)
-                .frame(maxWidth: .infinity, minHeight: Self.hitHeight)
-                .background(
-                    RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
-                        .fill(theme.colors.accentBrass)
-                )
+                .marketFilledChrome()
         }
         .buttonStyle(.plain)
         .disabled(!canAdopt)
@@ -336,27 +330,16 @@ struct MarketSection: View {
         .accessibilityIdentifier(identifier)
     }
 
-    /// The outlined button's chrome. `fills` is the artboards' `flex`: the
-    /// button hugs its label when something sits beside it and grows to the
-    /// row when it stands alone.
+    /// The outlined button's chrome, shared with the notice sheet since T011
+    /// — `MarketButtons.swift` holds it now, and this stays as the section's
+    /// name for it so no call site here had to change.
     private func outlinedChrome(
         _ label: some View,
         fills: Bool,
         ink: Color? = nil,
         border: Color? = nil
     ) -> some View {
-        label
-            .foregroundStyle(ink ?? theme.colors.accentBrass)
-            .padding(.horizontal, theme.metrics.cardPadding)
-            .frame(maxWidth: fills ? .infinity : nil, minHeight: Self.hitHeight)
-            .overlay(
-                RoundedRectangle(cornerRadius: theme.metrics.buttonRadius)
-                    .strokeBorder(border ?? theme.colors.accentBrass, lineWidth: theme.metrics.hairline)
-            )
-            // An outline leaves the interior transparent, and a transparent
-            // interior isn't hit-testable — the lesson `findItemsToSell`
-            // records on the wishlist screen.
-            .contentShape(Rectangle())
+        label.marketOutlinedChrome(fills: fills, ink: ink, border: border)
     }
 
     private var refreshInk: Color {

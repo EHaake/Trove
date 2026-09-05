@@ -25,6 +25,8 @@ struct MarketVocabularyTests {
     private static let viewFiles: [String] = [
         "Trove/Views/Shared/TrendArrow.swift",
         "Trove/Views/Market/MarketSection.swift",
+        "Trove/Views/Market/MarketNoticeView.swift",
+        "Trove/Views/Market/MarketMatchView.swift",
     ]
 
     /// The two forms carrying the Year field (T009a). Kept apart from

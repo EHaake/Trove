@@ -17,6 +17,8 @@ import Testing
 @Suite("Market section wiring")
 struct MarketWiringTests {
     private static let section = "Trove/Views/Market/MarketSection.swift"
+    private static let notice = "Trove/Views/Market/MarketNoticeView.swift"
+    private static let picker = "Trove/Views/Market/MarketMatchView.swift"
     private static let detailScreens = [
         ("Trove/Views/Items/ItemDetailView.swift", "private func content(for item: Item) -> some View {"),
         ("Trove/Views/Wishlist/WishlistDetailView.swift", "private func content(for item: WishlistItem) -> some View {"),
@@ -155,6 +157,92 @@ struct MarketWiringTests {
         ] {
             #expect(code.contains(symbol), "the section doesn't read \(symbol)")
         }
+    }
+
+    // MARK: - The match sheet (T011, plan §6, Q9)
+
+    /// One sheet, two phases (Q9). Four halves, and each is needed: the
+    /// presentation is counted so a second sheet over the same flag can't
+    /// appear; `onDismiss: viewModel.load` is pinned inside it, since a
+    /// picked match writes through the view model and the screen behind
+    /// re-reads only on `load()`; the branch is followed into `matchSheet`
+    /// so the notice can't be dropped; and the detent selection is pinned
+    /// because a notice at the large detent is a different sheet.
+    @Test func bothDetailScreensPresentTheOneMatchSheet() throws {
+        for (file, _) in Self.detailScreens {
+            let code = try SourceScan.production(file)
+            let presented = code.ranges(of: ".sheet(isPresented: $viewModel.isFindingMatch, onDismiss: viewModel.load)").count
+            #expect(presented == 1, "\(file): presents \(presented) match sheets with the load on dismiss")
+
+            let sheet = try body(of: "private var matchSheet: some View {", in: code)
+            for wiring in [
+                "viewModel.noticeIsPending",
+                "MarketNoticeView(",
+                "viewModel.continueFromNotice",
+                "viewModel.declineNotice",
+                "MarketMatchView(",
+                "viewModel.makeMatchViewModel()",
+                "viewModel.setMatch",
+                ".presentationDetents([.medium, .large], selection:",
+            ] {
+                #expect(sheet.contains(wiring), "\(file): the match sheet isn't wired to `\(wiring)`")
+            }
+        }
+    }
+
+    /// P15's whole point: the notice offers the policy to read, and an
+    /// alert couldn't have held it (Q9).
+    @Test func theNoticeCarriesALinkToThePrivacyPolicy() throws {
+        let code = try SourceScan.production(Self.notice)
+        let link = try Regex(#"(?:^|[^A-Za-z0-9_])Link\("#)
+        #expect(code.contains(link), "the notice draws no link at all")
+        #expect(code.contains("MarketCopy.privacyPolicyURL"), "the notice's link doesn't point at the privacy policy")
+        #expect(!code.contains("openURL"), "the notice opens a URL by hand instead of linking")
+    }
+
+    /// Decision 28: every candidate carries its own way out to Reverb, so
+    /// the person can look before committing. A real `Link` again, and the
+    /// hint that says it leaves the app.
+    @Test func everyCandidateCardLinksOutToReverb() throws {
+        let code = try SourceScan.production(Self.picker)
+        let link = try Regex(#"(?:^|[^A-Za-z0-9_])Link\("#)
+        let links = code.ranges(of: link).count
+        #expect(links == 1, "the picker draws \(links) links — the card's is the one and only")
+        #expect(code.contains("ReverbAPI.productURL(slug:"), "the card's link doesn't address the product page")
+        #expect(code.contains("MarketCopy.reverbLinkHint"), "the card's link carries no hint that it leaves the app")
+    }
+
+    /// Q17: a candidate's thumbnail is fetched by `AsyncImage` through the
+    /// OS's shared URL cache — transport, not app storage. Exactly one file
+    /// under `Trove/Views` may do it, so a second surface can't start
+    /// fetching images without this going red.
+    @Test func onlyThePickerFetchesAnImageFromTheNetwork() throws {
+        let fetching = try Self.filesUnderViews().filter { try SourceScan.production($0).contains("AsyncImage(") }
+        #expect(fetching == [Self.picker], "the files fetching images are \(fetching)")
+    }
+
+    @Test func everyTargetOnTheSheetCarriesTheIdentifierThePlanNames() throws {
+        let noticeCode = try SourceScan.production(Self.notice)
+        for identifier in ["market.notice.continue", "market.notice.notNow", "market.notice.privacy"] {
+            #expect(noticeCode.contains(identifier), "no target carries the identifier \(identifier)")
+        }
+
+        let pickerCode = try SourceScan.production(Self.picker)
+        for identifier in ["market.search", "market.candidate", "market.candidate.link"] {
+            #expect(pickerCode.contains(identifier), "no target carries the identifier \(identifier)")
+        }
+    }
+
+    /// Every `.swift` under `Trove/Views`, as repo-relative paths — walked
+    /// rather than listed, so a new view file is covered the day it lands.
+    private static func filesUnderViews(file: StaticString = #filePath) throws -> [String] {
+        let root = URL(filePath: "\(file)").deletingLastPathComponent().deletingLastPathComponent()
+        let views = root.appending(path: "Trove/Views")
+        let found = FileManager.default.enumerator(at: views, includingPropertiesForKeys: nil)?
+            .compactMap { $0 as? URL }
+            .filter { $0.pathExtension == "swift" }
+            .map { $0.path().replacingOccurrences(of: root.path().hasSuffix("/") ? root.path() : root.path() + "/", with: "") }
+        return (found ?? []).sorted()
     }
 
     /// `TrendArrowWiringTests`' brace matcher, for the same reason it has
