@@ -123,7 +123,35 @@ on something only the person has.
   any later fixture). `loadedAt` is consumed first by T004's row; its test
   is there.
 
-- [ ] **T003 — The seed.** Plan §6 (the unit half); Q8. `Trove/App/UITestSeed.swift`: `argument`, `shouldSeed(mode:arguments:)` true only for `.ephemeral` with `-seedSellPlan`; `sellPlan(into:now:)` — the Summicron ($2,400), and at desire 2 the Telecaster (**$600**, `reverbProductID` 126161, two `MarketLocalStore.record` calls: $1,250 at −14 d, then $1,400 at `now`), the Blues Junior ($640, matched, $600 → $600), the Squier Classic Vibe ($380, unmatched, no market rows), the NT1-A (**$400**, matched, $200 → $170) — values chosen so value alone orders Blues Junior, Telecaster, NT1-A, Squier and only the trend key gives Telecaster, Blues Junior, Squier, NT1-A; every market row written through `MarketLocalStore.record`, never constructed directly; one `save()` at the end. `TroveApp.init`: one call, `if UITestSeed.shouldSeed(mode: store.mode, arguments: ProcessInfo.processInfo.arguments)`, after the store is built, over `store.container.mainContext`, a failure → `fatalError`; `"-uiTesting"` still read in exactly one place and `"-seedSellPlan"` absent from `TroveApp.swift`. Files: `Trove/App/UITestSeed.swift` (new), `Trove/App/TroveApp.swift`; tests in `TroveTests/UITestSeedTests.swift` (new). Pattern: `ItemDetailViewModelTests.seed(median:at:in:)` and `MarketIndexTests.reading(median:at:)` for a `MarketReading.figure` fed to `MarketLocalStore.record`; `ItemDetailViewModelTests.world(productID:)` for an `Item` with `reverbProductID`; `TroveStore.make(isUITesting: true)` for the container the test builds through; `MarketLocalSchemaTests` for a scan over `TroveApp.swift`. **Verify**: `scripts/verify.sh` green; `shouldSeed` false for `.ephemeral` + `[]`, `.ephemeral` + `["-uiTesting"]`, `.cloudKit` and `.localOnly` + both flags, true for `.ephemeral` + both flags; the seed through `TroveStore.make`'s container yields 4 owned, 1 wanted, 3 matched items, 3 snapshots, 3 figure records fetched at `now`, 6 points, every record's trend equal to `compute(history)` and to `up`/`flat`/`down` as seeded; the writer-only scan over `UITestSeed.swift`; a `SellPlanViewModel` over the seeded context orders Telecaster, Blues Junior, Squier, NT1-A with a +12 % rise for the Telecaster only; the scan on `TroveApp.swift` (one `UITestSeed.sellPlan(` call inside the `shouldSeed(mode: store.mode` block; `"-uiTesting"` once; `"-seedSellPlan"` absent). **Mutations recorded red**: gate on the arguments alone (G8); a seed call outside the `shouldSeed` guard (G8's call-site half); the Telecaster's second `record` replaced by a direct `MarketFigureRecord` insert carrying `"flat"` (G9, both halves); a second `"-uiTesting"` literal in `TroveApp.swift`; drop the group key from `rank` → the seeded order becomes Blues Junior, Telecaster, NT1-A, Squier. Serves criterion 12 (the unit half).
+- [x] **T003 — The seed.** Plan §6 (the unit half); Q8. `Trove/App/UITestSeed.swift`: `argument`, `shouldSeed(mode:arguments:)` true only for `.ephemeral` with `-seedSellPlan`; `sellPlan(into:now:)` — the Summicron ($2,400), and at desire 2 the Telecaster (**$600**, `reverbProductID` 126161, two `MarketLocalStore.record` calls: $1,250 at −14 d, then $1,400 at `now`), the Blues Junior ($640, matched, $600 → $600), the Squier Classic Vibe ($380, unmatched, no market rows), the NT1-A (**$400**, matched, $200 → $170) — values chosen so value alone orders Blues Junior, Telecaster, NT1-A, Squier and only the trend key gives Telecaster, Blues Junior, Squier, NT1-A; every market row written through `MarketLocalStore.record`, never constructed directly; one `save()` at the end. `TroveApp.init`: one call, `if UITestSeed.shouldSeed(mode: store.mode, arguments: ProcessInfo.processInfo.arguments)`, after the store is built, over `store.container.mainContext`, a failure → `fatalError`; `"-uiTesting"` still read in exactly one place and `"-seedSellPlan"` absent from `TroveApp.swift`. Files: `Trove/App/UITestSeed.swift` (new), `Trove/App/TroveApp.swift`; tests in `TroveTests/UITestSeedTests.swift` (new). Pattern: `ItemDetailViewModelTests.seed(median:at:in:)` and `MarketIndexTests.reading(median:at:)` for a `MarketReading.figure` fed to `MarketLocalStore.record`; `ItemDetailViewModelTests.world(productID:)` for an `Item` with `reverbProductID`; `TroveStore.make(isUITesting: true)` for the container the test builds through; `MarketLocalSchemaTests` for a scan over `TroveApp.swift`. **Verify**: `scripts/verify.sh` green; `shouldSeed` false for `.ephemeral` + `[]`, `.ephemeral` + `["-uiTesting"]`, `.cloudKit` and `.localOnly` + both flags, true for `.ephemeral` + both flags; the seed through `TroveStore.make`'s container yields 4 owned, 1 wanted, 3 matched items, 3 snapshots, 3 figure records fetched at `now`, 6 points, every record's trend equal to `compute(history)` and to `up`/`flat`/`down` as seeded; the writer-only scan over `UITestSeed.swift`; a `SellPlanViewModel` over the seeded context orders Telecaster, Blues Junior, Squier, NT1-A with a +12 % rise for the Telecaster only; the scan on `TroveApp.swift` (one `UITestSeed.sellPlan(` call inside the `shouldSeed(mode: store.mode` block; `"-uiTesting"` once; `"-seedSellPlan"` absent). **Mutations recorded red**: gate on the arguments alone (G8); a seed call outside the `shouldSeed` guard (G8's call-site half); the Telecaster's second `record` replaced by a direct `MarketFigureRecord` insert carrying `"flat"` (G9, both halves); a second `"-uiTesting"` literal in `TroveApp.swift`; drop the group key from `rank` → the seeded order becomes Blues Junior, Telecaster, NT1-A, Squier. Serves criterion 12 (the unit half).
+  *Done (2026-09-06, `sdd-implementer`, one fix pass)*: `UITestSeed`
+  (`argument`, `shouldSeed(mode:arguments:)` = `.ephemeral` **and** the
+  flag, `sellPlan(into:now:)` writing every market row through
+  `MarketLocalStore.record` / `recordMatch`, one `save()`); `TroveApp.init`
+  calls it once inside the guard after the store is built, with
+  `"-uiTesting"` still read in one place; the values exactly the plan's
+  (Telecaster $600 / 126161 / $1,250 → $1,400; Blues Junior $640 flat;
+  Squier $380 unmatched; NT1-A $400 / $200 → $170). `UITestSeedTests` (6):
+  the gate table incl. persistent modes with both flags, the call-site and
+  read-once scans, the counts through `TroveStore.make(isUITesting: true)`
+  read back on a **second** context, stored trend = `compute(history)` for
+  up/flat/down, the writer-only scan, the seeded order with the Telecaster's
+  +12 % alone. 1127 → 1133 in 151. **Mutations red**: G8 (arguments alone →
+  `.cloudKit`/`.localOnly` true); the call *moved* outside the guard →
+  `:61` the placement assertion alone (the first attempt had *added* a call,
+  which only reached the count assertion — review B1); a second
+  `"-uiTesting"` literal; G9 (a direct record insert carrying "flat" → the
+  trend, the counts and the writer scan); G11 (group key dropped → Blues
+  Junior, Telecaster, NT1-A, Squier); `save()` deleted from the seed → three
+  tests red at the helper's `#require` (review B2: the suite had refetched
+  on the inserting context — the constitution's named false-passing shape,
+  fixed by a second `ModelContext`). Orchestrator's own `scripts/verify.sh`:
+  1133 in 151, green. `scripts/verify.sh ui` under `-uiTesting` alone: see
+  the pre-pause line below. Invented, declared: product ids 61927 / 40318
+  and proportional bounds for the two extra matched items — carried to T005
+  / the device pass in case a seeded Market section ever refreshes (review
+  S1). Finding: `MarketFigure`'s short init is test-only; production passes
+  all nine members.
 
 Before the pause: one `scripts/verify.sh ui` run (the count line read: the same count as the last green UI run), since T003 touched the launch path every UI test goes through — recorded in T003's Done note.
 
@@ -175,6 +203,10 @@ The constitution's model policy (amended 2026-09-06) decides which tier runs eac
 | T001 review | opus (`skeptical-reviewer`) | 53,200 | signed off; scope matched the bundle plus one locale grep |
 | T002 | opus (`sdd-implementer`) | 83,167 | verified first try; five mutations red as planned |
 | T002 review | opus (`skeptical-reviewer`) | 50,593 | signed off; scope matched the bundle exactly |
+| T003 | opus (`sdd-implementer`) | 86,841 | verified first try; reviewer: fix and re-review |
+| T003 review | opus (`skeptical-reviewer`) | 43,485 | fix and re-review — B1 (the wrong mutation for the call-site guard), B2 (same-context refetch), S1–S4 |
+| T003 fix pass | opus (`sdd-implementer`) | 49,749 | both mutations red for the right reason; tests only changed |
+| T003 re-review | opus (`skeptical-reviewer`) | 19,832 | signed off |
 
 ## Skeptical-review record (this decomposition)
 
