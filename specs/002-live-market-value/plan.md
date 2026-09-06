@@ -420,7 +420,12 @@ reads them; the pins move if the person rewords.
   `isFindingMatch` cannot tell this presentation from a picker the person
   re-opened after swiping the fetch away — T022's review) —
   `sheetStep = .value(step)` with `chosenCents` the whole-currency
-  median; in every other case the sheet closes
+  median; a landing whose fetch is no longer the sheet's (the person
+  swiped it away and re-opened the picker, or moved on) **touches the
+  sheet not at all** — it updates the section and the notice only (T022
+  as built: the presentation test is the outer condition, the
+  value-or-close split sits inside it); within this fetch's own
+  presentation every other case closes the sheet
   (`isFindingMatch = false`) and the section shows what it shows today
   (the withheld copy, or the failure line over the kept match). An
   outcome that lands after the person swiped the `.fetching` sheet away
