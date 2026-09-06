@@ -405,20 +405,27 @@ reads them; the pins move if the person rewords.
   pin it; renaming buys nothing). `findMatch()` sets `.notice` or `.pick`
   as today. **`setMatch(_:) async`** is guarded — `guard case .pick = sheetStep` — so two quick taps on candidate cards produce one save and one request (B3 `aSecondPickDuringTheFetchIsIgnored`); the guard does **not** require `marketActivity == nil` (T022's review: that conjunct would silently drop a pick made while the section's own Refresh is in flight, a path that worked before this amendment — the refresher's supersede rule already drops the older fetch's result on a re-match, and `marketActivity` is a flag, not a counter, so the earlier refresh's completion may clear it a moment early: a cosmetic edge, recorded); it then keeps its one save (the id,
   `updatedAt`, the snapshot, `clear` on a changed product); a refused
-  save rolls back and closes the sheet without fetching (the T009 rule).
-  Then — new — it sets `sheetStep = .fetching(candidate)` and
+  save rolls back and closes the sheet without fetching (the T009 rule) —
+  and leaves `marketNotice` alone, since the old match still stands.
+  Then — new — it sets `sheetStep = .fetching(candidate, token)` and
   `marketActivity = .refreshing` (so `canRefresh` and `canAdopt` are
-  false throughout, and a second refresh cannot start underneath the
-  sheet), awaits the refresher for this item (`.stillFresh` is a hit —
+  false while the newest fetch runs — **the generation rule, T022's
+  second review**: every `setMatch` and `refresh()` start takes the next
+  value of one `marketFetchGeneration` counter; a landing applies its
+  notice and clears the activity flag only if its generation is still
+  the current one, so an older section refresh landing after a pick can
+  neither paint a failure line over the new match nor re-enable the
+  buttons early — it re-derives the section and nothing else), awaits the refresher for this item (`.stillFresh` is a hit —
   no second request within the hour, P7), clears the activity, maps the
   outcome to `marketNotice` (the date read from the re-derived state
   *after* the save, so a changed product's cleared figure can never date
   a failure line), then `loadMarket()`. **The landing rule, stated
   once:** if `marketState`'s reading is now `.current` **and the sheet
   is still *this fetch's* presentation** — `isFindingMatch` true *and*
-  `sheetStep` still `.fetching(candidate)` for this candidate (a bare
-  `isFindingMatch` cannot tell this presentation from a picker the person
-  re-opened after swiping the fetch away — T022's review) —
+  `sheetStep` still `.fetching(_, token)` carrying **this fetch's token**
+  (candidate equality is not fetch identity: the same product re-picked
+  after a swipe-down is a second fetch; a bare `isFindingMatch` cannot
+  tell this presentation from a re-opened picker — T022's reviews) —
   `sheetStep = .value(step)` with `chosenCents` the whole-currency
   median; a landing whose fetch is no longer the sheet's (the person
   swiped it away and re-opened the picker, or moved on) **touches the
@@ -520,7 +527,12 @@ phases, the fetching card, wiring; T018 gains the B8 lines.
 ### Costs accepted
 
 - The pick's refresh is one more request per pick — the same request a
-  Refresh tap would have made a moment later.
+  Refresh tap would have made a moment later. With the activity conjunct
+  gone from the pick guard, a re-pick of the *same* product while the
+  section's own refresh is in flight and the stored figure is stale makes
+  a second request for it seconds after the first (P7's hour rule is
+  checked at each start); accepted — the generation rule keeps the two
+  landings from disagreeing on screen.
 - A record written before this amendment has no percentiles; the
   slider falls back to low/high for it until its next refresh. No shipped
   device has such a record.
