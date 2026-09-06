@@ -153,7 +153,7 @@ on something only the person has.
   S1). Finding: `MarketFigure`'s short init is test-only; production passes
   all nine members.
 
-Before the pause: one `scripts/verify.sh ui` run (the count line read: the same count as the last green UI run), since T003 touched the launch path every UI test goes through — recorded in T003's Done note.
+Before the pause: one `scripts/verify.sh ui` run (the count line read: the same count as the last green UI run), since T003 touched the launch path every UI test goes through — recorded in T003's Done note. *Run by the orchestrator 2026-09-06 after T003's commit: `Executed 13 tests, with 0 failures`, the same 13 as before the spec — the seed does not fire under `-uiTesting` alone.*
 
 **Phase 1 pause** — the person's report; a fresh session resumes at T004.
 
