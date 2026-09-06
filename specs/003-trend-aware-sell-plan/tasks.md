@@ -227,6 +227,33 @@ Before the pause: one `scripts/verify.sh ui` run (the count line read: the same 
 
 **Phase 2 review** — one `skeptical-reviewer` pass at its default tier over `git diff <T003's commit>..HEAD` (T004–T005), the two task lines, plan §§5–6 and Q10, criteria 5, 6, 10, 11, 12. Then the **Phase 2 pause** — the person's report; a fresh session resumes at T006.
 
+  *Reviewed (2026-09-06, `skeptical-reviewer`, default tier, over
+  `git diff cc17467..HEAD`)*: **signed off, nothing blocking**; six second
+  looks, dispositioned by the orchestrator: **S1** (the arrow's spoken half
+  — "trending up" — asserted nowhere at runtime, and nothing pinned the row
+  passing `trend: summary?.currentTrend`) → fixed: the UI test now asserts
+  "trending up" on the Telecaster's row alone and "trending down" on the
+  NT1-A's alone (green — plan Q4's claim about the combine confirmed on the
+  simulator), and the row-composition scan pins the trend argument (mutation
+  `trend: nil` → `:245` red). **S3** (`ringTop` is a locator bounded in
+  neither axis, the shape found false twice at sign-off, with its value
+  pinned only in prose) → fixed: the test now pins the plain row's ring at
+  `cardPadding − 1` (the 2 pt stroke's spill) beside the cross-render
+  equality. **S4** (the alignment test's name overstated — it never
+  compares the checkbox to the dial) → renamed
+  `theMarksStayWhereTheyWereWhenTheRowGainsItsLines`. **S2** (`.lineLimit(1)`
+  on the market line, a modifier plan Q4 does not list; a five-figure median
+  could truncate to "$14,000 on Rev…" invisibly to every test) → not
+  changed here: carried to the device pass (T006: look at a long median
+  beside a long name) and to T007's "As built" for plan §5 to record either
+  way. **S5** (the two-line floor is red for `lineLimit(1)` but would pass
+  `lineLimit(2)`; the healthy 70 pt implies about four lines) → recorded for
+  the sweep; the threshold is the one plan §5 chose with its reasoning.
+  **S6** (the UI test's comments call the unmatched Squier "neutral") → no
+  change: plan Q8 uses exactly that vocabulary (unmatched = neutral, the
+  ±5 % band = flat), and criterion 9 says "a neutral rank" for no trend.
+  Fix pass verified: unit 1141 in 153 green; the seeded UI test green alone.
+
 ## Phase 3 — Verification and close-out
 
 - [ ] **T006 — The device pass. [person]** On the simulator with the seed (`-uiTesting -seedSellPlan`): the four rows in the seeded order — the Telecaster first at $600 above the Blues Junior's $640, the NT1-A last at $400 below the Squier's $380, so the reordering is visibly the trend's and not the values' — the Telecaster's reason line and moss arrow, the Blues Junior's market line with no arrow, the Squier with no market line, the NT1-A's rust arrow and no sentence; selecting the Telecaster reads "$600" in the combined figure, not $1,400; **a plain row beside a rising one** — the top-hung checkbox and dial (plan Q6) — judged acceptable or not; VoiceOver over the Telecaster's row reading the sentence in full and "Median asking price $1,400, trending up"; the largest accessibility text size turned on, the row unchanged (plan Q10 — the 001 limitation, attested as such). On the person's own device: the plan as it reads today (no trends yet, the market line present on matched items with a current figure, no arrow, no sentence) — criterion 9's "no extra text" and the spec's "At launch" section, attested. **Verify**: the person's word, recorded per item in the Done note; anything unexpected escalated before T007.
@@ -271,6 +298,7 @@ The constitution's model policy (amended 2026-09-06) decides which tier runs eac
 | T003 re-review | opus (`skeptical-reviewer`) | 19,832 | signed off |
 | T004 | opus (`sdd-implementer`) | 96,658 | verified first try; five mutations red as planned; the instrument printed 16 before the `.center` red was believed |
 | T005 | opus (`sdd-implementer`) | 65,116 | verified first try; UI suite 14 twice; the two UI mutations run red by the orchestrator |
+| Phase 2 review | opus (`skeptical-reviewer`) | 81,819 | signed off, nothing blocking; S1, S3, S4 fixed by the orchestrator, S2 → T006/T007, S5 → sweep, S6 declined (plan Q8's vocabulary) |
 
 ## Skeptical-review record (this decomposition)
 

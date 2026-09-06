@@ -89,7 +89,7 @@ struct SellPlanMarketLinesRenderTests {
     /// rule): the located y on the healthy render is printed and pinned to
     /// `cardPadding`, because a locator that never found the checkbox at all
     /// would also "go red" under `.center`.
-    @Test func theCheckboxAndTheDialSitOnTheSameEdgeWithTheLinesAndWithout() throws {
+    @Test func theMarksStayWhereTheyWereWhenTheRowGainsItsLines() throws {
         let plain = try pixels(of: row(summary: nil, rise: nil).frame(width: rowWidth))
         let withLines = try pixels(of: row(summary: risingSummary, rise: try rise()).frame(width: rowWidth))
 
@@ -103,6 +103,16 @@ struct SellPlanMarketLinesRenderTests {
         #expect(
             plainCheckbox == Int(ThemeMetrics.standard.cardPadding),
             "the locator found y \(plainCheckbox) on a top-aligned plain row, not the card's own \(ThemeMetrics.standard.cardPadding) pt padding — it is measuring something other than the checkbox"
+        )
+        // The ring locator is bounded in neither axis — the shape the checkbox
+        // locator was found false twice for at sign-off — so it carries its
+        // own instrument too: the dial's 2 pt stroke is centred on a circle
+        // inscribed in the 36 pt frame, so its top ink sits exactly 1 pt
+        // above the frame top, one above the checkbox. A locator that had
+        // latched onto quiet text in the right column would land elsewhere.
+        #expect(
+            plainRing == Int(ThemeMetrics.standard.cardPadding) - 1,
+            "the ring locator found y \(plainRing) on the plain row, not the stroke's 1 pt spill above the \(ThemeMetrics.standard.cardPadding) pt padding — it is measuring something other than the dial"
         )
         #expect(plainCheckbox == linedCheckbox, "the checkbox moved from y \(plainCheckbox) to y \(linedCheckbox) when the row gained its two lines")
         #expect(plainRing == linedRing, "the dial moved from y \(plainRing) to y \(linedRing) when the row gained its two lines")
@@ -232,6 +242,10 @@ struct SellPlanMarketLinesWiringTests {
 
         #expect(row.contains("SellPlanMarketLine("), "the row draws no market line")
         #expect(row.contains("SellPlanReasonLine("), "the row draws no reason line")
+        #expect(
+            row.contains("trend: summary?.currentTrend"),
+            "the row builds the market line without the summary's current trend, so every arrow on the plan would be the parameter's nil"
+        )
         #expect(
             row.contains("HStack(alignment: .top"),
             "the row's stack isn't top-aligned, so its marks drift as the lines arrive (criterion 11)"

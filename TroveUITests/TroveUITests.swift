@@ -636,6 +636,15 @@ final class TroveUITests: XCTestCase {
             "every matched candidate carries the market line, and the unmatched one doesn't"
         )
 
+        // The arrow's half of the same sentence — the reason the figure's
+        // label sits on the `Text` and not on the stack around it: combined,
+        // the rising row reads "Median asking price $1,400, trending up".
+        // The flat Blues Junior draws no arrow and so says neither.
+        let trendingUp = rows.filter { $0.element.label.contains("trending up") }
+        XCTAssertEqual(trendingUp.map(\.name), ["Telecaster"], "the rising row's label should carry the arrow's spoken half, and only that row's")
+        let trendingDown = rows.filter { $0.element.label.contains("trending down") }
+        XCTAssertEqual(trendingDown.map(\.name), ["NT1-A"], "the falling row's label should carry the arrow's spoken half, and only that row's")
+
         // Instrumented once at T005 and recorded in tasks.md, then removed:
         // inside the `.combine`d row, `sellPlan.reason` resolved to exactly
         // one element and `sellPlan.market` to *two per matched row* (six),
