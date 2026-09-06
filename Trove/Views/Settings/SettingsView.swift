@@ -171,6 +171,15 @@ struct SettingsView: View {
                         .foregroundStyle(theme.colors.accentRustText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                // Decision 38: a walk that found nothing due says so — the
+                // same line shape, in the quiet colour, since nothing failed.
+                if let note = viewModel.marketRefreshNote {
+                    Text(note)
+                        .font(theme.typography.secondary)
+                        .foregroundStyle(theme.colors.textQuiet)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("settings.refreshMarket.note")
+                }
             }
         }
     }

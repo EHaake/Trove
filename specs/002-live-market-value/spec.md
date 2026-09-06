@@ -248,6 +248,8 @@ nothing crosses items (see Non-goals).
   Decision 31).
 - Failure: "Couldn't reach Reverb. The figure below is from {age}."
 - Rate limit: "Reverb is asking us to slow down. Try again in a while."
+- The Settings walk with nothing due: "Every figure is under an hour
+  old." — the quiet colour, not the failure colour (Decision 38).
 - The Settings walk stopped by any other failure: "Couldn't reach
   Reverb. 3 of 12 refreshed." (Decision 27).
 - The dashboard variant: "Market · $18,400 · 12 of 34 items" (Decision
@@ -506,6 +508,18 @@ have and the implications for current and future designs"):
     marks (which would leave VoiceOver without the track's landmarks).
     Decision 34 and the Adopting bullet read "the trimmed low, the median
     and the trimmed high marked".
+38. **A walk that finds nothing due says so.** (Delegated to Claude Code
+    by the person at the Phase-5 pause, 2026-09-05; shipped after merge
+    on `fix/market-walk-nothing-due`.) With every matched item refreshed
+    within the hour, **Refresh market values** stays enabled — the
+    alternative, a row that disables and re-enables on an hour timer,
+    is the same silence with a flicker — and a tap walks nothing and
+    shows one quiet line under the row: "Every figure is under an hour
+    old." It is not a failure, so it is in the quiet text colour, not
+    rust, and it clears when the next walk has something to visit.
+    Criterion 10's "visible progress" thereby holds when there is
+    nothing to progress through; T018 had found the enabled row doing
+    nothing, which read as broken.
 
 Proposed at drafting, 2026-09-03, by Claude Code, and decisions since
 the spec's approval the same day (P13 as reworded under Decision 16):
@@ -632,7 +646,7 @@ the plan's Amendment A):
     answers with its limit — and, with "Couldn't reach Reverb. N of M
     refreshed.", on the first failure of any other kind (Decision 27);
     items already refreshed stay refreshed.
-    *Verified 2026-09-05*: `SettingsViewModelMarketRefreshTests` (progress advancing, the rate-limit stop, the unreachable stop with "N of M refreshed.", refreshed items kept); T018: a walk with nothing due said nothing. *Partial*: the advancing line and a real 429 were not seen live (none in four calls).
+    *Verified 2026-09-05*: `SettingsViewModelMarketRefreshTests` (progress advancing, the rate-limit stop, the unreachable stop with "N of M refreshed.", refreshed items kept); T018: a walk with nothing due said nothing — closed after merge by Decision 38 (`aWalkWithNothingDueSaysSoAndSendsNothing`: the quiet line, no request, cleared by the next real walk). *Partial*: the advancing line and a real 429 were not seen live (none in four calls).
 11. [x] Offline, the last figure stays with its age and the failure
     copy; nothing is cleared.
     *Verified 2026-09-05*: `ItemDetailViewModelMarketTests` (a failed fetch leaves the record field by field; the failure line with the kept figure), `MarketCopyTests`; T018: Link Conditioner was not used — *partial*.

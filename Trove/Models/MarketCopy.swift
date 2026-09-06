@@ -186,6 +186,11 @@ nonisolated enum MarketCopy {
         "\(done) of \(total)"
     }
 
+    /// Decision 38: the walk found nothing due — every matched item was
+    /// refreshed within the hour — so instead of an enabled row that does
+    /// nothing, one quiet line says why. Not a failure, so not in rust.
+    static let nothingDue = "Every figure is under an hour old."
+
     /// Decision 27: the walk stopped by a failure that isn't the rate limit.
     static func refreshStoppedUnreachable(done: Int, total: Int) -> String {
         "\(unreachableNoFigure) \(done) of \(total) refreshed."

@@ -806,12 +806,51 @@ struct SettingsViewModelMarketRefreshTests {
             .product(444), .listings(productID: 444),
         ], "the walk visited the wrong items, or in the wrong order")
         #expect(viewModel.marketRefreshStatus == nil, "a walk that finished said something")
+        #expect(viewModel.marketRefreshNote == nil, "a walk that visited items showed the nothing-due note")
         #expect(viewModel.marketRefreshProgress == nil, "the progress outlived the walk")
         #expect(!viewModel.isBusy)
         #expect(try storedMedian(for: first.id, in: container) == 140_000)
         #expect(try storedMedian(for: second.id, in: container) == 90_000)
         #expect(try storedMedian(for: wanted.id, in: container) == 200_000)
         #expect(try storedMedian(for: fresh.id, in: container) == 111_000, "the skipped item was refreshed anyway")
+    }
+
+    /// Decision 38: every matched item refreshed within the hour → the row
+    /// is enabled, the walk sends nothing, and one quiet line says why. The
+    /// note is not the failure status, and it clears when a later walk has
+    /// something to visit.
+    @Test func aWalkWithNothingDueSaysSoAndSendsNothing() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let owned = Item(name: "Telecaster", sortOrder: 0, reverbProductID: 222)
+        let wanted = WishlistItem(name: "D-18", sortOrder: 0, reverbProductID: 444)
+        context.insert(owned); context.insert(wanted)
+        try context.save()
+        try seedFigure(for: owned.id, kind: .owned, productID: 222, at: t0.addingTimeInterval(-30 * minute), in: context)
+        try seedFigure(for: wanted.id, kind: .wanted, productID: 444, at: t0.addingTimeInterval(-59 * minute), in: context)
+
+        let spy = MarketServiceSpy(products: [], listings: [])
+        let settings = viewModel(context, service: spy)
+        #expect(settings.canRefreshMarketValues, "two matched items leave the row enabled")
+        #expect(settings.marketRefreshNote == nil, "the note showed before any walk")
+
+        await settings.refreshMarketValues()
+
+        #expect(spy.calls.isEmpty, "a walk with nothing due sent a request")
+        #expect(settings.marketRefreshNote == MarketCopy.nothingDue)
+        #expect(settings.marketRefreshStatus == nil, "nothing due was reported as a failure")
+        #expect(settings.marketRefreshProgress == nil)
+        #expect(!settings.isBusy)
+
+        // An hour and a minute later the owned item is due: the note clears
+        // as the walk starts, and the walk itself runs.
+        let later = viewModel(context, service: MarketServiceSpy(
+            products: [.success(product(222)), .success(product(444))],
+            listings: [.success(listings(median: 140_000)), .success(listings(median: 200_000))]
+        ), now: t0.addingTimeInterval(61 * minute))
+        await later.refreshMarketValues()
+        #expect(later.marketRefreshNote == nil, "the note outlived a walk that visited items")
+        #expect(later.marketRefreshStatus == nil)
     }
 
     /// The row's "3 of 12" while it runs, and no second walk behind it: the
