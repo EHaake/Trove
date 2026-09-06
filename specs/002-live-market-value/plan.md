@@ -390,9 +390,12 @@ reads them; the pins move if the person rewords.
   through `MarketAdoption.wholeCurrencyCents(from:)` — the record keeps
   raw cents (the oracle's excellent median is `139_999`; the step's
   default is `140_000`), the slider moves in whole-currency steps from a
-  whole start, and `adopt(cents:)` writes what it is handed, guarded by
-  a test that constructs a step from a non-whole median and asserts the
-  default, both bounds and the written amount are whole. Criterion 8's
+  whole start, and `adopt(cents:)` rounds once more through the same function — a
+  deliberate second application, so *any* caller (not only the step) is
+  held to the invariant, recorded at T022's review; the views never
+  round — guarded by a test that constructs a step from a non-whole
+  median and asserts the default, both bounds and the written amount are
+  whole. Criterion 8's
   "the whole-currency median by default" is therefore a property of the
   step, tested there.
 - **The detail view models — the sheet's phases (Decisions 33–34).** The
@@ -400,7 +403,7 @@ reads them; the pins move if the person rewords.
   (`.notice`, `.pick`, `.fetching(MarketCandidate)`, `.value(MarketValueStep)`),
   with `isFindingMatch` kept as the presentation flag (the wiring scans
   pin it; renaming buys nothing). `findMatch()` sets `.notice` or `.pick`
-  as today. **`setMatch(_:) async`** is guarded — `guard marketActivity == nil, case .pick = sheetStep` — so two quick taps on candidate cards produce one save and one request (B3 `aSecondPickDuringTheFetchIsIgnored`); it then keeps its one save (the id,
+  as today. **`setMatch(_:) async`** is guarded — `guard case .pick = sheetStep` — so two quick taps on candidate cards produce one save and one request (B3 `aSecondPickDuringTheFetchIsIgnored`); the guard does **not** require `marketActivity == nil` (T022's review: that conjunct would silently drop a pick made while the section's own Refresh is in flight, a path that worked before this amendment — the refresher's supersede rule already drops the older fetch's result on a re-match, and `marketActivity` is a flag, not a counter, so the earlier refresh's completion may clear it a moment early: a cosmetic edge, recorded); it then keeps its one save (the id,
   `updatedAt`, the snapshot, `clear` on a changed product); a refused
   save rolls back and closes the sheet without fetching (the T009 rule).
   Then — new — it sets `sheetStep = .fetching(candidate)` and
@@ -412,8 +415,12 @@ reads them; the pins move if the person rewords.
   *after* the save, so a changed product's cleared figure can never date
   a failure line), then `loadMarket()`. **The landing rule, stated
   once:** if `marketState`'s reading is now `.current` **and the sheet
-  is still presented**, `sheetStep = .value(step)` with `chosenCents`
-  the whole-currency median; in every other case the sheet closes
+  is still *this fetch's* presentation** — `isFindingMatch` true *and*
+  `sheetStep` still `.fetching(candidate)` for this candidate (a bare
+  `isFindingMatch` cannot tell this presentation from a picker the person
+  re-opened after swiping the fetch away — T022's review) —
+  `sheetStep = .value(step)` with `chosenCents` the whole-currency
+  median; in every other case the sheet closes
   (`isFindingMatch = false`) and the section shows what it shows today
   (the withheld copy, or the failure line over the kept match). An
   outcome that lands after the person swiped the `.fetching` sheet away
