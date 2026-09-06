@@ -415,7 +415,7 @@ reads them; the pins move if the person rewords.
   notice and clears the activity flag only if its generation is still
   the current one, so an older section refresh landing after a pick can
   neither paint a failure line over the new match nor re-enable the
-  buttons early — it re-derives the section and nothing else), awaits the refresher for this item (`.stillFresh` is a hit —
+  buttons early — it re-derives the section and nothing else), The reverse quadrant — a refresh taking a newer token while a pick's fetch is out, stranding the pick's landing under a spinner — is closed by construction: the detail view models' `refresh()` has exactly one caller, the section's Refresh button through `MarketSectionActions`, and `canRefresh` is false while any fetch runs (grepped at T022's fourth review; the lists' and dashboard's `.refreshable` call their own `load()`, not this). A device-pass line for T018: `closeSheet()` rests the step at `.pick`, whose detent is `.large`, so an adopt or Not now from the medium value step writes a detent change into a dismissing sheet — if it flickers, the fix is a resting phase that leaves the detent alone, decided at T024. awaits the refresher for this item (`.stillFresh` is a hit —
   no second request within the hour, P7), then — **in this order, as
   built (T022's third review corrected this sentence)** — `loadMarket()`
   first, and only then, under the generation rule, clears the activity

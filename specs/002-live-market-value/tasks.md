@@ -1545,6 +1545,8 @@ off with four small notes, folded below (the interim adopt closure, the
   address is a two-file edit (`MarketCopy.contactAddress`, `PRIVACY.md`).
   T018 also checks the dashboard line's lifted amount reads as a real
   medium weight on the device (T013 finding).
+  T018 also watches the value step's dismissal for a detent flicker
+  (the resting step's detent is large; T022's review, round 4).
   `CLAUDE.md`'s false-passing-test paragraph gains a fourth instance
   (post-merge, on `main`): a test asserting an invariant a `precondition`
   already guarantees — correct-looking, green, unfalsifiable (T021's
