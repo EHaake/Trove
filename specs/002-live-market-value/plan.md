@@ -329,7 +329,7 @@ eBay (its own spec, two prerequisites); `003`'s trend-aware ranking (this spec b
 
 ---
 
-## Amendment B — the adopt flow (spec Decisions 33–36, criteria 8, 9, 23; 2026-09-05) — **Draft, revised after review round 1**
+## Amendment B — the adopt flow (spec Decisions 33–36, criteria 8, 9, 23; 2026-09-05) — **Signed off** (skeptical-reviewer, top tier, two rounds, 2026-09-05; Q22 carried to the person at the T020 pause; round 2's seven second-look items folded below)
 
 Folded in at the Phase 3 pause at the person's direction, after using
 the shipped flow: match → return to the section → Refresh → Use as my
@@ -338,7 +338,7 @@ screen of Phase 3 exists, so this amendment reshapes rather than adds:
 the picker sheet gains two phases, the adopt intent takes an amount, and
 the figure record learns two numbers.
 
-### Q22 — the slider's labels once trimming bites (needs the person)
+### Q22 — the slider's labels once trimming bites (needs the person; asked at the T020 pause)
 
 Decision 36 trims the slider to the 10th–90th percentiles, and the
 approved Copy block names the spoken marks "lowest asking price $1,100"
@@ -354,7 +354,10 @@ $1,900"; the hint reads "Slides between the typical low and high asking
 prices."; the true low–high stays in the figure line beside the slider
 ("$1,100–$2,000"), read as today ("Asking prices from $1,100 to
 $2,000"). For fewer than ten listings the trimmed and true ends
-coincide, so "typical" stays true. Until approved, T021 lands the copy
+coincide, so "typical" stays true. Decision 34's own phrase "the low,
+median and high marked" is in the same tension — the marks sit at the
+trimmed ends — so the answer touches that sentence as well as the Copy
+block. Until approved, T021 lands the copy
 constants under these proposed strings marked in a comment, and T024
 reads them; the pins move if the person rewords.
 
@@ -378,8 +381,10 @@ reads them; the pins move if the person rewords.
   are numbers derived from listings, not listing content: G5′ is
   unaffected, and the two-store line holds. **The spec's retention row
   and `PRIVACY.md`'s enumeration of "the last figure" gain "the trimmed
-  bounds"** (both edited with this amendment; `PrivacyPolicyTests`
-  checks nouns, not the field list, so this is a hand edit).
+  bounds"** — the table row (done with this amendment) *and* the Reverb
+  section's "keeps only the summary numbers … a median, a low, a high, a
+  count, a timestamp" sentence (T021); `PrivacyPolicyTests` checks nouns,
+  not the field list, so both are hand edits.
 - **Whole currency, once.** `MarketValueStep` is constructed with
   `lowerCents`, `upperCents` and the default `chosenCents` each passed
   through `MarketAdoption.wholeCurrencyCents(from:)` — the record keeps
@@ -395,7 +400,7 @@ reads them; the pins move if the person rewords.
   (`.notice`, `.pick`, `.fetching(MarketCandidate)`, `.value(MarketValueStep)`),
   with `isFindingMatch` kept as the presentation flag (the wiring scans
   pin it; renaming buys nothing). `findMatch()` sets `.notice` or `.pick`
-  as today. **`setMatch(_:) async`** keeps its one save (the id,
+  as today. **`setMatch(_:) async`** is guarded — `guard marketActivity == nil, case .pick = sheetStep` — so two quick taps on candidate cards produce one save and one request (B3 `aSecondPickDuringTheFetchIsIgnored`); it then keeps its one save (the id,
   `updatedAt`, the snapshot, `clear` on a changed product); a refused
   save rolls back and closes the sheet without fetching (the T009 rule).
   Then — new — it sets `sheetStep = .fetching(candidate)` and
@@ -418,10 +423,18 @@ reads them; the pins move if the person rewords.
   and nothing is refreshing; it is a no-op otherwise (`canAdopt` already
   gates the button). `adopt(cents:)` replaces `adopt()`: it writes the
   amount, bumps `updatedAt` on owned, saves once, writes no history,
-  fetches nothing, closes the sheet. `MarketValueStep { medianCents,
+  fetches nothing, closes the sheet; a refused save rolls back, sets
+  `adoptFailureMessage` as `adopt()` does today, returns `false`, and
+  still closes the sheet — the section shows the message, the value
+  unchanged (the existing refused-save tests keep their shape). `MarketValueStep { medianCents,
   lowCents, highCents, count, lowerCents, upperCents, chosenCents }` is
-  a plain value the view binds to; `setChosen(_ cents:)` clamps to the
-  bounds. `dismissValueStep()` (Not now, swipe-down) closes without
+  a plain value the view binds to; `setChosen(_ cents:)` rounds to whole
+  currency **and** clamps to the bounds, so the invariant lives in the
+  value type once and no view path can write unrounded cents. A
+  zero-width range (`lowerCents == upperCents`, three identical asking
+  prices) is legal: the step's `chosenCents` is fixed at that amount,
+  `setChosen` is the identity, and the slider draws a single mark with
+  the drag inert and the button live. `dismissValueStep()` (Not now, swipe-down) closes without
   writing. `currentFigureFetchedAt` and the notice mapping are unchanged.
 - **The picker.** `MarketMatchViewModel` is unchanged. `MarketMatchView`'s
   `pick` closure becomes `(MarketCandidate) async -> Void`, called from
@@ -471,12 +484,12 @@ reads them; the pins move if the person rewords.
 
 | # | Test | Red when |
 |---|---|---|
-| B1 | `MarketFigureComputationTests`: the oracle's excellent bucket yields `p10Cents`/`p90Cents` equal to its 4th and 31st sorted prices (the numbers recorded at implementation from the fixture); `n = 3` → low and high; a synthetic set of twelve with one absurd high shows `p90 < high` and `p10 == low` only if the low is within the first tenth | the percentile computed as a linear interpolation, or the rank off by one |
+| B1 | `MarketFigureComputationTests`: the oracle's excellent bucket yields `p10Cents`/`p90Cents` equal to its 4th and 31st sorted prices (the numbers recorded at implementation from the fixture); `n = 3` → low and high; a synthetic set of twelve with one absurd high asserts `p10Cents == sorted[1]` and `p90Cents == sorted[10]` outright (so `p90 < high`) | the percentile computed as a linear interpolation, or the rank off by one |
 | B2 | `MarketLocalSchemaTests` G4: the allowlist gains exactly the two names | a third field slips in |
-| B3 | Detail VMs (mirrored): `setMatchRefreshesAndOpensTheValueStep` (spy sees `product` then `listings`; `sheetStep == .value` with `chosenCents == wholeCurrency(median)`; `marketActivity` was `.refreshing` mid-flight through the gated spy and is nil after; the record on a second context); `aFreshRePickSkipsTheFetch` (figure 5 min old → `.value`, spy uncalled); `aWithheldPickClosesToTheSection`; `aFailedPickClosesWithTheNotice` (`.unreachable`, the match kept, `isFindingMatch == false`, the notice carrying no date after a changed product); `aDismissedFetchLandsQuietly` (swipe-down mid-fetch → the outcome lands, `isFindingMatch` stays false, the section current); `adoptWritesTheChosenAmountNotTheMedian` (choose `upper`, second context reads `upper`; **mutation: write the median → red**); `adoptStillWritesNoHistoryAndFetchesNothing`; `openValueStepNeedsACurrentReading` (withheld/stale/refreshing → no-op); `theChosenAmountIsClampedToTheBounds`; `theStepIsWholeCurrencyFromANonWholeMedian` | each named mutation |
+| B3 | Detail VMs (mirrored): `setMatchRefreshesAndOpensTheValueStep` (spy sees `product` then `listings`; `sheetStep == .value` with `chosenCents == wholeCurrency(median)`; `marketActivity` was `.refreshing` mid-flight through the gated spy and is nil after; the record on a second context); `aFreshRePickSkipsTheFetch` (figure 5 min old → `.value`, spy uncalled); `aWithheldPickClosesToTheSection`; `aFailedPickClosesWithTheNotice` (`.unreachable`, the match kept, `isFindingMatch == false`, the notice carrying no date after a changed product); `aDismissedFetchLandsQuietly` (swipe-down mid-fetch → the outcome lands, `isFindingMatch` stays false, the section current); `adoptWritesTheChosenAmountNotTheMedian` (choose `upper`, second context reads `upper`; **mutation: write the median → red**); `adoptStillWritesNoHistoryAndFetchesNothing`; `openValueStepNeedsACurrentReading` (withheld/stale/refreshing → no-op); `theChosenAmountIsClampedAndRounded` (`setChosen` on 1_234_56 → whole; above `upper` → `upper`); `theStepIsWholeCurrencyFromANonWholeMedian`; `aSecondPickDuringTheFetchIsIgnored` (two picks through the gated spy → one `listings` call, one save); `aRefusedAdoptSaveReportsAndCloses` | each named mutation |
 | B4 | `MarketValueBoundsTests`: nil percentiles → low/high; present → themselves | the fallback dropped |
 | B5 | `MarketWiringTests`: the sheet switches on `sheetStep` and composes all four phases; the section's adopt action calls `openValueStep()` (a scan over both detail views' `MarketSectionActions(` argument lists); `MarketValueSlider.swift` has no `Slider(` (the boundary regex) and carries `accessibilityAdjustableAction`; the detents by phase; `noticeIsPending` appears nowhere | a system `Slider`; a phase dropped; the old flag kept |
-| B6 | `MarketValueSliderRenderTests`: with bounds 1000 / 2000 and median 1300 (off-centre, strictly inside — the fraction 0.3 written as a literal), the brass fill's measured extent is 30 % of the track; the fill ink within ΔE of `accentBrass`; the adjustable action moves the chosen amount by exactly `adjustableStep` | the default not the median; a midpoint default; the fill token swapped; the step constant unread |
+| B6 | `MarketValueSliderRenderTests`: with bounds 1000 / 2000 and median 1300 (off-centre, strictly inside — the fraction 0.3 written as a literal), the brass fill's measured extent is 30 % of the track; the fill ink within ΔE of `accentBrass`; the adjustable action moves the chosen amount by exactly `adjustableStep`; a drag position within `snapTolerance` of the median's x yields `chosenCents == medianCents` and one just outside yields the mapped value; bounds 1000 / 1000 draw a single mark, the drag is inert and the amount stays 1000 | the default not the median; a midpoint default; the fill token swapped; the step constant unread; the snap removed; a NaN on a zero-width range |
 | B7 | `MarketCopyTests`: every new string whole, `useAmount` at both kinds, the mark labels (Q22's wording) | — |
 | B8 | UI: none new — the value step needs a live pick (Q13); T018 gains the flow: pick → fetching → slider at the median → drag → Use → the item's value on the detail and the dashboard; Not now writes nothing; the section's Use as my value opens the same step; swipe-down mid-fetch leaves the section correct | — |
 

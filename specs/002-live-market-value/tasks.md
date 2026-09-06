@@ -1178,6 +1178,99 @@ only — technical detail lives in `plan.md` and the commit log).
   red.
   *Done when*: UI target green twice, mutations recorded.
 
+## Phase 3b — Amendment B, the adopt flow (spec Decisions 33–36; plan Amendment B, signed off 2026-09-05) — **Draft**
+
+Folded in at the Phase 3 pause. The frame comes first and is the
+person's gate; T021 and T022 need no frame and run while it waits; T023
+and T024 wait for the frame's approval and Q22's answer.
+
+- [ ] **T020 — The value-step frame. [person: approves; answers Q22]**
+  Per plan Amendment B (Design) and spec's *(B)* Design line. One
+  artboard, `ValueStep.dc.html`, drawn in session as the Phase 2 frames
+  were, joined to the existing canvas and rendered to PNG: the sheet at
+  the medium detent over the item detail — the title, the figure as the
+  section draws it with the true spread, the slider (a thin `divider`
+  track, the brass fill to the knob, three marks with the median's
+  taller, the trimmed-bound amounts beneath the ends), the guidance
+  line, the filled button with the live amount, Not now. `tokens.md`
+  gains "The value step and the slider" with empty "as implemented"
+  cells. **Q22 goes to the person with the frame**: the spoken marks
+  and hint once trimming bites, and Decision 34's "low, median and
+  high" phrase.
+  *Done when*: the frame and PNG committed, the person's approval and
+  Q22's answer recorded here; the Copy block and Decision 34 amended on
+  the answer.
+
+- [ ] **T021 — The trimmed bounds: computation, record, copy, retention.**
+  Per plan Amendment B (the bounds; whole currency, once; copy) and
+  Decision 36. `MarketFigure` gains `p10Cents`/`p90Cents` (nearest rank,
+  `⌈P/100·n⌉`-th smallest); `MarketFigureRecord` gains the two optional
+  fields (G4 +2); `MarketSnapshotValue` carries them; `MarketLocalStore.
+  record` writes them; `MarketValueBounds.bounds(for:)` is the one
+  fallback; `MarketValueStep` (the value type, `setChosen` rounding and
+  clamping, the zero-width case) lives with it. `MarketCopy` gains the
+  value step's strings — Q22's proposed wording for the marks and hint,
+  marked pending in a comment. `PRIVACY.md`'s Reverb sentence ("keeps
+  only the summary numbers … a median, a low, a high, a count, a
+  timestamp") gains the trimmed range (the table row already has it).
+  Tests: B1 (the oracle's 4th and 31st, recorded; `n = 3`; the twelve
+  with an outlier asserting `sorted[1]`/`sorted[10]`), B2, B4, B7, the
+  step's whole-currency and clamp-and-round tests, the zero-width step.
+  Mutations: linear interpolation → B1 red; a third record field → G4
+  red; the fallback dropped → B4 red; `setChosen` without rounding →
+  red. Foundational: reviewer on the diff.
+  *Done when*: green, mutations recorded, full suite green with count.
+
+- [ ] **T022 — The detail view models: the sheet's phases, the pick's refresh, `adopt(cents:)`.**
+  Per plan Amendment B (the detail view models; the picker) and
+  Decisions 33–35. `sheetStep: MarketSheetStep` replaces `noticeIsPending`
+  (removed, not derived); `setMatch(_:) async` guarded against a second
+  pick, setting `.fetching(candidate)` and `marketActivity`, awaiting the
+  refresher, the notice's date read after the save, the landing rule
+  stated once (a `.current` reading with the sheet still presented →
+  `.value`, else close; a landing after dismissal never re-presents);
+  `openValueStep()`; `adopt(cents:)` replacing `adopt()` with the
+  refused-save behavior kept; `dismissValueStep()`. `MarketMatchView`'s
+  `pick` becomes `async`, called in a `Task`; the wiring pins move
+  (`noticeIsPending` → `sheetStep`; the detent `onChange`). Tests: B3 in
+  both suites, mirrored; the existing adopt tests move to `adopt(cents:)`
+  and `openValueStep`. Mutations: write the median instead of the chosen
+  amount → red; re-present after dismissal → red; drop the second-pick
+  guard → red; drop `acknowledgeNotice` still red from T009's test.
+  Foundational: reviewer on the diff.
+  *Done when*: green, mutations recorded, full suite green with count.
+
+- [ ] **T023 — `MarketValueSlider`.** *(after T020's approval)*
+  Per plan Amendment B (the views — the slider) and the frame. Trove's
+  own control in `Trove/Views/Market/MarketValueSlider.swift`: the
+  track, the fill, three marks, the end amounts, the drag mapping in
+  whole-currency steps with `snapTolerance` (6 pt) to the median,
+  `accessibilityAdjustableAction` by `adjustableStep` (1 % of the range,
+  whole currency, at least one unit), label / value / hint from
+  `MarketCopy`, the zero-width range drawn as one mark with the drag
+  inert. Tests: B6 in full (the 0.3 fraction from literals, the ΔE, the
+  adjustable step, the snap inside and outside the tolerance, the
+  zero-width case); the file joins the vocabulary scan; B5's no-`Slider(`
+  scan. Mutations: default at the midpoint → red; the fill token swapped
+  → red; the snap removed → red; a system `Slider` → red.
+  *Done when*: green, mutations recorded; the slider seen rendered
+  against the frame.
+
+- [ ] **T024 — `MarketValueStepView` and the sheet's four phases.** *(after T023)*
+  Per plan Amendment B (the views) and the frame. The sheet switches on
+  `sheetStep`: notice, picker, the fetching card with the status line,
+  the value step (title, the figure and true spread, the slider, the
+  guidance line, the filled button with the live amount, Not now);
+  detents `.medium` / `.large` by phase; the section's adopt action
+  calls `openValueStep()`; identifiers `market.value.slider`,
+  `market.value.use`, `market.value.notNow`. Tests: B5 in full; the
+  vocabulary scan gains the file; `MarketCopy` pins for any string the
+  view composes. Mutations: a phase dropped → red; the adopt action
+  calling `adopt` directly → the actions scan red.
+  *Done when*: green, mutations recorded; the four phases seen on the
+  simulator through a live pick (the by-hand half), with what was seen
+  named here; T018 gains B8's lines.
+
 ## Phase 4 — Contract and policy
 
 - [x] **T016a — The CSV column and the header tolerance — the atomic commit.**
@@ -1324,6 +1417,11 @@ only — technical detail lives in `plan.md` and the commit log).
 ## Phase 5 — Verification and close-out
 
 - [ ] **T018 — Device pass with the live API. [person: watches the live half]**
+  *Amendment B (B8) adds*: pick → fetching card → the value step at the
+  median → drag → Use → the item's value on the detail and the dashboard;
+  Not now writes nothing; the section's Use as my value opens the same
+  step; swipe-down mid-fetch leaves the section correct and never
+  re-presents the sheet.
   Per plan §11 and every criterion — the second and last time the
   network is touched. iPhone 17 Pro simulator. Dev store: match a real
   Telecaster (the notice once; Not now first, then Continue — and after
