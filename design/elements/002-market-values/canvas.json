@@ -121,6 +121,14 @@
       "title": "Picker · failed"
     },
     {
+      "file": "ValueStep.dc.html",
+      "x": 2465,
+      "y": 2340,
+      "w": 393,
+      "h": 852,
+      "title": "Value step (Amendment B)"
+    },
+    {
       "file": "DashboardMarketLine.dc.html",
       "x": 0,
       "y": 3332,
@@ -157,7 +165,7 @@
       "x": -720,
       "y": 2340,
       "w": 620,
-      "text": "Surface 2 — one sheet, two phases. The notice at a medium detent; the picker at large. The sheet's bar (Cancel, title) is system chrome and drawn in the system face on purpose — bespoke inside the page, system in the bars. The card body picks; the footer strip under the hairline is the only place the outward link lives. Thumbnails are flat silhouettes standing in for Reverb's photos."
+      "text": "Surface 2 — one sheet, two phases. The notice at a medium detent; the picker at large. The sheet's bar (Cancel, title) is system chrome and drawn in the system face on purpose — bespoke inside the page, system in the bars. The card body picks; the footer strip under the hairline is the only place the outward link lives. Thumbnails are flat silhouettes standing in for Reverb's photos. Amendment B (2026-09-05) adds the third phase at the row's end: the value step at the medium detent — the figure and true spread, the slider between the trimmed bounds with the median marked and defaulted, the guidance line, Use with the live amount, Not now."
     },
     {
       "id": "row-dashboard",

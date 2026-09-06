@@ -1178,14 +1178,16 @@ only — technical detail lives in `plan.md` and the commit log).
   red.
   *Done when*: UI target green twice, mutations recorded.
 
-## Phase 3b — Amendment B, the adopt flow (spec Decisions 33–36; plan Amendment B, signed off 2026-09-05) — **Draft**
+## Phase 3b — Amendment B, the adopt flow (spec Decisions 33–36; plan Amendment B, signed off 2026-09-05) — **Signed off** (skeptical-reviewer, top tier, two rounds, 2026-09-05)
 
 Folded in at the Phase 3 pause. The frame comes first and is the
 person's gate; T021 and T022 need no frame and run while it waits; T023
 and T024 wait for the frame's approval and Q22's answer. Reviewed by the
 skeptical-reviewer at the top tier (2026-09-05): round 1 "fix and
 re-review" — T024's Done-when had asked for a live pick against the
-two-touches rule, plus seven should-fixes, all folded.
+two-touches rule, plus seven should-fixes, all folded; round 2 signed
+off with four small notes, folded below (the interim adopt closure, the
+`cents(atX:` scan, two wordings).
 
 - [ ] **T020 — The value-step frame. [person: approves; answers Q22]**
   Per plan Amendment B (Design) and spec's *(B)* Design line. One
@@ -1241,7 +1243,11 @@ two-touches rule, plus seven should-fixes, all folded.
   as today and, for `.fetching` and `.value`, a bare `ProgressView`
   placeholder with a comment naming T024 — B5's "composes all four
   phases" is T024's; T022 takes B5's one line that is its own guard,
-  `noticeIsPending` appears nowhere. Tests: B3 in both suites, mirrored,
+  `noticeIsPending` appears nowhere. **Interim adopt closure**: until
+  T024 rewires it, the section's adopt action calls `adopt(cents:
+  wholeCurrency(median))` — today's one-tap behavior — so no commit
+  leaves Use as my value opening a placeholder sheet (the header's rule);
+  `openValueStep()` exists and is tested but has no caller until T024. Tests: B3 in both suites, mirrored,
   **less the step's own tests** (`theChosenAmountIsClampedAndRounded`,
   `theStepIsWholeCurrencyFromANonWholeMedian` live on the value type in
   T021; T022 keeps the VM-level assertion that `adopt(cents:)` writes a
@@ -1267,12 +1273,13 @@ two-touches rule, plus seven should-fixes, all folded.
   fraction from literals, the ΔE, the adjustable step, the snap inside
   and outside the tolerance through the seam, the zero-width case); the
   file joins the vocabulary scan; B5's no-`Slider(` and
-  `accessibilityAdjustableAction` scans. Mutations: default at the
+  `accessibilityAdjustableAction` scans, plus a scan that the file's
+  gesture calls `cents(atX:` (so the pure seam is what the gesture uses). Mutations: default at the
   midpoint → red; the fill token swapped → red; the snap removed → red;
   `adjustableStep` unread (a literal in its place) → red; the zero-width
   range dividing by zero (a NaN fraction) → red; a system `Slider` → red.
-  *Done when*: green, mutations recorded; the slider seen rendered
-  against the frame.
+  *Done when*: green, mutations recorded, full suite green with count;
+  the slider seen rendered against the frame.
 
 - [ ] **T024 — `MarketValueStepView` and the sheet's four phases.** *(after T023)*
   Per plan Amendment B (the views) and the frame. The sheet switches on
@@ -1289,8 +1296,8 @@ two-touches rule, plus seven should-fixes, all folded.
   pins for any string the view composes. Mutations: a phase dropped →
   red; the adopt action calling `adopt` directly → the actions scan red.
   *Done when*: green, mutations recorded, full suite green with count;
-  the four phases seen rendered from fixture-built steps through a
-  temporary harness (removed before commit) against the frame, with
+  the four phases seen rendered — the value step from fixture-built
+  steps — through a temporary harness (removed before commit) against the frame, with
   what was seen named here — **the live pick is T018's** (its B8 lines
   are already in place; the value step cannot be reached under
   `-uiTesting`, per Q13 and the two-touches rule); `tokens.md`'s "as

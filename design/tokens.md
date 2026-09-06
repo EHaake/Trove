@@ -446,6 +446,30 @@ coverage, which P5 forbids).
 | Register | IBM Plex Mono `12.5px`, `textMonoMeta` (45 %), tabular, `white-space: nowrap`; the amount alone at 500 in `textBody` (75 %) — never brass, never Archivo, so it cannot read as the total | `typography.monoMeta` (mono **11.5**) + `textMonoMeta`, `.monospacedDigit()`; the amount's run gets `monoMeta.weight(.medium)` + `textBody`. The nearest existing role, not a new one: the alternatives are `monoValue` (15, the PAID cell's register — far too loud for a line that must not read as the total) and a twelfth mono size for one line. Colours are the designed tokens exactly |
 | Inseparability | one string, one line; if it must shrink, the whole line scales — the coverage never wraps or clips away from the number | as designed — one `Text` over one `AttributedString` built from `viewModel.marketLine` (`MarketCopy.dashboardLine`), so it is one accessibility element and the view never composes the parts; `.lineLimit(1)` + `.minimumScaleFactor(0.6)`. The lift is a range search for `MarketCopy.median(cents:)` inside the line, falling back to the uniform line if it isn't found — legible rather than wrong |
 
+### The value step and the slider (`002` Amendment B)
+
+Source: `design/elements/002-market-values/ValueStep.dc.html` (drawn
+2026-09-05; approval pending in T020). The sheet's third phase at the
+medium detent: the title, the figure as the section draws it with the
+true spread, Trove's own slider between the trimmed bounds with the
+median marked and defaulted, the guidance line, the filled button with
+the live amount, Not now.
+
+| Property | Value | As implemented |
+|---|---|---|
+| Sheet | medium detent (~`500px` drawn), `22px 24px 32px` padding, `20px` between blocks | |
+| Title | Archivo 600 `19px` `textPrimary` — "Set your value" / "Set your estimated cost" | |
+| Figure block | the section's own registers: source line `12.5px` 55 %, median IBM Plex Mono 500 `19px`, separator and count `12.5px` mono 45 %, the **true** spread `11.5px` mono 45 % | |
+| Track | `2px`, `divider`, `1px` radius, full width; the filled portion from the left end to the knob in `accentBrass` | |
+| Knob | `20px` circle, `accentBrass`, a `3px` `background` ring and `0 2px 6px rgba(0,0,0,0.4)`; centred on the chosen amount's fraction of the bounds | |
+| Marks | the two ends `1px × 12px` `divider`; the median `1.5px × 18px` `accentBrassDim`, taller than the ends | |
+| Labels | the trimmed bounds' amounts under the ends, IBM Plex Mono `11px` 45 %; "median" under its mark, mono `10px` 40 % tracked `0.08em` | |
+| Default | the knob at the whole-currency median | |
+| Snap / step | snaps to the median within `6pt`; the accessibility step is 1 % of the range in whole currency, at least one unit | |
+| Guidance line | IBM Plex Sans `12.5px`, line-height `1.45`, 55 % | |
+| Buttons | filled brass "Use $1,450 as my value" and outlined "Not now", each `48pt`, stacked with `8px` gap (the notice's pair) | |
+| Zero-width range | one mark, the drag inert, the button live at that amount | |
+
 ### Market trend arrow (`002`)
 
 `TrendArrow` — the market's direction beside a row's own figure (spec
