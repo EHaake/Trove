@@ -159,6 +159,26 @@ a reading at least a week older than its latest and the two differ by
    branch, whose only effect is on that launch's in-memory stores. The person's own device shows the
    feature as its history accrues.
 
+10. ***Delegated* — a withheld figure with an older stored trend ranks
+    neutral.** Not named in "The ranking" above; the plan ranks it with
+    the unmatched and the stale, since it has no current figure and
+    nothing about it is guessed (plan Q2, sign-off N2).
+11. ***Delegated* — criterion 11 reworded; Dynamic Type to the roadmap.**
+    Every font in the app is fixed-size (001's recorded limitation), so
+    "at the largest accessibility text size" verifies nothing; the
+    criterion now names its substance, wrap-not-truncate and alignment.
+    Dynamic Type is worth its own spec and goes to `ROADMAP.md` as a
+    future entry in the post-merge docs pass (tasks T007), not into
+    this one.
+12. ***Delegated* — the list rows keep drawing arrows on stale figures
+    for now.** Since 002 the item list and wishlist rows draw the trend
+    arrow even when the figure is over thirty days old; the Sell Plan
+    will not. A mild inconsistency, not a defect in this spec's scope:
+    recorded for a small `fix/` branch after this spec merges, noted in
+    the same docs pass.
+13. ***Delegated* — "12 %" is set with a narrow no-break space** so the
+    number and the sign never split across lines (plan Q5).
+
 ## Acceptance criteria
 
 Each is something a person can check on the built app, or a test can
@@ -188,9 +208,12 @@ check against fixtures. The plan will cite what verifies each.
    `001` orders it, with no extra text.
 10. [ ] Every new string passes `002`'s vocabulary rule for the fetched
     figure, and the reason line is read by VoiceOver in full.
-11. [ ] At the largest accessibility text size the reason line wraps
+11. [ ] The reason line wraps rather than truncates at the row's width,
     and the row's checkbox, dial and value stay aligned with rows that
-    have no such line.
+    have no such line. (Reworded at plan sign-off, 2026-09-06, with the
+    person's delegation: the app's type is fixed-size — a limitation
+    recorded in 001's plan — so the text-size setting changes nothing
+    here; Decision 11 below.)
 12. [ ] Under `-uiTesting` with `-seedSellPlan` the seeded history
     produces at least one rising, one falling and one neutral candidate,
     so the UI test and the device pass exercise all three; under
