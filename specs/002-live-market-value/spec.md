@@ -1,5 +1,7 @@
 # 002 — Market Values
 
+**Amendment B — the adopt flow — Draft (2026-09-05), pending the person's approval.** Decisions 33–36, the amended Adopting and Refresh sections, criteria 8, 9 and 23, the Copy block "The value step" and the Design line are marked *(B)*. Drafted by Claude Code from the person's direction at the Phase 3 pause; every call in it is theirs to confirm or change.
+
 Status: **Approved** (2026-09-03, the day after drafting; one
 proposal — the year's cap on history — overturned at review as Decision
 16, and the seventeen drafting proposals P1–P17 became decisions on
@@ -132,20 +134,31 @@ with one tap (Decision 2).
 
 ### Adopting
 
-- "Use as my value" (owned) / "Use as estimated cost" (wanted) writes
-  the median, rounded to whole currency, into the person's own value and
-  marks the item edited (P6). From then on it is simply their value —
-  the app records no provenance, and every figure that reads the value
-  (totals, the Sell Plan pool, the row's vs-paid) reads it as before.
+- *(B)* Adopting happens in the sheet's **value step** (Decision 34):
+  after a pick's refresh lands with a figure — or when the section's
+  "Use as my value" / "Use as estimated cost" is tapped later — the
+  sheet shows the figure and a **slider** over the trimmed range of
+  asking prices (Decision 36), defaulting to the median with the low,
+  median and high marked. One filled button writes the chosen amount,
+  rounded to whole currency, into the person's own value and marks the
+  item edited (P6); **Not now** writes nothing. From then on it is
+  simply their value — the app records no provenance, and every figure
+  that reads the value (totals, the Sell Plan pool, the row's vs-paid)
+  reads it as before.
+- *(B)* The slider sets the person's value only (Decision 35): the market
+  figure stays the median everywhere — the section, the history, the
+  trend, the dashboard — whatever amount the person adopts.
 - Adopting does not touch the history (P6), and does not refresh.
 
 ### Refresh and budget
 
 - Refresh is a deliberate act: the market section's refresh on either
-  detail screen, and "Refresh market values" in Settings, which walks
+  detail screen, "Refresh market values" in Settings, which walks
   every matched item in turn with visible progress and stops cleanly
-  when Reverb's rate limit answers (P7). The app never fetches in the
-  background, on launch, or on appear (Decision 4).
+  when Reverb's rate limit answers (P7), and *(B)* **the pick of a
+  match**, which refreshes that product at once in the same sheet
+  (Decision 33). The app never fetches in the background, on launch, or
+  on appear (Decision 4).
 - An item refreshed within the last hour isn't fetched again; the
   section shows the age it has (P7).
 - Offline or failed: the last figure stays, with its age, and the
@@ -240,6 +253,19 @@ nothing crosses items (see Non-goals).
 - Copy this spec doesn't give — the never-refreshed line, the wanted
   item's withheld sentence, the picker's strings, the link label — is
   proposed in `plan.md` (Q7) and joins this section on plan approval.
+- *(B)* **The value step** (Amendment B): the status line while a pick's
+  refresh runs, "Fetching asking prices…"; the step's title **Set your
+  value** (owned) / **Set your estimated cost** (wanted); the figure as
+  the section shows it ("$1,450 · 12 listed", "$1,100–$2,000"); the
+  slider's ends labelled with their amounts and its median mark
+  "median"; the guidance line "Drag toward the high end if yours is in
+  better shape than most."; the filled button **Use $1,450 as my value**
+  / **Use $349 as estimated cost** (the amount live as the slider
+  moves); the other button **Not now**. Accessibility: the slider is
+  "Your value" / "Your estimated cost" with the amount as its value and
+  the hint "Slides between the lowest and highest asking prices."; the
+  marks read "lowest asking price $1,100", "median asking price $1,450",
+  "highest asking price $2,000".
 
 ## Design requirements
 
@@ -265,6 +291,11 @@ nothing crosses items (see Non-goals).
   candidates that the exact variant is on the list when Reverb has it.
 - Every action is a single tap; the Reverb link opens the product page
   in the browser.
+- *(B)* One frame for the sheet's value step (Amendment B): the figure,
+  the slider with its three marks, the guidance line and the two
+  buttons — a thin track and marks in the app's instrument language, no
+  rendered materials; the slider is Trove's own control, not a system
+  `Slider`, since it sits inside the page.
 
 ## Decisions record
 
@@ -416,6 +447,44 @@ Added 2026-09-05, at the Phase 4 pause (the person):
     narrowing needs (Reverb's listing years are build years) and what
     `docs/csv-reference.md` already said at T016b; P18 now says it too.
 
+Added 2026-09-05, Amendment B — the adopt flow (the person's direction at
+the Phase 3 pause, drafted by Claude Code; **Draft** until approved):
+
+33. **A pick refreshes.** Choosing a candidate fetches that product's
+    listings at once, in the same sheet, with a status line while it
+    runs. This is the person's own tap: criterion 9's list of fetches
+    the app never makes — launch, appear, background, within the hour —
+    is unchanged, and the pick joins the section's Refresh and Settings'
+    walk as the third deliberate act. A re-picked product whose figure
+    is under an hour old is not fetched again (P7); the sheet goes
+    straight to the value step. If the refresh fails, the sheet closes
+    to the section, which shows the failure line as today; the match
+    stands.
+34. **Adopting happens in the sheet, with a slider.** With a figure in
+    hand the sheet's third phase — the value step — shows the figure, a
+    slider defaulting to the median with the low, median and high
+    marked, a one-line guidance sentence, and two buttons: the filled
+    one writes the chosen amount as the person's value and closes the
+    sheet; **Not now** closes without writing. The section's "Use as my
+    value" / "Use as estimated cost" opens the same step later, so there
+    is one adopt control. A withheld or stale reading offers no value
+    step, as it offers no adopt today. Three taps become one flow: pick,
+    adjust, use.
+35. **The slider sets the person's value only.** The market figure stays
+    the median: the section shows it, the history records it, the trend
+    compares it, the dashboard sums it. The chosen amount is written
+    exactly as a typed value would be — no provenance, no history write
+    — so trending is untouched by what anyone adopts (P6, Decision 7).
+36. **The slider's bounds are trimmed.** One mispriced or bundled
+    listing drags an extreme, so the slider runs from the 10th to the
+    90th percentile of the counted listings' asking prices (nearest
+    rank, whole currency), which for small counts coincide with the low
+    and high; the text spread beside it stays the true low–high. The
+    edit form still takes any amount by hand. A wrong *product* is not a
+    range problem: Change match is the fix, and the picker's count and
+    lowest price are there to make a doubtful candidate visible before
+    the pick.
+
 Proposed at drafting, 2026-09-03, by Claude Code, and decisions since
 the spec's approval the same day (P13 as reworded under Decision 16):
 
@@ -432,7 +501,7 @@ the spec's approval the same day (P13 as reworded under Decision 16):
 - **P5. The dashboard variant's form** is the design pass's — a second
   line under the current-value figure or a toggle — but the coverage
   qualifier is mandatory and inseparable from the number.
-- **P6. Adopting** writes the whole-currency median, bumps the item's
+- **P6. Adopting** writes the whole-currency median *(B: the amount chosen on the slider, the median by default — Decisions 34–35)*, bumps the item's
   edited time where it has one (owned items — Decision 24), records no
   provenance, and leaves the history alone.
 - **P7. Budget**: an item refreshed within the hour isn't re-fetched;
@@ -517,14 +586,16 @@ the plan's Amendment A):
    the product.
 7. [ ] Only listings in the app's currency count, and the count
    reflects that.
-8. [ ] **Use as my value** writes the whole-currency median into the
+8. [ ] *(B)* **Use as my value** writes the amount chosen on the value
+   step's slider — the whole-currency median by default — into the
    item's value; the dashboard total, the row's vs-paid and the Sell
    Plan pool then read it exactly as a typed value; **Use as estimated
-   cost** does the same for a wanted item's cost. Neither refreshes,
-   neither changes the history.
-9. [ ] No fetch happens on launch, on appear, in the background, or
+   cost** does the same for a wanted item's cost. Adopting neither
+   refreshes nor changes the history.
+9. [ ] *(B)* No fetch happens on launch, on appear, in the background, or
    within an hour of an item's last refresh; refreshing is only the
-   section's action or Settings' **Refresh market values**.
+   section's action, Settings' **Refresh market values**, or the pick
+   of a match in the sheet (Decision 33).
 10. [ ] Settings' refresh walks every matched item with visible
     progress and stops cleanly, with the rate-limit copy, when Reverb
     answers with its limit — and, with "Couldn't reach Reverb. N of M
@@ -573,6 +644,13 @@ the plan's Amendment A):
 22. [ ] With fewer than three listings after narrowing, the section
     shows the all-years figure under the all-years copy; clearing the
     year restores the plain figure on the next refresh.
+23. [ ] *(B)* Picking a candidate refreshes it in the sheet with the
+    status line and, with a figure, shows the value step: the slider
+    defaults to the median between trimmed bounds with the true spread
+    beside it; the filled button writes the chosen amount and closes the
+    sheet; **Not now** writes nothing; the section's adopt action opens
+    the same step; the history point that refresh recorded is the
+    median, whatever amount was chosen.
 
 ## Non-goals (explicit)
 
