@@ -1,6 +1,6 @@
 # Spec 003 — Trend-aware Sell Plan
 
-**Status**: Draft — pending the person's approval
+**Status**: Approved — by the person, 2026-09-06 (Draft authored the same day)
 **Depends on**: `001-core-inventory` (the Sell Plan), `002-live-market-value` (the on-device history and its trend)
 **Authored**: 2026-09-06, in the Claude Code session at the person's direction (the constitution's venue clause); every substantive call below is the person's, and the two marked *delegated* were left to Claude Code and can be overturned before approval.
 
