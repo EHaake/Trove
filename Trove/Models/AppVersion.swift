@@ -3,7 +3,7 @@ import Foundation
 /// The running build's version and build number, for the Settings screen's
 /// About section (013) — read from the bundle, never typed into a view, so
 /// the screen can't go stale against the project's marketing version.
-struct AppVersion: Equatable, Sendable {
+nonisolated struct AppVersion: Equatable, Sendable {
     let version: String
     let build: String
 

@@ -142,8 +142,8 @@ Four surfaces are deliberately outside the rule, all because they have no
 fill to plate: capsule chips (category, condition, cost presets) are
 outlined pills; the dashboard's un-valued callout is unfilled by design —
 the mock distinguishes it from the figures card above by outlining it
-rather than raising it; and the wishlist detail's market-price ghost and
-sell-plan CTA are outlined, unfilled surfaces for the same reason (added
+rather than raising it; and the wishlist detail's sell-plan CTA (and, until `002`
+replaced it, its market-price ghost) are outlined, unfilled surfaces for the same reason (added
 to this list at the T039 review — the rule as first written didn't cover
 them, and a literal reading would have plated both).
 
@@ -309,7 +309,7 @@ row is omitted as redundant with it.
 | Cost value | Archivo 600 `34px`, line-height `1`, `accentBrass`, tabular |
 | Cost sub-line | IBM Plex Mono `11px`, letter-spacing `0.06em`, `textMonoMeta` — "YOUR ESTIMATE · ADDED …" |
 | DETAILS / NOTES | identical treatment to the item detail's tables above (shared `DetailSection` / `DetailRow` / `DetailProse`), including its mono-heading divergence; rows Category and Added only — the estimated cost is the screen's headline figure already, and printing it again to the cent under a whole-dollar hero was removed at `T044` |
-| Market-price ghost | `1px dashed divider`, `3px` radius, padding `18px`, `12px` gap; header pair `10px` 600 `0.14em` `textQuiet` / mono `10px` `0.1em` `textInactive`; ghost bars `divider` at `35%` opacity, `40px` tall field; note `12px` line-height `1.5` `textQuiet` |
+| Market-price ghost | **Retired in `002`** — replaced by the Market section (below); the dashed placeholder and its ghost bars are gone |
 | Sell-plan CTA | `1px solid accentBrass`, `3px` radius, padding `16px 18px`; heading "Find items to sell" `14.5px` 600 `accentBrass`; subtitle `11.5px` `#F2EDE4 @ 50%`; trailing "→" mono `15px` `accentBrass` |
 | CTA subtitle copy | "Browse your lowest desire-to-keep items" — accurate today: `SellPlanViewModel` ranks candidates lowest-desire-first |
 
@@ -378,7 +378,121 @@ the app bundle, no licensing step needed.
 | Reserved trend-indicator slot | 12×14 |
 
 That reserved slot is the future-proofing space asked for in the design
-brief — confirms it made it into the actual build.
+brief — confirms it made it into the actual build. `002` is what it was
+reserved for: the market trend arrow below, which ships on the two list
+rows (`002`/T012). The Sell Plan's own candidate rows keep the slot
+empty for now.
+
+### Market section, candidate picker, dashboard variant (`002`)
+
+Source: `design/elements/002-market-values/` — seventeen `.dc.html`
+artboards and their PNGs, approved 2026-09-05 (spec Decision 17; the
+pass ran through `/design` in the implementing session against the `010`
+artboard sources and this file). Every string is a `MarketCopy` string.
+"As implemented" columns are filled by T010–T013 where the build departs.
+
+**The Market section** (both detail screens; item: after DETAILS, before
+NOTES; wishlist: after NOTES, before the sell-plan CTA, where the ghost
+was). One unbroken block in the DETAILS/NOTES rhythm — not a card — so
+the two plated cards above stay the screen's weight.
+
+| Property | Value | As implemented |
+|---|---|---|
+| Header | `monoLabel` "MARKET", `10px` gap to the body (DETAILS' `fieldGap + 2`) | as designed — `DetailSection(title: MarketCopy.sectionTitle)`, so the block sits in the DETAILS/NOTES rhythm by construction |
+| Body rhythm | `12px` between rows | as designed — `MarketSection.rowGap`, a file constant: 12 has no metrics token and this is the section's own rhythm |
+| Source line | IBM Plex Sans `12.5px`, line-height `1.45`, `textLabelSecondary` (55 %); "On Reverb · {title} · {year}", wraps | as designed — `typography.secondary` (12.5) + `textLabelSecondary`; leading as `.lineSpacing(3)`, SwiftUI's nearest to a 1.45 line-height |
+| All-years line | same register, `4px` under the source line, above the figure | as designed — `MarketSection.tightGap`; drawn only over a **current** figure (plan Amendment A's copy rule), never over a withheld one |
+| Median | IBM Plex Mono 500 `19px`, `textPrimary`, tabular — the PAID cell's register, never Archivo or brass | `typography.monoValue` (mono 500 **15**) + `textPrimary`, `.monospacedDigit()` — the PAID cell's register *as built*: `ItemDetailView.statPair` has drawn PAID at `monoValue` since 010, so matching the artboard's 19 here would have made the market figure larger than the person's own |
+| Separator and count | IBM Plex Mono `12.5px`, `textMonoMeta` (45 %), `8px` gaps, baseline-aligned with the median | `typography.monoMeta` (11.5) + `textMonoMeta`, `metrics.fieldGap` (8), `.firstTextBaseline` — no 12.5 mono role exists and one wasn't worth adding for a 1pt difference |
+| Reading row | spread left — IBM Plex Mono `11.5px` `textMonoMeta`; age right — IBM Plex Mono `11px` `textQuiet` (40 %), `white-space: nowrap`; withheld and stale readings put their sentence (IBM Plex Sans `13.5px`, line-height `1.5`, `textBody`) on the left | as designed, with the age at `monoMeta` (11.5, no 11 role) + `textQuiet` and `.fixedSize()` for the nowrap; the sentence is `typography.body` + `textBody`. Withheld puts its sentence on its own line with the age right-aligned beneath (the `ItemWithheld` artboard); stale shares one baseline row |
+| Never-refreshed line | IBM Plex Sans `13.5px`, `textLabelSecondary` | as designed — `typography.body` + `textLabelSecondary` |
+| Link | "View on Reverb" + `arrow.up.right` glyph (`11px`, `1.6` stroke), IBM Plex Sans 500 `13px`, `accentBrass`, `5px` gap, `44pt` hit height — the app's first external link, visually distinct from the in-place buttons | as designed — `MarketReverbLink`: `typography.buttonCompact` (new role, sans 500 13), `accentBrass`, `linkGap` 5, `.frame(minHeight: 44)` with `-8` vertical padding so the target doesn't stretch the rhythm. **A SwiftUI `Link` takes the label's `foregroundStyle`** — measured, not assumed, in `MarketLinkRenderTests` (ΔE 4e-8 from the token); no `.buttonStyle(.plain)` needed. The glyph is the SF symbol, so the artboard's 1.6 stroke reads as `.font(.system(size: 11, weight: .medium))` |
+| Failure line | IBM Plex Sans `12.5px`, line-height `1.45`, `accentRustText`, between the link and the actions; the reading beneath unchanged | as designed — `typography.secondary` + `accentRustText`, drawn after the link and before the action rows |
+| Button rule | filled brass = writes the person's data (the adopt action only); outlined brass = fetches (Refresh); text = manages the match, rust for Remove | as designed — one filled button in the section, and it is the adopt action |
+| Filled button | `accentBrass` fill, `background` ink, IBM Plex Sans 600 `13.5px`, `44pt` tall, `3px` radius, grows to fill the row | as designed — `typography.buttonProminent` (new role, sans 600 13.5), `metrics.buttonRadius` (3), `cardPadding` (16) horizontal, `.frame(maxWidth: .infinity, minHeight: 44)`. Disabled while a refresh is in flight (`canAdopt` is false there): the component sheet's three Refresh looks specify Refresh, not adopt, and a live button whose action the view model refuses would be a dead tap |
+| Outlined button | `1px accentBrass` border, brass text 500 `13.5px`, `44pt`, `3px`, `0 16px` padding, hugs its label (grows when alone) | as designed — `typography.button` (new role, sans 500 13.5), `metrics.hairline` border, `buttonRadius`, `cardPadding`; the artboards' `flex` is `fills:` — it grows exactly when no adopt button sits beside it. `.contentShape(Rectangle())`, since an outline's interior isn't hit-testable |
+| Refresh · disabled (within the hour) | border ivory 16 %, text `textDisabled` (35 %); the age line above says why | as designed — `textPrimary.opacity(0.16)` (no ivory-16 % token but `gaugeTrack`, which is a gauge's track) and `textDisabled`; carries `MarketCopy.refreshWithinHourHint` for VoiceOver (Q8) |
+| Refresh · refreshing | border brass 50 %, text brass 60 %, a `12px` arc spinner before the label | as designed — `accentBrass.opacity(0.5)` / `.opacity(0.6)`, and `ProgressView().controlSize(.small).tint(…)` for the spinner, the `SettingsActionRow` pattern. Note for the device pass: `ImageRenderer` draws that spinner as an unavailable-symbol box in stills, which is a renderer artifact, not the running app |
+| Text buttons | IBM Plex Sans 500 `13px`, brass / `accentRustText`, `44pt` hit height on a `32px` visual row (`-6px` margins), Change match… left, Remove match right | as designed — `typography.buttonCompact`, `.frame(minHeight: 44)` with `-6` vertical padding, `Spacer` between them |
+| Find on Reverb… (unmatched) | the outlined button alone under the header, hugging its label | as designed — the same outlined chrome with `fills: false`, and nothing else in the section (criterion 1) |
+| Adopt label | "Use as my value" (item) / "Use as estimated cost" (wishlist) | as designed — `MarketCopy.useAsMyValue` / `.useAsEstimatedCost`, chosen by the section's `isWanted` |
+
+**The candidate picker** — one sheet, four phases since Amendment B (notice, pick, fetching, value), over a `rgba(0,0,0,0.45)`
+scrim; the sheet's bar (Cancel, title) is system chrome.
+
+| Property | Value | As implemented |
+|---|---|---|
+| Sheet | `background` fill, `12px` top radius, `36×5` grabber at ivory 30 %; notice at a medium detent (~`300px`), picker at large (~`780px`) | as designed — one `.sheet(isPresented: $viewModel.isFindingMatch, onDismiss: viewModel.load)` on each detail screen, its content branching on `sheetStep` (Q9; `noticeIsPending` until T022 replaced it), with `.presentationDetents([.medium, .large], selection:)` driven by that phase. The top radius, the grabber and the `0.45` scrim are the system sheet's own — nothing here draws them; each phase fills its own `theme.colors.background` |
+| Notice body | IBM Plex Sans `15px`, line-height `1.55`, `textBody`; "See the privacy policy" inline in brass 500; `22px 24px 32px` padding, `24px` to the buttons | `typography.body` (13.5) + `textBody`, `.lineSpacing(4)` — no 15pt sans prose role exists, and adding one for a single paragraph would put a second prose size in the app. Padding `22` / `screenGutter` (24) / `32`, `sectionGap` (24) to the buttons, as designed. **The link sits under the paragraph, not inline**: a SwiftUI `Link` is a view and cannot flow inside a `Text`, and the markdown-in-`Text` alternative would move the copy's shape into `MarketCopy` and give up the real `Link` (criterion 20's `.isLink` trait, `MarketReverbLink`'s reasoning). `typography.button` (sans 500 13.5) in brass, 44pt target |
+| Notice buttons | Continue filled brass, Not now outlined, each `48pt`, stacked with `8px` gap; swipe-down = Not now | as designed — `MarketButtons.noticeHeight` (48) and `fieldGap` (8), drawn with the section's own filled/outlined chrome, lifted at T011 into `Trove/Views/Market/MarketButtons.swift` (two `ViewModifier`s) so the two surfaces can't drift; `MarketSection`'s call sites are unchanged. Swipe-down is Not now by construction — only `continueFromNotice()` acknowledges anything |
+| Search field | the plated card, `44pt`, `0 14px` padding, `10px` gaps; magnifier `15px` ivory 40 %; text IBM Plex Sans `13.5px` `textPrimary`, brass caret `1.5×18`; clear glyph ivory 40 % | the shared `SearchField` — so the plate, the magnifier, the caret and the clear glyph are as designed, but **40pt**, not 44 (`metrics.searchFieldHeight`, what both list screens already use): one search control in the app is worth more than a second one 4pt taller. `.onSubmit` is attached here rather than inside it, since the picker searches on submit only (Q10) |
+| Status line | IBM Plex Mono `11.5px` `textQuiet` with the `12px` spinner, `8px` gap | as designed — `typography.monoMeta` (11.5) + `textQuiet`, `fieldGap` (8), and `ProgressView().controlSize(.small).tint(accentBrass)` for the arc, the same spinner the Refresh button uses |
+| Candidate card | plated, `3px`; body `13px` padding and gap (the row treatment); the body picks | as designed — `.extrudedPlate()` (`cardRadius` 3), `rowPadding` / `rowContentGap` (13); the body is a `.plain` `Button` calling `setMatch`, identifier `market.candidate` |
+| Thumbnail | `64×64`, `2px` radius, `surfaceInset`; `RowThumbnail`'s hairline placeholder when there is no image | as designed — 64pt square, `thumbnailRadius` (2), `AsyncImage` over Reverb's URL through the OS's shared cache (Q17), `accessibilityHidden`. The placeholder is `RowThumbnail`'s `surfaceInset` + `photo` glyph *redrawn* rather than reused: that component takes stored `Photo`s, not a URL. `MarketWiringTests` holds `AsyncImage(` to this one file under `Trove/Views` |
+| Title | IBM Plex Sans 500 `14.5px`, line-height `1.3`, `textPrimary`, **wraps in full** | `typography.rowTitle` (sans 500 **15**, the list rows' title role — no 14.5 role exists and a 0.5pt one wasn't worth adding) + `textPrimary`, with `.fixedSize(horizontal: false, vertical: true)` so it wraps in full and can never truncate |
+| Brand | IBM Plex Sans `12.5px`, `textLabelSecondary` | as designed — `typography.secondary` (12.5) + `textLabelSecondary`; drawn only when the candidate has one |
+| Reading | IBM Plex Mono `11.5px`, `textMonoMeta`, `2px` above | as designed — `typography.monoMeta` (11.5) + `textMonoMeta`, `.padding(.top, 2)`, `.monospacedDigit()`; the words are `MarketCopy.candidateReading(usedLowCents:usedTotal:)` |
+| Card footer | `1px surfaceInset` top hairline, `0 13px`, the link right-aligned at `40pt` — the only outward target on the card | as designed — a `surfaceInset` hairline, `rowPadding` (13) horizontal, and a real `Link` to `ReverbAPI.productURL(slug:)` at `minHeight: 40` with the `arrow.up.right` glyph, `buttonCompact` in brass, `MarketCopy.reverbLinkHint` and identifier `market.candidate.link` (Decision 28) |
+| Empty / failed | `EmptyStateView`: `34px` light glyph ivory 30 %, Archivo 600 `19px` headline, IBM Plex Sans `13.5px` `textQuiet` detail, the outlined "Try again" at `44pt` | `EmptyStateView` for both, with the artboards' `magnifyingglass` mark — so the glyph, the `emptyStateTitle` headline and the `body` + `textQuiet` detail are as designed. Empty carries the detail and no action; failed carries the headline (`rateLimited` or `unreachableNoFigure`) and Try again. **Try again is that component's capsule outline, not the artboard's 3pt rect**: one empty-state button shape in the app beats a second one that differs only in its corners |
+
+**The dashboard's market line** (recommended form; the toggle was drawn
+beside it and rejected — it hides the person's total behind a state,
+puts a second figure in the hero's slot, and splits the amount from its
+coverage, which P5 forbids).
+
+| Property | Value | As implemented |
+|---|---|---|
+| Position | one line directly under the ruler, `8px` gap (`4px` extra top), above SPENT / GAIN | as designed — last in `DashboardView.headline`'s `VStack` (`fieldGap` 8) with `.padding(.top, 4)`, so it sits inside the headline block and above the SPENT / GAIN plate by construction. Drawn under "Not yet valued" too, on the same gap: a matched, refreshed item's asking price exists whether or not the person has priced anything |
+| Register | IBM Plex Mono `12.5px`, `textMonoMeta` (45 %), tabular, `white-space: nowrap`; the amount alone at 500 in `textBody` (75 %) — never brass, never Archivo, so it cannot read as the total | `typography.monoMeta` (mono **11.5**) + `textMonoMeta`, `.monospacedDigit()`; the amount's run gets `monoMeta.weight(.medium)` + `textBody`. The nearest existing role, not a new one: the alternatives are `monoValue` (15, the PAID cell's register — far too loud for a line that must not read as the total) and a twelfth mono size for one line. Colours are the designed tokens exactly |
+| Inseparability | one string, one line; if it must shrink, the whole line scales — the coverage never wraps or clips away from the number | as designed — one `Text` over one `AttributedString` built from `viewModel.marketLine` (`MarketCopy.dashboardLine`), so it is one accessibility element and the view never composes the parts; `.lineLimit(1)` + `.minimumScaleFactor(0.6)`. The lift is a range search for `MarketCopy.median(cents:)` inside the line, falling back to the uniform line if it isn't found — legible rather than wrong |
+
+### The value step and the slider (`002` Amendment B)
+
+Source: `design/elements/002-market-values/ValueStep.dc.html` (drawn and
+approved 2026-09-05, T020). The sheet's fourth phase at the
+medium detent: the title, the figure as the section draws it with the
+true spread, Trove's own slider between the trimmed bounds with the
+median marked and defaulted, the guidance line, the filled button with
+the live amount, Not now.
+
+| Property | Value | As implemented |
+|---|---|---|
+| Sheet | medium detent (~`500px` drawn), `22px 24px 32px` padding, `20px` between blocks | `MarketValueStepView.topPadding` 22 / `.bottomPadding` 32 / `theme.metrics.screenGutter` 24 across — the notice sheet's own padding — and `blockGap` 20 between the five blocks. The detent belongs to the sheet, not the view: both detail screens map `.notice, .value` to `.medium`, pinned in `MarketWiringTests` |
+| Title | Archivo 600 `19px` `textPrimary` — "Set your value" / "Set your estimated cost" | `typography.emptyStateTitle` (display 19 semibold — the role the theme already has at exactly that size and weight) + `textPrimary`; the words from `MarketCopy.valueStepTitle(wanted:)` |
+| Figure block | the section's own registers: source line `12.5px` 55 %, median IBM Plex Mono 500 `19px`, separator and count `12.5px` mono 45 %, the **true** spread `11.5px` mono 45 % | literally the section's pieces: `MarketQuietLine`, `MarketFigureRow` and `MarketSpreadLine`, lifted out of `MarketSection` at T024 and kept in `MarketSection.swift`, so the two surfaces draw one composition and the copy scan still sees every symbol. The median therefore reads at `monoValue` (mono **15**) — the section's register as built, for the reason the Market table's Median row records — and the spread is the true low–high, not the slider's ends (Decision 36). `figureGap` 10 |
+| Track | `2px`, `divider`, `1px` radius, full width; the filled portion from the left end to the knob in `accentBrass` | `MarketValueSlider.trackHeight` / `.trackRadius`, `theme.colors.divider`; the fill's extent and its ink are measured in `MarketValueSliderRenderTests` |
+| Knob | `20px` circle, `accentBrass`, a `3px` `background` ring and `0 2px 6px rgba(0,0,0,0.4)`; centred on the chosen amount's fraction of the bounds | `MarketValueSlider.knobDiameter` / `.knobRing`; the ring is a `background` disc under the brass one, the shadow `plateEdgeShadow` (the frame's own 40 % black) at `radius: 3, y: 2` — `ExtrudedPlate`'s pair |
+| Marks | the two ends `1px × 12px` `divider`; the median `1.5px × 18px` `accentBrassDim`, taller than the ends | `MarketValueSlider.marks(trackWidth:lower:upper:median:)` places all three by centre; a zero-width range returns the median's alone |
+| Labels | the trimmed bounds' amounts under the ends, IBM Plex Mono `11px` 45 %; "median" under its mark, mono `10px` 40 % tracked `0.08em` | the amounts in `typography.monoMeta` (mono 11.5) + `colors.textMonoMeta` (45 %); the caption in `typography.monoLabel` (mono 10.5) + `colors.textQuiet` (40 %), tracked `0.8` — the nearest roles the theme has, rather than two new sizes for one row. The row is fixed at `labelRowHeight` 16, the mono line box being taller than the frame's `14px` |
+| Default | the knob at the whole-currency median | `MarketValueStep.chosenCents`, drawn through `x(forCents:trackWidth:lower:upper:)`; the 30 % fraction is measured in `MarketValueSliderRenderTests` |
+| Snap / step | snaps to the median within `6pt`; the accessibility step is 1 % of the range in whole currency, at least one unit | `MarketValueSlider.snapTolerance` and `.adjustableStep(lower:upper:)`, both pure statics the drag and the adjustable action call — `MarketWiringTests` scans that they do |
+| Guidance line | IBM Plex Sans `12.5px`, line-height `1.45`, 55 % | `MarketQuietLine` again — `typography.secondary` (12.5) + `textLabelSecondary` (55 %), `lineSpacing` 3 (`MarketSection.proseLineSpacing`, the drawn line-height at that size); `MarketCopy.valueGuidance` |
+| Buttons | filled brass "Use $1,450 as my value" and outlined "Not now", each `48pt`, stacked with `8px` gap (the notice's pair) | the notice's pair exactly: `.marketFilledChrome(minHeight:)` and `.marketOutlinedChrome(fills: true, minHeight:)` at `MarketButtons.noticeHeight` 48, stacked at `theme.metrics.fieldGap` 8; the filled label carries the live amount through `MarketCopy.useAmount(cents:wanted:)`, so it changes as the knob moves |
+| Zero-width range | one mark, the drag inert, the button live at that amount | one median mark at the left end, the amount named once beneath it; `x(forCents:)` and `cents(atX:)` each guard the division. The button is live because nothing disables it: `chosenCents` is fixed at that amount, and the step is the only thing the button reads |
+
+### Market trend arrow (`002`)
+
+`TrendArrow` — the market's direction beside a row's own figure (spec
+`002` criterion 13, Decision 8). One glyph, no label, nothing at all when
+the trend is flat or not yet known.
+
+| Token | Value | As implemented |
+|---|---|---|
+| Glyph, rising | `arrowtriangle.up.fill` | `TrendArrow.swift` |
+| Glyph, falling | `arrowtriangle.down.fill` | `TrendArrow.swift` |
+| Size | 9 pt | `.font(.system(size: 9))` |
+| Rising tone | `accentMossText` | ΔE-checked against the token in `TrendArrowRenderTests` |
+| Falling tone | `accentRustText` | ΔE-checked against the token in `TrendArrowRenderTests` |
+| Flat / unknown | draws nothing, takes no width | measured in `TrendArrowRenderTests` |
+| Accessibility label | "trending up" / "trending down" | `MarketCopy.trendUp` / `.trendDown`, joined into the row's combined label |
+| Placement, owned row | last on the value line, in both its branches | `ItemRow.valueLine` |
+| Placement, wanted row | after the estimated cost, so the cost's own label reads first | `WishlistRow` |
+
+The tones are the `*Text` pair rather than the base accents — the arrow
+sits on a row plate at 9 pt, which is what that pair exists for — and
+they are the same two tones the owned row's "vs paid" delta already
+wears, deliberately: one voice for "up" and one for "down" on the same
+line.
 
 ## Corner radii
 

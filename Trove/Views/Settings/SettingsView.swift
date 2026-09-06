@@ -44,6 +44,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
                     exportSection
                     templatesSection
+                    marketSection
                     iCloudSection
                     deleteSection
                     aboutSection
@@ -143,6 +144,37 @@ struct SettingsView: View {
         }
     }
 
+    /// 002: one row that walks every matched item, with the walk's position
+    /// beside it and, when it stops early, one line saying why (Q12 — a
+    /// status line, never an alert: Settings presents exactly one alert, and
+    /// it belongs to Delete All).
+    private var marketSection: some View {
+        DetailSection(title: MarketCopy.settingsSectionTitle) {
+            VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
+                SettingsActionRow(
+                    title: MarketCopy.refreshAll,
+                    isActing: viewModel.activity == .refreshMarket,
+                    isEnabled: viewModel.canRefreshMarketValues && !viewModel.isBusy,
+                    detail: viewModel.marketRefreshProgress.map {
+                        MarketCopy.progress(done: $0.done, total: $0.total)
+                    }
+                ) {
+                    Task { await viewModel.refreshMarketValues() }
+                }
+                .accessibilityIdentifier("settings.refreshMarket")
+                // Every status this screen shows is a stopped walk, so the
+                // line is always the failure colour — the delete footer's
+                // shape, in rust.
+                if let status = viewModel.marketRefreshStatus {
+                    Text(status)
+                        .font(theme.typography.secondary)
+                        .foregroundStyle(theme.colors.accentRustText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
     /// Read-only and live: the view model reads the monitor's phase, so a
     /// sync finishing changes this without leaving the screen.
     private var iCloudSection: some View {
@@ -209,6 +241,25 @@ struct SettingsView: View {
                     .font(theme.typography.monoMeta)
                     .foregroundStyle(theme.colors.textMonoMeta)
                     .padding(.top, 4)
+                // 002 (Decisions 12, 13, 18, 25): Reverb's attribution
+                // verbatim, the contact address, and the policy the notice
+                // links to — every string and both destinations from
+                // `MarketCopy`, so nothing here is typed twice.
+                Text(MarketCopy.attribution)
+                    .font(theme.typography.secondary)
+                    .foregroundStyle(theme.colors.textQuiet)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 12)
+                Link(MarketCopy.contactAddress, destination: MarketCopy.contactURL)
+                    .font(theme.typography.body)
+                    .foregroundStyle(theme.colors.accentBrass)
+                    .padding(.top, 8)
+                    .accessibilityIdentifier("about.contact")
+                Link(MarketCopy.privacyPolicyTitle, destination: MarketCopy.privacyPolicyURL)
+                    .font(theme.typography.body)
+                    .foregroundStyle(theme.colors.accentBrass)
+                    .padding(.top, 4)
+                    .accessibilityIdentifier("about.privacy")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -227,6 +278,9 @@ private struct SettingsActionRow: View {
     let title: String
     let isActing: Bool
     let isEnabled: Bool
+    /// The acting row's own meta — 002's "3 of 12", in the mono meta the
+    /// rest of the app counts in, ahead of the spinner.
+    var detail: String?
     var isDestructive = false
     var accessibilityHint: String?
     let action: () -> Void
@@ -240,6 +294,11 @@ private struct SettingsActionRow: View {
                     .font(theme.typography.body)
                     .foregroundStyle(color)
                 Spacer(minLength: 0)
+                if let detail {
+                    Text(detail)
+                        .font(theme.typography.monoMeta)
+                        .foregroundStyle(theme.colors.textMonoMeta)
+                }
                 if isActing {
                     ProgressView()
                         .controlSize(.small)
@@ -267,12 +326,12 @@ private struct SettingsActionRow: View {
 
 @MainActor
 private func previewContainer(populated: Bool) -> ModelContainer {
-    let configuration = ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: TroveSchema.schema, configurations: configuration)
+    let configuration = ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
+    let container = try! ModelContainer(for: TroveSchema.combinedSchema, configurations: configuration)
     if populated {
         let context = container.mainContext
         context.insert(Item(name: "Telecaster", categoryPath: "Music/Guitars", purchasePriceCents: 1_200_00, currentValueCents: 1_450_00))
-        context.insert(Item(name: "Deluxe Reverb", categoryPath: "Music/Amps", purchasePriceCents: 900_00))
+        context.insert(Item(name: "Deluxe Amp", categoryPath: "Music/Amps", purchasePriceCents: 900_00))
         context.insert(WishlistItem(name: "Pedal Steel", categoryPath: "Music/Guitars", estimatedCostCents: 2_500_00))
         try? context.save()
     }

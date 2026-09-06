@@ -1,0 +1,4 @@
+{
+  "message": "Rate limit exceeded. Please slow down.",
+  "error_type": "rate_limited"
+}

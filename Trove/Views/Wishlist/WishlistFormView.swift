@@ -44,6 +44,7 @@ struct WishlistFormView: View {
                         // order the item form uses among its optional fields,
                         // since the two sit one tab apart.
                         PhotoPickerField(photos: $viewModel.photos)
+                        yearField
                         notesField
                     }
                     .padding(.horizontal, theme.metrics.screenGutter)
@@ -179,6 +180,31 @@ struct WishlistFormView: View {
         }
     }
 
+    /// 002 Amendment A: optional, four digits, no prompt — the spec gives this
+    /// field a label and nothing else, so an invented sample year would read
+    /// as a default. The empty prompt costs the field its implicit
+    /// accessibility label, hence the explicit one (the same trap `nameField`
+    /// documents).
+    private var yearField: some View {
+        VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
+            Text(MarketCopy.yearLabel).monoLabel()
+            TextField(
+                MarketCopy.yearLabel,
+                text: $viewModel.yearText,
+                prompt: Text(verbatim: "")
+            )
+            .font(theme.typography.monoMeta)
+            .foregroundStyle(theme.colors.textPrimary)
+            .tint(theme.colors.accentBrass)
+            .keyboardType(.numberPad)
+            .accessibilityLabel(MarketCopy.yearLabel)
+            .padding(.vertical, theme.metrics.fieldPaddingVertical)
+            .padding(.horizontal, theme.metrics.fieldPaddingHorizontal)
+            .background(fieldBackground)
+            .overlay(fieldBorder(isInvalid: viewModel.validationErrors.contains(.yearInvalid)))
+        }
+    }
+
     private var notesField: some View {
         VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
             Text("Notes").monoLabel()
@@ -246,7 +272,14 @@ struct WishlistFormView: View {
         if errors.contains(.costMissing) { missing.append("an estimated cost") }
         if errors.contains(.costNegative) { missing.append("a cost of zero or more") }
 
-        return "Needs \(missing.formatted(.list(type: .and)))"
+        // The year's message is a whole sentence from MarketCopy rather than
+        // one more item for the "Needs" list, so it's appended to the caption
+        // instead of folded into it — the item form does the same.
+        let needs = missing.isEmpty ? nil : "Needs \(missing.formatted(.list(type: .and)))"
+        let year = errors.contains(.yearInvalid)
+            ? MarketCopy.yearValidationError(nextYear: viewModel.maximumYear)
+            : nil
+        return [needs, year].compactMap { $0 }.joined(separator: " ")
     }
 
     private func save() {
@@ -274,8 +307,8 @@ struct WishlistFormView: View {
 
 #Preview {
     let container = try! ModelContainer(
-        for: TroveSchema.schema,
-        configurations: ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
+        for: TroveSchema.combinedSchema,
+        configurations: ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
     )
     let context = ModelContext(container)
     context.insert(Item(name: "Leica M6", categoryPath: "Photography/Cameras"))

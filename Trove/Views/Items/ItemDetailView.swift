@@ -9,6 +9,8 @@ struct ItemDetailView: View {
     @State private var selectedPhotoIndex = 0
     @State private var isEditing = false
     @State private var isConfirmingDelete = false
+    /// The match sheet's detent, driven by which phase it is showing.
+    @State private var matchDetent: PresentationDetent = .medium
 
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -45,6 +47,14 @@ struct ItemDetailView: View {
                 }
             }
         }
+        // 002 (plan §6, Q9): one sheet, two phases. An alert can hold no
+        // link, and branching the *content* rather than swapping
+        // presentations means no binding is written mid-flight. Swipe-down
+        // over the notice is Not now by construction — only
+        // `continueFromNotice()` acknowledges anything.
+        .sheet(isPresented: $viewModel.isFindingMatch, onDismiss: viewModel.load) {
+            matchSheet
+        }
         // An alert rather than a confirmation dialog: presented from a toolbar
         // button, the dialog renders as an anchored popover that drops the
         // cancel button entirely, leaving "Delete" as the only thing to press
@@ -66,6 +76,61 @@ struct ItemDetailView: View {
         .onAppear(perform: viewModel.load)
     }
 
+    /// The notice first, once per device, then the picker (spec Decision
+    /// 14), then — since Amendment B — the pick's fetch and the value step
+    /// (Decisions 33–34). The detent follows the phase: the notice and the
+    /// value step are short reads, the picker and the fetch want the whole
+    /// sheet.
+    private var matchSheet: some View {
+        Group {
+            switch viewModel.sheetStep {
+            case .notice:
+                MarketNoticeView(
+                    continueAction: viewModel.continueFromNotice,
+                    declineAction: viewModel.declineNotice
+                )
+            case .pick:
+                MarketMatchView(
+                    viewModel: viewModel.makeMatchViewModel(),
+                    pick: viewModel.setMatch,
+                    cancel: { viewModel.isFindingMatch = false }
+                )
+            case .fetching(let candidate, _):
+                // The picked card, held still under the picker's own bar,
+                // so the sheet doesn't go blank while the fetch runs
+                // (Decision 33). The token is the view model's business.
+                MarketFetchingView(candidate: candidate)
+            case .value(let step):
+                MarketValueStepView(
+                    step: step,
+                    isWanted: false,
+                    productTitle: viewModel.marketState.matchedTitle,
+                    year: viewModel.item?.year ?? nil,
+                    actions: MarketValueStepActions(
+                        choose: viewModel.setChosen,
+                        // The amount comes back from the step the view is
+                        // holding; the write and its refusal are the view
+                        // model's, as the section's adopt was.
+                        use: { _ = viewModel.adopt(cents: $0) },
+                        notNow: viewModel.dismissValueStep
+                    )
+                )
+            }
+        }
+        .presentationDetents([.medium, .large], selection: $matchDetent)
+        // The phase, not the whole step: the step carries the value
+        // step's payload, which the slider rewrites on every tick of a
+        // drag, so observing the step itself would re-decide a detent that
+        // cannot have changed (T022's third review). The detent depends on
+        // the phase alone.
+        .onChange(of: viewModel.sheetStep.phase, initial: true) { _, phase in
+            matchDetent = switch phase {
+            case .notice, .value: .medium
+            case .pick, .fetching: .large
+            }
+        }
+    }
+
     private func content(for item: Item) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
@@ -84,6 +149,7 @@ struct ItemDetailView: View {
                 statPair(for: item)
                 desireCard(for: item)
                 details(for: item)
+                marketSection(for: item)
 
                 if let notes = item.notes, !notes.isEmpty {
                     DetailSection(title: "Notes") { DetailProse(text: notes) }
@@ -240,6 +306,36 @@ struct ItemDetailView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Market (002)
+
+    /// Reverb's asking price beside the person's own figure — never in
+    /// place of it (spec 002, plan §6). Placed after DETAILS and before
+    /// NOTES, and given the view model's state rather than any derivation
+    /// of its own.
+    private func marketSection(for item: Item) -> some View {
+        MarketSection(
+            state: viewModel.marketState,
+            activity: viewModel.marketActivity,
+            notice: viewModel.marketNotice,
+            year: item.year,
+            isWanted: false,
+            canRefresh: viewModel.canRefresh,
+            canAdopt: viewModel.canAdopt,
+            actions: MarketSectionActions(
+                find: viewModel.findMatch,
+                refresh: viewModel.refresh,
+                // Use as my value opens the value step rather than
+                // writing (Amendment B): one adopt control, one flow, and
+                // the write happens in the sheet where the amount is
+                // chosen. `canAdopt` already gates the button.
+                adopt: viewModel.openValueStep,
+                // Change match… is Find on Reverb… over an existing match.
+                changeMatch: viewModel.findMatch,
+                removeMatch: viewModel.removeMatch
+            )
+        )
     }
 
     /// Reachable once sync is on and another device deletes the item while

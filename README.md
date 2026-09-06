@@ -18,7 +18,10 @@ purchases.
   dial, since the two ratings mean structurally different things.
 - **A dashboard** — total current value, total spent, the gap between
   them, and a category breakdown, with un-valued items excluded from
-  every figure rather than silently treated as worthless.
+  every figure rather than silently treated as worthless; and a Market
+  line — the sum of the current medians over the matched items, always
+  stated with its coverage ("12 of 34 items"), so a partial picture
+  never reads as a whole one.
 - **The Sell Plan** — an advisory, persisted shortlist of owned items
   with low desire-to-keep, reachable from any wishlist item, for
   answering "is this a reasonable time to buy, and what would make sense
@@ -28,12 +31,14 @@ purchases.
   both lists; press-and-hold drag reordering under a "Custom" sort,
   with an accessible Move up/Move down path for VoiceOver; and value
   and cost sorts in both directions, with ties resolving by your own
-  manual order.
+  manual order, and a Market sort on both lists.
 - **Export** — the exact view you're looking at (filters and sort
   respected), as a data-grade CSV with a canonical, re-importable
   schema, or as a print-first PDF collection document — cover summary,
   then one photo-and-fields entry per item — delivered through the
-  share sheet.
+  share sheet. The CSV carries an item's Reverb match and the year it
+  was made, so a round trip restores them; it never carries the fetched
+  figures, which belong to the device that fetched them.
 - **Import** — CSV import of an externally-tracked collection on both
   lists, parsing the same canonical schema export writes: grab a blank
   template from Settings (or start from a real export), fill it in
@@ -42,12 +47,28 @@ purchases.
   before a single row is written, and nothing ever modifies existing
   items. Sample files for every state live in
   [`docs/samples/`](docs/samples/README.md).
+- **Market values** — a Reverb asking-price indicator beside your own
+  value, never in place of it. You pick the match yourself from a
+  candidate list; the pick fetches the current asking prices at once
+  and offers them on a slider between the typical low and high asking
+  price, resting on the median, so you set your own value with a drag
+  and a tap — or step back and keep what you had. The detail then
+  shows the median asking price of the current listings in your item's
+  condition (all used listings, for something on the wishlist),
+  narrowed to the year it was made when you've given one, with the
+  spread, how many listings it came from, and how long ago it was
+  taken; a refresh is one tap, at most once an hour. The figures and
+  their history stay on the device that fetched them and never sync,
+  and a first search asks you first — see [`PRIVACY.md`](PRIVACY.md).
 - **Settings** — one sheet, reached from the "…" on either list or on
   the dashboard: export *everything* as a CSV pair or a PDF pair (one
   share sheet, two files), the blank import templates, a live iCloud
-  status row that says what the app actually knows, Delete All for
-  either list (all-or-nothing, the count in the title, with "Export
-  first if you want a copy" right there), and About.
+  status row that says what the app actually knows, Refresh market
+  values (one walk over every matched item that is due, with its
+  progress shown), Delete All for either list (all-or-nothing, the
+  count in the title, with "Export first if you want a copy" right
+  there), and About — the Reverb attribution, the contact address and
+  the privacy policy.
 - **Menus that are the app's own** — every menu inside a page (Sort
   By, both "…" badges, the dashboard's category order) opens one
   shared dropdown surface in Trove's own type and tokens, growing out
@@ -163,3 +184,6 @@ record of what a feature does and why it's built the way it is.
 [`docs/csv-reference.md`](docs/csv-reference.md) documents the CSV
 layout the export writes and the import reads — columns, formats,
 defaults, and the spreadsheet-app caveats.
+[`PRIVACY.md`](PRIVACY.md) is the app's privacy policy — what Trove
+stores and where, and the two things that leave your device when you
+ask it to look something up on Reverb.

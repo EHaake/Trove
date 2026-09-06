@@ -237,3 +237,60 @@ struct PersistenceTests {
         #expect(fetched.first?.condition == .good)
     }
 }
+
+/// 002/T003: the two synced market fields. Optional integers with no
+/// uniqueness — additive for CloudKit, which `CloudKitSchemaTests` covers
+/// the moment they exist (its red run for this task: declare either as a
+/// non-optional `Int` with no default and the validator throws).
+@Suite("Market fields on the models")
+struct MarketFieldsTests {
+    @Test func bothKindsStartUnmatchedAndYearless() {
+        let item = Item(name: "Telecaster")
+        let wanted = WishlistItem(name: "D-18")
+
+        #expect(item.reverbProductID == nil)
+        #expect(item.year == nil)
+        #expect(wanted.reverbProductID == nil)
+        #expect(wanted.year == nil)
+    }
+
+    @Test func theInitParametersSetBoth() {
+        let item = Item(name: "Telecaster", reverbProductID: 126_161, year: 2021)
+        let wanted = WishlistItem(name: "D-18", reverbProductID: 182_769, year: 1975)
+
+        #expect(item.reverbProductID == 126_161)
+        #expect(item.year == 2021)
+        #expect(wanted.reverbProductID == 182_769)
+        #expect(wanted.year == 1975)
+    }
+
+    /// A second context, so the assertion is about what reached the store
+    /// (see `makeInMemoryContainer`'s doc).
+    @Test func bothFieldsSurviveASaveAndRefetch() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        context.insert(Item(name: "Telecaster", reverbProductID: 126_161, year: 2021))
+        context.insert(WishlistItem(name: "D-18", reverbProductID: 182_769, year: 1975))
+        try context.save()
+
+        let elsewhere = ModelContext(container)
+        let item = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first)
+        let wanted = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(item.reverbProductID == 126_161)
+        #expect(item.year == 2021)
+        #expect(wanted.reverbProductID == 182_769)
+        #expect(wanted.year == 1975)
+    }
+
+    @Test func theExportRecordsSnapshotBoth() {
+        let item = Item(name: "Telecaster", reverbProductID: 126_161, year: 2021)
+        let wanted = WishlistItem(name: "D-18", reverbProductID: 182_769, year: 1975)
+
+        let itemRecord = ItemExportRecord(item: item)
+        let wantedRecord = WishlistExportRecord(item: wanted)
+        #expect(itemRecord.reverbProductID == 126_161)
+        #expect(itemRecord.year == 2021)
+        #expect(wantedRecord.reverbProductID == 182_769)
+        #expect(wantedRecord.year == 1975)
+    }
+}

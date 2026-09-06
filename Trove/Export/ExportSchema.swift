@@ -26,6 +26,12 @@ nonisolated struct ItemExportRecord: Sendable {
     let conditionNotes: String?
     let serialNumber: String?
     let notes: String?
+    /// 002: the match and the year — carried by the CSV (P17, Decision
+    /// 29) so a re-import restores them; `nil` on an unmatched or
+    /// year-less item, and always `nil` from a file written before the
+    /// columns existed. Not presented by the PDF.
+    let reverbProductID: Int?
+    let year: Int?
 
     /// The display-order first photo, chosen at snapshot time on the main
     /// actor (plan.md: `PhotoSelection.inDisplayOrder` is the one definition
@@ -47,6 +53,9 @@ nonisolated struct WishlistExportRecord: Sendable {
     let desireToOwn: Int
     let createdAt: Date
     let notes: String?
+    /// As on `ItemExportRecord` (002).
+    let reverbProductID: Int?
+    let year: Int?
     let firstPhotoID: PersistentIdentifier?
 }
 
@@ -128,6 +137,8 @@ extension ItemExportRecord {
             conditionNotes: item.conditionNotes,
             serialNumber: item.serialNumber,
             notes: item.notes,
+            reverbProductID: item.reverbProductID,
+            year: item.year,
             firstPhotoID: PhotoSelection.inDisplayOrder(item.photos ?? []).first?.persistentModelID
         )
     }
@@ -146,6 +157,8 @@ extension WishlistExportRecord {
             desireToOwn: item.desireToOwn,
             createdAt: item.createdAt,
             notes: item.notes,
+            reverbProductID: item.reverbProductID,
+            year: item.year,
             firstPhotoID: PhotoSelection.inDisplayOrder(item.photos ?? []).first?.persistentModelID
         )
     }
@@ -153,11 +166,14 @@ extension WishlistExportRecord {
 
 extension PDFEntry {
     /// The item entry's field grid. Same field *set* as the CSV (plan.md's
-    /// rule), presented in the detail screen's own vocabulary and formats —
-    /// "Worth now", "Bought from", whole-dollar money, "Not yet valued" for
-    /// the unvalued case — because the PDF is presentation where the CSV is
-    /// data. Empty optionals are skipped, exactly as the detail screen
-    /// filters its empty rows.
+    /// rule) — less the Reverb product identifier and the year, keys the CSV
+    /// carries so a re-import restores the match and the narrowing, not
+    /// fields the person reads (002, plan §7; the fetched market figures are
+    /// in neither document) — presented in the detail screen's own
+    /// vocabulary and formats — "Worth now", "Bought from", whole-dollar
+    /// money, "Not yet valued" for the unvalued case — because the PDF is
+    /// presentation where the CSV is data. Empty optionals are skipped,
+    /// exactly as the detail screen filters its empty rows.
     nonisolated init(record: ItemExportRecord, timeZone: TimeZone = .current) {
         var fields: [PDFField] = [
             PDFField(
@@ -200,7 +216,8 @@ extension PDFEntry {
         )
     }
 
-    /// See `init(record: ItemExportRecord, ...)` — wishlist vocabulary.
+    /// See `init(record: ItemExportRecord, ...)` — wishlist vocabulary, and
+    /// the same carve-out: no Reverb identifier, no year, no market figure.
     nonisolated init(record: WishlistExportRecord, timeZone: TimeZone = .current) {
         self.init(
             eyebrow: record.categoryPath.split(separator: "/").joined(separator: " · "),
@@ -229,16 +246,33 @@ nonisolated enum ExportSchema {
     /// The items CSV's column order — the contract `012` matches
     /// byte-for-byte. Reordering or renaming is a schema change, made here
     /// and in plan.md together or not at all.
+    ///
+    /// **Append-only** (002, Q16): a column may be added at the end and
+    /// never renamed, reordered or removed, which is what lets the import
+    /// gate accept a file written by an older Trove. `Reverb Product ID`
+    /// and `Year` are 002's two appended columns.
     static let itemHeaders = [
         "Name", "Category", "Purchase Price", "Currency", "Purchase Date",
         "Purchase Location", "Current Value", "Desire to Keep", "Condition",
-        "Condition Notes", "Serial Number", "Notes",
+        "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
+        "Year",
     ]
 
     static let wishlistHeaders = [
         "Name", "Category", "Estimated Cost", "Currency", "Desire to Own",
-        "Added", "Notes",
+        "Added", "Notes", "Reverb Product ID", "Year",
     ]
+
+    /// Every column count at which a shipped layout ended, oldest first —
+    /// the widths `ImportSchema`'s gate accepts as a prefix of the current
+    /// headers (002, plan §7). 12 is the layout `011`/`012` shipped, before
+    /// `Reverb Product ID` and `Year` were appended. A width is added here
+    /// only when a *released* layout ends, never speculatively: an entry
+    /// that never shipped would accept a file Trove never wrote.
+    static let itemSchemaBoundaries = [12]
+
+    /// See `itemSchemaBoundaries` — 7 is the shipped wishlist layout.
+    static let wishlistSchemaBoundaries = [7]
 
     /// Money as the schema writes it: plain decimal, always two places, dot
     /// separator, no symbol, no grouping. Pure integer arithmetic — no locale
@@ -289,6 +323,8 @@ nonisolated enum ExportSchema {
             record.conditionNotes ?? "",
             record.serialNumber ?? "",
             record.notes ?? "",
+            record.reverbProductID.map(String.init) ?? "",
+            record.year.map(String.init) ?? "",
         ]
     }
 
@@ -302,6 +338,8 @@ nonisolated enum ExportSchema {
             String(record.desireToOwn),
             day(from: record.createdAt, timeZone: timeZone),
             record.notes ?? "",
+            record.reverbProductID.map(String.init) ?? "",
+            record.year.map(String.init) ?? "",
         ]
     }
 

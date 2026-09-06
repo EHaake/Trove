@@ -63,6 +63,12 @@ bought, bought from, serial number, and notes; `WishlistDetailView`
 shows category, name, estimated cost, the desire gauge, added date, and
 notes. Photos are the one exception (PDF only, per spec).
 
+*The two tables below are the historical record of the layout `011`
+shipped — 12 items columns, 7 wishlist columns. `002` appended
+`Reverb Product ID` and `Year` to both (`ExportSchema` is always
+current); the boundaries entry under "Recorded schema decisions" says
+how both widths keep importing.*
+
 ### Items — `Trove-Items-YYYY-MM-DD.csv`, 12 columns, this order
 
 | # | Header | Source | Serialization |
@@ -139,6 +145,22 @@ notes. Photos are the one exception (PDF only, per spec).
   edit to the writer alone. New columns append after the existing
   ones, so files written against this version keep parsing
   positionally.
+- **Shipped widths are recorded as boundaries** *(recorded 2026-09-05
+  at `002`/T016a, the first time the rule above was exercised)*:
+  `ExportSchema.itemSchemaBoundaries = [12]` and
+  `wishlistSchemaBoundaries = [7]` are "every column count at which a
+  shipped layout ended, oldest first" — here, the two tables above,
+  before `002` appended `Reverb Product ID` and `Year`. `012`'s header
+  gate accepts the full current header **or** the header cut at one of
+  those boundaries, and nothing else, which is what turns append-only
+  growth into backward compatibility: a file written by an older Trove
+  imports with the newer columns blank, while a header one column short
+  of a boundary, or renamed, or reordered, still fails the file. The
+  matched width also bounds "more columns than the template", so a
+  legacy file's overlong row is still a stray comma rather than new
+  content. A width joins the array only when a *released* layout ends,
+  never speculatively — an entry that never shipped would accept a file
+  Trove never wrote.
 - **[escalated → decided] Dates are the device-local calendar day**,
   serialized from `Calendar` components — exactly what the detail
   screen shows, which is what criterion 6 measures. The caveat this

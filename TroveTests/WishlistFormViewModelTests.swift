@@ -53,6 +53,46 @@ struct WishlistFormValidationTests {
         #expect(viewModel.validationErrors.contains(.costNegative))
     }
 
+    // MARK: - The year field (002 Amendment A, P18)
+
+    /// P18's table again, over the same `YearCase` rows the item form uses —
+    /// the two fields validate identically, so they share the table rather
+    /// than each carrying a copy to drift.
+    @Test(arguments: YearCase.all)
+    func validatesTheYearField(yearCase: YearCase) throws {
+        let context = try makeInMemoryContext()
+        let viewModel = WishlistFormViewModel(modelContext: context)
+        viewModel.name = "Martin D-18"
+        viewModel.categoryPath = "Music/Guitars"
+        viewModel.estimatedCost = 2_400
+        viewModel.yearText = yearCase.typed
+
+        let saved = viewModel.save()
+        #expect(saved == yearCase.isAccepted)
+        #expect(viewModel.validationErrors.contains(.yearInvalid) == !yearCase.isAccepted)
+
+        let items = try context.fetch(FetchDescriptor<WishlistItem>())
+        if yearCase.isAccepted {
+            #expect(items.count == 1)
+            #expect(items.first?.year == yearCase.expected)
+        } else {
+            #expect(items.isEmpty)
+        }
+    }
+
+    /// The message the form shows, pinned whole — the sentence and the bound
+    /// it names.
+    @Test func pinsTheYearValidationMessage() throws {
+        let viewModel = WishlistFormViewModel(modelContext: try makeInMemoryContext())
+        let nextYear = Calendar.current.component(.year, from: .now) + 1
+
+        #expect(viewModel.maximumYear == nextYear)
+        #expect(
+            MarketCopy.yearValidationError(nextYear: viewModel.maximumYear)
+                == "Year should be four digits, 1900 to \(nextYear)."
+        )
+    }
+
     @Test func clearsEarlierErrorsOnASuccessfulSave() throws {
         let viewModel = WishlistFormViewModel(modelContext: try makeInMemoryContext())
         #expect(viewModel.save() == false)
@@ -127,6 +167,36 @@ struct WishlistFormSaveTests {
 
     /// Same rule as the item form: reuse the casing already in use rather than
     /// letting the taxonomy sprout near-duplicates.
+    /// The year survives the store, not just the object graph: read back on a
+    /// *second* context over the same container, which sees only what `save()`
+    /// actually wrote.
+    @Test func roundTripsTheYearThroughTheStore() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let existing = WishlistItem(name: "Martin D-18", categoryPath: "Music/Guitars")
+        context.insert(existing)
+        try context.save()
+
+        let viewModel = WishlistFormViewModel(modelContext: context, editing: existing)
+        viewModel.yearText = "1975"
+        #expect(viewModel.save())
+
+        let reader = ModelContext(container)
+        let stored = try #require(try reader.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(stored.year == 1975)
+
+        // And back out again: an existing year loads into the field, and
+        // blanking it clears the model.
+        let reopened = WishlistFormViewModel(modelContext: context, editing: existing)
+        #expect(reopened.yearText == "1975")
+        reopened.yearText = ""
+        #expect(reopened.save())
+
+        let after = ModelContext(container)
+        let cleared = try #require(try after.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(cleared.year == nil)
+    }
+
     @Test func canonicalizesTheCategoryAgainstPathsAlreadyInUse() throws {
         let context = try makeInMemoryContext()
         context.insert(Item(name: "Leica M6", categoryPath: "Photography/Cameras"))

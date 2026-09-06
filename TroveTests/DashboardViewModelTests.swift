@@ -98,6 +98,13 @@ struct DashboardHeadlineTests {
 
     /// The property that makes the screen readable: whatever the figures are,
     /// the two above always account for the third.
+    ///
+    /// Asserted against literals written out by hand from the fixture above,
+    /// not against the view model's own arithmetic. The previous form —
+    /// `totalCurrentValueCents - totalSpentCents == valueDeltaCents` — was a
+    /// tautology, since `valueDeltaCents` *is* that subtraction: found at
+    /// 002/T013, where a mutation making the value total read the market
+    /// medians instead of the person's values left this test green.
     @Test func theThreeHeadlineFiguresAlwaysReconcile() throws {
         let context = try makeInMemoryContext()
         insertItem("A", paidCents: 12_345, valueCents: 20_000, into: context)
@@ -109,9 +116,11 @@ struct DashboardHeadlineTests {
         let viewModel = DashboardViewModel(modelContext: context)
         viewModel.load()
 
-        #expect(
-            viewModel.totalCurrentValueCents - viewModel.totalSpentCents == viewModel.valueDeltaCents
-        )
+        // A, B and D are valued; C is not, so neither its value nor its
+        // 7,777 of spend belongs to any of the three.
+        #expect(viewModel.totalCurrentValueCents == 20_000 + 5_000 + 999)
+        #expect(viewModel.totalSpentCents == 12_345 + 90_000 + 400)
+        #expect(viewModel.valueDeltaCents == (20_000 + 5_000 + 999) - (12_345 + 90_000 + 400))
     }
 
     @Test func everythingIsZeroWhenNoItemHasAValue() throws {
@@ -484,5 +493,213 @@ struct UnvaluedDestinationTests {
         viewModel.load()
 
         #expect(viewModel.unvaluedDestination == .none)
+    }
+}
+
+// MARK: - 002/T013: the market variant
+
+/// The dashboard's asking-price line (002, criterion 15, Decisions 21–22).
+///
+/// Every figure here is written through `MarketLocalStore.record`, the app's
+/// own writer, on the `ItemListViewModelMarketSortTests` pattern: the stale
+/// and withheld cases only mean anything if they are the rows a real refresh
+/// would have left behind.
+@Suite("DashboardViewModel — the market line")
+struct DashboardMarketTests {
+    /// A fixed clock, so "thirty-one days old" is a fact about the fixture
+    /// rather than about the day the suite runs.
+    private let clock = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private var stale: Date { clock.addingTimeInterval(-31 * 24 * 60 * 60) }
+
+    private func product(_ id: Int) -> MarketProduct {
+        MarketProduct(
+            id: id,
+            slug: "fender-american-professional-ii-telecaster",
+            title: "Fender American Professional II Telecaster",
+            usedLowCents: 100_000,
+            usedTotal: 108,
+            listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
+        )
+    }
+
+    /// One recorded refresh: a figure, or — with no median — the withheld
+    /// reading a thin catalog produces.
+    private func record(
+        _ medianCents: Int?,
+        for id: UUID,
+        kind: MarketSubjectKind = .owned,
+        fetchedAt: Date,
+        in context: ModelContext
+    ) throws {
+        let reading: MarketReading
+        if let medianCents {
+            reading = .figure(MarketFigure(
+                medianCents: medianCents,
+                lowCents: medianCents - 10_000,
+                highCents: medianCents + 10_000,
+                count: 12,
+                fetchedAt: fetchedAt,
+                isTruncated: false,
+                yearScope: .any
+            ))
+        } else {
+            reading = .withheld(count: 2, usedLowCents: 100_000, fetchedAt: fetchedAt, yearScope: .any)
+        }
+        try MarketLocalStore.record(
+            reading,
+            product: product(126_161),
+            for: MarketSubjectKey(subjectID: id, kind: kind),
+            in: context
+        )
+    }
+
+    private func id(of name: String, in context: ModelContext) throws -> UUID {
+        let items = try context.fetch(FetchDescriptor<Item>())
+        return try #require(items.first(where: { $0.name == name })?.id, "\(name) wasn't inserted")
+    }
+
+    /// Five owned items in `Photography` and one outside it: two carry a
+    /// current median, one is withheld, one went stale past thirty days
+    /// (Decision 21), one was never matched.
+    private func makeCollection() throws -> ModelContext {
+        let context = try makeInMemoryContext()
+        insertItem("Leica", category: "Photography/Cameras", paidCents: 290_000, valueCents: 345_000, into: context)
+        insertItem("Nikon", category: "Photography/Lenses", paidCents: 24_000, valueCents: 31_000, into: context)
+        insertItem("Withheld", category: "Photography/Cameras", paidCents: 10_000, valueCents: 12_000, into: context)
+        insertItem("Stale", category: "Photography/Cameras", paidCents: 10_000, valueCents: 12_000, into: context)
+        insertItem("Unmatched", category: "Photography/Lenses", paidCents: 10_000, valueCents: nil, into: context)
+        insertItem("Amp", category: "Music/Amps", paidCents: 69_000, valueCents: 54_000, into: context)
+        try context.save()
+        return context
+    }
+
+    private func seedMarketRows(into context: ModelContext) throws {
+        try record(400_000, for: try id(of: "Leica", in: context), fetchedAt: clock, in: context)
+        try record(50_000, for: try id(of: "Nikon", in: context), fetchedAt: clock, in: context)
+        try record(nil, for: try id(of: "Withheld", in: context), fetchedAt: clock, in: context)
+        // The largest number in the fixture, so a sum that ignored freshness
+        // could not come out right by accident.
+        try record(900_000, for: try id(of: "Stale", in: context), fetchedAt: stale, in: context)
+        try record(700_000, for: try id(of: "Amp", in: context), fetchedAt: clock, in: context)
+        try context.save()
+    }
+
+    private func viewModel(over context: ModelContext, scope: String = "") -> DashboardViewModel {
+        DashboardViewModel(modelContext: context, scope: scope, now: { self.clock })
+    }
+
+    /// Criterion 15: the sum is over *current* medians only, and it follows
+    /// the scope the screen is showing. The out-of-scope item's figure is
+    /// counted when the whole collection is on screen, so the exclusion is
+    /// the scope's doing and not an unreadable row.
+    @Test func theMarketTotalSumsCurrentMediansOnly() throws {
+        let context = try makeCollection()
+        try seedMarketRows(into: context)
+
+        let scoped = viewModel(over: context, scope: "Photography")
+        scoped.load()
+
+        #expect(scoped.marketTotalCents == 450_000)
+        #expect(scoped.marketFigureCount == 2)
+        #expect(scoped.totalItemCount == 5)
+        #expect(scoped.hasMarketFigures)
+
+        let whole = viewModel(over: context)
+        whole.load()
+
+        #expect(whole.marketTotalCents == 1_150_000)
+        #expect(whole.marketFigureCount == 3)
+        #expect(whole.totalItemCount == 6)
+    }
+
+    /// Criterion 15: a wanted item's figure belongs to the wishlist, never
+    /// to what the collection is worth — even though both kinds of row live
+    /// in the same store.
+    @Test func wishlistFiguresNeverReachTheTotal() throws {
+        let context = try makeCollection()
+        try seedMarketRows(into: context)
+        let wanted = WishlistItem(name: "D-18", categoryPath: "Music/Guitars")
+        context.insert(wanted)
+        try record(1_500_000, for: wanted.id, kind: .wanted, fetchedAt: clock, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(viewModel.marketTotalCents == 1_150_000)
+        #expect(viewModel.marketFigureCount == 3)
+    }
+
+    /// Decision 22, whole: the amount and the coverage are one string, so
+    /// no surface can show the figure without saying what it covers.
+    @Test func theMarketLineIsTheWholeString() throws {
+        let context = try makeCollection()
+        try seedMarketRows(into: context)
+
+        let viewModel = viewModel(over: context, scope: "Photography")
+        viewModel.load()
+
+        #expect(
+            viewModel.marketLine
+                == MarketCopy.dashboardLine(totalCents: 450_000, count: 2, totalCount: 5)
+        )
+        // Written out once, so the line can't drift behind its own composer.
+        #expect(viewModel.marketLine == "Market · $4,500 · 2 of 5 items")
+    }
+
+    /// The rule the whole variant rests on: the market figures are an
+    /// addition, never an ingredient. Every other figure on the screen comes
+    /// out identical over the same collection with and without market rows.
+    @Test func marketFiguresLeaveEveryOtherFigureAlone() throws {
+        let without = try makeCollection()
+        let with = try makeCollection()
+        try seedMarketRows(into: with)
+
+        let bare = viewModel(over: without)
+        bare.load()
+        let market = viewModel(over: with)
+        market.load()
+
+        #expect(market.totalCurrentValueCents == bare.totalCurrentValueCents)
+        #expect(market.totalSpentCents == bare.totalSpentCents)
+        #expect(market.valueDeltaCents == bare.valueDeltaCents)
+        #expect(market.valuedCount == bare.valuedCount)
+        #expect(market.unvaluedCount == bare.unvaluedCount)
+        #expect(market.totalItemCount == bare.totalItemCount)
+        #expect(market.valuedShare == bare.valuedShare)
+        #expect(market.breakdown == bare.breakdown)
+        // And the market figures really were there to interfere.
+        #expect(market.hasMarketFigures)
+        #expect(!bare.hasMarketFigures)
+    }
+
+    /// No line at all rather than "Market · $0 · 0 of 6 items", which would
+    /// report a collection as worthless on Reverb rather than un-matched.
+    @Test func hasMarketFiguresIsFalseWithNothingMatched() throws {
+        let context = try makeCollection()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(!viewModel.hasMarketFigures)
+        #expect(viewModel.marketFigureCount == 0)
+        #expect(viewModel.marketTotalCents == 0)
+    }
+
+    /// The same, with rows present but nothing readable in them: a withheld
+    /// reading and one past thirty days are matched items with no current
+    /// median, and neither may light the line.
+    @Test func hasMarketFiguresIsFalseWhenEveryFigureIsWithheldOrStale() throws {
+        let context = try makeCollection()
+        try record(nil, for: try id(of: "Withheld", in: context), fetchedAt: clock, in: context)
+        try record(900_000, for: try id(of: "Stale", in: context), fetchedAt: stale, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(!viewModel.hasMarketFigures)
+        #expect(viewModel.marketTotalCents == 0)
     }
 }

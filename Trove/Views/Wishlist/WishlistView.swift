@@ -315,7 +315,7 @@ struct WishlistView: View {
     private var rows: some View {
         List {
             ForEach(viewModel.items, id: \.id) { item in
-                WishlistRow(item: item)
+                WishlistRow(item: item, trend: viewModel.trend(for: item.id))
                     // The screen's own background, not `.clear`, and not
                     // decoration: at rest they're pixel-identical (the screen
                     // shows through either way), but the reorder lift
@@ -527,6 +527,10 @@ struct WishlistView: View {
 private struct WishlistRow: View {
     let item: WishlistItem
 
+    /// The market trend for this wanted item, from the list's own view model
+    /// (002/T012) — the row's only market mark (spec Decision 8).
+    var trend: MarketTrend?
+
     @Environment(\.theme) private var theme
 
     var body: some View {
@@ -558,11 +562,17 @@ private struct WishlistRow: View {
             // thumbnail sets the row's height, so this column has the space
             // for both without the row growing.
             VStack(alignment: .trailing, spacing: 0) {
-                Text(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))
-                    .font(theme.typography.monoValue)
-                    .foregroundStyle(theme.colors.textPrimary)
-                    .lineLimit(1)
-                    .accessibilityLabel("Estimated cost \(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))")
+                // The arrow *after* the cost, so the cost's own explicit
+                // label still reads first in the combined row (plan §6).
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))
+                        .font(theme.typography.monoValue)
+                        .foregroundStyle(theme.colors.textPrimary)
+                        .lineLimit(1)
+                        .accessibilityLabel("Estimated cost \(item.estimatedCostCents.formattedAsWholeCurrency(currencyCode: item.currencyCode))")
+
+                    TrendArrow(trend: trend)
+                }
 
                 Spacer(minLength: theme.metrics.fieldGap)
 
@@ -584,8 +594,8 @@ private struct WishlistRow: View {
 
 #Preview {
     let container = try! ModelContainer(
-        for: TroveSchema.schema,
-        configurations: ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
+        for: TroveSchema.combinedSchema,
+        configurations: ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
     )
     let context = ModelContext(container)
     for (index, wanted) in [

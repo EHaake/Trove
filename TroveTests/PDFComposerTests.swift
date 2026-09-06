@@ -111,6 +111,8 @@ struct PDFComposerTests {
             conditionNotes: nil,
             serialNumber: serial,
             notes: notes,
+            reverbProductID: nil,
+            year: nil,
             firstPhotoID: nil
         ))
     }
@@ -203,6 +205,66 @@ struct PDFComposerTests {
 
         let lastPage = try #require(pdf.page(at: pdf.pageCount - 1)?.string)
         #expect(lastPage.contains("ENDOFNOTESMARKER"))
+    }
+
+    // MARK: - The 002 carve-out (T016a)
+
+    /// The PDF presents what the person reads; the Reverb product id and the
+    /// year are keys the CSV carries so a re-import restores the match and
+    /// the narrowing (spec criterion 19). Neither may appear as a label, a
+    /// value, or rendered text — and neither may the fetched figures, which
+    /// the record type doesn't carry at all. Mutation: add a `PDFField` for
+    /// either and this goes red.
+    @Test func theEntryNeverCarriesTheReverbIdentifier() throws {
+        let matched = ItemExportRecord(
+            name: "Martin D-18",
+            categoryPath: "Music/Guitars/Acoustic",
+            purchasePriceCents: 229_900,
+            currencyCode: "USD",
+            purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+            purchaseLocation: "Local shop",
+            currentValueCents: 260_000,
+            desireToKeep: 5,
+            conditionRawValue: "good",
+            conditionNotes: "pick wear",
+            serialNumber: "2214782",
+            notes: "The keeper",
+            reverbProductID: 182_769,
+            year: 1984,
+            firstPhotoID: nil
+        )
+        let wanted = WishlistExportRecord(
+            name: "Deluxe Reverb Reissue",
+            categoryPath: "Music/Amps",
+            estimatedCostCents: 124_999,
+            currencyCode: "USD",
+            desireToOwn: 3,
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+            notes: nil,
+            reverbProductID: 232,
+            year: 1966,
+            firstPhotoID: nil
+        )
+
+        let entries = [PDFEntry(record: matched), PDFEntry(record: wanted)]
+        for entry in entries {
+            for field in entry.fields {
+                // "Reverb" as a word: the wanted item is literally named
+                // "Deluxe Reverb Reissue", so the *name* is exempt — it is
+                // the person's own text, not the identifier.
+                #expect(!field.label.contains("Reverb"), "\(field.label)")
+                #expect(!field.label.contains("Year"), "\(field.label)")
+                for digits in ["182769", "232", "1984", "1966"] {
+                    #expect(!field.value.contains(digits), "\(field.label) = \(field.value)")
+                }
+            }
+        }
+
+        let text = fullText(try render(entries: entries))
+        #expect(text.contains("Martin D-18"))
+        for digits in ["182769", "1984", "1966"] {
+            #expect(!text.contains(digits), "\(digits)")
+        }
     }
 
     // MARK: - Photos (T008)

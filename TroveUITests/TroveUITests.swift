@@ -382,4 +382,329 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings")
         XCTAssertTrue(badge.isHittable, "Done should return to the list")
     }
+
+    // MARK: - 002 Market (offline states only)
+
+    /// 002 criterion 1's behavioral half: an item with nothing matched to it
+    /// offers Find on Reverb… and *no* other market action — no Refresh, no
+    /// adopt, no link out, neither match action — on the item screen, and on
+    /// the wishlist screen the pre-002 placeholder block ("Not tracked yet")
+    /// is gone from where it used to sit.
+    ///
+    /// `MarketSectionRenderTests` pins what each state draws from a state
+    /// value handed straight to the view; this pins that a real item, added
+    /// through the real form, actually arrives in the unmatched state on
+    /// both screens. Its mutation: rendering the section's action rows
+    /// unconditionally must turn this red.
+    @MainActor
+    func testAnUnmatchedItemOffersFindOnReverbAndNothingElse() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        let name = "Rolleiflex \(UUID().uuidString.prefix(6))"
+        addItem(to: app, named: name)
+        openDetail(in: app, named: name)
+
+        XCTAssertTrue(
+            app.buttons["market.find"].waitForExistence(timeout: 5),
+            "an unmatched item must offer Find on Reverb…"
+        )
+        assertNoMarketActionsBeyondFind(in: app, screen: "an unmatched item")
+
+        let wanted = "Summicron \(UUID().uuidString.prefix(6))"
+        addWantedItem(to: app, named: wanted)
+        openDetail(in: app, named: wanted)
+
+        XCTAssertTrue(
+            app.buttons["market.find"].waitForExistence(timeout: 5),
+            "an unmatched wanted item must offer Find on Reverb… too"
+        )
+        assertNoMarketActionsBeyondFind(in: app, screen: "an unmatched wanted item")
+        let ghost = app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS[c] 'Not tracked yet'"))
+            .firstMatch
+        XCTAssertFalse(ghost.exists, "010's reserved placeholder is still on the wishlist screen")
+    }
+
+    /// 002 criterion 2's Not-now half, and Decision 14's ordering: the first
+    /// Find on Reverb… on this device puts the notice in front of the picker
+    /// — the picker's search field is not on screen yet — and Not now closes
+    /// the sheet without acknowledging anything, so the very next Find on
+    /// Reverb… shows the notice again (Q5).
+    ///
+    /// **Continue is never tapped here, and that is deliberate** (plan Q13):
+    /// tapping it would acknowledge the notice and hand the sheet to the
+    /// picker, which searches Reverb on appear. Nothing in this target may
+    /// reach the network, so the flag's persistence is the unit suites' claim
+    /// and the device pass's, not this test's — this covers the half that
+    /// needs no network and no writes.
+    ///
+    /// Its mutation: acknowledging on Not now (calling `acknowledgeNotice`
+    /// from `declineNotice`) must turn this red at the second showing.
+    @MainActor
+    func testTheFirstFindOnReverbShowsTheNoticeAndNotNowClosesIt() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        let name = "Rolleiflex \(UUID().uuidString.prefix(6))"
+        addItem(to: app, named: name)
+        openDetail(in: app, named: name)
+
+        let find = app.buttons["market.find"]
+        XCTAssertTrue(find.waitForExistence(timeout: 5))
+        scrollUntilHittable(find, in: app)
+        find.tap()
+
+        let notNow = app.buttons["market.notice.notNow"]
+        XCTAssertTrue(notNow.waitForExistence(timeout: 5), "the first find must present the notice")
+        XCTAssertTrue(app.buttons["market.notice.continue"].exists, "the notice must offer Continue")
+        XCTAssertFalse(
+            element(in: app, identifiedBy: "market.search").exists,
+            "the picker stands behind the notice, not beside it — its search field must not be on screen"
+        )
+
+        notNow.tap()
+        XCTAssertTrue(notNow.waitForNonExistence(timeout: 5), "Not now must close the sheet")
+
+        // The whole point of Q5: Not now acknowledges nothing, so the notice
+        // is back the next time. If this find opened the picker instead, the
+        // app would be searching Reverb — which is why the assertion is on
+        // the notice returning rather than on the picker staying away.
+        scrollUntilHittable(find, in: app)
+        find.tap()
+        XCTAssertTrue(
+            notNow.waitForExistence(timeout: 5),
+            "Not now acknowledged the notice — the second find should have shown it again"
+        )
+        // Left closed, so the run ends with no sheet up.
+        notNow.tap()
+        XCTAssertTrue(notNow.waitForNonExistence(timeout: 5))
+    }
+
+    /// 002 criterion 14's reachable half: both list screens offer the two
+    /// market sort rows in the Sort By dropdown. The view-model suites pin
+    /// what each order sorts by; this pins that a person can pick them.
+    ///
+    /// Its mutation: removing the `.marketFigure` case from either list's
+    /// `SortOrder` must turn this red.
+    @MainActor
+    func testTheSortMenuOffersMarketRows() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        addItem(to: app, named: "Rolleiflex \(UUID().uuidString.prefix(6))")
+        assertMarketSortRows(in: app, badge: "sortOptions.items", screen: "the items list")
+
+        addWantedItem(to: app, named: "Summicron \(UUID().uuidString.prefix(6))")
+        assertMarketSortRows(in: app, badge: "sortOptions.wishlist", screen: "the wishlist")
+    }
+
+    /// 002 criterion 17's About half and the Settings row, on a fresh
+    /// install: Refresh market values is on the screen and disabled, because
+    /// an empty store has nothing matched to refresh; Reverb's attribution is
+    /// there verbatim; and the two destinations the terms and the notice
+    /// promise — the contact address and the privacy policy — are both real
+    /// links.
+    ///
+    /// Its mutation: dropping the `canRefreshMarketValues` gate, so the row
+    /// is always enabled, must turn this red.
+    @MainActor
+    func testSettingsCarriesTheMarketRowAndAttribution() {
+        let app = launchApp()
+        app.buttons["Items"].tap()
+
+        let badge = app.buttons["moreActions.items"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "the overflow badge must exist")
+        badge.tap()
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5), "the menu should open")
+        settings.tap()
+        XCTAssertTrue(
+            app.navigationBars["Settings"].waitForExistence(timeout: 5),
+            "Settings should present as a sheet"
+        )
+
+        // Existence before `isEnabled`, which is false for a missing row.
+        let refresh = app.buttons["settings.refreshMarket"]
+        XCTAssertTrue(refresh.waitForExistence(timeout: 5), "the market row must be on the screen")
+        XCTAssertFalse(refresh.isEnabled, "nothing is matched on an empty store, so the row must be disabled")
+
+        let attribution = app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS[c] 'not endorsed'"))
+            .firstMatch
+        scrollUntilFound(attribution, in: app)
+        XCTAssertTrue(attribution.exists, "Reverb's attribution must be in About")
+
+        let contact = element(in: app, identifiedBy: "about.contact")
+        XCTAssertTrue(contact.exists, "About must carry the contact address")
+        let privacy = element(in: app, identifiedBy: "about.privacy")
+        XCTAssertTrue(privacy.exists, "About must link to the privacy policy")
+    }
+
+    // MARK: - Market helpers
+
+    /// Any element with this identifier, whatever it is drawn as. The market
+    /// targets are a mix of buttons, links and a search field, and querying
+    /// `app.buttons[...]` for one of the others would report "doesn't exist"
+    /// for a thing that plainly does — which is the wrong answer in both
+    /// directions here, since half these assertions are negative.
+    @MainActor
+    private func element(in app: XCUIApplication, identifiedBy identifier: String) -> XCUIElement {
+        app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+    }
+
+    @MainActor
+    private func assertNoMarketActionsBeyondFind(
+        in app: XCUIApplication,
+        screen: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        for identifier in [
+            "market.refresh", "market.adopt", "market.link",
+            "market.changeMatch", "market.removeMatch",
+        ] {
+            XCTAssertFalse(
+                element(in: app, identifiedBy: identifier).exists,
+                "\(screen) draws \(identifier) — nothing is matched, so Find on Reverb… is the only action",
+                file: file,
+                line: line
+            )
+        }
+    }
+
+    @MainActor
+    private func assertMarketSortRows(
+        in app: XCUIApplication,
+        badge identifier: String,
+        screen: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let badge = app.buttons[identifier]
+        XCTAssertTrue(
+            badge.waitForExistence(timeout: 5),
+            "one row is enough for \(screen)'s sort badge to show",
+            file: file,
+            line: line
+        )
+        badge.tap()
+        XCTAssertTrue(
+            app.staticTexts["SORT BY"].waitForExistence(timeout: 5),
+            "\(screen)'s Sort By should open",
+            file: file,
+            line: line
+        )
+        // The dropdown row's title, as `MarketCopy.sortDescending` and
+        // `sortAscending` spell it — a UI-test target can't import the app,
+        // so the copy is repeated here and `MarketCopyTests` pins the source.
+        for title in ["Market \u{2193}", "Market \u{2191}"] {
+            XCTAssertTrue(
+                app.buttons[title].exists,
+                "\(screen)'s Sort By is missing \(title)",
+                file: file,
+                line: line
+            )
+        }
+        app.buttons["Dismiss sort options"].tap()
+        XCTAssertTrue(
+            app.staticTexts["SORT BY"].waitForNonExistence(timeout: 5),
+            "\(screen)'s Sort By should close",
+            file: file,
+            line: line
+        )
+    }
+
+    /// Adds one item through the real form — the same steps
+    /// `testAddingAnItemThroughQuickAddPutsItInTheList` walks, which is the
+    /// only way to get a market section to look at.
+    @MainActor
+    private func addItem(to app: XCUIApplication, named name: String) {
+        app.buttons["Items"].tap()
+
+        let addButton = app.buttons["Add item"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5))
+        addButton.tap()
+
+        let nameField = app.textFields["Name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5), "The add-item sheet didn't present")
+        nameField.tap()
+        nameField.typeText(name)
+
+        let categoryField = app.textFields["Category"]
+        categoryField.tap()
+        categoryField.typeText("Photography/Cameras")
+
+        let priceField = app.textFields["Price paid"]
+        priceField.tap()
+        priceField.typeText("1850")
+
+        app.buttons["Save item"].tap()
+        XCTAssertTrue(
+            app.buttons["Save item"].waitForNonExistence(timeout: 5),
+            "The sheet stayed up — the save was probably rejected by validation"
+        )
+        XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5), "no row for \"\(name)\" appeared")
+    }
+
+    /// The wishlist's equivalent: name, category and estimated cost are all
+    /// required, the same three the item form asks for under other names.
+    @MainActor
+    private func addWantedItem(to app: XCUIApplication, named name: String) {
+        app.buttons["Wishlist"].tap()
+
+        let addButton = app.buttons["Add wanted item"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5))
+        addButton.tap()
+
+        let nameField = app.textFields["What do you want"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5), "The wishlist sheet didn't present")
+        nameField.tap()
+        nameField.typeText(name)
+
+        let categoryField = app.textFields["Category"]
+        categoryField.tap()
+        categoryField.typeText("Photography/Lenses")
+
+        let costField = app.textFields["Estimated cost"]
+        costField.tap()
+        costField.typeText("2400")
+
+        app.buttons["Save to wishlist"].tap()
+        XCTAssertTrue(
+            app.buttons["Save to wishlist"].waitForNonExistence(timeout: 5),
+            "The sheet stayed up — the save was probably rejected by validation"
+        )
+        XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5), "no row for \"\(name)\" appeared")
+    }
+
+    /// Both lists push their detail screen from a tap on the row itself, so
+    /// the row's title is the target.
+    @MainActor
+    private func openDetail(in app: XCUIApplication, named name: String) {
+        let row = app.staticTexts[name]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+    }
+
+    /// The market section sits below the fold on both detail screens. Its
+    /// elements are in the accessibility tree either way — the content is a
+    /// plain `VStack` — so existence needs no scrolling and only a *tap*
+    /// does.
+    @MainActor
+    private func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication, attempts: Int = 6) {
+        for _ in 0..<attempts where !element.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(element.isHittable, "couldn't scroll \(element) into reach")
+    }
+
+    /// The same for a query that may resolve to nothing until the screen has
+    /// been scrolled — Settings' About block is the long way down.
+    @MainActor
+    private func scrollUntilFound(_ element: XCUIElement, in app: XCUIApplication, attempts: Int = 6) {
+        for _ in 0..<attempts where !element.exists {
+            app.swipeUp()
+        }
+    }
 }

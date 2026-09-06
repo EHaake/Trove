@@ -627,6 +627,203 @@ struct ItemListViewModelSortTests {
     }
 }
 
+/// The Market sort and the row's trend (002/T012, spec criteria 13–14,
+/// Decision 21) — the mirror of `WishlistMarketSortTests`, which holds the
+/// same rules for the other list.
+///
+/// Every figure here is written through `MarketLocalStore.record`, the app's
+/// own writer, rather than by assembling rows by hand: the stale and
+/// withheld cases only mean anything if they are the rows a real refresh
+/// would have left.
+@Suite("ItemListViewModel — the Market sort")
+struct ItemListViewModelMarketSortTests {
+    /// A fixed clock, so "thirty days old" is a fact about the fixture
+    /// rather than about the day the suite runs.
+    private let clock = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private func product(_ id: Int) -> MarketProduct {
+        MarketProduct(
+            id: id,
+            slug: "fender-american-professional-ii-telecaster",
+            title: "Fender American Professional II Telecaster",
+            usedLowCents: 100_000,
+            usedTotal: 108,
+            listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
+        )
+    }
+
+    /// One recorded refresh for an owned item: a figure, or — with no
+    /// median — the withheld reading a thin catalog produces.
+    private func record(
+        _ medianCents: Int?,
+        for id: UUID,
+        fetchedAt: Date,
+        productID: Int = 126_161,
+        in context: ModelContext
+    ) throws {
+        let reading: MarketReading
+        if let medianCents {
+            reading = .figure(MarketFigure(
+                medianCents: medianCents,
+                lowCents: medianCents - 10_000,
+                highCents: medianCents + 10_000,
+                count: 12,
+                fetchedAt: fetchedAt,
+                isTruncated: false,
+                yearScope: .any
+            ))
+        } else {
+            reading = .withheld(count: 2, usedLowCents: 100_000, fetchedAt: fetchedAt, yearScope: .any)
+        }
+        try MarketLocalStore.record(
+            reading,
+            product: product(productID),
+            for: MarketSubjectKey(subjectID: id, kind: .owned),
+            in: context
+        )
+    }
+
+    private func viewModel(over context: ModelContext) -> ItemListViewModel {
+        ItemListViewModel(modelContext: context, now: { self.clock })
+    }
+
+    private func id(of name: String, in context: ModelContext) throws -> UUID {
+        let items = try context.fetch(FetchDescriptor<Item>())
+        return try #require(items.first(where: { $0.name == name })?.id, "\(name) wasn't inserted")
+    }
+
+    /// The four kinds of row, one sort: a current median leads, and
+    /// everything without one — withheld, stale past thirty days
+    /// (Decision 21), or never matched at all — falls to the bottom in the
+    /// person's own order rather than sorting as if it were worth nothing.
+    /// The stale figure is the *largest* number in the fixture, so a sort
+    /// that ignored freshness would lead with it.
+    @Test func theMarketSortLeadsWithTheDearestCurrentMedianAndSinksTheRest() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Cheap", order: 5, into: context)
+        insertItem("Dear", order: 6, into: context)
+        insertItem("Stale", order: 0, into: context)
+        insertItem("Withheld", order: 1, into: context)
+        insertItem("Unmatched", order: 2, into: context)
+        try record(50_000, for: try id(of: "Cheap", in: context), fetchedAt: clock, in: context)
+        try record(200_000, for: try id(of: "Dear", in: context), fetchedAt: clock, in: context)
+        try record(900_000, for: try id(of: "Stale", in: context), fetchedAt: clock.addingTimeInterval(-31 * 24 * 60 * 60), in: context)
+        try record(nil, for: try id(of: "Withheld", in: context), fetchedAt: clock, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.sortOrder = .marketFigure
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Dear", "Cheap", "Stale", "Withheld", "Unmatched"])
+    }
+
+    /// The ascending half: the cheapest current median leads, and the three
+    /// figure-less rows stay last — they are unknown, not cheap, so
+    /// ascending must not promote them above the cheapest matched item.
+    @Test func theAscendingMarketSortLeadsWithTheCheapestAndStillSinksTheRest() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Cheap", order: 5, into: context)
+        insertItem("Dear", order: 6, into: context)
+        insertItem("Stale", order: 0, into: context)
+        insertItem("Withheld", order: 1, into: context)
+        insertItem("Unmatched", order: 2, into: context)
+        try record(50_000, for: try id(of: "Cheap", in: context), fetchedAt: clock, in: context)
+        try record(200_000, for: try id(of: "Dear", in: context), fetchedAt: clock, in: context)
+        try record(900_000, for: try id(of: "Stale", in: context), fetchedAt: clock.addingTimeInterval(-31 * 24 * 60 * 60), in: context)
+        try record(nil, for: try id(of: "Withheld", in: context), fetchedAt: clock, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.sortOrder = .marketFigureAscending
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Cheap", "Dear", "Stale", "Withheld", "Unmatched"])
+    }
+
+    /// Equal medians resolve by the user's own order — the tie-break every
+    /// non-Custom sort takes. Insertion order, name order and manual order
+    /// are three different orders here, so neither a stable sort over the
+    /// fetch nor a name fallback passes this by coincidence.
+    @Test func marketFigureTiesResolveByManualOrder() throws {
+        let context = try makeInMemoryContext()
+        insertItem("alpha", order: 2, into: context)
+        insertItem("Charlie", order: 0, into: context)
+        insertItem("Bravo", order: 1, into: context)
+        for name in ["alpha", "Charlie", "Bravo"] {
+            try record(140_000, for: try id(of: name, in: context), fetchedAt: clock, in: context)
+        }
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.sortOrder = .marketFigure
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Charlie", "Bravo", "alpha"])
+    }
+
+    /// The row's arrow, not the sort: an item with no figure row of its own
+    /// has no trend to draw, whatever its neighbours have.
+    @Test func unmatchedItemsShowNoTrend() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Unmatched", into: context)
+        insertItem("Matched", into: context)
+        try record(140_000, for: try id(of: "Matched", in: context), fetchedAt: clock, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(viewModel.trend(for: try id(of: "Unmatched", in: context)) == nil)
+        #expect(viewModel.marketSummaries[try id(of: "Unmatched", in: context)] == nil)
+    }
+
+    /// The positive half, through the property the row actually reads: two
+    /// refreshes a fortnight apart, the second ten per cent higher, and the
+    /// row's arrow points up (spec criterion 13). The trend is the figure
+    /// row's own stored one, recomputed by `record` over the whole history.
+    @Test func aMatchedItemWithARisingHistoryReadsUp() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", into: context)
+        let id = try id(of: "Telecaster", in: context)
+        try record(100_000, for: id, fetchedAt: clock.addingTimeInterval(-14 * 24 * 60 * 60), in: context)
+        try record(110_000, for: id, fetchedAt: clock, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(viewModel.trend(for: id) == .up)
+    }
+
+    /// Q11's labels, on both lists: read from `MarketCopy`, never retyped —
+    /// the source scan is the half that catches a second copy of the string
+    /// being typed in beside the first.
+    @Test func theMarketSortLabelsComeFromMarketCopyOnBothLists() throws {
+        #expect(ItemListViewModel.SortOrder.marketFigure.label == MarketCopy.sortDescending)
+        #expect(ItemListViewModel.SortOrder.marketFigureAscending.label == MarketCopy.sortAscending)
+        #expect(WishlistViewModel.SortOrder.marketFigure.label == MarketCopy.sortDescending)
+        #expect(WishlistViewModel.SortOrder.marketFigureAscending.label == MarketCopy.sortAscending)
+
+        for file in ["Trove/ViewModels/ItemListViewModel.swift", "Trove/ViewModels/WishlistViewModel.swift"] {
+            let code = try SourceScan.production(file)
+            #expect(code.contains("MarketCopy.sortDescending"), "\(file): the descending label isn't read from MarketCopy")
+            #expect(code.contains("MarketCopy.sortAscending"), "\(file): the ascending label isn't read from MarketCopy")
+            let retyped = SourceScan.stringLiterals(in: code).filter { $0.contains("Market") }
+            #expect(retyped.isEmpty, "\(file): the sort label is typed inline: \(retyped)")
+        }
+    }
+
+    /// Q11's positions: the Market pair sits straight after the Value pair,
+    /// descending before ascending — the order the menu shows, which is
+    /// `allCases`.
+    @Test func theMarketPairFollowsTheValuePairInTheMenu() {
+        #expect(ItemListViewModel.SortOrder.allCases == [
+            .custom, .purchaseDate, .currentValue, .currentValueAscending, .marketFigure, .marketFigureAscending, .desireToKeep,
+        ])
+    }
+}
+
 /// The un-valued filter, which arrives from the dashboard rather than from a
 /// control on the list itself.
 @Suite("ItemListViewModel — the un-valued filter")
@@ -1062,7 +1259,7 @@ func itemsPreview(names: [String]) -> ItemsImportPreview {
                     currencyCode: "USD", purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
                     purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
                     conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
-                    notes: nil, firstPhotoID: nil
+                    notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
                 ),
                 rowNumber: offset + 2,
                 defaultedFieldCount: 0
@@ -1104,6 +1301,53 @@ struct ItemListViewModelCommitTests {
         #expect(ordered.map(\.name) == ["Existing A", "Existing B", "One", "Two", "Three"])
         #expect(ordered.map(\.sortOrder) == [0, 1, 2, 3, 4])
         #expect(viewModel.importPresentation == nil)
+    }
+
+    /// 002/T016a: the commit carries the CSV's two appended columns onto
+    /// the model, so a re-imported item asks the market the same question it
+    /// asked before it left (criterion 19). Verified on a second context
+    /// over the same store — a same-context refetch would pass with
+    /// `save()` deleted.
+    @Test func commitRestoresTheReverbMatchAndTheYear() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        var preview = itemsPreview(names: ["Matched", "Unmatched"])
+        preview = ImportPreview(
+            validated: [
+                ValidatedRow(
+                    record: ItemExportRecord(
+                        name: "Matched", categoryPath: "Music/Guitars",
+                        purchasePriceCents: 100_000, currencyCode: "USD",
+                        purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+                        purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
+                        conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
+                        notes: nil, reverbProductID: 182_769, year: 1984, firstPhotoID: nil
+                    ),
+                    rowNumber: 2,
+                    defaultedFieldCount: 0
+                ),
+                preview.validated[1],
+            ],
+            skipped: [],
+            defaultedFieldCount: 0
+        )
+
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(preview))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        let saved = try ModelContext(container).fetch(
+            FetchDescriptor<Item>(sortBy: [SortDescriptor(\.sortOrder)])
+        )
+        #expect(saved.map(\.name) == ["Matched", "Unmatched"])
+        #expect(saved[0].reverbProductID == 182_769)
+        #expect(saved[0].year == 1984)
+        // An unmatched row stays unmatched — no id invented, no year.
+        #expect(saved[1].reverbProductID == nil)
+        #expect(saved[1].year == nil)
     }
 
     @Test func thePlacementBaseIsComputedAtCommitTimeNotParseTime() async throws {
@@ -1204,7 +1448,7 @@ struct ItemListViewModelCommitTests {
                             purchaseDate: row.record.purchaseDate, purchaseLocation: nil,
                             currentValueCents: nil, desireToKeep: 3,
                             conditionRawValue: "good", conditionNotes: nil,
-                            serialNumber: nil, notes: nil, firstPhotoID: nil
+                            serialNumber: nil, notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
                         ),
                         rowNumber: row.rowNumber,
                         defaultedFieldCount: 0

@@ -175,6 +175,23 @@ screen needs, this is the visual/layout brief for each:
 9. **Empty states** — items list, wishlist, and dashboard with no data
    yet. Should point at the add action, not just say "nothing here."
 
+## Market figures (`002`)
+
+The Market section on both detail screens shows a Reverb **asking
+price** — the median of current listings — beside the person's own
+value, never in place of it. Two rules hold everywhere the figure
+appears: it is an asking price and never a value, a worth or a price
+(the vocabulary scan enforces the words); and the person's own figure
+stays the hero — the median sits in the PAID cell's register, one
+unbroken block in the DETAILS/NOTES rhythm, not a rival card. "View on
+Reverb" is the app's first external link, drawn with an outward glyph
+and kept visually apart from the buttons that act in place. Filled
+brass means "writes your data" and appears once, on the adopt action;
+outlined brass fetches; text buttons manage the match, rust for the
+destructive one. The dashboard's market line stays in the mono meta
+register with only the amount lifted, so it cannot be mistaken for the
+total, and it never separates from its coverage.
+
 ## Menus and chrome
 
 **Bespoke inside the page, system in the bars** (`013` Amendment A).

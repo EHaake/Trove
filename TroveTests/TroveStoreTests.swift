@@ -13,9 +13,10 @@ import Testing
 /// So the decisions get tested even though sync itself doesn't (plan.md's
 /// testing strategy: CloudKit sync is verified by hand across two devices,
 /// T048). What's checked here is everything that can be checked without an
-/// account: which configuration each launch asks for, what happens when it
+/// account: which configurations each launch asks for, what happens when they
 /// won't load, and whether the two files outside the Swift sources agree with
-/// the one string in them.
+/// the one string in them. The two-store shape itself — which models go where,
+/// the filenames, the disjointness — is `MarketLocalSchemaTests`' (002).
 @Suite("Trove store")
 struct TroveStoreTests {
     // MARK: - Which configuration a launch asks for
@@ -33,7 +34,7 @@ struct TroveStoreTests {
 
     @Test func theCloudKitConfigurationNamesTheContainer() {
         #expect(
-            TroveStore.configuration(for: .cloudKit).cloudKitContainerIdentifier
+            TroveStore.configurations(for: .cloudKit)[0].cloudKitContainerIdentifier
                 == TroveStore.cloudKitContainerIdentifier
         )
     }
@@ -43,35 +44,49 @@ struct TroveStoreTests {
     /// entitlement. A UI test that inherited that default would be reading and
     /// writing the developer's own iCloud data — and `-uiTesting` exists
     /// precisely so a test run has no ambient state.
+    ///
+    /// Audit (002/T001a): `cloudKitContainerIdentifier` is `nil` for
+    /// `.automatic` as well as `.none`, so the `== nil` half of this test
+    /// **cannot** see a dropped `.none` — it pins only that no configuration
+    /// names the container outright. The guard that can see the label is
+    /// `MarketLocalSchemaTests.everyConfigurationSpellsOutItsCloudKitDatabase`.
     @Test func uiTestsNeverReachICloud() {
-        let configuration = TroveStore.configuration(for: .ephemeral)
+        let configurations = TroveStore.configurations(for: .ephemeral)
 
-        #expect(configuration.isStoredInMemoryOnly)
-        #expect(
-            configuration.cloudKitContainerIdentifier == nil,
-            "UI tests would sync to \(configuration.cloudKitContainerIdentifier ?? "")"
-        )
+        #expect(!configurations.isEmpty)
+        for configuration in configurations {
+            #expect(configuration.isStoredInMemoryOnly)
+            #expect(
+                configuration.cloudKitContainerIdentifier == nil,
+                "UI tests would sync to \(configuration.cloudKitContainerIdentifier ?? "")"
+            )
+        }
     }
 
     // MARK: - The fallback
 
     /// The point of the fallback: the user's collection is the same file
-    /// either way, so dropping sync costs sync and nothing else. Both
+    /// either way, so dropping sync costs sync and nothing else. Both synced
     /// configurations leave the URL unset so SwiftData resolves its default —
     /// naming a path in one and not the other is how this would break, and
     /// it would look like the app had forgotten everything.
     @Test func theFallbackOpensTheSameCollection() {
         #expect(
-            TroveStore.configuration(for: .cloudKit).url
-                == TroveStore.configuration(for: .localOnly).url
+            TroveStore.configurations(for: .cloudKit)[0].url
+                == TroveStore.configurations(for: .localOnly)[0].url
         )
     }
 
     /// A fallback that inherited `.automatic` would ask for the CloudKit
     /// container it just failed on, fail identically, and turn a lost sync
     /// into a crash.
+    ///
+    /// Audit (002/T001a): as with `uiTestsNeverReachICloud`, `nil` here is
+    /// what `.automatic` reports too, so this pins only that the fallback
+    /// doesn't name the container explicitly; the label scan in
+    /// `MarketLocalSchemaTests` is the guard against a dropped `.none`.
     @Test func theFallbackDoesNotAskForCloudKitAgain() {
-        #expect(TroveStore.configuration(for: .localOnly).cloudKitContainerIdentifier == nil)
+        #expect(TroveStore.configurations(for: .localOnly)[0].cloudKitContainerIdentifier == nil)
     }
 
     @Test func onlyCloudKitHasSomethingToFallBackTo() {
@@ -84,44 +99,96 @@ struct TroveStoreTests {
     /// satisfiable while `make` ignores all of them.
     @Test func aCloudKitFailureLeavesAWorkingLocalStore() throws {
         var asked: [String?] = []
-        let store = try TroveStore.make(isUITesting: false) { configuration in
-            asked.append(configuration.cloudKitContainerIdentifier)
-            if configuration.cloudKitContainerIdentifier != nil {
+        var recreated: [URL] = []
+        let store = try TroveStore.make(isUITesting: false, build: { configurations in
+            asked.append(configurations[0].cloudKitContainerIdentifier)
+            if configurations[0].cloudKitContainerIdentifier != nil {
                 // Stands in for the real causes — an entitlement the
                 // provisioning profile no longer carries, a container this
                 // build can't reach.
                 throw CocoaError(.fileReadUnknown)
             }
             return try inMemoryContainer()
-        }
+        }, recreateLocalStore: { recreated.append($0) })
 
         #expect(store.mode == .localOnly)
         #expect(store.cloudKitFailure != nil, "The reason CloudKit dropped out was thrown away")
         #expect(asked == [TroveStore.cloudKitContainerIdentifier, nil])
+        #expect(recreated.isEmpty, "A CloudKit failure is not a reason to touch the local store")
+    }
+
+    /// Plan Q21: the third attempt. A local store that won't open fails the
+    /// intended pair and the fallback pair alike — the synced half is the
+    /// same file in both — and without this step the launch would end in
+    /// `TroveApp`'s `fatalError` forever, over the app's own disposable
+    /// summaries. The recreate hook is called once, with the local URL and
+    /// never the collection's, and the launch opens `.localOnly` so the
+    /// next one can ask for CloudKit again.
+    @Test func aBrokenLocalStoreIsRecreatedOnceAndTheLaunchStillOpens() throws {
+        var attempts = 0
+        var recreated: [URL] = []
+        let store = try TroveStore.make(isUITesting: false, build: { _ in
+            attempts += 1
+            if attempts < 3 { throw CocoaError(.fileReadCorruptFile) }
+            return try inMemoryContainer()
+        }, recreateLocalStore: { recreated.append($0) })
+
+        #expect(attempts == 3)
+        #expect(recreated == [TroveStore.localConfiguration().url])
+        #expect(recreated.first != TroveStore.configurations(for: .cloudKit)[0].url, "The collection was handed to the recreate hook")
+        #expect(store.mode == .localOnly)
+        #expect(store.cloudKitFailure != nil)
+    }
+
+    @Test func aStoreThatOpensFirstTimeIsNeverRecreated() throws {
+        var recreated: [URL] = []
+        let store = try TroveStore.make(isUITesting: false, build: { _ in try inMemoryContainer() },
+                                        recreateLocalStore: { recreated.append($0) })
+
+        #expect(store.mode == .cloudKit)
+        #expect(recreated.isEmpty)
+    }
+
+    /// Three failures is the end: the recreate ran once, and the error that
+    /// reaches the caller is the last one, not a fourth attempt.
+    @Test func aLaunchThatFailsAllThreeTimesThrowsAfterOneRecreate() {
+        var attempts = 0
+        var recreated: [URL] = []
+        #expect(throws: CocoaError.self) {
+            _ = try TroveStore.make(isUITesting: false, build: { _ in
+                attempts += 1
+                throw CocoaError(.fileReadCorruptFile)
+            }, recreateLocalStore: { recreated.append($0) })
+        }
+        #expect(attempts == 3)
+        #expect(recreated.count == 1)
     }
 
     /// The other half. Retrying without CloudKit only makes sense for a
     /// failure CloudKit caused; a UI test whose store won't load has to say so
-    /// rather than quietly running against something else.
+    /// rather than quietly running against something else — and never reach
+    /// for the recreate step, which is about a disk file it doesn't have.
     ///
     /// The fake fails only the in-memory configuration, so a `fallback` that
     /// offered `.localOnly` to every mode would be caught here — `make` would
     /// hand back a working on-disk store instead of throwing. A fake that
     /// threw for everything would let that mistake through.
     @Test func aUITestStoreThatWillNotLoadIsNotQuietlyReplacedByTheRealOne() {
+        var recreated: [URL] = []
         #expect(throws: CocoaError.self) {
-            _ = try TroveStore.make(isUITesting: true) { configuration in
-                if configuration.isStoredInMemoryOnly { throw CocoaError(.fileReadUnknown) }
+            _ = try TroveStore.make(isUITesting: true, build: { configurations in
+                if configurations[0].isStoredInMemoryOnly { throw CocoaError(.fileReadUnknown) }
                 return try inMemoryContainer()
-            }
+            }, recreateLocalStore: { recreated.append($0) })
         }
+        #expect(recreated.isEmpty)
     }
 
     private func inMemoryContainer() throws -> ModelContainer {
         try ModelContainer(
-            for: TroveSchema.schema,
+            for: TroveSchema.combinedSchema,
             configurations: ModelConfiguration(
-                schema: TroveSchema.schema,
+                schema: TroveSchema.combinedSchema,
                 isStoredInMemoryOnly: true,
                 cloudKitDatabase: .none
             )

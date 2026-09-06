@@ -3,7 +3,8 @@ import SwiftUI
 
 /// A single wishlist item, per `design/screens/Trove Wishlist Detail.png`:
 /// what it is, what you think it'll cost, how much you want it, your notes,
-/// and space held open for pricing that doesn't exist yet.
+/// and — since `002` — what it is asking on Reverb, in the space the market
+/// ghost was holding open for exactly that.
 ///
 /// Deliberately quiet. plan.md keeps the Sell Plan a tap away rather than
 /// rendering it here — this screen is about the thing you want, not about what
@@ -14,6 +15,8 @@ struct WishlistDetailView: View {
     @State private var isEditing = false
     @State private var isConfirmingDelete = false
     @State private var sellPlanRoute: SellPlanRoute?
+    /// The match sheet's detent, driven by which phase it is showing.
+    @State private var matchDetent: PresentationDetent = .medium
 
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -53,6 +56,14 @@ struct WishlistDetailView: View {
                 }
             }
         }
+        // 002 (plan §6, Q9): one sheet, two phases. An alert can hold no
+        // link, and branching the *content* rather than swapping
+        // presentations means no binding is written mid-flight. Swipe-down
+        // over the notice is Not now by construction — only
+        // `continueFromNotice()` acknowledges anything.
+        .sheet(isPresented: $viewModel.isFindingMatch, onDismiss: viewModel.load) {
+            matchSheet
+        }
         // An alert rather than a confirmation dialog, for the same reason as
         // the item detail screen: from a toolbar button the dialog renders as
         // a popover that drops the cancel button entirely.
@@ -75,6 +86,61 @@ struct WishlistDetailView: View {
             )
         }
         .onAppear(perform: viewModel.load)
+    }
+
+    /// The notice first, once per device, then the picker (spec Decision
+    /// 14), then — since Amendment B — the pick's fetch and the value step
+    /// (Decisions 33–34). The detent follows the phase: the notice and the
+    /// value step are short reads, the picker and the fetch want the whole
+    /// sheet.
+    private var matchSheet: some View {
+        Group {
+            switch viewModel.sheetStep {
+            case .notice:
+                MarketNoticeView(
+                    continueAction: viewModel.continueFromNotice,
+                    declineAction: viewModel.declineNotice
+                )
+            case .pick:
+                MarketMatchView(
+                    viewModel: viewModel.makeMatchViewModel(),
+                    pick: viewModel.setMatch,
+                    cancel: { viewModel.isFindingMatch = false }
+                )
+            case .fetching(let candidate, _):
+                // The picked card, held still under the picker's own bar,
+                // so the sheet doesn't go blank while the fetch runs
+                // (Decision 33). The token is the view model's business.
+                MarketFetchingView(candidate: candidate)
+            case .value(let step):
+                MarketValueStepView(
+                    step: step,
+                    isWanted: true,
+                    productTitle: viewModel.marketState.matchedTitle,
+                    year: viewModel.item?.year ?? nil,
+                    actions: MarketValueStepActions(
+                        choose: viewModel.setChosen,
+                        // The amount comes back from the step the view is
+                        // holding; the write and its refusal are the view
+                        // model's, as the section's adopt was.
+                        use: { _ = viewModel.adopt(cents: $0) },
+                        notNow: viewModel.dismissValueStep
+                    )
+                )
+            }
+        }
+        .presentationDetents([.medium, .large], selection: $matchDetent)
+        // The phase, not the whole step: the step carries the value
+        // step's payload, which the slider rewrites on every tick of a
+        // drag, so observing the step itself would re-decide a detent that
+        // cannot have changed (T022's third review). The detent depends on
+        // the phase alone.
+        .onChange(of: viewModel.sheetStep.phase, initial: true) { _, phase in
+            matchDetent = switch phase {
+            case .notice, .value: .medium
+            case .pick, .fetching: .large
+            }
+        }
     }
 
     private func content(for item: WishlistItem) -> some View {
@@ -101,7 +167,7 @@ struct WishlistDetailView: View {
                     notesSection(notes)
                 }
 
-                marketPricePlaceholder
+                marketSection(for: item)
                 findItemsToSell(for: item)
             }
             .padding(.horizontal, theme.metrics.screenGutter)
@@ -124,8 +190,8 @@ struct WishlistDetailView: View {
                 .font(theme.typography.heroFigure)
                 .foregroundStyle(theme.colors.accentBrass)
             // "YOUR ESTIMATE" is doing real work: it marks this figure as the
-            // user's own guess rather than a looked-up price, which is exactly
-            // the distinction the market-price block below is reserved for.
+            // user's own guess rather than a looked-up figure — the
+            // distinction the Market section below now actually draws.
             Text("Your estimate · Added \(item.createdAt.formatted(date: .abbreviated, time: .omitted))")
                 .monoLabel(color: theme.colors.textQuiet)
         }
@@ -208,6 +274,36 @@ struct WishlistDetailView: View {
         DetailSection(title: "Notes") { DetailProse(text: notes) }
     }
 
+    // MARK: - Market (002)
+
+    /// Reverb's asking price for the thing the person wants, where the
+    /// market-price ghost used to sit (spec 002, plan §6). The ghost was
+    /// the layout this section was reserved for, so the section takes its
+    /// place exactly: after NOTES, before the sell-plan CTA.
+    private func marketSection(for item: WishlistItem) -> some View {
+        MarketSection(
+            state: viewModel.marketState,
+            activity: viewModel.marketActivity,
+            notice: viewModel.marketNotice,
+            year: item.year,
+            isWanted: true,
+            canRefresh: viewModel.canRefresh,
+            canAdopt: viewModel.canAdopt,
+            actions: MarketSectionActions(
+                find: viewModel.findMatch,
+                refresh: viewModel.refresh,
+                // Use as my value opens the value step rather than
+                // writing (Amendment B): one adopt control, one flow, and
+                // the write happens in the sheet where the amount is
+                // chosen. `canAdopt` already gates the button.
+                adopt: viewModel.openValueStep,
+                // Change match… is Find on Reverb… over an existing match.
+                changeMatch: viewModel.findMatch,
+                removeMatch: viewModel.removeMatch
+            )
+        )
+    }
+
     // MARK: - Sell Plan
 
     /// The one action on this screen, and deliberately the only route to the
@@ -257,53 +353,6 @@ struct WishlistDetailView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Reserved
-
-    /// Space held open for the market pricing spec.md lists as a non-goal for
-    /// v1, drawn as Design drew it: dashed, dim, and explicitly labeled as not
-    /// tracked rather than mocked up with fake numbers.
-    ///
-    /// Reserving it now is the point — plan.md asks for the layout to already
-    /// have a home for this so adding it later isn't a redesign of the screen.
-    private var marketPricePlaceholder: some View {
-        VStack(alignment: .leading, spacing: theme.metrics.cardPadding) {
-            HStack {
-                Text("Market price").monoLabel()
-                Spacer()
-                Text("Not tracked yet").monoLabel(color: theme.colors.textInactive)
-            }
-
-            // Inert bars, not data. Varying heights so the block reads as a
-            // chart's footprint rather than as a loading state that might
-            // finish.
-            HStack(alignment: .bottom, spacing: 6) {
-                ForEach(Array(Self.placeholderBarHeights.enumerated()), id: \.offset) { _, height in
-                    RoundedRectangle(cornerRadius: theme.metrics.thumbnailRadius)
-                        .fill(theme.colors.divider.opacity(0.35))
-                        .frame(height: height)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .frame(height: 44, alignment: .bottom)
-
-            Text("Trove will chart what this actually sells for once price tracking is switched on.")
-                .font(theme.typography.secondary)
-                .foregroundStyle(theme.colors.textQuiet)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(theme.metrics.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(
-            RoundedRectangle(cornerRadius: theme.metrics.cardRadius)
-                .strokeBorder(
-                    theme.colors.divider,
-                    style: StrokeStyle(lineWidth: theme.metrics.hairline, dash: [4, 3])
-                )
-        )
-    }
-
-    private static let placeholderBarHeights: [CGFloat] = [18, 24, 16, 30, 22, 34, 26, 38, 30, 42, 34, 44]
-
     /// Reachable once sync is on and another device removes the item while
     /// this screen is open.
     private var missingItem: some View {
@@ -321,8 +370,8 @@ struct WishlistDetailView: View {
 
 #Preview {
     let container = try! ModelContainer(
-        for: TroveSchema.schema,
-        configurations: ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
+        for: TroveSchema.combinedSchema,
+        configurations: ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
     )
     let context = ModelContext(container)
     let wanted = WishlistItem(

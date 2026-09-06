@@ -94,7 +94,7 @@ struct ExportWiringTests {
             "Trove/Views/Shared/ShareSheet.swift",
             "Trove/Extensions/Image+Data.swift",
         ]
-        for path in try Self.allAppSwiftFiles() {
+        for path in try SourceScan.swiftFiles(under: "Trove", minimum: 20) {
             let code = try SourceScan.production(path)
             if code.contains("UIActivityViewController") {
                 #expect(
@@ -113,23 +113,5 @@ struct ExportWiringTests {
     @Test func theLaunchSweepIsWiredIntoAppStartup() throws {
         let code = try SourceScan.production("Trove/App/TroveApp.swift")
         #expect(code.contains("FileExportService.purgeAtLaunch()"))
-    }
-
-    /// Same walk as `ReorderWiringTests` — asserted non-trivial so a moved
-    /// source root fails loudly instead of scanning nothing and passing.
-    private static func allAppSwiftFiles(file: StaticString = #filePath) throws -> [String] {
-        let root = URL(filePath: "\(file)")
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appending(path: "Trove")
-        let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
-        var paths: [String] = []
-        while let url = walker?.nextObject() as? URL {
-            if url.pathExtension == "swift" {
-                paths.append("Trove/" + url.path.replacingOccurrences(of: root.path + "/", with: ""))
-            }
-        }
-        try #require(paths.count > 20, "source walk found only \(paths.count) files — wrong root?")
-        return paths.sorted()
     }
 }

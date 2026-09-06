@@ -53,24 +53,62 @@ nonisolated enum ImportSchema {
     }
 
     /// The items gate: trimmed header cells must equal
-    /// `ExportSchema.itemHeaders` exactly. The pinned arrays are read right
-    /// here, never copied — a schema change reshapes the gate by
-    /// construction, which is the append-only growth rule's enforcement
-    /// point. Callers shape the rows first (`shaped(_:)`), so a re-saved
-    /// header's trailing empty columns are already gone.
-    static func requireItemsHeader(_ row: CSVRow) throws {
-        try requireHeader(row, expected: ExportSchema.itemHeaders, other: ExportSchema.wishlistHeaders)
+    /// `ExportSchema.itemHeaders` — or a *shipped* prefix of it
+    /// (`ExportSchema.itemSchemaBoundaries`), so a file written before 002
+    /// appended `Reverb Product ID` and `Year` still imports (Q16). Returns
+    /// the width that matched; the caller judges "more columns than the
+    /// template" against *that*, not against the current header count, or a
+    /// legacy file's overlong row would slip through as content.
+    ///
+    /// The pinned arrays are read right here, never copied — a schema change
+    /// reshapes the gate by construction, which is the append-only growth
+    /// rule's enforcement point. Callers shape the rows first (`shaped(_:)`),
+    /// so a re-saved header's trailing empty columns are already gone.
+    @discardableResult
+    static func requireItemsHeader(_ row: CSVRow) throws -> Int {
+        try requireHeader(
+            row,
+            expected: ExportSchema.itemHeaders,
+            boundaries: ExportSchema.itemSchemaBoundaries,
+            other: ExportSchema.wishlistHeaders,
+            otherBoundaries: ExportSchema.wishlistSchemaBoundaries
+        )
     }
 
     /// See `requireItemsHeader(_:)` — the wishlist twin.
-    static func requireWishlistHeader(_ row: CSVRow) throws {
-        try requireHeader(row, expected: ExportSchema.wishlistHeaders, other: ExportSchema.itemHeaders)
+    @discardableResult
+    static func requireWishlistHeader(_ row: CSVRow) throws -> Int {
+        try requireHeader(
+            row,
+            expected: ExportSchema.wishlistHeaders,
+            boundaries: ExportSchema.wishlistSchemaBoundaries,
+            other: ExportSchema.itemHeaders,
+            otherBoundaries: ExportSchema.itemSchemaBoundaries
+        )
     }
 
-    private static func requireHeader(_ row: CSVRow, expected: [String], other: [String]) throws {
+    /// Accepted widths: the full width, then each shipped boundary. Only
+    /// those exact widths — one column short of a boundary is still a
+    /// mismatch, because "any prefix" would accept a truncated file and
+    /// silently blank whatever it lost.
+    private static func requireHeader(
+        _ row: CSVRow,
+        expected: [String],
+        boundaries: [Int],
+        other: [String],
+        otherBoundaries: [Int]
+    ) throws -> Int {
         let cells = row.cells.map { FieldNormalization.trimmed($0) }
-        guard cells != expected else { return }
-        throw cells == other ? HeaderError.wrongList : HeaderError.mismatch
+        for width in [expected.count] + boundaries where cells == Array(expected.prefix(width)) {
+            return width
+        }
+        // Criterion 4 holds at every shipped width too: an old wishlist
+        // export offered to the items screen is still "wrong list", not
+        // "wrong columns".
+        for width in [other.count] + otherBoundaries where cells == Array(other.prefix(width)) {
+            throw HeaderError.wrongList
+        }
+        throw HeaderError.mismatch
     }
 
     // MARK: - Field parsers (plan §Money and date parsing)
@@ -181,6 +219,65 @@ nonisolated enum ImportSchema {
         return field.uppercased()
     }
 
+    /// The Reverb match as the schema reads it (002, plan §7): ASCII digits
+    /// only, overflow-checked, and positive — a product id is a positive
+    /// whole number, so `0`, `-1`, `12.5` and `abc` are all unreadable. The
+    /// field policy makes blank silent and unreadable counted, the same
+    /// split `Current Value` uses.
+    ///
+    /// Trims first, as `year(from:)` does: callers may pass untrimmed input
+    /// — a hand-edited cell with a stray space around the number is the
+    /// number, on both columns alike.
+    static func reverbProductID(from field: String) -> Int? {
+        let scalars = Array(FieldNormalization.trimmed(field).unicodeScalars)
+        guard !scalars.isEmpty else { return nil }
+        var value = 0
+        for scalar in scalars {
+            guard let digit = digit(scalar) else { return nil }
+            let (shifted, overflow1) = value.multipliedReportingOverflow(by: 10)
+            guard !overflow1 else { return nil }
+            let (added, overflow2) = shifted.addingReportingOverflow(digit)
+            guard !overflow2 else { return nil }
+            value = added
+        }
+        guard value > 0 else { return nil }
+        return value
+    }
+
+    /// The year as the schema reads it (002, Decision 29 / P18): exactly
+    /// four ASCII digits after trimming, `1900` through next calendar year.
+    /// What it shares with the rule `ItemFormViewModel.parsedYear` applies
+    /// to a typed field is the lower bound (`FieldNormalization.earliestYear`)
+    /// and the four-digit shape; the upper bound is each caller's own clock
+    /// and calendar, and under a non-Gregorian preferred calendar the two
+    /// need not land on the same number. `"01975"` is the case that
+    /// falsifies the four-digit check (`"75"` is rejected by the lower bound
+    /// whatever the digit rule says — the note in plan Amendment A).
+    ///
+    /// Callers may pass untrimmed input — the field is trimmed here, as on
+    /// `reverbProductID(from:)`.
+    ///
+    /// A separate function from the forms' `parsedYear` rather than shared
+    /// machinery, for the T019/B1 reason `day(from:)` records: this path
+    /// takes its time zone as a parameter and builds a Gregorian calendar
+    /// from it, where the forms read `Calendar.current` — the user's
+    /// preferred-calendar setting has no way in from here, and import must
+    /// read a date the same way whatever locale the file arrives in. The
+    /// instant is a parameter for the same reason, so "next year" is a
+    /// thing a test can pin. What the two do share is the lower bound:
+    /// `FieldNormalization.earliestYear`, one constant, three call sites.
+    /// If a fourth appears, `FieldNormalization` is the home plan
+    /// Amendment A names for a shared `year(from:)`.
+    static func year(from field: String, timeZone: TimeZone = .current, now: Date = .now) -> Int? {
+        let scalars = Array(FieldNormalization.trimmed(field).unicodeScalars)
+        guard scalars.count == 4, let value = number(scalars[0...3]) else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let latest = calendar.component(.year, from: now) + 1
+        guard (FieldNormalization.earliestYear...latest).contains(value) else { return nil }
+        return value
+    }
+
     private static func digit(_ scalar: Unicode.Scalar) -> Int? {
         guard ("0"..."9").contains(scalar) else { return nil }
         return Int(scalar.value - UnicodeScalar("0").value)
@@ -218,7 +315,10 @@ nonisolated enum ImportSchema {
         // No rows at all — an empty or all-blank file — has no header, and
         // "not a Trove items file" is the honest description.
         guard let header = shaped.first else { throw HeaderError.mismatch }
-        try requireItemsHeader(header)
+        // The width the gate matched — the current layout's, or a shipped
+        // legacy one. It bounds a row's cells; padding still runs out to the
+        // full header count, so a legacy file's missing columns arrive blank.
+        let width = try requireItemsHeader(header)
 
         // Column positions derive from the pinned array, never hand-numbered
         // — the arrays are the schema, and a growth lands here by compile
@@ -239,15 +339,19 @@ nonisolated enum ImportSchema {
         let conditionNotesColumn = column("Condition Notes")
         let serialColumn = column("Serial Number")
         let notesColumn = column("Notes")
+        let reverbColumn = column("Reverb Product ID")
+        let yearColumn = column("Year")
 
         var validated: [ValidatedRow<ItemExportRecord>] = []
         var skipped: [SkippedRow] = []
 
         for row in shaped.dropFirst() {
-            guard row.cells.count <= headers.count else {
+            guard row.cells.count <= width else {
                 // Row-fatal by decision: after trailing-empty stripping,
                 // extra cells are extra *content*, and a stray comma has
-                // shifted every later column — no guess is safe.
+                // shifted every later column — no guess is safe. Judged
+                // against the *matched* width: a 13-cell row in a 12-column
+                // legacy file is a stray comma, not a Reverb id.
                 skipped.append(SkippedRow(rowNumber: row.number, reason: SkipReason.extraColumns))
                 continue
             }
@@ -323,6 +427,31 @@ nonisolated enum ImportSchema {
                 defaulted += 1
             }
 
+            // The match and the year: blank is the ordinary "no match" /
+            // "no year" answer and stays silent; anything unreadable is a
+            // counted default, the `Current Value` policy exactly.
+            let matchCell = FieldNormalization.trimmed(cells[reverbColumn])
+            let productID: Int?
+            if matchCell.isEmpty {
+                productID = nil
+            } else if let parsed = reverbProductID(from: matchCell) {
+                productID = parsed
+            } else {
+                productID = nil
+                defaulted += 1
+            }
+
+            let yearCell = FieldNormalization.trimmed(cells[yearColumn])
+            let itemYear: Int?
+            if yearCell.isEmpty {
+                itemYear = nil
+            } else if let parsed = year(from: yearCell, timeZone: timeZone) {
+                itemYear = parsed
+            } else {
+                itemYear = nil
+                defaulted += 1
+            }
+
             let record = ItemExportRecord(
                 name: name,
                 categoryPath: FieldNormalization.trimmed(cells[categoryColumn]),
@@ -336,6 +465,8 @@ nonisolated enum ImportSchema {
                 conditionNotes: FieldNormalization.nilIfBlank(cells[conditionNotesColumn]),
                 serialNumber: FieldNormalization.nilIfBlank(cells[serialColumn]),
                 notes: FieldNormalization.nilIfBlank(cells[notesColumn]),
+                reverbProductID: productID,
+                year: itemYear,
                 firstPhotoID: nil
             )
             validated.append(
@@ -350,7 +481,7 @@ nonisolated enum ImportSchema {
         )
     }
 
-    /// The wishlist pipeline — `itemsPreview`'s twin over the 7-column
+    /// The wishlist pipeline — `itemsPreview`'s twin over the nine-column
     /// table. Deliberately a parallel implementation, not shared machinery:
     /// each function reads as its spec table, and the tables genuinely
     /// differ (`Added` restores `createdAt`; desire runs 1–3 defaulting
@@ -361,7 +492,8 @@ nonisolated enum ImportSchema {
     ) throws -> WishlistImportPreview {
         let shaped = shaped(rows)
         guard let header = shaped.first else { throw HeaderError.mismatch }
-        try requireWishlistHeader(header)
+        // See `itemsPreview` — the matched width bounds a row's cells.
+        let width = try requireWishlistHeader(header)
 
         let headers = ExportSchema.wishlistHeaders
         func column(_ name: String) -> Int { headers.firstIndex(of: name)! }
@@ -372,12 +504,14 @@ nonisolated enum ImportSchema {
         let desireColumn = column("Desire to Own")
         let addedColumn = column("Added")
         let notesColumn = column("Notes")
+        let reverbColumn = column("Reverb Product ID")
+        let yearColumn = column("Year")
 
         var validated: [ValidatedRow<WishlistExportRecord>] = []
         var skipped: [SkippedRow] = []
 
         for row in shaped.dropFirst() {
-            guard row.cells.count <= headers.count else {
+            guard row.cells.count <= width else {
                 skipped.append(SkippedRow(rowNumber: row.number, reason: SkipReason.extraColumns))
                 continue
             }
@@ -431,6 +565,29 @@ nonisolated enum ImportSchema {
                 defaulted += 1
             }
 
+            // As in `itemsPreview`: blank silent, unreadable counted.
+            let matchCell = FieldNormalization.trimmed(cells[reverbColumn])
+            let productID: Int?
+            if matchCell.isEmpty {
+                productID = nil
+            } else if let parsed = reverbProductID(from: matchCell) {
+                productID = parsed
+            } else {
+                productID = nil
+                defaulted += 1
+            }
+
+            let yearCell = FieldNormalization.trimmed(cells[yearColumn])
+            let wantedYear: Int?
+            if yearCell.isEmpty {
+                wantedYear = nil
+            } else if let parsed = year(from: yearCell, timeZone: timeZone) {
+                wantedYear = parsed
+            } else {
+                wantedYear = nil
+                defaulted += 1
+            }
+
             let record = WishlistExportRecord(
                 name: name,
                 categoryPath: FieldNormalization.trimmed(cells[categoryColumn]),
@@ -439,6 +596,8 @@ nonisolated enum ImportSchema {
                 desireToOwn: desireToOwn,
                 createdAt: createdAt,
                 notes: FieldNormalization.nilIfBlank(cells[notesColumn]),
+                reverbProductID: productID,
+                year: wantedYear,
                 firstPhotoID: nil
             )
             validated.append(

@@ -244,7 +244,46 @@ struct DashboardView: View {
                     .foregroundStyle(theme.colors.textInactive)
                     .accessibilityLabel("Current value not yet valued")
             }
+
+            // Under the ruler either way: the asking-price figure exists
+            // whether or not the person has priced anything, so a matched,
+            // refreshed collection still says so under "Not yet valued".
+            if viewModel.hasMarketFigures {
+                marketLine(viewModel.marketLine)
+            }
         }
+    }
+
+    /// 002 criterion 15: the market variant, one mono line under the ruler.
+    ///
+    /// One `Text` over one string, so the amount can never be read — or
+    /// selected, or spoken — apart from the coverage it covers (spec P5).
+    /// It shrinks rather than wraps for the same reason. Deliberately quiet
+    /// and never brass or Archivo: this is an asking price on Reverb, and
+    /// nothing about it may read as the total above.
+    private func marketLine(_ line: String) -> some View {
+        Text(attributedMarketLine(line))
+            .font(theme.typography.monoMeta)
+            .foregroundStyle(theme.colors.textMonoMeta)
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .padding(.top, 4)
+    }
+
+    /// The line with its amount lifted — the one part Design draws heavier
+    /// and brighter. Found by searching for the formatted amount rather
+    /// than composed from parts, so the view still renders the view model's
+    /// string; a line whose amount can't be found renders uniform, which is
+    /// legible rather than wrong.
+    private func attributedMarketLine(_ line: String) -> AttributedString {
+        var attributed = AttributedString(line)
+        guard let amount = attributed.range(of: MarketCopy.median(cents: viewModel.marketTotalCents)) else {
+            return attributed
+        }
+        attributed[amount].font = theme.typography.monoMeta.weight(.medium)
+        attributed[amount].foregroundColor = theme.colors.textBody
+        return attributed
     }
 
     // MARK: - Spent / gain
@@ -577,8 +616,8 @@ struct DashboardScope: Hashable {
 
 #Preview {
     let container = try! ModelContainer(
-        for: TroveSchema.schema,
-        configurations: ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
+        for: TroveSchema.combinedSchema,
+        configurations: ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
     )
     let context = ModelContext(container)
     for item in [

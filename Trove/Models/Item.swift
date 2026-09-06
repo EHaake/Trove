@@ -53,6 +53,19 @@ final class Item {
     /// backfill (`010`'s T005) assigns them a real order.
     var sortOrder: Int = 0
 
+    /// 002: the Reverb catalog product this item is matched to; nil is
+    /// unmatched. The person's own data, so it syncs (spec P1). Reverb's
+    /// identifier is an integer and the product endpoint takes one — `Int`,
+    /// not a string that could quietly start holding slugs. Everything the
+    /// device learns *about* the product lives in the local store, never
+    /// here.
+    var reverbProductID: Int?
+
+    /// 002, Decision 29: the instrument's year, when the person gives one —
+    /// four digits, optional, distinct from `purchaseDate`. Narrows the
+    /// market listings a figure is computed from; never leaves the device.
+    var year: Int?
+
     /// Optional, not `[Photo]`, because CloudKit rejects non-optional
     /// relationships outright — see the note in plan.md. Read it as
     /// `photos ?? []`; nil and empty mean the same thing here.
@@ -103,7 +116,9 @@ final class Item {
         conditionNotes: String? = nil,
         notes: String? = nil,
         sortOrder: Int = 0,
-        photos: [Photo]? = []
+        photos: [Photo]? = [],
+        reverbProductID: Int? = nil,
+        year: Int? = nil
     ) {
         let now = Date.now
         self.name = name
@@ -120,6 +135,8 @@ final class Item {
         self.notes = notes
         self.sortOrder = sortOrder
         self.photos = photos
+        self.reverbProductID = reverbProductID
+        self.year = year
         self.createdAt = now
         self.updatedAt = now
     }

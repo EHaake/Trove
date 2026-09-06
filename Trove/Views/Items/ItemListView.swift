@@ -318,7 +318,7 @@ struct ItemListView: View {
     private var rows: some View {
         List {
             ForEach(viewModel.items, id: \.id) { item in
-                ItemRow(item: item)
+                ItemRow(item: item, trend: viewModel.trend(for: item.id))
                     // The screen's own background, not `.clear`, and not
                     // decoration: at rest they're pixel-identical (the screen
                     // shows through either way), but the reorder lift
@@ -706,8 +706,8 @@ struct ItemListView: View {
 
 #Preview {
     let container = try! ModelContainer(
-        for: TroveSchema.schema,
-        configurations: ModelConfiguration(schema: TroveSchema.schema, isStoredInMemoryOnly: true)
+        for: TroveSchema.combinedSchema,
+        configurations: ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
     )
     let context = ModelContext(container)
     for item in [
