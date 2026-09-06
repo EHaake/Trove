@@ -343,8 +343,8 @@ the figure record learns two numbers.
 Decision 36 trims the slider to the 10th–90th percentiles, and the
 approved Copy block names the spoken marks "lowest asking price $1,100"
 and "highest asking price $2,000" with the hint "Slides between the
-lowest and highest asking prices." For ten or more counted listings the
-track's ends are *not* the lowest and highest — the true spread sits
+lowest and highest asking prices." Once there are enough counted listings (the high end from ten, the
+low end from eleven) the track's ends are *not* the lowest and highest — the true spread sits
 outside it — so as approved the hint is false and the end marks name
 positions the slider cannot reach. Proposed, for the person's approval
 (the Copy block changes on it): the visible end labels carry the trimmed
@@ -353,7 +353,7 @@ $1,150", "median asking price $1,450", "typical high asking price
 $1,900"; the hint reads "Slides between the typical low and high asking
 prices."; the true low–high stays in the figure line beside the slider
 ("$1,100–$2,000"), read as today ("Asking prices from $1,100 to
-$2,000"). For fewer than ten listings the trimmed and true ends
+$2,000"). For nine or fewer listings the trimmed and true ends
 coincide, so "typical" stays true. Decision 34's own phrase "the low,
 median and high marked" is in the same tension — the marks sit at the
 trimmed ends — so the answer touches that sentence as well as the Copy

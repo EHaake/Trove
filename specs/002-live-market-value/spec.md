@@ -265,7 +265,7 @@ nothing crosses items (see Non-goals).
   "Your value" / "Your estimated cost" with the amount as its value and
   the hint "Slides between the lowest and highest asking prices."; the
   marks read "lowest asking price $1,100", "median asking price $1,450",
-  "highest asking price $2,000". *(Q22, plan Amendment B, pending the person's answer at T020: with ten or more listings the slider's ends are the trimmed bounds, not the lowest and highest; the proposed wording is "typical low asking price $1,150" / "typical high asking price $1,900" and "Slides between the typical low and high asking prices." — the code carries the proposal, marked pending, until this block is amended.)*
+  "highest asking price $2,000". *(Q22, plan Amendment B, pending the person's answer at T020: once there are enough listings the slider's ends are the trimmed bounds, not the lowest and highest — the high end from ten listings, the low end from eleven; the proposed wording is "typical low asking price $1,150" / "typical high asking price $1,900" and "Slides between the typical low and high asking prices." — the code carries the proposal, marked pending, until this block is amended.)*
 
 ## Design requirements
 
