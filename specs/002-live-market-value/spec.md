@@ -2,6 +2,8 @@
 
 **Amendment B — the adopt flow — Approved 2026-09-05** ("Signed off on all decisions as is", the guidance sentence kept). Decisions 33–36, the amended Adopting and Refresh sections, criteria 8, 9 and 23, the Copy block "The value step" and the Design line are marked *(B)*. Drafted by Claude Code from the person's direction at the Phase 3 pause the same day.
 
+**Verified 2026-09-05** — criteria 1–23 ticked below with their evidence and honest partials; the pre-merge sweep dispositioned in `tasks.md` T019.
+
 Status: **Approved** (2026-09-03, the day after drafting; one
 proposal — the year's cap on history — overturned at review as Decision
 16, and the seventeen drafting proposals P1–P17 became decisions on
@@ -462,7 +464,7 @@ same day**):
     to the section, which shows the failure line as today; the match
     stands.
 34. **Adopting happens in the sheet, with a slider.** With a figure in
-    hand the sheet's third phase — the value step — shows the figure, a
+    hand the sheet's fourth phase — the value step — shows the figure, a
     slider defaulting to the median with the trimmed low, the median
     and the trimmed high marked (Decision 37), a one-line guidance sentence, and two buttons: the filled
     one writes the chosen amount as the person's value and closes the
@@ -592,7 +594,7 @@ the plan's Amendment A):
 2. [x] The first **Find on Reverb…** in the app shows the one-time
    notice; **Not now** searches nothing; **Continue** searches and the
    notice never shows again, on any item, on that device.
-   *Verified 2026-09-05*: the detail VM market suites (Not now searches nothing; the acknowledgement written once to the local store); T018: Continue on the Telecaster, then the SM7B's Find on Reverb… showed no notice. *Partial*: Not now first, and no notice across a relaunch, were not seen live — the acknowledgement lives in `MarketLocal.store`, which `-uiTesting` holds in memory, so the relaunch check needs the dev store.
+   *Verified 2026-09-05*: the detail VM market suites (Not now searches nothing; the acknowledgement written once to the local store); T018: Continue on the Telecaster, then the SM7B's Find on Reverb… showed no notice. T019 (instrumented, a file probe inside `ReverbMarketService.searchProducts` on the simulator): Not now on the notice sent nothing; the run's one search came from Continue; Not now on the value step and the adopt that followed added none. *Partial*: and no notice across a relaunch, were not seen live — the acknowledgement lives in `MarketLocal.store`, which `-uiTesting` holds in memory, so the relaunch check needs the dev store.
 3. [x] Searching sends the item's name and nothing else; candidates
    show title, brand, image, lowest used asking price and listed
    count, from Reverb; picking one stores the match, which appears on
@@ -624,7 +626,7 @@ the plan's Amendment A):
    within an hour of an item's last refresh; refreshing is only the
    section's action, Settings' **Refresh market values**, or the pick
    of a match in the sheet (Decision 33).
-   *Verified 2026-09-05*: `ItemDetailViewModelMarketTests` (no fetch on load or appear), `MarketRefresherTests` and `SettingsViewModelMarketRefreshTests` (the hour rule), `MarketWiringTests`; T018: Refresh disabled two minutes after the pick; the Settings walk visited nothing for a three-minute-old row.
+   *Verified 2026-09-05*: `ItemDetailViewModelMarketTests` (no fetch on load or appear), `MarketRefresherTests` and `SettingsViewModelMarketRefreshTests` (the hour rule), `MarketWiringTests`; T018: Refresh disabled two minutes after the pick; the Settings walk visited nothing for a three-minute-old row. T019's probe (criterion 2's note): every sheet dismissal — the notice's Not now, the value step's Not now, adopt — left the search count where it was, so no dismissal re-runs the picker's `.task`.
 10. [x] Settings' refresh walks every matched item with visible
     progress and stops cleanly, with the rate-limit copy, when Reverb
     answers with its limit — and, with "Couldn't reach Reverb. N of M

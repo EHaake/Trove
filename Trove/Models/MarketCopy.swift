@@ -33,11 +33,6 @@ nonisolated enum MarketCopy {
         "\(count) listed"
     }
 
-    /// "$1,450 · 12 listed", composed from its parts so the three can't drift.
-    static func figure(medianCents: Int, count: Int) -> String {
-        "\(median(cents: medianCents)) \(separator) \(listed(count: count))"
-    }
-
     /// "$1,100–$2,000", an en dash.
     static func spread(lowCents: Int, highCents: Int) -> String {
         "\(median(cents: lowCents))\u{2013}\(median(cents: highCents))"

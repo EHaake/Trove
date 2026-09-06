@@ -98,8 +98,8 @@ Order of operations, before any field is read:
    file — directly contradicting criterion 3. A hand-built fixture
    (all 12 columns plus four trailing commas on every line, header
    included) must import cleanly. *(2026-09-05, at 002's close-out:
-   the items schema is 14 columns since 002 added `reverb_product_id`
-   and `year`. The test builds its fixture from `ExportSchema`, so it
+   the items schema is 14 columns since 002 added `Reverb Product ID`
+   and `Year`. The test builds its fixture from `ExportSchema`, so it
    widened by itself; the checked-in sample `docs/samples/items-resaved.csv`
    was regenerated at 14 with three trailing commas. The rule is
    unchanged.)*

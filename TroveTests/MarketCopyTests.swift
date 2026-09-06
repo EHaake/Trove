@@ -27,10 +27,9 @@ struct MarketCopyTests {
         #expect(MarketCopy.sourceLine(title: "", year: 1975) == "On Reverb · 1975")
     }
 
-    @Test func theFigureIsTheMedianAndTheCount() {
-        #expect(MarketCopy.figure(medianCents: 145_000, count: 12) == "$1,450 · 12 listed")
-        #expect(MarketCopy.figure(medianCents: 139_999, count: 1) == "$1,400 · 1 listed")
+    @Test func theCountReadsListed() {
         #expect(MarketCopy.listed(count: 2) == "2 listed")
+        #expect(MarketCopy.listed(count: 1) == "1 listed")
     }
 
     @Test func theSpreadIsAnEnDash() {

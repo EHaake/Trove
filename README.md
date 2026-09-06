@@ -63,9 +63,12 @@ purchases.
 - **Settings** — one sheet, reached from the "…" on either list or on
   the dashboard: export *everything* as a CSV pair or a PDF pair (one
   share sheet, two files), the blank import templates, a live iCloud
-  status row that says what the app actually knows, Delete All for
-  either list (all-or-nothing, the count in the title, with "Export
-  first if you want a copy" right there), and About.
+  status row that says what the app actually knows, Refresh market
+  values (one walk over every matched item that is due, with its
+  progress shown), Delete All for either list (all-or-nothing, the
+  count in the title, with "Export first if you want a copy" right
+  there), and About — the Reverb attribution, the contact address and
+  the privacy policy.
 - **Menus that are the app's own** — every menu inside a page (Sort
   By, both "…" badges, the dashboard's category order) opens one
   shared dropdown surface in Trove's own type and tokens, growing out

@@ -326,7 +326,7 @@ private struct SettingsActionRow: View {
 
 @MainActor
 private func previewContainer(populated: Bool) -> ModelContainer {
-    let configuration = ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true)
+    let configuration = ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
     let container = try! ModelContainer(for: TroveSchema.combinedSchema, configurations: configuration)
     if populated {
         let context = container.mainContext

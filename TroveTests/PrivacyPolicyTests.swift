@@ -44,13 +44,27 @@ struct PrivacyPolicyTests {
         #expect(text.contains(MarketCopy.attribution))
     }
 
-    /// The spec's retention table, as amended by Decision 20: the match's
-    /// identifier, the year, the last figure, the catalog slug and title, the
-    /// history — and the sentence saying nothing from a listing is kept.
+    /// The spec's retention table, as amended by Decision 20: each row of
+    /// "What Trove stores" is pinned by the phrase that opens it, so deleting
+    /// the table — or one row of it — goes red. The earlier form checked
+    /// seven nouns anywhere in the file, which the prose alone satisfied (the
+    /// over-broad-pattern shape, caught at 002's pre-merge sweep).
     @Test func thePolicyNamesEveryRowOfTheRetentionTable() throws {
         let text = try Self.policyText()
-        for noun in ["identifier", "year", "figure", "history", "slug", "title", "listing"] {
-            #expect(text.contains(noun), "the policy never says \"\(noun)\"")
+        let rows = [
+            "| Your owned items and wishlist items",
+            "| Your photos of your items",
+            "| Your own value for an item, adopted or typed",
+            "| The match — the Reverb product identifier you picked for an item",
+            "| The item's year, when you give one",
+            "| The last figure for a matched item — median, low, high, count, when it was fetched",
+            "| The matched product's catalog slug and title",
+            "| The history of figures for a matched item",
+            "| When you tapped Continue on the one-time notice",
+            "| Anything from an individual listing — its title, seller, image or listing identifier | nowhere; it is never stored |",
+        ]
+        for row in rows {
+            #expect(text.contains(row), "the retention table lost the row starting \"\(row)\"")
         }
     }
 

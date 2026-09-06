@@ -1,6 +1,6 @@
 # 002 — Market Values: Tasks
 
-Status: **In progress** (approved 2026-09-03, same day as drafting; **Amendment A — year narrowing** folded in after T002 per spec Decision 29 and plan Amendment A — the tasks it touches say so)
+Status: **Complete** (2026-09-05 — every task checked, the pre-merge sweep dispositioned, PR #11 marked ready; approved 2026-09-03, same day as drafting; **Amendment A — year narrowing** folded in after T002 per spec Decision 29 and plan Amendment A — the tasks it touches say so)
 
 Drafted against the approved `plan.md` (approved 2026-09-03; drafted
 at `64d505b`) on branch `002-live-market-value`, based on `main` at
@@ -1725,7 +1725,7 @@ off with four small notes, folded below (the interim adopt closure, the
     suites passed** both runs (10.8 s and 10.9 s of test time); UI suite
     twice back to back, **13 tests, 0 failures** both runs (211 s each).
 
-- [ ] **T019 — Close-out.**
+- [x] **T019 — Close-out.**
   *Sweep list, added 2026-09-05 at T016a's review*: stale statements
   outside 002's own documents that the contract change left behind —
   `specs/012-data-import/plan.md` (~line 99: the re-save fixture as "12
@@ -1761,6 +1761,83 @@ off with four small notes, folded below (the interim adopt closure, the
   ready for review.
   *Done when*: everything above committed and pushed; full suite green
   with the final count recorded here.
+  *Done 2026-09-05*:
+  - **Criteria** 1–23 ticked in `spec.md`, each with the suites and the
+    T018 observations that serve it; honest partials named: a real 429
+    never seen; the second-device match and history checks; "is
+    published" waits on the merge; VoiceOver, Link Conditioner, `mailto:`,
+    a physical device and the arrow on a live row are the person's; the
+    relaunch check of the notice needs the dev store (`-uiTesting` holds
+    the acknowledgement in memory).
+  - **`plan.md`** gains "As built" (the renumbering, the spike's
+    numbers, the `.automatic` audit, Q21 as shipped, the Sort By surface
+    232 × 327, the notice's home, the shared derivations, the suite
+    counts, the N1 gap, the previews) and, in Amendment B, "The
+    dismissal question, settled by instrumentation".
+  - **The sweep list**: 012 plan ~99 and 013 spec ~806 annotated (14
+    columns; 91 bytes — both derived by their tests); README's Market
+    values bullet rewritten to Amendment B's flow and the Settings
+    bullet given Refresh market values and About's three lines; the
+    address swap is the two-file edit plan §8 records; the dashboard's
+    lifted amount read as a real medium weight (T018); the dismissal
+    flicker cannot be caught in stills and the instrumented run showed
+    the sheet's content is not re-rendered on dismissal, so no resting
+    phase — a real-device look stays the person's; `ReorderWiringTests`
+    onto `SourceScan.swiftFiles` (minimum 500 → red at 102 files,
+    reverted); PRIVACY's field list completed against
+    `MarketFigureRecord`, `MarketMatchSnapshot` and `MarketDeviceState`,
+    plus the notice-acknowledgement row; the year-parse extraction
+    deferred (N6 below).
+  - **The pre-merge sweep** (`skeptical-reviewer`, top tier, 532,178
+    tokens, the three bundles cut with `git add -N`): one blocking
+    finding, **B1** — every dismissal of the match sheet might re-render
+    its content as the picker and run a live search from its `.task`,
+    with nothing but view-model tests saying otherwise. Settled by a
+    file probe in `searchProducts` on the simulator: 0 after the
+    notice's Not now, 1 after Continue, 1 after the value step's Not
+    now, 1 after adopt. Not a defect; recorded in plan Amendment B and
+    criteria 2 and 9. Non-blocking, dispositioned: **N1** the
+    second-device stale figure under a changed match → a known gap in
+    plan "As built" for a `fix/` branch; **N2** previews inheriting
+    `.automatic` → `cloudKitDatabase: .none` in all eight, compiled;
+    **N3** `thePolicyNamesEveryRowOfTheRetentionTable` was the
+    over-broad shape (the nouns survive the table's deletion) → the
+    rows pinned by their opening phrases, mutation: table removed →
+    red; **N4** stale statements → fixed (tokens.md's "two phases" and
+    `noticeIsPending`, Decision 34's "third phase", the 012 annotation's
+    column names, README's Settings bullet); **N5** the walk that says
+    nothing when nothing is due → a product question in the Phase-5
+    report; **N6** the year parse in three places and the hour
+    predicate in four, plus no boundary test at exactly 3600 s on
+    `SettingsViewModel.dueTargets` → recorded for a follow-up; **N7**
+    `MarketCopy.figure(medianCents:count:)` deleted (no production
+    caller; its test now pins `listed(count:)` alone),
+    `privacyPolicyFilename` kept as the spec's named pin, the `?? nil`
+    on `item?.year` kept (it flattens `Int??`), the triplicated doc
+    comment left.
+  - **Post-merge, on `main` via `fix/docs-002-shipped`** (plan §8):
+    `specs/ROADMAP.md` — rewrite the 002 entry (it still says "replace
+    `currentValueCents`" and names eBay and Facebook), add its status
+    row, record the 011 deferral's PDF clause as overridden by P17, add
+    the eBay follow-up with Decision 1's two prerequisites, note 002 as
+    `003`'s input; `README.md` Status (six specs), tree (`Trove/Market/`,
+    `Views/Market/`, `design/elements/`, `scripts/`, `PRIVACY.md`) and
+    specs listing; `DECISIONS.md` — the first network dependency and the
+    local store, Reverb over a crawler, the terms' four obligations and
+    where each lives, the 010 line restated, the constitution-amendment
+    reconciliation (Decision 19), the fifth routing bucket (Q20),
+    blob-then-Pages (Decision 18), Q21, the live-network-twice rule, the
+    model policy's first spec; `CLAUDE.md` — the fourth false-passing
+    instance (asserting what a `precondition` already guarantees), the
+    review-bundle rule (`git add -N` before the diff), and the sweep's
+    lesson (a `.task` inside sheet content is a fetch trigger the
+    view-model suite cannot see — instrument it once on the device).
+  - **Suites** on the close-out build: unit **1103 tests in 148 suites
+    passed** (the fourth run of the day; the first two are T018's pair),
+    UI **13 tests, 0 failures** (the third run; T018's pair before it).
+    Mutations this task: `ReorderWiringTests` minimum 500 → red;
+    `PrivacyPolicyTests` with the retention table removed → red (10
+    issues); both reverted.
 
 ## Skeptical-review record (this decomposition, 2026-09-03)
 
@@ -1856,3 +1933,6 @@ previous spec of similar size before treating the policy as settled.
 | T022 review 5 | opus (`skeptical-reviewer`) | 35,750 | signed off |
 | T023 | opus (`sdd-implementer`) | 165,356 | verified first try; renders seen by the orchestrator |
 | T024 | opus (`sdd-implementer`) | 188,119 | verified first try; renders seen by the orchestrator |
+| T018 | fable (orchestrator) | — | the device pass driven by hand on the simulator; no dispatch |
+| Pre-merge sweep | fable (`skeptical-reviewer`) | 532,178 | 1 blocking → instrumented on the simulator, not a defect; 7 non-blocking dispositioned in T019's note |
+| T019 | fable (orchestrator) | — | the close-out by hand; no dispatch |

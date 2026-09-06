@@ -389,6 +389,21 @@ numbers the plan promised to record. The dated *as built* notes inside
   green twice back to back; the UI suite **13 tests**, green twice. The
   live network was touched twice in the spec's life — the fixture script
   at T002 and the device pass at T018 — and by no test.
+- **Known gap, for a `fix/` branch after merge (the pre-merge sweep,
+  N1)**: `MarketSectionState.resolve`, `MarketSummary.summaries` and the
+  refresher's hour gate compare nothing against the item's current
+  `reverbProductID`. If a second device changes the match, the first
+  device's local row for the old product reads as current — old title
+  and median in the section, sort, dashboard and adopt — and Refresh
+  stays disabled for up to an hour on the old row's `fetchedAt`. It
+  self-heals on the next refresh and is reachable only on the
+  two-device path criteria 3 and 12 carry as partials. The fix is
+  small: a `productID` mismatch reads as `.none` and as due. Not made at
+  close-out, so the sweep's diff and the person's attestation match.
+- **Previews** build their in-memory container with
+  `cloudKitDatabase: .none` spelled out (the sweep's N2; eight
+  `#Preview` bodies). They compile under `xcodebuild build`; no canvas
+  was opened.
 - **Carried out of the spec** (honest partials, spec criteria block):
   a real 429 was never seen; the second-device history and match checks
   need two signed-in devices; "is published" waits on the merge;
@@ -570,6 +585,24 @@ final and the pending markers came off.
   `.onChange(of: viewModel.noticeIsPending …)` in both detail views;
   both move to `sheetStep`. `noticeIsPending` is **removed**, not kept as
   a derived property to keep the scans green.
+
+### The dismissal question, settled by instrumentation (2026-09-05, T019)
+
+The pre-merge sweep asked whether `closeSheet()` setting `sheetStep = .pick`
+in the same turn as `isFindingMatch = false` lets SwiftUI re-render the
+dismissing sheet as the picker, whose `.task` would then run a live
+search on every Not now and every adopt — the T056 shape, since every
+test of "Not now searches nothing" sits on the view model and cannot see
+a `.task`. Settled the T056 way: a temporary file probe at the top of
+`ReverbMarketService.searchProducts`, the app relaunched on the
+simulator's in-memory store. Find on Reverb… → Not now on the notice:
+**0** searches. Find → Continue: **1**. Pick → the value step → Not now:
+still **1**. The section's Use as my value → Use $1,400: still **1**.
+The dismissing sheet's content is not re-evaluated as `.pick`; no
+resting phase is needed. The probe was removed before the commit; the
+lesson — a `.task` inside sheet content is a fetch trigger the view-model
+suite cannot see, so instrument it once on the device — goes to
+`CLAUDE.md` post-merge.
 
 ### Guards (each with its red run)
 

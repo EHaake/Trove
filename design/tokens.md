@@ -417,12 +417,12 @@ the two plated cards above stay the screen's weight.
 | Find on Reverb… (unmatched) | the outlined button alone under the header, hugging its label | as designed — the same outlined chrome with `fills: false`, and nothing else in the section (criterion 1) |
 | Adopt label | "Use as my value" (item) / "Use as estimated cost" (wishlist) | as designed — `MarketCopy.useAsMyValue` / `.useAsEstimatedCost`, chosen by the section's `isWanted` |
 
-**The candidate picker** — one sheet, two phases, over a `rgba(0,0,0,0.45)`
+**The candidate picker** — one sheet, four phases since Amendment B (notice, pick, fetching, value), over a `rgba(0,0,0,0.45)`
 scrim; the sheet's bar (Cancel, title) is system chrome.
 
 | Property | Value | As implemented |
 |---|---|---|
-| Sheet | `background` fill, `12px` top radius, `36×5` grabber at ivory 30 %; notice at a medium detent (~`300px`), picker at large (~`780px`) | as designed — one `.sheet(isPresented: $viewModel.isFindingMatch, onDismiss: viewModel.load)` on each detail screen, its content branching on `noticeIsPending` (Q9), with `.presentationDetents([.medium, .large], selection:)` driven by that phase. The top radius, the grabber and the `0.45` scrim are the system sheet's own — nothing here draws them; each phase fills its own `theme.colors.background` |
+| Sheet | `background` fill, `12px` top radius, `36×5` grabber at ivory 30 %; notice at a medium detent (~`300px`), picker at large (~`780px`) | as designed — one `.sheet(isPresented: $viewModel.isFindingMatch, onDismiss: viewModel.load)` on each detail screen, its content branching on `sheetStep` (Q9; `noticeIsPending` until T022 replaced it), with `.presentationDetents([.medium, .large], selection:)` driven by that phase. The top radius, the grabber and the `0.45` scrim are the system sheet's own — nothing here draws them; each phase fills its own `theme.colors.background` |
 | Notice body | IBM Plex Sans `15px`, line-height `1.55`, `textBody`; "See the privacy policy" inline in brass 500; `22px 24px 32px` padding, `24px` to the buttons | `typography.body` (13.5) + `textBody`, `.lineSpacing(4)` — no 15pt sans prose role exists, and adding one for a single paragraph would put a second prose size in the app. Padding `22` / `screenGutter` (24) / `32`, `sectionGap` (24) to the buttons, as designed. **The link sits under the paragraph, not inline**: a SwiftUI `Link` is a view and cannot flow inside a `Text`, and the markdown-in-`Text` alternative would move the copy's shape into `MarketCopy` and give up the real `Link` (criterion 20's `.isLink` trait, `MarketReverbLink`'s reasoning). `typography.button` (sans 500 13.5) in brass, 44pt target |
 | Notice buttons | Continue filled brass, Not now outlined, each `48pt`, stacked with `8px` gap; swipe-down = Not now | as designed — `MarketButtons.noticeHeight` (48) and `fieldGap` (8), drawn with the section's own filled/outlined chrome, lifted at T011 into `Trove/Views/Market/MarketButtons.swift` (two `ViewModifier`s) so the two surfaces can't drift; `MarketSection`'s call sites are unchanged. Swipe-down is Not now by construction — only `continueFromNotice()` acknowledges anything |
 | Search field | the plated card, `44pt`, `0 14px` padding, `10px` gaps; magnifier `15px` ivory 40 %; text IBM Plex Sans `13.5px` `textPrimary`, brass caret `1.5×18`; clear glyph ivory 40 % | the shared `SearchField` — so the plate, the magnifier, the caret and the clear glyph are as designed, but **40pt**, not 44 (`metrics.searchFieldHeight`, what both list screens already use): one search control in the app is worth more than a second one 4pt taller. `.onSubmit` is attached here rather than inside it, since the picker searches on submit only (Q10) |
@@ -449,7 +449,7 @@ coverage, which P5 forbids).
 ### The value step and the slider (`002` Amendment B)
 
 Source: `design/elements/002-market-values/ValueStep.dc.html` (drawn and
-approved 2026-09-05, T020). The sheet's third phase at the
+approved 2026-09-05, T020). The sheet's fourth phase at the
 medium detent: the title, the figure as the section draws it with the
 true spread, Trove's own slider between the trimmed bounds with the
 median marked and defaulted, the guidance line, the filled button with

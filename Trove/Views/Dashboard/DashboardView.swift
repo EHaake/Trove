@@ -617,7 +617,7 @@ struct DashboardScope: Hashable {
 #Preview {
     let container = try! ModelContainer(
         for: TroveSchema.combinedSchema,
-        configurations: ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true)
+        configurations: ModelConfiguration(schema: TroveSchema.combinedSchema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
     )
     let context = ModelContext(container)
     for item in [
