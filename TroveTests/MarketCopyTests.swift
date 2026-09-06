@@ -88,10 +88,7 @@ struct MarketCopyTests {
         #expect(MarketCopy.useAmount(cents: 34_900, wanted: true) == "Use $349 as estimated cost")
     }
 
-    /// Q22's **proposed** wording, pending the person's answer at T020: these
-    /// pins move if the person rewords the marks and the hint. The three
-    /// spoken marks are lowercase, as the spec writes them; the section's own
-    /// label is a sentence opener and keeps its capital.
+    /// Spec Decision 37's wording for the slider's spoken marks and hint.
     @Test func theSlidersSpokenMarksAndHint() {
         #expect(MarketCopy.sliderHint == "Slides between the typical low and high asking prices.")
         #expect(MarketCopy.typicalLowLabel(cents: 115_000) == "typical low asking price $1,150")

@@ -105,21 +105,18 @@ nonisolated enum MarketCopy {
         wanted ? "Your estimated cost" : "Your value"
     }
 
-    /// Q22 — proposed wording, pending the person's answer at T020; the
-    /// approved Copy block says "lowest/highest asking price" and "Slides
-    /// between the lowest and highest asking prices."
+    /// Spec Decision 37: the marks name the trimmed bounds as "typical",
+    /// which coincide with the lowest and highest for nine or fewer listings.
     static let sliderHint = "Slides between the typical low and high asking prices."
 
-    /// Q22 — proposed wording, pending the person's answer at T020; the
-    /// approved Copy block says "lowest/highest asking price" and "Slides
-    /// between the lowest and highest asking prices."
+    /// Spec Decision 37: the marks name the trimmed bounds as "typical",
+    /// which coincide with the lowest and highest for nine or fewer listings.
     static func typicalLowLabel(cents: Int) -> String {
         "typical low asking price \(median(cents: cents))"
     }
 
-    /// Q22 — proposed wording, pending the person's answer at T020; the
-    /// approved Copy block says "lowest/highest asking price" and "Slides
-    /// between the lowest and highest asking prices."
+    /// Spec Decision 37: the marks name the trimmed bounds as "typical",
+    /// which coincide with the lowest and highest for nine or fewer listings.
     static func typicalHighLabel(cents: Int) -> String {
         "typical high asking price \(median(cents: cents))"
     }

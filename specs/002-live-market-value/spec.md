@@ -138,8 +138,8 @@ with one tap (Decision 2).
   after a pick's refresh lands with a figure — or when the section's
   "Use as my value" / "Use as estimated cost" is tapped later — the
   sheet shows the figure and a **slider** over the trimmed range of
-  asking prices (Decision 36), defaulting to the median with the low,
-  median and high marked. One filled button writes the chosen amount,
+  asking prices (Decision 36), defaulting to the median with the trimmed low, the
+  median and the trimmed high marked (Decisions 36–37). One filled button writes the chosen amount,
   rounded to whole currency, into the person's own value and marks the
   item edited (P6); **Not now** writes nothing. From then on it is
   simply their value — the app records no provenance, and every figure
@@ -263,9 +263,9 @@ nothing crosses items (see Non-goals).
   / **Use $349 as estimated cost** (the amount live as the slider
   moves); the other button **Not now**. Accessibility: the slider is
   "Your value" / "Your estimated cost" with the amount as its value and
-  the hint "Slides between the lowest and highest asking prices."; the
+  the hint "Slides between the typical low and high asking prices."; the
   marks read "lowest asking price $1,100", "median asking price $1,450",
-  "highest asking price $2,000". *(Q22, plan Amendment B, pending the person's answer at T020: once there are enough listings the slider's ends are the trimmed bounds, not the lowest and highest — the high end from ten listings, the low end from eleven; the proposed wording is "typical low asking price $1,150" / "typical high asking price $1,900" and "Slides between the typical low and high asking prices." — the code carries the proposal, marked pending, until this block is amended.)*
+  "highest asking price $2,000".
 
 ## Design requirements
 
@@ -463,8 +463,8 @@ same day**):
     stands.
 34. **Adopting happens in the sheet, with a slider.** With a figure in
     hand the sheet's third phase — the value step — shows the figure, a
-    slider defaulting to the median with the low, median and high
-    marked, a one-line guidance sentence, and two buttons: the filled
+    slider defaulting to the median with the trimmed low, the median
+    and the trimmed high marked (Decision 37), a one-line guidance sentence, and two buttons: the filled
     one writes the chosen amount as the person's value and closes the
     sheet; **Not now** closes without writing. The section's "Use as my
     value" / "Use as estimated cost" opens the same step later, so there
@@ -485,6 +485,25 @@ same day**):
     range problem: Change match is the fix, and the picker's count and
     lowest price are there to make a doubtful candidate visible before
     the pick.
+
+Added 2026-09-05, Amendment B's copy question (delegated by the person to
+Claude Code: "I'll let you decide what is best based on what we currently
+have and the implications for current and future designs"):
+
+37. **The slider's spoken marks name the trimmed bounds as "typical".**
+    Decision 36 trims the track to the 10th–90th percentiles, so
+    "lowest" and "highest" would be false whenever ten or more listings
+    count. The marks read "typical low asking price $1,150", "median
+    asking price $1,450", "typical high asking price $1,900"; the hint
+    reads "Slides between the typical low and high asking prices."; the
+    visible end labels carry the same amounts; the true low–high stays in
+    the figure line above the slider, read as before. For nine or fewer
+    listings the trimmed and true ends coincide, so "typical" is never
+    wrong. Chosen over reverting to the true ends (which would put a
+    mispriced listing back on the track) and over dropping the spoken
+    marks (which would leave VoiceOver without the track's landmarks).
+    Decision 34 and the Adopting bullet read "the trimmed low, the median
+    and the trimmed high marked".
 
 Proposed at drafting, 2026-09-03, by Claude Code, and decisions since
 the spec's approval the same day (P13 as reworded under Decision 16):

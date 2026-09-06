@@ -338,7 +338,7 @@ screen of Phase 3 exists, so this amendment reshapes rather than adds:
 the picker sheet gains two phases, the adopt intent takes an amount, and
 the figure record learns two numbers.
 
-### Q22 — the slider's labels once trimming bites (needs the person; asked at the T020 pause)
+### Q22 — the slider's labels once trimming bites (answered 2026-09-05: spec Decision 37, the proposed wording adopted; the person delegated the call)
 
 Decision 36 trims the slider to the 10th–90th percentiles, and the
 approved Copy block names the spoken marks "lowest asking price $1,100"
@@ -357,9 +357,8 @@ $2,000"). For nine or fewer listings the trimmed and true ends
 coincide, so "typical" stays true. Decision 34's own phrase "the low,
 median and high marked" is in the same tension — the marks sit at the
 trimmed ends — so the answer touches that sentence as well as the Copy
-block. Until approved, T021 lands the copy
-constants under these proposed strings marked in a comment, and T024
-reads them; the pins move if the person rewords.
+block. T021 landed the constants under these strings; Decision 37 made them
+final and the pending markers came off.
 
 ### What changes where
 
