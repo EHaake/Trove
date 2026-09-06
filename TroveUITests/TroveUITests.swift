@@ -541,6 +541,108 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(privacy.exists, "About must link to the privacy policy")
     }
 
+    // MARK: - 003 Sell Plan (the seeded collection)
+
+    /// 003 criteria 10 and 12, on a collection no real device can have yet:
+    /// the Sell Plan ranks the rising candidate above the flat and neutral
+    /// ones and the falling one last, and each row says why in the label
+    /// VoiceOver actually reads.
+    ///
+    /// **The only test in this target that launches with `-seedSellPlan`.**
+    /// Every other test keeps `launchApp()` and its empty collection — which
+    /// is what makes `testEmptyCollectionOffersImportAndSettingsButNotExport`
+    /// the mutation for "`-uiTesting` alone seeds nothing".
+    ///
+    /// The rows are `.combine`d, so this reads each row button's combined
+    /// label rather than children whose identifiers may not survive the
+    /// combine — and reading the whole label is what turns criterion 10's
+    /// "read by VoiceOver in full" into an automated check. Whether
+    /// `sellPlan.market` and `sellPlan.reason` stay reachable inside a
+    /// combined row is instrumented at the end and recorded; nothing above
+    /// depends on the answer.
+    ///
+    /// Its mutation: dropping the group key from `SellPlanViewModel.rank`, so
+    /// value alone decides, must turn the order assertion red — the seed's
+    /// own values read Blues Junior, Telecaster, NT1-A, Squier that way.
+    @MainActor
+    func testTheSeededSellPlanRanksRisingFirstAndSaysWhy() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSellPlan"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Wishlist"].tap()
+        openDetail(in: app, named: "Summicron 35mm f/2")
+
+        // The entry point carries no accessibility identifier and isn't being
+        // given one for a test's sake, so it's matched on the first thing it
+        // says — the subtitle follows in the same combined label.
+        let findItemsToSell = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Find items to sell"))
+            .firstMatch
+        XCTAssertTrue(
+            findItemsToSell.waitForExistence(timeout: 5),
+            "the wishlist detail must offer a way into the Sell Plan"
+        )
+        scrollUntilHittable(findItemsToSell, in: app)
+        findItemsToSell.tap()
+
+        // Declared in the order the ranking should put them: rising, flat,
+        // neutral, falling.
+        let expected = ["Telecaster", "Blues Junior", "Squier Classic Vibe", "NT1-A"]
+        let rows = expected.map { name in
+            (
+                name: name,
+                element: app.buttons
+                    .matching(NSPredicate(format: "label CONTAINS %@", name))
+                    .firstMatch
+            )
+        }
+        for row in rows {
+            XCTAssertTrue(
+                row.element.waitForExistence(timeout: 5),
+                "the seeded Sell Plan has no candidate row for \(row.name)"
+            )
+        }
+
+        // Ranking, read off the screen rather than off the view model: each
+        // row sits below the one before it.
+        for (earlier, later) in zip(rows, rows.dropFirst()) {
+            XCTAssertLessThan(
+                earlier.element.frame.minY,
+                later.element.frame.minY,
+                "\(earlier.name) should be ranked above \(later.name)"
+            )
+        }
+
+        // Criterion 10: the reason line is on the rising row and nowhere else.
+        // The copy is repeated here because a UI-test target can't import the
+        // app; `MarketCopyTests` pins the source of the sentence. Matched
+        // short of the "%" so the narrow no-break space between figure and
+        // sign doesn't have to be spelled twice.
+        let saysWhy = rows.filter { $0.element.label.contains("Asking prices on Reverb are up 12") }
+        XCTAssertEqual(
+            saysWhy.map(\.name),
+            ["Telecaster"],
+            "only the rising row explains itself, and it must be the rising one"
+        )
+
+        // And the market line is on the three matched rows — the unmatched
+        // Squier has no figure to show, so it says nothing.
+        let saysMarket = rows.filter { $0.element.label.contains("Median asking price") }
+        XCTAssertEqual(
+            saysMarket.map(\.name),
+            ["Telecaster", "Blues Junior", "NT1-A"],
+            "every matched candidate carries the market line, and the unmatched one doesn't"
+        )
+
+        // Instrumented once at T005 and recorded in tasks.md, then removed:
+        // inside the `.combine`d row, `sellPlan.reason` resolved to exactly
+        // one element and `sellPlan.market` to *two per matched row* (six),
+        // so both stay addressable but the market identifier is no count of
+        // market lines. Nothing above depends on either.
+    }
+
     // MARK: - Market helpers
 
     /// Any element with this identifier, whatever it is drawn as. The market

@@ -190,7 +190,40 @@ Before the pause: one `scripts/verify.sh ui` run (the count line read: the same 
   equality is the assertion that carries the mutation, not the `== 16`
   instrument alone.
 
-- [ ] **T005 — The seeded UI test, twice.** Plan §6 (the UI half). `TroveUITests.testTheSeededSellPlanRanksRisingFirstAndSaysWhy`: launch `["-uiTesting", "-seedSellPlan"]`; the Wishlist tab → the Summicron's detail → "Find items to sell"; the four candidate buttons, matched by label, with `frame.minY` ascending Telecaster, Blues Junior, Squier, NT1-A; exactly one row's label contains "Asking prices on Reverb are up 12" and it is the Telecaster's; exactly three rows' labels contain "Median asking price" and the Squier's does not. **Instrument once and record in the Done note** whether `sellPlan.market` / `sellPlan.reason` are reachable from XCUITest inside the combined row — the test does not depend on the answer. Files: `TroveUITests/TroveUITests.swift`. Pattern: `testTheFirstFindOnReverbShowsTheNoticeAndNotNowClosesIt` (navigation helpers `openDetail`, `scrollUntilHittable`); `launchApp()` for the argument shape — this test sets its own two arguments and every other test keeps `launchApp()` as it is. **Verify**: `scripts/verify.sh ui` green **twice back to back**, the count line one more than the last green run before this task; every pre-existing UI test still launching with `-uiTesting` alone and green (the empty-collection tests are the mutation for "`-uiTesting` alone seeds nothing"). **Mutations recorded red**: drop the group key from `rank` → this test's order assertion red (G11); seed on `-uiTesting` alone → `testEmptyCollectionOffersImportAndSettingsButNotExport` red. Serves criteria 10 (the combined label read in full), 12 (the UI half).
+- [x] **T005 — The seeded UI test, twice.** Plan §6 (the UI half). `TroveUITests.testTheSeededSellPlanRanksRisingFirstAndSaysWhy`: launch `["-uiTesting", "-seedSellPlan"]`; the Wishlist tab → the Summicron's detail → "Find items to sell"; the four candidate buttons, matched by label, with `frame.minY` ascending Telecaster, Blues Junior, Squier, NT1-A; exactly one row's label contains "Asking prices on Reverb are up 12" and it is the Telecaster's; exactly three rows' labels contain "Median asking price" and the Squier's does not. **Instrument once and record in the Done note** whether `sellPlan.market` / `sellPlan.reason` are reachable from XCUITest inside the combined row — the test does not depend on the answer. Files: `TroveUITests/TroveUITests.swift`. Pattern: `testTheFirstFindOnReverbShowsTheNoticeAndNotNowClosesIt` (navigation helpers `openDetail`, `scrollUntilHittable`); `launchApp()` for the argument shape — this test sets its own two arguments and every other test keeps `launchApp()` as it is. **Verify**: `scripts/verify.sh ui` green **twice back to back**, the count line one more than the last green run before this task; every pre-existing UI test still launching with `-uiTesting` alone and green (the empty-collection tests are the mutation for "`-uiTesting` alone seeds nothing"). **Mutations recorded red**: drop the group key from `rank` → this test's order assertion red (G11); seed on `-uiTesting` alone → `testEmptyCollectionOffersImportAndSettingsButNotExport` red. Serves criteria 10 (the combined label read in full), 12 (the UI half).
+
+  *Done (2026-09-06, `sdd-implementer`, first try)*:
+  `testTheSeededSellPlanRanksRisingFirstAndSaysWhy` — its own two-argument
+  launch (the only `-seedSellPlan` in the target; `launchApp()` untouched),
+  the Wishlist tab → the Summicron → "Find items to sell" matched by label
+  (`BEGINSWITH`; the button carries no identifier and was given none) → the
+  four row buttons matched by `label CONTAINS` the name, adjacent-pair
+  `frame.minY` ascending Telecaster, Blues Junior, Squier Classic Vibe,
+  NT1-A; the rows whose label contains "Asking prices on Reverb are up 12"
+  (matched short of the `%` so U+202F is never spelled in the UI target)
+  exactly `["Telecaster"]`; the rows containing "Median asking price"
+  exactly `["Telecaster", "Blues Junior", "NT1-A"]`. Implementer's
+  `scripts/verify.sh ui` **twice back to back**: `Executed 14 tests, with 0
+  failures` both runs (13 → 14; ~227 s a run); unit suite still 1141 in 153.
+  **Instrumented once, recorded, then removed**: inside the `.combine`d row
+  both identifiers are reachable from XCUITest — `sellPlan.reason` resolves
+  to exactly 1 element, `sellPlan.market` to **6, two per matched row**
+  (the `HStack` and an inner element inheriting the identifier), so it is
+  addressable but is no count of market lines; a comment at the end of the
+  test carries the answer. **Mutations red, run by the orchestrator on the
+  single-test selector** (XCTest accepts per-function `-only-testing:`;
+  the Swift Testing caveat in `verify.sh` does not apply): G11 — the group
+  comparison disabled in `rank` → `:611` twice, "Telecaster should be ranked
+  above Blues Junior" (441 vs 360) and "Squier Classic Vibe should be ranked
+  above NT1-A" (657 vs 576) — both ends, as the seed's values were chosen to
+  show; `shouldSeed` reduced to `mode == .ephemeral` →
+  `testEmptyCollectionOffersImportAndSettingsButNotExport` `:260` twice
+  (both export rows enabled on a collection that should be empty). Both
+  reverted; the seeded test green alone afterwards on the final file.
+  Tooling finding, for T007: `verify.sh`'s count grep matches "tests" only,
+  so a one-test run prints `Executed 1 test` in the raw log but nothing
+  under `## counts` and ends with the NO TEST COUNT failure — harmless for
+  a mutation check read from the log, wrong for a single-test green.
 
 **Phase 2 review** — one `skeptical-reviewer` pass at its default tier over `git diff <T003's commit>..HEAD` (T004–T005), the two task lines, plan §§5–6 and Q10, criteria 5, 6, 10, 11, 12. Then the **Phase 2 pause** — the person's report; a fresh session resumes at T006.
 
@@ -237,6 +270,7 @@ The constitution's model policy (amended 2026-09-06) decides which tier runs eac
 | T003 fix pass | opus (`sdd-implementer`) | 49,749 | both mutations red for the right reason; tests only changed |
 | T003 re-review | opus (`skeptical-reviewer`) | 19,832 | signed off |
 | T004 | opus (`sdd-implementer`) | 96,658 | verified first try; five mutations red as planned; the instrument printed 16 before the `.center` red was believed |
+| T005 | opus (`sdd-implementer`) | 65,116 | verified first try; UI suite 14 twice; the two UI mutations run red by the orchestrator |
 
 ## Skeptical-review record (this decomposition)
 
