@@ -30,6 +30,7 @@ struct MarketVocabularyTests {
         "Trove/Views/Market/MarketValueSlider.swift",
         "Trove/Views/Market/MarketFetchingView.swift",
         "Trove/Views/Market/MarketValueStepView.swift",
+        "Trove/Views/Market/SellPlanMarketLines.swift",
     ]
 
     /// The two forms carrying the Year field (T009a). Kept apart from

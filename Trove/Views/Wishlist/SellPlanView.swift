@@ -155,7 +155,10 @@ struct SellPlanView: View {
                     SellPlanRow(
                         item: item,
                         isSelected: viewModel.isSelected(item),
-                        toggle: { viewModel.toggle(item) }
+                        toggle: { viewModel.toggle(item) },
+                        summary: viewModel.summary(for: item.id),
+                        rise: viewModel.rise(for: item.id),
+                        now: viewModel.loadedAt
                     )
                 }
             }
@@ -221,16 +224,34 @@ struct SellPlanView: View {
 /// 1. That's the same value twice in two notations, so the meta line carries
 /// the category alone — matching `ItemRow`, which pairs a category meta line
 /// with a separate dial for exactly this reason.
-private struct SellPlanRow: View {
+///
+/// 003 adds two quiet lines: the reason line under the category when the
+/// item is rising, and the market line under the person's value when there
+/// is a current median. The stack is top-aligned so the checkbox, name,
+/// value and dial sit on the same edge whether a row carries zero, one or
+/// two of them (criterion 11) — which does move the marks on a plain
+/// two-line row from centred to top-hung, a small geometry shift to an
+/// approved row recorded for the device pass (003 plan Q6).
+///
+/// Internal rather than private so the render tests can build one.
+struct SellPlanRow: View {
     let item: Item
     let isSelected: Bool
     let toggle: () -> Void
+    /// The item's figure, from the screen's own view model — nil when it is
+    /// unmatched, withheld or no longer current.
+    let summary: MarketSummary?
+    /// Set only for a rising row; the reason line's whole condition.
+    let rise: MarketRise?
+    /// When the screen loaded, so the reason line's date reads relative to
+    /// the same instant the trend was derived at.
+    let now: Date
 
     @Environment(\.theme) private var theme
 
     var body: some View {
         Button(action: toggle) {
-            HStack(spacing: theme.metrics.cardPadding) {
+            HStack(alignment: .top, spacing: theme.metrics.cardPadding) {
                 checkbox
 
                 VStack(alignment: .leading, spacing: 5) {
@@ -241,21 +262,33 @@ private struct SellPlanRow: View {
                     Text(CategoryPathHelper.trailingSegments(of: item.categoryPath).joined(separator: " · "))
                         .monoLabel()
                         .lineLimit(1)
+                    if let rise {
+                        SellPlanReasonLine(rise: rise, now: now)
+                    }
                 }
 
                 Spacer(minLength: 0)
 
-                if let value = item.currentValueCents {
-                    Text(value.formattedAsWholeCurrency(currencyCode: item.currencyCode))
-                        .font(theme.typography.monoValue)
-                        .foregroundStyle(theme.colors.textPrimary)
-                        .lineLimit(1)
-                } else {
-                    // Only reachable for something already on the plan whose
-                    // value was cleared afterwards — it stays switchable off.
-                    Text("No value")
-                        .font(theme.typography.monoMeta)
-                        .foregroundStyle(theme.colors.textQuiet)
+                VStack(alignment: .trailing, spacing: 5) {
+                    if let value = item.currentValueCents {
+                        Text(value.formattedAsWholeCurrency(currencyCode: item.currencyCode))
+                            .font(theme.typography.monoValue)
+                            .foregroundStyle(theme.colors.textPrimary)
+                            .lineLimit(1)
+                    } else {
+                        // Only reachable for something already on the plan whose
+                        // value was cleared afterwards — it stays switchable off.
+                        Text("No value")
+                            .font(theme.typography.monoMeta)
+                            .foregroundStyle(theme.colors.textQuiet)
+                    }
+
+                    // Under the person's own figure, never instead of it. The
+                    // non-optional median is what keeps criterion 6 true by
+                    // construction: withheld and stale both read nil here.
+                    if let median = summary?.medianCents {
+                        SellPlanMarketLine(medianCents: median, trend: summary?.currentTrend)
+                    }
                 }
 
                 DesireDial(value: .constant(item.desireToKeep), diameter: 36)
