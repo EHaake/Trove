@@ -15,6 +15,14 @@ import SwiftUI
 /// the row reads "Median asking price $1,400, trending up"; a label on the
 /// container would swallow the arrow's half of that sentence.
 ///
+/// The figure is **rigid** — `fixedSize(horizontal: true, vertical: false)`
+/// — so it is never truncated and never wrapped: a row's `HStack` splits the
+/// width between its two columns, and measured at 360 pt that squeezed a
+/// `lineLimit(1)` figure under its ideal width and cut "$1,400 on Reverb"
+/// short beside a rising row's sentence, while no limit at all wrapped it
+/// after "on" even with no sentence in the row (Phase 2 review, S2). The
+/// sentence is the flexible line, and it wraps in what the figure leaves.
+///
 /// Every word comes from `MarketCopy`; this file may not contain a string
 /// literal with a space in it, and `MarketVocabularyTests` holds it to that.
 struct SellPlanMarketLine: View {
@@ -28,7 +36,7 @@ struct SellPlanMarketLine: View {
             Text(MarketCopy.sellPlanMarketLine(medianCents: medianCents))
                 .font(theme.typography.monoMeta)
                 .foregroundStyle(theme.colors.textQuiet)
-                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .accessibilityLabel(MarketCopy.figureAccessibilityLabel(medianCents: medianCents))
 
             TrendArrow(trend: trend)

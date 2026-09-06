@@ -242,17 +242,41 @@ Before the pause: one `scripts/verify.sh ui` run (the count line read: the same 
   equality. **S4** (the alignment test's name overstated — it never
   compares the checkbox to the dial) → renamed
   `theMarksStayWhereTheyWereWhenTheRowGainsItsLines`. **S2** (`.lineLimit(1)`
-  on the market line, a modifier plan Q4 does not list; a five-figure median
-  could truncate to "$14,000 on Rev…" invisibly to every test) → not
-  changed here: carried to the device pass (T006: look at a long median
-  beside a long name) and to T007's "As built" for plan §5 to record either
-  way. **S5** (the two-line floor is red for `lineLimit(1)` but would pass
+  on the market line, a modifier plan Q4 does not list; a long median could
+  truncate invisibly to every test) → **measured, then fixed by the
+  orchestrator**: a scratch render of `SellPlanRow` at 360 pt (deleted
+  after) read the market line's ideal width as 126 pt for "$1,400 on Reverb"
+  and the row with both lines as 141 under `lineLimit(1)` — a right column
+  narrower than that ideal, so the seeded Telecaster's *own* figure was
+  being cut short beside its sentence, not only a five-figure one; with no
+  limit at all the figure wrapped after "on" even on a row with no sentence
+  (market line alone: 71 → 87). `fixedSize(horizontal: true, vertical:
+  false)` on the figure's `Text` is what the spec's "readable in full" and
+  "wrap under their own column" together require: the figure whole at every
+  median measured ($1,400 / $14,000 / $140,000 — row unchanged at 72 with
+  the market line alone), the sentence wrapping in what it leaves. The
+  consequence, for the person at T006: beside a rising row's figure the
+  sentence's column is about 75 pt wide at 360 pt, so the row with both
+  lines now measures 174 (was 141) — the reason line at five or six short
+  lines. Reasoning recorded in the file's doc comment; plan §5 records it
+  at T007. **S5** (the two-line floor is red for `lineLimit(1)` but would pass
   `lineLimit(2)`; the healthy 70 pt implies about four lines) → recorded for
   the sweep; the threshold is the one plan §5 chose with its reasoning.
   **S6** (the UI test's comments call the unmatched Squier "neutral") → no
   change: plan Q8 uses exactly that vocabulary (unmatched = neutral, the
   ±5 % band = flat), and criterion 9 says "a neutral rank" for no trend.
   Fix pass verified: unit 1141 in 153 green; the seeded UI test green alone.
+  *Re-reviewed (same reviewer, default tier, the findings and the fix diff
+  only)*: signed off; S1, S3, S4 closed as claimed; carry-forwards — S2 and
+  S5 are one fact seen twice and reach the sweep together (the two-line
+  floor cannot discriminate a change S2 might make to the figure's limit);
+  the ring pin is bounded in y, still not in x, its "would land elsewhere"
+  an inference, not a measurement; S6's decline rests on plan Q8's wording.
+  After the `fixedSize` change: `scripts/verify.sh` 1141 in 153 green, the
+  render heights now plain 71 / with lines 174 / `oneLine` 17 (the T004
+  note's 141 was measured under the truncating limit), the marks at 16/16
+  and 15/15 unchanged; `scripts/verify.sh ui` `Executed 14 tests, with 0
+  failures`, once more on the final code.
 
 ## Phase 3 — Verification and close-out
 
@@ -299,6 +323,7 @@ The constitution's model policy (amended 2026-09-06) decides which tier runs eac
 | T004 | opus (`sdd-implementer`) | 96,658 | verified first try; five mutations red as planned; the instrument printed 16 before the `.center` red was believed |
 | T005 | opus (`sdd-implementer`) | 65,116 | verified first try; UI suite 14 twice; the two UI mutations run red by the orchestrator |
 | Phase 2 review | opus (`skeptical-reviewer`) | 81,819 | signed off, nothing blocking; S1, S3, S4 fixed by the orchestrator, S2 → T006/T007, S5 → sweep, S6 declined (plan Q8's vocabulary) |
+| Phase 2 re-review | opus (`skeptical-reviewer`) | 22,894 | signed off; S2 then settled by the orchestrator's own measurement (`fixedSize`), no third round |
 
 ## Skeptical-review record (this decomposition)
 
