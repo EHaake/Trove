@@ -58,10 +58,11 @@ a product request is governed by Reverb's own privacy policy, not this one.
 > This application uses the Reverb API but is not endorsed, created by or certified by Reverb.com, LLC.
 
 Of what Reverb returns, Trove keeps only the summary numbers described above —
-a median, a low, a high, a count, a timestamp — plus the matched product's
-slug and title for the link back. It never stores a listing's title, its
-seller, its image or its identifier, and it never combines your items with one
-another or with anyone else's.
+a median, a low, a high, a count, a timestamp, the year it narrowed to, the
+trimmed range the value slider runs between — plus the matched product's slug
+and title for the link back. It never stores a listing's title, its seller, its image or its
+identifier, and it never combines your items with one another or with anyone
+else's.
 
 ## iCloud
 

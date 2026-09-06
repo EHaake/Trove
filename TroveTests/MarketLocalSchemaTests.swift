@@ -76,7 +76,8 @@ struct MarketLocalSchemaTests {
         let allowed: [String: Set<String>] = [
             "MarketFigureRecord": [
                 "subjectID", "subjectKindRawValue", "productID", "fetchedAt", "count",
-                "medianCents", "lowCents", "highCents", "usedLowCents", "isTruncated", "trendRawValue",
+                "medianCents", "lowCents", "highCents", "p10Cents", "p90Cents",
+                "usedLowCents", "isTruncated", "trendRawValue",
                 "yearFilter", "isAllYearsFallback",
             ],
             "MarketHistoryPoint": ["subjectID", "fetchedAt", "medianCents", "lowCents", "highCents", "count"],

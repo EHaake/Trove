@@ -81,6 +81,56 @@ nonisolated enum MarketCopy {
     static let removeMatch = "Remove match"
     static let viewOnReverb = "View on Reverb"
 
+    // MARK: - The value step (Amendment B)
+
+    /// The sheet's own status line while the pick's refresh is in flight,
+    /// so the sheet doesn't go blank between the pick and the slider.
+    static let fetchingAskingPrices = "Fetching asking prices\u{2026}"
+
+    static func valueStepTitle(wanted: Bool) -> String {
+        wanted ? "Set your estimated cost" : "Set your value"
+    }
+
+    static let valueGuidance = "Drag toward the high end if yours is in better shape than most."
+
+    /// "Use $1,450 as my value" — the filled button, carrying the amount
+    /// the slider is on.
+    static func useAmount(cents: Int, wanted: Bool) -> String {
+        wanted ? "Use \(median(cents: cents)) as estimated cost" : "Use \(median(cents: cents)) as my value"
+    }
+
+    static let medianMark = "median"
+
+    static func yourValue(wanted: Bool) -> String {
+        wanted ? "Your estimated cost" : "Your value"
+    }
+
+    /// Q22 — proposed wording, pending the person's answer at T020; the
+    /// approved Copy block says "lowest/highest asking price" and "Slides
+    /// between the lowest and highest asking prices."
+    static let sliderHint = "Slides between the typical low and high asking prices."
+
+    /// Q22 — proposed wording, pending the person's answer at T020; the
+    /// approved Copy block says "lowest/highest asking price" and "Slides
+    /// between the lowest and highest asking prices."
+    static func typicalLowLabel(cents: Int) -> String {
+        "typical low asking price \(median(cents: cents))"
+    }
+
+    /// Q22 — proposed wording, pending the person's answer at T020; the
+    /// approved Copy block says "lowest/highest asking price" and "Slides
+    /// between the lowest and highest asking prices."
+    static func typicalHighLabel(cents: Int) -> String {
+        "typical high asking price \(median(cents: cents))"
+    }
+
+    /// The slider's middle mark — the spec's spoken marks are all lowercase
+    /// ("median asking price $1,450"), unlike the section's own
+    /// `figureAccessibilityLabel`, which opens a sentence and stays capitalised.
+    static func medianAskingPriceLabel(cents: Int) -> String {
+        "median asking price \(median(cents: cents))"
+    }
+
     // MARK: - The one-time notice (Decision 14, P15)
 
     /// Decision 31: the second sentence names what the refresh request

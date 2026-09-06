@@ -36,21 +36,93 @@ struct MarketVocabularyTests {
         "Trove/Views/Wishlist/WishlistFormView.swift",
     ]
 
-    private static let allowedPhrases = ["asking prices", "asking price", "use as my value", "refresh market values", "market values"]
+    /// "your value" covers "Your value" and "Set your value"; "as my value"
+    /// covers the button that carries the amount ("Use $1,450 as my value")
+    /// as well as the section's own "Use as my value", which it subsumes —
+    /// the value step's names for the *person's* number (Amendment B, T021).
+    /// Each is a whole phrase, never the bare word, so "value" anywhere else
+    /// still fires.
+    private static let allowedPhrases = ["asking prices", "asking price", "as my value", "your value", "refresh market values", "market values"]
     private static let forbidden = try! Regex(#"(?i)\b(value|values|valued|valuation|worth|price|prices|priced|sold)\b"#)
+
+    /// Rule 1 as a pure function: strip the allowed phrases, then look for a
+    /// forbidden word in what is left.
+    ///
+    /// The strip respects a word boundary at *both* ends, which a raw
+    /// substring replace does not: "your value" heads "your values", so
+    /// replacing it blindly left "refresh s" behind and the rule passed
+    /// "Refresh your values", a literal that names the figure the person's
+    /// values; "as my value" tails "has my value", so replacing it blindly
+    /// left "trove h" and the rule passed "Trove has my value" too. A phrase
+    /// is removed only where the character before it and the character after
+    /// it are each a non-letter or the literal's edge; otherwise it stays,
+    /// and the longer word it sits inside is matched whole.
+    static func fires(_ literal: String) -> Bool {
+        var stripped = literal.lowercased()
+        for phrase in allowedPhrases { stripped = strip(phrase, from: stripped) }
+        return stripped.contains(forbidden)
+    }
+
+    /// Every whole-phrase occurrence of `phrase` removed; occurrences that
+    /// head or tail a longer word are left where they are, so the text around
+    /// them is unchanged. Both boundaries are judged against `text` itself,
+    /// never against what has been emitted so far — an earlier strip must not
+    /// change what counts as a boundary later.
+    private static func strip(_ phrase: String, from text: String) -> String {
+        var output = ""
+        var searchStart = text.startIndex
+        while let found = text.range(of: phrase, range: searchStart..<text.endIndex) {
+            output += text[searchStart..<found.lowerBound]
+            let startsWord = found.lowerBound == text.startIndex
+                || !text[text.index(before: found.lowerBound)].isLetter
+            let after = found.upperBound
+            let endsWord = after == text.endIndex || !text[after].isLetter
+            if !(startsWord && endsWord) { output += text[found] }
+            searchStart = after
+        }
+        return output + text[searchStart...]
+    }
 
     @Test func theFetchedFigureIsNeverAValueAWorthOrAPrice() throws {
         try #require(!Self.copyFiles.isEmpty)
         var offenders: [String] = []
         for file in Self.copyFiles + Self.viewFiles {
             let code = try SourceScan.production(file)
-            for literal in SourceScan.stringLiterals(in: code) {
-                var stripped = literal.lowercased()
-                for phrase in Self.allowedPhrases { stripped = stripped.replacingOccurrences(of: phrase, with: "") }
-                if stripped.contains(Self.forbidden) { offenders.append("\(file): \"\(literal)\"") }
+            for literal in SourceScan.stringLiterals(in: code) where Self.fires(literal) {
+                offenders.append("\(file): \"\(literal)\"")
             }
         }
         #expect(offenders.isEmpty, "the figure described as a value, worth or price:\n\(offenders.joined(separator: "\n"))")
+    }
+
+    /// The strip itself, over the shapes that distinguish a strip bounded at
+    /// both ends from a raw substring replace: the bare word fires, an allowed
+    /// phrase that only *heads* or only *tails* a forbidden word still fires,
+    /// and the copy the value step actually ships passes.
+    ///
+    /// Two rows isolate the two boundaries. "Refresh your values" is the
+    /// trailing one: a raw replace takes "your value" out of it and leaves
+    /// "refresh s", which names nothing and passes. "Trove has my value" is
+    /// the leading one: "as my value" is a suffix of "has my value", so a
+    /// replace that checks only the character after leaves "trove h" and
+    /// passes a literal that calls the figure the person's value. The
+    /// repeated-phrase row runs the strip's loop more than once, so a strip
+    /// that stopped after the first match would leave the second behind. The
+    /// other rows hold under either strip — "valuation" reads "valu" +
+    /// "ation" and never contains "value" at all, so it fires on the
+    /// forbidden word directly.
+    @Test(arguments: [
+        ("value", true),
+        ("your valuation", true),
+        ("Refresh your values", true),
+        ("Trove has my value", true),
+        ("Use $1,450 as my value", false),
+        ("Set your value", false),
+        ("your value, your value", false),
+        ("market value", true),
+    ])
+    func theAllowlistStripRespectsAWordBoundaryAtBothEnds(literal: String, shouldFire: Bool) {
+        #expect(Self.fires(literal) == shouldFire, "\"\(literal)\" should \(shouldFire ? "fire" : "pass")")
     }
 
     @Test func theFramingIsInUse() throws {

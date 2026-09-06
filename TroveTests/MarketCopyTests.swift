@@ -70,6 +70,36 @@ struct MarketCopyTests {
         #expect(MarketCopy.viewOnReverb == "View on Reverb")
     }
 
+    // MARK: - The value step (B7, Amendment B)
+
+    @Test func theValueStepsStrings() {
+        #expect(MarketCopy.fetchingAskingPrices == "Fetching asking prices\u{2026}")
+        #expect(MarketCopy.valueStepTitle(wanted: false) == "Set your value")
+        #expect(MarketCopy.valueStepTitle(wanted: true) == "Set your estimated cost")
+        #expect(MarketCopy.valueGuidance == "Drag toward the high end if yours is in better shape than most.")
+        #expect(MarketCopy.medianMark == "median")
+        #expect(MarketCopy.yourValue(wanted: false) == "Your value")
+        #expect(MarketCopy.yourValue(wanted: true) == "Your estimated cost")
+    }
+
+    /// The filled button carries the amount the slider is on, at both kinds.
+    @Test func theButtonNamesTheAmountItWouldWrite() {
+        #expect(MarketCopy.useAmount(cents: 145_000, wanted: false) == "Use $1,450 as my value")
+        #expect(MarketCopy.useAmount(cents: 34_900, wanted: true) == "Use $349 as estimated cost")
+    }
+
+    /// Q22's **proposed** wording, pending the person's answer at T020: these
+    /// pins move if the person rewords the marks and the hint. The three
+    /// spoken marks are lowercase, as the spec writes them; the section's own
+    /// label is a sentence opener and keeps its capital.
+    @Test func theSlidersSpokenMarksAndHint() {
+        #expect(MarketCopy.sliderHint == "Slides between the typical low and high asking prices.")
+        #expect(MarketCopy.typicalLowLabel(cents: 115_000) == "typical low asking price $1,150")
+        #expect(MarketCopy.medianAskingPriceLabel(cents: 145_000) == "median asking price $1,450")
+        #expect(MarketCopy.typicalHighLabel(cents: 190_000) == "typical high asking price $1,900")
+        #expect(MarketCopy.figureAccessibilityLabel(medianCents: 145_000) == "Median asking price $1,450")
+    }
+
     /// The spec's sentence, reassembled from the body and the link the sheet
     /// draws separately.
     @Test func theNoticeReassemblesToTheSpecsSentence() {

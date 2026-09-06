@@ -16,20 +16,20 @@ removed at recording.
 
 ```
 listings fetched: 337 over 7 pages; USD (listing_currency and price.currency): 259
-brand-new       n=182 median=183999 low=153900 high=256999
-excellent       n=34 median=139999 low=115200 high=325000
-very-good       n=14 median=141000 low=100000 high=159999
-mint-inventory  n=14 median=154999 low=144319 high=164999
-mint            n=7 median=149999 low=119800 high=169999
-b-stock         n=5 median=156599 low=147599 high=184000
-good            n=3 median=118900 low=114900 high=170000
+brand-new       n=182 median=183999 low=153900 high=256999 p10=163999 p90=193999
+excellent       n=34 median=139999 low=115200 high=325000 p10=120000 p90=169900
+very-good       n=14 median=141000 low=100000 high=159999 p10=110000 p90=155900
+mint-inventory  n=14 median=154999 low=144319 high=164999 p10=149999 p90=164999
+mint            n=7 median=149999 low=119800 high=169999 p10=119800 p90=169999
+b-stock         n=5 median=156599 low=147599 high=184000 p10=147599 p90=184000
+good            n=3 median=118900 low=114900 high=170000 p10=114900 p90=170000
 
-owned(.new)          n=208 median=183999 low=119800 high=256999
-owned(.excellent)    n=34 median=139999 low=115200 high=325000
-owned(.good)         n=17 median=139999 low=100000 high=170000
+owned(.new)          n=208 median=183999 low=119800 high=256999 p10=158800 p90=193999
+owned(.excellent)    n=34 median=139999 low=115200 high=325000 p10=120000 p90=169900
+owned(.good)         n=17 median=139999 low=100000 high=170000 p10=110000 p90=159999
 owned(.fair)         n=0 (withheld)
 owned(.broken)       n=0 (withheld)
-wanted               n=72 median=149999 low=100000 high=325000   (product used_total = 108; used_low_price = 100000)
+wanted               n=72 median=149999 low=100000 high=325000 p10=119999 p90=164999   (product used_total = 108; used_low_price = 100000)
 slugs outside the known set: none
 ```
 
@@ -51,6 +51,14 @@ slugs outside the known set: none
     189120  Strymon TimeLine MX Delay  (used from 59000 cents, 4 listed)
 ```
 <!-- recorded:end -->
+
+### Where the `p10`/`p90` columns came from (2026-09-05)
+
+The `p10` and `p90` columns in the oracle block above were **not** produced by
+a live run of `scripts/record-reverb-fixtures.sh` — they are the script's own
+percentile logic (added for 002 Amendment B, T021) run offline over the
+already-committed fixtures, so the next real recording either confirms them or
+replaces them along with the rest of the block.
 
 ### Chosen for the four rows (by hand, after the run)
 

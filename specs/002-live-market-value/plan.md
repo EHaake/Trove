@@ -516,6 +516,18 @@ phases, the fetching card, wiring; T018 gains the B8 lines.
   adopt button no longer writes directly, so `adoptRefusesWithheldAndStale`
   moves to `openValueStep` and `adopt(cents:)` both.
 - The wiring-scan churn above.
+- *Recorded at T021's sign-off (2026-09-05):* the test-only `MarketFigure`
+  shim in `TestSupport` defaults `p10 = low, p90 = high` — a state the
+  computation reaches only for n ≤ 9 — so any test asserting bounds
+  behavior must use the memberwise init with distinct values; the
+  recording script's Python rank is a second implementation of the rule,
+  bound to the Swift only by the README's recorded numbers (a real
+  re-recording either confirms or replaces the p10/p90 columns); the
+  `min(max(rank, 1), n)` clamp in `percentile` is unreachable for p in
+  1…100, kept as belt-and-braces; `PRIVACY.md`'s Reverb sentence
+  enumerates fields the record also stores under other names
+  (`usedLowCents`, `isTruncated`, `trendRawValue`) — a pre-merge sweep
+  item alongside the two new bounds.
 
 ## Amendment A — year narrowing (spec Decision 29, P18–P22; 2026-09-03)
 

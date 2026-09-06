@@ -90,6 +90,8 @@ enum MarketLocalStore {
             row.medianCents = figure.medianCents
             row.lowCents = figure.lowCents
             row.highCents = figure.highCents
+            row.p10Cents = figure.p10Cents
+            row.p90Cents = figure.p90Cents
             row.isTruncated = figure.isTruncated
             apply(figure.yearScope, to: row)
             context.insert(MarketHistoryPoint(
@@ -101,6 +103,8 @@ enum MarketLocalStore {
             row.medianCents = nil
             row.lowCents = nil
             row.highCents = nil
+            row.p10Cents = nil
+            row.p90Cents = nil
             row.isTruncated = false
             apply(scope, to: row)
         }

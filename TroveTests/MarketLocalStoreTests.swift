@@ -17,8 +17,14 @@ struct MarketLocalStoreTests {
         usedLowCents: 100_000, usedTotal: 108, listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
     )
 
+    /// The trimmed bounds sit inside the spread on purpose (Amendment B), so
+    /// a row that stored a bound as its low or high would be visible.
     private func figure(median: Int, at: Date, scope: YearScope = .any, truncated: Bool = false) -> MarketReading {
-        .figure(MarketFigure(medianCents: median, lowCents: median - 100, highCents: median + 100, count: 12, fetchedAt: at, isTruncated: truncated, yearScope: scope))
+        .figure(MarketFigure(
+            medianCents: median, lowCents: median - 100, highCents: median + 100,
+            p10Cents: median - 50, p90Cents: median + 50,
+            count: 12, fetchedAt: at, isTruncated: truncated, yearScope: scope
+        ))
     }
 
     // MARK: - record
@@ -40,6 +46,8 @@ struct MarketLocalStoreTests {
         #expect(row.medianCents == 140_000)
         #expect(row.lowCents == 139_900)
         #expect(row.highCents == 140_100)
+        #expect(row.p10Cents == 139_950, "the trimmed bounds round-trip (Amendment B)")
+        #expect(row.p90Cents == 140_050)
         #expect(row.usedLowCents == 100_000)
         #expect(row.isTruncated)
         #expect(row.yearFilter == 2021)
@@ -112,6 +120,8 @@ struct MarketLocalStoreTests {
         let row = try #require(try MarketLocalStore.figure(for: key.subjectID, in: elsewhere))
         #expect(row.medianCents == nil)
         #expect(row.lowCents == nil)
+        #expect(row.p10Cents == nil, "a withheld refresh clears the trimmed bounds too")
+        #expect(row.p90Cents == nil)
         #expect(row.count == 2)
         #expect(row.fetchedAt == later)
         #expect(row.usedLowCents == 100_000)

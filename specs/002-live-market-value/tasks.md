@@ -1207,7 +1207,52 @@ off with four small notes, folded below (the interim adopt closure, the
   Adopting bullet's "low, median and high marked" phrase amended on the
   answer (three places, one sentence each).
 
-- [ ] **T021 — The trimmed bounds: computation, record, copy, retention.**
+- [x] **T021 — The trimmed bounds: computation, record, copy, retention.**
+  *Done (2026-09-05)* — dispatched to `sdd-implementer` (four passes),
+  verified by the orchestrator's own runs, reviewed four rounds by the
+  `skeptical-reviewer` at its default tier. As built: `MarketFigure.p10Cents`
+  / `p90Cents` by nearest rank (`(p·n + 99) / 100`, 1-based — `p10 == low`
+  for n ≤ 10, `p90 == high` for n ≤ 9; the oracle's excellent bucket
+  gives 120,000 / 169,900, the 4th and 31st of 34, recorded in the
+  fixtures README with a dated note that the columns came from the
+  script's logic run offline over the committed fixtures); the two
+  optional fields on `MarketFigureRecord` (G4 +2), written on a figure
+  and nilled on a withheld reading, carried by `MarketSnapshotValue`;
+  `MarketValueStep.swift` — `MarketValueBounds.bounds(for:)` as one
+  decision over the pair with the low/high fallback, `MarketValueStep`
+  rounding the default and both bounds once at construction and
+  `setChosen` rounding then clamping, three `precondition`s (a median,
+  low and high, ordered bounds — traps, unverifiable by Swift Testing,
+  recorded in plan B4) naming the landing rule as the caller's
+  obligation; `MarketCopy`'s value-step block, nine strings plus
+  `medianAskingPriceLabel(cents:)` lowercase, the three Q22 strings
+  marked pending in comments; `PRIVACY.md`'s Reverb sentence matching
+  the retention row. Tests: +16 net across the run (B1 with n = 3, 9,
+  10, 12 and the oracle; B2; B4 plus the half-populated pair; the step's
+  whole-currency, clamp-and-round and zero-width tests; B7; the two
+  fields round-tripping on a second context and nil after a withheld
+  refresh; the vocabulary scan's strip made boundary-aware at both ends
+  with an eight-row table). Mutations, each red then reverted: linear
+  interpolation → B1 red; floor+1 → the n = 10 test red (the n = 9 row
+  is the "still coincides" side and stays green there by design); a
+  third record field → G4 red; the fallback dropped → B4 red; the
+  per-field fallback restored → the pair test red; `setChosen` without
+  rounding → red; the raw substring strip → the "Refresh your values"
+  row red; the leading boundary forced → the "Trove has my value" row
+  red; bounds swapped → the (since deleted) ordering test red. Review
+  rounds: 1 — the bundle had omitted the two untracked files (built
+  with `git add -N` from then on) and four should-fixes; 2 — the plan's
+  Copy bullet contradicted the shipped median string, and a new test
+  could not fail (deleted, per the constitution — the fourth instance
+  of the shape, on the close-out list for `CLAUDE.md`); 3 — an off-by-
+  one in three threshold comments and no boundary tests; 4 — signed
+  off. Durable notes from the last round, recorded in plan Amendment B:
+  the test shim's `p10 = low, p90 = high` defaults are a state the
+  computation reaches only for n ≤ 9, so bounds tests must use the
+  memberwise init; the recording script is a second implementation of
+  the rank rule bound to the Swift only by the README's numbers; the
+  PRIVACY field list is a sweep item. Full unit suite (orchestrator's
+  run): **1046 tests in 146 suites, all passed**.
   Per plan Amendment B (the bounds; whole currency, once; copy) and
   Decision 36. `MarketFigure` gains `p10Cents`/`p90Cents` (nearest rank,
   `⌈P/100·n⌉`-th smallest); `MarketFigureRecord` gains the two optional
@@ -1588,3 +1633,11 @@ previous spec of similar size before treating the policy as settled.
 | T013 | opus (`sdd-implementer`) | 105,112 | verified first try; one finding (a tautological existing test), fixed in the follow-up |
 | T013 follow-up | opus (`sdd-implementer`) | 45,933 | verified first try; the reconcile test now red under the T013 mutation |
 | T015 | opus (`sdd-implementer`) | 88,829 | verified first try; UI target green twice by the implementer, once more by the orchestrator |
+| T021 | opus (`sdd-implementer`) | 155,350 | verified first try; reviewer: fix and re-review |
+| T021 review 1 | opus (`skeptical-reviewer`) | 60,902 | fix and re-review — the bundle missed two untracked files; S1–S3 |
+| T021 fix pass 2 | opus (`sdd-implementer`) | 59,693 | verified first try; corrected the reviewer's 'valuation' example |
+| T021 review 2 | opus (`skeptical-reviewer`) | 67,431 | fix and re-review — a plan/code contradiction; an unfalsifiable new test |
+| T021 fix pass 3 | opus (`sdd-implementer`) | 45,224 | verified first try; the test deleted |
+| T021 review 3 | opus (`skeptical-reviewer`) | 54,554 | fix and re-review — an off-by-one in comments, no boundary tests |
+| T021 fix pass 4 | opus (`sdd-implementer`) | 49,188 | verified first try |
+| T021 review 4 | opus (`skeptical-reviewer`) | 39,081 | signed off |

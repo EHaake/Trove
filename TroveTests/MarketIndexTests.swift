@@ -17,7 +17,11 @@ struct MarketIndexTests {
 
     private func reading(median: Int?, at: Date) -> MarketReading {
         if let median {
-            return .figure(MarketFigure(medianCents: median, lowCents: median, highCents: median, count: 5, fetchedAt: at, isTruncated: false, yearScope: .any))
+            return .figure(MarketFigure(
+                medianCents: median, lowCents: median - 1_000, highCents: median + 1_000,
+                p10Cents: median - 500, p90Cents: median + 500,
+                count: 5, fetchedAt: at, isTruncated: false, yearScope: .any
+            ))
         }
         return .withheld(count: 1, usedLowCents: 100_000, fetchedAt: at, yearScope: .any)
     }
@@ -36,7 +40,10 @@ struct MarketIndexTests {
         #expect(Set(index.figures.keys) == [a, b, orphan])
         #expect(index.figures[a]?.medianCents == 140_000)
         #expect(index.figures[a]?.currentMedianCents(now: t0.addingTimeInterval(day)) == 140_000)
+        #expect(index.figures[a]?.p10Cents == 139_500, "the trimmed bounds reach the index (Amendment B)")
+        #expect(index.figures[a]?.p90Cents == 140_500)
         #expect(index.figures[b]?.medianCents == nil)
+        #expect(index.figures[b]?.p10Cents == nil, "a withheld row has no bounds")
         #expect(index.figures[b]?.currentMedianCents(now: t0) == nil, "withheld has no median to sort by")
         #expect(index.figures[a]?.currentMedianCents(now: t0.addingTimeInterval(31 * day)) == nil, "stale drops out (Decision 21)")
     }

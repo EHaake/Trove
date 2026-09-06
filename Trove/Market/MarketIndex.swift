@@ -9,6 +9,10 @@ struct MarketSnapshotValue: Equatable, Sendable {
     let medianCents: Int?
     let lowCents: Int?
     let highCents: Int?
+    /// The trimmed bounds the value slider runs between (Decision 36); nil
+    /// on a row written before Amendment B — read through `MarketValueBounds`.
+    let p10Cents: Int?
+    let p90Cents: Int?
     let usedLowCents: Int?
     let isTruncated: Bool
     let trend: MarketTrend?
@@ -22,6 +26,8 @@ struct MarketSnapshotValue: Equatable, Sendable {
         medianCents = record.medianCents
         lowCents = record.lowCents
         highCents = record.highCents
+        p10Cents = record.p10Cents
+        p90Cents = record.p90Cents
         usedLowCents = record.usedLowCents
         isTruncated = record.isTruncated
         trend = record.trendRawValue.flatMap(MarketTrend.init(rawValue:))

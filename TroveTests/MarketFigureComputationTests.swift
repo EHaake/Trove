@@ -84,6 +84,30 @@ struct MarketFigureComputationTests {
         #expect(reading == .withheld(count: 0, usedLowCents: 100_000, fetchedAt: Self.fetchedAt, yearScope: .any))
     }
 
+    /// B1, Decision 36: the trimmed bounds over the same counted prices —
+    /// the 4th and the 31st of the excellent bucket's 34.
+    ///
+    /// What this test is for is drift: the numbers are the ones written into
+    /// `Fixtures/Reverb/README.md` by the recording script, which mirrors this
+    /// same nearest-rank formula, so it pins the recorded pair rather than
+    /// deriving it independently. The rank *definition* is pinned instead by
+    /// the synthetic sets below (`threeListingsTrimToTheirOwnLowAndHigh`, the
+    /// nine/ten pair that pins where the two ends part, and
+    /// `oneAbsurdListingInTwelveIsOutsideTheTrimmedBounds`), whose ranks are
+    /// computed by hand. Note that `p10 = 120_000` on this bucket is also what
+    /// linear interpolation would give, so of this test's two numbers only
+    /// `p90` — with the synthetic sets — tells nearest rank from interpolation.
+    @Test func theExcellentBucketsTrimmedBoundsAreTheFourthAndThirtyFirstPrices() throws {
+        let (listings, product) = try telecaster()
+        let figure = try figure(compute(.owned(condition: .excellent), over: listings, product: product))
+
+        #expect(figure.count == 34)
+        #expect(figure.p10Cents == 120_000)
+        #expect(figure.p90Cents == 169_900)
+        #expect(figure.lowCents == 115_200, "the true spread is untouched")
+        #expect(figure.highCents == 325_000)
+    }
+
     @Test func everyRecordedSlugIsKnown() throws {
         let (listings, _) = try telecaster()
         let seen = Set(listings.listings.map(\.conditionSlug))
@@ -158,6 +182,69 @@ struct MarketFigureComputationTests {
     @Test func truncationIsCarriedOntoTheFigure() throws {
         let figure = try figure(compute(.owned(condition: .excellent), over: set([listing(1), listing(2), listing(3)], truncated: true), product: product))
         #expect(figure.isTruncated)
+    }
+
+    // MARK: - The trimmed bounds (Decision 36, Amendment B)
+
+    /// The nearest rank on three lands on the ends, so the slider spans the
+    /// whole spread. Trimming begins at ten listings for the *high* end —
+    /// `⌈0.9·10⌉ = 9`, the ninth of the ten — and only at eleven for the low
+    /// end; the two rows below pin that boundary.
+    @Test func threeListingsTrimToTheirOwnLowAndHigh() throws {
+        let figure = try figure(compute(.owned(condition: .excellent), over: set([listing(100), listing(300), listing(200)]), product: product))
+        #expect(figure.p10Cents == figure.lowCents)
+        #expect(figure.p90Cents == figure.highCents)
+        #expect(figure.p10Cents == 100)
+        #expect(figure.p90Cents == 300)
+    }
+
+    /// The last count at which *both* ends coincide with the spread: nine
+    /// distinct ascending prices, `⌈0.1·9⌉ = 1` and `⌈0.9·9⌉ = 9`, so the
+    /// bounds are the first and the ninth — the low and the high themselves.
+    @Test func nineListingsStillTrimToTheirOwnLowAndHigh() throws {
+        let cents = [900, 100, 500, 300, 800, 200, 700, 400, 600]
+        let figure = try figure(compute(.owned(condition: .excellent), over: set(cents.map { listing($0) }), product: product))
+
+        #expect(figure.count == 9)
+        #expect(figure.p10Cents == figure.lowCents)
+        #expect(figure.p90Cents == figure.highCents)
+        #expect(figure.p10Cents == 100)
+        #expect(figure.p90Cents == 900)
+    }
+
+    /// Ten: the first count where the ends part. `⌈0.1·10⌉ = 1` still lands
+    /// on the low, but `⌈0.9·10⌉ = 9` is the *ninth of ten* — one below the
+    /// high — so trimming begins at the top here and only at eleven at the
+    /// bottom.
+    @Test func tenListingsTrimTheHighEndButNotTheLow() throws {
+        let cents = [900, 100, 500, 1000, 300, 800, 200, 700, 400, 600]
+        let sorted = cents.sorted()
+        let figure = try figure(compute(.owned(condition: .excellent), over: set(cents.map { listing($0) }), product: product))
+
+        #expect(figure.count == 10)
+        #expect(figure.p10Cents == figure.lowCents)
+        #expect(figure.p10Cents == 100)
+        #expect(figure.p90Cents == sorted[8])
+        #expect(figure.p90Cents == 900)
+        #expect(figure.p90Cents < figure.highCents, "the tenth is already trimmed off")
+        #expect(figure.highCents == 1000)
+    }
+
+    /// Twelve listings, one of them absurd: `⌈0.1·12⌉ = 2` and
+    /// `⌈0.9·12⌉ = 11`, so the bounds are the 2nd and the 11th sorted
+    /// prices — the outlier is outside the range the person drags across,
+    /// while the figure's own high still carries it.
+    @Test func oneAbsurdListingInTwelveIsOutsideTheTrimmedBounds() throws {
+        let cents = [104_000, 100_000, 111_000, 106_000, 102_000, 109_000, 1_200_000, 103_000, 107_000, 110_000, 101_000, 105_000]
+        let sorted = cents.sorted()
+        let figure = try figure(compute(.owned(condition: .excellent), over: set(cents.map { listing($0) }), product: product))
+
+        #expect(figure.count == 12)
+        #expect(figure.p10Cents == sorted[1])
+        #expect(figure.p90Cents == sorted[10])
+        #expect(figure.p90Cents < figure.highCents, "the absurd high is trimmed off")
+        #expect(figure.p10Cents > figure.lowCents)
+        #expect(figure.highCents == 1_200_000)
     }
 
     // MARK: - Year narrowing (Decision 29)

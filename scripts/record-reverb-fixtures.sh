@@ -134,7 +134,10 @@ def block(cents):
     cents = sorted(cents)
     n = len(cents)
     median = cents[n // 2] if n % 2 else (cents[n // 2 - 1] + cents[n // 2] + 1) // 2
-    return f"n={n} median={median} low={cents[0]} high={cents[-1]}"
+    # The trimmed bounds the value slider runs between (Decision 36): the
+    # nearest-rank percentiles, ceil(P/100 * n)-th smallest, 1-based.
+    rank = lambda p: cents[min(max(1, (p * n + 99) // 100), n) - 1]
+    return f"n={n} median={median} low={cents[0]} high={cents[-1]} p10={rank(10)} p90={rank(90)}"
 lines = [f"listings fetched: {sum(len(p['listings']) for p in pages)} over {len(pages)} pages; USD (listing_currency and price.currency): {len(usd)}"]
 for slug, cents in sorted(by.items(), key=lambda kv: -len(kv[1])):
     lines.append(f"{slug:15s} {block(cents)}")

@@ -40,6 +40,12 @@ final class MarketFigureRecord {
     var medianCents: Int?
     var lowCents: Int?
     var highCents: Int?
+    /// The trimmed range the value slider runs between (Decision 36,
+    /// Amendment B): the 10th and 90th percentiles of the counted asking
+    /// prices. Nil on a row written before that amendment — the bounds then
+    /// fall back to low and high, in `MarketValueBounds`.
+    var p10Cents: Int?
+    var p90Cents: Int?
     /// The catalog's lowest used asking price — what a withheld figure offers.
     var usedLowCents: Int?
     /// The page cap was hit; the figure covers what was fetched (plan Q2).

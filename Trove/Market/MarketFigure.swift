@@ -101,6 +101,16 @@ nonisolated struct MarketFigure: Sendable, Equatable {
     let medianCents: Int
     let lowCents: Int
     let highCents: Int
+    /// The trimmed bounds the value slider runs between (spec Decision 36,
+    /// Amendment B): the 10th and 90th percentiles of the same counted
+    /// prices, so one mispriced or bundled listing can't stretch the range
+    /// the person drags across. The nearest rank puts these on the ends of a
+    /// small count, at a different size for each: `p10Cents == lowCents` for
+    /// n ≤ 10, `p90Cents == highCents` for n ≤ 9 only — at ten the 90th's
+    /// rank is `⌈0.9·10⌉ = 9`, the ninth of the ten. So both coincide with
+    /// the ends up to nine listings, and the low end alone at ten.
+    let p10Cents: Int
+    let p90Cents: Int
     let count: Int
     let fetchedAt: Date
     let isTruncated: Bool
@@ -160,6 +170,8 @@ nonisolated enum MarketFigureComputation {
             medianCents: median(sortedCents: cents),
             lowCents: cents[0],
             highCents: cents[cents.count - 1],
+            p10Cents: percentile(10, sortedCents: cents),
+            p90Cents: percentile(90, sortedCents: cents),
             count: cents.count,
             fetchedAt: fetchedAt,
             isTruncated: listings.isTruncated,
@@ -174,5 +186,15 @@ nonisolated enum MarketFigureComputation {
         let n = cents.count
         if n % 2 == 1 { return cents[n / 2] }
         return (cents[n / 2 - 1] + cents[n / 2] + 1) / 2
+    }
+
+    /// The nearest-rank percentile (spec Decision 36): the `⌈P/100 · n⌉`-th
+    /// smallest, 1-based — never an interpolation, so every bound is a price
+    /// someone is actually asking. Integer arithmetic so the rank is exact,
+    /// the way `MarketTrend`'s 5 % boundary is.
+    static func percentile(_ p: Int, sortedCents cents: [Int]) -> Int {
+        precondition(!cents.isEmpty)
+        let rank = (p * cents.count + 99) / 100
+        return cents[min(max(rank, 1), cents.count) - 1]
     }
 }

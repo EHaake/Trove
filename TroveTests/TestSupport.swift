@@ -682,3 +682,35 @@ nonisolated final class GatedMarketServiceSpy: MarketService {
         waiter?.resume()
     }
 }
+
+// MARK: - The figure, before Amendment B's trimmed bounds
+
+extension MarketFigure {
+    /// **Test-only**: the memberwise init as it read before the trimmed
+    /// bounds (002 Amendment B, T021), with `p10Cents`/`p90Cents` defaulted
+    /// to the ends — where the nearest rank puts them on a small count
+    /// anyway. Every test that doesn't care about the bounds keeps its call
+    /// site; a test that does passes them explicitly through the memberwise
+    /// init. Deliberately *not* a default on the production initializer,
+    /// which no caller may forget.
+    /// Note the shape this defaulting produces: percentiles *equal* to the
+    /// ends, which the production computation only reaches on a small count —
+    /// and the two ends part company at different sizes. The nearest rank
+    /// puts the 10th on the first element for n ≤ 10, and the 90th on the
+    /// last for n ≤ 9 only: at ten the 90th's rank is `⌈0.9·10⌉ = 9`, the
+    /// ninth of the ten. So both ends coincide up to nine listings, the low
+    /// end alone at ten, and neither past that — meaning a figure built
+    /// through this shim is not a realistic larger-count row, and any test asserting how the trimmed bounds
+    /// behave must use the memberwise init with `p10Cents`/`p90Cents`
+    /// distinct from the low and the high.
+    /// `nonisolated`, like the type: the test target defaults to `MainActor`,
+    /// and some call sites (a `@Test(arguments:)` table, a spy's closure) are
+    /// not on it.
+    nonisolated init(medianCents: Int, lowCents: Int, highCents: Int, count: Int, fetchedAt: Date, isTruncated: Bool, yearScope: YearScope) {
+        self.init(
+            medianCents: medianCents, lowCents: lowCents, highCents: highCents,
+            p10Cents: lowCents, p90Cents: highCents,
+            count: count, fetchedAt: fetchedAt, isTruncated: isTruncated, yearScope: yearScope
+        )
+    }
+}
