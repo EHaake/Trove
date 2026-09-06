@@ -1292,7 +1292,12 @@ off with four small notes, folded below (the interim adopt closure, the
   T024 rewires it, the section's adopt action calls `adopt(cents:
   wholeCurrency(median))` — today's one-tap behavior — so no commit
   leaves Use as my value opening a placeholder sheet (the header's rule);
-  `openValueStep()` exists and is tested but has no caller until T024. Tests: B3 in both suites, mirrored,
+  `openValueStep()` exists and is tested but has no caller until T024.
+  **Between T022 and T024 a successful pick shows the interim
+  `ProgressView` sheet at the medium detent with no way out but a
+  swipe-down** — `.fetching` and `.value` render identically until T024
+  draws them; the section's adopt stays live. Recorded so a run of the
+  app in this window is not read as a defect. Tests: B3 in both suites, mirrored,
   **less the step's own tests** (`theChosenAmountIsClampedAndRounded`,
   `theStepIsWholeCurrencyFromANonWholeMedian` live on the value type in
   T021; T022 keeps the VM-level assertion that `adopt(cents:)` writes a
