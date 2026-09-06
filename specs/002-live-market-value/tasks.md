@@ -1182,7 +1182,10 @@ only — technical detail lives in `plan.md` and the commit log).
 
 Folded in at the Phase 3 pause. The frame comes first and is the
 person's gate; T021 and T022 need no frame and run while it waits; T023
-and T024 wait for the frame's approval and Q22's answer.
+and T024 wait for the frame's approval and Q22's answer. Reviewed by the
+skeptical-reviewer at the top tier (2026-09-05): round 1 "fix and
+re-review" — T024's Done-when had asked for a live pick against the
+two-touches rule, plus seven should-fixes, all folded.
 
 - [ ] **T020 — The value-step frame. [person: approves; answers Q22]**
   Per plan Amendment B (Design) and spec's *(B)* Design line. One
@@ -1198,8 +1201,9 @@ and T024 wait for the frame's approval and Q22's answer.
   and hint once trimming bites, and Decision 34's "low, median and
   high" phrase.
   *Done when*: the frame and PNG committed, the person's approval and
-  Q22's answer recorded here; the Copy block and Decision 34 amended on
-  the answer.
+  Q22's answer recorded here; the Copy block, Decision 34 and the
+  Adopting bullet's "low, median and high marked" phrase amended on the
+  answer (three places, one sentence each).
 
 - [ ] **T021 — The trimmed bounds: computation, record, copy, retention.**
   Per plan Amendment B (the bounds; whole currency, once; copy) and
@@ -1232,9 +1236,17 @@ and T024 wait for the frame's approval and Q22's answer.
   `openValueStep()`; `adopt(cents:)` replacing `adopt()` with the
   refused-save behavior kept; `dismissValueStep()`. `MarketMatchView`'s
   `pick` becomes `async`, called in a `Task`; the wiring pins move
-  (`noticeIsPending` → `sheetStep`; the detent `onChange`). Tests: B3 in
-  both suites, mirrored; the existing adopt tests move to `adopt(cents:)`
-  and `openValueStep`. Mutations: write the median instead of the chosen
+  (`noticeIsPending` → `sheetStep`; the detent `onChange`). **Interim
+  sheet body**: until T024, the switch renders the notice and the picker
+  as today and, for `.fetching` and `.value`, a bare `ProgressView`
+  placeholder with a comment naming T024 — B5's "composes all four
+  phases" is T024's; T022 takes B5's one line that is its own guard,
+  `noticeIsPending` appears nowhere. Tests: B3 in both suites, mirrored,
+  **less the step's own tests** (`theChosenAmountIsClampedAndRounded`,
+  `theStepIsWholeCurrencyFromANonWholeMedian` live on the value type in
+  T021; T022 keeps the VM-level assertion that `adopt(cents:)` writes a
+  whole amount); the existing adopt tests move to `adopt(cents:)` and
+  `openValueStep`. Mutations: write the median instead of the chosen
   amount → red; re-present after dismissal → red; drop the second-pick
   guard → red; drop `acknowledgeNotice` still red from T009's test.
   Foundational: reviewer on the diff.
@@ -1248,11 +1260,17 @@ and T024 wait for the frame's approval and Q22's answer.
   `accessibilityAdjustableAction` by `adjustableStep` (1 % of the range,
   whole currency, at least one unit), label / value / hint from
   `MarketCopy`, the zero-width range drawn as one mark with the drag
-  inert. Tests: B6 in full (the 0.3 fraction from literals, the ΔE, the
-  adjustable step, the snap inside and outside the tolerance, the
-  zero-width case); the file joins the vocabulary scan; B5's no-`Slider(`
-  scan. Mutations: default at the midpoint → red; the fill token swapped
-  → red; the snap removed → red; a system `Slider` → red.
+  inert. **The x→cents mapping is a pure static seam**,
+  `MarketValueSlider.cents(atX:trackWidth:step:)` (and its inverse for
+  the knob), so the snap and drag tests drive it directly — the
+  `DragGesture` closure only calls it. Tests: B6 in full (the 0.3
+  fraction from literals, the ΔE, the adjustable step, the snap inside
+  and outside the tolerance through the seam, the zero-width case); the
+  file joins the vocabulary scan; B5's no-`Slider(` and
+  `accessibilityAdjustableAction` scans. Mutations: default at the
+  midpoint → red; the fill token swapped → red; the snap removed → red;
+  `adjustableStep` unread (a literal in its place) → red; the zero-width
+  range dividing by zero (a NaN fraction) → red; a system `Slider` → red.
   *Done when*: green, mutations recorded; the slider seen rendered
   against the frame.
 
@@ -1263,13 +1281,20 @@ and T024 wait for the frame's approval and Q22's answer.
   guidance line, the filled button with the live amount, Not now);
   detents `.medium` / `.large` by phase; the section's adopt action
   calls `openValueStep()`; identifiers `market.value.slider`,
-  `market.value.use`, `market.value.notNow`. Tests: B5 in full; the
-  vocabulary scan gains the file; `MarketCopy` pins for any string the
-  view composes. Mutations: a phase dropped → red; the adopt action
-  calling `adopt` directly → the actions scan red.
-  *Done when*: green, mutations recorded; the four phases seen on the
-  simulator through a live pick (the by-hand half), with what was seen
-  named here; T018 gains B8's lines.
+  `market.value.use`, `market.value.notNow`. If Q22's answer reworded
+  the marks or hint, this task retires T021's pending comment and moves
+  the `MarketCopyTests` pins. Tests: B5's remainder (the four-phase
+  composition, the detents by phase, the section's adopt action calling
+  `openValueStep()`); the vocabulary scan gains the file; `MarketCopy`
+  pins for any string the view composes. Mutations: a phase dropped →
+  red; the adopt action calling `adopt` directly → the actions scan red.
+  *Done when*: green, mutations recorded, full suite green with count;
+  the four phases seen rendered from fixture-built steps through a
+  temporary harness (removed before commit) against the frame, with
+  what was seen named here — **the live pick is T018's** (its B8 lines
+  are already in place; the value step cannot be reached under
+  `-uiTesting`, per Q13 and the two-touches rule); `tokens.md`'s "as
+  implemented" cells for the value step and the slider filled.
 
 ## Phase 4 — Contract and policy
 
