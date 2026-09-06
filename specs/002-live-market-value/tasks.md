@@ -58,6 +58,21 @@ possible); **where execution deviated from the spec, and why** (every
 place, never silently); **what needs your decision** (product questions
 only — technical detail lives in `plan.md` and the commit log).
 
+Cadence, amended again 2026-09-05 when the constitution adopted the
+skill's tuned model policy (after this spec's tier log was measured;
+this note is for the record and for the next spec, since every task
+here is done): each dispatch gets a **task bundle** assembled with
+shell — task line, plan section, acceptance criteria, files, pattern
+file — and the implementer is told not to read `plan.md`, `spec.md`,
+or `tasks.md` in full; verification is **`scripts/verify.sh`** and
+nothing more verbose, re-run by the orchestrator only in foundational
+phases; review bundles are cut after staging; every task gets **one
+review and at most one re-review**, with anything still open logged
+and left to the sweep; the sweep runs at the reviewer's default tier
+on the documents plus `git diff main...HEAD`; and the orchestrator
+starts a **fresh session at each phase pause**, resuming from the
+first unchecked task.
+
 ## Phase 0 — The constitution
 
 - [x] **T000 — `CLAUDE.md` amended, own commit (spec Decision 19).**
