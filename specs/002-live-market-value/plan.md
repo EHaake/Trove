@@ -467,7 +467,10 @@ reads them; the pins move if the person rewords.
   ("Use $1,450 as my value" / "Use $349 as estimated cost"),
   `medianMark` ("median"), `yourValue(wanted:)`, `sliderHint`,
   `typicalLowLabel(cents:)` / `typicalHighLabel(cents:)` (Q22's wording,
-  pending), reusing `figureAccessibilityLabel` for the median mark.
+  pending), and `medianAskingPriceLabel(cents:)` — the spec's spoken marks
+  are lowercase, so the median mark gets its own lowercase string rather
+  than reusing `figureAccessibilityLabel` ("Median asking price …", the
+  section's, which opens a sentence); corrected at T021's review.
   `MarketCopyTests` pins each whole. The two new view files join the
   vocabulary scan.
 - **Design.** One frame, `ValueStep.dc.html`, drawn in session as the

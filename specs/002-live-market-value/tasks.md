@@ -1495,6 +1495,11 @@ off with four small notes, folded below (the interim adopt closure, the
   address is a two-file edit (`MarketCopy.contactAddress`, `PRIVACY.md`).
   T018 also checks the dashboard line's lifted amount reads as a real
   medium weight on the device (T013 finding).
+  `CLAUDE.md`'s false-passing-test paragraph gains a fourth instance
+  (post-merge, on `main`): a test asserting an invariant a `precondition`
+  already guarantees — correct-looking, green, unfalsifiable (T021's
+  review, round 2). And the review-bundle rule: build diffs after
+  `git add -N` so new files appear.
   Criteria 1–20 ticked in `spec.md` with citations, honest partials
   named (a real 429 if none was seen; the second-device history check;
   "is published" pending merge); the skeptical-reviewer sweep over the
