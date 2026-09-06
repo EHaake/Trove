@@ -1276,7 +1276,7 @@ off with four small notes, folded below (the interim adopt closure, the
   Per plan Amendment B (the detail view models; the picker) and
   Decisions 33–35. `sheetStep: MarketSheetStep` replaces `noticeIsPending`
   (removed, not derived); `setMatch(_:) async` guarded against a second
-  pick, setting `.fetching(candidate)` and `marketActivity`, awaiting the
+  pick, setting `.fetching(candidate, token:)` and `marketActivity`, awaiting the
   refresher, the notice's date read after the save, the landing rule
   stated once (a `.current` reading with the sheet still presented →
   `.value`, else close; a landing after dismissal never re-presents);
@@ -1294,9 +1294,9 @@ off with four small notes, folded below (the interim adopt closure, the
   leaves Use as my value opening a placeholder sheet (the header's rule);
   `openValueStep()` exists and is tested but has no caller until T024.
   **Between T022 and T024 a successful pick shows the interim
-  `ProgressView` sheet at the medium detent with no way out but a
-  swipe-down** — `.fetching` and `.value` render identically until T024
-  draws them; the section's adopt stays live. Recorded so a run of the
+  `ProgressView` sheet — at the large detent while `.fetching`, snapping
+  to medium on `.value` — with no way out but a swipe-down**; the two
+  phases render the same content until T024 draws them; the section's adopt stays live. Recorded so a run of the
   app in this window is not read as a defect. Tests: B3 in both suites, mirrored,
   **less the step's own tests** (`theChosenAmountIsClampedAndRounded`,
   `theStepIsWholeCurrencyFromANonWholeMedian` live on the value type in
