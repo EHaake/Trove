@@ -210,14 +210,16 @@ further, and whenever something unexpected bears on spec adherence.
 ## Model policy
 
 Decided 2026-09-04, per the `spec-driven-development` skill's "Model
-tiering" section, and amended 2026-09-05 from the skill's tuned
-template after `002-live-market-value`'s tier log was measured (the
-review loop and raw build logs were the two largest costs). Decided
-once, alongside the involvement level; the tier names change as models
-do, the roles don't.
+tiering" section; amended 2026-09-05 from the skill's tuned template
+after `002-live-market-value`'s tier log was measured (the review loop
+and raw build logs were the two largest costs), and 2026-09-06 to the
+template's current wording, which moves plan and task drafting into
+the `sdd-planner` subagent. Decided once, alongside the involvement
+level; the tier names change as models do, the roles don't.
 
 - **Decisions run at the best available tier**: the spec conversation,
-  plan and task drafting, Step 1 triage, orchestration of
+  plan and task drafting (the `sdd-planner` subagent, one dispatch per
+  spec on a planning bundle), Step 1 triage, orchestration of
   implementation, and the `skeptical-reviewer` when it's judging a
   decision — plan/tasks sign-off and reviews of routine-but-real
   decisions — via a per-call model override up from its default.
@@ -229,11 +231,14 @@ do, the roles don't.
   documents and the spec's full diff (`git diff main...HEAD`) — and
   reads nothing else. Stage before cutting the diff (`git add -A`), so
   untracked files appear in it.
-- **Review loop cap**: one review and at most one re-review per task.
-  The re-review sees the findings and the fix diff only. Blocking
-  means it would fail an acceptance criterion or a test, or contradicts
-  `plan.md` or `CLAUDE.md`; nothing else blocks. Anything open after
-  the re-review goes to the tier log and the sweep.
+- **Review loop cap**: one review and at most one re-review per
+  invocation — task, phase, sign-off, or sweep. The re-review sees the
+  findings and the fix diff only. Blocking means it would fail an
+  acceptance criterion or a test, or contradicts `plan.md` or
+  `CLAUDE.md`; nothing else blocks. Anything open after the re-review
+  goes to the tier log and the sweep; a blocking finding still open
+  after a sign-off's re-review is fixed by the orchestrator directly
+  and logged, not sent around a third time.
 - **Implementation runs one tier down**, in the `sdd-implementer`
   subagent, one task per dispatch, sequentially. The orchestrating
   session triages each task, dispatches routine ones on a task bundle
@@ -254,73 +259,53 @@ do, the roles don't.
 - **Third tier**: off. Turn on once a spec's tier log under this
   amended cadence justifies it: "Sonnet for tasks with an automated
   Verify check, a named pattern file, and a small footprint."
-- **Log token usage per implementer run and per reviewer invocation**,
-  plus tier misses, in `tasks.md`'s tier log — `002-live-market-value`
-  (from T009a on) is the first spec's log and the baseline this
-  amendment came from; the next spec's log is compared against it
-  before the policy is treated as settled.
+- **Log token usage per planner dispatch, implementer run and
+  reviewer invocation**, plus tier misses, in `tasks.md`'s tier log —
+  `002-live-market-value` (from T009a on) is the first spec's log and
+  the baseline this amendment came from; the next spec's log is
+  compared against it before the policy is treated as settled.
 
 ## Spec-driven workflow
 
 This project follows spec → plan → tasks → implement, gated by review
-between each phase — the person's for `spec.md`, the
-`skeptical-reviewer`'s for `plan.md` and `tasks.md`, per the
-involvement level above. Artifacts live in `specs/<NNN>-<slug>/`:
+between each phase — the person's or the `skeptical-reviewer`'s, per
+the involvement level above. Artifacts live in `specs/<NNN>-<slug>/`:
 
 - `spec.md` — what and why, user-facing behavior, acceptance criteria,
   explicit non-goals. No implementation detail.
-- `plan.md` — technical design: types, data flow, view hierarchy, what
-  changes where.
+- `plan.md` — technical design: types, data flow, what changes where.
 - `tasks.md` — ordered, small, independently verifiable tasks.
 
-Do not begin implementation on a feature without a spec, plan, and
-tasks in that feature's directory that are signed off per the
-involvement level above. When resuming a session, check
-`specs/<feature>/tasks.md` for the current state before doing anything
-else.
-
-**Authorship split (amended 2026-08-30 during `011-data-export`; venue
-clause amended 2026-08-31 during `012-data-import`):** `spec.md` is
-authored in a design conversation with the person — it captures product
-intent and decisions, and every substantive call in it is theirs. The
+Authorship: `spec.md` is written in the chat design conversation. The
 *venue* of that conversation is decided per spec, by the person: the
-default for a green-field feature is a dedicated claude.ai chat (product
-intent needs no repo access to write well), but they may direct it to
-happen in this session instead — as `012-data-import` was — which suits
+default for a green-field feature is a dedicated claude.ai chat, but
+they may direct it to happen in the Claude Code session instead — as
+`012-data-import` and `003-trend-aware-sell-plan` were — which suits
 specs whose design questions hang off contracts already shipped in the
-repo. What does not flex, in either venue: the person makes the product
-decisions, the resulting `spec.md` is committed to the spec branch
-marked **Draft**, and it is human-approved before `plan.md` is drafted
-against it. If asked to scope a brand-new feature and the person hasn't
-said where, ask which venue they want rather than assuming either.
+repo; if they haven't said where, ask. In either venue the person
+makes the product decisions, the resulting `spec.md` is committed to
+the spec branch marked **Draft**, and it is human-approved before
+`plan.md` is drafted against it. Until this project has shipped code,
+`plan.md` and `tasks.md` are drafted in chat too; once shipped code is
+what plans extend — this project's state since `001` merged — the
+`sdd-planner` subagent drafts them instead, at the top tier, from a
+planning bundle (the spec, the previous spec's plan and tasks as the
+pattern, the file listing), against the actual codebase, and the
+orchestrator commits them to the spec branch with the PR still in
+draft. Both are signed off before any implementation task starts: at
+the product-owner level by the `skeptical-reviewer` (blocking findings
+fixed and re-reviewed), with the person receiving a spec-conformance
+summary to approve; at the technical-lead level by the person
+directly. If planning surfaces something that is actually a product
+decision — scope, user-facing behavior, a spec contradiction — it goes
+back to the person rather than being settled in `plan.md`. (Amended
+2026-08-30, 2026-08-31, 2026-09-03 and 2026-09-06; the reasoning for
+moving plan authorship out of chat once code exists is in
+`DECISIONS.md`, 2026-08-30.)
 
-`plan.md` and `tasks.md`, by contrast, are drafted **in this session**,
-by Claude Code, against the approved spec: work in Plan Mode, apply the
-`skeptical-reviewer` subagent to non-routine technical calls, and commit
-each document to the spec branch marked **Draft** at the top. **Sign-off
-follows the involvement level** (amended 2026-09-03): at the
-product-owner level, Plan Mode plus the `skeptical-reviewer` is the gate
-— the reviewer checks the draft against `spec.md` and this file,
-blocking findings go back to the drafting session to be fixed and
-re-reviewed — and the person receives a **spec-conformance summary**
-rather than the plan itself: which acceptance criteria the plan serves
-and how, where it deviates from the spec and why, and any product
-question it surfaced that needs their call. `plan.md` is signed off
-before `tasks.md` is drafted against it, and both before any
-implementation task starts. If planning surfaces something that is
-actually a product decision — scope, user-facing behavior, a spec
-contradiction — stop and escalate rather than settling it in `plan.md`.
-
-This explicitly reverses the original rule, which placed `plan.md`
-authorship in the chat conversation alongside `spec.md`. That rule was
-written when this project had no code — a plan could be authored
-anywhere, because there was nothing to inspect. With an established
-codebase, a plan's quality depends on ground truth only the repo has
-(actual model definitions, actual view structure, actual injection
-shapes), and the chat's knowledge-base snapshot is a manual upload that
-is reliably stale. See `DECISIONS.md` (2026-08-30 entry) for the full
-reasoning; the same amendment is being proposed upstream to the
-`spec-driven-development` skill.
+Do not begin implementation on a feature without an approved spec and
+plan in that feature's directory. When resuming a session, check
+`specs/<feature>/tasks.md` for current state before doing anything else.
 
 ## Collaboration workflow
 
