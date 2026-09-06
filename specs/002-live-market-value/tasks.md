@@ -1189,7 +1189,18 @@ two-touches rule, plus seven should-fixes, all folded; round 2 signed
 off with four small notes, folded below (the interim adopt closure, the
 `cents(atX:` scan, two wordings).
 
-- [ ] **T020 — The value-step frame. [person: approves; answers Q22]**
+- [x] **T020 — The value-step frame. [person: approves; answers Q22]**
+  *Done (2026-09-05)* — the frame `ValueStep.dc.html` and its PNG
+  committed with the tokens table (a59397a → 5a1061a); **approved by the
+  person 2026-09-05** ("signed off on the designs"), who also reported
+  the interim state exactly as recorded under T022 — the spinner that
+  never finishes is the `.value` phase's placeholder, and the section's
+  Use as my value works after a swipe-down. **Q22 is not yet answered**:
+  the person's sign-off named the designs; the copy question was asked
+  again with the T023 dispatch. Until it is, the code carries the
+  proposed wording marked pending, and T024 moves the pins on the
+  answer; the Copy block, Decision 34 and the Adopting bullet are
+  amended then.
   Per plan Amendment B (Design) and spec's *(B)* Design line. One
   artboard, `ValueStep.dc.html`, drawn in session as the Phase 2 frames
   were, joined to the existing canvas and rendered to PNG: the sheet at
