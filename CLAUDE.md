@@ -140,7 +140,16 @@ prerequisites of its own (amended 2026-09-03, spec `002` Decision 19).
   or corrupting real persisted data — bounded enough that the test-only
   branch is worth the unease it should still provoke. Confirm isolation
   actually holds by running the suite twice back to back, don't assume
-  the flag does what it's supposed to.
+  the flag does what it's supposed to. The same bounded branch may
+  *add* rows for one launch — `003`'s seeded market history, so a UI
+  test can exercise a ranking no real device has the history for yet —
+  on two conditions (amended 2026-09-06, at `003`'s plan sign-off): the
+  seed is gated on the store the app actually built being the in-memory
+  one, never on reading the flag a second time, so the in-memory bound
+  is structural and a test can show the seed refusing a persistent
+  store even with every flag set; and it takes its own second argument,
+  so the flag alone keeps starting from an empty collection and every
+  existing UI test keeps the starting state it was written against.
 - **When checking whether a mechanism fired, instrument the mechanism —
   don't inspect an artifact that might not reliably show it.** `T056`'s
   pull-to-refresh was reported as broken on `ScrollView` — a platform
