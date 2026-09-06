@@ -416,10 +416,12 @@ reads them; the pins move if the person rewords.
   the current one, so an older section refresh landing after a pick can
   neither paint a failure line over the new match nor re-enable the
   buttons early — it re-derives the section and nothing else), awaits the refresher for this item (`.stillFresh` is a hit —
-  no second request within the hour, P7), clears the activity, maps the
-  outcome to `marketNotice` (the date read from the re-derived state
-  *after* the save, so a changed product's cleared figure can never date
-  a failure line), then `loadMarket()`. **The landing rule, stated
+  no second request within the hour, P7), then — **in this order, as
+  built (T022's third review corrected this sentence)** — `loadMarket()`
+  first, and only then, under the generation rule, clears the activity
+  and maps the outcome to `marketNotice` with the date read from the
+  re-derived state (so a changed product's cleared figure can never date
+  a failure line). **The landing rule, stated
   once:** if `marketState`'s reading is now `.current` **and the sheet
   is still *this fetch's* presentation** — `isFindingMatch` true *and*
   `sheetStep` still `.fetching(_, token)` carrying **this fetch's token**
