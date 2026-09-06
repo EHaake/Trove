@@ -1367,7 +1367,40 @@ off with four small notes, folded below (the interim adopt closure, the
   Foundational: reviewer on the diff.
   *Done when*: green, mutations recorded, full suite green with count.
 
-- [ ] **T023 — `MarketValueSlider`.** *(after T020's approval)*
+- [x] **T023 — `MarketValueSlider`.** *(after T020's approval)*
+  *Done (2026-09-05)* — dispatched to `sdd-implementer`, verified by the
+  orchestrator's own run; not foundational, so no per-task review. As
+  built: `Trove/Views/Market/MarketValueSlider.swift` — Trove's own
+  control (`divider` track, `accentBrass` fill to the knob, end marks
+  and the taller `accentBrassDim` median mark, the ringed brass knob with
+  the frame's shadow, the bound amounts and "median" beneath; input
+  `(step:isWanted:onChange:)` for T024 to bind to the VM's `setChosen`);
+  pure `nonisolated` seams `cents(atX:trackWidth:lower:upper:median:)`,
+  `x(forCents:…)`, `marks(…)`, `adjustableStep(lower:upper:)`,
+  `snapTolerance = 6`, the `DragGesture` closure and the adjustable
+  action calling them; zero-width range → no NaN, one mark, drag inert;
+  label / value / hint from `MarketCopy`, the mark labels one combined
+  element (a hand join would need a space literal). Tests: +17 in 2
+  suites (twelve seam tests at literals — the 0.3 fraction, the snap
+  inside and outside the tolerance, the step and its floor, the
+  zero-width cases; three render tests — the fill's extent at 30 %, the
+  fill's ΔE, the zero-width render) plus two wiring scans (no `Slider(`
+  by the boundary regex, `accessibilityAdjustableAction`; the gesture
+  calls `cents(atX:` and the action `adjustableStep(`). Mutations, each
+  red then reverted: the knob at the midpoint → red; the fill token →
+  `accentBrassDim` → ΔE red; the snap removed → red; a literal step in
+  the action → the seam scan red; the zero-width guard removed → `x` is
+  NaN → red (an `ImageRenderer` treats a NaN offset as zero, so only the
+  seam test sees it — recorded in the runner memory); a system `Slider(`
+  → red; the knob fill → `divider` → the zero-width render red. `tokens.md`'s
+  slider rows filled (the label row 16 pt for the mono line box; the
+  knob's shadow the frame's 40 % black). Full unit suite (orchestrator's
+  run): **1098 tests in 148 suites, all passed**. Seen rendered by the
+  orchestrator against the frame through a temporary harness (deleted):
+  the default with the knob on the median, a moved knob with the median
+  mark reappearing under the fill, and the zero-width range as one knob
+  and one amount. `market.value.slider` is T024's to attach at the call
+  site.
   Per plan Amendment B (the views — the slider) and the frame. Trove's
   own control in `Trove/Views/Market/MarketValueSlider.swift`: the
   track, the fill, three marks, the end amounts, the drag mapping in
@@ -1723,3 +1756,4 @@ previous spec of similar size before treating the policy as settled.
 | T022 review 4 | opus (`skeptical-reviewer`) | 65,194 | fix and re-review — a racy precondition in one test |
 | T022 fix pass 5 | opus (`sdd-implementer`) | 55,335 | verified first try |
 | T022 review 5 | opus (`skeptical-reviewer`) | 35,750 | signed off |
+| T023 | opus (`sdd-implementer`) | 165,356 | verified first try; renders seen by the orchestrator |

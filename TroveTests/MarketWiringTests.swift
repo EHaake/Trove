@@ -19,6 +19,7 @@ struct MarketWiringTests {
     private static let section = "Trove/Views/Market/MarketSection.swift"
     private static let notice = "Trove/Views/Market/MarketNoticeView.swift"
     private static let picker = "Trove/Views/Market/MarketMatchView.swift"
+    private static let slider = "Trove/Views/Market/MarketValueSlider.swift"
     private static let detailScreens = [
         ("Trove/Views/Items/ItemDetailView.swift", "private func content(for item: Item) -> some View {"),
         ("Trove/Views/Wishlist/WishlistDetailView.swift", "private func content(for item: WishlistItem) -> some View {"),
@@ -257,6 +258,55 @@ struct MarketWiringTests {
         // come from a walk that found nothing.
         let carryingTheStep = try Self.allAppSwiftFiles().filter { try SourceScan.production($0).contains("sheetStep") }
         #expect(carryingTheStep.count >= 4, "the walk found `sheetStep` in only \(carryingTheStep.count) files")
+    }
+
+    /// B5's slider half (plan Amendment B, spec Decision 34's Design line):
+    /// the value slider is **Trove's own control**, not a system `Slider`
+    /// dressed in brass — a distinction no render test can draw, since a
+    /// tinted system slider would sample much the same.
+    ///
+    /// The boundary regex is the point: a bare `contains("Slider(")` fires
+    /// on `MarketValueSlider(`, which would make the guard permanently red
+    /// the moment anything composed it. The character before the word has
+    /// to be a non-identifier one.
+    @Test func theValueSliderIsTrovesOwnControl() throws {
+        let code = try SourceScan.production(Self.slider)
+        let systemSlider = try Regex(#"(?:^|[^A-Za-z0-9_])Slider\("#)
+        let found = code.ranges(of: systemSlider).count
+        #expect(
+            found == 0,
+            "the value slider is a system `Slider` — the spec's Design line asks for Trove's own control"
+        )
+        // The control: the pattern does match the word where it stands
+        // alone, so an empty result can't come from a regex that matches
+        // nothing — and doesn't match the file's own type name.
+        #expect("  Slider(value: $x)".firstMatch(of: systemSlider) != nil)
+        #expect("  MarketValueSlider(step: step)".firstMatch(of: systemSlider) == nil)
+        #expect(code.contains("accessibilityAdjustableAction"), "the slider can't be adjusted by VoiceOver")
+    }
+
+    /// The drag mapping is a pure static seam so the snap and the rounding
+    /// can be tested directly (`MarketValueSliderTests`); this is the half
+    /// that check can't see — that the gesture *uses* it rather than
+    /// repeating the arithmetic inline, where it would drift untested. Same
+    /// for the VoiceOver step: `adjustableStep` written as a literal in the
+    /// action would leave its own test green.
+    @Test func theSlidersGestureAndAdjustmentGoThroughTheSeam() throws {
+        let code = try SourceScan.production(Self.slider)
+
+        let dragged = SourceScan.closureBodies(after: ".onChanged", in: code)
+        try #require(dragged.count == 1, "the slider has \(dragged.count) drag closures — one gesture, one mapping")
+        #expect(
+            dragged[0].contains("cents(atX:"),
+            "the drag closure maps x to cents itself instead of calling the seam: \(dragged[0])"
+        )
+
+        let adjusted = SourceScan.closureBodies(after: "accessibilityAdjustableAction", in: code)
+        try #require(adjusted.count == 1, "the slider has \(adjusted.count) adjustable actions")
+        #expect(
+            adjusted[0].contains("adjustableStep("),
+            "the adjustable action steps by something other than `adjustableStep`: \(adjusted[0])"
+        )
     }
 
     /// The same walk `ExportWiringTests` uses — asserted non-trivial so a
