@@ -20,7 +20,9 @@ import SwiftUI
 /// literal with a space in it, and `MarketVocabularyTests` holds it to that.
 struct MarketMatchView: View {
     @State private var viewModel: MarketMatchViewModel
-    private let pick: (MarketCandidate) -> Void
+    /// Async since Amendment B: the pick now runs that product's refresh in
+    /// the same sheet (spec Decision 33), so the card's button awaits it.
+    private let pick: (MarketCandidate) async -> Void
     private let cancel: () -> Void
 
     @Environment(\.theme) private var theme
@@ -31,7 +33,7 @@ struct MarketMatchView: View {
     /// doesn't throw away a search in flight.
     init(
         viewModel: MarketMatchViewModel,
-        pick: @escaping (MarketCandidate) -> Void,
+        pick: @escaping (MarketCandidate) async -> Void,
         cancel: @escaping () -> Void
     ) {
         _viewModel = State(initialValue: viewModel)
@@ -152,7 +154,7 @@ struct MarketMatchView: View {
     private func card(_ candidate: MarketCandidate) -> some View {
         VStack(spacing: 0) {
             Button {
-                pick(candidate)
+                Task { await pick(candidate) }
             } label: {
                 cardBody(candidate)
             }

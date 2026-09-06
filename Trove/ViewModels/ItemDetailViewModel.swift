@@ -89,14 +89,33 @@ final class ItemDetailViewModel {
     /// store instead, so a refused save simply leaves the section as it was.
     private(set) var adoptFailureMessage: String?
 
-    /// Whether the one-time notice stands in front of the picker this time
-    /// (spec Decision 14). Decided when the sheet opens, not while it is
-    /// open, so continuing can't reshuffle the sheet under the person.
-    private(set) var noticeIsPending = false
+    /// Which phase the match sheet is showing (spec Decisions 14, 33–34,
+    /// plan Amendment B). Whether the notice stands in front of the picker
+    /// is decided when the sheet opens, not while it is open, so continuing
+    /// can't reshuffle the sheet under the person; the two phases after the
+    /// pick are driven by `setMatch(_:)` and by `openValueStep()`.
+    private(set) var sheetStep: MarketSheetStep = .pick
 
     /// Settable by the view: the sheet's `isPresented` binding writes false
     /// back on dismissal, the way `SettingsViewModel.stagedExport` does.
     var isFindingMatch = false
+
+    /// **The generation rule** (plan Amendment B, T022's second review):
+    /// every fetch this view model starts — a pick's and the section's own
+    /// Refresh alike — takes the next value of this counter, and a landing
+    /// may write the notice or clear the activity flag only while its token
+    /// is still the current one. An older fetch landing after a newer one
+    /// has begun re-derives the section and nothing else: it may neither
+    /// paint a failure line over the match that replaced it nor re-enable
+    /// Refresh and the adopt button while the newest fetch is still
+    /// running. The newest fetch always lands, so the flag can't be left
+    /// set by the rule.
+    private var marketFetchGeneration = 0
+
+    private func nextGeneration() -> Int {
+        marketFetchGeneration += 1
+        return marketFetchGeneration
+    }
 
     /// Matched, idle, and nothing fetched here within the hour (spec P7,
     /// Q8) — the same window the refresher enforces, so a disabled button
@@ -117,7 +136,7 @@ final class ItemDetailViewModel {
     /// Find on Reverb… and Change match… — one intent, since the second is
     /// the first over an existing match.
     func findMatch() {
-        noticeIsPending = !MarketLocalStore.hasAcknowledgedNotice(in: modelContext)
+        sheetStep = MarketLocalStore.hasAcknowledgedNotice(in: modelContext) ? .pick : .notice
         isFindingMatch = true
     }
 
@@ -134,13 +153,13 @@ final class ItemDetailViewModel {
             // more than the notice standing there once again.
             modelContext.rollback()
         }
-        noticeIsPending = false
+        sheetStep = .pick
     }
 
     /// Not now: the sheet closes and the flag is left unacknowledged (Q5),
     /// so the notice comes back the next time Find on Reverb… is tapped.
     func declineNotice() {
-        noticeIsPending = false
+        sheetStep = .pick
         isFindingMatch = false
     }
 
@@ -152,7 +171,8 @@ final class ItemDetailViewModel {
         MarketMatchViewModel(seed: item?.name ?? "", service: marketService)
     }
 
-    /// The pick. A *different* product's figure and history describe
+    /// The pick, and the refresh it now runs (spec Decision 33, plan
+    /// Amendment B). A *different* product's figure and history describe
     /// something else, so they go first (spec Decision 26); re-picking the
     /// same product keeps them.
     ///
@@ -162,8 +182,17 @@ final class ItemDetailViewModel {
     /// present, or the rows cleared with the old match still on the item.
     /// Either way the next `loadMarket()` shows what is actually stored, and
     /// a refresh re-derives the figure from the match.
-    func setMatch(_ candidate: MarketCandidate) {
-        guard let item else { return }
+    ///
+    /// Guarded so two quick taps on candidate cards produce one save and one
+    /// request: a second pick while the first is fetching is dropped, and a
+    /// pick can only come from the picker phase in the first place. The step
+    /// alone is enough — everything up to `sheetStep = .fetching` runs
+    /// synchronously on the MainActor — and it is deliberately *not* joined
+    /// by `marketActivity == nil` (plan Amendment B), which would silently
+    /// drop a pick made while the section's own Refresh is in flight; the
+    /// refresher's supersede rule already drops the older fetch's result.
+    func setMatch(_ candidate: MarketCandidate) async {
+        guard let item, case .pick = sheetStep else { return }
         do {
             if item.reverbProductID != candidate.id {
                 try MarketLocalStore.clear(subjectID: item.id, in: modelContext)
@@ -176,12 +205,110 @@ final class ItemDetailViewModel {
             // `rollback()` discards every pending change on the shared
             // context, not only this intent's — the same recovery
             // `SettingsViewModel.confirmDeleteAll` uses; `loadMarket()`
-            // below then shows whatever is actually stored.
+            // below then shows whatever is actually stored. Nothing is
+            // fetched over a match that wasn't written (the T009 rule): the
+            // sheet closes to the section as it did before Amendment B.
+            // The notice is left exactly as it was: the match it describes
+            // is still the item's, since this pick was never written (plan
+            // Amendment B).
             modelContext.rollback()
+            closeSheet()
+            loadMarket()
+            return
         }
+        // The notice described the match this pick has just replaced, so it
+        // goes with it (plan §6's deviation) — before the fetch, so the
+        // section behind the sheet isn't standing under a dead failure line.
         marketNotice = nil
-        isFindingMatch = false
+        // This fetch's place in line (the generation rule): the token names
+        // the presentation as well as the landing, so the same product
+        // picked again after a swipe-down is a second fetch and the first
+        // has no claim on the second's sheet.
+        let token = nextGeneration()
+        sheetStep = .fetching(candidate, token: token)
+        // `canRefresh` and `canAdopt` are false throughout, so a second
+        // refresh can't start underneath the sheet.
+        marketActivity = .refreshing
+
+        let target = MarketRefreshTarget(
+            key: MarketSubjectKey(subjectID: item.id, kind: .owned),
+            productID: candidate.id,
+            subject: .owned(condition: item.condition),
+            year: item.year
+        )
+        let refresher = MarketRefresher(modelContext: modelContext, service: marketService, now: now)
+        let outcome = await refresher.refresh(target)
+
+        // Re-derived first, so the unreachable line dates itself by the
+        // figure that is actually showing *after* the save — a changed
+        // product's figure is cleared, and can never date this failure.
         loadMarket()
+        // The generation rule: only the newest fetch speaks for the section.
+        if token == marketFetchGeneration {
+            marketActivity = nil
+            marketNotice = MarketNotice.notice(for: outcome, lastFetchedAt: marketState.currentFigureFetchedAt)
+        }
+
+        // **The landing rule** (plan Amendment B), stated once: the outcome
+        // may only move the sheet it is *this fetch's* presentation of —
+        // `sheetStep` still `.fetching` carrying **this fetch's token**.
+        // The token is what is compared, not the candidate: candidate
+        // equality is not fetch identity, and the same product picked again
+        // after a swipe-down is a second fetch whose sheet the first may
+        // not move. The step is named as well as the flag because a bare
+        // `isFindingMatch` cannot tell this presentation from a picker the
+        // person re-opened after swiping this fetch away, and that picker
+        // is theirs: an outcome must neither replace it with a value step
+        // for a fetch they walked away from nor close it under them.
+        //
+        // Within this fetch's own sheet: a figure in hand and the sheet
+        // still up is the value step; anything else — a withheld reading, a
+        // failure, or a person who swiped the fetching sheet away — closes
+        // to the section, which says what it says today. An outcome landing
+        // after the dismissal never re-presents the sheet.
+        if case .fetching(_, let inFlight) = sheetStep, inFlight == token {
+            if isFindingMatch, let figure = currentFigure {
+                sheetStep = .value(MarketValueStep(figure: figure))
+            } else {
+                closeSheet()
+            }
+        }
+    }
+
+    /// The section's adopt action from T024 on (spec Decision 34): the same
+    /// value step, opened over a figure already in hand. A no-op when there
+    /// is no current reading or a refresh is running — `canAdopt` gates the
+    /// button, and this repeats the gate rather than trusting it.
+    func openValueStep() {
+        guard canAdopt, let figure = currentFigure else { return }
+        sheetStep = .value(MarketValueStep(figure: figure))
+        isFindingMatch = true
+    }
+
+    /// The slider's write, forwarded to the step the sheet is holding, so
+    /// the view binds to this view model rather than to a copy of the step.
+    /// Whole currency and the bounds are `MarketValueStep`'s own invariant.
+    func setChosen(_ cents: Int) {
+        guard case .value(var step) = sheetStep else { return }
+        step.setChosen(cents)
+        sheetStep = .value(step)
+    }
+
+    /// Not now, and the swipe-down: the sheet closes and nothing is written.
+    func dismissValueStep() {
+        closeSheet()
+    }
+
+    /// The figure the section is showing, when it is showing one — the one
+    /// reading a value step may be built over (plan Amendment B, B4).
+    private var currentFigure: MarketSnapshotValue? {
+        guard case .matched(let display) = marketState, case .current(let figure) = display.reading else { return nil }
+        return figure
+    }
+
+    private func closeSheet() {
+        isFindingMatch = false
+        sheetStep = .pick
     }
 
     /// One item's refresh. The refresher owns the hour budget, the writes
@@ -189,8 +316,11 @@ final class ItemDetailViewModel {
     /// the section (spec P8: a failure leaves the last figure alone).
     func refresh() async {
         guard canRefresh, let item, let productID = item.reverbProductID else { return }
+        // This refresh's place in line (the generation rule, plan Amendment
+        // B): what it may write when it lands turns on whether a pick has
+        // started a newer fetch in the meantime.
+        let token = nextGeneration()
         marketActivity = .refreshing
-        defer { marketActivity = nil }
 
         let target = MarketRefreshTarget(
             key: MarketSubjectKey(subjectID: item.id, kind: .owned),
@@ -205,23 +335,36 @@ final class ItemDetailViewModel {
         let refresher = MarketRefresher(modelContext: modelContext, service: marketService, now: now)
         let outcome = await refresher.refresh(target)
 
-        marketNotice = MarketNotice.notice(for: outcome, lastFetchedAt: lastFetchedAt)
+        // The generation rule: an older refresh landing after a pick's
+        // fetch has begun re-derives the section and nothing else.
+        if token == marketFetchGeneration {
+            marketActivity = nil
+            marketNotice = MarketNotice.notice(for: outcome, lastFetchedAt: lastFetchedAt)
+        }
         loadMarket()
     }
 
-    /// "Use as my value" (spec criterion 8, Q15): the median as the display
-    /// formatter rounds it, written to the person's own value. No fetch, and
-    /// no history point — the market's record of itself is untouched.
+    /// The value step's one filled button (spec criterion 8, Decisions
+    /// 34–35): the amount the person chose on the slider, written to their
+    /// own value. No fetch, and no history point — the market's record of
+    /// itself is the median whatever is adopted, so trending is untouched.
+    ///
+    /// The amount arrives whole: `MarketValueStep` rounds its default and
+    /// every move through `MarketAdoption`. It is routed through the same
+    /// rounding again here so the invariant holds for any caller, not only
+    /// for the one path that happens to hold a step.
     @discardableResult
-    func adopt() -> Bool {
+    func adopt(cents: Int) -> Bool {
         adoptFailureMessage = nil
-        guard canAdopt,
-              let item,
-              case .matched(let display) = marketState,
-              case .current(let figure) = display.reading,
-              let medianCents = figure.medianCents else { return false }
+        // The sheet closes on every path out of here (plan Amendment B):
+        // the write, a refused save — the section then carries the message
+        // over the value left as it was — and a gate that refuses the write
+        // altogether, since a value step standing over a reading that has
+        // gone stale or withheld under it has nothing left to offer.
+        defer { closeSheet() }
+        guard canAdopt, let item else { return false }
 
-        item.currentValueCents = MarketAdoption.wholeCurrencyCents(from: medianCents)
+        item.currentValueCents = MarketAdoption.wholeCurrencyCents(from: cents)
         item.updatedAt = now()
         do {
             try modelContext.save()
@@ -235,6 +378,17 @@ final class ItemDetailViewModel {
             return false
         }
         return true
+    }
+
+    /// **Interim (T022, replaced by T024)**: the median the section's adopt
+    /// button writes until `openValueStep()` takes the intent over, so no
+    /// commit leaves "Use as my value" opening a sheet that isn't built yet.
+    ///
+    /// Whole already, because rounding belongs to one place per layer and a
+    /// view is never that place (T022's review): the value step rounds its
+    /// own default the same way from T024 on.
+    var adoptableMedianCents: Int? {
+        currentFigure?.medianCents.map { MarketAdoption.wholeCurrencyCents(from: $0) }
     }
 
     /// Remove match: the match and everything the device knows about it go

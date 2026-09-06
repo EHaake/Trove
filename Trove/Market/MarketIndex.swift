@@ -211,6 +211,54 @@ enum MarketActivity: Equatable, Sendable {
     case refreshing
 }
 
+/// Which phase the match sheet is showing (spec Decisions 14, 33–34, plan
+/// Amendment B). Replaces the `noticeIsPending` Bool the sheet carried
+/// while it had two phases: the pick now refreshes in place and hands over
+/// to the value step, which is four phases and no longer a yes-or-no.
+///
+/// `.pick` is the resting value, the way `noticeIsPending == false` was —
+/// the step only means anything while `isFindingMatch` is true, and the
+/// sheet's own presentation stays that flag's job.
+enum MarketSheetStep: Equatable, Sendable {
+    /// The one-time notice, in front of the picker (Decision 14).
+    case notice
+    case pick
+    /// The picked candidate's listings are being fetched, in the same sheet
+    /// (Decision 33) — the candidate is carried so the sheet can keep
+    /// showing what was picked while it runs, and the fetch's own
+    /// generation token beside it so a landing can tell *this* fetch's
+    /// presentation from a later one's. Candidate equality is not fetch
+    /// identity: the same product picked again after a swipe-down is a
+    /// second fetch, and the first has no claim on the second's sheet
+    /// (plan Amendment B, T022's second review).
+    case fetching(MarketCandidate, token: Int)
+    /// The figure, the slider and the one button that writes (Decision 34).
+    case value(MarketValueStep)
+
+    /// Which phase the sheet is in, with the payload dropped — what the
+    /// detent observer watches (plan Amendment B, T022's third review).
+    /// `.onChange(of:)` over the step itself re-runs on every payload
+    /// change, so once the value step's slider writes back through
+    /// `setChosen`, every tick of the drag would re-decide a detent that
+    /// cannot have changed. The phase is what the detent actually depends
+    /// on, so it is what is observed.
+    enum Phase: Equatable, Sendable {
+        case notice
+        case pick
+        case fetching
+        case value
+    }
+
+    var phase: Phase {
+        switch self {
+        case .notice: return .notice
+        case .pick: return .pick
+        case .fetching: return .fetching
+        case .value: return .value
+        }
+    }
+}
+
 /// The one rust line above the actions when a refresh didn't land (spec
 /// criterion 11, Q3): the reading beneath it is left exactly as it was.
 enum MarketNotice: Equatable, Sendable {

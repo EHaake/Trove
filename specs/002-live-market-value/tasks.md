@@ -1272,7 +1272,55 @@ off with four small notes, folded below (the interim adopt closure, the
   red. Foundational: reviewer on the diff.
   *Done when*: green, mutations recorded, full suite green with count.
 
-- [ ] **T022 — The detail view models: the sheet's phases, the pick's refresh, `adopt(cents:)`.**
+- [x] **T022 — The detail view models: the sheet's phases, the pick's refresh, `adopt(cents:)`.**
+  *Done (2026-09-05)* — dispatched to `sdd-implementer` (five passes),
+  verified by the orchestrator's own runs, reviewed five rounds by the
+  `skeptical-reviewer` at its default tier. As built: `MarketSheetStep`
+  (`.notice`, `.pick`, `.fetching(MarketCandidate, token: Int)`,
+  `.value(MarketValueStep)`; `Equatable, Sendable`; a payload-free
+  `phase` the detent observer keys off) replaces `noticeIsPending`, which
+  appears nowhere under `Trove/` (a whole-app scan with a control);
+  `setMatch(_:) async` guarded by `case .pick`, one save with the refused
+  save rolling back, closing and fetching nothing (a structural test pins
+  the `return` and the token's position after the catch), then the
+  **fetch token** and the **generation rule** — every `setMatch` and
+  `refresh()` start takes the next generation; `loadMarket()` first, then
+  only the newest fetch's landing writes the notice (date from the
+  re-derived state) and clears the activity flag; the landing moves the
+  sheet only if it is still this fetch's presentation (token match) and,
+  within that, `.value` over a current reading or close; a landing whose
+  fetch is no longer the sheet's touches the sheet not at all;
+  `openValueStep()`, `setChosen(_:)`, `dismissValueStep()`,
+  `adopt(cents:)` (rounds once more for any caller, `updatedAt` on owned,
+  one save, no history, no fetch, closes even when refused); the interim
+  sheet body (a `ProgressView` for `.fetching`/`.value` until T024) and
+  interim adopt closure (`adopt(cents: adoptableMedianCents)`, no
+  rounding in views); `MarketMatchView.pick` async in a `Task`.
+  `GatedMarketServiceSpy` gained keyed waiters, `release(listingsCall:)`,
+  a per-call `listingsScript`, and a categorical precondition against
+  unkeyed releases in every-call mode. Tests: +35 net across the run —
+  B3 in both suites, mirrored, including the re-open, the second pick
+  after a re-open, the same product re-picked, the older refresh landing
+  before and after the pick, the second-pick guard, the refused-save
+  scan, the token-position pin; the three phase-to-detent wiring pins.
+  Mutations, each red then reverted: the median written instead of the
+  chosen amount; the landing re-presenting after a dismissal; the
+  candidate compared instead of the token (two directions); the
+  generation guard deleted at each site; the second-pick guard dropped;
+  Not now acknowledging (T009's test); `noticeIsPending` kept derived;
+  the rounding removed from `adopt(cents:)`; the `return` deleted; the
+  token moved above the `do`; the detents swapped in one view; an
+  unkeyed release on an every-call spy (a deterministic trap). Review
+  rounds: 1 — the bare presentation flag and an activity conjunct that
+  regressed picks during a section refresh; 2 — the candidate conjunct
+  unverified, a formatted-string comparison, the concurrent-refresh
+  hole → the token and the generation rule (orchestrator's decisions,
+  recorded); 3 — the guard correct but unguarded; 4 — the spy's
+  precondition racy in one test; 5 — signed off. Recorded for later: the
+  reverse quadrant is closed by the current call graph (one `refresh()`
+  caller), not by construction; the value step's dismissal detent is a
+  T018 line; the source-walker consolidation is T024's. Full unit suite
+  (orchestrator's run): **1081 tests in 146 suites, all passed**.
   Per plan Amendment B (the detail view models; the picker) and
   Decisions 33–35. `sheetStep: MarketSheetStep` replaces `noticeIsPending`
   (removed, not derived); `setMatch(_:) async` guarded against a second
@@ -1332,6 +1380,12 @@ off with four small notes, folded below (the interim adopt closure, the
   the slider seen rendered against the frame.
 
 - [ ] **T024 — `MarketValueStepView` and the sheet's four phases.** *(after T023)*
+  *Carried from T022's reviews*: consolidate the three hand-written
+  source walkers in the wiring tests (`allAppSwiftFiles`, `filesUnderViews`,
+  the one in `ExportWiringTests`) onto `SourceScan`; loosen or name the
+  `>= 4` control in `theSheetsOldNoticeFlagIsGoneFromTheApp` if `sheetStep`
+  moves; if the value step's dismissal flickers the detent (the resting
+  step is `.pick` → large), a resting phase that leaves the detent alone.
   Per plan Amendment B (the views) and the frame. The sheet switches on
   `sheetStep`: notice, picker, the fetching card with the status line,
   the value step (title, the figure and true spread, the slider, the
@@ -1648,3 +1702,13 @@ previous spec of similar size before treating the policy as settled.
 | T021 review 3 | opus (`skeptical-reviewer`) | 54,554 | fix and re-review — an off-by-one in comments, no boundary tests |
 | T021 fix pass 4 | opus (`sdd-implementer`) | 49,188 | verified first try |
 | T021 review 4 | opus (`skeptical-reviewer`) | 39,081 | signed off |
+| T022 | opus (`sdd-implementer`) | 204,262 | verified first try; reviewer: fix and re-review |
+| T022 review 1 | opus (`skeptical-reviewer`) | 90,323 | fix and re-review — the presentation flag; the activity conjunct |
+| T022 fix pass 2 | opus (`sdd-implementer`) | 88,588 | verified first try; found the flat landing rule would close a re-opened picker |
+| T022 review 2 | opus (`skeptical-reviewer`) | 79,324 | fix and re-review — candidate ≠ fetch identity; the concurrent refresh |
+| T022 fix pass 3 | opus (`sdd-implementer`) | 134,127 | verified first try; the token and the generation rule |
+| T022 review 3 | opus (`skeptical-reviewer`) | 99,942 | fix and re-review — the guard correct but unguarded |
+| T022 fix pass 4 | opus (`sdd-implementer`) | 88,471 | verified first try |
+| T022 review 4 | opus (`skeptical-reviewer`) | 65,194 | fix and re-review — a racy precondition in one test |
+| T022 fix pass 5 | opus (`sdd-implementer`) | 55,335 | verified first try |
+| T022 review 5 | opus (`skeptical-reviewer`) | 35,750 | signed off |

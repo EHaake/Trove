@@ -551,27 +551,41 @@ struct ItemDetailViewModelMarketTests {
 
     // MARK: - Use as my value (criterion 8, Q15)
 
-    @Test func adoptWritesTheRoundedMedianAndChangesNothingElse() throws {
+    /// The amount reaches the store whole, whatever it is handed: the value
+    /// step rounds its default and every move already (T021), and this is
+    /// the same rule one level out, for any caller of the intent.
+    @Test func adoptWritesAWholeAmount() throws {
         let world = try world()
         try seed(median: 139_950, at: t0.addingTimeInterval(-minute), in: world)
         let before = world.item.updatedAt
-        let spy = MarketServiceSpy()
         let adoptedAt = t0.addingTimeInterval(day)
-        let viewModel = loaded(world, now: adoptedAt, service: spy)
+        let viewModel = loaded(world, now: adoptedAt)
 
         #expect(viewModel.canAdopt)
-        #expect(viewModel.adopt())
+        #expect(viewModel.adopt(cents: 139_950))
         #expect(viewModel.adoptFailureMessage == nil)
         #expect(!world.context.hasChanges, "adopt left unsaved changes behind")
 
         let stored = try storedItem(world.item.id, in: world.container)
         let written = try #require(stored.currentValueCents)
-        #expect(written == 140_000)
-        // The number written is the number the section showed — the display
-        // formatter rounds half to even, and so does the adoption.
-        #expect(MarketCopy.median(cents: written) == MarketCopy.median(cents: 139_950))
-        #expect(stored.updatedAt == adoptedAt)
+        // The cents themselves, not the formatted line: two amounts a
+        // display formatter rounds alike are not the same amount, and the
+        // rounding this test is about is the one the store keeps.
+        #expect(written == 140_000, "adopt wrote unrounded cents to the item's value")
+        #expect(stored.updatedAt == adoptedAt, "P6: adopting marks the item edited")
         #expect(stored.updatedAt != before)
+    }
+
+    /// Decision 35, and criterion 8's second half: the market's record of
+    /// itself is untouched by what anyone adopts, and adopting reaches
+    /// nothing.
+    @Test func adoptStillWritesNoHistoryAndFetchesNothing() throws {
+        let world = try world()
+        try seed(median: 139_950, at: t0.addingTimeInterval(-minute), in: world)
+        let spy = MarketServiceSpy()
+        let viewModel = loaded(world, now: t0.addingTimeInterval(day), service: spy)
+
+        #expect(viewModel.adopt(cents: 139_950))
 
         let elsewhere = ModelContext(world.container)
         #expect(try MarketLocalStore.history(for: world.item.id, in: elsewhere).count == 1, "adopt wrote to the history")
@@ -585,14 +599,14 @@ struct ItemDetailViewModelMarketTests {
         try seed(median: nil, at: t0, in: withheld)
         let a = loaded(withheld, now: t0.addingTimeInterval(minute))
         #expect(!a.canAdopt)
-        #expect(!a.adopt())
+        #expect(!a.adopt(cents: 140_000))
         #expect(try storedItem(withheld.item.id, in: withheld.container).currentValueCents == nil)
 
         let stale = try world()
         try seed(median: 140_000, at: t0, in: stale)
         let b = loaded(stale, now: t0.addingTimeInterval(31 * day))
         #expect(!b.canAdopt)
-        #expect(!b.adopt())
+        #expect(!b.adopt(cents: 140_000))
         #expect(try storedItem(stale.item.id, in: stale.container).currentValueCents == nil)
     }
 
@@ -622,23 +636,31 @@ struct ItemDetailViewModelMarketTests {
     }
 
     /// Decision 26: a different product's figure describes something else.
-    @Test func setMatchToADifferentProductClearsHistoryButTheSameProductDoesNot() throws {
+    ///
+    /// The figure is seeded five minutes old, so the re-pick's own refresh
+    /// (Decision 33) is skipped as still fresh and the pick under test is
+    /// the only thing moving.
+    @Test func setMatchToADifferentProductClearsHistoryButTheSameProductDoesNot() async throws {
         let world = try world()
-        try seed(median: 140_000, at: t0, in: world)
         let matchedAt = t0.addingTimeInterval(day)
+        try seed(median: 140_000, at: matchedAt.addingTimeInterval(-5 * minute), in: world)
         let viewModel = loaded(world, now: matchedAt)
-        viewModel.findMatch()
+        openThePicker(viewModel)
 
-        viewModel.setMatch(candidate())
+        await viewModel.setMatch(candidate())
 
         let same = ModelContext(world.container)
         let keptFigure = try MarketLocalStore.figure(for: world.item.id, in: same)
         let keptHistory = try MarketLocalStore.history(for: world.item.id, in: same)
         #expect(keptFigure?.medianCents == 140_000, "re-picking the same product cleared its figure")
         #expect(keptHistory.count == 1, "re-picking the same product cleared its history")
-        #expect(!viewModel.isFindingMatch, "the sheet stayed open after the pick")
+        // Amendment B's landing rule, not the old "a pick always closes the
+        // sheet": a figure still in hand hands the sheet to the value step.
+        #expect(viewModel.isFindingMatch, "the pick closed the sheet over a figure it could adopt")
+        guard case .value = viewModel.sheetStep else { throw TestFailure("\(viewModel.sheetStep)") }
 
-        viewModel.setMatch(candidate(id: 182_769, slug: "martin-d-18", title: "Martin D-18"))
+        openThePicker(viewModel)
+        await viewModel.setMatch(candidate(id: 182_769, slug: "martin-d-18", title: "Martin D-18"))
 
         #expect(!world.context.hasChanges, "setMatch left unsaved changes behind")
         let elsewhere = ModelContext(world.container)
@@ -661,15 +683,36 @@ struct ItemDetailViewModelMarketTests {
     /// The deviation recorded in plan §6: an unreachable or product-gone
     /// line describes a match that a change or an unmatch has just ended,
     /// so it goes with it.
+    ///
+    /// The change is watched **mid-fetch**, which is the only place the rule
+    /// is visible since Amendment B: the pick's own refresh maps its outcome
+    /// onto the notice when it lands, so an end-state assertion would pass
+    /// just as well with the clearing deleted. The gate on every listings
+    /// call is what lets the second fetch be the one held open.
     @Test func changingOrRemovingTheMatchClearsTheNotice() async throws {
         let changing = try world()
         try seed(median: 140_000, at: t0.addingTimeInterval(-2 * 60 * minute), in: changing)
-        let afterChange = loaded(changing, service: MarketServiceSpy(products: [.failure(.unreachable)]))
-        await afterChange.refresh()
-        #expect(afterChange.marketNotice != nil, "the failing refresh left no notice to clear")
+        let gated = GatedMarketServiceSpy(
+            product: .success(try fixtureProduct()),
+            listings: .failure(.rateLimited),
+            gatesEveryListingsCall: true
+        )
+        let afterChange = loaded(changing, service: gated)
 
-        afterChange.setMatch(candidate(id: 182_769, slug: "martin-d-18", title: "Martin D-18"))
+        let refreshing = Task { await afterChange.refresh() }
+        // Named, not plain `release()`: this spy gates every listings call,
+        // and a keyed release banks a credit if it gets there first, so it
+        // can't depend on how far the fetch has run (T022's fourth review).
+        gated.release(listingsCall: 1)
+        await refreshing.value
+        #expect(afterChange.marketNotice == .rateLimited, "the failing refresh left no notice to clear")
+
+        openThePicker(afterChange)
+        let picking = Task { await afterChange.setMatch(candidate(id: 182_769, slug: "martin-d-18", title: "Martin D-18")) }
+        try await waitForListingsCall(2, on: gated)
         #expect(afterChange.marketNotice == nil, "a change of match kept the old match's notice")
+        gated.release(listingsCall: 2)
+        await picking.value
 
         let removing = try world()
         try seed(median: 140_000, at: t0.addingTimeInterval(-2 * 60 * minute), in: removing)
@@ -689,21 +732,21 @@ struct ItemDetailViewModelMarketTests {
         let viewModel = loaded(world, service: spy)
 
         viewModel.findMatch()
-        #expect(viewModel.noticeIsPending)
+        #expect(viewModel.sheetStep == .notice)
         #expect(viewModel.isFindingMatch)
         #expect(spy.calls.isEmpty, "opening the sheet reached Reverb")
 
         viewModel.declineNotice()
         #expect(!viewModel.isFindingMatch)
-        #expect(!viewModel.noticeIsPending)
+        #expect(viewModel.sheetStep == .pick)
         #expect(!MarketLocalStore.hasAcknowledgedNotice(in: ModelContext(world.container)), "Not now acknowledged the notice (Q5)")
         #expect(spy.calls.isEmpty, "Not now searched Reverb")
 
         viewModel.findMatch()
-        #expect(viewModel.noticeIsPending, "Not now should leave the notice to come back")
+        #expect(viewModel.sheetStep == .notice, "Not now should leave the notice to come back")
 
         viewModel.continueFromNotice()
-        #expect(!viewModel.noticeIsPending)
+        #expect(viewModel.sheetStep == .pick, "Continue didn't hand the sheet to the picker")
         #expect(viewModel.isFindingMatch, "Continue closed the sheet instead of handing it to the picker")
         #expect(MarketLocalStore.hasAcknowledgedNotice(in: ModelContext(world.container)), "Continue didn't reach the store")
 
@@ -712,7 +755,543 @@ struct ItemDetailViewModelMarketTests {
         let next = ItemDetailViewModel(modelContext: ModelContext(world.container), itemID: world.item.id, marketService: spy, now: { self.t0 })
         next.load()
         next.findMatch()
-        #expect(!next.noticeIsPending, "the notice came back on a new view model")
+        #expect(next.sheetStep == .pick, "the notice came back on a new view model")
+    }
+
+
+    // MARK: - The pick's refresh and the value step (Decisions 33–35, B3)
+
+    /// Criterion 23's first half: the pick fetches that product at once, in
+    /// the same sheet, and hands the sheet to the value step at the
+    /// whole-currency median.
+    @Test func setMatchRefreshesAndOpensTheValueStep() async throws {
+        let world = try world()
+        let gated = GatedMarketServiceSpy(product: .success(try fixtureProduct()), listings: .success(try fixtureListings()))
+        let viewModel = loaded(world, service: gated)
+        openThePicker(viewModel)
+
+        let task = Task { await viewModel.setMatch(candidate()) }
+        try await waitForListingsCall(1, on: gated)
+
+        #expect(viewModel.marketActivity == .refreshing, "the pick's fetch doesn't read as activity")
+        #expect(
+            viewModel.sheetStep == .fetching(candidate(), token: 1),
+            "the sheet doesn't hold the candidate and token it is fetching"
+        )
+        #expect(!viewModel.canRefresh, "a second refresh could start under the sheet")
+        #expect(!viewModel.canAdopt, "a figure was adoptable mid-fetch")
+        gated.release()
+        await task.value
+
+        #expect(
+            gated.calls == [.product(126_161), .listings(productID: 126_161)],
+            "the pick's fetch was \(gated.calls)"
+        )
+        #expect(viewModel.marketActivity == nil)
+        #expect(viewModel.marketNotice == nil)
+        #expect(viewModel.isFindingMatch, "the sheet closed instead of showing the value step")
+        guard case .value(let step) = viewModel.sheetStep else { throw TestFailure("\(viewModel.sheetStep)") }
+        #expect(step.medianCents == 139_999)
+        #expect(step.chosenCents == 140_000, "the step didn't default to the whole-currency median")
+        #expect(step.chosenCents == MarketAdoption.wholeCurrencyCents(from: 139_999))
+        #expect(step.lowerCents == 120_000, "the slider's ends aren't the trimmed bounds")
+        #expect(step.upperCents == 169_900)
+
+        // The refresh a pick runs is a refresh: read on a second context.
+        let elsewhere = ModelContext(world.container)
+        let figure = try #require(try MarketLocalStore.figure(for: world.item.id, in: elsewhere))
+        #expect(figure.medianCents == 139_999)
+        #expect(try MarketLocalStore.history(for: world.item.id, in: elsewhere).count == 1)
+        let snapshot = try #require(try MarketLocalStore.snapshot(for: world.item.id, in: elsewhere))
+        #expect(snapshot.productID == 126_161)
+    }
+
+    /// Decision 33 and P7: a re-pick of a product refreshed within the hour
+    /// sends nothing and goes straight to the value step.
+    @Test func aFreshRePickSkipsTheFetch() async throws {
+        let world = try world()
+        let pickedAt = t0.addingTimeInterval(day)
+        try seed(median: 140_000, at: pickedAt.addingTimeInterval(-5 * minute), in: world)
+        let spy = MarketServiceSpy()
+        let viewModel = loaded(world, now: pickedAt, service: spy)
+        openThePicker(viewModel)
+
+        await viewModel.setMatch(candidate())
+
+        #expect(spy.calls.isEmpty, "a figure five minutes old was fetched again (P7)")
+        #expect(viewModel.marketNotice == nil, "a skipped fetch read as a failure")
+        #expect(viewModel.isFindingMatch)
+        guard case .value(let step) = viewModel.sheetStep else { throw TestFailure("\(viewModel.sheetStep)") }
+        #expect(step.chosenCents == 140_000)
+    }
+
+    /// Decision 34: a withheld reading offers no value step, so the sheet
+    /// closes to the section — which says what it says today.
+    @Test func aWithheldPickClosesToTheSection() async throws {
+        let world = try world()
+        let spy = MarketServiceSpy(
+            products: [.success(try fixtureProduct())],
+            listings: [.success(MarketListings(listings: [], reportedTotal: 0, isTruncated: false))]
+        )
+        let viewModel = loaded(world, service: spy)
+        openThePicker(viewModel)
+
+        await viewModel.setMatch(candidate())
+
+        #expect(!viewModel.isFindingMatch, "a withheld reading opened the value step")
+        #expect(viewModel.sheetStep == .pick)
+        #expect(viewModel.marketNotice == nil, "a refresh that landed reported a failure")
+        #expect(!viewModel.canAdopt)
+        guard case .matched(let display) = viewModel.marketState, case .withheld = display.reading else {
+            throw TestFailure("\(viewModel.marketState)")
+        }
+    }
+
+    /// Decision 33's last sentence: the refresh failed, the sheet closes to
+    /// the section, the match stands. The line carries no date — the state
+    /// it reads is the one the save left behind, and a changed product's
+    /// figure went with the product.
+    @Test func aFailedPickClosesWithTheNotice() async throws {
+        let world = try world()
+        try seed(median: 140_000, at: t0.addingTimeInterval(-2 * 60 * minute), in: world)
+        let viewModel = loaded(world, service: MarketServiceSpy(products: [.failure(.unreachable)]))
+        openThePicker(viewModel)
+
+        await viewModel.setMatch(candidate(id: 182_769, slug: "martin-d-18", title: "Martin D-18"))
+
+        #expect(!viewModel.isFindingMatch, "the sheet stayed open over a failed pick")
+        #expect(viewModel.sheetStep == .pick)
+        #expect(viewModel.marketNotice == .unreachable(lastFetchedAt: nil), "the failure was dated by a figure that is gone")
+        #expect(try storedItem(world.item.id, in: world.container).reverbProductID == 182_769, "the failure took the match with it")
+        guard case .matched(let display) = viewModel.marketState else { throw TestFailure("\(viewModel.marketState)") }
+        #expect(display.title == "Martin D-18")
+        #expect(display.reading == .none)
+    }
+
+    /// The landing rule's other half: an outcome that arrives after the
+    /// person swiped the fetching sheet away updates the section and the
+    /// notice and never re-presents the sheet.
+    @Test func aDismissedFetchLandsQuietly() async throws {
+        let world = try world()
+        let gated = GatedMarketServiceSpy(product: .success(try fixtureProduct()), listings: .success(try fixtureListings()))
+        let viewModel = loaded(world, service: gated)
+        openThePicker(viewModel)
+
+        let task = Task { await viewModel.setMatch(candidate()) }
+        try await waitForListingsCall(1, on: gated)
+        // The swipe-down: the sheet's `isPresented` binding writes the flag
+        // back itself, exactly as the view does.
+        viewModel.isFindingMatch = false
+        gated.release()
+        await task.value
+
+        #expect(!viewModel.isFindingMatch, "the outcome re-presented a sheet the person had dismissed")
+        if case .value = viewModel.sheetStep { Issue.record("the sheet landed on the value step after a dismissal") }
+        #expect(viewModel.marketNotice == nil)
+        #expect(viewModel.canAdopt, "the figure that landed isn't offered by the section")
+        guard case .matched(let display) = viewModel.marketState, case .current(let figure) = display.reading else {
+            throw TestFailure("\(viewModel.marketState)")
+        }
+        #expect(figure.medianCents == 139_999, "the section didn't take the outcome that landed")
+    }
+
+    /// Two quick taps on candidate cards are one save and one request: the
+    /// second pick is dropped while the first is fetching.
+    @Test func aSecondPickDuringTheFetchIsIgnored() async throws {
+        let world = try world()
+        let gated = GatedMarketServiceSpy(product: .success(try fixtureProduct()), listings: .success(try fixtureListings()))
+        let viewModel = loaded(world, service: gated)
+        openThePicker(viewModel)
+
+        let first = Task { await viewModel.setMatch(candidate()) }
+        try await waitForListingsCall(1, on: gated)
+        await viewModel.setMatch(candidate(id: 182_769, slug: "martin-d-18", title: "Martin D-18"))
+        gated.release()
+        await first.value
+
+        #expect(gated.listingsCalls == 1, "the second pick reached Reverb")
+        #expect(
+            gated.calls == [.product(126_161), .listings(productID: 126_161)],
+            "the second pick fetched something of its own: \(gated.calls)"
+        )
+        #expect(try storedItem(world.item.id, in: world.container).reverbProductID == 126_161, "the second pick was saved")
+        let elsewhere = ModelContext(world.container)
+        let snapshot = try #require(try MarketLocalStore.snapshot(for: world.item.id, in: elsewhere))
+        #expect(snapshot.productID == 126_161, "the second pick wrote its own snapshot")
+        guard case .value = viewModel.sheetStep else { throw TestFailure("\(viewModel.sheetStep)") }
+    }
+
+    /// The landing rule names *this fetch's* presentation, not merely "a
+    /// sheet is up". A person who swipes the fetching sheet away and then
+    /// re-opens Change match… is standing in a picker the earlier fetch has
+    /// no claim on: it may neither replace it with a value step for the
+    /// candidate they walked away from, nor close it under them.
+    @Test func aReopenedPickerIsNotHijackedByAnEarlierFetch() async throws {
+        let world = try world()
+        let gated = GatedMarketServiceSpy(product: .success(try fixtureProduct()), listings: .success(try fixtureListings()))
+        let viewModel = loaded(world, service: gated)
+        openThePicker(viewModel)
+
+        let task = Task { await viewModel.setMatch(candidate()) }
+        try await waitForListingsCall(1, on: gated)
+        // The swipe-down, then Change match… again while the first fetch is
+        // still in flight — a sheet is presented, and it is the picker's.
+        viewModel.isFindingMatch = false
+        viewModel.findMatch()
+        #expect(viewModel.sheetStep == .pick, "the re-opened sheet isn't the picker")
+        #expect(viewModel.isFindingMatch)
+
+        gated.release()
+        await task.value
+
+        #expect(viewModel.sheetStep == .pick, "the earlier fetch took over the picker the person re-opened")
+        #expect(viewModel.isFindingMatch, "the earlier fetch closed the picker the person re-opened")
+        // The outcome still landed, in the section behind the sheet.
+        #expect(viewModel.canAdopt, "the figure that landed isn't offered by the section")
+    }
+
+    /// The token, not the candidate (T022's second review). A person who
+    /// swipes the fetching sheet away, re-opens Change match… and picks
+    /// something else is standing in the *second* pick's fetch; the first,
+    /// landing late, has no claim on it and must leave it exactly as it is.
+    @Test func aSecondPickAfterAReopenIsNotDisturbedByTheFirstFetch() async throws {
+        let world = try world()
+        let gated = GatedMarketServiceSpy(
+            product: .success(try fixtureProduct()),
+            listings: .success(try fixtureListings()),
+            gatesEveryListingsCall: true
+        )
+        let viewModel = loaded(world, service: gated)
+        openThePicker(viewModel)
+
+        let a = candidate()
+        let b = candidate(id: 182_769, slug: "martin-d-18", title: "Martin D-18")
+        let first = Task { await viewModel.setMatch(a) }
+        try await waitForListingsCall(1, on: gated)
+
+        // The swipe-down, Change match… again, and a second pick — all while
+        // the first fetch is still gated.
+        viewModel.isFindingMatch = false
+        viewModel.findMatch()
+        let second = Task { await viewModel.setMatch(b) }
+        try await waitForListingsCall(2, on: gated)
+        #expect(viewModel.sheetStep == .fetching(b, token: 2), "the second pick isn't the sheet's own fetch")
+
+        gated.release(listingsCall: 1)
+        await first.value
+
+        #expect(viewModel.sheetStep == .fetching(b, token: 2), "the first fetch moved the second's sheet")
+        #expect(viewModel.isFindingMatch, "the first fetch closed the second's sheet")
+
+        gated.release(listingsCall: 2)
+        await second.value
+        #expect(viewModel.isFindingMatch, "the second fetch closed its own sheet")
+        guard case .value = viewModel.sheetStep else { throw TestFailure("\(viewModel.sheetStep)") }
+    }
+
+    /// The same question with the candidates equal, which is where candidate
+    /// equality and fetch identity part company: re-picking the *same*
+    /// product after a swipe-down is a second fetch, and the first landing
+    /// must not hand the second's sheet to the value step behind its back.
+    @Test func aRePickOfTheSameProductIsASecondFetch() async throws {
+        let world = try world()
+        // The older fetch fails, so its landing has something to write:
+        // the generation rule is what stops it (T022's third review).
+        let gated = GatedMarketServiceSpy(
+            product: .success(try fixtureProduct()),
+            listingsScript: [.failure(.unreachable), .success(try fixtureListings())],
+            gatesEveryListingsCall: true
+        )
+        let viewModel = loaded(world, service: gated)
+        openThePicker(viewModel)
+
+        let first = Task { await viewModel.setMatch(candidate()) }
+        try await waitForListingsCall(1, on: gated)
+
+        viewModel.isFindingMatch = false
+        viewModel.findMatch()
+        let second = Task { await viewModel.setMatch(candidate()) }
+        try await waitForListingsCall(2, on: gated)
+        #expect(viewModel.sheetStep == .fetching(candidate(), token: 2), "the re-pick isn't a fetch of its own")
+
+        gated.release(listingsCall: 1)
+        await first.value
+
+        #expect(
+            viewModel.sheetStep == .fetching(candidate(), token: 2),
+            "the first fetch took over the second's sheet because the candidate matched"
+        )
+        #expect(viewModel.isFindingMatch)
+        // The older landing speaks for nothing: the second fetch is still
+        // running, so the section stays busy and its failure goes unwritten.
+        #expect(viewModel.marketActivity == .refreshing, "the older fetch cleared the flag the newer one still holds")
+        #expect(!viewModel.canRefresh, "the older fetch re-enabled Refresh under the running one")
+        #expect(!viewModel.canAdopt, "the older fetch re-enabled the adopt button under the running one")
+        #expect(viewModel.marketNotice == nil, "the older fetch painted its failure over the newer one's sheet")
+
+        gated.release(listingsCall: 2)
+        await second.value
+        guard case .value = viewModel.sheetStep else { throw TestFailure("\(viewModel.sheetStep)") }
+    }
+
+    /// **The generation rule** (plan Amendment B): the section's own Refresh
+    /// is in flight when a pick starts a newer fetch. The pick lands first
+    /// and speaks for the section; the older refresh then fails, and may
+    /// neither paint its failure line over the match that replaced it nor
+    /// clear the activity flag the newer fetch had already cleared.
+    @Test func anOlderRefreshLandingAfterAPickWritesNoNotice() async throws {
+        let world = try world()
+        try seed(median: 140_000, at: t0.addingTimeInterval(-2 * 60 * minute), in: world)
+        let gated = GatedMarketServiceSpy(
+            product: .success(try fixtureProduct()),
+            listingsScript: [.failure(.unreachable), .success(try fixtureListings())],
+            gatesEveryListingsCall: true
+        )
+        let viewModel = loaded(world, service: gated)
+        #expect(viewModel.canRefresh)
+
+        let refreshing = Task { await viewModel.refresh() }
+        try await waitForListingsCall(1, on: gated)
+
+        // The pick, made while the section's own refresh is still running —
+        // the path the pick guard deliberately leaves open.
+        openThePicker(viewModel)
+        let picking = Task { await viewModel.setMatch(candidate()) }
+        try await waitForListingsCall(2, on: gated)
+
+        // The newer fetch lands first, and it is the one that speaks.
+        gated.release(listingsCall: 2)
+        await picking.value
+
+        guard case .value = viewModel.sheetStep else { throw TestFailure("\(viewModel.sheetStep)") }
+        #expect(viewModel.marketNotice == nil)
+        #expect(viewModel.marketActivity == nil, "the pick's landing left the section busy")
+        #expect(viewModel.canAdopt, "the pick's landing left the adopt button disabled")
+
+        // The older refresh, failing, lands last and changes neither.
+        gated.release(listingsCall: 1)
+        await refreshing.value
+
+        #expect(viewModel.marketNotice == nil, "the older refresh painted its failure over the pick")
+        #expect(viewModel.marketActivity == nil)
+        #expect(viewModel.canAdopt, "the older refresh disturbed what the pick left standing")
+        guard case .value = viewModel.sheetStep else { throw TestFailure("\(viewModel.sheetStep)") }
+    }
+
+    /// The same two fetches in the other order, which is where `refresh()`'s
+    /// own guard does its work (T022's third review): the older refresh
+    /// lands while the pick's fetch is still out. It re-derives the section
+    /// and nothing else — it may neither clear the flag the pick is still
+    /// holding, re-enabling Refresh and the adopt button under a running
+    /// fetch, nor paint its own failure line before the newer fetch has
+    /// said anything.
+    @Test func anOlderRefreshLandingWhileAPickRunsClearsNothing() async throws {
+        let world = try world()
+        try seed(median: 140_000, at: t0.addingTimeInterval(-2 * 60 * minute), in: world)
+        let gated = GatedMarketServiceSpy(
+            product: .success(try fixtureProduct()),
+            listingsScript: [.failure(.unreachable), .success(try fixtureListings())],
+            gatesEveryListingsCall: true
+        )
+        let viewModel = loaded(world, service: gated)
+        #expect(viewModel.canRefresh)
+
+        let refreshing = Task { await viewModel.refresh() }
+        try await waitForListingsCall(1, on: gated)
+
+        openThePicker(viewModel)
+        let picking = Task { await viewModel.setMatch(candidate()) }
+        try await waitForListingsCall(2, on: gated)
+
+        // The older refresh lands first, failing, with the pick's fetch
+        // still gated behind it.
+        gated.release(listingsCall: 1)
+        await refreshing.value
+
+        #expect(viewModel.marketActivity == .refreshing, "the older refresh cleared the flag the pick still holds")
+        #expect(!viewModel.canRefresh, "the older refresh re-enabled Refresh under the pick's fetch")
+        #expect(!viewModel.canAdopt, "the older refresh re-enabled the adopt button under the pick's fetch")
+        #expect(viewModel.marketNotice == nil, "the older refresh painted its failure while the pick was still running")
+        #expect(viewModel.sheetStep == .fetching(candidate(), token: 2), "the older refresh moved the pick's sheet")
+
+        // The pick lands second, and it is the one that speaks.
+        gated.release(listingsCall: 2)
+        await picking.value
+
+        guard case .value = viewModel.sheetStep else { throw TestFailure("\(viewModel.sheetStep)") }
+        #expect(viewModel.marketNotice == nil, "the pick's own landing wrote a notice")
+        #expect(viewModel.marketActivity == nil, "the pick's landing left the section busy")
+    }
+
+    /// The other refused save, structurally, and for the same reason an
+    /// in-memory `save()` can't be made to throw on demand. `setMatch`'s
+    /// catch block ends in `return`, and that `return` is the whole of "a
+    /// fetch never runs over a match that wasn't written" (the T009 rule):
+    /// one save, the rollback and the close on the failure path, and both
+    /// lines that start the fetch reachable only past it.
+    @Test func aRefusedSetMatchSaveNeverFetches() throws {
+        let code = try SourceScan.production("Trove/ViewModels/ItemDetailViewModel.swift")
+        let bodies = SourceScan.closureBodies(after: "func setMatch(_ candidate: MarketCandidate) async", in: code)
+        try #require(bodies.count == 1, "expected exactly one setMatch(_:)")
+        let body = bodies[0]
+        #expect(body.ranges(of: "modelContext.save()").count == 1, "setMatch must save exactly once")
+
+        let catches = SourceScan.closureBodies(after: "} catch", in: body)
+        try #require(catches.count == 1, "expected exactly one catch block")
+        #expect(catches[0].contains("modelContext.rollback()"), "the refused save must roll back the context")
+        #expect(catches[0].contains("closeSheet()"), "the refused save must close the sheet")
+        // A line that *is* `return`, not the word anywhere in the block —
+        // `return false` or a `returned` in prose would satisfy `contains`.
+        // Comments are already gone: `SourceScan.production` strips them.
+        let returnsOnItsOwnLine = catches[0]
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .contains { $0.trimmingCharacters(in: .whitespaces) == "return" }
+        #expect(returnsOnItsOwnLine, "the refused save must return before anything is fetched")
+
+        let catchEnd = try #require(body.range(of: catches[0])).upperBound
+        let fetching = try #require(body.range(of: "sheetStep = .fetching(candidate, token: token)"), "setMatch no longer enters the fetching phase")
+        let activity = try #require(body.range(of: "marketActivity = .refreshing"), "setMatch no longer marks its fetch as activity")
+        #expect(fetching.lowerBound > catchEnd, "the fetching phase is entered where a refused save can reach it")
+        #expect(activity.lowerBound > catchEnd, "the fetch starts where a refused save can reach it")
+        // The token is taken on the far side of the catch too (T022's
+        // third review). Above the `do`, a refused save would consume a
+        // generation and return, and any fetch already in flight would land
+        // with a stale token — leaving `marketActivity` set with no landing
+        // left to clear it, and the section busy for good.
+        let token = try #require(body.range(of: "let token = nextGeneration()"), "setMatch no longer takes a generation of its own")
+        #expect(token.lowerBound > catchEnd, "the generation is taken where a refused save can burn it")
+    }
+
+    // MARK: - The value step and what it writes (criterion 8, Decisions 34–35)
+
+    /// Criterion 8: the button writes the amount on the slider, not the
+    /// median under it.
+    @Test func adoptWritesTheChosenAmountNotTheMedian() throws {
+        let world = try world()
+        try seedTrimmed(median: 139_999, low: 115_200, high: 325_000, p10: 120_000, p90: 169_900, at: t0.addingTimeInterval(-minute), in: world)
+        let viewModel = loaded(world, service: MarketServiceSpy())
+
+        viewModel.openValueStep()
+        #expect(viewModel.isFindingMatch, "the section's adopt action opened nothing")
+        guard case .value(let opened) = viewModel.sheetStep else { throw TestFailure("\(viewModel.sheetStep)") }
+        #expect(opened.chosenCents == 140_000, "the step didn't open on the whole-currency median")
+
+        viewModel.setChosen(opened.upperCents)
+        guard case .value(let moved) = viewModel.sheetStep else { throw TestFailure("\(viewModel.sheetStep)") }
+        #expect(moved.chosenCents == 169_900, "the view model didn't carry the slider's move")
+        #expect(viewModel.adopt(cents: moved.chosenCents))
+
+        let stored = try storedItem(world.item.id, in: world.container)
+        #expect(stored.currentValueCents == 169_900, "the median was written instead of the amount chosen")
+        #expect(stored.currentValueCents != 140_000)
+        #expect(!viewModel.isFindingMatch, "the sheet stayed open after the write")
+        #expect(viewModel.sheetStep == .pick)
+    }
+
+    /// Not now: the sheet closes and nothing is written (Decision 34).
+    @Test func dismissingTheValueStepWritesNothing() throws {
+        let world = try world()
+        try seedTrimmed(median: 139_999, low: 115_200, high: 325_000, p10: 120_000, p90: 169_900, at: t0.addingTimeInterval(-minute), in: world)
+        let viewModel = loaded(world, service: MarketServiceSpy())
+
+        viewModel.openValueStep()
+        viewModel.setChosen(150_000)
+        viewModel.dismissValueStep()
+
+        #expect(!viewModel.isFindingMatch)
+        #expect(viewModel.sheetStep == .pick)
+        #expect(!world.context.hasChanges, "Not now left changes waiting to be saved")
+        #expect(try storedItem(world.item.id, in: world.container).currentValueCents == nil)
+    }
+
+    /// Decision 34: a withheld or stale reading offers no value step, and
+    /// neither does a figure with a refresh already running over it.
+    @Test func openValueStepNeedsACurrentReading() async throws {
+        let withheld = try world()
+        try seed(median: nil, at: t0, in: withheld)
+        let a = loaded(withheld, now: t0.addingTimeInterval(minute))
+        a.openValueStep()
+        #expect(!a.isFindingMatch, "a withheld reading opened the value step")
+        #expect(a.sheetStep == .pick)
+
+        let stale = try world()
+        try seed(median: 140_000, at: t0, in: stale)
+        let b = loaded(stale, now: t0.addingTimeInterval(31 * day))
+        b.openValueStep()
+        #expect(!b.isFindingMatch, "a stale reading opened the value step")
+        #expect(b.sheetStep == .pick)
+
+        let refreshing = try world()
+        try seed(median: 140_000, at: t0.addingTimeInterval(-2 * 60 * minute), in: refreshing)
+        let gated = GatedMarketServiceSpy(product: .success(try fixtureProduct()), listings: .success(try fixtureListings()))
+        let c = loaded(refreshing, service: gated)
+        let task = Task { await c.refresh() }
+        try await waitForListingsCall(1, on: gated)
+        c.openValueStep()
+        #expect(!c.isFindingMatch, "the value step opened over a figure a refresh was replacing")
+        #expect(c.sheetStep == .pick)
+        gated.release()
+        await task.value
+    }
+
+    /// B3's refused save, structurally — the shape
+    /// `SettingsWiringTests.confirmDeleteAllRollsBackOnSaveFailure` uses,
+    /// and for its reason: an in-memory `save()` can't be made to throw on
+    /// demand. One save; the rollback and the message on the failure path
+    /// and nowhere else; and the sheet closed whichever way it goes.
+    @Test func aRefusedAdoptSaveReportsAndCloses() throws {
+        let code = try SourceScan.production("Trove/ViewModels/ItemDetailViewModel.swift")
+        let bodies = SourceScan.closureBodies(after: "func adopt(cents: Int) -> Bool", in: code)
+        try #require(bodies.count == 1, "expected exactly one adopt(cents:)")
+        let body = bodies[0]
+        #expect(body.ranges(of: "modelContext.save()").count == 1, "adopt must save exactly once")
+        #expect(body.contains("defer { closeSheet() }"), "the sheet must close whether or not the save lands")
+
+        let catches = SourceScan.closureBodies(after: "} catch", in: body)
+        try #require(catches.count == 1, "expected exactly one catch block")
+        #expect(catches[0].contains("modelContext.rollback()"), "the failure path must roll back the context")
+        #expect(catches[0].contains("adoptFailureMessage = error.localizedDescription"), "the failure path must report itself")
+        #expect(catches[0].contains("return false"), "the failure path must answer false")
+        let outsideCatch = body.replacingOccurrences(of: catches[0], with: "")
+        #expect(!outsideCatch.contains("rollback()"), "rollback belongs to the failure path only")
+        #expect(!outsideCatch.contains("adoptFailureMessage = error"), "the message belongs to the failure path only")
+    }
+
+    // MARK: - Driving the sheet the way the screen does
+
+    /// Find on Reverb…, and past the one-time notice where this device
+    /// hasn't seen it (Decision 14): the picker is the only phase a pick
+    /// can come from.
+    private func openThePicker(_ viewModel: ItemDetailViewModel) {
+        viewModel.findMatch()
+        if viewModel.sheetStep == .notice { viewModel.continueFromNotice() }
+    }
+
+    /// Bounded, like the refresh tests' own spin: a fetch that never reaches
+    /// the spy fails the `#require` instead of hanging the suite.
+    private func waitForListingsCall(_ call: Int, on gated: GatedMarketServiceSpy) async throws {
+        var yields = 0
+        while gated.listingsCalls < call && yields < 10_000 {
+            await Task.yield()
+            yields += 1
+        }
+        try #require(gated.listingsCalls == call, "listings call \(call) never arrived")
+    }
+
+    /// A stored figure carrying trimmed bounds of its own — the memberwise
+    /// init rather than `seed`'s shim, whose percentiles sit exactly on the
+    /// ends (TestSupport's note), which a test about the slider's ends could
+    /// not tell apart from the real thing.
+    private func seedTrimmed(
+        median: Int, low: Int, high: Int, p10: Int, p90: Int, at fetchedAt: Date, in world: World
+    ) throws {
+        let figure = MarketFigure(
+            medianCents: median, lowCents: low, highCents: high,
+            p10Cents: p10, p90Cents: p90,
+            count: 34, fetchedAt: fetchedAt, isTruncated: false, yearScope: .any
+        )
+        try MarketLocalStore.record(.figure(figure), product: catalogProduct, for: MarketSubjectKey(subjectID: world.item.id, kind: .owned), in: world.context)
+        try world.context.save()
     }
 
     // MARK: - The two screens agree

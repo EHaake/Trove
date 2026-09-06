@@ -66,7 +66,7 @@ struct MarketMatchViewModelTests {
 
     /// Change match… seeds from the item, not from what it is matched to
     /// (Q10) — otherwise a wrong match narrows every search after it.
-    @Test func changingAMatchSeedsFromTheItemNotFromTheMatchedProduct() throws {
+    @Test func changingAMatchSeedsFromTheItemNotFromTheMatchedProduct() async throws {
         let context = try makeInMemoryContext()
         let item = Item(name: "Fender Telecaster", categoryPath: "Music/Guitars")
         item.reverbProductID = telecaster.id
@@ -75,7 +75,7 @@ struct MarketMatchViewModelTests {
 
         let detail = ItemDetailViewModel(modelContext: context, itemID: item.id, marketService: MarketServiceSpy())
         detail.load()
-        detail.setMatch(telecaster)
+        await detail.setMatch(telecaster)
 
         #expect(
             detail.makeMatchViewModel().query == "Fender Telecaster",

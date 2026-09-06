@@ -609,75 +609,165 @@ nonisolated final class MarketServiceSpy: MarketService {
 /// one call further out, so it belongs on this double rather than in a
 /// second one. Only one gate is ever open at a time, and `release()`
 /// releases whichever it is.
+///
+/// `gatesEveryListingsCall` (002/T022) gates **each** `listings` call
+/// rather than only the first, one release apiece — what a test needs when
+/// a *second* fetch is the one to be observed mid-flight, as the pick's
+/// refresh is once a failing refresh has already left a notice standing.
+/// Two calls can then be gated at the same time, which is the whole point
+/// of the generation rule's tests, so each waits on its own continuation
+/// keyed by its call number, and `release(listingsCall:)` — the only form
+/// this mode accepts — names which one to let go. A release that arrives
+/// before its call is remembered as a credit, so the two orders can't
+/// deadlock. The default is unchanged: the first call gates, plain
+/// `release()` latches, and every later call answers at once.
+///
+/// `listingsScript` answers each `listings` call from its own scripted
+/// result, the last repeating once the script runs out — what a test needs
+/// when one fetch must fail and the next succeed.
+///
+/// Every call is recorded in order, in `MarketServiceSpy`'s own `Call`
+/// vocabulary, so a test can assert *what* was fetched and not only how
+/// often — the pick's product-then-listings pair, for one.
 nonisolated final class GatedMarketServiceSpy: MarketService {
     private struct State {
         var listingsCalls = 0
         var searchCalls = 0
         var queries: [String] = []
+        var calls: [MarketServiceSpy.Call] = []
         var released = false
-        var waiter: CheckedContinuation<Void, Never>?
+        /// Releases that arrived before the call they name; the search
+        /// gate's key is 0, a listings call's is its call number.
+        var credits: Set<Int> = []
+        var waiters: [Int: CheckedContinuation<Void, Never>] = [:]
     }
 
     private let state = Mutex(State())
     private let candidates: [MarketCandidate]
     private let productAnswer: Result<MarketProduct, MarketError>
-    private let listingsAnswer: Result<MarketListings, MarketError>
+    private let listingsAnswers: [Result<MarketListings, MarketError>]
     private let gatesSearch: Bool
+    private let gatesEveryListingsCall: Bool
+
+    convenience init(
+        candidates: [MarketCandidate] = [],
+        product: Result<MarketProduct, MarketError>,
+        listings: Result<MarketListings, MarketError>,
+        gatesSearch: Bool = false,
+        gatesEveryListingsCall: Bool = false
+    ) {
+        self.init(
+            candidates: candidates, product: product, listingsScript: [listings],
+            gatesSearch: gatesSearch, gatesEveryListingsCall: gatesEveryListingsCall
+        )
+    }
 
     init(
         candidates: [MarketCandidate] = [],
         product: Result<MarketProduct, MarketError>,
-        listings: Result<MarketListings, MarketError>,
-        gatesSearch: Bool = false
+        listingsScript: [Result<MarketListings, MarketError>],
+        gatesSearch: Bool = false,
+        gatesEveryListingsCall: Bool = false
     ) {
+        precondition(!listingsScript.isEmpty, "the listings script needs at least one answer")
         self.candidates = candidates
         self.productAnswer = product
-        self.listingsAnswer = listings
+        self.listingsAnswers = listingsScript
         self.gatesSearch = gatesSearch
+        self.gatesEveryListingsCall = gatesEveryListingsCall
     }
 
     var listingsCalls: Int { state.withLock { $0.listingsCalls } }
     var searchCalls: Int { state.withLock { $0.searchCalls } }
     var queries: [String] { state.withLock { $0.queries } }
+    var calls: [MarketServiceSpy.Call] { state.withLock { $0.calls } }
 
     @concurrent func searchProducts(named query: String) async throws -> [MarketCandidate] {
         let isFirstCall = state.withLock { state -> Bool in
             state.searchCalls += 1
             state.queries.append(query)
+            state.calls.append(.search(query))
             return state.searchCalls == 1
         }
-        if gatesSearch, isFirstCall { await waitUntilReleased() }
+        if gatesSearch, isFirstCall { await waitUntilReleased(gate: 0) }
         return candidates
     }
 
-    @concurrent func product(id: Int) async throws -> MarketProduct { try productAnswer.get() }
-
-    @concurrent func listings(for product: MarketProduct) async throws -> MarketListings {
-        let isFirstCall = state.withLock { state -> Bool in
-            state.listingsCalls += 1
-            return state.listingsCalls == 1
-        }
-        guard isFirstCall else { return try listingsAnswer.get() }
-        await waitUntilReleased()
-        return try listingsAnswer.get()
+    @concurrent func product(id: Int) async throws -> MarketProduct {
+        state.withLock { $0.calls.append(.product(id)) }
+        return try productAnswer.get()
     }
 
-    private func waitUntilReleased() async {
+    @concurrent func listings(for product: MarketProduct) async throws -> MarketListings {
+        let call = state.withLock { state -> Int in
+            state.listingsCalls += 1
+            state.calls.append(.listings(productID: product.id))
+            return state.listingsCalls
+        }
+        let answer = listingsAnswers[min(call - 1, listingsAnswers.count - 1)]
+        guard call == 1 || gatesEveryListingsCall else { return try answer.get() }
+        await waitUntilReleased(gate: call)
+        return try answer.get()
+    }
+
+    private func waitUntilReleased(gate: Int) async {
         await withCheckedContinuation { continuation in
             let resumeNow = state.withLock { state -> Bool in
                 guard !state.released else { return true }
-                state.waiter = continuation
+                // A release that arrived before its call is waiting here as
+                // a credit; taking it keeps the two orders from deadlocking.
+                if state.credits.remove(gate) != nil { return true }
+                state.waiters[gate] = continuation
                 return false
             }
             if resumeNow { continuation.resume() }
         }
     }
 
+    /// Lets go of the earliest gate still waiting — the only one, in every
+    /// test that opens one at a time.
+    ///
+    /// In every-call mode it is a **programmer error** to call this at all
+    /// (T022's fourth review). With no waiter registered the release would
+    /// have had to bank a credit, and the next gate to open — a call this
+    /// release was never meant for — would take it and run straight
+    /// through: the test would pass, having gated nothing. Waiting for the
+    /// call to show up in `listingsCalls` first is *not* a fix, because the
+    /// counter rises inside `listings` before the continuation is
+    /// registered, so a release that follows it can still find no waiter —
+    /// which is why the precondition below refuses the form outright rather
+    /// than only when none is waiting. Name the call instead:
+    /// `release(listingsCall:)` banks a credit under that call's own key,
+    /// which is race-free whichever side arrives first.
     func release() {
+        // Categorical, not conditional on a waiter being registered: whether
+        // one is depends on how far `listings` has got, so a check that only
+        // fired when none was would trap on some runs of a test and not
+        // others. In every-call mode this form is simply the wrong one.
+        precondition(
+            !gatesEveryListingsCall,
+            "release() in gatesEveryListingsCall mode: name the call with release(listingsCall:) — spinning on listingsCalls first is racy, not a fix"
+        )
         let waiter = state.withLock { state -> CheckedContinuation<Void, Never>? in
+            // Latching is what the single-gate default wants: the first call
+            // gates, and every later one answers at once.
             state.released = true
-            defer { state.waiter = nil }
-            return state.waiter
+            guard let gate = state.waiters.keys.min() else { return nil }
+            return state.waiters.removeValue(forKey: gate)
+        }
+        waiter?.resume()
+    }
+
+    /// Lets go of one named `listings` call while another stays gated —
+    /// what the generation rule's tests need, since they hold two fetches
+    /// open at once and care which of the two lands first.
+    func release(listingsCall call: Int) {
+        let waiter = state.withLock { state -> CheckedContinuation<Void, Never>? in
+            guard let waiter = state.waiters.removeValue(forKey: call) else {
+                state.credits.insert(call)
+                return nil
+            }
+            return waiter
         }
         waiter?.resume()
     }

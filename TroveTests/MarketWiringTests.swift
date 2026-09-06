@@ -60,7 +60,7 @@ struct MarketWiringTests {
                 "canAdopt: viewModel.canAdopt",
                 "find: viewModel.findMatch",
                 "refresh: viewModel.refresh",
-                "viewModel.adopt()",
+                "viewModel.adopt(cents:",
                 "changeMatch: viewModel.findMatch",
                 "removeMatch: viewModel.removeMatch",
                 "year: item.year",
@@ -166,7 +166,8 @@ struct MarketWiringTests {
     /// appear; `onDismiss: viewModel.load` is pinned inside it, since a
     /// picked match writes through the view model and the screen behind
     /// re-reads only on `load()`; the branch is followed into `matchSheet`
-    /// so the notice can't be dropped; and the detent selection is pinned
+    /// so the notice can't be dropped; and the detent selection is pinned —
+    /// the phase the mapping observes *and* the mapping's own two lines —
     /// because a notice at the large detent is a different sheet.
     @Test func bothDetailScreensPresentTheOneMatchSheet() throws {
         for (file, _) in Self.detailScreens {
@@ -176,7 +177,7 @@ struct MarketWiringTests {
 
             let sheet = try body(of: "private var matchSheet: some View {", in: code)
             for wiring in [
-                "viewModel.noticeIsPending",
+                "viewModel.sheetStep",
                 "MarketNoticeView(",
                 "viewModel.continueFromNotice",
                 "viewModel.declineNotice",
@@ -184,6 +185,17 @@ struct MarketWiringTests {
                 "viewModel.makeMatchViewModel()",
                 "viewModel.setMatch",
                 ".presentationDetents([.medium, .large], selection:",
+                // The phase, not the whole step (T022's third review): the
+                // value step's payload changes on every slider tick, and a
+                // detent that re-decides on each of them is the bug this
+                // pins shut.
+                ".onChange(of: viewModel.sheetStep.phase, initial: true)",
+                // The mapping itself, not only the observer: it is written
+                // out in both screens, so pinning the two lines is what
+                // catches one of them diverging — swap the detents in either
+                // and only that screen goes red (T022's fourth review).
+                "case .notice, .value: .medium",
+                "case .pick, .fetching: .large",
             ] {
                 #expect(sheet.contains(wiring), "\(file): the match sheet isn't wired to `\(wiring)`")
             }
@@ -231,6 +243,38 @@ struct MarketWiringTests {
         for identifier in ["market.search", "market.candidate", "market.candidate.link"] {
             #expect(pickerCode.contains(identifier), "no target carries the identifier \(identifier)")
         }
+    }
+
+    /// Amendment B removed the sheet's Bool outright rather than keeping it
+    /// as a derived property to hold the older pins green (plan, "Churn the
+    /// wiring scans take"). A property nobody sets is the shape that goes
+    /// quietly wrong, so the scan is over all of `Trove/`, not the two
+    /// screens: the flag is gone from the app or this is red.
+    @Test func theSheetsOldNoticeFlagIsGoneFromTheApp() throws {
+        let carrying = try Self.allAppSwiftFiles().filter { try SourceScan.production($0).contains("noticeIsPending") }
+        #expect(carrying.isEmpty, "`noticeIsPending` survives in \(carrying) — `sheetStep` replaced it")
+        // The control: the scan reads real source, so an empty result can't
+        // come from a walk that found nothing.
+        let carryingTheStep = try Self.allAppSwiftFiles().filter { try SourceScan.production($0).contains("sheetStep") }
+        #expect(carryingTheStep.count >= 4, "the walk found `sheetStep` in only \(carryingTheStep.count) files")
+    }
+
+    /// The same walk `ExportWiringTests` uses — asserted non-trivial so a
+    /// moved source root fails loudly instead of scanning nothing.
+    private static func allAppSwiftFiles(file: StaticString = #filePath) throws -> [String] {
+        let root = URL(filePath: "\(file)")
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Trove")
+        let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
+        var paths: [String] = []
+        while let url = walker?.nextObject() as? URL {
+            if url.pathExtension == "swift" {
+                paths.append("Trove/" + url.path.replacingOccurrences(of: root.path + "/", with: ""))
+            }
+        }
+        try #require(paths.count > 20, "source walk found only \(paths.count) files — wrong root?")
+        return paths.sorted()
     }
 
     /// Every `.swift` under `Trove/Views`, as repo-relative paths — walked

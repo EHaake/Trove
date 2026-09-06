@@ -89,26 +89,44 @@ struct WishlistDetailView: View {
     }
 
     /// The notice first, once per device, then the picker (spec Decision
-    /// 14). The detent follows the phase: the notice is a short read, the
-    /// picker wants the whole sheet.
+    /// 14), then — since Amendment B — the pick's fetch and the value step
+    /// (Decisions 33–34). The detent follows the phase: the notice and the
+    /// value step are short reads, the picker and the fetch want the whole
+    /// sheet.
     private var matchSheet: some View {
         Group {
-            if viewModel.noticeIsPending {
+            switch viewModel.sheetStep {
+            case .notice:
                 MarketNoticeView(
                     continueAction: viewModel.continueFromNotice,
                     declineAction: viewModel.declineNotice
                 )
-            } else {
+            case .pick:
                 MarketMatchView(
                     viewModel: viewModel.makeMatchViewModel(),
                     pick: viewModel.setMatch,
                     cancel: { viewModel.isFindingMatch = false }
                 )
+            case .fetching, .value:
+                // Interim (T022): a pick reaches both of these phases
+                // today — the fetch runs in this sheet and hands it to the
+                // value step — so this placeholder is what the person
+                // actually sees between the pick and the write until T024
+                // puts the fetching card and MarketValueStepView here. It
+                // shows that something is running rather than going blank.
+                ProgressView()
             }
         }
         .presentationDetents([.medium, .large], selection: $matchDetent)
-        .onChange(of: viewModel.noticeIsPending, initial: true) { _, isPending in
-            matchDetent = isPending ? .medium : .large
+        // The phase, not the whole step: the step carries the value
+        // step's payload, so observing it would re-decide the detent on
+        // every tick of the slider once T024 wires it (T022's third
+        // review). The detent depends on the phase alone.
+        .onChange(of: viewModel.sheetStep.phase, initial: true) { _, phase in
+            matchDetent = switch phase {
+            case .notice, .value: .medium
+            case .pick, .fetching: .large
+            }
         }
     }
 
@@ -263,7 +281,16 @@ struct WishlistDetailView: View {
                 refresh: viewModel.refresh,
                 // Adopt reports its own failure through the view model;
                 // the result is the intent's, not the view's.
-                adopt: { _ = viewModel.adopt() },
+                //
+                // Interim (T022): today's one-tap adopt of the median, kept
+                // until T024 rewires this action to `openValueStep()` — so
+                // no commit leaves the button opening a placeholder sheet.
+                // The amount arrives whole; the view does not round.
+                adopt: {
+                    if let median = viewModel.adoptableMedianCents {
+                        _ = viewModel.adopt(cents: median)
+                    }
+                },
                 // Change match… is Find on Reverb… over an existing match.
                 changeMatch: viewModel.findMatch,
                 removeMatch: viewModel.removeMatch
