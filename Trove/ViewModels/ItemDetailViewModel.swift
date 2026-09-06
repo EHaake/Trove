@@ -380,17 +380,6 @@ final class ItemDetailViewModel {
         return true
     }
 
-    /// **Interim (T022, replaced by T024)**: the median the section's adopt
-    /// button writes until `openValueStep()` takes the intent over, so no
-    /// commit leaves "Use as my value" opening a sheet that isn't built yet.
-    ///
-    /// Whole already, because rounding belongs to one place per layer and a
-    /// view is never that place (T022's review): the value step rounds its
-    /// own default the same way from T024 on.
-    var adoptableMedianCents: Int? {
-        currentFigure?.medianCents.map { MarketAdoption.wholeCurrencyCents(from: $0) }
-    }
-
     /// Remove match: the match and everything the device knows about it go
     /// together — spec criterion 16, "unmatching clears the item's history
     /// and figure" — in one save, with the same two-store caveat `setMatch`

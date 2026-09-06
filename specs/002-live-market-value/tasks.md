@@ -1423,7 +1423,43 @@ off with four small notes, folded below (the interim adopt closure, the
   *Done when*: green, mutations recorded, full suite green with count;
   the slider seen rendered against the frame.
 
-- [ ] **T024 — `MarketValueStepView` and the sheet's four phases.** *(after T023)*
+- [x] **T024 — `MarketValueStepView` and the sheet's four phases.** *(after T023)*
+  *Done (2026-09-05)* — dispatched to `sdd-implementer`, verified by the
+  orchestrator's own run; not foundational, so no per-task review. As
+  built: `MarketValueStepView.swift` (new) — `MarketValueStepActions`
+  (`choose`/`use`/`notNow`), the title at `emptyStateTitle` (the frame's
+  Archivo 600 19), the figure block through pieces extracted from
+  `MarketSection` (`MarketFigureRow`, `MarketSpreadLine`, `MarketQuietLine`,
+  kept in that file so its copy pins stand), the slider bound to
+  `setChosen`, the guidance line, the 48 pt filled/outlined pair, the
+  three identifiers; `MarketFetchingView.swift` (new) — the picked
+  candidate's card (`MarketCandidateCard`, extracted within
+  `MarketMatchView.swift` so the `AsyncImage` scan still names one file)
+  over the status line reading `fetchingAskingPrices`, in the picker's
+  bar and padding; both detail views' sheets compose all four phases;
+  the section's adopt action is `openValueStep()`; the interim
+  `adoptableMedianCents` and comments are gone; `MarketSectionState.matchedTitle`
+  added so the view derives nothing. The three source walkers in the
+  wiring tests consolidated onto `SourceScan.swiftFiles(under:minimum:)`;
+  the flag-gone scan names the two view models instead of a bare `>= 4`.
+  `tokens.md`'s value-step rows filled. Tests: +5 wiring scans (the four
+  phases in both screens; the section's actions calling `openValueStep`
+  and not `adopt(cents:`; the step view composing the slider and its
+  identifiers; the fetching branch reading its copy; the step's copy
+  symbols). Mutations, each red then reverted: a phase back to a bare
+  `ProgressView` → red; the section's adopt writing directly → red;
+  `market.value.use` removed → red; `Text("Set your value")` inline →
+  the no-space rule red. Full unit suite (orchestrator's run): **1103
+  tests in 148 suites, all passed**. Seen rendered by the orchestrator
+  against the frame (a temporary harness, deleted): the owned step
+  ($1,450 · 12 listed, the true spread, the knob on the median between
+  $1,150 and $1,900, the guidance, Use $1,450 as my value / Not now), the
+  wanted step (Set your estimated cost / Use $349 as estimated cost),
+  the year in the source line (Martin D-18 · 1975), and the fetching
+  card with its status line (the spinner is a renderer placeholder;
+  the sheet's bar cannot be rendered — T018's). Q22's constants and
+  pins untouched, still pending. Left for close-out: a fourth identical
+  walker in `ReorderWiringTests` (one line onto `SourceScan`).
   *Carried from T022's reviews*: consolidate the three hand-written
   source walkers in the wiring tests (`allAppSwiftFiles`, `filesUnderViews`,
   the one in `ExportWiringTests`) onto `SourceScan`; loosen or name the
@@ -1643,6 +1679,8 @@ off with four small notes, folded below (the interim adopt closure, the
   address is a two-file edit (`MarketCopy.contactAddress`, `PRIVACY.md`).
   T018 also checks the dashboard line's lifted amount reads as a real
   medium weight on the device (T013 finding).
+  `ReorderWiringTests.allAppSwiftFiles` onto `SourceScan.swiftFiles`
+  (the fourth copy, T024 finding).
   T018 also watches the value step's dismissal for a detent flicker
   (the resting step's detent is large; T022's review, round 4).
   `CLAUDE.md`'s false-passing-test paragraph gains a fourth instance
@@ -1757,3 +1795,4 @@ previous spec of similar size before treating the policy as settled.
 | T022 fix pass 5 | opus (`sdd-implementer`) | 55,335 | verified first try |
 | T022 review 5 | opus (`skeptical-reviewer`) | 35,750 | signed off |
 | T023 | opus (`sdd-implementer`) | 165,356 | verified first try; renders seen by the orchestrator |
+| T024 | opus (`sdd-implementer`) | 188,119 | verified first try; renders seen by the orchestrator |

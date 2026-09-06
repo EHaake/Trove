@@ -20,6 +20,8 @@ struct MarketWiringTests {
     private static let notice = "Trove/Views/Market/MarketNoticeView.swift"
     private static let picker = "Trove/Views/Market/MarketMatchView.swift"
     private static let slider = "Trove/Views/Market/MarketValueSlider.swift"
+    private static let fetching = "Trove/Views/Market/MarketFetchingView.swift"
+    private static let valueStep = "Trove/Views/Market/MarketValueStepView.swift"
     private static let detailScreens = [
         ("Trove/Views/Items/ItemDetailView.swift", "private func content(for item: Item) -> some View {"),
         ("Trove/Views/Wishlist/WishlistDetailView.swift", "private func content(for item: WishlistItem) -> some View {"),
@@ -61,13 +63,37 @@ struct MarketWiringTests {
                 "canAdopt: viewModel.canAdopt",
                 "find: viewModel.findMatch",
                 "refresh: viewModel.refresh",
-                "viewModel.adopt(cents:",
                 "changeMatch: viewModel.findMatch",
                 "removeMatch: viewModel.removeMatch",
                 "year: item.year",
             ] {
                 #expect(code.contains(wiring), "\(file): the section isn't given `\(wiring)`")
             }
+        }
+    }
+
+    /// B5: the section's adopt action **opens the value step** rather than
+    /// writing (Amendment B, Decision 34's "one adopt control"). Scanned
+    /// inside the `MarketSectionActions(` argument list, not over the file:
+    /// `adopt(cents:)` is still called from this screen — by the value
+    /// step's own button — so a scan over the whole file would pass with the
+    /// section writing directly again.
+    ///
+    /// This pin replaces the intent list's `viewModel.adopt(cents:` (T022's
+    /// interim one-tap adopt): the same wiring, at the place it now lives.
+    @Test func theSectionsAdoptActionOpensTheValueStep() throws {
+        for (file, _) in Self.detailScreens {
+            let code = try SourceScan.production(file)
+            let lists = SourceScan.argumentLists(of: "MarketSectionActions", in: code)
+            try #require(lists.count == 1, "\(file): composes \(lists.count) section action sets")
+            #expect(
+                lists[0].contains("adopt: viewModel.openValueStep"),
+                "\(file): the section's adopt action isn't `openValueStep`: \(lists[0])"
+            )
+            #expect(
+                !lists[0].contains("adopt(cents:"),
+                "\(file): the section's actions write a value straight from the section"
+            )
         }
     }
 
@@ -203,6 +229,86 @@ struct MarketWiringTests {
         }
     }
 
+    /// B5's four-phase half (Amendment B): the sheet draws *every* phase of
+    /// `MarketSheetStep`, each with its own view. Followed into `matchSheet`
+    /// rather than over the file, and each phase named by its case as well as
+    /// by the view it composes — so a phase falling back to a bare
+    /// `ProgressView`, which is exactly what T022 left here on purpose, goes
+    /// red instead of rendering a blank sheet in a shipped build.
+    @Test func theMatchSheetComposesAllFourPhases() throws {
+        for (file, _) in Self.detailScreens {
+            let code = try SourceScan.production(file)
+            let sheet = try body(of: "private var matchSheet: some View {", in: code)
+            for (phase, view) in [
+                ("case .notice:", "MarketNoticeView("),
+                ("case .pick:", "MarketMatchView("),
+                ("case .fetching(let candidate, _):", "MarketFetchingView(candidate: candidate)"),
+                ("case .value(let step):", "MarketValueStepView("),
+            ] {
+                #expect(sheet.contains(phase), "\(file): the sheet has no `\(phase)` branch")
+                #expect(sheet.contains(view), "\(file): the sheet's phases don't compose `\(view)`")
+            }
+            // The value step's three intents, which no compiler check pins
+            // to the right view model methods.
+            for wiring in [
+                "choose: viewModel.setChosen",
+                "viewModel.adopt(cents:",
+                "notNow: viewModel.dismissValueStep",
+            ] {
+                #expect(sheet.contains(wiring), "\(file): the value step isn't wired to `\(wiring)`")
+            }
+        }
+    }
+
+    /// The fetching phase keeps the picked card on screen and says what is
+    /// running (Decision 33) — the two halves of "the sheet does not go
+    /// blank", neither of which the four-phase scan can see from the screens.
+    @Test func theFetchingPhaseKeepsTheCardAndSaysWhatIsRunning() throws {
+        let code = try SourceScan.production(Self.fetching)
+        #expect(code.contains("MarketCandidateCard(candidate:"), "the fetching phase drops the picked card")
+        #expect(
+            code.contains("MarketCopy.fetchingAskingPrices"),
+            "the fetching phase doesn't say that asking prices are being fetched"
+        )
+        #expect(code.contains("MarketStatusLine("), "the fetching phase doesn't use the picker's status line")
+    }
+
+    /// The value step draws Trove's own slider — bound to the view model's
+    /// write, since the step is a value and a copy of it would move the knob
+    /// and change nothing — and carries the plan's three identifiers.
+    @Test func theValueStepComposesTheSliderAndItsTargets() throws {
+        let code = try SourceScan.production(Self.valueStep)
+        #expect(code.contains("MarketValueSlider(step:"), "the value step draws no slider")
+        #expect(
+            code.contains("onChange: actions.choose"),
+            "the slider's writes don't reach the view model's `setChosen`"
+        )
+        for identifier in ["market.value.slider", "market.value.use", "market.value.notNow"] {
+            #expect(code.contains(identifier), "no target carries the identifier \(identifier)")
+        }
+    }
+
+    /// Every word the value step shows comes from `MarketCopy`
+    /// (`MarketVocabularyTests` proves it types none of its own; this proves
+    /// it reads the ones the spec's Copy block gives it), and the figure is
+    /// drawn by the section's own pieces so the two surfaces can't drift.
+    /// The spread is the **true** low–high, not the slider's trimmed ends
+    /// (Decision 36) — pinned by the arguments it is given.
+    @Test func theValueStepReadsItsCopyAndDrawsTheSectionsFigure() throws {
+        let code = try SourceScan.production(Self.valueStep)
+        for symbol in [
+            "MarketCopy.valueStepTitle(wanted:",
+            "MarketCopy.sourceLine(title:",
+            "MarketCopy.valueGuidance",
+            "MarketCopy.useAmount(cents:",
+            "MarketCopy.noticeNotNow",
+            "MarketFigureRow(medianCents: step.medianCents, count: step.count)",
+            "MarketSpreadLine(lowCents: step.lowCents, highCents: step.highCents)",
+        ] {
+            #expect(code.contains(symbol), "the value step doesn't read \(symbol)")
+        }
+    }
+
     /// P15's whole point: the notice offers the policy to read, and an
     /// alert couldn't have held it (Q9).
     @Test func theNoticeCarriesALinkToThePrivacyPolicy() throws {
@@ -230,8 +336,9 @@ struct MarketWiringTests {
     /// under `Trove/Views` may do it, so a second surface can't start
     /// fetching images without this going red.
     @Test func onlyThePickerFetchesAnImageFromTheNetwork() throws {
-        let fetching = try Self.filesUnderViews().filter { try SourceScan.production($0).contains("AsyncImage(") }
-        #expect(fetching == [Self.picker], "the files fetching images are \(fetching)")
+        let viewFiles = try SourceScan.swiftFiles(under: "Trove/Views", minimum: 20)
+        let fetchers = try viewFiles.filter { try SourceScan.production($0).contains("AsyncImage(") }
+        #expect(fetchers == [Self.picker], "the files fetching images are \(fetchers)")
     }
 
     @Test func everyTargetOnTheSheetCarriesTheIdentifierThePlanNames() throws {
@@ -252,12 +359,20 @@ struct MarketWiringTests {
     /// quietly wrong, so the scan is over all of `Trove/`, not the two
     /// screens: the flag is gone from the app or this is red.
     @Test func theSheetsOldNoticeFlagIsGoneFromTheApp() throws {
-        let carrying = try Self.allAppSwiftFiles().filter { try SourceScan.production($0).contains("noticeIsPending") }
+        let appFiles = try SourceScan.swiftFiles(under: "Trove", minimum: 20)
+        let carrying = try appFiles.filter { try SourceScan.production($0).contains("noticeIsPending") }
         #expect(carrying.isEmpty, "`noticeIsPending` survives in \(carrying) — `sheetStep` replaced it")
         // The control: the scan reads real source, so an empty result can't
-        // come from a walk that found nothing.
-        let carryingTheStep = try Self.allAppSwiftFiles().filter { try SourceScan.production($0).contains("sheetStep") }
-        #expect(carryingTheStep.count >= 4, "the walk found `sheetStep` in only \(carryingTheStep.count) files")
+        // come from a walk that found nothing. Named files rather than a
+        // count (T024): the two view models are the ones that *own* the
+        // phase, and a count would drift with every screen that reads it.
+        let carryingTheStep = try appFiles.filter { try SourceScan.production($0).contains("sheetStep") }
+        for owner in [
+            "Trove/ViewModels/ItemDetailViewModel.swift",
+            "Trove/ViewModels/WishlistDetailViewModel.swift",
+        ] {
+            #expect(carryingTheStep.contains(owner), "the walk didn't find `sheetStep` in \(owner)")
+        }
     }
 
     /// B5's slider half (plan Amendment B, spec Decision 34's Design line):
@@ -307,36 +422,6 @@ struct MarketWiringTests {
             adjusted[0].contains("adjustableStep("),
             "the adjustable action steps by something other than `adjustableStep`: \(adjusted[0])"
         )
-    }
-
-    /// The same walk `ExportWiringTests` uses — asserted non-trivial so a
-    /// moved source root fails loudly instead of scanning nothing.
-    private static func allAppSwiftFiles(file: StaticString = #filePath) throws -> [String] {
-        let root = URL(filePath: "\(file)")
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appending(path: "Trove")
-        let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
-        var paths: [String] = []
-        while let url = walker?.nextObject() as? URL {
-            if url.pathExtension == "swift" {
-                paths.append("Trove/" + url.path.replacingOccurrences(of: root.path + "/", with: ""))
-            }
-        }
-        try #require(paths.count > 20, "source walk found only \(paths.count) files — wrong root?")
-        return paths.sorted()
-    }
-
-    /// Every `.swift` under `Trove/Views`, as repo-relative paths — walked
-    /// rather than listed, so a new view file is covered the day it lands.
-    private static func filesUnderViews(file: StaticString = #filePath) throws -> [String] {
-        let root = URL(filePath: "\(file)").deletingLastPathComponent().deletingLastPathComponent()
-        let views = root.appending(path: "Trove/Views")
-        let found = FileManager.default.enumerator(at: views, includingPropertiesForKeys: nil)?
-            .compactMap { $0 as? URL }
-            .filter { $0.pathExtension == "swift" }
-            .map { $0.path().replacingOccurrences(of: root.path().hasSuffix("/") ? root.path() : root.path() + "/", with: "") }
-        return (found ?? []).sorted()
     }
 
     /// `TrendArrowWiringTests`' brace matcher, for the same reason it has

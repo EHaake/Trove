@@ -193,6 +193,15 @@ extension MarketSectionState {
         }
     }
 
+    /// The matched product's title, when the device has its snapshot — what
+    /// the value step's source line names (plan Amendment B). `lastFetchedAt`'s
+    /// shape: the state answers a question about itself, so no view has to
+    /// take the match apart to ask it.
+    var matchedTitle: String? {
+        guard case .matched(let display) = self else { return nil }
+        return display.title
+    }
+
     /// The fetch time behind the figure the section is actually *showing* —
     /// the date the unreachable line dates itself by, since its copy reads
     /// "the figure below is from {age}" and only a `.current` reading puts a

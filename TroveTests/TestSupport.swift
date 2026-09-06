@@ -3,6 +3,7 @@ import Foundation
 import SwiftData
 import SwiftUI
 import Synchronization
+import Testing
 @testable import Trove
 
 /// Records what the view models hand to `ExportService`, so intent tests
@@ -434,6 +435,38 @@ enum SourceScan {
         let source = try String(contentsOf: url, encoding: .utf8)
         let code = source.range(of: "#Preview").map { String(source[..<$0.lowerBound]) } ?? source
         return stripComments(code)
+    }
+
+    /// Every `.swift` file under a repo-relative directory, as repo-relative
+    /// paths, sorted — walked rather than listed, so a file is covered the day
+    /// it lands.
+    ///
+    /// One walk for the whole suite (T024): `MarketWiringTests` and
+    /// `ExportWiringTests` each carried a hand-written copy of it, two of them
+    /// differing only in the directory they started from. `minimum` keeps the
+    /// guard each copy had — a moved or renamed source root fails loudly here
+    /// rather than scanning nothing and passing every filter over it, which is
+    /// the false-passing shape this project has shipped three times.
+    static func swiftFiles(
+        under directory: String,
+        minimum: Int,
+        file: StaticString = #filePath
+    ) throws -> [String] {
+        let root = URL(filePath: "\(file)")
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let start = root.appending(path: directory)
+        let walker = FileManager.default.enumerator(at: start, includingPropertiesForKeys: nil)
+        var paths: [String] = []
+        while let url = walker?.nextObject() as? URL {
+            guard url.pathExtension == "swift" else { continue }
+            paths.append(directory + "/" + url.path.replacingOccurrences(of: start.path + "/", with: ""))
+        }
+        try #require(
+            paths.count >= minimum,
+            "source walk under \(directory) found only \(paths.count) files — wrong root?"
+        )
+        return paths.sorted()
     }
 
     /// Drops `//` line comments and `/* */` blocks. Deliberately naive about

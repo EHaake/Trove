@@ -44,11 +44,13 @@ struct MarketMatchView: View {
     /// The artboard's own measures: the gap under the search field, the
     /// card's 64pt thumbnail, the 2pt lift of the reading off the brand,
     /// the footer's 40pt target and the glyph's gap.
-    private static let contentGap: CGFloat = 14
-    private static let topPadding: CGFloat = 6
-    private static let thumbnailSide: CGFloat = 64
-    private static let cardTextGap: CGFloat = 4
-    private static let readingLift: CGFloat = 2
+    ///
+    /// The first two are internal because `MarketFetchingView` stands the
+    /// picked card in the same bar and the same padding (plan Amendment B) —
+    /// the sheet must not shift when the phase changes, so the two phases
+    /// read one set of numbers rather than a copy each.
+    static let contentGap: CGFloat = 14
+    static let topPadding: CGFloat = 6
     private static let footerHeight: CGFloat = 40
     private static let linkGap: CGFloat = 5
     private static let glyphSize: CGFloat = 11
@@ -104,7 +106,7 @@ struct MarketMatchView: View {
                 }
                 // The plate's cast shadow falls outside the card's own
                 // bounds, and a `ScrollView` clips at its edges.
-                .padding(.vertical, Self.readingLift)
+                .padding(.vertical, MarketCandidateCard.readingLift)
             }
             .scrollDismissesKeyboard(.immediately)
 
@@ -134,17 +136,8 @@ struct MarketMatchView: View {
         }
     }
 
-    /// `PhotoPickerField`'s status line, in the mono meta register the
-    /// `PickerSearching` artboard sets it in.
     private var statusLine: some View {
-        HStack(spacing: theme.metrics.fieldGap) {
-            ProgressView()
-                .controlSize(.small)
-                .tint(theme.colors.accentBrass)
-            Text(MarketCopy.searching)
-                .font(theme.typography.monoMeta)
-                .foregroundStyle(theme.colors.textQuiet)
-        }
+        MarketStatusLine(text: MarketCopy.searching)
     }
 
     // MARK: - A candidate
@@ -156,7 +149,7 @@ struct MarketMatchView: View {
             Button {
                 Task { await pick(candidate) }
             } label: {
-                cardBody(candidate)
+                MarketCandidateCard(candidate: candidate)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("market.candidate")
@@ -166,9 +159,63 @@ struct MarketMatchView: View {
         .extrudedPlate()
     }
 
-    private func cardBody(_ candidate: MarketCandidate) -> some View {
+    /// Decision 28: every candidate carries its own way out to Reverb, so a
+    /// person can look at the product before committing the match. A real
+    /// `Link`, for the reason `MarketReverbLink` records.
+    private func footer(_ candidate: MarketCandidate) -> some View {
+        VStack(spacing: 0) {
+            theme.colors.surfaceInset
+                .frame(height: theme.metrics.hairline)
+
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                Link(destination: ReverbAPI.productURL(slug: candidate.slug)) {
+                    HStack(spacing: Self.linkGap) {
+                        Text(MarketCopy.viewOnReverb)
+                            .font(theme.typography.buttonCompact)
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: Self.glyphSize, weight: .medium))
+                            .accessibilityHidden(true)
+                    }
+                    .foregroundStyle(theme.colors.accentBrass)
+                    .frame(minHeight: Self.footerHeight)
+                    .contentShape(Rectangle())
+                }
+                .accessibilityLabel(MarketCopy.viewOnReverb)
+                .accessibilityHint(MarketCopy.reverbLinkHint)
+                .accessibilityIdentifier("market.candidate.link")
+            }
+            .padding(.horizontal, theme.metrics.rowPadding)
+        }
+    }
+}
+
+/// One candidate, as the artboard draws it: the thumbnail, the title never
+/// truncated, the brand, and the catalog's used reading.
+///
+/// Its own view since T024, because the fetching phase stands the *picked*
+/// candidate's card in the same sheet while its listings are fetched (plan
+/// Amendment B) — the person keeps seeing what they chose. It stays in this
+/// file so `onlyThePickerFetchesAnImageFromTheNetwork` still names one file:
+/// `AsyncImage` lives here and nowhere else under `Trove/Views`.
+///
+/// The plate and whatever takes the tap belong to the caller: the picker
+/// wraps it in a `Button` over `.extrudedPlate()`, the fetching phase in the
+/// plate alone.
+struct MarketCandidateCard: View {
+    let candidate: MarketCandidate
+
+    @Environment(\.theme) private var theme
+
+    /// The 2pt lift of the reading off the brand, and the picker's 64pt
+    /// thumbnail — the artboard's own measures.
+    static let readingLift: CGFloat = 2
+    private static let thumbnailSide: CGFloat = 64
+    private static let cardTextGap: CGFloat = 4
+
+    var body: some View {
         HStack(alignment: .top, spacing: theme.metrics.rowContentGap) {
-            thumbnail(candidate)
+            thumbnail
 
             VStack(alignment: .leading, spacing: Self.cardTextGap) {
                 // Never truncated: the title is how the person tells two
@@ -201,7 +248,7 @@ struct MarketMatchView: View {
     /// square, the same inset placeholder while there is nothing to draw,
     /// and hidden from VoiceOver — the title and brand beside it say what
     /// the candidate is.
-    private func thumbnail(_ candidate: MarketCandidate) -> some View {
+    private var thumbnail: some View {
         AsyncImage(url: candidate.imageURL) { image in
             image.resizable().scaledToFill()
         } placeholder: {
@@ -216,34 +263,25 @@ struct MarketMatchView: View {
         .clipShape(RoundedRectangle(cornerRadius: theme.metrics.thumbnailRadius))
         .accessibilityHidden(true)
     }
+}
 
-    /// Decision 28: every candidate carries its own way out to Reverb, so a
-    /// person can look at the product before committing the match. A real
-    /// `Link`, for the reason `MarketReverbLink` records.
-    private func footer(_ candidate: MarketCandidate) -> some View {
-        VStack(spacing: 0) {
-            theme.colors.surfaceInset
-                .frame(height: theme.metrics.hairline)
+/// `PhotoPickerField`'s status line, in the mono meta register the
+/// `PickerSearching` artboard sets it in: a small spinner and a quiet line
+/// saying what is running. Shared by the picker's search and the fetching
+/// phase's own line (plan Amendment B), so the two read identically.
+struct MarketStatusLine: View {
+    let text: String
 
-            HStack(spacing: 0) {
-                Spacer(minLength: 0)
-                Link(destination: ReverbAPI.productURL(slug: candidate.slug)) {
-                    HStack(spacing: Self.linkGap) {
-                        Text(MarketCopy.viewOnReverb)
-                            .font(theme.typography.buttonCompact)
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: Self.glyphSize, weight: .medium))
-                            .accessibilityHidden(true)
-                    }
-                    .foregroundStyle(theme.colors.accentBrass)
-                    .frame(minHeight: Self.footerHeight)
-                    .contentShape(Rectangle())
-                }
-                .accessibilityLabel(MarketCopy.viewOnReverb)
-                .accessibilityHint(MarketCopy.reverbLinkHint)
-                .accessibilityIdentifier("market.candidate.link")
-            }
-            .padding(.horizontal, theme.metrics.rowPadding)
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        HStack(spacing: theme.metrics.fieldGap) {
+            ProgressView()
+                .controlSize(.small)
+                .tint(theme.colors.accentBrass)
+            Text(text)
+                .font(theme.typography.monoMeta)
+                .foregroundStyle(theme.colors.textQuiet)
         }
     }
 }

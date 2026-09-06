@@ -108,11 +108,11 @@ struct MarketSection: View {
     /// this condition" already; stacking both would say it twice.
     private func sourceBlock(_ display: MarketMatchDisplay) -> some View {
         VStack(alignment: .leading, spacing: Self.tightGap) {
-            quietLine(MarketCopy.sourceLine(title: display.title, year: year))
+            MarketQuietLine(text: MarketCopy.sourceLine(title: display.title, year: year))
             if case .current(let figure) = display.reading,
                figure.isAllYearsFallback,
                let narrowedYear = figure.yearFilter ?? year {
-                quietLine(MarketCopy.allYearsFallback(year: narrowedYear, wanted: isWanted))
+                MarketQuietLine(text: MarketCopy.allYearsFallback(year: narrowedYear, wanted: isWanted))
             }
         }
     }
@@ -121,21 +121,15 @@ struct MarketSection: View {
     private func reading(_ display: MarketMatchDisplay) -> some View {
         switch display.reading {
         case .none:
-            quietLine(MarketCopy.notRefreshedHere, font: theme.typography.body)
+            MarketQuietLine(text: MarketCopy.notRefreshedHere, font: theme.typography.body)
 
         case .current(let figure):
             if let medianCents = figure.medianCents {
-                figureRow(medianCents: medianCents, count: figure.count)
+                MarketFigureRow(medianCents: medianCents, count: figure.count)
             }
             HStack(alignment: .firstTextBaseline, spacing: Self.rowGap) {
                 if let lowCents = figure.lowCents, let highCents = figure.highCents {
-                    Text(MarketCopy.spread(lowCents: lowCents, highCents: highCents))
-                        .font(theme.typography.monoMeta)
-                        .foregroundStyle(theme.colors.textMonoMeta)
-                        .monospacedDigit()
-                        .accessibilityLabel(
-                            MarketCopy.spreadAccessibilityLabel(lowCents: lowCents, highCents: highCents)
-                        )
+                    MarketSpreadLine(lowCents: lowCents, highCents: highCents)
                 }
                 Spacer(minLength: theme.metrics.fieldGap)
                 ageLine(fetchedAt: figure.fetchedAt)
@@ -160,42 +154,12 @@ struct MarketSection: View {
         }
     }
 
-    /// `$1,450 · 12 listed` as three elements: the figure in the PAID
-    /// cell's mono register (never brass, never Archivo — those belong to
-    /// the person's own number), and the dot hidden from VoiceOver so the
-    /// count reads as its own phrase.
-    private func figureRow(medianCents: Int, count: Int) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: theme.metrics.fieldGap) {
-            Text(MarketCopy.median(cents: medianCents))
-                .font(theme.typography.monoValue)
-                .foregroundStyle(theme.colors.textPrimary)
-                .monospacedDigit()
-                .accessibilityLabel(MarketCopy.figureAccessibilityLabel(medianCents: medianCents))
-            Text(MarketCopy.separator)
-                .font(theme.typography.monoMeta)
-                .foregroundStyle(theme.colors.textMonoMeta)
-                .accessibilityHidden(true)
-            Text(MarketCopy.listed(count: count))
-                .font(theme.typography.monoMeta)
-                .foregroundStyle(theme.colors.textMonoMeta)
-                .accessibilityLabel(MarketCopy.countAccessibilityLabel(count))
-        }
-    }
-
     private func ageLine(fetchedAt: Date) -> some View {
         Text(MarketCopy.age(fetchedAt: fetchedAt, at: now))
             .font(theme.typography.monoMeta)
             .foregroundStyle(theme.colors.textQuiet)
             .fixedSize()
             .accessibilityLabel(MarketCopy.ageAccessibilityLabel(fetchedAt: fetchedAt, at: now))
-    }
-
-    private func quietLine(_ text: String, font: Font? = nil) -> some View {
-        Text(text)
-            .font(font ?? theme.typography.secondary)
-            .foregroundStyle(theme.colors.textLabelSecondary)
-            .lineSpacing(Self.proseLineSpacing)
-            .fixedSize(horizontal: false, vertical: true)
     }
 
     /// A reading that says something instead of showing a figure.
@@ -357,6 +321,78 @@ struct MarketSection: View {
     /// draws no Refresh at all.
     private var refreshHint: String {
         !canRefresh && !isRefreshing ? MarketCopy.refreshWithinHourHint : ""
+    }
+}
+
+/// The section's figure line — `$1,450 · 12 listed` — as three elements:
+/// the figure in the PAID cell's mono register (never brass, never Archivo
+/// — those belong to the person's own number), and the dot hidden from
+/// VoiceOver so the count reads as its own phrase.
+///
+/// Lifted out of `MarketSection` at T024, because the value step draws the
+/// same figure above its slider (plan Amendment B, "the figure as the
+/// section draws it"). It stays in this file so the section's own copy scan
+/// still sees every `MarketCopy` symbol the figure reads.
+struct MarketFigureRow: View {
+    let medianCents: Int
+    let count: Int
+
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: theme.metrics.fieldGap) {
+            Text(MarketCopy.median(cents: medianCents))
+                .font(theme.typography.monoValue)
+                .foregroundStyle(theme.colors.textPrimary)
+                .monospacedDigit()
+                .accessibilityLabel(MarketCopy.figureAccessibilityLabel(medianCents: medianCents))
+            Text(MarketCopy.separator)
+                .font(theme.typography.monoMeta)
+                .foregroundStyle(theme.colors.textMonoMeta)
+                .accessibilityHidden(true)
+            Text(MarketCopy.listed(count: count))
+                .font(theme.typography.monoMeta)
+                .foregroundStyle(theme.colors.textMonoMeta)
+                .accessibilityLabel(MarketCopy.countAccessibilityLabel(count))
+        }
+    }
+}
+
+/// The **true** spread, `$1,100–$2,000` — the section's reading line and,
+/// since T024, the value step's, where it is deliberately the true low and
+/// high rather than the slider's trimmed ends (spec Decision 36).
+struct MarketSpreadLine: View {
+    let lowCents: Int
+    let highCents: Int
+
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        Text(MarketCopy.spread(lowCents: lowCents, highCents: highCents))
+            .font(theme.typography.monoMeta)
+            .foregroundStyle(theme.colors.textMonoMeta)
+            .monospacedDigit()
+            .accessibilityLabel(
+                MarketCopy.spreadAccessibilityLabel(lowCents: lowCents, highCents: highCents)
+            )
+    }
+}
+
+/// A line of quiet prose in the market's own register — the source line,
+/// the all-years line, the value step's guidance. `font` overrides it for
+/// the one line that speaks at body size ("Not refreshed on this device.").
+struct MarketQuietLine: View {
+    let text: String
+    var font: Font?
+
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        Text(text)
+            .font(font ?? theme.typography.secondary)
+            .foregroundStyle(theme.colors.textLabelSecondary)
+            .lineSpacing(MarketSection.proseLineSpacing)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 

@@ -95,21 +95,34 @@ struct ItemDetailView: View {
                     pick: viewModel.setMatch,
                     cancel: { viewModel.isFindingMatch = false }
                 )
-            case .fetching, .value:
-                // Interim (T022): a pick reaches both of these phases
-                // today — the fetch runs in this sheet and hands it to the
-                // value step — so this placeholder is what the person
-                // actually sees between the pick and the write until T024
-                // puts the fetching card and MarketValueStepView here. It
-                // shows that something is running rather than going blank.
-                ProgressView()
+            case .fetching(let candidate, _):
+                // The picked card, held still under the picker's own bar,
+                // so the sheet doesn't go blank while the fetch runs
+                // (Decision 33). The token is the view model's business.
+                MarketFetchingView(candidate: candidate)
+            case .value(let step):
+                MarketValueStepView(
+                    step: step,
+                    isWanted: false,
+                    productTitle: viewModel.marketState.matchedTitle,
+                    year: viewModel.item?.year ?? nil,
+                    actions: MarketValueStepActions(
+                        choose: viewModel.setChosen,
+                        // The amount comes back from the step the view is
+                        // holding; the write and its refusal are the view
+                        // model's, as the section's adopt was.
+                        use: { _ = viewModel.adopt(cents: $0) },
+                        notNow: viewModel.dismissValueStep
+                    )
+                )
             }
         }
         .presentationDetents([.medium, .large], selection: $matchDetent)
         // The phase, not the whole step: the step carries the value
-        // step's payload, so observing it would re-decide the detent on
-        // every tick of the slider once T024 wires it (T022's third
-        // review). The detent depends on the phase alone.
+        // step's payload, which the slider rewrites on every tick of a
+        // drag, so observing the step itself would re-decide a detent that
+        // cannot have changed (T022's third review). The detent depends on
+        // the phase alone.
         .onChange(of: viewModel.sheetStep.phase, initial: true) { _, phase in
             matchDetent = switch phase {
             case .notice, .value: .medium
@@ -313,18 +326,11 @@ struct ItemDetailView: View {
             actions: MarketSectionActions(
                 find: viewModel.findMatch,
                 refresh: viewModel.refresh,
-                // Adopt reports its own failure through the view model;
-                // the result is the intent's, not the view's.
-                //
-                // Interim (T022): today's one-tap adopt of the median, kept
-                // until T024 rewires this action to `openValueStep()` — so
-                // no commit leaves the button opening a placeholder sheet.
-                // The amount arrives whole; the view does not round.
-                adopt: {
-                    if let median = viewModel.adoptableMedianCents {
-                        _ = viewModel.adopt(cents: median)
-                    }
-                },
+                // Use as my value opens the value step rather than
+                // writing (Amendment B): one adopt control, one flow, and
+                // the write happens in the sheet where the amount is
+                // chosen. `canAdopt` already gates the button.
+                adopt: viewModel.openValueStep,
                 // Change match… is Find on Reverb… over an existing match.
                 changeMatch: viewModel.findMatch,
                 removeMatch: viewModel.removeMatch

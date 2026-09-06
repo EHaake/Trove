@@ -448,8 +448,8 @@ coverage, which P5 forbids).
 
 ### The value step and the slider (`002` Amendment B)
 
-Source: `design/elements/002-market-values/ValueStep.dc.html` (drawn
-2026-09-05; approval pending in T020). The sheet's third phase at the
+Source: `design/elements/002-market-values/ValueStep.dc.html` (drawn and
+approved 2026-09-05, T020). The sheet's third phase at the
 medium detent: the title, the figure as the section draws it with the
 true spread, Trove's own slider between the trimmed bounds with the
 median marked and defaulted, the guidance line, the filled button with
@@ -457,18 +457,18 @@ the live amount, Not now.
 
 | Property | Value | As implemented |
 |---|---|---|
-| Sheet | medium detent (~`500px` drawn), `22px 24px 32px` padding, `20px` between blocks | |
-| Title | Archivo 600 `19px` `textPrimary` — "Set your value" / "Set your estimated cost" | |
-| Figure block | the section's own registers: source line `12.5px` 55 %, median IBM Plex Mono 500 `19px`, separator and count `12.5px` mono 45 %, the **true** spread `11.5px` mono 45 % | |
+| Sheet | medium detent (~`500px` drawn), `22px 24px 32px` padding, `20px` between blocks | `MarketValueStepView.topPadding` 22 / `.bottomPadding` 32 / `theme.metrics.screenGutter` 24 across — the notice sheet's own padding — and `blockGap` 20 between the five blocks. The detent belongs to the sheet, not the view: both detail screens map `.notice, .value` to `.medium`, pinned in `MarketWiringTests` |
+| Title | Archivo 600 `19px` `textPrimary` — "Set your value" / "Set your estimated cost" | `typography.emptyStateTitle` (display 19 semibold — the role the theme already has at exactly that size and weight) + `textPrimary`; the words from `MarketCopy.valueStepTitle(wanted:)` |
+| Figure block | the section's own registers: source line `12.5px` 55 %, median IBM Plex Mono 500 `19px`, separator and count `12.5px` mono 45 %, the **true** spread `11.5px` mono 45 % | literally the section's pieces: `MarketQuietLine`, `MarketFigureRow` and `MarketSpreadLine`, lifted out of `MarketSection` at T024 and kept in `MarketSection.swift`, so the two surfaces draw one composition and the copy scan still sees every symbol. The median therefore reads at `monoValue` (mono **15**) — the section's register as built, for the reason the Market table's Median row records — and the spread is the true low–high, not the slider's ends (Decision 36). `figureGap` 10 |
 | Track | `2px`, `divider`, `1px` radius, full width; the filled portion from the left end to the knob in `accentBrass` | `MarketValueSlider.trackHeight` / `.trackRadius`, `theme.colors.divider`; the fill's extent and its ink are measured in `MarketValueSliderRenderTests` |
 | Knob | `20px` circle, `accentBrass`, a `3px` `background` ring and `0 2px 6px rgba(0,0,0,0.4)`; centred on the chosen amount's fraction of the bounds | `MarketValueSlider.knobDiameter` / `.knobRing`; the ring is a `background` disc under the brass one, the shadow `plateEdgeShadow` (the frame's own 40 % black) at `radius: 3, y: 2` — `ExtrudedPlate`'s pair |
 | Marks | the two ends `1px × 12px` `divider`; the median `1.5px × 18px` `accentBrassDim`, taller than the ends | `MarketValueSlider.marks(trackWidth:lower:upper:median:)` places all three by centre; a zero-width range returns the median's alone |
 | Labels | the trimmed bounds' amounts under the ends, IBM Plex Mono `11px` 45 %; "median" under its mark, mono `10px` 40 % tracked `0.08em` | the amounts in `typography.monoMeta` (mono 11.5) + `colors.textMonoMeta` (45 %); the caption in `typography.monoLabel` (mono 10.5) + `colors.textQuiet` (40 %), tracked `0.8` — the nearest roles the theme has, rather than two new sizes for one row. The row is fixed at `labelRowHeight` 16, the mono line box being taller than the frame's `14px` |
 | Default | the knob at the whole-currency median | `MarketValueStep.chosenCents`, drawn through `x(forCents:trackWidth:lower:upper:)`; the 30 % fraction is measured in `MarketValueSliderRenderTests` |
 | Snap / step | snaps to the median within `6pt`; the accessibility step is 1 % of the range in whole currency, at least one unit | `MarketValueSlider.snapTolerance` and `.adjustableStep(lower:upper:)`, both pure statics the drag and the adjustable action call — `MarketWiringTests` scans that they do |
-| Guidance line | IBM Plex Sans `12.5px`, line-height `1.45`, 55 % | |
-| Buttons | filled brass "Use $1,450 as my value" and outlined "Not now", each `48pt`, stacked with `8px` gap (the notice's pair) | |
-| Zero-width range | one mark, the drag inert, the button live at that amount | one median mark at the left end, the amount named once beneath it; `x(forCents:)` and `cents(atX:)` each guard the division |
+| Guidance line | IBM Plex Sans `12.5px`, line-height `1.45`, 55 % | `MarketQuietLine` again — `typography.secondary` (12.5) + `textLabelSecondary` (55 %), `lineSpacing` 3 (`MarketSection.proseLineSpacing`, the drawn line-height at that size); `MarketCopy.valueGuidance` |
+| Buttons | filled brass "Use $1,450 as my value" and outlined "Not now", each `48pt`, stacked with `8px` gap (the notice's pair) | the notice's pair exactly: `.marketFilledChrome(minHeight:)` and `.marketOutlinedChrome(fills: true, minHeight:)` at `MarketButtons.noticeHeight` 48, stacked at `theme.metrics.fieldGap` 8; the filled label carries the live amount through `MarketCopy.useAmount(cents:wanted:)`, so it changes as the knob moves |
+| Zero-width range | one mark, the drag inert, the button live at that amount | one median mark at the left end, the amount named once beneath it; `x(forCents:)` and `cents(atX:)` each guard the division. The button is live because nothing disables it: `chosenCents` is fixed at that amount, and the step is the only thing the button reads |
 
 ### Market trend arrow (`002`)
 
