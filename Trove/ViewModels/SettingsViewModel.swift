@@ -67,6 +67,12 @@ final class SettingsViewModel {
     /// Reverb. 3 of 12 refreshed.". A completed walk says nothing.
     private(set) var marketRefreshStatus: String?
 
+    /// The one quiet line under the row when a walk found nothing due
+    /// (spec Decision 38): every matched item was refreshed within the
+    /// hour, so the row did nothing — and says so, in the quiet colour, not
+    /// the failure one. Cleared when the next walk starts.
+    private(set) var marketRefreshNote: String?
+
     private(set) var activity: Activity?
 
     /// The staged file set the view offers through the share sheet.
@@ -300,6 +306,7 @@ final class SettingsViewModel {
         guard canRefreshMarketValues else { return }
         activity = .refreshMarket
         marketRefreshStatus = nil
+        marketRefreshNote = nil
         defer {
             activity = nil
             marketRefreshProgress = nil
@@ -308,6 +315,11 @@ final class SettingsViewModel {
 
         let due = (try? dueTargets()) ?? []
         let total = due.count
+        // Nothing due is not a failure and not silence either (Decision 38).
+        if total == 0 {
+            marketRefreshNote = MarketCopy.nothingDue
+            return
+        }
         marketRefreshProgress = (done: 0, total: total)
 
         let refresher = MarketRefresher(modelContext: modelContext, service: marketService, now: now)

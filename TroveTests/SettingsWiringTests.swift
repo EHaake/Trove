@@ -150,6 +150,8 @@ struct SettingsWiringTests {
         #expect(code.contains("await viewModel.refreshMarketValues()"), "the row doesn't run the walk")
         #expect(code.contains("viewModel.marketRefreshStatus"), "no status line under the row")
         #expect(code.contains("theme.colors.accentRustText"), "the status line isn't in the failure colour")
+        #expect(code.contains("viewModel.marketRefreshNote"), "no nothing-due line under the row (Decision 38)")
+        #expect(code.contains("theme.colors.textQuiet"), "the nothing-due line isn't in the quiet colour")
         #expect(code.contains("settings.refreshMarket"), "the row carries no identifier")
         #expect(
             code.contains("Text(detail)"),
