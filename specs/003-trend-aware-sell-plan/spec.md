@@ -153,9 +153,10 @@ a reading at least a week older than its latest and the two differ by
    hold a week of history before this ships, so the ranking, the arrow
    and the reason line are verified against fixtures in the unit
    tests and, for the UI test and the device pass, against a history
-   seeded only under the existing `-uiTesting` launch argument — the
-   constitution's sanctioned test-only branch, whose only effect is on
-   that launch's in-memory stores. The person's own device shows the
+   seeded only under the existing `-uiTesting` launch argument (with a
+   second, `-seedSellPlan`, so `-uiTesting` alone still starts empty —
+   plan sign-off, 2026-09-06) — the constitution's sanctioned test-only
+   branch, whose only effect is on that launch's in-memory stores. The person's own device shows the
    feature as its history accrues.
 
 ## Acceptance criteria
@@ -190,10 +191,13 @@ check against fixtures. The plan will cite what verifies each.
 11. [ ] At the largest accessibility text size the reason line wraps
     and the row's checkbox, dial and value stay aligned with rows that
     have no such line.
-12. [ ] Under `-uiTesting` the seeded history produces at least one
-    rising, one falling and one neutral candidate, so the UI test and
-    the device pass exercise all three; in a normal launch nothing is
-    seeded.
+12. [ ] Under `-uiTesting` with `-seedSellPlan` the seeded history
+    produces at least one rising, one falling and one neutral candidate,
+    so the UI test and the device pass exercise all three; under
+    `-uiTesting` alone the collection starts empty as before, and in a
+    normal launch nothing is seeded. (Wording corrected at plan sign-off,
+    2026-09-06: the seed takes a second argument so the existing
+    empty-collection UI tests keep their starting state.)
 
 ## Non-goals (explicit)
 
