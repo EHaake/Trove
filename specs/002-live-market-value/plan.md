@@ -329,6 +329,117 @@ eBay (its own spec, two prerequisites); `003`'s trend-aware ranking (this spec b
 
 ---
 
+## Amendment B — the adopt flow (spec Decisions 33–36, criteria 8, 9, 23; 2026-09-05) — **Draft**
+
+Folded in at the Phase 3 pause at the person's direction, after using
+the shipped flow: match → return to the section → Refresh → Use as my
+value was three separate intents where the person wanted one. Every
+screen of Phase 3 exists, so this amendment reshapes rather than adds:
+the picker sheet gains two phases, the adopt intent takes an amount, and
+the figure record learns two numbers.
+
+### What changes where
+
+- **`MarketFigureComputation` and the record — the trimmed bounds
+  (Decision 36).** `MarketFigure` gains `p10Cents: Int` and `p90Cents:
+  Int`, computed in `compute` over the same sorted, counted prices as
+  the median: nearest-rank percentiles — the `⌈P/100 · n⌉`-th smallest,
+  1-based — so for `n = 3` they are the low and the high, and for the
+  fixture's excellent bucket (`n = 34`) the 4th and the 31st. The
+  withheld reading has none. `MarketFigureRecord` gains `p10Cents:
+  Int?` and `p90Cents: Int?` (G4's allowlist grows by two; nil on a
+  record written before this amendment, which no shipped device has —
+  the bounds then fall back to low and high); `MarketHistoryPoint` is
+  unchanged (Decision 35: the history is the median's). `MarketSnapshotValue`
+  carries them; `MarketLocalStore.record` writes them.
+  `MarketValueBounds.bounds(for figure) -> (lower, upper)` is the one
+  place the fallback lives.
+- **The detail view models — the sheet's phases (Decisions 33–34).** The
+  sheet's `noticeIsPending` Bool becomes `sheetStep: MarketSheetStep`
+  (`.notice`, `.pick`, `.fetching`, `.value(MarketValueStep)`), with
+  `isFindingMatch` kept as the presentation flag (the wiring scans pin
+  it; renaming buys nothing). `findMatch()` sets `.notice` or `.pick` as
+  today. `setMatch(candidate)` keeps its one save (the id, `updatedAt`,
+  the snapshot, `clear` on a changed product), then — new — sets
+  `.fetching`, awaits the refresher for this item (`.stillFresh` is a
+  hit: no second request within the hour, P7), and lands: a `.current`
+  reading → `.value(step)` with `chosenCents = medianCents`; anything
+  else (withheld, `.failed`, `.saveFailed`, `.superseded`) → the sheet
+  closes (`isFindingMatch = false`) and the section shows what it
+  shows today (the withheld copy, or the failure line over the match).
+  `openValueStep()` — the section's adopt action from now on — presents
+  the sheet directly at `.value` when the reading is `.current`; it is
+  a no-op otherwise (`canAdopt` already gates the button). `adopt(cents:)`
+  replaces `adopt()`: it writes `MarketAdoption.wholeCurrencyCents(from:
+  cents)` (the slider moves in whole currency, so this is the identity
+  today and stays the one rounding rule), bumps `updatedAt` on owned,
+  saves once, writes no history, fetches nothing, closes the sheet.
+  `MarketValueStep { medianCents, lowCents, highCents, count,
+  lowerCents, upperCents, chosenCents }` is a plain value the view binds
+  to; `setChosen(_ cents:)` clamps to the bounds. `dismissValueStep()`
+  (Not now, swipe-down) closes without writing.
+  `MarketSectionState.currentFigureFetchedAt` and the notice mapping
+  are unchanged; the pick's refresh reports through `marketNotice` like
+  any refresh, so a failed pick reads as a failed refresh.
+- **The picker view model** is unchanged; the pick calls the detail VM's
+  `setMatch`, which now owns the rest of the flow.
+- **The views.** `MarketMatchView` gains nothing; the sheet's content
+  switches on `sheetStep`: `MarketNoticeView`, `MarketMatchView`, a
+  fetching state (the picker's status-line pattern with
+  `MarketCopy.fetchingAskingPrices` over the picked candidate's card, so
+  the sheet does not go blank), and the new `MarketValueStepView`: the
+  title, the figure as the section draws it (median · count, spread),
+  the **`MarketValueSlider`**, the guidance line, the filled button with
+  the live amount, Not now. Detents: `.medium` for the notice and the
+  value step, `.large` for the picker and fetching. `MarketValueSlider`
+  is Trove's own control (the brief: bespoke inside the page): a thin
+  `divider` track with the filled portion in `accentBrass` up to the
+  knob, three marks (low, median, high — the median's taller), the end
+  amounts in mono meta beneath the ends, a drag gesture that maps x to
+  cents between the bounds in whole-currency steps and snaps to the
+  median within a few points of it; `accessibilityAdjustableAction`
+  stepping by 1 % of the range, label "Your value" / "Your estimated
+  cost", value the formatted amount, the hint from `MarketCopy`, the
+  marks as hidden decorations with the three labelled amounts read
+  through the slider's value text instead. The section's
+  `MarketSectionActions.adopt` closure now calls `openValueStep()`; the
+  button keeps its label ("Use as my value") and identifier.
+- **Copy.** `MarketCopy` gains `fetchingAskingPrices`,
+  `valueStepTitle(wanted:)`, `valueGuidance`, `useAmount(cents:wanted:)`
+  ("Use $1,450 as my value" / "Use $349 as estimated cost"),
+  `medianMark` ("median"), the slider label `yourValue(wanted:)` and
+  hint `sliderHint`, and the mark labels `lowestAskingPriceLabel(cents:)`
+  / `medianAskingPriceLabel` (reuse `figureAccessibilityLabel`) /
+  `highestAskingPriceLabel(cents:)`. `MarketCopyTests` pins each whole.
+  The two new view files join the vocabulary scan.
+- **Design.** One frame, `ValueStep.dc.html`, drawn in session as the
+  Phase 2 frames were, plus its PNG and a `tokens.md` table ("The value
+  step and the slider") with "as implemented" cells.
+
+### Guards (each with its red run)
+
+| # | Test | Red when |
+|---|---|---|
+| B1 | `MarketFigureComputationTests`: the oracle's excellent bucket yields `p10Cents`/`p90Cents` equal to its 4th and 31st sorted prices (recorded at implementation); `n = 3` → low and high; a synthetic set with one absurd high shows `p90 < high` | the percentile computed as a linear interpolation, or the rank off by one |
+| B2 | `MarketLocalSchemaTests` G4: the allowlist gains exactly the two names | a third field slips in |
+| B3 | Detail VMs (mirrored): `setMatchRefreshesAndOpensTheValueStep` (spy sees `product` then `listings`; `sheetStep == .value` with `chosenCents == median`; the record on a second context); `aFreshRePickSkipsTheFetch` (figure 5 min old → `.value`, spy uncalled); `aWithheldPickClosesToTheSection`; `aFailedPickClosesWithTheNotice` (`.unreachable`, the match kept, `isFindingMatch == false`); `adoptWritesTheChosenAmountNotTheMedian` (choose `upper`, second context reads `upper`; **mutation: write the median → red**); `adoptStillWritesNoHistoryAndFetchesNothing`; `openValueStepNeedsACurrentReading` (withheld/stale → no-op); `theChosenAmountIsClampedToTheBounds` | each named mutation |
+| B4 | `MarketValueBoundsTests`: nil percentiles → low/high; present → themselves | the fallback dropped |
+| B5 | `MarketWiringTests`: the sheet switches on `sheetStep` and composes all four phases; the section's adopt action calls `openValueStep()` (a scan over the two detail views' `MarketSectionActions(` argument lists); `MarketValueSlider` is not a `Slider(` (the boundary regex) and carries `accessibilityAdjustableAction`; the detents by phase | a system `Slider`; a phase dropped |
+| B6 | `MarketValueSliderRenderTests`: the knob's x at the default equals the median's fraction of the bounds (measured through `renderBitmap` by the brass fill's extent); the fill ink within ΔE of `accentBrass` | the default not the median; the fill token swapped |
+| B7 | `MarketCopyTests`: every new string whole, `useAmount` at both kinds, the mark labels | — |
+| B8 | UI: none new — the value step needs a live pick (Q13); T018 gains the flow: pick → fetching → slider at the median → drag → Use → the item's value on the detail and the dashboard; Not now writes nothing; the section's Use as my value opens the same step | — |
+
+### Costs accepted
+
+- The pick's refresh is one more request per pick — the same request a
+  Refresh tap would have made a moment later.
+- A record written before this amendment has no percentiles; the
+  slider falls back to low/high for it until its next refresh. No shipped
+  device has such a record.
+- `adopt()`'s callers in tests move to `adopt(cents:)`; the section's
+  adopt button no longer writes directly, so `adoptRefusesWithheldAndStale`
+  moves to `openValueStep` and `adopt(cents:)` both.
+
 ## Amendment A — year narrowing (spec Decision 29, P18–P22; 2026-09-03)
 
 Folded in after T002 at the person's direction. Grounded in a live

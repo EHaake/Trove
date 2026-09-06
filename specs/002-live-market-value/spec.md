@@ -1,6 +1,6 @@
 # 002 — Market Values
 
-**Amendment B — the adopt flow — Draft (2026-09-05), pending the person's approval.** Decisions 33–36, the amended Adopting and Refresh sections, criteria 8, 9 and 23, the Copy block "The value step" and the Design line are marked *(B)*. Drafted by Claude Code from the person's direction at the Phase 3 pause; every call in it is theirs to confirm or change.
+**Amendment B — the adopt flow — Approved 2026-09-05** ("Signed off on all decisions as is", the guidance sentence kept). Decisions 33–36, the amended Adopting and Refresh sections, criteria 8, 9 and 23, the Copy block "The value step" and the Design line are marked *(B)*. Drafted by Claude Code from the person's direction at the Phase 3 pause the same day.
 
 Status: **Approved** (2026-09-03, the day after drafting; one
 proposal — the year's cap on history — overturned at review as Decision
@@ -448,7 +448,8 @@ Added 2026-09-05, at the Phase 4 pause (the person):
     `docs/csv-reference.md` already said at T016b; P18 now says it too.
 
 Added 2026-09-05, Amendment B — the adopt flow (the person's direction at
-the Phase 3 pause, drafted by Claude Code; **Draft** until approved):
+the Phase 3 pause, drafted by Claude Code, **approved by the person the
+same day**):
 
 33. **A pick refreshes.** Choosing a candidate fetches that product's
     listings at once, in the same sheet, with a status line while it
