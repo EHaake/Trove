@@ -189,7 +189,7 @@ with one tap (Decision 2).
 |---|---|---|
 | The match (Reverb product identifier) | on the item | yes — the person's own data |
 | The item's year, when the person gives one | on the item | yes — the person's own data |
-| The last figure (median, low, high, count, fetched-at, the year it narrowed to) | on the device | no |
+| The last figure (median, low, high, count, fetched-at, the year it narrowed to; *(B)* the trimmed bounds the slider runs between — Decision 36) | on the device | no |
 | The matched product's catalog slug and title, for the link-back (Decision 20) | on the device | no |
 | The history of figures | on the device | no |
 | Anything from a listing (title, seller, image, listing id) | nowhere | — |

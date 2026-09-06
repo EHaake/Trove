@@ -329,7 +329,7 @@ eBay (its own spec, two prerequisites); `003`'s trend-aware ranking (this spec b
 
 ---
 
-## Amendment B — the adopt flow (spec Decisions 33–36, criteria 8, 9, 23; 2026-09-05) — **Draft**
+## Amendment B — the adopt flow (spec Decisions 33–36, criteria 8, 9, 23; 2026-09-05) — **Draft, revised after review round 1**
 
 Folded in at the Phase 3 pause at the person's direction, after using
 the shipped flow: match → return to the section → Refresh → Use as my
@@ -338,96 +338,156 @@ screen of Phase 3 exists, so this amendment reshapes rather than adds:
 the picker sheet gains two phases, the adopt intent takes an amount, and
 the figure record learns two numbers.
 
+### Q22 — the slider's labels once trimming bites (needs the person)
+
+Decision 36 trims the slider to the 10th–90th percentiles, and the
+approved Copy block names the spoken marks "lowest asking price $1,100"
+and "highest asking price $2,000" with the hint "Slides between the
+lowest and highest asking prices." For ten or more counted listings the
+track's ends are *not* the lowest and highest — the true spread sits
+outside it — so as approved the hint is false and the end marks name
+positions the slider cannot reach. Proposed, for the person's approval
+(the Copy block changes on it): the visible end labels carry the trimmed
+bounds' amounts; the spoken marks read "typical low asking price
+$1,150", "median asking price $1,450", "typical high asking price
+$1,900"; the hint reads "Slides between the typical low and high asking
+prices."; the true low–high stays in the figure line beside the slider
+("$1,100–$2,000"), read as today ("Asking prices from $1,100 to
+$2,000"). For fewer than ten listings the trimmed and true ends
+coincide, so "typical" stays true. Until approved, T021 lands the copy
+constants under these proposed strings marked in a comment, and T024
+reads them; the pins move if the person rewords.
+
 ### What changes where
 
 - **`MarketFigureComputation` and the record — the trimmed bounds
   (Decision 36).** `MarketFigure` gains `p10Cents: Int` and `p90Cents:
   Int`, computed in `compute` over the same sorted, counted prices as
   the median: nearest-rank percentiles — the `⌈P/100 · n⌉`-th smallest,
-  1-based — so for `n = 3` they are the low and the high, and for the
-  fixture's excellent bucket (`n = 34`) the 4th and the 31st. The
-  withheld reading has none. `MarketFigureRecord` gains `p10Cents:
-  Int?` and `p90Cents: Int?` (G4's allowlist grows by two; nil on a
-  record written before this amendment, which no shipped device has —
-  the bounds then fall back to low and high); `MarketHistoryPoint` is
-  unchanged (Decision 35: the history is the median's). `MarketSnapshotValue`
-  carries them; `MarketLocalStore.record` writes them.
-  `MarketValueBounds.bounds(for figure) -> (lower, upper)` is the one
-  place the fallback lives.
+  1-based — so `p10 = low` for `n ≤ 10` and `p90 = high` for `n ≤ 9`
+  (trimming begins at ten listings; a synthetic outlier test needs `n ≥
+  10`), and for the fixture's excellent bucket (`n = 34`) they are the
+  4th and the 31st sorted prices. The withheld reading has none.
+  `MarketFigureRecord` gains `p10Cents: Int?` and `p90Cents: Int?` (G4's
+  allowlist grows by exactly two; nil on a record written before this
+  amendment, which no shipped device has — the bounds then fall back to
+  low and high); `MarketHistoryPoint` is unchanged (Decision 35: the
+  history is the median's). `MarketSnapshotValue` carries them;
+  `MarketLocalStore.record` writes them. `MarketValueBounds.bounds(for
+  figure) -> (lower, upper)` is the one place the fallback lives. These
+  are numbers derived from listings, not listing content: G5′ is
+  unaffected, and the two-store line holds. **The spec's retention row
+  and `PRIVACY.md`'s enumeration of "the last figure" gain "the trimmed
+  bounds"** (both edited with this amendment; `PrivacyPolicyTests`
+  checks nouns, not the field list, so this is a hand edit).
+- **Whole currency, once.** `MarketValueStep` is constructed with
+  `lowerCents`, `upperCents` and the default `chosenCents` each passed
+  through `MarketAdoption.wholeCurrencyCents(from:)` — the record keeps
+  raw cents (the oracle's excellent median is `139_999`; the step's
+  default is `140_000`), the slider moves in whole-currency steps from a
+  whole start, and `adopt(cents:)` writes what it is handed, guarded by
+  a test that constructs a step from a non-whole median and asserts the
+  default, both bounds and the written amount are whole. Criterion 8's
+  "the whole-currency median by default" is therefore a property of the
+  step, tested there.
 - **The detail view models — the sheet's phases (Decisions 33–34).** The
   sheet's `noticeIsPending` Bool becomes `sheetStep: MarketSheetStep`
-  (`.notice`, `.pick`, `.fetching`, `.value(MarketValueStep)`), with
-  `isFindingMatch` kept as the presentation flag (the wiring scans pin
-  it; renaming buys nothing). `findMatch()` sets `.notice` or `.pick` as
-  today. `setMatch(candidate)` keeps its one save (the id, `updatedAt`,
-  the snapshot, `clear` on a changed product), then — new — sets
-  `.fetching`, awaits the refresher for this item (`.stillFresh` is a
-  hit: no second request within the hour, P7), and lands: a `.current`
-  reading → `.value(step)` with `chosenCents = medianCents`; anything
-  else (withheld, `.failed`, `.saveFailed`, `.superseded`) → the sheet
-  closes (`isFindingMatch = false`) and the section shows what it
-  shows today (the withheld copy, or the failure line over the match).
-  `openValueStep()` — the section's adopt action from now on — presents
-  the sheet directly at `.value` when the reading is `.current`; it is
-  a no-op otherwise (`canAdopt` already gates the button). `adopt(cents:)`
-  replaces `adopt()`: it writes `MarketAdoption.wholeCurrencyCents(from:
-  cents)` (the slider moves in whole currency, so this is the identity
-  today and stays the one rounding rule), bumps `updatedAt` on owned,
-  saves once, writes no history, fetches nothing, closes the sheet.
-  `MarketValueStep { medianCents, lowCents, highCents, count,
-  lowerCents, upperCents, chosenCents }` is a plain value the view binds
-  to; `setChosen(_ cents:)` clamps to the bounds. `dismissValueStep()`
-  (Not now, swipe-down) closes without writing.
-  `MarketSectionState.currentFigureFetchedAt` and the notice mapping
-  are unchanged; the pick's refresh reports through `marketNotice` like
-  any refresh, so a failed pick reads as a failed refresh.
-- **The picker view model** is unchanged; the pick calls the detail VM's
-  `setMatch`, which now owns the rest of the flow.
-- **The views.** `MarketMatchView` gains nothing; the sheet's content
-  switches on `sheetStep`: `MarketNoticeView`, `MarketMatchView`, a
-  fetching state (the picker's status-line pattern with
-  `MarketCopy.fetchingAskingPrices` over the picked candidate's card, so
-  the sheet does not go blank), and the new `MarketValueStepView`: the
-  title, the figure as the section draws it (median · count, spread),
-  the **`MarketValueSlider`**, the guidance line, the filled button with
-  the live amount, Not now. Detents: `.medium` for the notice and the
-  value step, `.large` for the picker and fetching. `MarketValueSlider`
-  is Trove's own control (the brief: bespoke inside the page): a thin
-  `divider` track with the filled portion in `accentBrass` up to the
-  knob, three marks (low, median, high — the median's taller), the end
-  amounts in mono meta beneath the ends, a drag gesture that maps x to
-  cents between the bounds in whole-currency steps and snaps to the
-  median within a few points of it; `accessibilityAdjustableAction`
-  stepping by 1 % of the range, label "Your value" / "Your estimated
-  cost", value the formatted amount, the hint from `MarketCopy`, the
-  marks as hidden decorations with the three labelled amounts read
-  through the slider's value text instead. The section's
+  (`.notice`, `.pick`, `.fetching(MarketCandidate)`, `.value(MarketValueStep)`),
+  with `isFindingMatch` kept as the presentation flag (the wiring scans
+  pin it; renaming buys nothing). `findMatch()` sets `.notice` or `.pick`
+  as today. **`setMatch(_:) async`** keeps its one save (the id,
+  `updatedAt`, the snapshot, `clear` on a changed product); a refused
+  save rolls back and closes the sheet without fetching (the T009 rule).
+  Then — new — it sets `sheetStep = .fetching(candidate)` and
+  `marketActivity = .refreshing` (so `canRefresh` and `canAdopt` are
+  false throughout, and a second refresh cannot start underneath the
+  sheet), awaits the refresher for this item (`.stillFresh` is a hit —
+  no second request within the hour, P7), clears the activity, maps the
+  outcome to `marketNotice` (the date read from the re-derived state
+  *after* the save, so a changed product's cleared figure can never date
+  a failure line), then `loadMarket()`. **The landing rule, stated
+  once:** if `marketState`'s reading is now `.current` **and the sheet
+  is still presented**, `sheetStep = .value(step)` with `chosenCents`
+  the whole-currency median; in every other case the sheet closes
+  (`isFindingMatch = false`) and the section shows what it shows today
+  (the withheld copy, or the failure line over the kept match). An
+  outcome that lands after the person swiped the `.fetching` sheet away
+  updates the section and the notice and **never re-presents** the
+  sheet. `openValueStep()` — the section's adopt action from now on —
+  presents the sheet directly at `.value` when the reading is `.current`
+  and nothing is refreshing; it is a no-op otherwise (`canAdopt` already
+  gates the button). `adopt(cents:)` replaces `adopt()`: it writes the
+  amount, bumps `updatedAt` on owned, saves once, writes no history,
+  fetches nothing, closes the sheet. `MarketValueStep { medianCents,
+  lowCents, highCents, count, lowerCents, upperCents, chosenCents }` is
+  a plain value the view binds to; `setChosen(_ cents:)` clamps to the
+  bounds. `dismissValueStep()` (Not now, swipe-down) closes without
+  writing. `currentFigureFetchedAt` and the notice mapping are unchanged.
+- **The picker.** `MarketMatchViewModel` is unchanged. `MarketMatchView`'s
+  `pick` closure becomes `(MarketCandidate) async -> Void`, called from
+  the card's button inside a `Task`; the detail views pass
+  `viewModel.setMatch` as before (the wiring scan's pinned string moves
+  with the signature).
+- **The views.** The sheet's content switches on `sheetStep`:
+  `MarketNoticeView`, `MarketMatchView`, the fetching state (the picked
+  candidate's card with the picker's status-line pattern reading
+  `MarketCopy.fetchingAskingPrices`, so the sheet does not go blank), and
+  the new `MarketValueStepView`: the title, the figure as the section
+  draws it (median · count, the true spread), the **`MarketValueSlider`**,
+  the guidance line, the filled button with the live amount, Not now.
+  Detents: `.medium` for the notice and the value step, `.large` for the
+  picker and fetching. `MarketValueSlider` is Trove's own control (the
+  brief: bespoke inside the page): a thin `divider` track with the
+  filled portion in `accentBrass` up to the knob, three marks (the two
+  ends and the median, the median's taller), the end amounts in mono
+  meta beneath the ends, a drag gesture mapping x to cents between the
+  bounds in whole-currency steps, snapping to the median within
+  `MarketValueSlider.snapTolerance` (6 pt) of it; `accessibilityAdjustableAction`
+  stepping by `MarketValueSlider.adjustableStep` (1 % of the range,
+  rounded to whole currency, never less than one unit), label "Your
+  value" / "Your estimated cost", value the formatted amount, the hint
+  and mark labels from `MarketCopy` (Q22). The section's
   `MarketSectionActions.adopt` closure now calls `openValueStep()`; the
-  button keeps its label ("Use as my value") and identifier.
+  button keeps its label and identifier.
 - **Copy.** `MarketCopy` gains `fetchingAskingPrices`,
   `valueStepTitle(wanted:)`, `valueGuidance`, `useAmount(cents:wanted:)`
   ("Use $1,450 as my value" / "Use $349 as estimated cost"),
-  `medianMark` ("median"), the slider label `yourValue(wanted:)` and
-  hint `sliderHint`, and the mark labels `lowestAskingPriceLabel(cents:)`
-  / `medianAskingPriceLabel` (reuse `figureAccessibilityLabel`) /
-  `highestAskingPriceLabel(cents:)`. `MarketCopyTests` pins each whole.
-  The two new view files join the vocabulary scan.
+  `medianMark` ("median"), `yourValue(wanted:)`, `sliderHint`,
+  `typicalLowLabel(cents:)` / `typicalHighLabel(cents:)` (Q22's wording,
+  pending), reusing `figureAccessibilityLabel` for the median mark.
+  `MarketCopyTests` pins each whole. The two new view files join the
+  vocabulary scan.
 - **Design.** One frame, `ValueStep.dc.html`, drawn in session as the
-  Phase 2 frames were, plus its PNG and a `tokens.md` table ("The value
-  step and the slider") with "as implemented" cells.
+  Phase 2 frames were and **approved by the person before the slider and
+  view tasks start** (Decisions 10, 17), plus its PNG and a `tokens.md`
+  table ("The value step and the slider") with "as implemented" cells.
+- **Churn the wiring scans take:** `MarketWiringTests` pins
+  `viewModel.noticeIsPending` (the sheet branch) and the detent
+  `.onChange(of: viewModel.noticeIsPending …)` in both detail views;
+  both move to `sheetStep`. `noticeIsPending` is **removed**, not kept as
+  a derived property to keep the scans green.
 
 ### Guards (each with its red run)
 
 | # | Test | Red when |
 |---|---|---|
-| B1 | `MarketFigureComputationTests`: the oracle's excellent bucket yields `p10Cents`/`p90Cents` equal to its 4th and 31st sorted prices (recorded at implementation); `n = 3` → low and high; a synthetic set with one absurd high shows `p90 < high` | the percentile computed as a linear interpolation, or the rank off by one |
+| B1 | `MarketFigureComputationTests`: the oracle's excellent bucket yields `p10Cents`/`p90Cents` equal to its 4th and 31st sorted prices (the numbers recorded at implementation from the fixture); `n = 3` → low and high; a synthetic set of twelve with one absurd high shows `p90 < high` and `p10 == low` only if the low is within the first tenth | the percentile computed as a linear interpolation, or the rank off by one |
 | B2 | `MarketLocalSchemaTests` G4: the allowlist gains exactly the two names | a third field slips in |
-| B3 | Detail VMs (mirrored): `setMatchRefreshesAndOpensTheValueStep` (spy sees `product` then `listings`; `sheetStep == .value` with `chosenCents == median`; the record on a second context); `aFreshRePickSkipsTheFetch` (figure 5 min old → `.value`, spy uncalled); `aWithheldPickClosesToTheSection`; `aFailedPickClosesWithTheNotice` (`.unreachable`, the match kept, `isFindingMatch == false`); `adoptWritesTheChosenAmountNotTheMedian` (choose `upper`, second context reads `upper`; **mutation: write the median → red**); `adoptStillWritesNoHistoryAndFetchesNothing`; `openValueStepNeedsACurrentReading` (withheld/stale → no-op); `theChosenAmountIsClampedToTheBounds` | each named mutation |
+| B3 | Detail VMs (mirrored): `setMatchRefreshesAndOpensTheValueStep` (spy sees `product` then `listings`; `sheetStep == .value` with `chosenCents == wholeCurrency(median)`; `marketActivity` was `.refreshing` mid-flight through the gated spy and is nil after; the record on a second context); `aFreshRePickSkipsTheFetch` (figure 5 min old → `.value`, spy uncalled); `aWithheldPickClosesToTheSection`; `aFailedPickClosesWithTheNotice` (`.unreachable`, the match kept, `isFindingMatch == false`, the notice carrying no date after a changed product); `aDismissedFetchLandsQuietly` (swipe-down mid-fetch → the outcome lands, `isFindingMatch` stays false, the section current); `adoptWritesTheChosenAmountNotTheMedian` (choose `upper`, second context reads `upper`; **mutation: write the median → red**); `adoptStillWritesNoHistoryAndFetchesNothing`; `openValueStepNeedsACurrentReading` (withheld/stale/refreshing → no-op); `theChosenAmountIsClampedToTheBounds`; `theStepIsWholeCurrencyFromANonWholeMedian` | each named mutation |
 | B4 | `MarketValueBoundsTests`: nil percentiles → low/high; present → themselves | the fallback dropped |
-| B5 | `MarketWiringTests`: the sheet switches on `sheetStep` and composes all four phases; the section's adopt action calls `openValueStep()` (a scan over the two detail views' `MarketSectionActions(` argument lists); `MarketValueSlider` is not a `Slider(` (the boundary regex) and carries `accessibilityAdjustableAction`; the detents by phase | a system `Slider`; a phase dropped |
-| B6 | `MarketValueSliderRenderTests`: the knob's x at the default equals the median's fraction of the bounds (measured through `renderBitmap` by the brass fill's extent); the fill ink within ΔE of `accentBrass` | the default not the median; the fill token swapped |
-| B7 | `MarketCopyTests`: every new string whole, `useAmount` at both kinds, the mark labels | — |
-| B8 | UI: none new — the value step needs a live pick (Q13); T018 gains the flow: pick → fetching → slider at the median → drag → Use → the item's value on the detail and the dashboard; Not now writes nothing; the section's Use as my value opens the same step | — |
+| B5 | `MarketWiringTests`: the sheet switches on `sheetStep` and composes all four phases; the section's adopt action calls `openValueStep()` (a scan over both detail views' `MarketSectionActions(` argument lists); `MarketValueSlider.swift` has no `Slider(` (the boundary regex) and carries `accessibilityAdjustableAction`; the detents by phase; `noticeIsPending` appears nowhere | a system `Slider`; a phase dropped; the old flag kept |
+| B6 | `MarketValueSliderRenderTests`: with bounds 1000 / 2000 and median 1300 (off-centre, strictly inside — the fraction 0.3 written as a literal), the brass fill's measured extent is 30 % of the track; the fill ink within ΔE of `accentBrass`; the adjustable action moves the chosen amount by exactly `adjustableStep` | the default not the median; a midpoint default; the fill token swapped; the step constant unread |
+| B7 | `MarketCopyTests`: every new string whole, `useAmount` at both kinds, the mark labels (Q22's wording) | — |
+| B8 | UI: none new — the value step needs a live pick (Q13); T018 gains the flow: pick → fetching → slider at the median → drag → Use → the item's value on the detail and the dashboard; Not now writes nothing; the section's Use as my value opens the same step; swipe-down mid-fetch leaves the section correct | — |
+
+### Tasks (the shape; drafted into tasks.md on sign-off)
+
+T020 the value-step frame **[person approves]** → T021 computation +
+record + bounds + copy + the retention/privacy edits (foundational;
+reviewer) → T022 the detail VMs' phases, `setMatch` async, `adopt(cents:)`
+(foundational; reviewer) → T023 `MarketValueSlider` + its render and
+accessibility guards → T024 `MarketValueStepView`, the sheet's four
+phases, the fetching card, wiring; T018 gains the B8 lines.
 
 ### Costs accepted
 
@@ -439,6 +499,7 @@ the figure record learns two numbers.
 - `adopt()`'s callers in tests move to `adopt(cents:)`; the section's
   adopt button no longer writes directly, so `adoptRefusesWithheldAndStale`
   moves to `openValueStep` and `adopt(cents:)` both.
+- The wiring-scan churn above.
 
 ## Amendment A — year narrowing (spec Decision 29, P18–P22; 2026-09-03)
 

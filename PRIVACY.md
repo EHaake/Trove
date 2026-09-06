@@ -22,7 +22,7 @@ signed in; the market figures Trove fetches from Reverb deliberately do not.
 | Your own value for an item, adopted or typed | on your device | yes, to your private iCloud database |
 | The match — the Reverb product identifier you picked for an item | on your device | yes, to your private iCloud database |
 | The item's year, when you give one | on your device | yes, to your private iCloud database |
-| The last figure for a matched item — median, low, high, count, when it was fetched, the year it narrowed to | on your device | no |
+| The last figure for a matched item — median, low, high, count, when it was fetched, the year it narrowed to, and the trimmed range the value slider runs between | on your device | no |
 | The matched product's catalog slug and title, so the link back to Reverb works without another request | on your device | no |
 | The history of figures for a matched item | on your device | no |
 | Anything from an individual listing — its title, seller, image or listing identifier | nowhere; it is never stored | — |
