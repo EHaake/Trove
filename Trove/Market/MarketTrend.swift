@@ -24,9 +24,36 @@ nonisolated enum MarketTrend: String, Sendable, CaseIterable {
     case down
     case flat
 
+    /// The two readings a trend is drawn from, kept together (003 plan Q3):
+    /// the latest median, the median and date of the point it was compared
+    /// against, and the classification. The Sell Plan's reason line dates
+    /// itself by `previousAt`, so the date and the figure it belongs to must
+    /// come from the *same* point — carrying them as one value is what makes
+    /// that true by construction rather than by two matching lookups.
+    struct Comparison: Sendable, Equatable {
+        let latestCents: Int
+        let previousCents: Int
+        let previousAt: Date
+        let trend: MarketTrend
+
+        /// (latest − previous) × 100 / previous, signed.
+        ///
+        /// The numerator is multiplied in exact integers **before** the one
+        /// division, so a true half is representable and rounds half away
+        /// from zero: 1000 → 1145 is 14500/1000 = 14.5 → 15, where dividing
+        /// first gives 0.145 × 100 = 14.499… → 14.
+        var percent: Int {
+            let delta = latestCents - previousCents
+            return Int((Double(delta * 100) / Double(previousCents)).rounded())
+        }
+    }
+
     static let minimumGap: TimeInterval = 7 * 24 * 60 * 60
 
-    static func compute(history: [MarketHistoryEntry]) -> MarketTrend? {
+    /// The latest reading against the most recent point at least seven days
+    /// older — the whole of the trend derivation, so `compute` and anything
+    /// that needs the numbers behind the arrow read one selection.
+    static func comparison(history: [MarketHistoryEntry]) -> Comparison? {
         let sorted = history.sorted { $0.fetchedAt < $1.fetchedAt }
         guard let latest = sorted.last else { return nil }
         guard let previous = sorted.dropLast().last(where: {
@@ -36,9 +63,41 @@ nonisolated enum MarketTrend: String, Sendable, CaseIterable {
 
         // Integer arithmetic so the 5 % boundary is exact.
         let delta = latest.medianCents - previous.medianCents
-        if 20 * delta >= previous.medianCents { return .up }
-        if 20 * -delta >= previous.medianCents { return .down }
-        return .flat
+        let trend: MarketTrend
+        if 20 * delta >= previous.medianCents {
+            trend = .up
+        } else if 20 * -delta >= previous.medianCents {
+            trend = .down
+        } else {
+            trend = .flat
+        }
+        return Comparison(
+            latestCents: latest.medianCents,
+            previousCents: previous.medianCents,
+            previousAt: previous.fetchedAt,
+            trend: trend
+        )
+    }
+
+    static func compute(history: [MarketHistoryEntry]) -> MarketTrend? {
+        comparison(history: history)?.trend
+    }
+}
+
+/// What the Sell Plan's reason line says (003 plan Q3): a rise, and only a
+/// rise. The initialiser is failable on the trend rather than on the sign of
+/// the percentage, so a flat item whose percentage rounds to 5 % can never
+/// produce a sentence saying it is up — the bands decide, the rounding only
+/// draws.
+nonisolated struct MarketRise: Sendable, Equatable {
+    let percent: Int
+    /// The earlier reading's date — the "since" of the sentence.
+    let since: Date
+
+    init?(comparison: MarketTrend.Comparison) {
+        guard comparison.trend == .up else { return nil }
+        percent = comparison.percent
+        since = comparison.previousAt
     }
 }
 

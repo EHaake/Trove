@@ -176,6 +176,37 @@ struct MarketCopyTests {
         #expect(domainHasADot, "no domain after the @: \(address)")
     }
 
+    // MARK: - The Sell Plan (003)
+
+    /// Noon in the current calendar, so no time zone puts the date on the
+    /// wrong day.
+    private func noon(_ year: Int, _ month: Int, _ day: Int) throws -> Date {
+        try #require(Calendar.current.date(from: DateComponents(year: year, month: month, day: day, hour: 12)))
+    }
+
+    @Test func theSellPlansMarketLineNamesReverb() {
+        #expect(MarketCopy.sellPlanMarketLine(medianCents: 140_000) == "$1,400 on Reverb")
+    }
+
+    @Test func theReasonLineCarriesThePercentageAndTheEarlierReadingsDate() throws {
+        let line = MarketCopy.sellPlanReason(percent: 12, since: try noon(2026, 8, 5), now: try noon(2026, 9, 6))
+        #expect(line == "Asking prices on Reverb are up 12\u{202F}% since Aug 5.")
+    }
+
+    @Test func theReasonLineAddsTheYearWhenTheReadingIsFromAnother() throws {
+        #expect(MarketCopy.sellPlanReason(percent: 12, since: try noon(2025, 8, 5), now: try noon(2026, 9, 6))
+            == "Asking prices on Reverb are up 12\u{202F}% since Aug 5, 2025.")
+    }
+
+    /// The rule is the calendar year, not an interval: two days apart, and
+    /// the year is shown because they fall either side of New Year.
+    @Test func theYearRuleIsTheCalendarYearNotAnInterval() throws {
+        #expect(MarketCopy.sellPlanReason(percent: 12, since: try noon(2025, 12, 31), now: try noon(2026, 1, 2))
+            == "Asking prices on Reverb are up 12\u{202F}% since Dec 31, 2025.")
+        #expect(MarketCopy.sellPlanReason(percent: 12, since: try noon(2026, 1, 1), now: try noon(2026, 12, 31))
+            == "Asking prices on Reverb are up 12\u{202F}% since Jan 1.")
+    }
+
     // MARK: - The year field, accessibility
 
     @Test func theYearField() {
