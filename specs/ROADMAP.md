@@ -28,6 +28,7 @@ own.
 | `011-data-export` | **Shipped** — merged to `main` 2026-08-31 via [PR #5](https://github.com/EHaake/Trove/pull/5); all nineteen tasks done, twelve criteria verified, close-out review findings dispositioned in `tasks.md` |
 | `012-data-import` | **Shipped** — merged to `main` 2026-09-01 via [PR #7](https://github.com/EHaake/Trove/pull/7); all eighteen tasks done, sixteen criteria verified with a per-criterion record in `spec.md`; the T017 device pass and T018 audit each caught and fixed a real defect before merge |
 | `013-settings-menu` | **Shipped** — merged to `main` 2026-09-02 via [PR #9](https://github.com/EHaake/Trove/pull/9); seventeen tasks plus Amendment A's nine (the Dashboard "…" and bespoke in-page menus, decided after the first close-out and before merge), twenty-seven criteria verified with per-criterion records in `spec.md`; three false-passing guards caught across the two phases, and the render oracle, the frame-by-frame recording and the safe-area probe each overturned a plan claim before it shipped |
+| `002-live-market-value` | **Shipped** — merged to `main` 2026-09-05 via [PR #11](https://github.com/EHaake/Trove/pull/11); twenty-nine tasks (T001a–T024 with sub-letters, Amendments A and B folded in during implementation), twenty-three criteria verified with per-criterion records in `spec.md`; the first spec under the constitution's model policy, its tier log in `tasks.md`; the pre-merge sweep's one blocking finding settled by instrumentation on the simulator (not a defect) and one two-device gap recorded for a `fix/` branch |
 
 ## Future specs
 
@@ -37,18 +38,40 @@ backlog of what v1 deliberately didn't do. Roughly in dependency order;
 after 003, the rest are independent and can happen in whatever order is
 actually useful once the app is in daily use.
 
-- **`002-live-market-value`** — Pull resale values from eBay, Reverb,
-  Facebook Marketplace, or similar, to replace the manually-entered
-  `currentValueCents`. The real unlock, and the one with genuine
-  complexity: real API access, and possibly ToS friction depending on
-  source (see plan.md's original discussion of this in
-  `001-core-inventory` for the caution around scraping vs. official
-  APIs).
+- **`002-live-market-value`** (**Shipped 2026-09-05** via
+  [PR #11](https://github.com/EHaake/Trove/pull/11) — see
+  `specs/002-live-market-value/` for the full record) — first imagined
+  as pulling resale values from eBay, Reverb or Facebook Marketplace to
+  *replace* the manually-entered `currentValueCents`. What shipped is
+  narrower on purpose: a **Reverb asking-price indicator beside the
+  person's value, never in place of it** — you pick the match from a
+  candidate list, the pick fetches the current asking prices at once,
+  and a slider between the typical low and high (10th–90th percentile)
+  lets you set your own value from the median in one drag; the median,
+  spread, count and age sit in a Market section on both detail screens,
+  as a trend arrow on the rows, a Market sort, and a dashboard line
+  always stated with its coverage. Figures and their history stay on
+  the device that fetched them (a second, unsynced SwiftData store);
+  only the match and the year sync. No source offers sold prices to a
+  non-partner, so no "sold" figure exists anywhere in the app, and a
+  crawler was declined on terms and privacy grounds (spec Decision 1).
+  `PRIVACY.md` and the one-time notice came with it.
+- **eBay asking prices** — the follow-up `002`'s Decision 1 deferred.
+  Two prerequisites before it can be scoped: a **hosted proxy service**
+  (eBay's token flow needs a secret that cannot ship in an iOS app, and
+  its licence forbids persisting or modelling prices from its content,
+  so the app could only ever display what a server relays), and a
+  **decision to accept that access** — production access is documented
+  as partner-only. Cameras and hi-fi, which Reverb barely covers, wait
+  on this.
 - **`003-trend-aware-sell-plan`** — Upgrade the Sell Plan's ranking to
   factor in market-value trend, not just desire-to-keep — surfacing an
   item because it's both low-attachment *and* currently selling well.
-  Depends on `002` existing first; this is where the originally-described
-  "killer feature" actually lands. The Sell Plan's persistence and
+  Depends on `002` existing first — and `002` has shipped: every refresh
+  writes a history point on the device and the rows already read a
+  seven-day ±5 % trend from it (`MarketTrend`), so this spec's input
+  exists; this is where the originally-described "killer feature"
+  actually lands. The Sell Plan's persistence and
   selection mechanics were built in `001` specifically so this upgrade
   only touches the ranking algorithm, not the screen's shape.
 - **`004-themes`** — Light mode, plus a small set of additional curated
@@ -196,7 +219,11 @@ actually useful once the app is in daily use.
     data: new CSV columns are a canonical-schema change made together
     with `012`'s parser, and the PDF's field grid and cover should
     carry the new figures. `011`'s plan.md schema section records the
-    mechanics (append-only column growth).
+    mechanics (append-only column growth). *(`002` did the CSV half —
+    `Reverb Product ID` and `Year` appended, `012`'s parser widened —
+    and overrode the PDF half by its P17: the fetched figures are
+    per-device asking prices, not the person's values, so the PDF
+    carries the match and the year but never the figures.)*
   - **Sell-plan export** — a wishlist item's Sell Plan (the gear
     weighed against funding it) appears in no export today; deferred
     deliberately, not overlooked.
