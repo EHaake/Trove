@@ -49,14 +49,17 @@ purchases.
   [`docs/samples/`](docs/samples/README.md).
 - **Market values** — a Reverb asking-price indicator beside your own
   value, never in place of it. You pick the match yourself from a
-  candidate list, and nothing is fetched until you ask: a refresh
-  reports the median asking price of the current listings in your
-  item's condition (all used listings, for something on the wishlist),
-  with the spread, how many listings it came from, and how long ago it
-  was taken. Adopt it as your own value with one tap, or don't. The
-  figures and their history stay on the device that fetched them and
-  never sync, and a first search asks you first — see
-  [`PRIVACY.md`](PRIVACY.md).
+  candidate list; the pick fetches the current asking prices at once
+  and offers them on a slider between the typical low and high asking
+  price, resting on the median, so you set your own value with a drag
+  and a tap — or step back and keep what you had. The detail then
+  shows the median asking price of the current listings in your item's
+  condition (all used listings, for something on the wishlist),
+  narrowed to the year it was made when you've given one, with the
+  spread, how many listings it came from, and how long ago it was
+  taken; a refresh is one tap, at most once an hour. The figures and
+  their history stay on the device that fetched them and never sync,
+  and a first search asks you first — see [`PRIVACY.md`](PRIVACY.md).
 - **Settings** — one sheet, reached from the "…" on either list or on
   the dashboard: export *everything* as a CSV pair or a PDF pair (one
   share sheet, two files), the blank import templates, a live iCloud

@@ -803,7 +803,10 @@ pass on the ~307-item dev store. Honest partials are stated as such.
    and after the items delete both export rows disabled.
 8. Templates — `SettingsViewModelTemplateTests` (bytes and names, the
    012 pins re-homed); on device the wishlist template staged at
-   68 bytes, as in 012.
+   68 bytes, as in 012. *(2026-09-05, at 002's close-out: 91 bytes
+   since 002 appended `Reverb Product ID` and `Year` to the wishlist
+   header; `SettingsViewModelTemplateTests` derives the expected bytes
+   from `ExportSchema.wishlistHeaders`, so it followed by itself.)*
 9. iCloud row — `SyncStatusCopyTests` (full-string table, nil/short/long
    reasons) and `theICloudRowFollowsTheMonitorLive`; on device the
    signed-out simulator read "iCloud isn't available". *Honest partial*:

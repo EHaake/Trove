@@ -19,7 +19,7 @@ struct ReorderWiringTests {
     /// decision reversed three times (T028 → T028a), and until now its only
     /// enforcement was a prose note that a one-time grep found nothing.
     @Test func noEditModeUIAnywhereInTheAppTarget() throws {
-        for path in try Self.allAppSwiftFiles() {
+        for path in try SourceScan.swiftFiles(under: "Trove", minimum: 21) {
             let code = try SourceScan.production(path)
             #expect(!code.contains("editMode"), "\(path) touches editMode")
             #expect(!code.contains("EditButton"), "\(path) uses EditButton")
@@ -60,24 +60,5 @@ struct ReorderWiringTests {
                     which is exactly what T029b removed: \(body)
                     """)
         }
-    }
-
-    /// Every Swift file under `Trove/`, repo-relative — the walk itself is
-    /// asserted non-trivial so a moved source root fails loudly instead of
-    /// scanning nothing and passing.
-    private static func allAppSwiftFiles(file: StaticString = #filePath) throws -> [String] {
-        let root = URL(filePath: "\(file)")
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appending(path: "Trove")
-        let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
-        var paths: [String] = []
-        while let url = walker?.nextObject() as? URL {
-            if url.pathExtension == "swift" {
-                paths.append("Trove/" + url.path.replacingOccurrences(of: root.path + "/", with: ""))
-            }
-        }
-        try #require(paths.count > 20, "source walk found only \(paths.count) files — wrong root?")
-        return paths.sorted()
     }
 }

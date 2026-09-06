@@ -329,6 +329,74 @@ eBay (its own spec, two prerequisites); `003`'s trend-aware ranking (this spec b
 
 ---
 
+## As built (2026-09-05, at T019's close-out)
+
+Where the shipped code differs from the sections above, and the
+numbers the plan promised to record. The dated *as built* notes inside
+§1, §6, §7, §8 and Amendment B stand; this is the summary.
+
+- **Task numbering.** The plan's Phase 5 names the device pass T019 and
+  the close-out T020; `tasks.md` shipped them as **T018** and **T019**,
+  with Amendment B's five tasks as **T020–T024** in Phase 3b. The
+  tasks file is the authority for the numbers.
+- **The two-store spike (§1, R1)** held: `TwoStoreContainerTests` builds
+  the production pairing through the real builder into a scratch
+  directory and finds the `MarketFigureRecord` in `MarketLocal.store`
+  alone, the `Item` — and no record — in `default.store`. On the
+  simulator's dev store both files exist: `default.store` 434 KB,
+  `MarketLocal.store` 139 KB at T001a. The fallback that would have put
+  a second context into five view models was never needed.
+- **The `.automatic` audit (§1, Q19)**: a local configuration that
+  inherits `.automatic` refuses the market models' unique constraints
+  through all three attempts and the app dies in `TroveApp`'s
+  `fatalError` — so the app's local configuration passes
+  `cloudKitDatabase: .none` explicitly and **G2b** (a source scan) is
+  the guard, because the identifier tests cannot see an inherited
+  `.automatic`. Mutation M2 confirmed the crash; M2′ confirmed the scan.
+- **Q21 as shipped**: a corrupt local store no longer ends in
+  `fatalError`. The container builder's third attempt calls its
+  injectable `recreateLocalStore` closure — by default
+  `TroveStore.removeLocalStoreFiles`, which deletes the local store's
+  files (never the collection's `default.store`; the "never the
+  collection" assertion caught M3 handing it the collection URL) — and
+  rebuilds the pair. Three tests in `TroveStoreTests`.
+- **The Sort By surface (§6, rows and sort)** measured 232 × 327 points
+  at seven rows on the iPhone 17 Pro (`DropdownPlacementTests`, through
+  `renderBitmap`), hanging below the badge on both lists with Market ↓ /
+  Market ↑ after Value / Cost.
+- **The notice's acknowledgement** lives in the local store
+  (`MarketDeviceState.noticeAcknowledgedAt`), not `UserDefaults`, so it
+  follows Decision 20's "on that device" exactly — and under `-uiTesting`
+  it is in memory, which is why the across-a-relaunch check needs the
+  dev store (T018).
+- **Shared derivations.** `MarketSummary.summaries(forSubjects:in:now:)`
+  is the one place both lists and the dashboard read the current figure;
+  `FieldNormalization.earliestYear = 1900` is shared by both forms and
+  the importer; `MarketSection` split into `MarketFigureRow`,
+  `MarketSpreadLine`, `MarketQuietLine` and `MarketButtons` when the
+  value step reused them.
+- **The dashboard's market line** lifts the amount to a medium weight
+  through one `AttributedString` (`lineLimit(1)`, `minimumScaleFactor
+  0.6`); read as a real weight on the simulator at T018.
+- **The contract (§7)**: items 14 columns, wishlist 9, boundaries
+  `[12]` / `[7]`; `requireHeader` returns the width it matched;
+  `items-partial.csv` stays at 12 as the prefix-accepted sample.
+- **Amendment B's mechanics** — the fetch token, the generation rule,
+  the landing rule, whole-currency rounding once — are recorded in that
+  section's dated notes; the interim spinner sheet between T022 and
+  T024 was the recorded interim and is gone.
+- **Verification at close**: the unit suite **1103 tests in 148 suites**,
+  green twice back to back; the UI suite **13 tests**, green twice. The
+  live network was touched twice in the spec's life — the fixture script
+  at T002 and the device pass at T018 — and by no test.
+- **Carried out of the spec** (honest partials, spec criteria block):
+  a real 429 was never seen; the second-device history and match checks
+  need two signed-in devices; "is published" waits on the merge;
+  VoiceOver, Link Conditioner, `mailto:` and a physical device are the
+  person's; the arrow on a live row needs a week of history.
+
+---
+
 ## Amendment B — the adopt flow (spec Decisions 33–36, criteria 8, 9, 23; 2026-09-05) — **Signed off** (skeptical-reviewer, top tier, two rounds, 2026-09-05; Q22 carried to the person at the T020 pause; round 2's seven second-look items folded below)
 
 Folded in at the Phase 3 pause at the person's direction, after using

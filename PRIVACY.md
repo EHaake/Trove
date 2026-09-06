@@ -22,9 +22,10 @@ signed in; the market figures Trove fetches from Reverb deliberately do not.
 | Your own value for an item, adopted or typed | on your device | yes, to your private iCloud database |
 | The match — the Reverb product identifier you picked for an item | on your device | yes, to your private iCloud database |
 | The item's year, when you give one | on your device | yes, to your private iCloud database |
-| The last figure for a matched item — median, low, high, count, when it was fetched, the year it narrowed to, and the trimmed range the value slider runs between | on your device | no |
+| The last figure for a matched item — median, low, high, count, when it was fetched, the year it narrowed to, whether it fell back to all years, whether Reverb's page of listings was capped, the trimmed range the value slider runs between, the trend Trove worked out from its own history, and the catalog's lowest used asking price for the withheld case | on your device | no |
 | The matched product's catalog slug and title, so the link back to Reverb works without another request | on your device | no |
 | The history of figures for a matched item | on your device | no |
+| When you tapped Continue on the one-time notice, so it is not shown again | on your device | no |
 | Anything from an individual listing — its title, seller, image or listing identifier | nowhere; it is never stored | — |
 
 A matched item's history is kept for as long as the match exists. Removing the
@@ -58,9 +59,11 @@ a product request is governed by Reverb's own privacy policy, not this one.
 > This application uses the Reverb API but is not endorsed, created by or certified by Reverb.com, LLC.
 
 Of what Reverb returns, Trove keeps only the summary numbers described above —
-a median, a low, a high, a count, a timestamp, the year it narrowed to, the
-trimmed range the value slider runs between — plus the matched product's slug
-and title for the link back. It never stores a listing's title, its seller, its image or its
+a median, a low, a high, a count, a timestamp, the year it narrowed to and
+whether it fell back to all years, whether the page of listings was capped, the
+trimmed range the value slider runs between, the catalog's lowest used asking
+price — plus the matched product's slug and title for the link back, and the
+trend Trove works out from its own history. It never stores a listing's title, its seller, its image or its
 identifier, and it never combines your items with one another or with anyone
 else's.
 

@@ -584,93 +584,116 @@ the plan's Amendment A):
 
 ## Acceptance criteria
 
-1. [ ] On an owned item's detail screen and on a wanted item's, an
+1. [x] On an owned item's detail screen and on a wanted item's, an
    unmatched item shows a Market section with **Find on Reverb…** and
    nothing else; the list row shows no arrow; the item sorts last
    under Market; it contributes nothing to the dashboard variant.
-2. [ ] The first **Find on Reverb…** in the app shows the one-time
+   *Verified 2026-09-05*: `ItemDetailViewModelMarketTests`, `WishlistDetailViewModelMarketTests` (the unmatched section state), `ItemListViewModelMarketSortTests`/`WishlistMarketSortTests` (unmatched last), `DashboardMarketTests` (contributes nothing); UI `testAnUnmatchedItemOffersFindOnReverbAndNothingElse`; T018: both details before matching.
+2. [x] The first **Find on Reverb…** in the app shows the one-time
    notice; **Not now** searches nothing; **Continue** searches and the
    notice never shows again, on any item, on that device.
-3. [ ] Searching sends the item's name and nothing else; candidates
+   *Verified 2026-09-05*: the detail VM market suites (Not now searches nothing; the acknowledgement written once to the local store); T018: Continue on the Telecaster, then the SM7B's Find on Reverb… showed no notice. *Partial*: Not now first, and no notice across a relaunch, were not seen live — the acknowledgement lives in `MarketLocal.store`, which `-uiTesting` holds in memory, so the relaunch check needs the dev store.
+3. [x] Searching sends the item's name and nothing else; candidates
    show title, brand, image, lowest used asking price and listed
    count, from Reverb; picking one stores the match, which appears on
    every device the item syncs to.
-4. [ ] Refreshing a matched owned item shows the median of Reverb's
+   *Verified 2026-09-05*: `ReverbDecodingTests`, `ReverbMarketServiceTests` (the search request carries the query and nothing else), `MarketMatchViewModelTests`; T018: live cards with title, brand, image, lowest used asking price and count; the pick stored. *Partial*: the match on a second device rests on `CloudKitSchemaTests` and the field's place on the synced model — no second device was available.
+4. [x] Refreshing a matched owned item shows the median of Reverb's
    current asking prices for listings in a condition mapped from the
    item's, the low–high spread, the count, the age, and a link that
    opens the product on Reverb.
-5. [ ] With fewer than three matching listings the figure is withheld
+   *Verified 2026-09-05*: `MarketFigureComputationTests` (condition mapping, median, spread, count), `MarketAgeTests`, `MarketLinkRenderTests`; T018: $1,400 · 34 listed, $1,152–$3,250, "as of 2 minutes ago", View on Reverb ↗ present. *Partial*: the link was not tapped through to reverb.com.
+5. [x] With fewer than three matching listings the figure is withheld
    and the section shows the withheld copy with the catalog's lowest
    used asking price, labelled as such.
-6. [ ] A wanted item's figure is computed over all used listings of
+   *Verified 2026-09-05*: `MarketFigureComputationTests` (fewer than three → withheld), `MarketCopyTests` (the withheld copy with the catalog's lowest used asking price); T018: no sparse product was tried — *partial*.
+6. [x] A wanted item's figure is computed over all used listings of
    the product.
-7. [ ] Only listings in the app's currency count, and the count
+   *Verified 2026-09-05*: `MarketFigureComputationTests` (wanted → all used listings); T018: the SM7B's 35 listings over all used conditions.
+7. [x] Only listings in the app's currency count, and the count
    reflects that.
-8. [ ] *(B)* **Use as my value** writes the amount chosen on the value
+   *Verified 2026-09-05*: `MarketFigureComputationTests` (the currency filter and its count).
+8. [x] *(B)* **Use as my value** writes the amount chosen on the value
    step's slider — the whole-currency median by default — into the
    item's value; the dashboard total, the row's vs-paid and the Sell
    Plan pool then read it exactly as a typed value; **Use as estimated
    cost** does the same for a wanted item's cost. Adopting neither
    refreshes nor changes the history.
-9. [ ] *(B)* No fetch happens on launch, on appear, in the background, or
+   *Verified 2026-09-05*: `MarketValueStepTests`, `ItemDetailViewModelMarketTests`/`WishlistDetailViewModelMarketTests` (adopt writes the chosen amount, no fetch, no history point), `DashboardHeadlineTests`, `ItemValueDeltaTests`, `SellPlanFiguresTests` (they read `currentValueCents` as typed); T018: $1,591 adopted from the slider; dashboard, row and gain read it.
+9. [x] *(B)* No fetch happens on launch, on appear, in the background, or
    within an hour of an item's last refresh; refreshing is only the
    section's action, Settings' **Refresh market values**, or the pick
    of a match in the sheet (Decision 33).
-10. [ ] Settings' refresh walks every matched item with visible
+   *Verified 2026-09-05*: `ItemDetailViewModelMarketTests` (no fetch on load or appear), `MarketRefresherTests` and `SettingsViewModelMarketRefreshTests` (the hour rule), `MarketWiringTests`; T018: Refresh disabled two minutes after the pick; the Settings walk visited nothing for a three-minute-old row.
+10. [x] Settings' refresh walks every matched item with visible
     progress and stops cleanly, with the rate-limit copy, when Reverb
     answers with its limit — and, with "Couldn't reach Reverb. N of M
     refreshed.", on the first failure of any other kind (Decision 27);
     items already refreshed stay refreshed.
-11. [ ] Offline, the last figure stays with its age and the failure
+    *Verified 2026-09-05*: `SettingsViewModelMarketRefreshTests` (progress advancing, the rate-limit stop, the unreachable stop with "N of M refreshed.", refreshed items kept); T018: a walk with nothing due said nothing. *Partial*: the advancing line and a real 429 were not seen live (none in four calls).
+11. [x] Offline, the last figure stays with its age and the failure
     copy; nothing is cleared.
-12. [ ] Each refresh that yields a median adds a history point on the
+    *Verified 2026-09-05*: `ItemDetailViewModelMarketTests` (a failed fetch leaves the record field by field; the failure line with the kept figure), `MarketCopyTests`; T018: Link Conditioner was not used — *partial*.
+12. [x] Each refresh that yields a median adds a history point on the
     device, and a withheld refresh adds none (Decision 23); a second
     device shows no history from the first; the history never appears
     in the CloudKit store.
-13. [ ] With two points at least seven days apart, the row shows an up
+    *Verified 2026-09-05*: `MarketLocalStoreTests` (a median adds a point, withheld adds none), `TwoStoreContainerTests` (the production pairing loads and splits the market models to the local store) and `MarketLocalSchemaTests`, `CloudKitSchemaTests`; *partial*: the second-device check needs two signed-in devices.
+13. [x] With two points at least seven days apart, the row shows an up
     arrow at +5 % or more, a down arrow at −5 % or less, and nothing
     between; with one point, or two closer than a week, nothing.
-14. [ ] The Market sort orders matched items by their current median
+    *Verified 2026-09-05*: `MarketTrendTests` (seven days, ±5 %), `TrendArrowRenderTests`, `TrendArrowWiringTests`; T018: no arrow with one point (as specified); a back-dated second point was not written — *partial*.
+14. [x] The Market sort orders matched items by their current median
     (under thirty days old — Decision 21), descending and ascending,
     with unmatched, withheld and stale items last in custom order, on
     both lists.
-15. [ ] The dashboard shows the market variant as the sum of current
+    *Verified 2026-09-05*: `ItemListViewModelMarketSortTests`, `WishlistMarketSortTests` (both directions; unmatched, withheld and stale last in custom order; the thirty-day window); T018: Market ↓ / Market ↑ offered and applied on the Items list.
+15. [x] The dashboard shows the market variant as the sum of current
     medians over matched owned items with one, always with "N of M
     items" where N is the items in the sum (Decisions 21–22); spent,
     gain and the category breakdown stay on the person's values.
-16. [ ] A displayed figure older than thirty days is no longer shown
+    *Verified 2026-09-05*: `DashboardMarketTests`, `DashboardMarketWiringTests` (the sum, "N of M items", spent/gain/breakdown untouched); T018: "Market · $1,400 · 1 of 1 items" under CURRENT VALUE $1,591, SPENT $1,150, GAIN +$441. The N = 0 absence is unit-tested; not re-observed after seeding.
+16. [x] A displayed figure older than thirty days is no longer shown
     as current; history is never trimmed by age; unmatching clears the
     item's history and figure.
-17. [ ] Settings › About shows the attribution line verbatim, the
+    *Verified 2026-09-05*: `MarketIndexTests` and `ItemDetailViewModelMarketTests` (thirty days → not current; unmatch clears figure and history; history never trimmed by age); T018: Remove match cleared the SM7B's section.
+17. [x] Settings › About shows the attribution line verbatim, the
     contact address, and a link to the privacy policy; the policy
     exists in the repository, is published, and states what leaves the
     device and what is stored.
-18. [ ] Nothing from a listing — title, seller, image, listing
+    *Verified 2026-09-05*: `MarketCopyTests` (the attribution verbatim, the address) and `SettingsWiringTests` (About wires the three lines), `PrivacyPolicyTests` (the file exists, quotes the notice verbatim, names the address and every retention noun, no placeholder); *partial*: "is published" waits on the merge — GitHub Pages serves `main`; `mailto:` was not tried on the simulator.
+18. [x] Nothing from a listing — title, seller, image, listing
     identifier — is stored anywhere; a scan of the persisted data after
     a refresh finds only the app's summary numbers, the product
     identifier, and the product's catalog slug and title (Decision 20).
-19. [ ] The canonical CSV gains the product-identifier and year
+    *Verified 2026-09-05*: `MarketLocalSchemaTests` (the allowlist of every persisted market field — summary numbers, product identifier, slug and title, nothing from a listing) and `MarketPersistedContentTests` (a scan of the stored rows after a refresh), `MarketLocalStoreTests`.
+19. [x] The canonical CSV gains the product-identifier and year
     columns at the end; an export followed by an import restores the
     match and the year; the fetched figures appear in neither the CSV
     nor the PDF.
-20. [ ] VoiceOver: the Market section reads as its parts — the figure,
+    *Verified 2026-09-05*: `ExportSchemaTests`, `ImportSchemaTests` (14/9 headers, the 12-wide prefix accepted, the round trip restores match and year), `PDFComposerTests` (no figures), `DocsSampleTests`; *partial*: export → Files → re-import was not driven on the simulator (its app exposes no Documents folder to Files).
+20. [x] VoiceOver: the Market section reads as its parts — the figure,
     the spread, the count, the age — every action is labelled, the
     trend arrow reads "trending up" / "trending down", and the Reverb
     link says it leaves the app.
-21. [ ] An item with a year computes its figure over the listings whose
+    *Verified 2026-09-05*: `MarketWiringTests` and `MarketCopyTests` (the section's parts and every action labelled; the link's leaves-the-app label), `TrendArrowRenderTests` ("trending up" / "trending down"); *partial*: VoiceOver itself was not run — the person's item.
+21. [x] An item with a year computes its figure over the listings whose
     stated year covers it plus those stating none; a listing stating a
     year that does not cover it is excluded, and the count says how many
     counted. An item without a year is unchanged.
-22. [ ] With fewer than three listings after narrowing, the section
+    *Verified 2026-09-05*: `MarketYearCoverageTests`, `MarketFigureComputationTests` (covering years plus unstated count; a non-covering year excluded; no year → unchanged); T018: the SM7B with 2020 narrowed 45 → 35 and the source line read "· 2020".
+22. [x] With fewer than three listings after narrowing, the section
     shows the all-years figure under the all-years copy; clearing the
     year restores the plain figure on the next refresh.
-23. [ ] *(B)* Picking a candidate refreshes it in the sheet with the
+    *Verified 2026-09-05*: `MarketFigureComputationTests` (fewer than three after narrowing → the all-years figure and flag), `MarketCopyTests` (the all-years copy), the detail VM suites (clearing the year restores the plain figure on the next refresh); T018: not seen live — *partial*.
+23. [x] *(B)* Picking a candidate refreshes it in the sheet with the
     status line and, with a figure, shows the value step: the slider
     defaults to the median between trimmed bounds with the true spread
     beside it; the filled button writes the chosen amount and closes the
     sheet; **Not now** writes nothing; the section's adopt action opens
     the same step; the history point that refresh recorded is the
     median, whatever amount was chosen.
+    *Verified 2026-09-05*: `MarketValueStepTests`, `MarketValueBoundsTests`, `MarketValueSliderTests`/`MarketValueSliderRenderTests`, `ItemDetailViewModelMarketTests`/`WishlistDetailViewModelMarketTests` (the landing rule, the generation rule, the fetch token, Not now writes nothing, the section's action opens the same step, the history point is the median); T018: end to end on both items — median default, trimmed bounds equal to the oracle fixture's, drag to $1,591, Use, Not now.
 
 ## Non-goals (explicit)
 

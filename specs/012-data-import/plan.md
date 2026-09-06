@@ -97,7 +97,12 @@ Order of operations, before any field is read:
    and the rigid header gate would otherwise reject every re-saved
    file — directly contradicting criterion 3. A hand-built fixture
    (all 12 columns plus four trailing commas on every line, header
-   included) must import cleanly.
+   included) must import cleanly. *(2026-09-05, at 002's close-out:
+   the items schema is 14 columns since 002 added `reverb_product_id`
+   and `year`. The test builds its fixture from `ExportSchema`, so it
+   widened by itself; the checked-in sample `docs/samples/items-resaved.csv`
+   was regenerated at 14 with three trailing commas. The rule is
+   unchanged.)*
 2. **Wholly blank rows are dropped silently** — a trailing blank line
    must not generate a phantom "row 43 — no name" report on a clean
    file.
