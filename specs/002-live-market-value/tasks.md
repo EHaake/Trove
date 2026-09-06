@@ -1630,7 +1630,7 @@ off with four small notes, folded below (the interim adopt closure, the
 
 ## Phase 5 — Verification and close-out
 
-- [ ] **T018 — Device pass with the live API. [person: watches the live half]**
+- [x] **T018 — Device pass with the live API. [person: watches the live half]**
   *Amendment B (B8) adds*: pick → fetching card → the value step at the
   median → drag → Use → the item's value on the detail and the dashboard;
   Not now writes nothing; the section's Use as my value opens the same
@@ -1662,6 +1662,68 @@ off with four small notes, folded below (the interim adopt closure, the
   finding fixed in place or listed for T019.
   *Done when*: the record is written into this Done note with the
   numbers seen.
+  *Done 2026-09-05* — iPhone 17 Pro simulator (iOS 26.0.1), the
+  `-uiTesting` in-memory store, the live API touched by hand: two
+  searches and two listings calls, the second and last time the network
+  is touched in this spec. What was seen, in order:
+  - **Owned path** (Fender Telecaster, Music/Guitars, paid $1,150, no
+    year). The notice once, Continue. Live search: four cards (Player
+    II, tuning heads, "American Professional II Telecaster · $1,000 ·
+    112 listed", American Ultra II). Pick → the fetching card → the
+    value step at the medium detent: "On Reverb · Fender American
+    Professional II Telecaster", $1,400 · 34 listed, spread
+    $1,152–$3,250, the slider $1,200 to $1,699 with the median mark.
+    The trimmed bounds equal the recorded oracle fixture for the same
+    product's excellent bucket (p10 120,000 / p90 169,900 cents) to the
+    cent — the live computation and the fixture agree. Drag → the
+    button followed ("Use $1,591 as my value"); Use → the sheet closed,
+    WORTH NOW $1,591, +441 · +38%. The section: source line, $1,400 · 34
+    listed, $1,152–$3,250, "as of 2 minutes ago", View on Reverb ↗,
+    Refresh disabled, Use as my value, Change match…, Remove match. The
+    section's Use as my value reopened the same step at the median
+    default; Not now closed it and wrote nothing (WORTH NOW still
+    $1,591). Dashboard: CURRENT VALUE $1,591, "Market · $1,400 · 1 of 1
+    items" with the amount reading as a real medium weight beside the
+    label text (T013 finding closed), SPENT $1,150, GAIN +$441. Items:
+    "1 ITEM · $1,591"; Sort By offers Market ↓ / Market ↑, choosing
+    Market ↓ relabels the button; the row keeps "+441 vs paid" and shows
+    no arrow — one history point is no trend (spec line 124).
+  - **Wanted path** (Shure SM7B, Music/Microphones, $500, Year 2020 —
+    the form's Year field sits below Photos, as planned). Find on
+    Reverb… showed no notice (accepted earlier this launch). Live cards:
+    SM7B "Lowest used asking price $175 · 45 listed", RK345 windscreen
+    "No used listings", A7WS windscreen "$20 · 4 listed", Gator case.
+    Pick → "Set your estimated cost", "On Reverb · Shure SM7B Cardioid
+    Dynamic Microphone · 2020", $292 · 35 listed (the year narrowed 45
+    → 35; Amendment A), spread $175–$450, slider $259 to $398, "Use
+    $292 as estimated cost"; Use → ESTIMATED COST $292, the section "as
+    of just now". Change match… reopened the picker with the same query
+    and cards (no current-match marker; none is specified); Cancel left
+    the section intact. Remove match → Find on Reverb… again, the
+    estimated cost still $292.
+  - **Settings**: MARKET → Refresh market values, enabled with one
+    matched row. Tapping it said nothing: the row was three minutes old,
+    inside the freshness window, so nothing was due and a completed walk
+    says nothing. The "n of m" line advancing needs hour-old rows and
+    rests on `SettingsViewModelMarketRefreshTests`.
+  - **Detents**: the picker at large, the value step at medium, the
+    switch seen on both picks. A flicker on dismissal cannot be caught
+    in stills — the person's item, below.
+  - **Not exercised here**, carried as honest partials for T019 and the
+    person: Not now first on the notice and the no-notice-across-relaunch
+    check; a vintage year's thin fallback ("all years shown"); a sparse
+    product withheld; Link Conditioner 100 % loss (the failure line with
+    the figure kept); a real 429 (none seen in four calls); rows' arrows
+    via a back-dated history point (no debug write was made — the arrow's
+    thresholds and render rest on `TrendArrowRenderTests` and the list
+    suites); the dashboard line's absence at N = 0 (not re-observed after
+    seeding); export → Files → re-import (the simulator app exposes no
+    Documents folder to Files; the round trip rests on the import/export
+    suites); About's three lines and `mailto:`; VoiceOver over the
+    section, picker and arrow; a physical device.
+  - **Suites**: full unit suite twice back to back, **1103 tests in 148
+    suites passed** both runs (10.8 s and 10.9 s of test time); UI suite
+    twice back to back, **13 tests, 0 failures** both runs (211 s each).
 
 - [ ] **T019 — Close-out.**
   *Sweep list, added 2026-09-05 at T016a's review*: stale statements
