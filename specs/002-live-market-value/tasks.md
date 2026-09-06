@@ -1195,12 +1195,10 @@ off with four small notes, folded below (the interim adopt closure, the
   person 2026-09-05** ("signed off on the designs"), who also reported
   the interim state exactly as recorded under T022 — the spinner that
   never finishes is the `.value` phase's placeholder, and the section's
-  Use as my value works after a swipe-down. **Q22 is not yet answered**:
-  the person's sign-off named the designs; the copy question was asked
-  again with the T023 dispatch. Until it is, the code carries the
-  proposed wording marked pending, and T024 moves the pins on the
-  answer; the Copy block, Decision 34 and the Adopting bullet are
-  amended then.
+  Use as my value works after a swipe-down. **Q22 answered 2026-09-05**: the person delegated the call to Claude
+  Code; the proposed "typical" wording became spec Decision 37, the Copy
+  block, Decision 34 and the Adopting bullet were amended, and the
+  pending markers came off `MarketCopy` and its test — no pin moved.
   Per plan Amendment B (Design) and spec's *(B)* Design line. One
   artboard, `ValueStep.dc.html`, drawn in session as the Phase 2 frames
   were, joined to the existing canvas and rendered to PNG: the sheet at
