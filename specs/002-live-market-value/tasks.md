@@ -1139,7 +1139,34 @@ only — technical detail lives in `plan.md` and the commit log).
   *Done when*: green, mutations recorded; About's three lines on the
   simulator; the progress row advancing is **T018's** live check.
 
-- [ ] **T015 — UI tests, offline, run twice.**
+- [x] **T015 — UI tests, offline, run twice.**
+  *Done (2026-09-05)* — dispatched to `sdd-implementer`, verified by the
+  orchestrator's own runs (the UI target once more, green: 13 tests, 0
+  failures; the unit target unchanged at 1030 in 144). The four tests
+  from plan §6 with their helpers: an unmatched owned item and an
+  unmatched wanted item each show `market.find` and none of Refresh,
+  adopt, the link, Change match… or Remove match, and "Not tracked yet"
+  exists nowhere; the first Find on Reverb… shows the notice with
+  Continue and Not now and no search field, Not now closes it, the next
+  Find on Reverb… shows it again (Q5), Not now again leaves the app
+  clean — **no UI test ever taps Continue, matches an item or writes a
+  local row (Q13), so the notice flag's persistence and every
+  figure-bearing state rest on the unit suites and T018's dev-store
+  pass; the twice-run proves re-runnability, nothing more**; both lists'
+  Sort By offers Market ↓ and Market ↑; Settings' Market row exists and
+  is disabled on the empty store, "not endorsed" is on screen, and the
+  About links exist. No shipping file changed — every identifier was
+  already there. Run twice back to back by the implementer (13/13 both
+  runs, ~209 s each) and twice again after the reverts. Mutations, each
+  red then reverted: the actions rendered in the unmatched state → test
+  1 red on both kinds; Not now acknowledging → test 2 red ("the second
+  find should have shown it again" — under that mutation alone the
+  picker appeared and made one live search, the only network the UI
+  target has ever touched); the market pair removed from the sort menu
+  (an explicit `allCases` without them — deleting the case is a compile
+  failure in the unit target, which is red but proves nothing about the
+  UI test) → test 3 red on both rows; the `canRefreshMarketValues` gate
+  dropped → test 4 red. **Phase 3 closes here.**
   Per plan §6 (UI tests), Q13. The four tests in plan §6 with the
   identifiers; the suite run twice back to back **to confirm it is
   re-runnable** — no UI test taps Continue, matches an item or writes a
@@ -1425,3 +1452,4 @@ previous spec of similar size before treating the policy as settled.
 | T011 | opus (`sdd-implementer`) | 161,355 | verified first try; the notice flow seen on the simulator |
 | T013 | opus (`sdd-implementer`) | 105,112 | verified first try; one finding (a tautological existing test), fixed in the follow-up |
 | T013 follow-up | opus (`sdd-implementer`) | 45,933 | verified first try; the reconcile test now red under the T013 mutation |
+| T015 | opus (`sdd-implementer`) | 88,829 | verified first try; UI target green twice by the implementer, once more by the orchestrator |
