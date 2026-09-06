@@ -80,7 +80,7 @@ purchases.
 
 ## Status
 
-Five specs shipped: `001-core-inventory` (v1 — item tracking, the
+Six specs shipped: `001-core-inventory` (v1 — item tracking, the
 dashboard, the wishlist, the Sell Plan, CloudKit sync),
 `010-item-management-enhancements` (merged 2026-08-30 — swipe actions,
 drag-to-reorder, duplication, expanded sorting, and a design-depth
@@ -93,7 +93,12 @@ and tested sample files), and `013-settings-menu` (merged 2026-09-02
 — the Settings sheet with export-everything, the templates, iCloud
 status, Delete All and About, reached from every root's "…"; and, by
 its Amendment A, the dashboard's "…" and every in-page menu on one
-bespoke dropdown surface).
+bespoke dropdown surface), and `002-live-market-value` (merged
+2026-09-05 — a Reverb asking-price indicator beside your own value:
+pick the match, set your value from the asking prices on a slider, and
+see the median on the detail, the rows, a sort and the dashboard, with
+the figures kept on the device that fetched them; `PRIVACY.md` and the
+one-time notice came with it).
 See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.
@@ -149,9 +154,10 @@ Trove/                 App source
   App/                 App entry point, ModelContainer setup
   Export/               CSV/PDF export — canonical schema, renderers
   Import/               CSV import — parser, field policy, service
+  Market/               Reverb client, the local (unsynced) market store, figures and trend
   Models/               SwiftData models
   ViewModels/            One per screen
-  Views/                 Dashboard/, Items/, Wishlist/, Settings/, Shared/
+  Views/                 Dashboard/, Items/, Wishlist/, Settings/, Market/, Shared/
   Extensions/            Small, flagged UIKit-bridge exceptions live here
 Trove/Fonts/            Bundled type (Archivo, IBM Plex Sans/Mono)
 TroveTests/             Swift Testing, one file per view model
@@ -162,13 +168,18 @@ specs/
   011-data-export/       Shipped — CSV + PDF export, canonical schema
   012-data-import/       Shipped — CSV import against that schema
   013-settings-menu/     Shipped — Settings, and the bespoke in-page menus
+  002-live-market-value/ Shipped — Reverb asking prices beside your value
   ROADMAP.md             Backlog of future specs
 design/
   brief.md               Visual/interaction direction
   tokens.md               Colors, type, spacing as implemented
   screens/                Design references
+  elements/               Design-pass artboards per spec (002's market surfaces)
 docs/
   csv-reference.md       The CSV columns, formats, and Excel caveats
+  samples/                Tested sample CSVs for every import state
+scripts/                 record-reverb-fixtures.sh — run by hand, never by the build
+PRIVACY.md               The privacy policy — what leaves the device, what is stored
 CLAUDE.md                Project constitution — read this first
 DECISIONS.md             Business/product/process context
 ```

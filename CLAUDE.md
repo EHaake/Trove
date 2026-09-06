@@ -106,19 +106,28 @@ prerequisites of its own (amended 2026-09-03, spec `002` Decision 19).
   CloudKit test, different domain: a claim like "these five colors are
   each distinguishable" is exactly as testable as "this schema validates"
   — write the test, don't just render it and glance.
-- **A passing test is not evidence it can fail.** Three separate times in
+- **A passing test is not evidence it can fail.** Four separate times in
   this project a test has been correct-looking, correctly named, green,
   and verifying nothing: a tie-break test that couldn't detect its own
   rule being deleted (`FetchDescriptor` doesn't return insertion order),
   a persistence test that refetched on the same `ModelContext` (which
   hands back objects carrying unsaved changes, so `save()` could be
-  removed and it still passed), and a color-literal guard whose pattern
-  was so broad it fired on legitimate helpers. For any test guarding a
-  rule that matters, break the rule deliberately and confirm the test
-  goes red — and when one turns out to be false-passing, audit for the
-  same *shape* elsewhere rather than fixing the single instance. If a
-  test can't be made to fail, delete it or restructure what it tests;
-  leaving it reads as coverage that isn't there.
+  removed and it still passed), a color-literal guard whose pattern
+  was so broad it fired on legitimate helpers (the same over-broad
+  shape returned in `002` as a policy scan for seven nouns that the
+  prose alone satisfied — the table it guarded could be deleted and it
+  stayed green), and a test asserting an invariant that a
+  `precondition` in the code under test already guaranteed — it could
+  only ever fail by trapping first, so it was deleted (`002`, T021's
+  review). For any test guarding a rule that matters, break the rule
+  deliberately and confirm the test goes red — and when one turns out
+  to be false-passing, audit for the same *shape* elsewhere rather than
+  fixing the single instance. If a test can't be made to fail, delete
+  it or restructure what it tests; leaving it reads as coverage that
+  isn't there. One mechanical rule from the same family: when a
+  reviewer is scoped to a diff, cut the diff after `git add -N` so
+  untracked files appear in it — a bundle that silently omits the new
+  files gets a sign-off on nothing (`002`, T021).
 - **UI tests need a controlled starting state, and a narrow test-only
   branch in shipping code is an acceptable way to get one.** A UI test
   whose starting data is whatever the simulator happened to have left
@@ -147,7 +156,15 @@ prerequisites of its own (amended 2026-09-03, spec `002` Decision 19).
   Two things follow: verify a claim about behavior with a probe on the
   behavior itself, not a visual proxy for it; and a long-standing
   platform API is the least likely thing in the room to be broken —
-  suspect the newest, most custom code first.
+  suspect the newest, most custom code first. `002`'s pre-merge sweep
+  ran the rule the other way round: a reviewer suspected that dismissing
+  the match sheet re-rendered it as the picker and fired a live search
+  from the picker's `.task` — a trigger the view-model suite cannot see,
+  since it lives in a view. Reasoning about SwiftUI's sheet lifecycle
+  would have settled nothing either way; a file probe inside the service
+  did, in one relaunch (it never fired). A `.task` inside sheet content
+  is a mechanism to instrument once on the device before the tests are
+  trusted to speak for it.
 - A task is not "done" until its tests exist and `xcodebuild test` passes.
   Claude Code should run the test command itself and show the result, not
   assert completion from reading the code.

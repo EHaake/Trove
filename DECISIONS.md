@@ -65,6 +65,93 @@ to anything real. Trove and any near-term future apps ship under the
 personal Apple Developer account regardless of what the studio name
 ends up being.
 
+## Market values (`002`, shipped 2026-09-05)
+
+The product decisions themselves are numbered 1–37 in
+`specs/002-live-market-value/spec.md`; this records the reasoning that
+reaches beyond that spec.
+
+- **The first network dependency, and the first unsynced store.** Until
+  `002` every byte the app held was the person's own and synced through
+  their private CloudKit database. Market figures broke both habits on
+  purpose: they are Reverb's data, not the person's, so they live in a
+  second SwiftData configuration (`MarketLocal.store`) that never syncs
+  and is deleted with the match — which is also what Reverb's retention
+  terms ask for. Only the match (a product identifier) and the item's
+  year ride on the synced model. The two-store pairing was the one
+  architectural risk in the spec, so its spike was the first task, and
+  the fallback it insured against (a second `ModelContext` threaded
+  through five view models) was never needed.
+- **Reverb over a crawler; eBay deferred.** No marketplace offers sold
+  prices to a non-partner app, so the honest figure is an *asking*
+  price, shown beside the person's value and never in place of it.
+  Reverb's catalog and listings are free, catalog-keyed,
+  condition-tagged and inside its terms. Building a crawler for
+  eBay/Facebook was declined: it breaches every relevant site's written
+  terms and adds a server and a new privacy posture. eBay's own API
+  needs a hosted proxy (its token secret cannot ship in an app) and a
+  decision to accept partner-only production access — the two
+  prerequisites on the roadmap's eBay entry.
+- **Reverb's terms put four obligations on the app, and each has one
+  home.** The attribution line, verbatim, in Settings › About
+  (`MarketCopy.attribution`, pinned by test); a displayed contact
+  address, also in About and sent as the `User-Agent` on every request
+  (`MarketCopy.contactAddress` — provisional, the person's own until
+  publication, a two-file swap with `PRIVACY.md`); a privacy policy of
+  the app's own, `PRIVACY.md` at the repo root, linked from About and
+  the one-time notice; and a link back to the product wherever its data
+  is shown, the candidate picker included. Two prohibitions — no
+  retention beyond a reasonable period, no analytics/ML/scraping — are
+  met by the per-match retention rules and by computing nothing across
+  items.
+- **The `010` line restated for a per-device fact.** `010` settled that
+  a device-local fact never gates a synced write; `002` kept it: the
+  figure never blocks adopting, editing or syncing, and there is no
+  launch sweep over local rows (plan Q18) — nothing is fetched on
+  launch, on appear or in the background, only on the person's tap, a
+  pick, or the Settings walk.
+- **Constitution amendment reconciled (spec Decision 19).** The
+  routing rule below says `CLAUDE.md` edits go to `main` post-merge; the
+  constitution's own "amend first, in its own commit" rule won for an
+  amendment a spec contradicted (pulling values from marketplaces →
+  an indicator beside the value). The amendment landed on the spec
+  branch before implementation; this entry is the post-merge record.
+  The same precedence applies next time: a spec that needs the
+  constitution changed amends it first, wherever the commit lands.
+- **A fifth routing bucket: `PRIVACY.md`** (plan Q20). Repo-root, but
+  not repo-wide in the sense of `CLAUDE.md`: it describes shipped
+  behaviour, so it travels with the branch that changes what it
+  describes, like `design/` and `docs/`. Its test
+  (`PrivacyPolicyTests`) reads it by `#filePath` and pins the notice
+  text, the address, and each row of the retention table.
+- **Blob URL first, GitHub Pages later (spec Decision 18).** The policy
+  link points at the GitHub blob URL, which works the moment the branch
+  merges; Pages is a later one-line `fix/` swap. "Is published" was the
+  one criterion clause that could only become true at merge.
+- **A corrupt local store never ends in `fatalError` (plan Q21).** The
+  container builder's third attempt deletes the *local* store's files
+  (never the collection's `default.store`) and rebuilds; the assertion
+  that it is never handed the collection's URL caught a mutation that
+  would have deleted the person's data. Market figures are recoverable
+  by a refresh; the person's items are not.
+- **The live network is touched twice in a spec's life, and by no
+  test.** Once by the fixture-recording script, run by hand, whose
+  trimmed responses are committed under `TroveTests/Fixtures/`; once by
+  the device pass. `TroveTests` stubs every `URLSession` and an
+  unregistered URL fails as `.unsupportedURL`. The rule is in
+  `CLAUDE.md`'s Networking bullet; `002` was its first application.
+- **The first spec under the model policy** (`CLAUDE.md`, 2026-09-04).
+  From T009a on, routine tasks went to the `sdd-implementer` one tier
+  down, with the orchestrator re-running build and tests itself before
+  each commit; foundational tasks got a per-task `skeptical-reviewer`
+  pass on a diff bundle. `tasks.md`'s tier log holds the evidence:
+  about 2.97 M implementer tokens and 1.43 M reviewer tokens across 42
+  logged runs, no escape-hatch redo (one task handed two stale doc
+  widths back to the orchestrator), and a pre-merge sweep at the top
+  tier whose single blocking finding was settled by instrumentation
+  rather than argument. Compare against the next spec before treating
+  the policy as settled.
+
 ## Process and tooling notes
 
 - **Git routing**: edits to `CLAUDE.md`, `specs/ROADMAP.md`, and this
