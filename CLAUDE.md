@@ -200,8 +200,9 @@ Decided 2026-09-03, per the `spec-driven-development` skill's
 
 **Product owner.** The person owns `spec.md`, attests to behavior by
 using the app at phase pauses, and decides escalations. They do not
-approve technical work: `plan.md` and `tasks.md` are signed off by Plan
-Mode plus the `skeptical-reviewer`, foundational tasks are reviewed by
+approve technical work: `plan.md` and `tasks.md` are drafted by the
+`sdd-planner` and signed off by the `skeptical-reviewer`, each phase
+(and any task the planner marked for its own review) is reviewed by
 the `skeptical-reviewer` rather than the person, and what reaches the
 person is a spec-conformance summary, not an architecture review.
 Implementation pauses after each phase unless the person says to run
@@ -210,27 +211,63 @@ further, and whenever something unexpected bears on spec adherence.
 ## Model policy
 
 Decided 2026-09-04, per the `spec-driven-development` skill's "Model
-tiering" section; amended 2026-09-05 from the skill's tuned template
-after `002-live-market-value`'s tier log was measured (the review loop
-and raw build logs were the two largest costs), and 2026-09-06 to the
-template's current wording, which moves plan and task drafting into
-the `sdd-planner` subagent. Decided once, alongside the involvement
-level; the tier names change as models do, the roles don't.
+tiering" section; amended 2026-09-05 after `002-live-market-value`'s
+tier log was measured (the review loop and raw build logs were the two
+largest costs), 2026-09-06 to move plan and task drafting into the
+`sdd-planner` subagent, and 2026-09-07 to the skill's current wording —
+which moves the session itself to the step-down tier, replaces the
+foundational/mechanical review split with per-phase review everywhere,
+and takes second-look and device work off the orchestrator. Decided
+once, alongside the involvement level; the tier names change as models
+do, the roles don't.
 
-- **Decisions run at the best available tier**: the spec conversation,
-  plan and task drafting (the `sdd-planner` subagent, one dispatch per
-  spec on a planning bundle), Step 1 triage, orchestration of
-  implementation, and the `skeptical-reviewer` when it's judging a
-  decision — plan/tasks sign-off and reviews of routine-but-real
-  decisions — via a per-call model override up from its default.
+- **Tiers by name**: top tier `fable`; step-down `opus`. These two
+  names are the only place a model is spelled out; everything below
+  refers to them.
+- **The session runs at the step-down tier, at medium effort**, set in
+  this repo's `.claude/settings.json` — written from the skill's
+  `assets/settings-template.json` (`"model": "opus"`,
+  `"effortLevel": "medium"`, and per-model effort under
+  `"modelSettings"` for `claude-opus-5` and `claude-fable-5-1`). If
+  that file is missing or lacks these keys, recreate it from the
+  template and commit it before dispatching anything; nobody creates it
+  by hand. Project settings outrank user settings, so a model picked in
+  the app's picker only affects the session it was picked in — new
+  sessions in this repo start here regardless. The orchestrating
+  session takes thousands of bookkeeping turns and re-sends its whole
+  context on each one; measured across the first specs, that re-send
+  volume was eight to nine times the implementers' and was the dominant
+  cost of the entire workflow. It doesn't need the top tier or deep
+  reasoning to assemble a bundle and tick a box.
+- **The top tier runs only inside the decisions**: the `sdd-planner`
+  (one dispatch per spec) and the `skeptical-reviewer` on plan/tasks
+  sign-off and on routine-but-real decision reviews — each dispatched
+  with an explicit per-call override to the top tier's name. The three
+  agent definitions carry `effort: high`, which overrides the session's
+  medium, so reasoning stays at full strength where it matters.
+- **Spec conversations happen in a Claude Code session of their own**,
+  at the top tier, and end when the spec is approved — never inside an
+  orchestrating session. A session in this repo opens at the step-down
+  tier, so a spec session states its model first and, if it's the
+  step-down tier, asks the person to switch to the top tier for this
+  session — the model selector in the app, or `/model fable` — before
+  continuing. `.claude/settings.json` pins effort per model, so picking
+  the top tier brings high effort with it and the next session still
+  opens at the step-down tier. (This project's very first spec, `001`,
+  happened in chat, with no codebase yet; `012` and `003` were the
+  first written in a Claude Code session.)
 - **The `skeptical-reviewer` runs one tier down by default** (its
-  definition says `opus`) for per-task reviews in foundational phases,
-  per-phase reviews in mechanical ones, and the pre-merge sweep. Each
-  review gets a single bundle file assembled with shell — diff, task
-  lines, plan sections, acceptance criteria; for the sweep, the
-  documents and the spec's full diff (`git diff main...HEAD`) — and
-  reads nothing else. Stage before cutting the diff (`git add -A`), so
-  untracked files appear in it.
+  definition says `opus`) for per-phase reviews, the per-task reviews
+  the planner marks, and the pre-merge sweep. Each review gets a single
+  bundle file assembled with shell — diff, task lines, plan sections,
+  acceptance criteria; for the sweep, the documents and the spec's full
+  diff (`git diff main...HEAD`) — and reads nothing else. Stage before
+  cutting the diff (`git add -A`), so untracked files appear in it.
+- **Review cadence is per-phase everywhere**, foundational phases
+  included; a task the planner marked `review: per-task` gets its own
+  review as well. `tasks.md` states which phases are foundational and
+  which tasks are marked — an orchestrator left to guess guesses "all
+  of them."
 - **Review loop cap**: one review and at most one re-review per
   invocation — task, phase, sign-off, or sweep. The re-review sees the
   findings and the fix diff only. Blocking means it would fail an
@@ -243,27 +280,42 @@ level; the tier names change as models do, the roles don't.
   subagent, one task per dispatch, sequentially. The orchestrating
   session triages each task, dispatches routine ones on a task bundle
   assembled with shell (task line, plan section, acceptance criteria,
-  files, the pattern file to copy), telling the implementer not to
-  read `plan.md`, `spec.md`, or `tasks.md` in full, and on return
-  verifies with the verification command below — re-run by the
-  orchestrator in foundational phases, taken from the implementer's
-  verbatim output in mechanical ones — never by re-reading the diff.
-  Only the orchestrator edits `tasks.md` or commits.
-- **Fresh orchestrator session at each phase pause**, resuming from
-  the first unchecked task, so the top-tier context doesn't accumulate
-  the whole spec.
+  files, the pattern file to copy), telling the implementer not to read
+  `plan.md`, `spec.md`, or `tasks.md` in full, and on return verifies
+  with the verification command below — re-run by the orchestrator for
+  tasks marked `review: per-task`, taken from the implementer's
+  verbatim output otherwise — never by re-reading the diff. Only the
+  orchestrator edits `tasks.md` or commits, and the orchestrator never
+  implements second-look notes or does device or browser checks by
+  hand: second-look items go to the tier log or the next task's bundle,
+  and visual checks are the implementer's Verify criterion or the
+  person's attestation at the phase pause.
+- **Clear at every phase boundary and at spec end** (`/clear`, resuming
+  from the first unchecked task). Cache re-sends are context size times
+  turn count; a phase boundary is where the carried context has the
+  least remaining value. Compact mid-phase only if the context grows
+  large; never clear mid-task.
+- **Batch the bookkeeping**: commit, checkbox, and tier-log row in one
+  shell command; bundle assembly and dispatch back to back. Every turn
+  saved is one fewer re-send of the whole context.
+- **Fallback**: if the top tier's usage budget runs out, dispatch the
+  planner and sign-off at the step-down tier for the rest of the
+  window (drop the override). Nothing else changes; the tier log
+  records what ran.
 - **Escape hatch**: two failed verifications on one task, or a "stopped
   on a judgment call" the orchestrator considers well-specified, and
-  the orchestrator does that task itself at the top tier, noting the
-  miss in `tasks.md`.
+  the orchestrator does that task itself, noting the miss in
+  `tasks.md`.
 - **Third tier**: off. Turn on once a spec's tier log under this
   amended cadence justifies it: "Sonnet for tasks with an automated
   Verify check, a named pattern file, and a small footprint."
-- **Log token usage per planner dispatch, implementer run and
-  reviewer invocation**, plus tier misses, in `tasks.md`'s tier log —
+- **Log token usage per planner dispatch, implementer run and reviewer
+  invocation**, plus tier misses, in `tasks.md`'s tier log — every Tier
+  entry a resolved model name (`opus`, `fable`), never "default."
   `002-live-market-value` (from T009a on) is the first spec's log and
-  the baseline this amendment came from; the next spec's log is
-  compared against it before the policy is treated as settled.
+  `003-trend-aware-sell-plan`'s is the second; the next spec's is
+  compared against them before this amended policy is treated as
+  settled.
 
 ## Spec-driven workflow
 
@@ -276,21 +328,18 @@ the involvement level above. Artifacts live in `specs/<NNN>-<slug>/`:
 - `plan.md` — technical design: types, data flow, what changes where.
 - `tasks.md` — ordered, small, independently verifiable tasks.
 
-Authorship: `spec.md` is written in the chat design conversation. The
-*venue* of that conversation is decided per spec, by the person: the
-default for a green-field feature is a dedicated claude.ai chat, but
-they may direct it to happen in the Claude Code session instead — as
-`012-data-import` and `003-trend-aware-sell-plan` were — which suits
-specs whose design questions hang off contracts already shipped in the
-repo; if they haven't said where, ask. In either venue the person
-makes the product decisions, the resulting `spec.md` is committed to
-the spec branch marked **Draft**, and it is human-approved before
-`plan.md` is drafted against it. Until this project has shipped code,
-`plan.md` and `tasks.md` are drafted in chat too; once shipped code is
-what plans extend — this project's state since `001` merged — the
-`sdd-planner` subagent drafts them instead, at the top tier, from a
+Authorship: `spec.md` is written in the spec conversation — which,
+now that this project has shipped code, happens in a Claude Code
+session of its own at the top tier, per the model policy above, and
+ends when the spec is approved. (`001` was written in chat, before
+there was a codebase; `012` and `003` were the first written in a
+Claude Code session.) The person makes the product decisions, the
+resulting `spec.md` is committed to the spec branch marked **Draft**,
+and it is human-approved before `plan.md` is drafted against it.
+Because shipped code is now what plans extend, the `sdd-planner`
+subagent drafts `plan.md` and `tasks.md` — at the top tier, from a
 planning bundle (the spec, the previous spec's plan and tasks as the
-pattern, the file listing), against the actual codebase, and the
+pattern, the file listing), against the actual codebase — and the
 orchestrator commits them to the spec branch with the PR still in
 draft. Both are signed off before any implementation task starts: at
 the product-owner level by the `skeptical-reviewer` (blocking findings
@@ -299,9 +348,9 @@ summary to approve; at the technical-lead level by the person
 directly. If planning surfaces something that is actually a product
 decision — scope, user-facing behavior, a spec contradiction — it goes
 back to the person rather than being settled in `plan.md`. (Amended
-2026-08-30, 2026-08-31, 2026-09-03 and 2026-09-06; the reasoning for
-moving plan authorship out of chat once code exists is in
-`DECISIONS.md`, 2026-08-30.)
+2026-08-30, 2026-08-31, 2026-09-03, 2026-09-06 and 2026-09-07; the
+reasoning for moving plan authorship out of chat once code exists is
+in `DECISIONS.md`, 2026-08-30.)
 
 Do not begin implementation on a feature without an approved spec and
 plan in that feature's directory. When resuming a session, check
@@ -343,8 +392,8 @@ report its actual output, not a paraphrase.
 A task is not complete until that output is green. Do not weaken, skip,
 or delete a test to make it pass — if a test seems wrong, flag it and
 ask. When the task was dispatched to the `sdd-implementer`, its verbatim
-output is the verification in mechanical phases; in foundational phases
-the orchestrator re-runs the command itself before committing.
+output is the verification; for a task marked `review: per-task` the
+orchestrator re-runs the command itself before committing.
 
 ## Git conventions
 
