@@ -179,9 +179,10 @@ final class WishlistViewModel {
         MarketSummary.summaries(forSubjects: items.map(\.id), in: context, now: now)
     }
 
-    /// See `ItemListViewModel.trend(for:)`.
+    /// See `ItemListViewModel.trend(for:)` — `currentTrend` there and here,
+    /// one rule, both lists (003 Decision 12).
     func trend(for id: UUID) -> MarketTrend? {
-        marketSummaries[id]?.trend
+        marketSummaries[id]?.currentTrend
     }
 
     /// Applies a drag through `ManualOrderHelper`, which renumbers every row
