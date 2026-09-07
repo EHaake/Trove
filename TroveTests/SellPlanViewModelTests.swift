@@ -566,3 +566,238 @@ struct SellPlanFramingTests {
         #expect(viewModel.selectedValueCents == 90_000)
     }
 }
+
+/// The trend key in the order (003 plan Q1, criteria 1–4), over the pure
+/// function with a dictionary standing in for the store.
+@Suite("Sell Plan ranking — the trend key")
+struct SellPlanRankingTests {
+    private func order(_ items: [Item], _ trends: [UUID: MarketTrend]) -> [String] {
+        SellPlanViewModel
+            .candidates(from: items, alreadySelected: [], trend: { trends[$0] })
+            .map(\.name)
+    }
+
+    /// Criterion 1, both ways round the value: the rising item leads whether
+    /// it's the cheaper of the pair or the dearer.
+    @Test func aRisingCandidateLeadsAFlatOneAtTheSameDesire() throws {
+        let context = try makeInMemoryContext()
+        let cheapRise = owned("Cheap rise", desire: 2, valueCents: 10_000, into: context)
+        let dearFlat = owned("Dear flat", desire: 2, valueCents: 900_000, into: context)
+        #expect(order([dearFlat, cheapRise], [cheapRise.id: .up, dearFlat.id: .flat]) == ["Cheap rise", "Dear flat"])
+
+        let dearRise = owned("Dear rise", desire: 2, valueCents: 900_000, into: context)
+        let cheapFlat = owned("Cheap flat", desire: 2, valueCents: 10_000, into: context)
+        #expect(order([cheapFlat, dearRise], [dearRise.id: .up, cheapFlat.id: .flat]) == ["Dear rise", "Cheap flat"])
+    }
+
+    /// Criterion 2, likewise: falling is last whatever it's worth.
+    @Test func aFallingCandidateTrailsAFlatOneAtTheSameDesire() throws {
+        let context = try makeInMemoryContext()
+        let dearFall = owned("Dear fall", desire: 2, valueCents: 900_000, into: context)
+        let cheapFlat = owned("Cheap flat", desire: 2, valueCents: 10_000, into: context)
+        #expect(order([dearFall, cheapFlat], [dearFall.id: .down, cheapFlat.id: .flat]) == ["Cheap flat", "Dear fall"])
+
+        let cheapFall = owned("Cheap fall", desire: 2, valueCents: 10_000, into: context)
+        let dearFlat = owned("Dear flat", desire: 2, valueCents: 900_000, into: context)
+        #expect(order([cheapFall, dearFlat], [cheapFall.id: .down, dearFlat.id: .flat]) == ["Dear flat", "Cheap fall"])
+    }
+
+    /// Criterion 3, and the reason the group key sits *behind* desire: what the
+    /// market is doing never promotes something the user is less willing to
+    /// part with.
+    @Test func aRisingLessWillingItemStaysBelowAWillingOne() throws {
+        let context = try makeInMemoryContext()
+        let rising = owned("Rising but wanted", desire: 3, valueCents: 900_000, into: context)
+        let willing = owned("Willing, flat", desire: 1, valueCents: 10_000, into: context)
+        #expect(order([rising, willing], [rising.id: .up, willing.id: .flat]) == ["Willing, flat", "Rising but wanted"])
+    }
+
+    /// Criterion 4: inside one desire level and one trend group the 001 order
+    /// is untouched — value, then name.
+    @Test func withinOneGroupTheValueThenTheNameDecides() throws {
+        let context = try makeInMemoryContext()
+        let dear = owned("Bass", desire: 2, valueCents: 900_000, into: context)
+        let sameA = owned("Amp", desire: 2, valueCents: 10_000, into: context)
+        let sameB = owned("Zither", desire: 2, valueCents: 10_000, into: context)
+        let trends = [dear.id: MarketTrend.up, sameA.id: .up, sameB.id: .up]
+        #expect(order([sameB, sameA, dear], trends) == ["Bass", "Amp", "Zither"])
+    }
+
+    /// No trend and a flat one are one group, checked in **both** directions so
+    /// separating them either way goes red: whichever of the pair is worth more
+    /// leads, regardless of which one has the trend.
+    @Test func noTrendRanksExactlyWhereFlatDoes() throws {
+        let context = try makeInMemoryContext()
+        let dearUnknown = owned("Dear unknown", desire: 2, valueCents: 900_000, into: context)
+        let cheapFlat = owned("Cheap flat", desire: 2, valueCents: 10_000, into: context)
+        #expect(order([cheapFlat, dearUnknown], [cheapFlat.id: .flat]) == ["Dear unknown", "Cheap flat"])
+
+        let dearFlat = owned("Dear flat", desire: 2, valueCents: 900_000, into: context)
+        let cheapUnknown = owned("Cheap unknown", desire: 2, valueCents: 10_000, into: context)
+        #expect(order([cheapUnknown, dearFlat], [dearFlat.id: .flat]) == ["Dear flat", "Cheap unknown"])
+    }
+}
+
+/// The same order and the row's readers through `load()`, with real figure
+/// rows in the device-local store — the integration the pure suite can't give.
+@Suite("SellPlanViewModel — the market readers")
+struct SellPlanMarketReaderTests {
+    private let day: TimeInterval = 24 * 60 * 60
+    private let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private let product = MarketProduct(
+        id: 126_161, slug: "fender-american-professional-ii-telecaster", title: "Fender American Professional II Telecaster",
+        usedLowCents: 100_000, usedTotal: 108, listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
+    )
+
+    private func figure(_ median: Int, at: Date) -> MarketReading {
+        .figure(MarketFigure(
+            medianCents: median, lowCents: median - 1_000, highCents: median + 1_000,
+            p10Cents: median - 500, p90Cents: median + 500,
+            count: 5, fetchedAt: at, isTruncated: false, yearScope: .any
+        ))
+    }
+
+    private func withheld(at: Date) -> MarketReading {
+        .withheld(count: 1, usedLowCents: 100_000, fetchedAt: at, yearScope: .any)
+    }
+
+    /// The readings in order, through the store's own write path — so the
+    /// stored trend is the one a real refresh would have left behind rather
+    /// than one the test asserted into place.
+    private func record(_ readings: [MarketReading], for id: UUID, in context: ModelContext) throws {
+        for reading in readings {
+            try MarketLocalStore.record(reading, product: product, for: MarketSubjectKey(subjectID: id, kind: .owned), in: context)
+        }
+    }
+
+    @Test func aRisingCandidateOutranksAFlatOneOfHigherValueThroughLoad() throws {
+        let context = ModelContext(try makeInMemoryContainer())
+        let plan = wanted(into: context)
+        let rising = owned("Rising", desire: 2, valueCents: 50_000, into: context)
+        let flat = owned("Flat", desire: 2, valueCents: 900_000, into: context)
+        try record([figure(100_000, at: t0 - 8 * day), figure(112_000, at: t0)], for: rising.id, in: context)
+        try record([figure(100_000, at: t0 - 8 * day), figure(101_000, at: t0)], for: flat.id, in: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.t0 })
+        viewModel.load()
+
+        #expect(viewModel.currentTrend(for: rising.id) == .up)
+        #expect(viewModel.currentTrend(for: flat.id) == .flat)
+        #expect(viewModel.candidates.map(\.name) == ["Rising", "Flat"])
+    }
+
+    @Test func theReasonNumbersBelongToTheRisingCandidateAlone() throws {
+        let context = ModelContext(try makeInMemoryContainer())
+        let plan = wanted(into: context)
+        let rising = owned("Rising", desire: 2, valueCents: 50_000, into: context)
+        let falling = owned("Falling", desire: 2, valueCents: 50_000, into: context)
+        let unmatched = owned("Unmatched", desire: 2, valueCents: 50_000, into: context)
+        try record([figure(100_000, at: t0 - 8 * day), figure(112_000, at: t0)], for: rising.id, in: context)
+        try record([figure(100_000, at: t0 - 8 * day), figure(80_000, at: t0)], for: falling.id, in: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.t0 })
+        viewModel.load()
+
+        let rise = try #require(viewModel.rise(for: rising.id))
+        #expect(rise.percent == 12)
+        #expect(rise.since == t0 - 8 * day, "the date is the earlier reading's, not the latest fetch's")
+        #expect(viewModel.currentTrend(for: falling.id) == .down)
+        #expect(viewModel.rise(for: falling.id) == nil)
+        #expect(viewModel.rise(for: unmatched.id) == nil)
+        #expect(viewModel.summary(for: unmatched.id) == nil)
+    }
+
+    /// Criterion 6, the stale half: the figure is older than thirty days, so
+    /// the stored `.up` says nothing here — no median, no reason, and a
+    /// neutral rank behind a rising item worth far less.
+    @Test func aFigureOlderThanThirtyDaysRanksNeutralAndSaysNothing() throws {
+        let context = ModelContext(try makeInMemoryContainer())
+        let plan = wanted(into: context)
+        let stale = owned("Stale", desire: 2, valueCents: 900_000, into: context)
+        let rising = owned("Rising", desire: 2, valueCents: 50_000, into: context)
+        try record([figure(100_000, at: t0 - 40 * day), figure(112_000, at: t0 - 31 * day)], for: stale.id, in: context)
+        try record([figure(100_000, at: t0 - 8 * day), figure(112_000, at: t0)], for: rising.id, in: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.t0 })
+        viewModel.load()
+
+        #expect(viewModel.summary(for: stale.id)?.trend == .up, "the classification is still stored")
+        #expect(viewModel.currentTrend(for: stale.id) == nil)
+        #expect(viewModel.summary(for: stale.id)?.medianCents == nil)
+        #expect(viewModel.rise(for: stale.id) == nil)
+        #expect(viewModel.candidates.map(\.name) == ["Rising", "Stale"])
+    }
+
+    /// Criterion 6, the withheld half: fetched today, and still nothing to say
+    /// — too few listings to publish a median means no arrow and no rank of
+    /// its own.
+    @Test func aWithheldFigureRanksNeutralAndSaysNothing() throws {
+        let context = ModelContext(try makeInMemoryContainer())
+        let plan = wanted(into: context)
+        let quiet = owned("Withheld", desire: 2, valueCents: 900_000, into: context)
+        let rising = owned("Rising", desire: 2, valueCents: 50_000, into: context)
+        try record([figure(100_000, at: t0 - 40 * day), figure(112_000, at: t0 - 8 * day), withheld(at: t0)], for: quiet.id, in: context)
+        try record([figure(100_000, at: t0 - 8 * day), figure(112_000, at: t0)], for: rising.id, in: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.t0 })
+        viewModel.load()
+
+        #expect(viewModel.summary(for: quiet.id)?.trend == .up, "the classification is still stored")
+        #expect(viewModel.currentTrend(for: quiet.id) == nil)
+        #expect(viewModel.summary(for: quiet.id)?.medianCents == nil)
+        #expect(viewModel.rise(for: quiet.id) == nil)
+        #expect(viewModel.candidates.map(\.name) == ["Rising", "Withheld"])
+    }
+
+    /// A history read that fails costs a sentence, never a candidate: the plan
+    /// still lists everything, in the ranked order the figures already gave,
+    /// and the screen reports no failure.
+    @Test func aHistoryReadThatThrowsLosesTheReasonAndNothingElse() throws {
+        let context = ModelContext(try makeInMemoryContainer())
+        let plan = wanted(into: context)
+        let rising = owned("Rising", desire: 2, valueCents: 50_000, into: context)
+        let flat = owned("Flat", desire: 2, valueCents: 900_000, into: context)
+        try record([figure(100_000, at: t0 - 8 * day), figure(112_000, at: t0)], for: rising.id, in: context)
+        try record([figure(100_000, at: t0 - 8 * day), figure(101_000, at: t0)], for: flat.id, in: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(
+            modelContext: context, wishlistItemID: plan.id, now: { self.t0 },
+            history: { _, _ in throw TestFailure("the local store is unreadable") }
+        )
+        viewModel.load()
+
+        #expect(viewModel.rises.isEmpty)
+        #expect(viewModel.rise(for: rising.id) == nil)
+        #expect(viewModel.candidates.map(\.name) == ["Rising", "Flat"])
+        #expect(viewModel.currentTrend(for: rising.id) == .up, "the ranking reads the figures, not the history")
+        #expect(viewModel.loadFailureMessage == nil)
+    }
+
+    /// Criterion 7: the combined figure is the person's values and only those.
+    /// The median is right there in the summary and takes no part in it.
+    @Test func theCombinedValueIsThePersonsFigureNotTheMarketsOne() throws {
+        let context = ModelContext(try makeInMemoryContainer())
+        let plan = wanted(into: context)
+        let item = owned("Ready to sell", desire: 1, valueCents: 60_000, into: context)
+        try record([figure(140_000, at: t0)], for: item.id, in: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.t0 })
+        viewModel.load()
+        viewModel.toggle(item)
+
+        #expect(viewModel.summary(for: item.id)?.medianCents == 140_000, "the median is present to be summed — and isn't")
+        #expect(viewModel.selectedValueCents == 60_000)
+    }
+}
+
+private struct TestFailure: Error, CustomStringConvertible {
+    let description: String
+    init(_ description: String) { self.description = description }
+}

@@ -55,10 +55,11 @@ struct MarketIndexTests {
 
     // MARK: - resolve
 
-    private func value(median: Int?, at: Date) -> MarketSnapshotValue {
+    private func value(median: Int?, at: Date, trend: MarketTrend? = nil) -> MarketSnapshotValue {
         let record = MarketFigureRecord(subjectID: UUID(), subjectKind: .owned, productID: 126_161, fetchedAt: at)
         record.medianCents = median
         record.count = median == nil ? 1 : 5
+        record.trendRawValue = trend?.rawValue
         return MarketSnapshotValue(record: record)
     }
 
@@ -103,6 +104,30 @@ struct MarketIndexTests {
             guard case .matched(let display) = MarketSectionState.resolve(productID: 1, figure: figure, snapshot: nil, now: now) else { throw TestFailure("not matched") }
             #expect(display.reading == .stale(fetchedAt: t0))
         }
+    }
+
+    // MARK: - The summary's current trend (003 §2)
+
+    /// The trend a surface may show is gated by the figure it would sit
+    /// beside: a figure older than thirty days draws no arrow and ranks no
+    /// candidate, though the row still carries the classification it was
+    /// last written with.
+    @Test func aStaleFigureHasNoCurrentTrendThoughTheRowStillCarriesOne() {
+        let summary = MarketSummary(snapshot: value(median: 140_000, at: t0, trend: .up), now: t0.addingTimeInterval(31 * day))
+        #expect(summary.medianCents == nil)
+        #expect(summary.trend == .up)
+        #expect(summary.currentTrend == nil)
+    }
+
+    @Test func aWithheldFigureHasNoCurrentTrendEitherOnTheDayItWasFetched() {
+        let summary = MarketSummary(snapshot: value(median: nil, at: t0, trend: .up), now: t0)
+        #expect(summary.trend == .up)
+        #expect(summary.currentTrend == nil)
+    }
+
+    @Test func aCurrentFiguresStoredTrendIsItsCurrentTrend() {
+        let summary = MarketSummary(snapshot: value(median: 140_000, at: t0, trend: .up), now: t0.addingTimeInterval(day))
+        #expect(summary.currentTrend == .up)
     }
 }
 

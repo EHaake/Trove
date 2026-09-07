@@ -37,6 +37,21 @@ struct TroveApp: App {
             // staged — the launch half of criterion 10's "no residue"; the
             // per-export half lives in FileExportService.stage.
             FileExportService.purgeAtLaunch()
+            // 003: the Sell Plan's seeded market history, for the one UI test
+            // that needs a rising, a flat, a neutral and a falling candidate.
+            // Gated on the store that was actually built being the in-memory
+            // one — not on a second read of the launch argument above — so it
+            // can only ever add rows to a test launch's own stores.
+            if UITestSeed.shouldSeed(mode: store.mode, arguments: ProcessInfo.processInfo.arguments) {
+                // Loud on purpose, and reachable only on a test launch: a seed
+                // that half-wrote would leave the test asserting against a
+                // collection nobody described.
+                do {
+                    try UITestSeed.sellPlan(into: store.container.mainContext, now: .now)
+                } catch {
+                    fatalError("Could not seed the UI test's collection: \(error)")
+                }
+            }
         } catch {
             // Reachable only once the CloudKit configuration has already
             // failed and been retried without it, so the remaining causes are

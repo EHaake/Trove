@@ -30,6 +30,7 @@ struct MarketVocabularyTests {
         "Trove/Views/Market/MarketValueSlider.swift",
         "Trove/Views/Market/MarketFetchingView.swift",
         "Trove/Views/Market/MarketValueStepView.swift",
+        "Trove/Views/Market/SellPlanMarketLines.swift",
     ]
 
     /// The two forms carrying the Year field (T009a). Kept apart from
@@ -154,6 +155,16 @@ struct MarketVocabularyTests {
             }
             #expect(inlined.isEmpty, "\(file): the year copy is typed inline: \(inlined)")
         }
+    }
+
+    /// 003's two Sell Plan strings, through the rule itself rather than
+    /// through the file scan: the market line names Reverb and no figure, and
+    /// the reason line says "asking prices", the one allowed framing.
+    @Test func theSellPlansStringsPassTheRule() throws {
+        let since = try #require(Calendar.current.date(from: DateComponents(year: 2026, month: 8, day: 5, hour: 12)))
+        let now = try #require(Calendar.current.date(from: DateComponents(year: 2026, month: 9, day: 6, hour: 12)))
+        #expect(!Self.fires(MarketCopy.sellPlanMarketLine(medianCents: 140_000)))
+        #expect(!Self.fires(MarketCopy.sellPlanReason(percent: 12, since: since, now: now)))
     }
 
     /// Rule 3: no string literal with a space in a Market view file —

@@ -224,6 +224,32 @@ nonisolated enum MarketCopy {
         "Year should be four digits, 1900 to \(nextYear)."
     }
 
+    // MARK: - The Sell Plan (spec 003)
+
+    /// "$1,400 on Reverb" — the median beside the person’s own value,
+    /// named as what it is.
+    static func sellPlanMarketLine(medianCents: Int) -> String {
+        "\(median(cents: medianCents)) on Reverb"
+    }
+
+    /// "Asking prices on Reverb are up 12 % since Aug 5." — the figure and
+    /// its sign joined by a narrow no-break space (U+202F) so the pair never
+    /// breaks across a line, and the earlier reading dated by month and day in
+    /// the `en_US` locale the currency helpers pin. The year is appended only
+    /// when that reading’s calendar year differs from today’s — the calendar
+    /// year, not an interval, so a reading from December reads with its year
+    /// in January.
+    static func sellPlanReason(percent: Int, since: Date, now: Date) -> String {
+        let calendar = Calendar.current
+        let differentYear = calendar.component(.year, from: since) != calendar.component(.year, from: now)
+        let format = Date.FormatStyle.dateTime
+            .month(.abbreviated)
+            .day()
+            .locale(Locale(identifier: "en_US"))
+        let date = differentYear ? since.formatted(format.year()) : since.formatted(format)
+        return "Asking prices on Reverb are up \(percent)\u{202F}% since \(date)."
+    }
+
     // MARK: - Accessibility (criterion 20)
 
     static let trendUp = "trending up"

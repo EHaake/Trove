@@ -1,0 +1,270 @@
+# Spec 003 — Trend-aware Sell Plan
+
+**Status**: Complete — criteria 1–12 verified at the close-out and the pre-merge sweep dispositioned, 2026-09-07; merged via [PR #15](https://github.com/EHaake/Trove/pull/15) (Approved by the person 2026-09-06; Draft authored the same day; Decision 14 amended at the Phase 2 pause)
+**Depends on**: `001-core-inventory` (the Sell Plan), `002-live-market-value` (the on-device history and its trend)
+**Authored**: 2026-09-06, in the Claude Code session at the person's direction (the constitution's venue clause); every substantive call below is the person's, and the two marked *delegated* were left to Claude Code and can be overturned before approval.
+
+## What and why
+
+The Sell Plan ranks the owned gear a person is lukewarm about, so that
+when they are eyeing a purchase they can see what would make the most
+sense to sell toward it. Since `001` it has ranked by attachment alone:
+least wanted first, ties to the more valuable. `002` gave every matched
+item a market history on the device and a trend from it — asking prices
+on Reverb rising, falling or flat over at least a week — but the Sell
+Plan never looked at it. Its rows show nothing from the market at all.
+
+This spec makes the ranking trend-aware: among the items a person feels
+the same about, the ones whose asking prices are rising come first, and
+the plan says so in one quiet line. The idea from the roadmap — surface
+an item because it is *both* low-attachment and currently selling well
+— lands here, without changing what the Sell Plan is: advisory, a list
+of the person's best options, never a target and never an instruction.
+
+The person's own attachment stays the first word. A trend reorders
+items within a desire level and never lifts one across levels (Decision
+1): a lukewarm item whose asking prices are falling is still a lukewarm
+item, and a well-loved one that is rising is still well loved.
+
+## Core behavior
+
+### The ranking
+
+- The candidate pool is unchanged: owned items with desire-to-keep of 3
+  or lower and a current value entered, plus anything already on the
+  plan that no longer qualifies (as `001` has it).
+- Order: least wanted first. Within one desire level, items whose
+  asking prices are **rising** come first, then items with **no trend
+  or a flat one**, then items whose asking prices are **falling**.
+  Within those groups, higher current value first, then name, so the
+  order is fully determined by the data (Decision 1).
+- "Rising", "falling" and "flat" are exactly `002`'s trend (its P12):
+  the latest median against the most recent history point at least
+  seven days older, up at +5 % or more, down at −5 % or less. One
+  definition, shared with the list rows' arrows; this spec adds no
+  threshold of its own (Decision 5).
+- An unmatched item, a matched item with fewer than two qualifying
+  points, or one whose figure is no longer current (older than thirty
+  days, `002` P13) ranks in the middle group, as neutral. Nothing about
+  it is guessed.
+
+### What a row shows
+
+- Each candidate row keeps its checkbox, name, category, desire dial
+  and the person's current value. Beneath the category it gains a
+  quiet **market line** when the item has a current figure: the Reverb
+  median asking price with the trend arrow beside it, in the same up
+  and down tones the list rows use (Decision 3). No figure, no line; no
+  trend, no arrow. (Amended 2026-09-07, Decision 14: the line sat
+  beneath the person's value until the Phase 2 pause.)
+- A row that is **rising** carries one **reason line** under its
+  market line: "Asking prices on Reverb are up 12 % since Aug 5." The
+  percentage is the same comparison the arrow made, rounded to a whole
+  number; the date is the earlier reading's (Decision 2). Falling and
+  neutral rows carry no reason line — the arrow is the whole statement
+  (Decision 2).
+- The market line and the reason line are information. Nothing on the
+  screen urges the person to sell, and nothing changes in the
+  screen's combined-value comparison or its colour cue.
+
+### What does not change
+
+- The combined value of the selected items is the sum of the person's
+  own values, as before. The market median sits beside a value and is
+  never summed or substituted (Decision 4; `002` Decisions 2 and 8).
+- Selecting and deselecting, immediate save, the empty states, the
+  entry from the wishlist item's detail screen, and the absence of any
+  per-row shortcut elsewhere are all as `001` left them.
+- The trend is computed from the device's own history, which does not
+  sync (`002` Decision 7). Two devices can therefore show the same
+  plan in different orders until both have accrued history; the
+  selection itself syncs and is the same on both (Decision 6).
+
+### At launch
+
+History began accruing on 2026-09-05, so on the day this ships no item
+has a trend and every plan reads exactly as it does today, with the
+market line added. The reason line appears the first time an item has
+a reading at least a week older than its latest and the two differ by
+5 % or more. The screen says nothing about the absence of trends
+(Decision 7): the quiet lines arrive when there is something to say.
+
+## Copy
+
+- Market line: "$1,400 on Reverb" — the median in whole currency, then
+  the arrow. The figure is an asking price, and the vocabulary rules of
+  `002` (P10: never "value", "worth" or "price" alone for the fetched
+  figure) apply to every string this spec adds.
+- Reason line: "Asking prices on Reverb are up 12 % since Aug 5." — the
+  month and day of the earlier reading; the year is added only when it
+  is not the current one.
+- Accessibility: the market line reads "Median asking price $1,400,
+  trending up"; the reason line reads as written.
+
+## Design requirements
+
+- The two new lines use the row's existing quiet tones and type: the
+  market line in the meta style beneath the category, the reason line
+  in the secondary style beneath the market line — both in the row's
+  left column, so the person's value stands alone on the right and the
+  lines take the row's full text width (Decision 14) — the arrow in
+  moss and rust as the list rows draw it. No Design pass, for the reason
+  `002` Decision 8 gave the arrow: small additions in existing tones
+  to an approved row (Decision 8, *delegated*).
+- A row with both lines must not push the checkbox, dial or value out
+  of alignment with rows that have neither; the lines wrap under their
+  own column.
+- Dynamic Type at the largest accessibility size keeps the reason line
+  readable in full, wrapping rather than truncating.
+
+## Decisions record
+
+1. **Trend reorders within a desire level and never across.** Option B
+   — letting a rising desire-3 item outrank a flat desire-1 item — was
+   put to the person and declined. Attachment is the person's own
+   judgement, the thing the app never overrides; the trend is context
+   for ordering the items they feel the same about. Within a level:
+   rising, then neutral, then falling, then value, then name.
+2. **The reason line names the rising case only.** "Asking prices on
+   Reverb are up 12 % since Aug 5." on rising rows; nothing beyond the
+   arrow on falling or neutral rows. The Sell Plan's principle since
+   `001` is "show the information, let the user decide": a falling
+   item needs no sentence, and no line anywhere says "sell".
+3. **Rows gain the median and the arrow.** The person chose the market
+   line over the arrow alone so the reason for a row's position is
+   visible without opening the item. This is the first row surface in
+   the app to carry the median itself — the item list and wishlist rows
+   carry only the arrow (`002` Decision 8) — which Claude Code
+   misdescribed in the conversation as "the same shape the list rows
+   use"; the person's choice was of the median line itself, and the
+   correction is recorded here.
+4. **The combined value stays the person's values.** Treated as settled
+   from `002`'s Decisions 2 and 8; the person confirmed.
+5. **No new thresholds.** The seven-day gap and the ±5 % bands are
+   `002`'s, one source of truth. The percentage the reason line shows
+   is that same comparison, rounded.
+6. **Order may differ between devices** until each has its own
+   history; the selection syncs. Accepted as a consequence of `002`
+   Decision 7 rather than reopened.
+7. **Nothing is said when no item has a trend.** At launch, every plan
+   is trend-less; a line explaining that would be the kind of
+   commentary the screen avoids. The lines appear when they have
+   something to say.
+8. ***Delegated* — no Design pass.** Two quiet lines in existing tones
+   on an approved row, by the reasoning of `002` Decision 8.
+9. ***Delegated* — a seeded history for verification.** No device will
+   hold a week of history before this ships, so the ranking, the arrow
+   and the reason line are verified against fixtures in the unit
+   tests and, for the UI test and the device pass, against a history
+   seeded only under the existing `-uiTesting` launch argument (with a
+   second, `-seedSellPlan`, so `-uiTesting` alone still starts empty —
+   plan sign-off, 2026-09-06) — the constitution's sanctioned test-only
+   branch, whose only effect is on that launch's in-memory stores. The person's own device shows the
+   feature as its history accrues.
+
+10. ***Delegated* — a withheld figure with an older stored trend ranks
+    neutral.** Not named in "The ranking" above; the plan ranks it with
+    the unmatched and the stale, since it has no current figure and
+    nothing about it is guessed (plan Q2, sign-off N2).
+11. ***Delegated* — criterion 11 reworded; Dynamic Type to the roadmap.**
+    Every font in the app is fixed-size (001's recorded limitation), so
+    "at the largest accessibility text size" verifies nothing; the
+    criterion now names its substance, wrap-not-truncate and alignment.
+    Dynamic Type is worth its own spec and goes to `ROADMAP.md` as a
+    future entry in the post-merge docs pass (tasks T007), not into
+    this one.
+12. ***Delegated* — the list rows keep drawing arrows on stale figures
+    for now.** Since 002 the item list and wishlist rows draw the trend
+    arrow even when the figure is over thirty days old; the Sell Plan
+    will not. A mild inconsistency, not a defect in this spec's scope:
+    recorded for a small `fix/` branch after this spec merges, noted in
+    the same docs pass.
+13. ***Delegated* — "12 %" is set with a narrow no-break space** so the
+    number and the sign never split across lines (plan Q5).
+14. **Both lines stack in the left column, under the category.**
+    Decided by the person at the Phase 2 pause (2026-09-07) from the
+    seeded row on the simulator. As first built, the market line sat
+    beneath the person's value in the right column and the reason line
+    beneath the category on the left; at phone width the two columns
+    split the row so that the category truncated to "MUSIC · GUI…" and
+    the sentence stacked into a four-line column beside a whole
+    "$1,400 on Reverb". With the market line moved under the category
+    and the sentence under it, the value alone on the right, everything
+    fits: the category reads whole and the sentence takes the row's
+    text width. Nothing else on the row moves; the value stays the
+    figure the checkbox adds up.
+
+## Acceptance criteria
+
+Each is something a person can check on the built app, or a test can
+check against fixtures. The plan will cite what verifies each.
+
+1. [x] Two candidates at the same desire level, one rising and one flat,
+   list the rising one first regardless of their values.
+    *Verified by*: `SellPlanRankingTests.aRisingCandidateLeadsAFlatOneAtTheSameDesire` and `SellPlanMarketReaderTests.aRisingCandidateOutranksAFlatOneOfHigherValueThroughLoad`; on screen, `testTheSeededSellPlanRanksRisingFirstAndSaysWhy` (Telecaster $600 above Blues Junior $640).
+2. [x] Two candidates at the same desire level, one flat and one
+   falling, list the falling one last regardless of their values.
+    *Verified by*: `SellPlanRankingTests.aFallingCandidateTrailsAFlatOneAtTheSameDesire`; on screen, the seeded NT1-A $400 below the Squier $380.
+3. [x] A rising desire-3 candidate never lists above a desire-1
+   candidate of any trend.
+    *Verified by*: `SellPlanRankingTests.aRisingLessWillingItemStaysBelowAWillingOne` (plan G1; mutation: the group key ahead of desire → red).
+4. [x] Within the same desire level and trend group, the higher value
+   lists first, then name — the `001` order, unchanged.
+    *Verified by*: `SellPlanRankingTests.withinOneGroupTheValueThenTheNameDecides`, and `SellPlanCandidateTests` (001) untouched and green — plan G10.
+5. [x] A rising row shows the reason line with the rounded percentage
+   and the earlier reading's date; a falling row and a neutral row
+   show none.
+    *Verified by*: `MarketTrendTests.thePercentIsExactBeforeTheDivisionAndRoundsHalfAwayFromZero` (the 1000→1145 row is the one that discriminates dividing first; `thePercentOfAHigherBase` is a value pin), `MarketCopyTests.theReasonLineCarriesThePercentageAndTheEarlierReadingsDate`, `theReasonLineAddsTheYearWhenTheReadingIsFromAnother`; `SellPlanViewModelTests.theReasonNumbersBelongToTheRisingCandidateAlone`; on screen, the seeded UI test finds the sentence on the Telecaster's row and no other.
+6. [x] A row whose item has a current figure shows the market line with
+   the median; the arrow appears only with a trend; a row whose item
+   is unmatched, withheld, or whose figure is older than thirty days
+   shows no market line.
+    *Verified by*: `MarketIndexTests.aStaleFigureHasNoCurrentTrendThoughTheRowStillCarriesOne`, `aWithheldFigureHasNoCurrentTrendEitherOnTheDayItWasFetched`, `aCurrentFiguresStoredTrendIsItsCurrentTrend`; `SellPlanViewModelTests.aFigureOlderThanThirtyDaysRanksNeutralAndSaysNothing`, `aWithheldFigureRanksNeutralAndSaysNothing`; the render pair `aRisingMarketLineDrawsTheArrowInTheMossTextTone` / `aMarketLineWithNoTrendDrawsNeitherArrowTone`; "no line" holds by construction — `SellPlanMarketLine(medianCents: Int, …)` takes a non-optional median (plan §5) — and on screen the unmatched Squier carries none (the UI test).
+7. [x] The combined selected value is the sum of the person's values;
+   changing an item's market figure changes nothing in it.
+    *Verified by*: `SellPlanFiguresTests` (001) untouched, and the G5 case in `SellPlanViewModelTests` (`selectedValueCents` ignores the median; mutation: the median summed → red); the on-screen half — ticking the seeded Telecaster and reading $600 — was stood in for by those tests at the person's direction (T006's Done note), not attested by hand.
+8. [x] A trend of exactly +5 % counts as rising and exactly −5 % as
+   falling; +4.9 % and −4.9 % are neutral (the `002` bands, shared).
+    *Verified by*: `MarketTrendTests.fivePercentIsTheBoundaryOnBothSides` and `sevenDaysExactlyIsATrendAndASecondLessIsNot` (002, unchanged — plan G10).
+9. [x] Two points fewer than seven days apart produce no trend and a
+   neutral rank; a plan with no trends anywhere is ordered exactly as
+   `001` orders it, with no extra text.
+    *Verified by*: `sevenDaysExactlyIsATrendAndASecondLessIsNot`; `SellPlanRankingTests.noTrendRanksExactlyWhereFlatDoes` (G2, both pairs); the 001 order by construction — `candidates(from:alreadySelected:trend:)` defaults `trend` to nil and the five 001 suites compile and pass untouched; no extra text by construction — both lines sit under `if let`.
+10. [x] Every new string passes `002`'s vocabulary rule for the fetched
+    figure, and the reason line is read by VoiceOver in full.
+    *Verified by*: `MarketVocabularyTests.theSellPlansStringsPassTheRule` and the new view file in `viewFiles` (rule 3: no spaced literal); "read in full" — `testTheSeededSellPlanRanksRisingFirstAndSaysWhy` reads the combined row's accessibility label (what VoiceOver speaks; XCUITest reading it, not VoiceOver itself) for the whole sentence, "Median asking price" and "trending up" on the simulator.
+11. [x] The reason line wraps rather than truncates at the row's width,
+    and the row's checkbox, dial and value stay aligned with rows that
+    have no such line. (Reworded at plan sign-off, 2026-09-06, with the
+    person's delegation: the app's type is fixed-size — a limitation
+    recorded in 001's plan — so the text-size setting changes nothing
+    here; Decision 11 below.)
+    *Verified by*: `SellPlanMarketLinesTests.theRowGrowsByAtLeastTwoLinesWhenTheReasonSentenceWraps` (the sentence's own contribution at 360 pt ≥ two `secondary` lines; `lineLimit(1)` → red) and `theMarksStayWhereTheyWereWhenTheRowGainsItsLines` (checkbox at 16 pt and the dial's ring at 15 pt in both renders; `.center` → red); the person's screenshot at Decision 14 with every name, category and value whole. Per Decision 11 the text-size setting changes nothing in this app — a fact of `ThemeTypography`, not something the person switched on and looked at (T006's Done note) — so the criterion is ticked for its reworded substance, not for Dynamic Type working.
+12. [x] Under `-uiTesting` with `-seedSellPlan` the seeded history
+    produces at least one rising, one falling and one neutral candidate,
+    so the UI test and the device pass exercise all three; under
+    `-uiTesting` alone the collection starts empty as before, and in a
+    normal launch nothing is seeded. (Wording corrected at plan sign-off,
+    2026-09-06: the seed takes a second argument so the existing
+    empty-collection UI tests keep their starting state.)
+    *Verified by*: `UITestSeedTests` (six: the gate table with the persistent modes refusing both flags, the guarded single call, the counts through the production container, `everyStoredTrendIsTheComputedOneAndTheThreeAreUpFlatDown`, the writer-only scan, the seeded order); the seeded UI test under both flags, and `testEmptyCollectionOffersImportAndSettingsButNotExport` under `-uiTesting` alone (mutation: seed on the flag alone → red).
+
+## Non-goals (explicit)
+
+- **Trend lifting an item across desire levels** — Decision 1.
+- **Any text on falling items, or any "sell now" language** —
+  Decision 2 and the Sell Plan's founding principle.
+- **A "plans trending up" line on the dashboard or the wishlist**, or
+  any survey of plans in bulk — `009-sell-plan-list`'s ground.
+- **Notifications** ("your Telecaster is trending up") — `002`'s
+  non-goal, still.
+- **New trend parameters, a longer look-back, or a magnitude ranking**
+  (an item up 20 % above one up 6 %) — Decision 5; the history is a
+  day old, and a richer model is a later spec once there is data to
+  design it against.
+- **Using the market median in the combined value, or as a fallback
+  for an item with no value entered** — Decision 4.
+- **Changing who qualifies as a candidate** — still desire 3 or lower
+  with a value entered.
+- **Marking anything as sold** — `006-mark-as-sold`.
+- **Syncing history so that two devices agree** — `002` Decision 7.

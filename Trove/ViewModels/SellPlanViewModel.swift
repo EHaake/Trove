@@ -20,7 +20,7 @@ import SwiftData
 /// `SellPlanFramingTests` guards that rather than trusting this comment.
 @Observable
 final class SellPlanViewModel {
-    /// Owned gear worth offering, ranked. See `rank(_:_:)` for the order.
+    /// Owned gear worth offering, ranked. See `SellPlanRanking` for the order.
     private(set) var candidates: [Item] = []
 
     /// Held as ids rather than as `Item` references so membership is a cheap,
@@ -33,15 +33,54 @@ final class SellPlanViewModel {
     private(set) var loadFailureMessage: String?
     private(set) var saveFailureMessage: String?
 
+    /// The device's own market figures for the owned items, keyed by item —
+    /// one fetch per `load()`, the same step every other row surface goes
+    /// through (`MarketSummary.summaries(forSubjects:in:now:)`), so this
+    /// screen can never derive a figure differently from the item list.
+    private(set) var marketSummaries: [UUID: MarketSummary] = [:]
+
+    /// The reason line's numbers, for the rising candidates only (003 plan
+    /// Q3). A candidate that isn't rising has no entry at all, so a row can't
+    /// draw a rise beside a flat or falling arrow.
+    private(set) var rises: [UUID: MarketRise] = [:]
+
+    /// The clock the figures' freshness was measured against on the last
+    /// `load()` — the row's dates read this rather than calling `Date()`
+    /// again, so everything on screen agrees about "now".
+    private(set) var loadedAt: Date
+
     private let modelContext: ModelContext
     private let wishlistItemID: UUID
 
     private let syncMonitor: SyncMonitor
 
-    init(modelContext: ModelContext, wishlistItemID: UUID, syncMonitor: SyncMonitor = .notSyncing) {
+    private let now: () -> Date
+
+    /// Where the history behind a rise comes from. Injected as a closure over
+    /// the local store rather than as a protocol because it's one read with
+    /// no state of its own — the `TroveStore.make(recreateLocalStore:)` shape
+    /// — and a test needs it to throw far more than it needs it to be a type.
+    private let history: (UUID, ModelContext) throws -> [MarketHistoryEntry]
+
+    /// - Parameters:
+    ///   - now: the clock the market figures' freshness is measured against
+    ///     (002/T012), injected so a test can age a figure past the thirty-day
+    ///     window without waiting a month.
+    ///   - history: the item's history points, for the rise behind a rising
+    ///     candidate. Defaults to the device-local store.
+    init(
+        modelContext: ModelContext,
+        wishlistItemID: UUID,
+        syncMonitor: SyncMonitor = .notSyncing,
+        now: @escaping () -> Date = Date.init,
+        history: @escaping (UUID, ModelContext) throws -> [MarketHistoryEntry] = { try MarketLocalStore.historyEntries(for: $0, in: $1) }
+    ) {
         self.modelContext = modelContext
         self.wishlistItemID = wishlistItemID
         self.syncMonitor = syncMonitor
+        self.now = now
+        self.history = history
+        self.loadedAt = now()
     }
 
     // MARK: - The two figures
@@ -154,7 +193,13 @@ final class SellPlanViewModel {
             let owned = try modelContext.fetch(FetchDescriptor<Item>())
             ownedCount = owned.count
             lowDesireCount = owned.count { DesireLevel(clamping: $0.desireToKeep).isSellCandidate }
-            candidates = Self.candidates(from: owned, alreadySelected: selectedIDs)
+
+            loadedAt = now()
+            // Before the sort, not after: the order reads these (002/T012 —
+            // the list's market sorts learned the same lesson the hard way).
+            marketSummaries = MarketSummary.summaries(forSubjects: owned.map(\.id), in: modelContext, now: loadedAt)
+            candidates = Self.candidates(from: owned, alreadySelected: selectedIDs, trend: { self.currentTrend(for: $0) })
+            rises = risesForRisingCandidates()
         } catch {
             loadFailureMessage = error.localizedDescription
             ownedCount = 0
@@ -162,8 +207,50 @@ final class SellPlanViewModel {
             candidates = []
             selectedIDs = []
             wishlistItem = nil
+            marketSummaries = [:]
+            rises = [:]
         }
         hasLoaded = true
+    }
+
+    /// The reason numbers, derived once per `load()` for the candidates the
+    /// stored trend already calls rising.
+    ///
+    /// The history read is `try?` and a failure yields no entry: the device's
+    /// market rows are an addition to the collection, so a local-store problem
+    /// must cost a sentence, never a candidate (the 002 direction
+    /// `MarketSummary.summaries` takes for the figures themselves). The
+    /// comparison must agree that it's a rise — `MarketRise.init` is failable
+    /// on exactly that — so a history that no longer says `.up` draws nothing
+    /// rather than contradicting the arrow beside it.
+    private func risesForRisingCandidates() -> [UUID: MarketRise] {
+        var found: [UUID: MarketRise] = [:]
+        for candidate in candidates where currentTrend(for: candidate.id) == .up {
+            found[candidate.id] = (try? history(candidate.id, modelContext))
+                .flatMap(MarketTrend.comparison)
+                .flatMap(MarketRise.init)
+        }
+        return found
+    }
+
+    // MARK: - What the rows read
+
+    /// The item's figure, or nil when it's unmatched or nothing was fetched
+    /// for it on this device.
+    func summary(for id: UUID) -> MarketSummary? {
+        marketSummaries[id]
+    }
+
+    /// The trend the row draws *and* ranks by — `currentTrend`, so a withheld
+    /// or no-longer-current figure is neutral and silent rather than carrying
+    /// a stale classification (003 plan Q2).
+    func currentTrend(for id: UUID) -> MarketTrend? {
+        marketSummaries[id]?.currentTrend
+    }
+
+    /// The rise behind a rising row's reason line, or nil for every other row.
+    func rise(for id: UUID) -> MarketRise? {
+        rises[id]
     }
 
     /// The pool, ranked — plus anything already on the plan that no longer
@@ -175,10 +262,14 @@ final class SellPlanViewModel {
     /// plan. Dropping it from the list would strand it — still counted, with no
     /// row to switch it off from. Keeping it visible means every selection is
     /// reversible, which matters more than a tidy pool.
-    static func candidates(from owned: [Item], alreadySelected: Set<UUID>) -> [Item] {
+    static func candidates(
+        from owned: [Item],
+        alreadySelected: Set<UUID>,
+        trend: (UUID) -> MarketTrend? = { _ in nil }
+    ) -> [Item] {
         owned
             .filter { qualifies($0) || alreadySelected.contains($0.id) }
-            .sorted(by: rank)
+            .sorted { SellPlanRanking.rank($0, $1, trend: trend) }
     }
 
     /// Owned gear the user has already said they're relaxed about, with a value
@@ -191,31 +282,6 @@ final class SellPlanViewModel {
     static func qualifies(_ item: Item) -> Bool {
         DesireLevel(clamping: item.desireToKeep).isSellCandidate
             && item.currentValueCents != nil
-    }
-
-    /// Least-wanted first; ties go to the more valuable, since between two
-    /// items you feel the same about, the one that raises more is the better
-    /// suggestion.
-    ///
-    /// Falls through to name then id so the order is fully determined by the
-    /// data — `FetchDescriptor` promises no ordering, and a list that reshuffles
-    /// equal rows between visits looks broken.
-    private static func rank(_ lhs: Item, _ rhs: Item) -> Bool {
-        if lhs.desireToKeep != rhs.desireToKeep {
-            return lhs.desireToKeep < rhs.desireToKeep
-        }
-        if lhs.currentValueCents != rhs.currentValueCents {
-            // An item with no value sorts last among its equals rather than as
-            // zero — it's unknown, not worthless.
-            guard let left = lhs.currentValueCents else { return false }
-            guard let right = rhs.currentValueCents else { return true }
-            return left > right
-        }
-        let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
-        if byName != .orderedSame {
-            return byName == .orderedAscending
-        }
-        return lhs.id.uuidString < rhs.id.uuidString
     }
 
     // MARK: - Selecting
@@ -250,5 +316,62 @@ final class SellPlanViewModel {
     /// The selected rows, in the order they appear on screen.
     private var selectedItems: [Item] {
         candidates.filter { selectedIDs.contains($0.id) }
+    }
+}
+
+/// The order the plan lists candidates in (003 plan Q1).
+///
+/// Least-wanted first; then the trend, so what the market is doing decides
+/// between two items you feel the same about; then the more valuable, since
+/// between two you feel the same about and the market agrees on, the one that
+/// raises more is the better suggestion.
+///
+/// Falls through to name then id so the order is fully determined by the data
+/// — `FetchDescriptor` promises no ordering, and a list that reshuffles equal
+/// rows between visits looks broken.
+///
+/// MainActor (the project's default) rather than `nonisolated`: it compares
+/// `Item`, a `@Model`, which `nonisolated` code cannot touch.
+enum SellPlanRanking {
+    /// Rising first, falling last, everything else in the middle.
+    ///
+    /// No trend and a flat one are deliberately **one** group, not two: the
+    /// spec ranks an unmatched item, one with too little history, and one
+    /// whose figure is no longer current exactly where a flat one sits —
+    /// nothing about them is guessed, in either direction.
+    static func group(of trend: MarketTrend?) -> Int {
+        switch trend {
+        case .up: 0
+        case .flat, nil: 1
+        case .down: 2
+        }
+    }
+
+    /// - Parameter trend: the trend to rank an item by, taken as a closure so
+    ///   the whole order is testable against a dictionary. Its default of no
+    ///   trend anywhere is 001's order exactly.
+    static func rank(_ lhs: Item, _ rhs: Item, trend: (UUID) -> MarketTrend?) -> Bool {
+        // Desire outranks the trend: the market never promotes something the
+        // user said they want to keep above something they'd let go.
+        if lhs.desireToKeep != rhs.desireToKeep {
+            return lhs.desireToKeep < rhs.desireToKeep
+        }
+        let leftGroup = group(of: trend(lhs.id))
+        let rightGroup = group(of: trend(rhs.id))
+        if leftGroup != rightGroup {
+            return leftGroup < rightGroup
+        }
+        if lhs.currentValueCents != rhs.currentValueCents {
+            // An item with no value sorts last among its equals rather than as
+            // zero — it's unknown, not worthless.
+            guard let left = lhs.currentValueCents else { return false }
+            guard let right = rhs.currentValueCents else { return true }
+            return left > right
+        }
+        let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+        if byName != .orderedSame {
+            return byName == .orderedAscending
+        }
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 }

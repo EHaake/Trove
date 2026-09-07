@@ -58,6 +58,16 @@ struct MarketSummary: Equatable, Sendable {
         trend = snapshot.trend
     }
 
+    /// The trend a surface may *show* — nil whenever there is no median to
+    /// show it beside, so a withheld or no-longer-current figure draws no
+    /// arrow here; the Sell Plan reads this gate for its ranking (003 plan §2). `medianCents` is already
+    /// through the one freshness predicate, so this reads the same gate the
+    /// figure does rather than a second copy of it. `trend` stays as stored,
+    /// for anything that wants the row's last classification regardless.
+    var currentTrend: MarketTrend? {
+        medianCents == nil ? nil : trend
+    }
+
     /// One fetch of the figure rows, narrowed to the subjects just fetched —
     /// what every surface that reads a figure per row goes through
     /// (`ItemListViewModel.load()`, `WishlistViewModel.load()`,
