@@ -280,10 +280,20 @@ struct SellPlanRow: View {
                 }
                 // Sized before the spacer, so the name and category take
                 // the row's spare width rather than being cut to the market
-                // line's rigid width beside them (spec Decision 14: on the
-                // simulator "Blues Junior" read "Blues Juni…" over "$600 on
-                // Reverb"). The value below is fixed-size, so the column
-                // can never squeeze the figure the checkbox adds up.
+                // line beside them (spec Decision 14: on the simulator
+                // "Blues Junior" read "Blues Juni…" over "$600 on Reverb").
+                // The value below is fixed-size, so the column can never
+                // squeeze the figure the checkbox adds up.
+                //
+                // Measured while fixing S1, and it states an intent rather
+                // than a mechanism: removing this line changes nothing.
+                // The name's ink ends on the same pixel with it and without
+                // it, at 327/345/382/402 pt, on long and short names, with
+                // the figure rigid and with it limited — `Spacer` yields to
+                // the column either way. Kept because it says which column
+                // is meant to win if that ever stops being true, and there
+                // is no test under it for the reason `CLAUDE.md` gives:
+                // nothing can make one fail.
                 .layoutPriority(1)
 
                 Spacer(minLength: 0)
