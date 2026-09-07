@@ -331,7 +331,35 @@ Before the pause: one `scripts/verify.sh ui` run (the count line read: the same 
   by construction — both lines sit under `if let` on facts no real device
   has yet). Recorded as the product owner's call, not as a finding.
 
-- [ ] **T007 — Close-out.** Criteria 1–12 in `spec.md` ticked with a citation each (criterion 8 by `sevenDaysExactlyIsATrendAndASecondLessIsNot` and `fivePercentIsTheBoundaryOnBothSides`; criterion 11 per plan Q10), honest partials named; `plan.md` gains an "As built" section (any deviation, the T005 instrumentation's answer, the tier totals, the closure-with-default `history` injection recorded as the accepted variant for a single store read, and the sentence plan Q9 promised: nothing new is stored or sent, so `PRIVACY.md` is unchanged); README's Sell Plan bullet gains one sentence; the tier log below totalled and compared against 002's; `scripts/verify.sh` and `scripts/verify.sh ui` green, the UI suite twice; then the **pre-merge sweep** — the `skeptical-reviewer` at its default tier over `spec.md`, `plan.md`, `tasks.md` and `git diff main...HEAD`, its findings dispositioned here; the PR marked ready and merged with a merge commit; the post-merge `fix/docs-003-shipped` branch for `specs/ROADMAP.md` (the 003 entry and status row; the two "Not in this plan" observations — the list rows' stale arrows and the fixed-size type — recorded for the person) and `DECISIONS.md` if anything belongs there. **Verify**: every box above checked; the sweep's disposition recorded; both suites green; `ROADMAP.md` (the 003 entry and status row; a new future entry for Dynamic Type, spec Decision 11; the list-row stale-arrow follow-up as a `fix/` candidate, Decision 12) no longer lists this spec's work as future.
+- [x] **T007 — Close-out.** Criteria 1–12 in `spec.md` ticked with a citation each (criterion 8 by `sevenDaysExactlyIsATrendAndASecondLessIsNot` and `fivePercentIsTheBoundaryOnBothSides`; criterion 11 per plan Q10), honest partials named; `plan.md` gains an "As built" section (any deviation, the T005 instrumentation's answer, the tier totals, the closure-with-default `history` injection recorded as the accepted variant for a single store read, and the sentence plan Q9 promised: nothing new is stored or sent, so `PRIVACY.md` is unchanged); README's Sell Plan bullet gains one sentence; the tier log below totalled and compared against 002's; `scripts/verify.sh` and `scripts/verify.sh ui` green, the UI suite twice; then the **pre-merge sweep** — the `skeptical-reviewer` at its default tier over `spec.md`, `plan.md`, `tasks.md` and `git diff main...HEAD`, its findings dispositioned here; `specs/ROADMAP.md` updated on this branch (the 003 entry and status row; the two "Not in this plan" observations — the list rows' stale arrows and the fixed-size type — recorded for the person) and `DECISIONS.md` where something belongs there — the post-merge `fix/docs-003-shipped` branch this line first named was retired by the sweep's S5, see `DECISIONS.md` 2026-09-07; the PR marked ready and merged with a merge commit. **Verify**: every box above checked; the sweep's disposition recorded; both suites green; `ROADMAP.md` (the 003 entry and status row; a new future entry for Dynamic Type, spec Decision 11; the list-row stale-arrow follow-up as a `fix/` candidate, Decision 12) no longer lists this spec's work as future.
+
+  *Done (2026-09-07, orchestrator)*: criteria 1–12 ticked in `spec.md` with
+  a citation each; `plan.md` "As built"; README's sentence; the tier log
+  totalled; `scripts/verify.sh` 1141 in 153 and `scripts/verify.sh ui`
+  `Executed 14 tests, with 0 failures` twice back to back (after the
+  script's count-grep fix). **The sweep** (`skeptical-reviewer`, default
+  tier, over the three documents and `git diff main...HEAD`): fix and
+  re-review — B1 (criterion 7's and 11's citations claimed on-screen checks
+  T006 had stood in for) → reworded to name the tests and the substitution;
+  B2 (README and the script uncommitted) → committed; S1 (three rigid
+  elements in the row, a five-figure median on a 320 pt row untested) →
+  recorded in "As built" and as a `fix/` candidate in the roadmap; S2 (the
+  4 pt margin on the two-line floor) → stands, with the re-fixture note;
+  S3 (T003's note named `recordMatch`; the purchase prices undeclared) →
+  fixed; S4 (three citation imprecisions) → fixed; S5 (the roadmap
+  deferred to a post-merge branch on a reason that doesn't hold) → taken,
+  the roadmap on this branch and the mechanism change in `DECISIONS.md`;
+  S6 (per-task figures divided by dispatches) → fixed; S7 (the status line
+  ahead of the merge) → worded for the merging commit. **The re-review**:
+  signed off for merge with two one-sentence contradictions of the fix
+  commit's own making, fixed here directly per the cap (T007's clause and
+  the "As built" closing bullet still described the retired post-merge
+  branch); its second looks — the two reviewer rows below added before
+  this tick; the 003 bullet stays under "Future specs" marked Shipped, the
+  002 pattern; criterion 6's "the UI test" is right, `saysMarket` asserts
+  the Squier's absence by the exact array; the merge strings checked at
+  the merge. Nothing learned at the merge itself, so no post-merge branch.
+
 
 ---
 
@@ -374,8 +402,10 @@ The constitution's model policy (amended 2026-09-06) decides which tier runs eac
 | Phase 2 review | opus (`skeptical-reviewer`) | 81,819 | signed off, nothing blocking; S1, S3, S4 fixed by the orchestrator, S2 → T006/T007, S5 → sweep, S6 declined (plan Q8's vocabulary) |
 | Phase 2 re-review | opus (`skeptical-reviewer`) | 22,894 | signed off; S2 then settled by the orchestrator's own measurement (`fixedSize`), no third round |
 | T004a | opus (`sdd-implementer`) | 51,973 | verified first try; four mutations red; the column-width squeeze found by the orchestrator on the simulator and fixed directly |
+| Pre-merge sweep | opus (`skeptical-reviewer`) | 152,655 | fix and re-review — B1, B2 (the record, not the code), S1–S7 |
+| Sweep re-review | opus (`skeptical-reviewer`) | 36,946 | signed off for merge; two doc contradictions fixed by the orchestrator directly |
 
-**Totals (before the sweep)** — implementer (opus, 7 dispatches over 6 tasks incl. one fix pass): **530,884**; reviewer at its default tier (opus, 6 invocations: three task reviews, one re-review, the phase review and its re-review): **271,823**; top tier (fable): the planner's one draft **191,974** and the two sign-off rounds **145,955** (the four superseded in-session rounds, 213,479, are the cost of drafting before the planner subagent existed and are not counted against the policy). Against 002's baseline (~2.97 M implementer and ~1.43 M reviewer over 29 tasks — ~102 k and ~49 k per task): 003 ran ~88 k implementer and ~45 k reviewer per *task* over the six implemented (T001–T005, T004a; the first draft of this line divided by the seven dispatches — the sweep's S6), and the two phase-level reviews together (104,713) cost less than three of 002's per-task reviews. The review-loop cap held every time: no invocation went past one re-review, and the two findings still open after a re-review (plan B1 at sign-off; S2 in Phase 2) were closed by the orchestrator directly. Escape-hatch misses: none — no task failed verification twice and none stopped on a judgment call; the orchestrator's own code edits (the `fixedSize` and the `layoutPriority`) came from measurements after the implementer's green, not from a miss. Third tier: stays off — T004 and T005 each had a named pattern and an automated Verify, but each also produced a finding the implementer had to reason about (the two-axis locator's instrument; the combined-row probe), which is the judgment the third tier would lack.
+**Totals (final)** — implementer (opus, 7 dispatches over 6 tasks incl. one fix pass): **530,884**; reviewer at its default tier (opus, 8 invocations: three task reviews, one re-review, the phase review and its re-review, the sweep and its re-review): **461,424** (271,823 before the sweep; the sweep alone 152,655, the largest single invocation of the spec — it read three documents and the whole diff, ~300 KB); top tier (fable): the planner's one draft **191,974** and the two sign-off rounds **145,955** (the four superseded in-session rounds, 213,479, are the cost of drafting before the planner subagent existed and are not counted against the policy). Against 002's baseline (~2.97 M implementer and ~1.43 M reviewer over 29 tasks — ~102 k and ~49 k per task): 003 ran ~88 k implementer and ~77 k reviewer per *task* over the six implemented (~45 k before the sweep) (T001–T005, T004a; the first draft of this line divided by the seven dispatches — the sweep's S6), and the two phase-level reviews together (104,713) cost less than three of 002's per-task reviews. The review-loop cap held every time: no invocation went past one re-review, and the two findings still open after a re-review (plan B1 at sign-off; S2 in Phase 2) were closed by the orchestrator directly. Escape-hatch misses: none — no task failed verification twice and none stopped on a judgment call; the orchestrator's own code edits (the `fixedSize` and the `layoutPriority`) came from measurements after the implementer's green, not from a miss. Third tier: stays off — T004 and T005 each had a named pattern and an automated Verify, but each also produced a finding the implementer had to reason about (the two-axis locator's instrument; the combined-row probe), which is the judgment the third tier would lack.
 
 ## Skeptical-review record (this decomposition)
 
