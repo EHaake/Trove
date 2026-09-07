@@ -46,9 +46,11 @@ struct MarketSnapshotValue: Equatable, Sendable {
 /// median they may show — nil when the figure is withheld or no longer
 /// current, through the one freshness predicate, so stale and withheld
 /// items fall into the sort's nil-last block (spec Decision 21) — and the
-/// trend the row's arrow draws, which is the figure row's stored trend
-/// (`MarketLocalStore.record` is its single writer, so it can never
-/// disagree with the history it was computed over).
+/// trend the row's arrow draws, which is `currentTrend`, the stored trend
+/// gated on there being a figure to draw it beside (`MarketLocalStore.record`
+/// is the stored trend's single writer, so it can never disagree with the
+/// history it was computed over; the gate is what keeps it from outliving
+/// the figure — 003 Decision 12).
 struct MarketSummary: Equatable, Sendable {
     let medianCents: Int?
     let trend: MarketTrend?

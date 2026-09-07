@@ -79,9 +79,14 @@ actually useful once the app is in daily use.
   - **Dynamic Type** (spec Decision 11) — every font in the app is
     fixed-size, a `001` limitation this spec inherited; worth its own
     spec, since it touches every screen.
-  - **`fix/` candidate — the list rows' stale arrows** (Decision 12):
-    the item list and wishlist rows still draw the trend arrow on a
-    figure older than thirty days, where the Sell Plan draws nothing.
+  - **Fixed** (`fix/stale-trend-arrows`, 2026-09-07) — **the list rows'
+    stale arrows** (Decision 12): the item list and wishlist rows drew
+    the trend arrow on a figure older than thirty days, where the Sell
+    Plan, the Market section and both Market sorts all stay silent.
+    Both list view models read `MarketSummary.trend`, the stored
+    classification, rather than the freshness-gated `currentTrend` the
+    figure itself goes through; they now read the same gate, so the
+    arrow cannot outlive the figure it sits on.
   - **Fixed** (`fix/sell-plan-row-narrow-width`, 2026-09-07) — **the
     Sell Plan row at a narrow width** (sweep S1): the market line, the
     value and the dial were all rigid, and the render test settled it
@@ -90,7 +95,9 @@ actually useful once the app is in daily use.
     the row's content spilled out of its own card at both edges. The
     market line's `fixedSize(horizontal: true)` is gone; `lineLimit(1)`
     renders identically everywhere measured and shortens the figure
-    only where the row cannot hold it.
+    only where the row cannot hold it. T004a's `layoutPriority(1)`,
+    measured in the same pass, turns out to be inert — kept, and its
+    comment now says so.
 - **`004-themes`** — Light mode, plus a small set of additional curated
   color themes beyond the default. Uses the semantic `Theme` abstraction
   built into every view from `001` specifically so this is a config
