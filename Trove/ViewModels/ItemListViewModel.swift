@@ -223,9 +223,17 @@ final class ItemListViewModel {
     }
 
     /// The trend the row's arrow draws, or nil for an unmatched item, one
-    /// with no figure fetched here, or one whose history can't say yet.
+    /// with no figure fetched here, one whose history can't say yet, or one
+    /// whose figure is no longer current.
+    ///
+    /// `currentTrend`, not the stored `trend`: the row draws the arrow beside
+    /// a figure the same load already withheld for age, so reading the stored
+    /// classification here would have the list assert a direction the Sell
+    /// Plan and the Market section had both gone quiet about (003 Decision
+    /// 12 — the arrow outlived its figure by however long the person left
+    /// the item unrefreshed).
     func trend(for id: UUID) -> MarketTrend? {
-        marketSummaries[id]?.trend
+        marketSummaries[id]?.currentTrend
     }
 
     /// Deletes an owned item by id, on the same shape as

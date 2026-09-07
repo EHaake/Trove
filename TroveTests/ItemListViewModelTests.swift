@@ -778,6 +778,47 @@ struct ItemListViewModelMarketSortTests {
         #expect(viewModel.marketSummaries[try id(of: "Unmatched", in: context)] == nil)
     }
 
+    /// 003 Decision 12, the list's half: the figure is older than thirty days,
+    /// so the row draws no arrow — the same silence the Sell Plan and the
+    /// Market section already keep. The stored classification is still `.up`,
+    /// which is exactly what makes this falsifiable: read the stored trend
+    /// here instead of the current one and the row asserts a rise beside a
+    /// figure the same load withheld.
+    @Test func aFigureOlderThanThirtyDaysDrawsNoTrend() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Stale", into: context)
+        let id = try id(of: "Stale", in: context)
+        try record(100_000, for: id, fetchedAt: clock.addingTimeInterval(-40 * 24 * 60 * 60), in: context)
+        try record(112_000, for: id, fetchedAt: clock.addingTimeInterval(-31 * 24 * 60 * 60), in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(viewModel.marketSummaries[id]?.trend == .up, "the classification is still stored")
+        #expect(viewModel.marketSummaries[id]?.medianCents == nil, "and the figure itself is already withheld for age")
+        #expect(viewModel.trend(for: id) == nil)
+    }
+
+    /// The withheld half of the same rule: fetched today, but too thin a
+    /// catalog to publish a median, so there is no figure for an arrow to
+    /// sit beside and none is drawn.
+    @Test func aWithheldFigureDrawsNoTrend() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Withheld", into: context)
+        let id = try id(of: "Withheld", in: context)
+        try record(100_000, for: id, fetchedAt: clock.addingTimeInterval(-8 * 24 * 60 * 60), in: context)
+        try record(112_000, for: id, fetchedAt: clock.addingTimeInterval(-1 * 24 * 60 * 60), in: context)
+        try record(nil, for: id, fetchedAt: clock, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(viewModel.marketSummaries[id]?.trend == .up, "the classification is still stored")
+        #expect(viewModel.trend(for: id) == nil)
+    }
+
     /// The positive half, through the property the row actually reads: two
     /// refreshes a fortnight apart, the second ten per cent higher, and the
     /// row's arrow points up (spec criterion 13). The trend is the figure
