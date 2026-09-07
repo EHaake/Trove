@@ -225,13 +225,18 @@ struct SellPlanView: View {
 /// the category alone — matching `ItemRow`, which pairs a category meta line
 /// with a separate dial for exactly this reason.
 ///
-/// 003 adds two quiet lines: the reason line under the category when the
-/// item is rising, and the market line under the person's value when there
-/// is a current median. The stack is top-aligned so the checkbox, name,
-/// value and dial sit on the same edge whether a row carries zero, one or
-/// two of them (criterion 11) — which does move the marks on a plain
-/// two-line row from centred to top-hung, a small geometry shift to an
-/// approved row recorded for the device pass (003 plan Q6).
+/// 003 adds two quiet lines, and both stack in the left column under the
+/// category: the market line when there is a current median, then the
+/// reason line beneath it when the item is rising. The person's value sits
+/// alone on the right. The market line lived under that value until the
+/// Phase 2 pause, where at phone width the two columns split the row so
+/// the category truncated to "MUSIC · GUI…" and the sentence stacked four
+/// lines deep beside a whole figure (003 spec Decision 14). The stack is
+/// top-aligned so the checkbox, name, value and dial sit on the same edge
+/// whether a row carries zero, one or two of them (criterion 11) — which
+/// does move the marks on a plain two-line row from centred to top-hung, a
+/// small geometry shift to an approved row recorded for the device pass
+/// (003 plan Q6).
 ///
 /// Internal rather than private so the render tests can build one.
 struct SellPlanRow: View {
@@ -262,33 +267,39 @@ struct SellPlanRow: View {
                     Text(CategoryPathHelper.trailingSegments(of: item.categoryPath).joined(separator: " · "))
                         .monoLabel()
                         .lineLimit(1)
-                    if let rise {
-                        SellPlanReasonLine(rise: rise, now: now)
-                    }
-                }
-
-                Spacer(minLength: 0)
-
-                VStack(alignment: .trailing, spacing: 5) {
-                    if let value = item.currentValueCents {
-                        Text(value.formattedAsWholeCurrency(currencyCode: item.currencyCode))
-                            .font(theme.typography.monoValue)
-                            .foregroundStyle(theme.colors.textPrimary)
-                            .lineLimit(1)
-                    } else {
-                        // Only reachable for something already on the plan whose
-                        // value was cleared afterwards — it stays switchable off.
-                        Text("No value")
-                            .font(theme.typography.monoMeta)
-                            .foregroundStyle(theme.colors.textQuiet)
-                    }
-
-                    // Under the person's own figure, never instead of it. The
+                    // Under the category, never instead of the person's own
+                    // figure, which keeps its place on the right. The
                     // non-optional median is what keeps criterion 6 true by
                     // construction: withheld and stale both read nil here.
                     if let median = summary?.medianCents {
                         SellPlanMarketLine(medianCents: median, trend: summary?.currentTrend)
                     }
+                    if let rise {
+                        SellPlanReasonLine(rise: rise, now: now)
+                    }
+                }
+                // Sized before the spacer, so the name and category take
+                // the row's spare width rather than being cut to the market
+                // line's rigid width beside them (spec Decision 14: on the
+                // simulator "Blues Junior" read "Blues Juni…" over "$600 on
+                // Reverb"). The value below is fixed-size, so the column
+                // can never squeeze the figure the checkbox adds up.
+                .layoutPriority(1)
+
+                Spacer(minLength: 0)
+
+                if let value = item.currentValueCents {
+                    Text(value.formattedAsWholeCurrency(currencyCode: item.currencyCode))
+                        .font(theme.typography.monoValue)
+                        .foregroundStyle(theme.colors.textPrimary)
+                        .lineLimit(1)
+                        .fixedSize()
+                } else {
+                    // Only reachable for something already on the plan whose
+                    // value was cleared afterwards — it stays switchable off.
+                    Text("No value")
+                        .font(theme.typography.monoMeta)
+                        .foregroundStyle(theme.colors.textQuiet)
                 }
 
                 DesireDial(value: .constant(item.desireToKeep), diameter: 36)

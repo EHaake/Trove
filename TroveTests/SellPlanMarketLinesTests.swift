@@ -32,6 +32,10 @@ struct SellPlanMarketLinesRenderTests {
     /// enough for the sentence to need more than one line.
     private let rowWidth: CGFloat = 360
 
+    /// The left column's own `VStack` spacing, which arrives with each line
+    /// the column gains.
+    private let columnSpacing = 5
+
     // MARK: - The market line's ink
 
     /// The whole line is sampled rather than the brightest pixel: unlike a
@@ -55,25 +59,42 @@ struct SellPlanMarketLinesRenderTests {
 
     // MARK: - The reason line wraps rather than truncating
 
-    /// One threshold, two mutations (plan §5). Drop the reason line and the
-    /// difference is the market line's height alone — under one line. Cap it
-    /// at `lineLimit(1)` and the difference is one line plus the column's
-    /// 5 pt spacing — under two. "At least one line" would have passed the
-    /// second because of that spacing, and a bitmap cannot yield the reason
-    /// text's own height in isolation.
+    /// Three renders, two thresholds (plan §5, amended 2026-09-07 for
+    /// T004a). Both lines now stack in the same column, so the old
+    /// `withLines − plain` difference carried the market line's height too
+    /// and `lineLimit(1)` on the sentence would have cleared a two-line
+    /// floor. Isolating the sentence takes a third render: the row with the
+    /// market line and no rise. Then `both − marketOnly` is the reason
+    /// line's contribution alone — drop it and the difference is 0, cap it
+    /// at `lineLimit(1)` and it is one line plus the column's 5 pt spacing,
+    /// under two.
+    ///
+    /// The market line gets its own pin rather than a floor, so that it is
+    /// proven present *and* single: `marketOnly − plain` is exactly one
+    /// rendered `SellPlanMarketLine` plus that same 5 pt spacing. Drop the
+    /// market line from the row and the difference is 0.
     @Test func theRowGrowsByAtLeastTwoLinesWhenTheReasonSentenceWraps() throws {
         let plain = try rowHeight(summary: nil, rise: nil)
-        let withLines = try rowHeight(summary: risingSummary, rise: try rise())
+        let marketOnly = try rowHeight(summary: risingSummary, rise: nil)
+        let both = try rowHeight(summary: risingSummary, rise: try rise())
         let oneLine = try #require(
             renderBitmap(SellPlanReasonLine(rise: try rise(), now: now)),
             "ImageRenderer produced nothing to measure."
         ).height
+        let oneMetaLine = try #require(
+            renderBitmap(SellPlanMarketLine(medianCents: 140_000, trend: .up)),
+            "ImageRenderer produced nothing to measure."
+        ).height
 
-        print("SellPlanRow heights — plain: \(plain), with the two lines: \(withLines), one secondary line: \(oneLine)")
+        print("SellPlanRow heights — plain: \(plain), market line only: \(marketOnly), both lines: \(both), one secondary line: \(oneLine), one meta line: \(oneMetaLine)")
 
         #expect(
-            withLines - plain >= 2 * oneLine,
-            "the row grew by \(withLines - plain) pt for a sentence that needs two lines of \(oneLine) pt — it was dropped, or truncated"
+            both - marketOnly >= 2 * oneLine,
+            "the row grew by \(both - marketOnly) pt for a sentence that needs two lines of \(oneLine) pt — it was dropped, or truncated"
+        )
+        #expect(
+            marketOnly - plain == oneMetaLine + columnSpacing,
+            "the row grew by \(marketOnly - plain) pt for a market line of \(oneMetaLine) pt plus the column's \(columnSpacing) pt spacing — it was dropped, or it is drawing more than one line"
         )
     }
 

@@ -225,7 +225,31 @@ Before the pause: one `scripts/verify.sh ui` run (the count line read: the same 
   under `## counts` and ends with the NO TEST COUNT failure — harmless for
   a mutation check read from the log, wrong for a single-test green.
 
-- [ ] **T004a — Both lines under the category (spec Decision 14).** Added 2026-09-07 at the Phase 2 pause, the person's decision from the seeded row: at phone width the two-column split truncated the category to "MUSIC · GUI…" and stacked the sentence four lines deep beside the market line. `SellPlanRow`'s left `VStack` becomes name, category, `SellPlanMarketLine` (under `if let median = summary?.medianCents`, unchanged), then `SellPlanReasonLine` (under `if let rise`); the right side is the value `Text` alone (the trailing `VStack` goes); `HStack(alignment: .top)`, `.combine`, the three readers and both identifiers unchanged; `SellPlanMarketLines.swift` untouched. `SellPlanMarketLinesTests`' height test restructured per plan §5's amendment: three renders — plain, market line only, both — `both − marketOnly ≥ 2 × oneLine`, and `marketOnly − plain` pinned to one `monoMeta` line plus 5 pt (measure `SellPlanMarketLine` alone for the line); the marks test unchanged. The wiring scan's pins hold as written; the UI test's label assertions hold (order within the combined label changes, `contains` does not care). Files: `Trove/Views/Wishlist/SellPlanView.swift`, `TroveTests/SellPlanMarketLinesTests.swift`. **Verify**: `scripts/verify.sh` green (count unchanged or up; verbatim from the implementer); the three heights and the located marks in the Done note; then the orchestrator's `scripts/verify.sh ui` once (14) and a simulator screenshot of the seeded Telecaster row for the person. **Mutations recorded red**: the reason line dropped → `both − marketOnly` = 0; `lineLimit(1)` on the reason line → under two lines; the market line dropped → `marketOnly − plain` = 0; `.center` → the marks. Reviewed in the pre-merge sweep, not separately — a layout move inside one view after the phase review, at the person's direction.
+- [x] **T004a — Both lines under the category (spec Decision 14).** Added 2026-09-07 at the Phase 2 pause, the person's decision from the seeded row: at phone width the two-column split truncated the category to "MUSIC · GUI…" and stacked the sentence four lines deep beside the market line. `SellPlanRow`'s left `VStack` becomes name, category, `SellPlanMarketLine` (under `if let median = summary?.medianCents`, unchanged), then `SellPlanReasonLine` (under `if let rise`); the right side is the value `Text` alone (the trailing `VStack` goes); `HStack(alignment: .top)`, `.combine`, the three readers and both identifiers unchanged; `SellPlanMarketLines.swift` untouched. `SellPlanMarketLinesTests`' height test restructured per plan §5's amendment: three renders — plain, market line only, both — `both − marketOnly ≥ 2 × oneLine`, and `marketOnly − plain` pinned to one `monoMeta` line plus 5 pt (measure `SellPlanMarketLine` alone for the line); the marks test unchanged. The wiring scan's pins hold as written; the UI test's label assertions hold (order within the combined label changes, `contains` does not care). Files: `Trove/Views/Wishlist/SellPlanView.swift`, `TroveTests/SellPlanMarketLinesTests.swift`. **Verify**: `scripts/verify.sh` green (count unchanged or up; verbatim from the implementer); the three heights and the located marks in the Done note; then the orchestrator's `scripts/verify.sh ui` once (14) and a simulator screenshot of the seeded Telecaster row for the person. **Mutations recorded red**: the reason line dropped → `both − marketOnly` = 0; `lineLimit(1)` on the reason line → under two lines; the market line dropped → `marketOnly − plain` = 0; `.center` → the marks. Reviewed in the pre-merge sweep, not separately — a layout move inside one view after the phase review, at the person's direction.
+
+  *Done (2026-09-07, `sdd-implementer` first try, then one orchestrator
+  fix)*: the left `VStack` is name, category, market line, reason line; the
+  value `Text` alone on the right; the row's doc comment cites Decision 14.
+  The height test renders plain / market only / both: `both − marketOnly ≥
+  2 × oneLine` and `marketOnly − plain == oneMetaLine + 5` (an exact 20).
+  Implementer's verbatim `scripts/verify.sh`: 1141 in 153. **Heights**:
+  plain 71, market only 91, both 129, `oneLine` 17, `oneMetaLine` 15 — the
+  sentence at two lines in the wider column (38 against the 34 floor, a
+  thin margin the implementer flagged: a wider row or a narrower dial could
+  fit it on one line and turn the floor red for the wrong reason). Marks
+  16/16 and 15/15 unchanged. **Mutations red**: the reason line dropped →
+  `:91` 0 ≥ 34; `lineLimit(1)` → `:91` 22 ≥ 34; the market line dropped →
+  `:95` 0 == 20; `.center` → the marks, four issues (checkbox 22/51, ring
+  17/46). **Orchestrator's fix after the screenshot**: on the simulator the
+  Telecaster row read as the person sketched it, but "Blues Junior" read
+  "Blues Juni…" and "MUSIC · AMPS" "MUSIC · AM…" — the `HStack` had sized
+  the left column to the rigid market line's width and truncated the
+  single-line texts to match. `.layoutPriority(1)` on the left column and
+  `.fixedSize()` on the value `Text` (recorded in plan Q6's amendment);
+  unit 1141 green with every height unchanged; `scripts/verify.sh ui`
+  `Executed 14 tests, with 0 failures`; the screenshot of all four rows
+  whole sent to the person and attached to the pause. Reviewed in the
+  sweep, as the task line says.
 
 **Phase 2 review** — one `skeptical-reviewer` pass at its default tier over `git diff <T003's commit>..HEAD` (T004–T005), the two task lines, plan §§5–6 and Q10, criteria 5, 6, 10, 11, 12. Then the **Phase 2 pause** — the person's report; a fresh session resumes at T006.
 
@@ -326,6 +350,7 @@ The constitution's model policy (amended 2026-09-06) decides which tier runs eac
 | T005 | opus (`sdd-implementer`) | 65,116 | verified first try; UI suite 14 twice; the two UI mutations run red by the orchestrator |
 | Phase 2 review | opus (`skeptical-reviewer`) | 81,819 | signed off, nothing blocking; S1, S3, S4 fixed by the orchestrator, S2 → T006/T007, S5 → sweep, S6 declined (plan Q8's vocabulary) |
 | Phase 2 re-review | opus (`skeptical-reviewer`) | 22,894 | signed off; S2 then settled by the orchestrator's own measurement (`fixedSize`), no third round |
+| T004a | opus (`sdd-implementer`) | 51,973 | verified first try; four mutations red; the column-width squeeze found by the orchestrator on the simulator and fixed directly |
 
 ## Skeptical-review record (this decomposition)
 
