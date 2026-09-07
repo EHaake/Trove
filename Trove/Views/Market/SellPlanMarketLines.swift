@@ -15,13 +15,29 @@ import SwiftUI
 /// the row reads "Median asking price $1,400, trending up"; a label on the
 /// container would swallow the arrow's half of that sentence.
 ///
-/// The figure is **rigid** — `fixedSize(horizontal: true, vertical: false)`
-/// — so it is never truncated and never wrapped: a row's `HStack` splits the
-/// width between its two columns, and measured at 360 pt that squeezed a
-/// `lineLimit(1)` figure under its ideal width and cut "$1,400 on Reverb"
-/// short beside a rising row's sentence, while no limit at all wrapped it
-/// after "on" even with no sentence in the row (Phase 2 review, S2). The
-/// sentence is the flexible line, and it wraps in what the figure leaves.
+/// The figure takes **one line and never wraps** — `lineLimit(1)` — and it
+/// is the column's widest fixed demand, so in practice it is never truncated
+/// either: the left column carries `layoutPriority(1)` and takes its ideal
+/// width before the spacer, and only a row too narrow to hold the whole
+/// figure shortens it. That is the ordering T004a settled (003 Decision 14),
+/// and it replaces the earlier `fixedSize(horizontal: true)` here.
+///
+/// The rigid version was Phase 2's answer to S2, when this line still sat
+/// under the person's value in the *right* column and the two columns split
+/// the width: there a `lineLimit(1)` figure was cut to "$1,400 on Rever…" at
+/// 360 pt, and no limit at all wrapped after "on". Both lines have stacked in
+/// the left column since T004a, and measured across 300–430 pt on four
+/// fixtures — long and short names, four- and five-figure medians, with and
+/// without the sentence — the rigid and the limited figure render to
+/// identical pixels at every width. What the rigid version also did was set
+/// a floor no row could go under: 003's sweep finding S1, measured at
+/// **355 pt** for a five-figure median beside a five-figure value, against
+/// the 327 pt a Sell Plan row gets on a 375 pt phone and 345 pt on a 393 pt
+/// one (two 24 pt gutters). Under that floor the `HStack` overflowed the
+/// frame it was given and centred in it, so the row's content spilled out of
+/// its own card at both edges — the checkbox landing at x 0 — rather than
+/// shortening anything. Truncating a five-figure figure on a narrow phone is
+/// the smaller loss, and it is the only case that behaves differently.
 ///
 /// Every word comes from `MarketCopy`; this file may not contain a string
 /// literal with a space in it, and `MarketVocabularyTests` holds it to that.
@@ -36,7 +52,7 @@ struct SellPlanMarketLine: View {
             Text(MarketCopy.sellPlanMarketLine(medianCents: medianCents))
                 .font(theme.typography.monoMeta)
                 .foregroundStyle(theme.colors.textQuiet)
-                .fixedSize(horizontal: true, vertical: false)
+                .lineLimit(1)
                 .accessibilityLabel(MarketCopy.figureAccessibilityLabel(medianCents: medianCents))
 
             TrendArrow(trend: trend)
