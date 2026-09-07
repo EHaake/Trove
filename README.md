@@ -26,7 +26,9 @@ purchases.
   with low desire-to-keep, reachable from any wishlist item, for
   answering "is this a reasonable time to buy, and what would make sense
   to sell if I did" — deliberately not a goal to complete or a sales
-  ledger.
+  ledger. Within a desire level it lists what Reverb's asking prices say
+  is rising first and falling last, with the median beside each matched
+  item and one dated sentence on a rising row saying by how much.
 - **Low-friction item management** — swipe to delete, edit, or copy on
   both lists; press-and-hold drag reordering under a "Custom" sort,
   with an accessible Move up/Move down path for VoiceOver; and value

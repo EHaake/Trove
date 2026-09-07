@@ -273,3 +273,14 @@ reaches beyond that spec.
   green-field spec remains a dedicated chat (with the knowledge-base
   refresh first); the person picks per spec. `CLAUDE.md`'s
   authorship-split section carries the amended rule.
+- **The roadmap is updated on the spec branch, not after merge
+  (2026-09-07, `003`'s close-out).** `002` updated `specs/ROADMAP.md` on
+  a post-merge `fix/docs-002-shipped` branch, reasoning that the
+  constitution forbids committing to `main` directly. `003`'s pre-merge
+  sweep pointed out the reasoning doesn't hold — an edit on the spec
+  branch merges through the PR like everything else — and that the
+  mechanism left the roadmap listing shipped work as future between the
+  two PRs. From `003` on, the roadmap's entry and status row are written
+  on the spec branch in the close-out task, citing the draft PR's
+  number, and the post-merge docs branch exists only if something is
+  learned at merge itself.

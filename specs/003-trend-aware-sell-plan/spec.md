@@ -1,6 +1,6 @@
 # Spec 003 — Trend-aware Sell Plan
 
-**Status**: Approved — by the person, 2026-09-06 (Draft authored the same day)
+**Status**: Complete — criteria 1–12 verified at the close-out and the pre-merge sweep dispositioned, 2026-09-07; merged via [PR #15](https://github.com/EHaake/Trove/pull/15) (Approved by the person 2026-09-06; Draft authored the same day; Decision 14 amended at the Phase 2 pause)
 **Depends on**: `001-core-inventory` (the Sell Plan), `002-live-market-value` (the on-device history and its trend)
 **Authored**: 2026-09-06, in the Claude Code session at the person's direction (the constitution's venue clause); every substantive call below is the person's, and the two marked *delegated* were left to Claude Code and can be overturned before approval.
 
@@ -199,43 +199,55 @@ a reading at least a week older than its latest and the two differ by
 Each is something a person can check on the built app, or a test can
 check against fixtures. The plan will cite what verifies each.
 
-1. [ ] Two candidates at the same desire level, one rising and one flat,
+1. [x] Two candidates at the same desire level, one rising and one flat,
    list the rising one first regardless of their values.
-2. [ ] Two candidates at the same desire level, one flat and one
+    *Verified by*: `SellPlanRankingTests.aRisingCandidateLeadsAFlatOneAtTheSameDesire` and `SellPlanMarketReaderTests.aRisingCandidateOutranksAFlatOneOfHigherValueThroughLoad`; on screen, `testTheSeededSellPlanRanksRisingFirstAndSaysWhy` (Telecaster $600 above Blues Junior $640).
+2. [x] Two candidates at the same desire level, one flat and one
    falling, list the falling one last regardless of their values.
-3. [ ] A rising desire-3 candidate never lists above a desire-1
+    *Verified by*: `SellPlanRankingTests.aFallingCandidateTrailsAFlatOneAtTheSameDesire`; on screen, the seeded NT1-A $400 below the Squier $380.
+3. [x] A rising desire-3 candidate never lists above a desire-1
    candidate of any trend.
-4. [ ] Within the same desire level and trend group, the higher value
+    *Verified by*: `SellPlanRankingTests.aRisingLessWillingItemStaysBelowAWillingOne` (plan G1; mutation: the group key ahead of desire → red).
+4. [x] Within the same desire level and trend group, the higher value
    lists first, then name — the `001` order, unchanged.
-5. [ ] A rising row shows the reason line with the rounded percentage
+    *Verified by*: `SellPlanRankingTests.withinOneGroupTheValueThenTheNameDecides`, and `SellPlanCandidateTests` (001) untouched and green — plan G10.
+5. [x] A rising row shows the reason line with the rounded percentage
    and the earlier reading's date; a falling row and a neutral row
    show none.
-6. [ ] A row whose item has a current figure shows the market line with
+    *Verified by*: `MarketTrendTests.thePercentIsExactBeforeTheDivisionAndRoundsHalfAwayFromZero` (the 1000→1145 row is the one that discriminates dividing first; `thePercentOfAHigherBase` is a value pin), `MarketCopyTests.theReasonLineCarriesThePercentageAndTheEarlierReadingsDate`, `theReasonLineAddsTheYearWhenTheReadingIsFromAnother`; `SellPlanViewModelTests.theReasonNumbersBelongToTheRisingCandidateAlone`; on screen, the seeded UI test finds the sentence on the Telecaster's row and no other.
+6. [x] A row whose item has a current figure shows the market line with
    the median; the arrow appears only with a trend; a row whose item
    is unmatched, withheld, or whose figure is older than thirty days
    shows no market line.
-7. [ ] The combined selected value is the sum of the person's values;
+    *Verified by*: `MarketIndexTests.aStaleFigureHasNoCurrentTrendThoughTheRowStillCarriesOne`, `aWithheldFigureHasNoCurrentTrendEitherOnTheDayItWasFetched`, `aCurrentFiguresStoredTrendIsItsCurrentTrend`; `SellPlanViewModelTests.aFigureOlderThanThirtyDaysRanksNeutralAndSaysNothing`, `aWithheldFigureRanksNeutralAndSaysNothing`; the render pair `aRisingMarketLineDrawsTheArrowInTheMossTextTone` / `aMarketLineWithNoTrendDrawsNeitherArrowTone`; "no line" holds by construction — `SellPlanMarketLine(medianCents: Int, …)` takes a non-optional median (plan §5) — and on screen the unmatched Squier carries none (the UI test).
+7. [x] The combined selected value is the sum of the person's values;
    changing an item's market figure changes nothing in it.
-8. [ ] A trend of exactly +5 % counts as rising and exactly −5 % as
+    *Verified by*: `SellPlanFiguresTests` (001) untouched, and the G5 case in `SellPlanViewModelTests` (`selectedValueCents` ignores the median; mutation: the median summed → red); the on-screen half — ticking the seeded Telecaster and reading $600 — was stood in for by those tests at the person's direction (T006's Done note), not attested by hand.
+8. [x] A trend of exactly +5 % counts as rising and exactly −5 % as
    falling; +4.9 % and −4.9 % are neutral (the `002` bands, shared).
-9. [ ] Two points fewer than seven days apart produce no trend and a
+    *Verified by*: `MarketTrendTests.fivePercentIsTheBoundaryOnBothSides` and `sevenDaysExactlyIsATrendAndASecondLessIsNot` (002, unchanged — plan G10).
+9. [x] Two points fewer than seven days apart produce no trend and a
    neutral rank; a plan with no trends anywhere is ordered exactly as
    `001` orders it, with no extra text.
-10. [ ] Every new string passes `002`'s vocabulary rule for the fetched
+    *Verified by*: `sevenDaysExactlyIsATrendAndASecondLessIsNot`; `SellPlanRankingTests.noTrendRanksExactlyWhereFlatDoes` (G2, both pairs); the 001 order by construction — `candidates(from:alreadySelected:trend:)` defaults `trend` to nil and the five 001 suites compile and pass untouched; no extra text by construction — both lines sit under `if let`.
+10. [x] Every new string passes `002`'s vocabulary rule for the fetched
     figure, and the reason line is read by VoiceOver in full.
-11. [ ] The reason line wraps rather than truncates at the row's width,
+    *Verified by*: `MarketVocabularyTests.theSellPlansStringsPassTheRule` and the new view file in `viewFiles` (rule 3: no spaced literal); "read in full" — `testTheSeededSellPlanRanksRisingFirstAndSaysWhy` reads the combined row's accessibility label (what VoiceOver speaks; XCUITest reading it, not VoiceOver itself) for the whole sentence, "Median asking price" and "trending up" on the simulator.
+11. [x] The reason line wraps rather than truncates at the row's width,
     and the row's checkbox, dial and value stay aligned with rows that
     have no such line. (Reworded at plan sign-off, 2026-09-06, with the
     person's delegation: the app's type is fixed-size — a limitation
     recorded in 001's plan — so the text-size setting changes nothing
     here; Decision 11 below.)
-12. [ ] Under `-uiTesting` with `-seedSellPlan` the seeded history
+    *Verified by*: `SellPlanMarketLinesTests.theRowGrowsByAtLeastTwoLinesWhenTheReasonSentenceWraps` (the sentence's own contribution at 360 pt ≥ two `secondary` lines; `lineLimit(1)` → red) and `theMarksStayWhereTheyWereWhenTheRowGainsItsLines` (checkbox at 16 pt and the dial's ring at 15 pt in both renders; `.center` → red); the person's screenshot at Decision 14 with every name, category and value whole. Per Decision 11 the text-size setting changes nothing in this app — a fact of `ThemeTypography`, not something the person switched on and looked at (T006's Done note) — so the criterion is ticked for its reworded substance, not for Dynamic Type working.
+12. [x] Under `-uiTesting` with `-seedSellPlan` the seeded history
     produces at least one rising, one falling and one neutral candidate,
     so the UI test and the device pass exercise all three; under
     `-uiTesting` alone the collection starts empty as before, and in a
     normal launch nothing is seeded. (Wording corrected at plan sign-off,
     2026-09-06: the seed takes a second argument so the existing
     empty-collection UI tests keep their starting state.)
+    *Verified by*: `UITestSeedTests` (six: the gate table with the persistent modes refusing both flags, the guarded single call, the counts through the production container, `everyStoredTrendIsTheComputedOneAndTheThreeAreUpFlatDown`, the writer-only scan, the seeded order); the seeded UI test under both flags, and `testEmptyCollectionOffersImportAndSettingsButNotExport` under `-uiTesting` alone (mutation: seed on the flag alone → red).
 
 ## Non-goals (explicit)
 
