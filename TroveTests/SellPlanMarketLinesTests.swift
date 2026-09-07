@@ -139,7 +139,80 @@ struct SellPlanMarketLinesRenderTests {
         #expect(plainRing == linedRing, "the dial moved from y \(plainRing) to y \(linedRing) when the row gained its two lines")
     }
 
+    // MARK: - The row at a phone's width (003 sweep S1)
+
+    /// The sweep's S1, measured. The checkbox, the market line's figure, the
+    /// person's value and the dial were all rigid, so the row had a floor: a
+    /// five-figure median beside a five-figure value needed **355 pt**, and a
+    /// Sell Plan row gets 327 pt on a 375 pt phone and 345 pt on a 393 pt one
+    /// (two 24 pt gutters). Under the floor the `HStack` overflowed the frame
+    /// it was given and centred in it, so the content spilled out of its own
+    /// card — the checkbox landing at x 0, half of it outside the card's
+    /// left edge, and the dial the same distance past the right.
+    ///
+    /// Both edges are asserted, because the overflow is symmetric and one
+    /// edge alone would leave the other free to drift. Each locator is
+    /// pinned to a known geometry rather than to "found something": the
+    /// checkbox is a 10x10 brass block at exactly `cardPadding`, and the
+    /// dial's track reaches exactly `width - cardPadding`.
+    @Test(arguments: [327, 345, 382])
+    func theRowStaysInsideItsCardAtEveryPhoneRowWidth(width: Int) throws {
+        let bitmap = try pixels(of: dearRow.frame(width: CGFloat(width)))
+        let padding = Int(ThemeMetrics.standard.cardPadding)
+
+        let left = try #require(checkboxLeft(in: bitmap), "no 10x10 brass block anywhere in a \(width) pt row — the checkbox isn't drawn at all")
+        #expect(left == padding, "at \(width) pt the checkbox starts at x \(left), not the card's own \(padding) pt padding — the row's content is overflowing the card it sits in")
+        #expect(
+            ringRight(in: bitmap) == width - padding,
+            "at \(width) pt the dial's track ends at x \(String(describing: ringRight(in: bitmap))), not \(width - padding) — the other end of the same overflow"
+        )
+    }
+
+    /// There is deliberately no test here for "the figure isn't truncated on
+    /// a row that can hold it". It was written, and then deleted for the
+    /// reason `CLAUDE.md` gives: nothing could make it fail. With both lines
+    /// stacked in the left column since T004a, the figure's width is decided
+    /// by the row's geometry alone — dropping `fixedSize`, dropping the
+    /// column's `layoutPriority(1)`, and rendering Phase 2's own S2 fixture
+    /// (a rising row at 360 pt) each left the arrow on the same pixel, across
+    /// 300-430 pt and four fixtures. A green test there would have been
+    /// asserting the layout can't do something it has no way to do.
+
+    /// Where the figure *does* shorten, it truncates; it never wraps.
+    /// `lineLimit(1)` is the whole of that — drop it and the five-figure row
+    /// is 106 pt tall at 327 pt against 91 pt at 402, which is Phase 2
+    /// review S2's own finding (the unlimited line wrapped after "on").
+    @Test func theNarrowRowsFigureTakesOneLineLikeTheWideRows() throws {
+        let narrow = try pixels(of: dearRow.frame(width: 327)).height
+        let wide = try pixels(of: dearRow.frame(width: 402)).height
+
+        #expect(narrow == wide, "the five-figure row is \(narrow) pt tall at 327 pt against \(wide) pt at 402 — the truncating figure wrapped instead")
+    }
+
     // MARK: - Fixtures
+
+    /// The row S1 is about: a five-figure median beside a five-figure value,
+    /// the pair that needed 355 pt. Real for the gear this app is for — a
+    /// Leica body, a vintage amp — not a contrived number.
+    private var dearRow: SellPlanRow {
+        row(name: "Fender Blues Junior IV", valueCents: 1_234_500, medianCents: 1_298_700)
+    }
+
+    private func row(name: String, valueCents: Int, medianCents: Int) -> SellPlanRow {
+        let item = Item(name: name, categoryPath: "Music/Amps", currentValueCents: valueCents, desireToKeep: 2)
+        let record = MarketFigureRecord(subjectID: UUID(), subjectKind: .owned, productID: 126_161, fetchedAt: now)
+        record.medianCents = medianCents
+        record.count = 5
+        record.trendRawValue = MarketTrend.up.rawValue
+        return SellPlanRow(
+            item: item,
+            isSelected: true,
+            toggle: {},
+            summary: MarketSummary(snapshot: MarketSnapshotValue(record: record), now: now),
+            rise: nil,
+            now: now
+        )
+    }
 
     private var item: Item {
         Item(
@@ -188,6 +261,40 @@ struct SellPlanMarketLinesRenderTests {
             renderBitmap(row(summary: summary, rise: rise).frame(width: rowWidth)),
             "ImageRenderer produced nothing to measure."
         ).height
+    }
+
+    /// The leftmost x carrying a 10x10 block of brass — the selected
+    /// checkbox, which neither the card's 1 pt border nor any glyph can be
+    /// (the same both-axes bound `checkboxTop` needed).
+    private func checkboxLeft(in bitmap: Bitmap, block: Int = 10) -> Int? {
+        for x in 0..<max(0, bitmap.width - block) {
+            for y in 0..<max(0, bitmap.height - block) {
+                var solid = true
+                rows: for dy in 0..<block {
+                    for dx in 0..<block {
+                        guard let pixel = bitmap.pixel(at: CGPoint(x: x + dx, y: y + dy)),
+                              Perceptual.distance(pixel, colors.accentBrass) < tolerance
+                        else { solid = false; break rows }
+                    }
+                }
+                if solid { return x }
+            }
+        }
+        return nil
+    }
+
+    /// The rightmost x of the dial's track, in the same rightmost 50 pt and
+    /// against the same `divider` token `ringTop` samples.
+    private func ringRight(in bitmap: Bitmap) -> Int? {
+        var found: Int?
+        let start = max(0, bitmap.width - 50)
+        for y in 0..<bitmap.height {
+            for x in start..<bitmap.width {
+                guard let pixel = bitmap.pixel(at: CGPoint(x: x, y: y)) else { continue }
+                if Perceptual.distance(pixel, colors.divider) < tolerance { found = max(found ?? -1, x) }
+            }
+        }
+        return found
     }
 
     private func contains(_ bitmap: Bitmap, _ color: Color) -> Bool {

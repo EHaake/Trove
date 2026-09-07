@@ -87,10 +87,17 @@ actually useful once the app is in daily use.
     classification, rather than the freshness-gated `currentTrend` the
     figure itself goes through; they now read the same gate, so the
     arrow cannot outlive the figure it sits on.
-  - **`fix/` candidate — the Sell Plan row at a narrow width** (sweep
-    S1): the market line, the value and the dial are all rigid, so a
-    five-figure median beside a five-figure value on a 320 pt row would
-    exceed the width; a render test at that width should settle it.
+  - **Fixed** (`fix/sell-plan-row-narrow-width`, 2026-09-07) — **the
+    Sell Plan row at a narrow width** (sweep S1): the market line, the
+    value and the dial were all rigid, and the render test settled it
+    at a floor of **355 pt** — more than the row gets on any iPhone but
+    a Max, not the 320 pt edge case the sweep supposed. Over the floor
+    the row's content spilled out of its own card at both edges. The
+    market line's `fixedSize(horizontal: true)` is gone; `lineLimit(1)`
+    renders identically everywhere measured and shortens the figure
+    only where the row cannot hold it. T004a's `layoutPriority(1)`,
+    measured in the same pass, turns out to be inert — kept, and its
+    comment now says so.
 - **`004-themes`** — Light mode, plus a small set of additional curated
   color themes beyond the default. Uses the semantic `Theme` abstraction
   built into every view from `001` specifically so this is a config
