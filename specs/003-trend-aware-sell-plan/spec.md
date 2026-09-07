@@ -51,13 +51,14 @@ item, and a well-loved one that is rising is still well loved.
 ### What a row shows
 
 - Each candidate row keeps its checkbox, name, category, desire dial
-  and the person's current value. Beneath the person's value it gains a
+  and the person's current value. Beneath the category it gains a
   quiet **market line** when the item has a current figure: the Reverb
   median asking price with the trend arrow beside it, in the same up
   and down tones the list rows use (Decision 3). No figure, no line; no
-  trend, no arrow.
+  trend, no arrow. (Amended 2026-09-07, Decision 14: the line sat
+  beneath the person's value until the Phase 2 pause.)
 - A row that is **rising** carries one **reason line** under its
-  category: "Asking prices on Reverb are up 12 % since Aug 5." The
+  market line: "Asking prices on Reverb are up 12 % since Aug 5." The
   percentage is the same comparison the arrow made, rounded to a whole
   number; the date is the earlier reading's (Decision 2). Falling and
   neutral rows carry no reason line — the arrow is the whole statement
@@ -103,9 +104,11 @@ a reading at least a week older than its latest and the two differ by
 ## Design requirements
 
 - The two new lines use the row's existing quiet tones and type: the
-  market line in the meta style beneath the person's value, the reason
-  line in the secondary style under the category, the arrow in moss
-  and rust as the list rows draw it. No Design pass, for the reason
+  market line in the meta style beneath the category, the reason line
+  in the secondary style beneath the market line — both in the row's
+  left column, so the person's value stands alone on the right and the
+  lines take the row's full text width (Decision 14) — the arrow in
+  moss and rust as the list rows draw it. No Design pass, for the reason
   `002` Decision 8 gave the arrow: small additions in existing tones
   to an approved row (Decision 8, *delegated*).
 - A row with both lines must not push the checkbox, dial or value out
@@ -178,6 +181,18 @@ a reading at least a week older than its latest and the two differ by
     the same docs pass.
 13. ***Delegated* — "12 %" is set with a narrow no-break space** so the
     number and the sign never split across lines (plan Q5).
+14. **Both lines stack in the left column, under the category.**
+    Decided by the person at the Phase 2 pause (2026-09-07) from the
+    seeded row on the simulator. As first built, the market line sat
+    beneath the person's value in the right column and the reason line
+    beneath the category on the left; at phone width the two columns
+    split the row so that the category truncated to "MUSIC · GUI…" and
+    the sentence stacked into a four-line column beside a whole
+    "$1,400 on Reverb". With the market line moved under the category
+    and the sentence under it, the value alone on the right, everything
+    fits: the category reads whole and the sentence takes the row's
+    text width. Nothing else on the row moves; the value stays the
+    figure the checkbox adds up.
 
 ## Acceptance criteria
 
