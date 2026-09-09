@@ -11,11 +11,6 @@ import Testing
 /// same-instance read would pass whether or not the value was written.
 @Suite("Appearance store")
 struct AppearanceStoreTests {
-    /// The key the store persists under, transcribed by hand rather than read
-    /// back from the source, so the forward-compat guard sets what the store
-    /// actually reads.
-    private static let key = "appearanceChoice"
-
     /// A fresh, isolated defaults suite, wiped before use so a previous run
     /// can't leak a value in.
     private func freshSuite() -> (name: String, defaults: UserDefaults) {
@@ -47,7 +42,7 @@ struct AppearanceStoreTests {
     /// reads as Dark rather than trapping.
     @Test func anUnrecognisedStoredStringReadsDark() {
         let suite = freshSuite()
-        suite.defaults.set("sepia", forKey: Self.key)
+        suite.defaults.set("sepia", forKey: AppearanceStore.defaultsKey)
         let store = AppearanceStore(defaults: suite.defaults)
         #expect(store.choice == .dark)
     }

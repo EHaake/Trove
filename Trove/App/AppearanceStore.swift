@@ -18,18 +18,22 @@ final class AppearanceStore {
 
     @ObservationIgnored private let defaults: UserDefaults
 
-    private static let key = "appearanceChoice"
+    /// The single `UserDefaults` key this store reads and writes. Exposed at
+    /// module scope (not `private`) so `AppearanceStoreTests` can set exactly
+    /// the key the store genuinely reads, rather than re-declaring a matching
+    /// literal that could silently drift out of step and pass vacuously.
+    static let defaultsKey = "appearanceChoice"
 
     /// Reads the stored raw value now, defaulting to `.dark` when the key is
     /// absent (a fresh or upgrading install) or holds a string this version
     /// doesn't recognise (spec criterion 6).
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        let raw = defaults.string(forKey: Self.key)
+        let raw = defaults.string(forKey: Self.defaultsKey)
         choice = raw.flatMap(AppearanceChoice.init(rawValue:)) ?? .dark
     }
 
     private func persist() {
-        defaults.set(choice.rawValue, forKey: Self.key)
+        defaults.set(choice.rawValue, forKey: Self.defaultsKey)
     }
 }
