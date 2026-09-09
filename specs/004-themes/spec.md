@@ -1,6 +1,6 @@
 # Spec 004 — Light mode
 
-**Status**: Approved by the person 2026-09-09 (Draft authored 2026-09-08). Plan and tasks in progress.
+**Status**: Approved by the person 2026-09-09 (Draft authored 2026-09-08). Implementation complete 2026-09-09 — all ten acceptance criteria verified with a per-criterion citation below (the T006 device pass signed off criteria 1–4 and 8's visual halves); pre-merge sweep pending.
 **Depends on**: `001-core-inventory` (the `Theme` abstraction injected at the root, and `NoHardcodedColorsTests`, which together make a second palette a config change rather than a sweep), `013-settings-menu` (the Settings screen the choice lives in — theme selection was deferred here from `013`)
 **Authored**: 2026-09-08, in the Claude Code spec session at the person's direction. Every substantive call below is the person's. The session ran at the implementation tier (`opus`), not the top tier, under the model policy's Fallback clause — the top tier's budget was spent; recorded here so the tier log has the reason.
 
@@ -137,30 +137,40 @@ and it stays deferred here.
 Each is something a person can check on the built app, or a test can
 check. The plan will cite what verifies each.
 
-1. [ ] With Appearance set to **Dark**, every screen looks exactly as it
+1. [x] With Appearance set to **Dark**, every screen looks exactly as it
    does today — the dark palette is unchanged.
-2. [ ] With Appearance set to **Light**, every screen is legible and
+   *Verified: the dark suites (`ThemeColorTokenTests`, `DesireDialColorTests`, `DesireGaugeColorTests`, `TrendArrowRenderTests`) untouched and green — light mode is additive (plan §8) — and the person's T006 device pass ("Dark = today's look", every screen).*
+2. [x] With Appearance set to **Light**, every screen is legible and
    on-brand: text meets contrast, surfaces and dividers are
    distinguishable, and no element disappears or clashes.
-3. [ ] With Appearance set to **System**, the app matches the device's
+   *Verified: `LightPaletteContrastTests` (text tokens clear WCAG on the light `background`/`surface`; the dial numeral ≥ 3:1) and the T006 device pass — Overview, Items list, item detail, Wishlist, Settings and the add-item form all walked in Light, signed off.*
+3. [x] With Appearance set to **System**, the app matches the device's
    light/dark setting and switches live when the device switches, with
    no relaunch.
-4. [ ] Changing the Appearance choice in Settings changes the whole app
+   *Verified: `AppearanceChoiceTests` (`resolvedTheme` — `.system` follows `colorScheme`, explicit cases ignore it) and `ThemeWiringTests` (`ThemedRoot` reads `@Environment(\.colorScheme)`); the live no-relaunch switch attested at T006 (device flipped dark↔light, app followed both directions).*
+4. [x] Changing the Appearance choice in Settings changes the whole app
    immediately — including system chrome (keyboard, pickers, selection)
    — with no relaunch.
-5. [ ] The choice persists across a relaunch, and is stored locally: a
+   *Verified: `ThemeWiringTests` (`TroveApp` drops the hardcoded `.preferredColorScheme(.dark)`/`.environment(\.theme, .dark)`; `ThemedRoot` drives both modifiers from the `@Observable` `AppearanceStore.choice`); the immediate whole-app + status-bar-chrome change attested at T006. (One non-blocking, non-reproducible transient noted in T006 — the person's decision: note, don't fix.)*
+5. [x] The choice persists across a relaunch, and is stored locally: a
    choice made on one device does not change another.
-6. [ ] An existing install updating to this version opens in Dark
+   *Verified: `AppearanceStoreTests` — a value written and read back through a **second** store over the same suite (real persistence, not a same-instance refetch); an isolated `UserDefaults(suiteName:)` does not see `.standard` (per-device); and the G13 scan that `AppearanceStore.swift` names no `NSUbiquitousKeyValueStore`/CloudKit symbol (does-not-sync).*
+6. [x] An existing install updating to this version opens in Dark
    without the person choosing, and a fresh install opens in Dark.
-7. [ ] In light, the desire dial's levels are each perceptually distinct
+   *Verified: `AppearanceStoreTests` (a fresh suite, and an unrecognised stored string, both read `.dark`) and `TroveUITests.testAppearanceControlDefaultsToDarkAndOffersThreeChoices` (UI launches with Dark selected); confirmed on the T006 device pass.*
+7. [x] In light, the desire dial's levels are each perceptually distinct
    from their neighbours and from the brass price figure — the dark
    ramp's guarantee, re-verified against the light tokens.
-8. [ ] In light, the `DesireGauge` segments and the trend arrows keep
+   *Verified: `LightDesireDialColorTests` (adjacent stops Oklab ΔE > 0.06; no stop closer to `accentBrass` than its nearest neighbour gap) and `LightPaletteContrastTests` (each numeral clears 3:1 on the light `surface`).*
+8. [x] In light, the `DesireGauge` segments and the trend arrows keep
    their meaning and stay legible on the light ground.
-9. [ ] Every light token is pinned by a test, as the dark tokens are,
+   *Verified: `LightDesireGaugeColorTests` (filled tones distinguishable from an empty track and from each other at row size, sampled off a light render) and `LightTrendArrowRenderTests` (up = light `accentMossText`, down = light `accentRustText`, each legible on the ground); the visual half attested at T006.*
+9. [x] Every light token is pinned by a test, as the dark tokens are,
    and `NoHardcodedColorsTests` still passes — no view acquired a
    literal or system colour while light mode was added.
-10. [ ] The exported PDF is unaffected by the appearance choice.
+   *Verified: `LightThemeColorTokenTests` pins every `ThemeColors.light` token as independent channel literals transcribed from `design/tokens.md` (not copied from the source), and `NoHardcodedColorsTests` is green.*
+10. [x] The exported PDF is unaffected by the appearance choice.
+    *Verified: `ThemeWiringTests`' PDF guard (`PDFComposer.swift` references no `ThemeColors`/`Theme.`/`\.theme`/`AppearanceChoice`/`AppearanceStore`, mutation-tested with a compiling reference so the scan itself fires), reinforced by actor isolation (plan §6); the existing `PrintPalette`/renderer tests untouched and green.*
 
 ## Non-goals (explicit)
 

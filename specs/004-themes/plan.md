@@ -128,6 +128,8 @@ Tested by source scan (`SettingsWiringTests`, extended): each host in `settingsH
 
 `ThemeWiringTests`: `SourceScan.production("Trove/Export/PDFComposer.swift")` contains none of `ThemeColors`, `Theme.`, `\.theme`, `AppearanceChoice`, `AppearanceStore` (criterion 10; mutation: add `ThemeColors.light.background` to the module → red). The existing PDF tests (`PrintPalette` values, the renderer) are untouched and green — the second half of criterion 10.
 
+**Belt-and-suspenders, recorded at T004 and routed here by the Phase 2 review:** the source scan is not the only thing keeping the composer theme-free. `ThemeColors` (and so `ThemeColors.light`/`.dark`) is `MainActor`-isolated under the project's `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, while `PDFComposer` — and `PrintPalette` inside it — is a `nonisolated` type (it must be, so an export can be composed off the main actor). A stray reference to a theme token from the composer therefore **fails to compile** (main-actor-isolated state read from a nonisolated context) before the scan ever runs. The scan still earns its place: it also catches the non-`Color` symbols (`AppearanceChoice`, `AppearanceStore`, `\.theme`) and a reference that happened to be reachable without an isolation error, and it is the falsifiable guard the plan can point at (the T004 mutation used a *compiling* `ThemeColors` reference precisely so the scan's own assertion, not the compiler, is what fired — confirmed at the Phase 2 review). Isolation is the structural floor; the scan is the explicit, mutation-tested guarantee on top of it.
+
 ## 7. The UI test and its isolation
 
 `AppearanceStore` under `-uiTesting` uses a volatile, isolated `UserDefaults` suite so each launch starts from Dark: `TroveApp.init` passes an isolated suite when the built store's mode is `.ephemeral` (structural, on `store.mode`, the `003` UITestSeed gating — never on a second read of the flag), else `.standard`. `AppearanceStoreTests` covers the isolation shape (a store over a named suite does not see `.standard`'s value).
@@ -170,7 +172,65 @@ Alternate-hue palettes / new colour themes, a custom/user-defined palette, Dynam
 
 ## As built
 
-To be filled at close-out (T007): any deviation, the tier totals, the light token values as recorded in `design/tokens.md`, and the sentence Q9 promised — nothing new is sent and the one stored value never leaves the device, so `PRIVACY.md` is unchanged.
+Filled at close-out (T007), 2026-09-09.
+
+**Deviations from the plan: none material.** Q1–Q9 shipped as proposed and
+signed off — the enum + separate SwiftUI extension (Q1), the
+`UserDefaults`-backed `@Observable` `AppearanceStore` (Q2), the
+implementer-derived Oklab light tokens pinned independently (Q3), shared
+typography/metrics (Q4), the `ThemedRoot` wrapper driving both modifiers
+(Q5), the segmented `Picker` first in Settings threaded through the three
+hosts (Q6), the PDF source scan (Q7), and the ephemeral-store-gated
+isolated `UserDefaults` suite for UI tests (Q8). Two things worth
+recording:
+
+- **A carry-over refinement, not a design change (T002 → T003).** The
+  `"appearanceChoice"` `UserDefaults` key was briefly duplicated (private
+  in the store, re-declared in `AppearanceStoreTests`); T003 collapsed it
+  to a single module-scope `AppearanceStore.defaultsKey` read by both, so
+  the unrecognised-string test can't go vacuously green if the key drifts.
+- **One runtime observation from the T006 device pass, dispositioned by
+  the person.** On the *very first* switch to Light, the already-open
+  Settings nav title rendered stale once (faint light-on-light);
+  **non-reproducible** across ~5 subsequent switches and self-correcting
+  on reopen — a one-time first-render artifact of the initial theme
+  propagation, not a persistent defect. The person's decision was **note
+  it, don't fix**; 004 ships as-is. Recorded here and in `tasks.md`'s T006
+  note.
+
+**The light token values (shipped, as recorded in `design/tokens.md`'s
+light column):** `background #ECE7DC`, `surface #F7F2E9`, `surfaceInset
+#EDE7DA`, `divider #D5CDBB`; text tokens all the warm near-black ink
+`#23201B` at the dark palette's descending opacities (100/75/60/55/45/40/
+35/30 %); `accentBrass #804A00` (deep bronze-gold — brass runs *dark* on
+the light ground so the money figure clears 6.5:1, the opposite direction
+to dark), `accentBrassHover #9C5D0E`, `accentBrassDim #C6A97C`,
+`accentBrassMid #A37946`, `accentBrassTint #804A00 @ 12%`; `accentMoss
+#889979` / `accentMossText #3E5137`, `accentRust #D47D5B` / `accentRustText
+#8E3A24` (the shape accents stay below 3:1 as text so the text-safe lift
+split stays real, the same discriminator the dark palette draws — the lift
+*darkens* on the light ground, the opposite direction to dark);
+`dialMidpoint #446A22` (a dark olive-green, pushed off yellow-gold so it
+doesn't collide with the deep-bronze brass on the dial); `categoryNeutral
+#7C7D80`; the plate alphas `plateHighlight rgba(255,255,255,0.70)`,
+`plateEdgeShadow rgba(0,0,0,0.12)`, `plateCastShadow rgba(0,0,0,0.10)`,
+and `gaugeTrack #23201B @ 16%` — all confirmed at the T006 device pass (no
+longer provisional). Every value is pinned by `LightThemeColorTokenTests`.
+
+**Privacy (Q9's promised sentence):** nothing new is sent off the device,
+and the one new stored value — the appearance choice, in `UserDefaults` —
+never leaves the device (it is deliberately not synced, spec Decision 4),
+so `PRIVACY.md` is unchanged. This is the app's first stored `UserDefaults`
+preference; noted so a future preference has the precedent to point at.
+
+**Tier totals (all invocations `opus` under the model policy's Fallback
+clause — `fable`'s budget spent this whole spec; the top tier ran
+nowhere):** implementer runs T001–T005 ≈ **490k** (204k + 82k + 54k + 106k
++ 44k) over 5 implementation tasks — ≈ 98k/task; reviewer invocations
+(planning sign-off 134k, T001/T002/T003 per-task reviews 70k/38k/40k,
+Phase 2 review 45k, plus the pre-merge sweep) ≈ **327k + the sweep**. The
+`sdd-planner` draft's tokens were not captured at dispatch. See the tasks
+tier log for the per-row detail and the comparison against `002` and `003`.
 
 ## Skeptical-review record (sign-off)
 

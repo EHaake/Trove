@@ -53,10 +53,12 @@ context. Measured on `surface`: `accentRust` 2.7:1 and `accentMoss`
 `ThemeColors.light` carries every token `.dark` does, derived for a
 near-white ground while keeping the brass/moss/rust identity. Derived by
 the same Oklab method the dark ramp was — no value picked by eye; the
-person attests the whole palette visually at `004`'s phase pause. The
-`Light` column below is the recorded derivation, written **before** the
-pin test (`LightThemeColorTokenTests`), so the pins are a genuine second
-transcription of these values, not a copy of the source.
+person attested the whole palette visually at `004`'s device pass (T006,
+2026-09-09 — criteria 1–4 and 8's visual halves signed off, every screen
+walked in Light). The `Light` column below is the recorded derivation,
+written **before** the pin test (`LightThemeColorTokenTests`), so the
+pins are a genuine second transcription of these values, not a copy of
+the source; these are the **shipped** values, finalised at close-out.
 
 | Token | Light | Notes |
 |---|---|---|
@@ -83,9 +85,9 @@ transcription of these values, not a copy of the source.
 | `accentRustText` | `#8E3A24` | rust as *text* — a dark rust; the lift darkens on the light ground |
 | `dialMidpoint` | `#446A22` | desire dial's middle-of-range colour. A dark olive-green rather than the dark palette's yellow-gold: it doubles as the numeral at level 3, so it must clear 3:1 as text (dark), and a dark *gold* midpoint would collide with the deep-bronze `accentBrass` on the dial. Pushing it green separates it from brass by hue while its neighbours stay distinct |
 | `categoryNeutral` | `#7C7D80` | dashboard breakdown's "everything else" swatch — a mid grey visible on the light ground |
-| `plateHighlight` | `rgba(255,255,255,0.70)` | extruded-plate top edge that catches the light — pure white at 70% over the near-white `surface`; the read flips from dark's ivory alpha. **Provisional** pending the phase-pause visual attestation |
-| `plateEdgeShadow` | `rgba(0,0,0,0.12)` | plate bottom inner edge — black, softened from dark's 0.40 because the light surface needs a subtler bevel. **Provisional** |
-| `plateCastShadow` | `rgba(0,0,0,0.10)` | soft cast shadow on the background. **Provisional** |
+| `plateHighlight` | `rgba(255,255,255,0.70)` | extruded-plate top edge that catches the light — pure white at 70% over the near-white `surface`; the read flips from dark's ivory alpha. Confirmed at the T006 device pass |
+| `plateEdgeShadow` | `rgba(0,0,0,0.12)` | plate bottom inner edge — black, softened from dark's 0.40 because the light surface needs a subtler bevel. Confirmed at the T006 device pass |
+| `plateCastShadow` | `rgba(0,0,0,0.10)` | soft cast shadow on the background. Confirmed at the T006 device pass |
 | `gaugeTrack` | `rgba(35,32,27,0.16)` | unfilled `DesireGauge` segment hairline — the dark ink at 16% over the light `surface`, the alpha's read flipped from dark's ivory |
 
 Re-earned on the light ground the same way the dark ramp was
