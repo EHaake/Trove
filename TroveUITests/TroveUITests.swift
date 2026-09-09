@@ -383,6 +383,57 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(badge.isHittable, "Done should return to the list")
     }
 
+    // MARK: - 004 Appearance
+
+    /// 004 criteria 2 and 6, the UI halves: Settings carries an Appearance
+    /// segmented control with three segments — System / Light / Dark — and it
+    /// opens on Dark, the default a fresh or upgrading install gets without
+    /// choosing. Tapping Light leaves Light selected, proving the control is
+    /// wired and settable.
+    ///
+    /// It launches with `-uiTesting` alone, which under T003's isolation gate
+    /// starts every run from Dark — so the "Dark selected" assertion is the
+    /// mutation guard (G12): defaulting `AppearanceStore` to `.system` or
+    /// `.light` turns it red. Selection state, not rendered pixels: the light
+    /// palette's visual correctness is the person's device pass and the
+    /// perceptual suites, never a fragile screenshot.
+    @MainActor
+    func testAppearanceControlDefaultsToDarkAndOffersThreeChoices() {
+        let app = launchApp()
+        app.buttons["Items"].tap()
+
+        let badge = app.buttons["moreActions.items"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "the overflow badge must exist")
+        badge.tap()
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5), "the menu should open")
+        settings.tap()
+        XCTAssertTrue(
+            app.navigationBars["Settings"].waitForExistence(timeout: 5),
+            "Settings should present as a sheet"
+        )
+
+        // A segmented Picker surfaces as a segmentedControl whose segments are
+        // buttons read by their displayName; selection is `.isSelected`.
+        let control = app.segmentedControls.firstMatch
+        XCTAssertTrue(control.waitForExistence(timeout: 5), "the Appearance segmented control must be on the screen")
+
+        let system = control.buttons["System"]
+        let light = control.buttons["Light"]
+        let dark = control.buttons["Dark"]
+        for segment in [system, light, dark] {
+            XCTAssertTrue(segment.exists, "the Appearance control must offer System / Light / Dark")
+        }
+
+        XCTAssertTrue(dark.isSelected, "a fresh install opens on Dark")
+        XCTAssertFalse(light.isSelected, "Dark, not Light, is the default")
+        XCTAssertFalse(system.isSelected, "Dark, not System, is the default")
+
+        light.tap()
+        XCTAssertTrue(light.isSelected, "tapping Light must leave Light selected — the control is wired and settable")
+        XCTAssertFalse(dark.isSelected, "picking Light must deselect Dark")
+    }
+
     // MARK: - 002 Market (offline states only)
 
     /// 002 criterion 1's behavioral half: an item with nothing matched to it
