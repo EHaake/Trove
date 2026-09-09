@@ -1,6 +1,6 @@
 # 004 — Light mode: Tasks
 
-**Status**: Draft — `skeptical-reviewer` signed off 2026-09-09 (B1 fixed and re-reviewed clean); pending the person's technical-lead sign-off
+**Status**: Approved 2026-09-09 — `skeptical-reviewer` signed off (B1 fixed and re-reviewed clean) and the person's technical-lead sign-off given. Begin at T001.
 **Implements**: plan.md in this directory
 **Foundational phases**: 1 — per-task reviewer cadence (both tasks). Phase 2 is per-phase, with **T003 marked `review: per-task`** (root wiring the whole app inherits). Phase 3 is the person's pass and the close-out.
 

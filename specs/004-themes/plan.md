@@ -1,6 +1,6 @@
 # Plan 004 — Light mode
 
-**Status**: Draft — `skeptical-reviewer` signed off 2026-09-09 (one blocking finding fixed and re-reviewed clean); pending the person's technical-lead sign-off
+**Status**: Approved 2026-09-09 — `skeptical-reviewer` signed off (one blocking finding fixed and re-reviewed clean) and the person's technical-lead sign-off given. Ready for implementation from T001.
 **Implements**: spec.md in this directory (approved by the person 2026-09-09)
 **Drafted**: 2026-09-09 by the `sdd-planner`, against the approved `spec.md` and the code on `main` at the point spec 004 branches, from a planning bundle carrying the spec, `003-trend-aware-sell-plan`'s plan and tasks as the pattern, and the file listing. Read beyond the bundle, recorded for the next bundle: `ContentView.swift`, `Color+Hex.swift`, `TestSupport.swift`, `SettingsViewModel.swift`, `WishlistView.swift`, `MenuPolicyTests.swift`, and `specs/013-settings-menu/plan.md`. **This dispatch ran at the implementation tier (`opus`) at high effort under the model policy's Fallback clause — the top tier's (`fable`) budget is spent** (spec.md line 5 records the same for the spec session); logged in the tier log below.
 
