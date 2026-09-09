@@ -221,15 +221,20 @@ review everywhere, and took second-look and device work off the
 orchestrator — and 2026-09-07 again to the skill's current three-tier
 wording, which separates a session tier (`sonnet`) from the
 implementation tier (`opus`) so the orchestrating session runs lighter
-than implementation. Decided once, alongside the involvement level;
+than implementation, and 2026-09-09 to move the session tier to
+`claude-opus-4-8` (a previous-generation Opus kept at its full ID),
+make the session-tier fallback a bump to high effort rather than a
+model change, and end every session-ending pause with a continuation
+prompt. Decided once, alongside the involvement level;
 the tier names change as models do, the roles don't.
 
 - **Tiers by name**: top tier `fable`; implementation tier `opus`;
-  session tier `sonnet`. These three names are the only place a model
-  is spelled out; everything below refers to the roles.
+  session tier `claude-opus-4-8` (the full ID — a previous-generation
+  model has no short alias). These three names are the only place a
+  model is spelled out; everything below refers to the roles.
 - **The session runs at the session tier, at medium effort**, set in
   this repo's `.claude/settings.json` — written from the skill's
-  `assets/settings-template.json` (`"model": "sonnet"`,
+  `assets/settings-template.json` (`"model": "claude-opus-4-8"`,
   `"effortLevel": "medium"`, and per-tier effort under
   `"modelSettings"` for each tier's model ID). If that file is missing
   or lacks these keys, recreate it from the template and commit it
@@ -243,8 +248,7 @@ the tier names change as models do, the roles don't.
   the entire workflow. It doesn't need the top tier or deep reasoning
   to assemble a bundle and tick a box. If it drops the protocol (a
   skipped review, a stale `tasks.md` edit, a task done by hand), the
-  fallback is the implementation tier at medium, one line in the same
-  file.
+  first fix is high effort, one line in the same file.
 - **The session tier never resolves a design question.** When triage
   finds a task that isn't routine, the session frames the question in
   Plan Mode — so nothing is touched meanwhile — and dispatches the
@@ -268,8 +272,10 @@ the tier names change as models do, the roles don't.
   medium, so reasoning stays at full strength where it matters.
 - **Spec conversations happen in a Claude Code session of their own**,
   at the top tier, and end when the spec is approved — never inside an
-  orchestrating session. A session in this repo opens at the session
-  tier, so a spec session states its model first and, if it's the
+  orchestrating session. The spec session's last message is the
+  continuation prompt that starts planning in the new session. A
+  session in this repo opens at the session tier, so a spec session
+  states its model first and, if it's the
   session tier, asks the person to switch to the top tier for this
   session — the model selector in the app, or `/model fable` — before
   continuing. `.claude/settings.json` pins effort per model, so picking
@@ -317,6 +323,16 @@ the tier names change as models do, the roles don't.
   turn count; a phase boundary is where the carried context has the
   least remaining value. Compact mid-phase only if the context grows
   large; never clear mid-task.
+- **Every session-ending pause ends with a continuation prompt.** When
+  the next step belongs in a fresh session — after a phase pause,
+  after a spec is approved, after a merge with the next spec waiting
+  on `ROADMAP.md` — the report's last item is the exact prompt to
+  paste there, in its own fenced block. It names the spec directory,
+  the files to read, where to resume, the involvement level, the
+  pause cadence, and any model switch the next session needs. Write
+  anything the next session needs to a file first; the prompt points
+  at files. If nothing can proceed until the person decides
+  something, say so instead.
 - **Batch the bookkeeping**: commit, checkbox, and tier-log row in one
   shell command; bundle assembly and dispatch back to back. Every turn
   saved is one fewer re-send of the whole context.
