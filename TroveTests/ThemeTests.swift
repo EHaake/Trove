@@ -65,6 +65,100 @@ struct ThemeColorTokenTests {
     }
 }
 
+/// Pins every **light** token (spec `004`) to the exact value in
+/// `design/tokens.md`'s light column, mirroring `ThemeColorTokenTests`.
+///
+/// The expected numbers are transcribed by hand from the tokens.md light
+/// column as separate channel literals — not read back from
+/// `ThemeColors.light`, which would only prove the source equals itself. A
+/// flipped digit in either the source or the pin parts them.
+@Suite("Light theme color tokens")
+struct LightThemeColorTokenTests {
+    private func rgba(_ color: Color) -> (red: Int, green: Int, blue: Int, opacity: Double) {
+        let resolved = color.resolve(in: EnvironmentValues())
+        return (
+            Int((Double(resolved.red) * 255).rounded()),
+            Int((Double(resolved.green) * 255).rounded()),
+            Int((Double(resolved.blue) * 255).rounded()),
+            (Double(resolved.opacity) * 100).rounded() / 100
+        )
+    }
+
+    private let colors = ThemeColors.light
+
+    @Test func surfaceTokensMatchTheTokenTable() {
+        #expect(rgba(colors.background) == (0xEC, 0xE7, 0xDC, 1.0))
+        #expect(rgba(colors.surface) == (0xF7, 0xF2, 0xE9, 1.0))
+        #expect(rgba(colors.surfaceInset) == (0xED, 0xE7, 0xDA, 1.0))
+        #expect(rgba(colors.divider) == (0xD5, 0xCD, 0xBB, 1.0))
+    }
+
+    /// One warm near-black ink at descending opacity — the dark palette's
+    /// structure with the ink inverted, so the channels are constant and only
+    /// the alpha varies.
+    @Test func textTokensAreTheSameInkAtDescendingOpacity() {
+        #expect(rgba(colors.textPrimary) == (0x23, 0x20, 0x1B, 1.0))
+        #expect(rgba(colors.textBody) == (0x23, 0x20, 0x1B, 0.75))
+        #expect(rgba(colors.textLabel) == (0x23, 0x20, 0x1B, 0.60))
+        #expect(rgba(colors.textLabelSecondary) == (0x23, 0x20, 0x1B, 0.55))
+        #expect(rgba(colors.textMonoMeta) == (0x23, 0x20, 0x1B, 0.45))
+        #expect(rgba(colors.textQuiet) == (0x23, 0x20, 0x1B, 0.40))
+        #expect(rgba(colors.textDisabled) == (0x23, 0x20, 0x1B, 0.35))
+        #expect(rgba(colors.textInactive) == (0x23, 0x20, 0x1B, 0.30))
+    }
+
+    @Test func accentTokensMatchTheTokenTable() {
+        #expect(rgba(colors.accentBrass) == (0x80, 0x4A, 0x00, 1.0))
+        #expect(rgba(colors.accentBrassHover) == (0x9C, 0x5D, 0x0E, 1.0))
+        #expect(rgba(colors.accentBrassDim) == (0xC6, 0xA9, 0x7C, 1.0))
+        #expect(rgba(colors.accentBrassMid) == (0xA3, 0x79, 0x46, 1.0))
+        #expect(rgba(colors.accentBrassTint) == (0x80, 0x4A, 0x00, 0.12))
+        #expect(rgba(colors.accentMoss) == (0x88, 0x99, 0x79, 1.0))
+        #expect(rgba(colors.accentMossText) == (0x3E, 0x51, 0x37, 1.0))
+        #expect(rgba(colors.accentRust) == (0xD4, 0x7D, 0x5B, 1.0))
+        #expect(rgba(colors.accentRustText) == (0x8E, 0x3A, 0x24, 1.0))
+        #expect(rgba(colors.dialMidpoint) == (0x44, 0x6A, 0x22, 1.0))
+        #expect(rgba(colors.categoryNeutral) == (0x7C, 0x7D, 0x80, 1.0))
+    }
+
+    /// The extruded-plate alphas and the gauge track — pinned too, so "every
+    /// light token is pinned" is literally true (spec `004` criterion 9).
+    @Test func plateAndGaugeAlphasMatchTheTokenTable() {
+        #expect(rgba(colors.plateHighlight) == (0xFF, 0xFF, 0xFF, 0.70))
+        #expect(rgba(colors.plateEdgeShadow) == (0x00, 0x00, 0x00, 0.12))
+        #expect(rgba(colors.plateCastShadow) == (0x00, 0x00, 0x00, 0.10))
+        #expect(rgba(colors.gaugeTrack) == (0x23, 0x20, 0x1B, 0.16))
+    }
+
+    /// The text-safe lifts remain distinct from their shape colours — on a
+    /// light ground the lift darkens the accent rather than lightening it, but
+    /// it must still be its own value, not collapsed onto the shape colour.
+    @Test func textSafeAccentLiftsAreDistinctFromTheirShapeColors() {
+        #expect(colors.accentMossText != colors.accentMoss)
+        #expect(colors.accentRustText != colors.accentRust)
+    }
+}
+
+/// "Light mode is colour-only" (plan.md Q4) as a checked claim rather than a
+/// comment: `Theme.light` differs from `Theme.dark` in its colours and nothing
+/// else. `ThemeMetrics`/`ThemeTypography` gained `Equatable` for exactly this.
+@Suite("Theme composition")
+struct ThemeCompositionTests {
+    @Test func lightSharesDarksMetrics() {
+        #expect(Theme.light.metrics == Theme.dark.metrics)
+    }
+
+    @Test func lightSharesDarksTypography() {
+        #expect(Theme.light.typography == Theme.dark.typography)
+    }
+
+    /// The claim would be vacuous if the two themes' colours were also equal —
+    /// then "colour-only" difference could mean "no difference". They aren't.
+    @Test func lightAndDarkColoursDiffer() {
+        #expect(Theme.light.colors.surface != Theme.dark.colors.surface)
+    }
+}
+
 /// plan.md claims colors are "never hardcoded per-view" and that swapping the
 /// active `Theme` is all a future light mode needs. That claim is only true
 /// while it stays true, and it degrades the moment one view reaches for a

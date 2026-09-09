@@ -5,6 +5,7 @@ import SwiftUI
 struct TroveApp: App {
     private let store: TroveStore
     private let syncMonitor: SyncMonitor
+    private let appearanceStore: AppearanceStore
 
     /// Set by the UI test target so each run starts from a genuinely fresh
     /// install rather than whatever the last run left in the simulator.
@@ -33,6 +34,26 @@ struct TroveApp: App {
             // CloudKit mirror has nothing to wait for, and the monitor is
             // what keeps every empty state from having to know that.
             syncMonitor = SyncMonitor(mode: store.mode)
+            // The appearance choice lives in `UserDefaults`, read synchronously
+            // so the first frame draws in the right palette. Under the in-memory
+            // (`.ephemeral`) store a UI-test launch built, it reads from a
+            // volatile, isolated suite so each run starts from Dark regardless
+            // of what a previous run left — gated structurally on the mode of
+            // the store that was actually built (the `UITestSeed` pattern), not
+            // on a second read of the launch argument, so a persistent-store
+            // launch can never pick up the volatile suite (plan.md §7, Q8).
+            let appearanceDefaults: UserDefaults
+            if store.mode == .ephemeral {
+                let suiteName = "TroveUITests.appearance"
+                let suite = UserDefaults(suiteName: suiteName)!
+                // Wipe: `UserDefaults(suiteName:)` persists on disk, so an
+                // unwiped suite could leak a prior run's choice into this one.
+                suite.removePersistentDomain(forName: suiteName)
+                appearanceDefaults = suite
+            } else {
+                appearanceDefaults = .standard
+            }
+            appearanceStore = AppearanceStore(defaults: appearanceDefaults)
             // 011: sweep whatever the previous session's share sheet left
             // staged — the launch half of criterion 10's "no residue"; the
             // per-export half lives in FileExportService.stage.
@@ -65,23 +86,26 @@ struct TroveApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(\.theme, .dark)
-                // What the store actually turned out to be, for the views
-                // that say so out loud — the save bars' captions (T049a).
-                .environment(\.storageMode, store.mode)
-                // 013: why that mode isn't `.cloudKit`, when it isn't — the
-                // Settings screen's iCloud row is the first reader the
-                // store's recorded reason has had since 001.
-                .environment(\.storageFallbackReason, store.cloudKitFailure?.localizedDescription)
-                // How far along this device's copy is, for the empty states
-                // that would otherwise claim an unfinished import is an empty
-                // collection (Phase 12).
-                .environment(syncMonitor)
-                // v1 is dark-only (spec.md defers light mode), and pinning the
-                // scheme keeps system-drawn chrome — keyboards, pickers,
-                // selection — matching the palette instead of fighting it.
-                .preferredColorScheme(.dark)
+            // The palette and preferred colour scheme are no longer hardcoded
+            // here: `ThemedRoot` drives both from the appearance choice, so a
+            // choice change re-themes the whole app with no relaunch and a
+            // device flip follows under `.system` (spec 004, plan.md §4, Q5).
+            ThemedRoot(appearanceStore: appearanceStore) {
+                ContentView()
+                    // What the store actually turned out to be, for the views
+                    // that say so out loud — the save bars' captions (T049a).
+                    .environment(\.storageMode, store.mode)
+                    // 013: why that mode isn't `.cloudKit`, when it isn't — the
+                    // Settings screen's iCloud row is the first reader the
+                    // store's recorded reason has had since 001.
+                    .environment(\.storageFallbackReason, store.cloudKitFailure?.localizedDescription)
+                    // How far along this device's copy is, for the empty states
+                    // that would otherwise claim an unfinished import is an empty
+                    // collection (Phase 12).
+                    .environment(syncMonitor)
+                    // The appearance choice, for Settings to read and change.
+                    .environment(appearanceStore)
+            }
         }
         .modelContainer(store.container)
     }

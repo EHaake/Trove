@@ -214,31 +214,56 @@ Decided 2026-09-04, per the `spec-driven-development` skill's "Model
 tiering" section; amended 2026-09-05 after `002-live-market-value`'s
 tier log was measured (the review loop and raw build logs were the two
 largest costs), 2026-09-06 to move plan and task drafting into the
-`sdd-planner` subagent, and 2026-09-07 to the skill's current wording —
-which moves the session itself to the step-down tier, replaces the
-foundational/mechanical review split with per-phase review everywhere,
-and takes second-look and device work off the orchestrator. Decided
-once, alongside the involvement level; the tier names change as models
-do, the roles don't.
+`sdd-planner` subagent, 2026-09-07 to the skill's per-phase-review
+wording — which moved the session itself to the step-down tier,
+replaced the foundational/mechanical review split with per-phase
+review everywhere, and took second-look and device work off the
+orchestrator — and 2026-09-07 again to the skill's current three-tier
+wording, which separates a session tier (`sonnet`) from the
+implementation tier (`opus`) so the orchestrating session runs lighter
+than implementation, and 2026-09-09 to move the session tier to
+`claude-opus-4-8` (a previous-generation Opus kept at its full ID),
+make the session-tier fallback a bump to high effort rather than a
+model change, and end every session-ending pause with a continuation
+prompt. Decided once, alongside the involvement level;
+the tier names change as models do, the roles don't.
 
-- **Tiers by name**: top tier `fable`; step-down `opus`. These two
-  names are the only place a model is spelled out; everything below
-  refers to them.
-- **The session runs at the step-down tier, at medium effort**, set in
+- **Tiers by name**: top tier `fable`; implementation tier `opus`;
+  session tier `claude-opus-4-8` (the full ID — a previous-generation
+  model has no short alias). These three names are the only place a
+  model is spelled out; everything below refers to the roles.
+- **The session runs at the session tier, at medium effort**, set in
   this repo's `.claude/settings.json` — written from the skill's
-  `assets/settings-template.json` (`"model": "opus"`,
-  `"effortLevel": "medium"`, and per-model effort under
-  `"modelSettings"` for `claude-opus-5` and `claude-fable-5-1`). If
-  that file is missing or lacks these keys, recreate it from the
-  template and commit it before dispatching anything; nobody creates it
-  by hand. Project settings outrank user settings, so a model picked in
-  the app's picker only affects the session it was picked in — new
-  sessions in this repo start here regardless. The orchestrating
-  session takes thousands of bookkeeping turns and re-sends its whole
-  context on each one; measured across the first specs, that re-send
-  volume was eight to nine times the implementers' and was the dominant
-  cost of the entire workflow. It doesn't need the top tier or deep
-  reasoning to assemble a bundle and tick a box.
+  `assets/settings-template.json` (`"model": "claude-opus-4-8"`,
+  `"effortLevel": "medium"`, and per-tier effort under
+  `"modelSettings"` for each tier's model ID). If that file is missing
+  or lacks these keys, recreate it from the template and commit it
+  before dispatching anything; nobody creates it by hand. Project
+  settings outrank user settings, so a model picked in the app's picker
+  only affects the session it was picked in — new sessions in this
+  repo start here regardless. The orchestrating session takes
+  thousands of bookkeeping turns and re-sends its whole context on
+  each one; measured across the first specs, that re-send volume was
+  eight to nine times the implementers' and was the dominant cost of
+  the entire workflow. It doesn't need the top tier or deep reasoning
+  to assemble a bundle and tick a box. If it drops the protocol (a
+  skipped review, a stale `tasks.md` edit, a task done by hand), the
+  first fix is high effort, one line in the same file.
+- **The session tier never resolves a design question.** When triage
+  finds a task that isn't routine, the session frames the question in
+  Plan Mode — so nothing is touched meanwhile — and dispatches the
+  `skeptical-reviewer` at the top tier on a decision bundle: the task
+  line, the plan section, the acceptance criteria, and the options as
+  the session sees them. It transcribes the recommendation into
+  `plan.md` and dispatches what remains. A product question `spec.md`
+  doesn't settle goes to the person instead.
+- **Everything the person reads is plain language.** Pause reports,
+  spec-conformance summaries, and questions use short sentences and
+  everyday words — no task IDs, agent names, tier names, or internal
+  shorthand unless the person asks — and assume the reader won't open
+  `plan.md`. Say what can now be tried, where execution deviated from
+  the spec and why, and what needs a decision. Technical detail
+  belongs in `plan.md` and the commit log, not in the report.
 - **The top tier runs only inside the decisions**: the `sdd-planner`
   (one dispatch per spec) and the `skeptical-reviewer` on plan/tasks
   sign-off and on routine-but-real decision reviews — each dispatched
@@ -247,19 +272,22 @@ do, the roles don't.
   medium, so reasoning stays at full strength where it matters.
 - **Spec conversations happen in a Claude Code session of their own**,
   at the top tier, and end when the spec is approved — never inside an
-  orchestrating session. A session in this repo opens at the step-down
-  tier, so a spec session states its model first and, if it's the
-  step-down tier, asks the person to switch to the top tier for this
+  orchestrating session. The spec session's last message is the
+  continuation prompt that starts planning in the new session. A
+  session in this repo opens at the session tier, so a spec session
+  states its model first and, if it's the
+  session tier, asks the person to switch to the top tier for this
   session — the model selector in the app, or `/model fable` — before
   continuing. `.claude/settings.json` pins effort per model, so picking
   the top tier brings high effort with it and the next session still
-  opens at the step-down tier. (This project's very first spec, `001`,
+  opens at the session tier. (This project's very first spec, `001`,
   happened in chat, with no codebase yet; `012` and `003` were the
   first written in a Claude Code session.)
-- **The `skeptical-reviewer` runs one tier down by default** (its
-  definition says `opus`) for per-phase reviews, the per-task reviews
-  the planner marks, and the pre-merge sweep. Each review gets a single
-  bundle file assembled with shell — diff, task lines, plan sections,
+- **The `skeptical-reviewer` runs at the implementation tier by
+  default** (its definition says `opus`) for per-phase reviews, the
+  per-task reviews the planner marks, and the pre-merge sweep. Each
+  review gets a single bundle file assembled with shell — diff, task
+  lines, plan sections,
   acceptance criteria; for the sweep, the documents and the spec's full
   diff (`git diff main...HEAD`) — and reads nothing else. Stage before
   cutting the diff (`git add -A`), so untracked files appear in it.
@@ -276,8 +304,8 @@ do, the roles don't.
   goes to the tier log and the sweep; a blocking finding still open
   after a sign-off's re-review is fixed by the orchestrator directly
   and logged, not sent around a third time.
-- **Implementation runs one tier down**, in the `sdd-implementer`
-  subagent, one task per dispatch, sequentially. The orchestrating
+- **Implementation runs at the implementation tier**, in the
+  `sdd-implementer` subagent, one task per dispatch, sequentially. The orchestrating
   session triages each task, dispatches routine ones on a task bundle
   assembled with shell (task line, plan section, acceptance criteria,
   files, the pattern file to copy), telling the implementer not to read
@@ -295,20 +323,31 @@ do, the roles don't.
   turn count; a phase boundary is where the carried context has the
   least remaining value. Compact mid-phase only if the context grows
   large; never clear mid-task.
+- **Every session-ending pause ends with a continuation prompt.** When
+  the next step belongs in a fresh session — after a phase pause,
+  after a spec is approved, after a merge with the next spec waiting
+  on `ROADMAP.md` — the report's last item is the exact prompt to
+  paste there, in its own fenced block. It names the spec directory,
+  the files to read, where to resume, the involvement level, the
+  pause cadence, and any model switch the next session needs. Write
+  anything the next session needs to a file first; the prompt points
+  at files. If nothing can proceed until the person decides
+  something, say so instead.
 - **Batch the bookkeeping**: commit, checkbox, and tier-log row in one
   shell command; bundle assembly and dispatch back to back. Every turn
   saved is one fewer re-send of the whole context.
 - **Fallback**: if the top tier's usage budget runs out, dispatch the
-  planner and sign-off at the step-down tier for the rest of the
-  window (drop the override). Nothing else changes; the tier log
-  records what ran.
+  planner and sign-off at the implementation tier for the rest of the
+  window (drop the override; both definitions default to `opus`).
+  Nothing else changes; the tier log records what ran.
 - **Escape hatch**: two failed verifications on one task, or a "stopped
   on a judgment call" the orchestrator considers well-specified, and
   the orchestrator does that task itself, noting the miss in
   `tasks.md`.
-- **Third tier**: off. Turn on once a spec's tier log under this
-  amended cadence justifies it: "Sonnet for tasks with an automated
-  Verify check, a named pattern file, and a small footprint."
+- **Lighter implementer**: off. Turn on once a spec's tier log under
+  this amended cadence justifies it: the session tier for tasks with
+  an automated Verify check, a named pattern file, and a small
+  footprint.
 - **Log token usage per planner dispatch, implementer run and reviewer
   invocation**, plus tier misses, in `tasks.md`'s tier log — every Tier
   entry a resolved model name (`opus`, `fable`), never "default."

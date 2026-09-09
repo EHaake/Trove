@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Spacing, sizing and corner radii from `design/tokens.md`. Everything sits
 /// on the 4pt base grid except where Design specified otherwise.
-struct ThemeMetrics: Sendable {
+struct ThemeMetrics: Sendable, Equatable {
     let screenGutter: CGFloat
     let cardPadding: CGFloat
     /// List-row internals run tighter than a card's (`010`'s row treatment):
