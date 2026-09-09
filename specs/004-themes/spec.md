@@ -1,6 +1,6 @@
 # Spec 004 — Light mode
 
-**Status**: Draft — authored 2026-09-08, awaiting the person's approval. No plan or tasks yet.
+**Status**: Approved by the person 2026-09-09 (Draft authored 2026-09-08). Plan and tasks in progress.
 **Depends on**: `001-core-inventory` (the `Theme` abstraction injected at the root, and `NoHardcodedColorsTests`, which together make a second palette a config change rather than a sweep), `013-settings-menu` (the Settings screen the choice lives in — theme selection was deferred here from `013`)
 **Authored**: 2026-09-08, in the Claude Code spec session at the person's direction. Every substantive call below is the person's. The session ran at the implementation tier (`opus`), not the top tier, under the model policy's Fallback clause — the top tier's budget was spent; recorded here so the tier log has the reason.
 
