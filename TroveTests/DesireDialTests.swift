@@ -294,3 +294,135 @@ struct DesireDialColorTests {
         #expect(contrastRatio(colors.textPrimary, on: colors.surface) > 14.0)
     }
 }
+
+/// The dial's colour ramp re-earned on the **light** palette (spec `004`,
+/// criterion 7). The dark suite above is left untouched; this one mirrors it
+/// against `ThemeColors.light` so the light ramp is independently falsifiable
+/// and the dark guarantee stays pristine.
+@Suite("Light DesireDial colour ramp")
+struct LightDesireDialColorTests {
+    private let colors = ThemeColors.light
+
+    @Test func theArcRunsFromRustToMoss() {
+        #expect(DesireDial.arcColor(for: .readyToSell, in: colors) == colors.accentRust)
+        #expect(DesireDial.arcColor(for: .absolutelyKeeping, in: colors) == colors.accentMoss)
+    }
+
+    /// Brass is the money colour on light as on dark, and stays off the dial.
+    @Test func brassNoLongerAppearsAnywhereOnTheDial() {
+        for level in DesireLevel.allCases {
+            #expect(DesireDial.arcColor(for: level, in: colors) != colors.accentBrass)
+            #expect(DesireDial.numeralColor(for: level, in: colors) != colors.accentBrass)
+        }
+    }
+
+    /// The price-figure half of criterion 7, re-earned on the light ground:
+    /// a deep-bronze brass sits near the dial's dark olive midpoint, so this is
+    /// the constraint the light derivation had to work hardest for. No stop may
+    /// sit closer to the money colour than to its own neighbours.
+    @Test func noStopIsMoreConfusableWithBrassThanWithItsNeighbours() {
+        let toBrass = DesireLevel.allCases
+            .map { perceptualDistance(DesireDial.arcColor(for: $0, in: colors), colors.accentBrass) }
+            .min() ?? 0
+
+        #expect(
+            toBrass >= smallestGapBetweenStops,
+            "closest stop sits \(toBrass) from brass, stops are \(smallestGapBetweenStops) apart"
+        )
+    }
+
+    @Test func noTwoAdjacentLevelsLookAlike() {
+        #expect(
+            smallestGapBetweenStops > 0.06,
+            "closest pair of levels measures \(smallestGapBetweenStops) apart"
+        )
+    }
+
+    @Test func theStopsAreSpacedEvenly() {
+        let gaps = adjacentGaps
+        let widest = gaps.max() ?? 0
+        let narrowest = gaps.min() ?? 0
+
+        #expect(widest / narrowest < 1.5, "gaps between stops: \(gaps)")
+    }
+
+    private var adjacentGaps: [Double] {
+        let stops = DesireLevel.allCases.map { DesireDial.arcColor(for: $0, in: colors) }
+        return (0..<stops.count - 1).map { perceptualDistance(stops[$0], stops[$0 + 1]) }
+    }
+
+    private var smallestGapBetweenStops: Double { adjacentGaps.min() ?? 0 }
+
+    private func perceptualDistance(_ first: Color, _ second: Color) -> Double {
+        Perceptual.distance(first, second)
+    }
+
+    @Test func theMidpointSitsAtTheMiddleOfTheScale() {
+        #expect(DesireDial.arcColor(for: .undecided, in: colors) == colors.dialMidpoint)
+        #expect(DesireDial.numeralColor(for: .undecided, in: colors) == colors.dialMidpoint)
+    }
+
+    @Test func theNumeralUsesTheTextSafeLiftsAtBothEnds() {
+        #expect(DesireDial.numeralColor(for: .readyToSell, in: colors) == colors.accentRustText)
+        #expect(DesireDial.numeralColor(for: .absolutelyKeeping, in: colors) == colors.accentMossText)
+    }
+
+    @Test func everyLevelGetsItsOwnColour() {
+        let arc = DesireLevel.allCases.map { DesireDial.arcColor(for: $0, in: colors) }
+        #expect(Set(arc).count == DesireLevel.allCases.count)
+    }
+}
+
+/// The contrast split, re-earned on the light palette (spec `004`, criteria 2
+/// and 7). On a near-white surface the split flips direction: the text-safe
+/// lifts must be *dark* enough to clear 3:1, and the raw shape accents must
+/// stay *light* enough to fall below it — but the discriminator is the same
+/// one the dark suite uses, so the lift stays non-vacuous.
+@Suite("Light palette contrast")
+struct LightPaletteContrastTests {
+    private let colors = ThemeColors.light
+
+    private func relativeLuminance(_ color: Color) -> Double {
+        let resolved = color.resolve(in: EnvironmentValues())
+        return 0.2126 * Double(resolved.linearRed)
+            + 0.7152 * Double(resolved.linearGreen)
+            + 0.0722 * Double(resolved.linearBlue)
+    }
+
+    private func contrastRatio(_ foreground: Color, on background: Color) -> Double {
+        let a = relativeLuminance(foreground)
+        let b = relativeLuminance(background)
+        let (lighter, darker) = a > b ? (a, b) : (b, a)
+        return (lighter + 0.05) / (darker + 0.05)
+    }
+
+    /// Every numeral stop clears 3:1 (WCAG AA large text) on the light card —
+    /// the legibility half of criterion 7.
+    @Test(arguments: DesireLevel.allCases)
+    func theNumeralStaysLegibleOnASurfaceCard(level: DesireLevel) {
+        let ratio = contrastRatio(DesireDial.numeralColor(for: level, in: colors), on: colors.surface)
+        #expect(ratio >= 3.0, "level \(level.rawValue) numeral measures \(ratio):1 on surface")
+    }
+
+    /// The other half of the pair: the raw shape accents would fail as text on
+    /// the light card, which is why the lift exists. Setting a lift equal to
+    /// its shape colour makes the numeral test above go red at that end.
+    @Test func theShapeOnlyAccentsWouldFailAsNumerals() {
+        #expect(contrastRatio(colors.accentRust, on: colors.surface) < 3.0)
+        #expect(contrastRatio(colors.accentMoss, on: colors.surface) < 3.0)
+    }
+
+    /// The primary and body ink clear their WCAG bars on both grounds
+    /// (criterion 2). 4.5:1 is AA for body text; the near-black ink clears it
+    /// with room to spare on the near-white surface and background.
+    @Test func theTextInkClearsItsBarsOnBothGrounds() {
+        #expect(contrastRatio(colors.textPrimary, on: colors.surface) >= 7.0)
+        #expect(contrastRatio(colors.textPrimary, on: colors.background) >= 7.0)
+        #expect(contrastRatio(colors.textBody, on: colors.surface) >= 4.5)
+        #expect(contrastRatio(colors.textBody, on: colors.background) >= 4.5)
+    }
+
+    @Test func theContrastFormulaAgreesWithKnownPairs() {
+        #expect(contrastRatio(colors.surface, on: colors.surface) == 1.0)
+    }
+}

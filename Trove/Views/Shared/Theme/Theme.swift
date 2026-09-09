@@ -17,6 +17,16 @@ struct Theme: Sendable {
         typography: .standard,
         metrics: .standard
     )
+
+    /// Light mode (spec `004`): the light colours over the shared typography
+    /// and metrics. "Light mode is colour-only" is a checked claim, not a
+    /// comment — `ThemeCompositionTests` asserts `light.metrics == dark.metrics`
+    /// and `light.typography == dark.typography`.
+    static let light = Theme(
+        colors: .light,
+        typography: .standard,
+        metrics: .standard
+    )
 }
 
 extension EnvironmentValues {

@@ -48,6 +48,65 @@ context. Measured on `surface`: `accentRust` 2.7:1 and `accentMoss`
 2.6:1 both fail, while the lifts reach 4.0:1 and 5.1:1.
 `DesireDialColorTests` computes these rather than trusting the names.
 
+### The light palette (spec `004`)
+
+`ThemeColors.light` carries every token `.dark` does, derived for a
+near-white ground while keeping the brass/moss/rust identity. Derived by
+the same Oklab method the dark ramp was — no value picked by eye; the
+person attests the whole palette visually at `004`'s phase pause. The
+`Light` column below is the recorded derivation, written **before** the
+pin test (`LightThemeColorTokenTests`), so the pins are a genuine second
+transcription of these values, not a copy of the source.
+
+| Token | Light | Notes |
+|---|---|---|
+| `background` | `#ECE7DC` | app background — a warm light grey |
+| `surface` | `#F7F2E9` | cards, list rows — near-white, one step lighter than `background` (cards read raised, mirroring the dark relationship) |
+| `surfaceInset` | `#EDE7DA` | inset hairline — a touch darker than `surface`, recessed (the read flips from dark, where inset is lighter) |
+| `divider` | `#D5CDBB` | hairlines, borders — visible on the light ground |
+| `textPrimary` | `#23201B` | full opacity — a warm near-black ink; every text token is a percentage of it, the dark palette's structure with the ink inverted |
+| `textBody` | `#23201B` @ 75% | body text |
+| `textLabel` | `#23201B` @ 60% | primary field/row labels |
+| `textLabelSecondary` | `#23201B` @ 55% | secondary labels |
+| `textMonoMeta` | `#23201B` @ 45% | secondary mono text |
+| `textQuiet` | `#23201B` @ 40% | de-emphasized text |
+| `textDisabled` | `#23201B` @ 35% | disabled controls |
+| `textInactive` | `#23201B` @ 30% | inactive/placeholder |
+| `accentBrass` | `#804A00` | primary accent — a deep bronze-gold. On the near-white ground the money figure has to stay legible (6.5:1 on `surface`), which pulls brass dark; keeping it a light gold like the dark palette's would drop it near 2:1. The direction flips from dark, where brass is the lightest accent — here it is one of the darkest — but the hobby's warm-gold identity holds |
+| `accentBrassHover` | `#9C5D0E` | pressed/hover — a lighter, brighter brass, the same "brightens on press" relationship dark uses |
+| `accentBrassDim` | `#C6A97C` | held-back brass for repeated marks (ruler minor ticks) — a light tan, less prominent against the light ground |
+| `accentBrassMid` | `#A37946` | perceptual (Oklab) half-mix of `accentBrassDim` and `accentBrass`, the `DesireGauge` ramp's middle segment — same construction as dark |
+| `accentBrassTint` | `rgba(128,74,0,0.12)` | background tint (selected-row fill) — `accentBrass` at 12% |
+| `accentMoss` | `#889979` | secondary accent — strokes/borders/fills only. A mid sage; it must stay *below* 3:1 as text on the light `surface` (2.7:1) so the text-safe lift stays non-vacuous, the same split the dark palette draws |
+| `accentMossText` | `#3E5137` | moss as *text* — a dark green. On a light ground the lift **darkens** moss to clear contrast, the opposite direction to dark, where it lightens it |
+| `accentRust` | `#D47D5B` | sell-candidate/low-desire accent — strokes/borders/fills only. A light terracotta, below 3:1 as text (2.7:1) for the same reason as `accentMoss` |
+| `accentRustText` | `#8E3A24` | rust as *text* — a dark rust; the lift darkens on the light ground |
+| `dialMidpoint` | `#446A22` | desire dial's middle-of-range colour. A dark olive-green rather than the dark palette's yellow-gold: it doubles as the numeral at level 3, so it must clear 3:1 as text (dark), and a dark *gold* midpoint would collide with the deep-bronze `accentBrass` on the dial. Pushing it green separates it from brass by hue while its neighbours stay distinct |
+| `categoryNeutral` | `#7C7D80` | dashboard breakdown's "everything else" swatch — a mid grey visible on the light ground |
+| `plateHighlight` | `rgba(255,255,255,0.70)` | extruded-plate top edge that catches the light — pure white at 70% over the near-white `surface`; the read flips from dark's ivory alpha. **Provisional** pending the phase-pause visual attestation |
+| `plateEdgeShadow` | `rgba(0,0,0,0.12)` | plate bottom inner edge — black, softened from dark's 0.40 because the light surface needs a subtler bevel. **Provisional** |
+| `plateCastShadow` | `rgba(0,0,0,0.10)` | soft cast shadow on the background. **Provisional** |
+| `gaugeTrack` | `rgba(35,32,27,0.16)` | unfilled `DesireGauge` segment hairline — the dark ink at 16% over the light `surface`, the alpha's read flipped from dark's ivory |
+
+Re-earned on the light ground the same way the dark ramp was
+(`LightDesireDialColorTests`, `LightPaletteContrastTests`,
+`LightDesireGaugeColorTests`, `LightTrendArrowRenderTests` — added
+beside the dark suites rather than folded in, so the dark guarantees
+stay pristine):
+
+- Dial arc (`accentRust` → `dialMidpoint` → `accentMoss`, with 2 and 4
+  the perceptual midpoints): adjacent stops measure Oklab ΔE ~0.128 /
+  0.128 / 0.095 / 0.095 — even (ratio 1.34) and above the 0.06 floor.
+- No dial stop is closer to `accentBrass` than its neighbours: the
+  nearest stop sits ΔE 0.122 from brass, against the smallest 0.095
+  neighbour gap — the price-figure guarantee, re-earned.
+- Numeral (`accentRustText` → `dialMidpoint` → `accentMossText`): every
+  level clears 3:1 on `surface` (5.6–7.7:1), while the raw shape accents
+  stay below (2.7:1) — the split that keeps the lift real.
+- Gauge tones (`accentBrassDim` / `accentBrassMid` / `accentBrass`)
+  sampled at row size measure ΔE ~0.14 apart and each ≥0.22 from the
+  light `surface` behind an empty track.
+
 ### The desire dial's ramp
 
 The dial runs `accentRust` (1, "ready to sell") → `dialMidpoint` (3) →
