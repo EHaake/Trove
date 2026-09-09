@@ -226,11 +226,12 @@ preference; noted so a future preference has the precedent to point at.
 **Tier totals (all invocations `opus` under the model policy's Fallback
 clause — `fable`'s budget spent this whole spec; the top tier ran
 nowhere):** implementer runs T001–T005 ≈ **490k** (204k + 82k + 54k + 106k
-+ 44k) over 5 implementation tasks — ≈ 98k/task; reviewer invocations
-(planning sign-off 134k, T001/T002/T003 per-task reviews 70k/38k/40k,
-Phase 2 review 45k, plus the pre-merge sweep) ≈ **327k + the sweep**. The
-`sdd-planner` draft's tokens were not captured at dispatch. See the tasks
-tier log for the per-row detail and the comparison against `002` and `003`.
++ 44k) over 5 implementation tasks — ≈ 98k/task; reviewer invocations ≈
+**447k** (planning sign-off 134k, T001/T002/T003 per-task reviews
+70k/38k/40k, Phase 2 review 45k, pre-merge sweep 105k, sweep re-review
+15k). The `sdd-planner` draft's tokens were not captured at dispatch. See
+the tasks tier log for the per-row detail and the comparison against `002`
+(~102k impl/task) and `003` (~88k impl/task).
 
 ## Skeptical-review record (sign-off)
 
