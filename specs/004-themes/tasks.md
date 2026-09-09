@@ -1,6 +1,6 @@
 # 004 — Light mode: Tasks
 
-**Status**: Draft — pending sign-off
+**Status**: Draft — `skeptical-reviewer` signed off 2026-09-09 (B1 fixed and re-reviewed clean); pending the person's technical-lead sign-off
 **Implements**: plan.md in this directory
 **Foundational phases**: 1 — per-task reviewer cadence (both tasks). Phase 2 is per-phase, with **T003 marked `review: per-task`** (root wiring the whole app inherits). Phase 3 is the person's pass and the close-out.
 
@@ -78,7 +78,7 @@ Before the pause: nothing to run beyond `scripts/verify.sh` — no launch-path c
 
 - [ ] **T005 — The appearance UI test, twice.** Plan §7. `TroveUITests.testAppearanceControlDefaultsToDarkAndOffersThreeChoices`: launch `-uiTesting`; open Settings from a list; the Appearance segmented control shows System / Light / Dark with **Dark** selected; tapping Light leaves Light selected. Files: `TroveUITests/TroveUITests.swift`. Pattern: an existing UI test's `openSettings`/navigation helpers and `launchApp()` argument shape. **Verify**: `scripts/verify.sh ui` green **twice back to back**, the count one more than the last green run; every pre-existing UI test still launching `-uiTesting` alone and green (they start Dark — the isolation working). **Mutations recorded red**: the store default changed to `.system`/`.light` → this test's "Dark selected" red (G12). Serves criteria 2, 6 (the UI halves).
 
-**Phase 2 review** — after T005: one `skeptical-reviewer` pass at its default tier over the T004–T005 diff (`git diff <T003's commit>..HEAD`; T003 was reviewed on its own as `review: per-task`, so the phase review covers T004 and T005), the task lines, plan §§4–7 and Q5–Q8, criteria 2, 3, 4, 6, 10. Then the **Phase 1/Phase 2 boundary run** and the **Phase 2 pause**: the orchestrator runs `scripts/verify.sh ui` once after T003 lands (the launch path gained a branch), and after T005 twice; the person's report; a fresh session resumes at T006. (Reconciled with the handoff note at sign-off, 2026-09-09 — B1: the review runs after T005 and covers both wiring tasks, so no task escapes it.)
+**Phase 2 review** — after T005: one `skeptical-reviewer` pass at its default tier over the T004–T005 diff (`git diff <T003's commit>..HEAD`; T003 was reviewed on its own as `review: per-task`, so the phase review covers T004 and T005), the task lines, plan §§4–7 and Q5–Q8. Criteria the diff carries directly: **2, 6, 10** (T004/T005's own); criteria **3, 4** as context — their wiring half is T003's (reviewed per-task) and T004's host threading, so plan §§4–7 stand in for the parts not in this diff. Then the **Phase 1/Phase 2 boundary run** and the **Phase 2 pause**: the orchestrator runs `scripts/verify.sh ui` once after T003 lands (the launch path gained a branch), and after T005 twice; the person's report; a fresh session resumes at T006. (Reconciled with the handoff note at sign-off, 2026-09-09 — B1: the review runs after T005 and covers both wiring tasks, so no task escapes it.)
 
 ## Phase 3 — Verification and close-out
 
@@ -110,7 +110,7 @@ The constitution's model policy decides which tier runs each invocation. Every p
 | Task / invocation | Tier | Tokens | Outcome / miss reason |
 |---|---|---|---|
 | Planning: draft (`sdd-planner`) | opus | _(fill at commit)_ | plan.md + tasks.md drafted; ran at the implementation tier at high effort under the Fallback clause — `fable`'s budget spent |
-| Planning: sign-off | opus | ~91k (+ re-review) | one blocking (B1, Phase 2 review-scope contradiction) fixed and re-reviewed; ran at the implementation tier at high effort under the Fallback clause |
+| Planning: sign-off | opus | ~91k review + ~43k re-review | one blocking (B1, Phase 2 review-scope contradiction) fixed and re-reviewed clean; ran at the implementation tier at high effort under the Fallback clause |
 | T001 | | | |
 | T001 review | | | |
 | T002 | | | |
