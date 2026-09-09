@@ -129,7 +129,7 @@ The constitution's model policy decides which tier runs each invocation. Every p
 | T003 review | opus | ~40k | signed off, no blocking findings; non-blocking second looks (init gate covered by T005 not a unit test; force-unwrap mirrors `freshSuite()`) routed to the record and T005 |
 | T004 | opus | ~106k | Settings appearance section + three hosts threading `appearanceStore` + PDF guard; verify green (1189 tests, 162 suites, implementer's verbatim — mechanical phase); G10a/G10b/G11 + `.menu`→MenuPolicy mutation-verified red |
 | T005 | opus | ~44k | appearance UI test (default Dark, three choices, settable); `scripts/verify.sh ui` green 15/0 (implementer's verbatim — mechanical phase); G12 mutation-verified red; orchestrator re-ran ui twice back to back at the boundary, both 15/0 |
-| Phase 2 review | | | |
+| Phase 2 review | opus | ~45k | signed off over T004–T005, no blocking findings; non-blocking: (a) G11's falsifiability — the reviewer flagged the `.light.background` mutation might be a compile error not the scan firing, but the T004 implementer had already used a *compiling* `ThemeColors` reference, so the scan's own assertion did fire (resolved); route the plan §6 "isolation is belt-and-suspenders" line to T007. (b) `SourceScan` `stringLiterals`/`argumentLists` semantics leaned on only transitively — re-anchor if a later change touches those helpers. |
 | Pre-merge sweep | | | |
 
 **Totals (final)** — to be filled at close-out, compared against `002`'s (~2.97M implementer, ~1.43M reviewer over 29 tasks) and `003`'s (~88k implementer, ~77k reviewer per task over six).
