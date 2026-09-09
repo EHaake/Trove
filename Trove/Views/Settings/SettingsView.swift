@@ -13,19 +13,27 @@ import SwiftUI
 struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
 
+    /// The app-level appearance choice, threaded in like `syncMonitor` from
+    /// the three hosts (004): the segmented control below binds it directly,
+    /// so a pick propagates by observation with no relaunch. Not routed
+    /// through `SettingsViewModel` — there's no derivation to place there.
+    @Bindable var appearanceStore: AppearanceStore
+
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
 
-    /// The presenting list view threads `syncMonitor`, the storage mode and
-    /// the fallback reason in — the way `ContentView` threads them into
-    /// every screen — so the sheet never reads an observable from the
+    /// The presenting list view threads `appearanceStore`, `syncMonitor`, the
+    /// storage mode and the fallback reason in — the way `ContentView` threads
+    /// them into every screen — so the sheet never reads an observable from the
     /// environment it might not have.
     init(
         modelContext: ModelContext,
+        appearanceStore: AppearanceStore,
         syncMonitor: SyncMonitor = .notSyncing,
         storageMode: StorageMode = .cloudKit,
         storageFallbackReason: String? = nil
     ) {
+        self.appearanceStore = appearanceStore
         _viewModel = State(
             initialValue: SettingsViewModel(
                 modelContext: modelContext,
@@ -42,6 +50,7 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
+                    appearanceSection
                     exportSection
                     templatesSection
                     marketSection
@@ -101,6 +110,22 @@ struct SettingsView: View {
     }
 
     // MARK: - Sections, in spec order
+
+    /// 004: light/dark/system as a segmented control, first on the screen.
+    /// The labels come from `AppearanceChoice.displayName` — the copy lives
+    /// on the model, never typed here — and the selection binds the store
+    /// directly, so a pick redraws the app at once.
+    private var appearanceSection: some View {
+        DetailSection(title: "Appearance") {
+            Picker("Appearance", selection: $appearanceStore.choice) {
+                ForEach(AppearanceChoice.allCases, id: \.self) { choice in
+                    Text(choice.displayName).tag(choice)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.vertical, 12)
+        }
+    }
 
     private var exportSection: some View {
         DetailSection(title: "Export") {
@@ -350,7 +375,7 @@ private func previewContainer(populated: Bool) -> ModelContainer {
 #Preview("Populated, syncing") {
     let container = previewContainer(populated: true)
     NavigationStack {
-        SettingsView(modelContext: container.mainContext, storageMode: .cloudKit)
+        SettingsView(modelContext: container.mainContext, appearanceStore: AppearanceStore(), storageMode: .cloudKit)
     }
     .modelContainer(container)
     .environment(\.theme, .dark)
@@ -360,7 +385,7 @@ private func previewContainer(populated: Bool) -> ModelContainer {
 #Preview("Empty") {
     let container = previewContainer(populated: false)
     NavigationStack {
-        SettingsView(modelContext: container.mainContext)
+        SettingsView(modelContext: container.mainContext, appearanceStore: AppearanceStore())
     }
     .modelContainer(container)
     .environment(\.theme, .dark)
@@ -372,6 +397,7 @@ private func previewContainer(populated: Bool) -> ModelContainer {
     NavigationStack {
         SettingsView(
             modelContext: container.mainContext,
+            appearanceStore: AppearanceStore(),
             storageMode: .localOnly,
             storageFallbackReason: "The operation couldn't be completed. (CKErrorDomain error 1.)"
         )

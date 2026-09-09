@@ -67,6 +67,8 @@ struct WishlistView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.storageMode) private var storageMode
     @Environment(\.storageFallbackReason) private var storageFallbackReason
+    /// 004: threaded into the Settings sheet — see `ItemListView`'s twin.
+    @Environment(AppearanceStore.self) private var appearanceStore
 
     /// Kept for the Settings sheet — see `ItemListView`'s twin.
     private let syncMonitor: SyncMonitor
@@ -141,6 +143,7 @@ struct WishlistView: View {
             NavigationStack {
                 SettingsView(
                     modelContext: modelContext,
+                    appearanceStore: appearanceStore,
                     syncMonitor: syncMonitor,
                     storageMode: storageMode,
                     storageFallbackReason: storageFallbackReason

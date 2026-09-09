@@ -36,6 +36,8 @@ struct DashboardView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.storageMode) private var storageMode
     @Environment(\.storageFallbackReason) private var storageFallbackReason
+    /// 004: threaded into the Settings sheet — see `ItemListView`'s twin.
+    @Environment(AppearanceStore.self) private var appearanceStore
 
     /// Kept for the Settings sheet as well as the view model: constructor-
     /// injected the way `ContentView` injects this screen — one delivery
@@ -121,6 +123,7 @@ struct DashboardView: View {
             NavigationStack {
                 SettingsView(
                     modelContext: modelContext,
+                    appearanceStore: appearanceStore,
                     syncMonitor: syncMonitor,
                     storageMode: storageMode,
                     storageFallbackReason: storageFallbackReason

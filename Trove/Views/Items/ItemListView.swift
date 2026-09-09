@@ -66,6 +66,9 @@ struct ItemListView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.storageMode) private var storageMode
     @Environment(\.storageFallbackReason) private var storageFallbackReason
+    /// 004: the app-level appearance choice, injected by `ThemedRoot`, threaded
+    /// into the Settings sheet the way `syncMonitor` is — never read there.
+    @Environment(AppearanceStore.self) private var appearanceStore
 
     /// Kept for the Settings sheet, which is constructor-injected the way
     /// `ContentView` injects this screen — one delivery mechanism for the
@@ -165,6 +168,7 @@ struct ItemListView: View {
             NavigationStack {
                 SettingsView(
                     modelContext: modelContext,
+                    appearanceStore: appearanceStore,
                     syncMonitor: syncMonitor,
                     storageMode: storageMode,
                     storageFallbackReason: storageFallbackReason

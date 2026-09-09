@@ -18,6 +18,24 @@ import Testing
 struct ThemeWiringTests {
     private nonisolated static let troveApp = "Trove/App/TroveApp.swift"
     private nonisolated static let themedRoot = "Trove/Views/Shared/Theme/ThemedRoot.swift"
+    private nonisolated static let pdfComposer = "Trove/Export/PDFComposer.swift"
+
+    /// G11 (criterion 10): the exported PDF is unaffected by the appearance
+    /// choice, pinned by a cheap source scan — `PDFComposer`'s production code
+    /// references no theme or appearance type, so it can only draw its own
+    /// `PrintPalette`. The existing PDF tests (`PrintPalette` values, the
+    /// renderer) are the other, behavioural half of the criterion.
+    /// Mutation: add `ThemeColors.light.background` into the module → the
+    /// `ThemeColors` expectation fires.
+    @Test func thePDFComposerReferencesNoThemeOrAppearanceType() throws {
+        let code = try SourceScan.production(Self.pdfComposer)
+        for token in ["ThemeColors", "Theme.", "\\.theme", "AppearanceChoice", "AppearanceStore"] {
+            #expect(
+                !code.contains(token),
+                "PDFComposer references \(token) — the PDF must be independent of the appearance system"
+            )
+        }
+    }
 
     /// G9a: `TroveApp` wraps `ContentView` in `ThemedRoot`, injects the store,
     /// and carries neither hardcoded modifier the root used to pin.
