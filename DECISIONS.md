@@ -284,3 +284,44 @@ reaches beyond that spec.
   on the spec branch in the close-out task, citing the draft PR's
   number, and the post-merge docs branch exists only if something is
   learned at merge itself.
+
+## Reversing a shipped approach mid-branch — the segmented-picker theming (2026-09-09, spec `004`)
+
+- **`004`'s Appearance picker: the UIKit `UISegmentedControl.appearance()`
+  bridge (T008) was removed and replaced by a SwiftUI sheet-level fix
+  (T009).** The person's device pass found the segmented control's
+  unselected labels illegible: near-black on the dark track in Dark, then
+  (after the first fix) near-white on the light track in Light. T008 set
+  the `.normal` title through a process-global `UISegmentedControl`
+  appearance proxy with a trait-dynamic `UIColor`. That treated the
+  symptom and keyed the colour off the control's UIKit trait — which,
+  inside the Settings `.sheet`, does **not** follow a live in-app
+  appearance switch (the app drives appearance with `.preferredColorScheme`
+  at the root, and an already-presented sheet doesn't inherit the changed
+  override). So the bridge read the wrong trait and mis-coloured. The same
+  cause produced the "faint nav title" first mis-recorded at T006 as a
+  non-reproducible transient.
+- **Decision: fix the root, not the symptom, and delete the bridge.** T009
+  makes the Settings sheet adopt the choice itself —
+  `AppearanceChoice.sheetColorScheme(device:)` resolves the choice to a
+  **concrete** `ColorScheme` (never `nil`: passing `nil` to a *presented*
+  sheet's `.preferredColorScheme` hits a documented SwiftUI
+  refresh-failure bug), read from each presenting host's own
+  `@Environment(\.colorScheme)` and applied to the Settings sheet's
+  `NavigationStack`. With the sheet's trait correct, the system segmented
+  control renders its unselected label legibly by default, so the T008
+  UIKit bridge (and its test, and its flagged-exception allow-list entry)
+  were deleted. Net over T008+T009: **no** new UIKit exception, a system
+  control taking the system label colour, and both the label and the title
+  symptoms fixed at one cause. The trade — the unselected label is the
+  system `.label`, not the exact `ThemeColors.textPrimary` token — was
+  accepted: legibility is the requirement, a system control taking the
+  system semantic colour is appropriate, and the person can ask for the
+  exact token (which would mean retaining a bridge) if they ever want it.
+- **Why on the spec branch, not a `fix/` branch.** `CLAUDE.md`'s "bug
+  found in already-merged code gets a `fix/` branch" rule is scoped to
+  *merged* code; `004` had not merged, so both fixes rode the spec branch
+  before the PR was marked ready — the same reasoning as any late task in
+  a spec. The `skeptical-reviewer` vetted the T009 mechanism as a decision
+  before implementation (Fallback clause: at `opus`), which is why the
+  reversal is recorded here rather than discovered later.

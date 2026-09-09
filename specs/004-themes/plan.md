@@ -118,6 +118,14 @@ struct ThemedRoot<Content: View>: View {   // Trove/Views/Shared/Theme/ThemedRoo
 
 Tested by source scan (`ThemeWiringTests`, the `SettingsWiringTests` discipline): `TroveApp.swift` wraps `ContentView` in `ThemedRoot(`, injects `.environment(appearanceStore)`, and contains **no** `.preferredColorScheme(.dark)` and no `.environment(\.theme, .dark)` (mutation: leave the pin in → red); `ThemedRoot.swift` applies `.environment(\.theme,` with `resolvedTheme(systemColorScheme:` and `.preferredColorScheme(appearanceStore.choice.preferredColorScheme` (mutation: hardcode `.dark`/`.environment(\.theme, .dark)` → red). The *live/no-relaunch* behaviour (criteria 3, 4) rests on SwiftUI's `@Observable` re-render and `@Environment(\.colorScheme)` — long-standing platform capabilities (the `T056` "suspect the newest code, not the platform" instinct) — and is attested by the person at the phase pause, named as such in the conformance summary; the wiring scan and the resolver test are what make that attestation about *this* code and not the framework.
 
+### §4a. Amendment — the Settings sheet must adopt the choice too (T009, added at close-out)
+
+`ThemedRoot`'s `.preferredColorScheme` governs the app's own window. It does **not** reach an already-presented `.sheet`: the person's device pass found that switching appearance **while Settings is open** left the sheet's UIKit trait on its old value, so the sheet's system chrome (the segmented picker's unselected labels, the `.navigationTitle` ink, and by extension any keyboard/picker it presents) rendered against the wrong palette — illegible unselected labels in Light, a faint title. (This is the true cause of the "title transient" T006 first recorded as note-don't-fix; that disposition is superseded — it is the same bug and it is fixed here, not a first-render flicker.) Opening Settings *fresh* in the target appearance was always correct; only a live switch from inside the sheet broke.
+
+**Mechanism** (`skeptical-reviewer` decision, opus/Fallback, 2026-09-09): the sheet content gets its own `.preferredColorScheme`, resolved to a **concrete** scheme — never `nil`. A documented SwiftUI bug (Apple Developer Forums, reproduced through 2025) is that passing `nil` (revert-to-System) to a *presented sheet's* `preferredColorScheme` fails to refresh the open sheet; passing a concrete `.light`/`.dark` always works. So `AppearanceChoice.sheetColorScheme(device:)` maps `.system → device`, `.light → .light`, `.dark → .dark` (concrete), and each host applies `.preferredColorScheme(appearanceStore.choice.sheetColorScheme(device: <the host's own \.colorScheme>))` on the Settings `NavigationStack`. The device scheme is read from the **presenting host** (under `ThemedRoot`, so it already reflects the resolved appearance), **not** from inside the sheet (which would read the very stale trait being fixed, and risk a self-referential fixpoint). No feedback loop with Q1: the resolver still runs off `ThemedRoot`'s `colorScheme`, and the sheet's own preference is intercepted at the presentation level and does not propagate back up.
+
+Once the sheet trait is correct, the system segmented control renders its unselected `.normal` label in the trait-responsive system label colour legibly in both modes — which **removes the need for the T008 `SegmentedControlAppearance` UIKit bridge**. T009 deletes it (and its tests, its `TroveApp.init` install, and its `ExportWiringTests` allow-list entry), contingent on a device check that the bare system default is legible in both modes on a **live** switch; if it somehow is not, the bridge is retained (now safe, since with a correct trait its trait-keyed dynamic colour resolves correctly). The unselected label then reads in the system `.label` colour rather than the exact `ThemeColors.textPrimary` token — a system control taking the system semantic colour, legible either way; the brand-token fidelity call is the person's if they want it (→ retain the bridge, Option B). **Guard**: a pure Swift Testing unit test on `sheetColorScheme(device:)` (all four cases; falsifiable — mutate `.system` to return the nil-prone `preferredColorScheme` and it goes red), **not** a source-presence scan (the false-passing shape `CLAUDE.md` names). The live-switch visual behaviour — including the fragile →System case — is device-attested per criterion 4, instrumented not inferred (`T056`). The bridge-reversal rationale is also recorded in `DECISIONS.md`.
+
 ## 5. The Settings Appearance control
 
 `SettingsView` gains `@Bindable var appearanceStore: AppearanceStore`, constructor-injected. A new `appearanceSection` — a `DetailSection(title: "Appearance")` holding `Picker("Appearance", selection: $appearanceStore.choice) { ForEach(AppearanceChoice.allCases…) { Text($0.displayName).tag($0) } }.pickerStyle(.segmented)` — is composed **first** in the body's section stack. The three hosts read `@Environment(AppearanceStore.self)` and pass `appearanceStore:` into `SettingsView`.
@@ -174,7 +182,8 @@ Alternate-hue palettes / new colour themes, a custom/user-defined palette, Dynam
 
 Filled at close-out (T007), 2026-09-09.
 
-**Deviations from the plan: one scope addition (T008), no design change.**
+**Deviations from the plan: two on-branch additions (T008 then T009,
+which supersedes T008's approach), no change to Q1–Q9's design.**
 Q1–Q9 shipped as proposed and signed off — the enum + separate SwiftUI
 extension (Q1), the
 `UserDefaults`-backed `@Observable` `AppearanceStore` (Q2), the
@@ -190,14 +199,16 @@ recording:
   in the store, re-declared in `AppearanceStoreTests`); T003 collapsed it
   to a single module-scope `AppearanceStore.defaultsKey` read by both, so
   the unrecognised-string test can't go vacuously green if the key drifts.
-- **One runtime observation from the T006 device pass, dispositioned by
-  the person.** On the *very first* switch to Light, the already-open
-  Settings nav title rendered stale once (faint light-on-light);
-  **non-reproducible** across ~5 subsequent switches and self-correcting
-  on reopen — a one-time first-render artifact of the initial theme
-  propagation, not a persistent defect. The person's decision was **note
-  it, don't fix**; 004 ships as-is. Recorded here and in `tasks.md`'s T006
-  note.
+- **A T006 observation first mis-diagnosed, then fixed (T009).** At the
+  device pass the Settings nav title once rendered stale on a switch to
+  Light and was recorded as a non-reproducible first-render transient
+  ("note, don't fix"). On the person's merge-review look it proved to be a
+  real, deterministic bug — the Settings sheet's UIKit trait not following
+  a live in-app appearance switch — and the *same* cause as the T009
+  segmented-label symptom. The earlier disposition is superseded; T009
+  fixes both at the root (§4a). The lesson matches `T056`: a "flicker" seen
+  once is a symptom to instrument, not to wave off — the person's second
+  look, not the first pass, caught it.
 - **T008 — one scope addition, surfaced by the person at the device pass.**
   The person spotted that the new segmented Appearance control rendered
   its *unselected* segment labels (System/Light while Dark is selected) as
@@ -217,6 +228,19 @@ recording:
   the wiring test red). Per-task review signed off clean; its four
   non-blocking second looks were all applied in a hardening pass rather
   than deferred. See `tasks.md`'s T008 note.
+- **T009 — the fix that superseded T008, and the more correct one.** The
+  person's merge-review look found the segmented labels illegible in Light
+  when the appearance is switched *from inside* Settings (and tied it to
+  the title observation above). Root cause (§4a): the Settings sheet's
+  UIKit trait doesn't follow a live in-app appearance switch, so T008's
+  trait-keyed bridge was reading the wrong trait. T009 makes the sheet
+  adopt the choice directly (`sheetColorScheme(device:)`, concrete never
+  nil, applied per host) and **deletes the T008 UIKit bridge** — so the
+  net of T008+T009 is *no* new UIKit exception, a system control taking
+  the system label colour with a correct trait. Confirmed on the simulator
+  across every within-Settings switch including →System and a live device
+  flip. This is a `fix/`-shaped change kept on the spec branch because 004
+  had not merged. Recorded in `DECISIONS.md` (the bridge reversal).
 
 **The light token values (shipped, as recorded in `design/tokens.md`'s
 light column):** `background #ECE7DC`, `surface #F7F2E9`, `surfaceInset
@@ -245,14 +269,15 @@ preference; noted so a future preference has the precedent to point at.
 
 **Tier totals (all invocations `opus` under the model policy's Fallback
 clause — `fable`'s budget spent this whole spec; the top tier ran
-nowhere):** implementer runs ≈ **613k** (T001 204k, T002 82k, T003 54k,
-T004 106k, T005 44k, T008 69k, T008 hardening 54k) over 6 implementation
-tasks plus one hardening sub-round — ≈ 102k/implementation-task; reviewer
-invocations ≈ **479k** (planning sign-off 134k, T001/T002/T003 per-task
-reviews 70k/38k/40k, Phase 2 review 45k, pre-merge sweep 105k, sweep
-re-review 15k, T008 review 32k). The `sdd-planner` draft's tokens were not
-captured at dispatch. See the tasks tier log for the per-row detail and
-the comparison against `002` (~102k impl/task) and `003` (~88k impl/task).
+nowhere):** implementer runs ≈ **686k** (T001 204k, T002 82k, T003 54k,
+T004 106k, T005 44k, T008 69k, T008 hardening 54k, T009 73k) over 7
+implementation tasks plus one hardening sub-round; reviewer invocations ≈
+**555k** (planning sign-off 134k, T001/T002/T003 per-task reviews
+70k/38k/40k, Phase 2 review 45k, pre-merge sweep 105k, sweep re-review
+15k, T008 review 32k, sheet-appearance decision 41k, T009 review 35k). The
+`sdd-planner` draft's tokens were not captured at dispatch. Much of the
+extra over `002`/`003` is the two device-pass fixes (T008, T009). See the
+tasks tier log for the per-row detail and the `002`/`003` comparison.
 
 ## Skeptical-review record (sign-off)
 

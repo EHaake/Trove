@@ -46,6 +46,29 @@ struct AppearanceChoiceTests {
         #expect(isDarkPalette(AppearanceChoice.system.resolvedTheme(systemColorScheme: .dark)))
     }
 
+    /// `.system` resolves to the concrete device scheme the caller reads — the
+    /// Settings sheet never gets a nil (T009's SwiftUI refresh-bug avoidance).
+    /// Routing `.system` through the nil-prone `preferredColorScheme` (which
+    /// hands back nil) fails to compile against the `ColorScheme` return type,
+    /// and returning the wrong scheme here — e.g. `.dark` for both devices —
+    /// turns one of these two rows red.
+    @Test func systemSheetSchemeFollowsTheDevice() {
+        #expect(AppearanceChoice.system.sheetColorScheme(device: .dark) == .dark)
+        #expect(AppearanceChoice.system.sheetColorScheme(device: .light) == .light)
+    }
+
+    /// An explicit `.light` sheet scheme ignores the device scheme.
+    @Test func explicitLightSheetSchemeIgnoresTheDevice() {
+        #expect(AppearanceChoice.light.sheetColorScheme(device: .light) == .light)
+        #expect(AppearanceChoice.light.sheetColorScheme(device: .dark) == .light)
+    }
+
+    /// An explicit `.dark` sheet scheme ignores the device scheme.
+    @Test func explicitDarkSheetSchemeIgnoresTheDevice() {
+        #expect(AppearanceChoice.dark.sheetColorScheme(device: .light) == .dark)
+        #expect(AppearanceChoice.dark.sheetColorScheme(device: .dark) == .dark)
+    }
+
     @Test func displayNameIsTheUserFacingCopy() {
         #expect(AppearanceChoice.system.displayName == "System")
         #expect(AppearanceChoice.light.displayName == "Light")

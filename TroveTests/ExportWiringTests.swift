@@ -93,9 +93,6 @@ struct ExportWiringTests {
         let allowedImports = [
             "Trove/Views/Shared/ShareSheet.swift",
             "Trove/Extensions/Image+Data.swift",
-            // T008: the segmented-control unselected-label colour, the only
-            // way to reach it being UISegmentedControl's title attributes.
-            "Trove/Extensions/SegmentedControlAppearance.swift",
         ]
         for path in try SourceScan.swiftFiles(under: "Trove", minimum: 20) {
             let code = try SourceScan.production(path)

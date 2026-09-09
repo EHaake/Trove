@@ -38,6 +38,8 @@ struct DashboardView: View {
     @Environment(\.storageFallbackReason) private var storageFallbackReason
     /// 004: threaded into the Settings sheet — see `ItemListView`'s twin.
     @Environment(AppearanceStore.self) private var appearanceStore
+    /// 004 (T009): the resolved scheme under `ThemedRoot` — see `ItemListView`'s twin.
+    @Environment(\.colorScheme) private var systemColorScheme
 
     /// Kept for the Settings sheet as well as the view model: constructor-
     /// injected the way `ContentView` injects this screen — one delivery
@@ -129,6 +131,9 @@ struct DashboardView: View {
                     storageFallbackReason: storageFallbackReason
                 )
             }
+            // 004 (T009): the sheet adopts the resolved scheme so a live
+            // appearance switch follows — see `ItemListView`'s twin.
+            .preferredColorScheme(appearanceStore.choice.sheetColorScheme(device: systemColorScheme))
         }
         // The root "…"'s dropdown floats over the whole screen from here —
         // the same host as the lists' (013 Amendment A). The header scrolls

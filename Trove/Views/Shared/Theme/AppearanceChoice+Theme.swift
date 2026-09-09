@@ -13,6 +13,18 @@ extension AppearanceChoice {
         }
     }
 
+    /// The CONCRETE colour scheme the Settings sheet adopts so its own system
+    /// chrome follows the choice on a live switch. Never nil: passing nil to a
+    /// presented sheet's .preferredColorScheme hits a documented SwiftUI
+    /// refresh bug, so .system resolves to the device scheme the caller reads.
+    func sheetColorScheme(device: ColorScheme) -> ColorScheme {
+        switch self {
+        case .system: device
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+
     /// The palette to inject for this choice.
     ///
     /// An explicit `.light`/`.dark` choice **never** consults `colorScheme` —

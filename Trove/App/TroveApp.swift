@@ -24,13 +24,6 @@ struct TroveApp: App {
     }
 
     init() {
-        // T008: install the unselected-segment label colour on the process-
-        // global segmented-control appearance proxy once, at startup, before
-        // any picker is realized. It was a side effect in `SettingsView`'s body
-        // — running on every pass and order-dependent on Settings being visited
-        // first. The call exposes no UIKit type, so this file imports none; the
-        // installed colour is dynamic, so a live Light/Dark switch re-resolves.
-        SegmentedControlAppearance.installUnselectedTitleColor()
         do {
             // Which of the three configurations this is, and what happens when
             // CloudKit won't load, lives in `TroveStore` — the decisions are

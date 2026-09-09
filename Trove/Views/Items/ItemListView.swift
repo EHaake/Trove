@@ -69,6 +69,10 @@ struct ItemListView: View {
     /// 004: the app-level appearance choice, injected by `ThemedRoot`, threaded
     /// into the Settings sheet the way `syncMonitor` is — never read there.
     @Environment(AppearanceStore.self) private var appearanceStore
+    /// 004 (T009): the resolved scheme under `ThemedRoot`, read HERE so the
+    /// Settings sheet can adopt it — the sheet's own `colorScheme` is the stale
+    /// value a live switch leaves behind, which is the bug being fixed.
+    @Environment(\.colorScheme) private var systemColorScheme
 
     /// Kept for the Settings sheet, which is constructor-injected the way
     /// `ContentView` injects this screen — one delivery mechanism for the
@@ -174,6 +178,10 @@ struct ItemListView: View {
                     storageFallbackReason: storageFallbackReason
                 )
             }
+            // 004 (T009): the sheet adopts the resolved scheme so its own
+            // system chrome follows a live appearance switch — read from this
+            // host, under `ThemedRoot`, never from inside the sheet.
+            .preferredColorScheme(appearanceStore.choice.sheetColorScheme(device: systemColorScheme))
         }
         // Values can change on the detail screen — an edit, or the dial — so
         // the list refetches whenever it comes back into view.
