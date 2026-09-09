@@ -116,6 +116,13 @@ struct SettingsView: View {
     /// on the model, never typed here — and the selection binds the store
     /// directly, so a pick redraws the app at once.
     private var appearanceSection: some View {
+        // T008: the unselected segment labels' colour is set from the theme's
+        // text tokens so they read on the dark track in Dark (system default is
+        // a near-black that vanishes there). The install runs once at app
+        // startup (`TroveApp.init`), not here — a body side effect ran on every
+        // pass and was order-dependent. The UIKit is confined to
+        // `SegmentedControlAppearance`; this view imports none. The installed
+        // colour is dynamic, so a live Light/Dark switch re-resolves it.
         DetailSection(title: "Appearance") {
             Picker("Appearance", selection: $appearanceStore.choice) {
                 ForEach(AppearanceChoice.allCases, id: \.self) { choice in

@@ -174,8 +174,9 @@ Alternate-hue palettes / new colour themes, a custom/user-defined palette, Dynam
 
 Filled at close-out (T007), 2026-09-09.
 
-**Deviations from the plan: none material.** Q1–Q9 shipped as proposed and
-signed off — the enum + separate SwiftUI extension (Q1), the
+**Deviations from the plan: one scope addition (T008), no design change.**
+Q1–Q9 shipped as proposed and signed off — the enum + separate SwiftUI
+extension (Q1), the
 `UserDefaults`-backed `@Observable` `AppearanceStore` (Q2), the
 implementer-derived Oklab light tokens pinned independently (Q3), shared
 typography/metrics (Q4), the `ThemedRoot` wrapper driving both modifiers
@@ -197,6 +198,25 @@ recording:
   propagation, not a persistent defect. The person's decision was **note
   it, don't fix**; 004 ships as-is. Recorded here and in `tasks.md`'s T006
   note.
+- **T008 — one scope addition, surfaced by the person at the device pass.**
+  The person spotted that the new segmented Appearance control rendered
+  its *unselected* segment labels (System/Light while Dark is selected) as
+  near-black on the dark grey track — illegible in Dark. This is a
+  new-control legibility gap (the control did not exist before 004, so
+  criterion 1 is not implicated), fixed on-branch before merge — not a
+  `fix/` branch, since the spec had not yet merged. The fix is a confined,
+  flagged UIKit bridge (`Trove/Extensions/SegmentedControlAppearance.swift`)
+  installing a dynamic `UIColor` on `UISegmentedControl.appearance()`'s
+  `.normal` title from `theme.colors.textPrimary`, resolving per trait so
+  it re-resolves on a live switch; installed once in `TroveApp.init()`. The
+  `.segmented` picker exposes no SwiftUI API for the unselected title
+  colour, so the UIKit bridge is a genuine gap, confined and flagged per
+  the constitution (`SettingsView`/`TroveApp` import no UIKit; the bridge
+  is on the `ExportWiringTests` allow-list). Guarded by a contrast test
+  *and* a wiring test (mutation-verified: removing the install turns only
+  the wiring test red). Per-task review signed off clean; its four
+  non-blocking second looks were all applied in a hardening pass rather
+  than deferred. See `tasks.md`'s T008 note.
 
 **The light token values (shipped, as recorded in `design/tokens.md`'s
 light column):** `background #ECE7DC`, `surface #F7F2E9`, `surfaceInset
@@ -225,13 +245,14 @@ preference; noted so a future preference has the precedent to point at.
 
 **Tier totals (all invocations `opus` under the model policy's Fallback
 clause — `fable`'s budget spent this whole spec; the top tier ran
-nowhere):** implementer runs T001–T005 ≈ **490k** (204k + 82k + 54k + 106k
-+ 44k) over 5 implementation tasks — ≈ 98k/task; reviewer invocations ≈
-**447k** (planning sign-off 134k, T001/T002/T003 per-task reviews
-70k/38k/40k, Phase 2 review 45k, pre-merge sweep 105k, sweep re-review
-15k). The `sdd-planner` draft's tokens were not captured at dispatch. See
-the tasks tier log for the per-row detail and the comparison against `002`
-(~102k impl/task) and `003` (~88k impl/task).
+nowhere):** implementer runs ≈ **613k** (T001 204k, T002 82k, T003 54k,
+T004 106k, T005 44k, T008 69k, T008 hardening 54k) over 6 implementation
+tasks plus one hardening sub-round — ≈ 102k/implementation-task; reviewer
+invocations ≈ **479k** (planning sign-off 134k, T001/T002/T003 per-task
+reviews 70k/38k/40k, Phase 2 review 45k, pre-merge sweep 105k, sweep
+re-review 15k, T008 review 32k). The `sdd-planner` draft's tokens were not
+captured at dispatch. See the tasks tier log for the per-row detail and
+the comparison against `002` (~102k impl/task) and `003` (~88k impl/task).
 
 ## Skeptical-review record (sign-off)
 
