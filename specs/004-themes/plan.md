@@ -78,7 +78,7 @@ extension AppearanceChoice {
 
 Tests (`AppearanceChoiceTests`): `preferredColorScheme` for all three; `resolvedTheme` — `.light` → `Theme.light`, `.dark` → `Theme.dark` at both `colorScheme`s (an explicit choice ignores the system scheme; mutation: make `.light` consult `colorScheme` → red), `.system` → `.light` under `.light` and `.dark` under `.dark` (mutation: invert the branch → red); `displayName` whole for each case. `Theme` equality is by its `colors`/`typography`/`metrics` — assert `resolvedTheme(...).colors` is the light or dark instance via a token that differs between the two palettes (e.g. `background`), since `Theme` need not be `Equatable`.
 
-Tests (`AppearanceStoreTests`, over an isolated `UserDefaults(suiteName:)` cleared in the test — a legitimate persistence/infrastructure check, not a view-model test, so the "no disk I/O" rule does not reach it): a fresh suite reads `.dark` (criterion 6; mutation: default to `.system` → red); setting `.light` then building a **second** `AppearanceStore` over the same suite reads back `.light` (criterion 5; mutation: drop the `persist()` in `didSet` → red); an unrecognised stored string reads `.dark` (a forward-compat guard). The second-store read is the persistence check for the reason `TestSupport`'s `makeInMemoryContainer` note gives — a same-instance read would pass whether or not the value was written.
+Tests (`AppearanceStoreTests`, over an isolated `UserDefaults(suiteName:)` cleared in the test — a legitimate persistence/infrastructure check, not a view-model test, so the "no disk I/O" rule does not reach it): a fresh suite reads `.dark` (criterion 6; mutation: default to `.system` → red); setting `.light` then building a **second** `AppearanceStore` over the same suite reads back `.light` (criterion 5; mutation: drop the `persist()` in `didSet` → red); an unrecognised stored string reads `.dark` (a forward-compat guard). The second-store read is the persistence check for the reason `TestSupport`'s `makeInMemoryContainer` note gives — a same-instance read would pass whether or not the value was written. A source scan (added at sign-off) also confirms `AppearanceStore.swift` names no `NSUbiquitousKeyValueStore` or CloudKit symbol — criterion 5's does-not-sync half made a checked claim rather than an architectural assertion (mutation: reference the ubiquitous store → red).
 
 ## 2. The light palette and its pins
 
@@ -150,6 +150,7 @@ Tested by source scan (`SettingsWiringTests`, extended): each host in `settingsH
 | G10 | hosts thread `appearanceStore`; Settings composes the segmented picker first, bound to the store | the arg dropped; the section absent; `.pickerStyle(.menu)` (→ `MenuPolicyTests`) |
 | G11 | `PDFComposer.swift` references nothing theme/appearance | the module reads a `ThemeColors` token |
 | G12 | the UI control defaults Dark and offers three choices | the store's default changed |
+| G13 | `AppearanceStore.swift` references no ubiquitous/CloudKit symbol — criterion 5's does-not-sync half (added at sign-off) | the store wired to `NSUbiquitousKeyValueStore`/CloudKit |
 
 Plus every mutation named in §§1–7. The dark suites (`ThemeColorTokenTests`, `DesireDialColorTests`, `DesireGaugeColorTests`, `TrendArrowRenderTests`) stay untouched and green — criterion 1's automated half, by construction.
 
@@ -173,4 +174,46 @@ To be filled at close-out (T007): any deviation, the tier totals, the light toke
 
 ## Skeptical-review record (sign-off)
 
-To be filled at sign-off.
+Reviewed 2026-09-09 by the `skeptical-reviewer` at the implementation
+tier (`opus`, high effort) under the model policy's Fallback clause
+(`fable`'s budget spent). Verdict: the design is sound and honestly
+scoped, and its guard tests survive the falsifiability scrutiny this
+project's scars demand; every symbol the plan cites was verified to
+exist in the tree. One blocking finding, fixed and re-reviewed:
+
+- **B1 — Phase 2 review scope contradiction (`tasks.md`).** The task
+  list's Phase 2 review line (review restricted to T004, before T005)
+  disagreed with its own handoff note (review T004–T005 as the phase);
+  the operative wording left T005 — the UI test riding T003's launch-path
+  branch — outside any skeptical review and dropped criterion 6, against
+  `CLAUDE.md`'s "per-phase everywhere." **Fixed**: the single Phase 2
+  review now runs after T005 over the T004–T005 diff, criteria 2, 3, 4,
+  6, 10, with T003 already reviewed per-task.
+
+Second-look items (non-blocking), routed to task bundles rather than
+implemented by the orchestrator (model policy):
+- **The "does not sync" claim (criterion 5's per-device half) had no
+  guard.** A source scan that `AppearanceStore.swift` names no
+  `NSUbiquitousKeyValueStore`/CloudKit symbol hardens it — added to
+  T002 (G13), the doctrine of writing the test that catches the claim
+  being false.
+- **The light contrast split may be unsatisfiable** if a mid-tone accent
+  naturally clears 3:1 on the near-white ground; T001 now says to
+  escalate rather than lower the floor.
+- **The independent channel-literal pin is a process instruction, not a
+  structural guarantee** (a source-copied pin catches only later drift);
+  the T001 per-task reviewer confirms the light pins were transcribed
+  from `tokens.md`, not copied from `ThemeColors.light`.
+
+Confirmed sound by the reviewer: every cited existing symbol
+(`SourceScan.production`, `settingsHosts`, `theSectionsAppearInSpecOrder`,
+`theScreenAttaches…`, `DesireGaugeColorTests`/`DesireDialColorTests`,
+`UITestSeed.shouldSeed(mode:arguments:)`, the dark channel-literal pins);
+`renderBitmap(_:theme:)` backward-compatible; `.pickerStyle(.segmented)`
+clears `MenuPolicyTests`; the PDF guard falsifiable and green today; the
+ΔE (>0.06) and contrast (<3:1 / ≥3:1) discriminators real; `Equatable`
+synthesis compiles; criterion 1 guarded by the untouched dark pins; the
+persistence/isolation tests avoid the refetch/ambient-state scars; the
+live/no-relaunch attestation (criteria 3, 4) honest and sufficient;
+every non-goal respected; every criterion 1–10 mapped to a task and
+every task traced to a plan section.
