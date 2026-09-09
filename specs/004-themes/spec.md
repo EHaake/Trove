@@ -147,14 +147,14 @@ check. The plan will cite what verifies each.
 3. [x] With Appearance set to **System**, the app matches the device's
    light/dark setting and switches live when the device switches, with
    no relaunch.
-   *Verified: `AppearanceChoiceTests` (`resolvedTheme` — `.system` follows `colorScheme`, explicit cases ignore it) and `ThemeWiringTests` (`ThemedRoot` reads `@Environment(\.colorScheme)`); the live no-relaunch switch attested at T006 (device flipped dark↔light, app followed both directions).*
+   *Verified: `AppearanceChoiceTests.systemFollowsTheSystemScheme` (`resolvedTheme` returns the light theme under `.light` and the dark theme under `.dark` for `.system`, while explicit cases ignore the system scheme) and the live no-relaunch switch attested at T006 (device flipped dark↔light, app followed both directions); `ThemeWiringTests` pins that `ThemedRoot` drives the theme through `resolvedTheme(systemColorScheme:)` — the resolver that first test covers — rather than proving the `@Environment(\.colorScheme)` read itself.*
 4. [x] Changing the Appearance choice in Settings changes the whole app
    immediately — including system chrome (keyboard, pickers, selection)
    — with no relaunch.
    *Verified: `ThemeWiringTests` (`TroveApp` drops the hardcoded `.preferredColorScheme(.dark)`/`.environment(\.theme, .dark)`; `ThemedRoot` drives both modifiers from the `@Observable` `AppearanceStore.choice`); the immediate whole-app + status-bar-chrome change attested at T006. (One non-blocking, non-reproducible transient noted in T006 — the person's decision: note, don't fix.)*
 5. [x] The choice persists across a relaunch, and is stored locally: a
    choice made on one device does not change another.
-   *Verified: `AppearanceStoreTests` — a value written and read back through a **second** store over the same suite (real persistence, not a same-instance refetch); an isolated `UserDefaults(suiteName:)` does not see `.standard` (per-device); and the G13 scan that `AppearanceStore.swift` names no `NSUbiquitousKeyValueStore`/CloudKit symbol (does-not-sync).*
+   *Verified: `AppearanceStoreTests.theChoicePersistsIntoASecondStore` — a value written and read back through a **second** store over the same suite (real persistence, not a same-instance refetch); the per-device half by G13 (`theStoreNamesNoUbiquitousOrCloudKitSymbol`, that `AppearanceStore.swift` names no `NSUbiquitousKeyValueStore`/CloudKit symbol) together with the store reading only local `UserDefaults` — so a choice on one device cannot propagate to another (does-not-sync, spec Decision 4).*
 6. [x] An existing install updating to this version opens in Dark
    without the person choosing, and a fresh install opens in Dark.
    *Verified: `AppearanceStoreTests` (a fresh suite, and an unrecognised stored string, both read `.dark`) and `TroveUITests.testAppearanceControlDefaultsToDarkAndOffersThreeChoices` (UI launches with Dark selected); confirmed on the T006 device pass.*
