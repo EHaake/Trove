@@ -480,6 +480,18 @@ with a continuation prompt. Everything the person reads is plain language.
   "notice shows once" and any relaunch check (the implementer used `simctl
   uninstall` to clear it after the acknowledging mutation). An asymmetry worth
   the phase review's eyes.
+  **Phase 3 review (2026-09-10, `skeptical-reviewer` at opus):** one **blocking**
+  finding — the `UserDefaults.standard` notice flag above breaks `-uiTesting`'s
+  controlled-starting-state contract (CLAUDE.md; the 003 amendment's structural
+  bound) — **fixed and re-reviewed** (see the fix row in the tier log). The
+  reset now happens in `TroveApp.init` via
+  `UserDefaultsPhotoNoticeStore.resetForUITesting(mode:)`, structurally gated on
+  the built `.ephemeral` store. Non-blocking notes recorded in plan §6 (the
+  4-vs-2 UI-test reconciliation; criterion 11's row-credit reading) and carried
+  to T015 (the picker `.task` probe; the two stacked detail sheets both present;
+  a silent failed download reads as a working button) and the pre-merge sweep
+  (the `marketFilledChrome`/`marketOutlinedChrome` name reads coupled though the
+  chrome is generic — a rename candidate; verify 005's self-containment wording).
 
 ## Phase 4 — Export and policy
 
@@ -554,8 +566,12 @@ with a continuation prompt. Everything the person reads is plain language.
   entry + status row + the Reverb-catalog-image later enhancement note; README
   Status/tree/specs listing; `DECISIONS.md` — the second network dependency,
   Wikimedia over the storing-forbidden sources, a fetched photo syncs while
-  `002`'s figures don't, the notice flag in `UserDefaults`; the `AppContact`
-  unification candidate from Q6); PR marked ready for review.
+  `002`'s figures don't, the notice flag in `UserDefaults`; **the generalization
+  from the Phase 3 review — a controlled UI-test starting state must be
+  structural for every persisted flag, not only the SwiftData store (the
+  `UserDefaults` notice flag needed its own `-uiTesting` reset, gated on the
+  built `.ephemeral` store)**; the `AppContact` unification candidate from Q6);
+  PR marked ready for review.
   **Verify:** everything above committed and pushed; `scripts/verify.sh all`
   green with the final counts recorded here.
 
@@ -610,6 +626,9 @@ settled.
 | T010 implement | opus (`sdd-implementer`) | ~138k | both form VMs photo plumbing + in-memory `store`; 3 pure `PhotoSelection` helpers (replace/keep); `PhotoPickerField` replace/keep alert; both form views' action; 3 mutations verified; no deviations; 1246 tests |
 | T011 implement | opus (`sdd-implementer`) | ~69k | `StockPhotoBadge` `.mark` style; `PhotoSelection.leadsWithStock`; `RowThumbnail` corner-mark overlay; both rows' a11y value; 3 mutations verified; row size tests intact; 1252 tests |
 | T012 implement | opus (`sdd-implementer`) | ~62k | 2 feasible UI tests (002 "offline states only" mirror; 2 infeasible ones → unit suites + T015, no seed/stub); UI suite green twice (16 tests); 2 mutations verified; surfaced the UserDefaults.standard notice-flag persistence finding for T015 |
+| Phase 3 review | opus (`skeptical-reviewer`) | ~124k | **1 blocking** — the `UserDefaults.standard` notice flag breaks `-uiTesting`'s controlled-start contract (CLAUDE.md / 003 amendment); 6 non-blocking notes (recorded in plan §6, carried to T015 + the sweep) |
+| Phase 3 fix | opus (`sdd-implementer`) | ~41k | `resetForUITesting(mode:)` in `TroveApp.init`, structurally gated on the built `.ephemeral` store; 3 tests + mutation verified; `if case` idiom for nonisolated `StorageMode`; 1255 tests |
+| Phase 3 re-review | opus (`skeptical-reviewer`) | ~23k | **resolved, nothing open**; DECISIONS generalization deferred to T016 |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the

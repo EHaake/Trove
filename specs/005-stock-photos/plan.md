@@ -475,6 +475,18 @@ thumbnail when the item has no owned photo; marked as a stock image).
 representative image. Tests: a stock-only item's row shows the badge; an item
 with an owned photo shows no badge (the owned photo leads).
 
+**As built (T011 + Phase 3 review).** The row uses a tiny **glyph-only corner
+mark** (a `.mark` style on the one `StockPhotoBadge`), the approved artboard's
+list-row treatment, not the labelled capsule this paragraph first named — one
+shared component, two styles. The mark and the row's a11y value both gate on a
+single `PhotoSelection.leadsWithStock` predicate. **Criterion 11's "with its
+credit" reading:** the *credit* is announced where the photo is shown at size —
+the detail carousel's `.full` credit line — while the compact row thumbnail
+announces only "Representative stock image" (a full author·licence·source
+announcement on every scrolled thumbnail would be needless VoiceOver verbosity).
+This is the plan's reading of criterion 11 for the row; confirmed at the Phase 3
+review.
+
 ### UI tests (offline, `-uiTesting`, run twice back to back — T012)
 
 `testAnItemWithNoPhotoOffersFindAPhoto` (owned and wanted), `testAnItemWithAn
@@ -486,6 +498,37 @@ and the device pass; the twice-run proves re-runnability. Identifiers:
 `stockphoto.find`, `stockphoto.notice.continue`, `stockphoto.notice.notNow`,
 `stockphoto.notice.privacy`, `stockphoto.search`, `stockphoto.badge`,
 `stockphoto.credit.link`.
+
+**As built (T012 + Phase 3 review) — this list named four tests but the same
+Q10 rule forbids two of them.** "No UI test taps Continue" makes the picker
+(and so `testTheEmptyAndFailureStatesRead`) unreachable — the empty/failure
+states sit behind Continue, which searches Wikimedia on appear — and an owned
+photo can't be added without the photo library or a seed Q10 declines, so
+`testAnItemWithAnOwnedPhotoDoesNotOfferFindAPhoto` is equally unwritable. Only
+two are feasible, exactly mirroring `002`'s "Market (offline states only)" UI
+scope: `testAnItemWithNoPhotoOffersFindAPhoto` (owned + wanted) and
+`testTheFirstFindAPhotoShowsTheNoticeAndNotNowClosesIt`. The other two criteria
+stay covered: **owned-photo-hides** by `PhotoSelection.canFindPhoto`
+(T005/T009/T010, mutation-verified); **empty/failure** by
+`PhotoFetchViewModelTests` (T008) and the **T015** device pass.
+
+**The notice flag's `-uiTesting` reset (Phase 3 review, blocking finding
+fixed).** The photo notice's acknowledgement lives in `UserDefaults.standard`,
+which `-uiTesting` does **not** reset the way it resets the SwiftData store — an
+asymmetry with `002`'s notice, which rides the in-memory model store. Left
+as-is, `testTheFirstFindAPhotoShowsTheNoticeAndNotNowClosesIt` would rest on
+uncontrolled starting state (a prior Continue, e.g. the T015 device pass, would
+suppress the notice and fail the test). Fixed by
+`UserDefaultsPhotoNoticeStore.resetForUITesting(mode:)`, called from
+`TroveApp.init`, which clears the flag on the in-memory launch — **structurally
+bound** on the built store's mode being `.ephemeral` (the `UITestSeed` pattern),
+never on re-reading the launch argument, so a persistent store keeps the
+person's acknowledgement (a test shows it refusing). The generalizable rule — a
+controlled UI-test starting state must be structural for **every** persisted
+flag, not only the model store — goes to `DECISIONS.md` at close-out (T016).
+Idiom note: a `nonisolated` type must pattern-match `StorageMode` (`if case
+.ephemeral`) rather than use `==`, whose `Equatable` conformance is
+MainActor-isolated under this project's `InferIsolatedConformances`.
 
 ## 7. PDF export (subject to OQ1)
 

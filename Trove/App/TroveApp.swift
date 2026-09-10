@@ -37,6 +37,14 @@ struct TroveApp: App {
             // staged — the launch half of criterion 10's "no residue"; the
             // per-export half lives in FileExportService.stage.
             FileExportService.purgeAtLaunch()
+            // Phase 3 review fix (005): the photo notice's flag lives in
+            // UserDefaults, which -uiTesting doesn't reset the way it resets
+            // the model store. Clear it on the in-memory launch so a UI test
+            // starts from a controlled "not acknowledged" state —
+            // structurally gated on the built store, like the seed below, and
+            // independent of the seed's own argument (it applies to all
+            // UI-test launches, not just seeded ones).
+            UserDefaultsPhotoNoticeStore.resetForUITesting(mode: store.mode)
             // 003: the Sell Plan's seeded market history, for the one UI test
             // that needs a rising, a flat, a neutral and a falling candidate.
             // Gated on the store that was actually built being the in-memory

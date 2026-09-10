@@ -35,3 +35,31 @@ nonisolated final class UserDefaultsPhotoNoticeStore: PhotoNoticeStore {
         defaults.set(true, forKey: Self.key)
     }
 }
+
+extension UserDefaultsPhotoNoticeStore {
+    /// A UI-test launch must start with the notice unacknowledged — the same
+    /// controlled start `-uiTesting` gives the SwiftData store. This flag lives
+    /// in `UserDefaults`, which `-uiTesting` does not otherwise reset, so the
+    /// in-memory launch clears it once at startup.
+    ///
+    /// **Structurally bound** (CLAUDE.md's 003 amendment): gated on the store
+    /// the app actually built being the in-memory one, never on a second read
+    /// of the launch argument — so a persistent store keeps the person's
+    /// acknowledgement even if the argument were present, and a test can show
+    /// it refusing. Its only possible effect is losing that one flag for that
+    /// one launch (the T050 bound). `.ephemeral` is UI-tests-only, so a shipped
+    /// launch never reaches this.
+    static func shouldResetForUITesting(mode: StorageMode) -> Bool {
+        // Pattern match rather than `==`: this extension is `nonisolated` (like
+        // its class), and `StorageMode`'s `Equatable` conformance is
+        // MainActor-isolated, so `==` isn't usable here. A `case` match needs
+        // no conformance and reads the same.
+        if case .ephemeral = mode { true } else { false }
+    }
+
+    /// Clears the acknowledgement iff the built store is the in-memory one.
+    static func resetForUITesting(mode: StorageMode, defaults: UserDefaults = .standard) {
+        guard shouldResetForUITesting(mode: mode) else { return }
+        defaults.removeObject(forKey: key)
+    }
+}

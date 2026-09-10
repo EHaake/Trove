@@ -41,4 +41,35 @@ struct PhotoNoticeStoreTests {
             #expect(second.hasAcknowledged == true)
         }
     }
+
+    /// The reset is structurally gated on the built store's mode: only the
+    /// in-memory `.ephemeral` launch clears the flag, never a persistent one.
+    @Test func onlyTheInMemoryStoreTriggersTheReset() {
+        #expect(UserDefaultsPhotoNoticeStore.shouldResetForUITesting(mode: .ephemeral) == true)
+        #expect(UserDefaultsPhotoNoticeStore.shouldResetForUITesting(mode: .localOnly) == false)
+        #expect(UserDefaultsPhotoNoticeStore.shouldResetForUITesting(mode: .cloudKit) == false)
+    }
+
+    /// On the in-memory launch the reset clears an already-acknowledged flag,
+    /// so a fresh store over the same defaults reads `false` — the controlled
+    /// "not acknowledged" start a UI test needs.
+    @Test func theResetClearsAnAcknowledgedFlagOnTheInMemoryStore() {
+        withFreshDefaults { defaults in
+            UserDefaultsPhotoNoticeStore(defaults: defaults).acknowledge()
+            UserDefaultsPhotoNoticeStore.resetForUITesting(mode: .ephemeral, defaults: defaults)
+            #expect(UserDefaultsPhotoNoticeStore(defaults: defaults).hasAcknowledged == false)
+        }
+    }
+
+    /// A persistent store refuses the reset: the person's acknowledgement
+    /// survives even when `resetForUITesting` is called against it. This is the
+    /// "refusing a persistent store" the 003 amendment asks to be shown, and
+    /// the mutation target — loosen the guard and this goes red.
+    @Test func theResetRefusesAPersistentStore() {
+        withFreshDefaults { defaults in
+            UserDefaultsPhotoNoticeStore(defaults: defaults).acknowledge()
+            UserDefaultsPhotoNoticeStore.resetForUITesting(mode: .localOnly, defaults: defaults)
+            #expect(UserDefaultsPhotoNoticeStore(defaults: defaults).hasAcknowledged == true)
+        }
+    }
 }
