@@ -150,6 +150,36 @@ struct PhotoSelectionReplaceKeepTests {
     }
 }
 
+@Suite("PhotoSelection — leadsWithStock")
+struct PhotoSelectionLeadsWithStockTests {
+    private func device(sortOrder: Int = 0) -> Photo {
+        Photo(imageData: data(9), source: .device, sortOrder: sortOrder)
+    }
+
+    /// A stock-only set leads with stock — the row shows the stock thumbnail.
+    @Test func trueForAStockOnlySet() {
+        #expect(PhotoSelection.leadsWithStock([fetched(1)]))
+    }
+
+    /// An empty set leads with nothing.
+    @Test func falseForAnEmptySet() {
+        #expect(!PhotoSelection.leadsWithStock([]))
+    }
+
+    /// An owned photo leading turns the mark off even with a stock photo present
+    /// (Decision 4a). Passed out of array order — device `sortOrder` 0 sits
+    /// *second* in the array, fetched `sortOrder` 1 sits first — to prove the
+    /// predicate sorts by `sortOrder`, not array position.
+    /// **Mutation:** change `leadsWithStock` to `photos.contains { $0.source ==
+    /// .fetched }` → this goes true → red.
+    @Test func falseWhenAnOwnedPhotoLeadsEvenWithAStockPhotoPresent() {
+        let owned = device(sortOrder: 0)
+        let stock = fetched(2, sortOrder: 1)
+
+        #expect(!PhotoSelection.leadsWithStock([stock, owned]))
+    }
+}
+
 @Suite("StockPhotoServiceSpy")
 struct StockPhotoServiceSpyTests {
     @Test func anExhaustedScriptThrowsScriptExhausted() async {

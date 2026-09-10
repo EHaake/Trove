@@ -63,3 +63,38 @@ struct StockPhotoBadgeTests {
         #expect(credit == "Photo: Wikimedia Commons \u{00B7} Public domain \u{00B7} Wikimedia Commons")
     }
 }
+
+/// The row a11y wiring for the stock thumbnail (T011, criterion 11). The
+/// runtime `.accessibilityValue` isn't unit-inspectable — it lives in the view —
+/// so the falsifiable decomposition is `PhotoSelection.leadsWithStock`'s own
+/// predicate test (in `PhotoSelectionLeadsWithStockTests`) plus this source
+/// scan: each row gates its stock announcement on the shared predicate and
+/// reads the wording from `StockPhotoCopy`, never inline.
+@Suite("Row stock a11y wiring")
+struct RowStockA11yTests {
+    private static let itemRow = "Trove/Views/Items/ItemRow.swift"
+    private static let wishlistView = "Trove/Views/Wishlist/WishlistView.swift"
+
+    /// `ItemRow` announces the stock thumbnail via the shared predicate and the
+    /// copy string, never a typed-in literal.
+    @Test func itemRowAnnouncesTheStockThumbnailFromTheSharedSources() throws {
+        let code = try SourceScan.production(Self.itemRow)
+        #expect(code.contains("PhotoSelection.leadsWithStock"),
+                "ItemRow doesn't gate its stock a11y value on the shared predicate")
+        #expect(code.contains("StockPhotoCopy.badgeAccessibilityLabel"),
+                "ItemRow doesn't read its stock a11y wording from StockPhotoCopy")
+        #expect(!code.contains("\"Representative stock image\""),
+                "ItemRow types its stock a11y wording inline")
+    }
+
+    /// `WishlistRow` (inside `WishlistView`) does the same.
+    @Test func wishlistRowAnnouncesTheStockThumbnailFromTheSharedSources() throws {
+        let code = try SourceScan.production(Self.wishlistView)
+        #expect(code.contains("PhotoSelection.leadsWithStock"),
+                "WishlistRow doesn't gate its stock a11y value on the shared predicate")
+        #expect(code.contains("StockPhotoCopy.badgeAccessibilityLabel"),
+                "WishlistRow doesn't read its stock a11y wording from StockPhotoCopy")
+        #expect(!code.contains("\"Representative stock image\""),
+                "WishlistRow types its stock a11y wording inline")
+    }
+}

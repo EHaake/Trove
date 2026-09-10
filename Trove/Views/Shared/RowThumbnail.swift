@@ -39,6 +39,16 @@ struct RowThumbnail: View {
         }
         .frame(width: side, height: side)
         .clipShape(RoundedRectangle(cornerRadius: theme.metrics.thumbnailRadius))
+        // The stock mark rides the row only when the leading photo — the one
+        // shown above — is a fetched stock image (spec criterion 3). An owned
+        // photo leading turns it off, even if a stock photo trails. Inset 4pt
+        // per the tokens; the thumbnail's 2pt corner radius won't clip it.
+        .overlay(alignment: .topLeading) {
+            if PhotoSelection.leadsWithStock(photos) {
+                StockPhotoBadge(style: .mark)
+                    .padding(4)
+            }
+        }
     }
 
     /// A flat glyph, per the brief's icon language — and an SF Symbol rather

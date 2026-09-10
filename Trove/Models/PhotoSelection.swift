@@ -92,6 +92,13 @@ enum PhotoSelection {
         return renumbered(withDevice + stock)
     }
 
+    /// Whether the item's leading photo — the one the row shows as its thumbnail —
+    /// is a fetched stock photo (spec criterion 3: the stock mark rides the row
+    /// only when the stock photo is the item's thumbnail, i.e. no owned photo leads).
+    static func leadsWithStock(_ photos: [Photo]) -> Bool {
+        inDisplayOrder(photos).first?.source == .fetched
+    }
+
     /// Photos as the user should see them. The relationship comes back
     /// unordered from SwiftData, so display order is `sortOrder`, with `id`
     /// breaking ties to keep it stable if two ever collide.

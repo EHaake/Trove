@@ -417,7 +417,7 @@ with a continuation prompt. Everything the person reads is plain language.
   predicate/helpers + a field source-scan); the actual alert on both forms is
   the person's phase-pause eye check.
 
-- [ ] **T011 — List rows: the leading rule and the stock badge.**
+- [x] **T011 — List rows: the leading rule and the stock badge.**
   Per plan §6 (list rows). `RowThumbnail` overlays a small `StockPhotoBadge`
   only when its leading photo (`inDisplayOrder(photos).first`) is `.fetched`;
   `ItemRow`/`WishlistRow` a11y labels announce a stock thumbnail as a
@@ -428,6 +428,23 @@ with a continuation prompt. Everything the person reads is plain language.
   owned-photo row red.
   **Verify:** `scripts/verify.sh` green; mutation recorded; the badge seen by
   eye on both lists.
+  **Done (2026-09-10):** design reconciliation (same shape as T008/T010) — the
+  row uses a tiny **glyph-only corner mark** (the approved artboard), so
+  `StockPhotoBadge` gained a `Style{.full,.mark}` (`.full` = T007's capsule,
+  unchanged; `.mark` = 16×16 rounded square, `background.opacity(0.9)` ground,
+  ivory-16 % border, glyph only, a11y-hidden). New shared predicate
+  `PhotoSelection.leadsWithStock(_:)` (leading display-order photo is `.fetched`)
+  gates both `RowThumbnail`'s `.topLeading` overlay and the two rows'
+  `.accessibilityValue` (announcing `badgeAccessibilityLabel` for a stock-leading
+  row) — so the mark and the spoken label can't drift. **Verify:** 1252 tests /
+  173 suites passed; T007 badge tests and the `RowThumbnail` size tests still
+  green (the mark is an overlay, slot size unchanged). **Mutations:**
+  `leadsWithStock` → `contains{.fetched}` → predicate + render tests red; the
+  overlay gate → `contains{.fetched}` → owned-leading corner goes dark (render)
+  red while the predicate suite stays green (targets the overlay specifically);
+  `ItemRow`'s a11y value line removed → the row a11y scan red; all reverted.
+  Runtime `.accessibilityValue` isn't unit-inspectable → predicate test + source
+  scan are the falsifiable decomposition; VoiceOver is the person's device check.
 
 - [ ] **T012 — UI tests, offline, run twice.**
   Per plan §6 (UI tests), Q10. The four tests with `-uiTesting`: an item with
@@ -569,6 +586,7 @@ settled.
 | T008 implement | opus (`sdd-implementer`) | ~107k | `PhotoFetchViewModel` + notice/picker sheet views; `StockPhotoCredit` `.compact`; `StockPhotoDownload`; 3 copy strings; 3 mutations verified; broadened (not weakened) the 002 AsyncImage guard for the second sanctioned picker; 1211 tests |
 | T009 implement | opus (`sdd-implementer`) | ~198k | both detail VMs + views photo plumbing; `store(_:)` (owned-only `updatedAt`); `PhotoPickerSheetView` `store`-closure refinement; `PhotoCarousel` badge/credit/a11y; 4 mutations verified; carousel badge test keys off label pixels (ImageRenderer won't render the paging hero); 1227 tests |
 | T010 implement | opus (`sdd-implementer`) | ~138k | both form VMs photo plumbing + in-memory `store`; 3 pure `PhotoSelection` helpers (replace/keep); `PhotoPickerField` replace/keep alert; both form views' action; 3 mutations verified; no deviations; 1246 tests |
+| T011 implement | opus (`sdd-implementer`) | ~69k | `StockPhotoBadge` `.mark` style; `PhotoSelection.leadsWithStock`; `RowThumbnail` corner-mark overlay; both rows' a11y value; 3 mutations verified; row size tests intact; 1252 tests |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the
