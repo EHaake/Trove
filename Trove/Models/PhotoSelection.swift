@@ -65,6 +65,33 @@ enum PhotoSelection {
         return renumbered(kept + [photo])
     }
 
+    /// Whether adding these device photos to `existing` must ask the person
+    /// first (Decision 4a): true iff there is something to add and a `.fetched`
+    /// photo is already present. Adding device photos to a set with no stock
+    /// photo just appends, so it needs no prompt.
+    static func shouldPromptReplaceOrKeep(addingCount: Int, to existing: [Photo]) -> Bool {
+        addingCount > 0 && existing.contains { $0.source == .fetched }
+    }
+
+    /// Replace: the newly added device photos, and the existing `.fetched`
+    /// photo dropped — its blob is freed by `orphaned(...)` at save, since it
+    /// falls out of the returned set.
+    static func addingReplacingStock(_ imageData: [Data], to existing: [Photo]) -> [Photo] {
+        appending(imageData, to: existing.filter { $0.source != .fetched })
+    }
+
+    /// Keep both: the newly added device photos LEAD and the existing
+    /// `.fetched` photo follows (Decision 4a — an owned photo is always the
+    /// item's first), then renumbered. `appending` puts new photos at the end,
+    /// so the stock photo is filtered out first, the device photos appended,
+    /// and the stock photo put back at the end — a plain append onto
+    /// `[fetched]` would leave the fetched one leading, which is wrong here.
+    static func addingKeepingStock(_ imageData: [Data], to existing: [Photo]) -> [Photo] {
+        let withDevice = appending(imageData, to: existing.filter { $0.source != .fetched })
+        let stock = inDisplayOrder(existing).filter { $0.source == .fetched }
+        return renumbered(withDevice + stock)
+    }
+
     /// Photos as the user should see them. The relationship comes back
     /// unordered from SwiftData, so display order is `sortOrder`, with `id`
     /// breaking ties to keep it stable if two ever collide.

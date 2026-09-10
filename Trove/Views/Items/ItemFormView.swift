@@ -66,6 +66,49 @@ struct ItemFormView: View {
             // them look lost.
             showsMoreDetails = viewModel.isEditing
         }
+        // 005 (plan §6): the stock-photo sheet, two phases — the one-time
+        // notice in front of the picker, or the picker itself. Mirrors the
+        // detail screen's `photoSheet`; the form has no `load()` to run on
+        // dismiss, so `onDismiss` is omitted.
+        .sheet(isPresented: $viewModel.isFindingPhoto) {
+            photoSheet
+        }
+    }
+
+    /// The stock-photo sheet's two phases (plan §6): the one-time notice, or
+    /// the picker. Branching the content rather than swapping presentations
+    /// means no binding is written mid-flight; swipe-down over the notice is
+    /// Not now by construction, since only `continuePhotoNotice()` acknowledges.
+    private var photoSheet: some View {
+        Group {
+            switch viewModel.photoSheetStep {
+            case .notice:
+                PhotoNoticeView(
+                    continueAction: viewModel.continuePhotoNotice,
+                    declineAction: viewModel.declinePhotoNotice
+                )
+            case .pick:
+                PhotoPickerSheetView(
+                    viewModel: viewModel.makePhotoFetchViewModel(),
+                    store: { viewModel.store($0) },
+                    cancel: { viewModel.isFindingPhoto = false }
+                )
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    /// Find a photo… — the fetches treatment (outlined brass), reusing the
+    /// generic word-free chrome, the same register as the detail screen's
+    /// action (plan §6). Shown only while `canFindPhoto` (no owned photo yet).
+    private var findPhotoAction: some View {
+        Button(action: viewModel.findPhoto) {
+            Text(StockPhotoCopy.findAPhoto)
+                .font(theme.typography.button)
+                .marketOutlinedChrome(fills: true)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("stockphoto.find")
     }
 
     // MARK: - Required fields
@@ -279,6 +322,10 @@ struct ItemFormView: View {
     private var optionalFields: some View {
         VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
             PhotoPickerField(photos: $viewModel.photos)
+
+            if viewModel.canFindPhoto {
+                findPhotoAction
+            }
 
             labelledField("Current value") {
                 HStack(spacing: 6) {

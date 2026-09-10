@@ -381,7 +381,7 @@ with a continuation prompt. Everything the person reads is plain language.
   row lands). Artboards built to: `ItemStockHeroDark/Light`, `ItemOwnedPlusStock`
   — for the person's phase-pause eye check.
 
-- [ ] **T010 — Forms: Find a photo…, the in-memory append, the replace/keep prompt.**
+- [x] **T010 — Forms: Find a photo…, the in-memory append, the replace/keep prompt.**
   Per plan §6 (the hosting view models, form; the replace/keep prompt). Both
   form view models gain `photoService`/`noticeStore` injection, the notice
   intents, `canFindPhoto`, `makePhotoFetchViewModel()`, and the pick's
@@ -398,6 +398,24 @@ with a continuation prompt. Everything the person reads is plain language.
   ordering reversed → the leads test red.
   **Verify:** `scripts/verify.sh` green; mutations recorded; the prompt seen by
   eye on both forms.
+  **Done (2026-09-09):** both form VMs gained the same photo members as the
+  detail VMs (T009), with an in-memory `store(_:)` — `addingFetched` into the
+  `photos` array, no save/insert/orphan here (the form's own `save()` persists
+  and runs `orphaned(...)`). Three pure `PhotoSelection` helpers added:
+  `shouldPromptReplaceOrKeep(addingCount:to:)`, `addingReplacingStock` (device
+  only, stock dropped), `addingKeepingStock` (device leads, stock trails,
+  renumbered). `PhotoPickerField` gained the two-button system `.alert` (Keep
+  both, Replace destructive) raised from `load(_:)` when device photos are added
+  over a `.fetched` photo, and its stale "device-only/deferred" doc comment was
+  corrected. Both form views gained the outlined-brass **Find a photo…** action
+  (id `stockphoto.find`) after `PhotoPickerField` and the two-phase photo sheet.
+  **Verify:** 1246 tests / 171 suites passed, exit 0; T005/T007/T008/T009 green.
+  **Mutations:** Keep-both ordering reversed → device-leads test red; Replace
+  not filtering → one-device/no-stock + orphan tests red; prompt branch removed
+  (append silently) → the field's consult-scan red; all reverted. No deviations.
+  The alert's runtime rendering isn't unit-inspectable → verified two ways (pure
+  predicate/helpers + a field source-scan); the actual alert on both forms is
+  the person's phase-pause eye check.
 
 - [ ] **T011 — List rows: the leading rule and the stock badge.**
   Per plan §6 (list rows). `RowThumbnail` overlays a small `StockPhotoBadge`
@@ -550,6 +568,7 @@ settled.
 | T007 implement | opus (`sdd-implementer`) | ~49k | shared `StockPhotoBadge` + `StockPhotoCredit`; 5 guards, 2 mutations verified + 1 caught in dev; T001 no-author fallback covered; 1196 tests |
 | T008 implement | opus (`sdd-implementer`) | ~107k | `PhotoFetchViewModel` + notice/picker sheet views; `StockPhotoCredit` `.compact`; `StockPhotoDownload`; 3 copy strings; 3 mutations verified; broadened (not weakened) the 002 AsyncImage guard for the second sanctioned picker; 1211 tests |
 | T009 implement | opus (`sdd-implementer`) | ~198k | both detail VMs + views photo plumbing; `store(_:)` (owned-only `updatedAt`); `PhotoPickerSheetView` `store`-closure refinement; `PhotoCarousel` badge/credit/a11y; 4 mutations verified; carousel badge test keys off label pixels (ImageRenderer won't render the paging hero); 1227 tests |
+| T010 implement | opus (`sdd-implementer`) | ~138k | both form VMs photo plumbing + in-memory `store`; 3 pure `PhotoSelection` helpers (replace/keep); `PhotoPickerField` replace/keep alert; both form views' action; 3 mutations verified; no deviations; 1246 tests |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the

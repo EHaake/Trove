@@ -88,6 +88,68 @@ struct PhotoSelectionAddingFetchedTests {
     }
 }
 
+@Suite("PhotoSelection — replace / keep prompt")
+struct PhotoSelectionReplaceKeepTests {
+    private func device() -> Photo { Photo(imageData: data(9), source: .device) }
+
+    // MARK: - shouldPromptReplaceOrKeep (Decision 4a)
+
+    @Test func promptsWhenAddingToASetWithAStockPhoto() {
+        #expect(PhotoSelection.shouldPromptReplaceOrKeep(addingCount: 1, to: [fetched(1)]))
+    }
+
+    @Test func doesNotPromptWithNoStockPhotoPresent() {
+        #expect(!PhotoSelection.shouldPromptReplaceOrKeep(addingCount: 1, to: [device()]))
+        #expect(!PhotoSelection.shouldPromptReplaceOrKeep(addingCount: 1, to: []))
+    }
+
+    @Test func doesNotPromptWhenThereIsNothingToAdd() {
+        #expect(!PhotoSelection.shouldPromptReplaceOrKeep(addingCount: 0, to: [fetched(1)]))
+    }
+
+    // MARK: - Replace (addingReplacingStock)
+
+    /// Replace drops the existing `.fetched` photo and keeps the new device
+    /// one. **Mutation:** make `addingReplacingStock` not filter out the
+    /// fetched photo → this goes red (two photos, one still `.fetched`).
+    @Test func replaceLeavesExactlyOneDevicePhotoAndNoStock() {
+        let result = PhotoSelection.addingReplacingStock([data(1)], to: [fetched(1)])
+
+        #expect(result.count == 1)
+        #expect(result.filter { $0.source == .device }.count == 1)
+        #expect(!result.contains { $0.source == .fetched })
+    }
+
+    /// The dropped fetched photo flows through `orphaned(...)` for deletion, so
+    /// no stored blob is left behind.
+    @Test func theReplacedStockPhotoIsOrphaned() {
+        let stock = fetched(1)
+        let result = PhotoSelection.addingReplacingStock([data(1)], to: [stock])
+
+        let orphans = PhotoSelection.orphaned(previous: [stock], current: result)
+        #expect(orphans.contains { $0.id == stock.id })
+    }
+
+    // MARK: - Keep both (addingKeepingStock)
+
+    /// Keep both keeps the stock photo and puts the owned photo first
+    /// (Decision 4a). **Mutation:** reverse the ordering in `addingKeepingStock`
+    /// (stock before device) → the device-leads assertion goes red.
+    @Test func keepBothLeadsWithTheDevicePhotoAndTrailsWithTheStock() {
+        let result = PhotoSelection.addingKeepingStock([data(1)], to: [fetched(1)])
+        let ordered = PhotoSelection.inDisplayOrder(result)
+
+        #expect(result.count == 2)
+        #expect(ordered.first?.source == .device)
+        #expect(ordered.last?.source == .fetched)
+    }
+
+    @Test func keepBothNumbersTheResultFromZero() {
+        let result = PhotoSelection.addingKeepingStock([data(1)], to: [fetched(1)])
+        #expect(PhotoSelection.inDisplayOrder(result).map(\.sortOrder) == Array(0..<result.count))
+    }
+}
+
 @Suite("StockPhotoServiceSpy")
 struct StockPhotoServiceSpyTests {
     @Test func anExhaustedScriptThrowsScriptExhausted() async {
