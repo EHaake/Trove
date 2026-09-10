@@ -122,7 +122,7 @@ with a continuation prompt. Everything the person reads is plain language.
   updated in plan §2/Q1 and carried into **T003**. URLs also carry `utm_*`
   params and a 1280 px bucket for a 1024 request (both harmless; noted in plan).
 
-- [ ] **T003 — `StockPhotoService`, `WikimediaPhotoService`, decoding, the licence filter, attribution. `review: per-task`.**
+- [x] **T003 — `StockPhotoService`, `WikimediaPhotoService`, decoding, the licence filter, attribution. `review: per-task`.**
   Per plan §2 and §3. New `Trove/Photos/StockPhotoService.swift` (protocol with
   two `@concurrent` requirements, `StockPhotoCandidate`, `StockPhotoLicence`,
   `StockPhotoError`) and `WikimediaPhotoService.swift` (`WikimediaAPI`
@@ -146,6 +146,29 @@ with a continuation prompt. Everything the person reads is plain language.
   a placeholder contact address → the address guard red.
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs — `review:
   per-task`); every mutation recorded; no test opens a connection.
+  **Done (2026-09-09):** `StockPhotoService` protocol (two `@concurrent` reqs),
+  `StockPhotoCandidate`, `StockPhotoLicence` (`classify` reads reusability from
+  the `License` code, display from `LicenseShortName`), `StockPhotoError`;
+  `WikimediaPhotoService` (ephemeral session, `.wikimedia.org`-suffix host
+  check before any image fetch, ~8 MB byte ceiling, one-place error mapping,
+  `requestProbe`); `WikimediaDecoding` (formatversion=2 wire structs,
+  session-free `candidates(from:cap:)`, a total hand-rolled
+  `plainText(fromHTML:)`); minimal `StockPhotoCopy.contactAddress`. Tests over
+  the T002 fixtures via a **dedicated** `WikimediaStubURLProtocol` (not the
+  Reverb stub — Swift Testing runs suites in parallel and the stub's state is
+  static). **Verify (orchestrator re-ran):** 1169 tests / 157 suites, exit 0
+  (up from 1150). All 7 guards mutation-verified (G2 filter, G3 attr-parse, G4
+  cap, G5 name-only, G6 `@concurrent`, G7 host-check, + address guard).
+  **Review:** one blocking finding — ported-licence acceptance
+  (`cc-by-sa-3.0-de`, real recorded data) was correct but unguarded; fixed by a
+  falsifiable classifier-table assertion (mutation-verified), **re-review
+  resolved**. Deviation: T001's `StockPhotoAttribution` marked `nonisolated`
+  (required — a `nonisolated` candidate can't embed a MainActor-default value;
+  one-token, no member change; noted for T004). Non-blocking notes carried
+  forward: `fetch`'s `catch` maps every error to `.unreachable` (a
+  `CancellationError` is swallowed) — consider narrowing to `URLError`; a
+  nonstandard CC0/PD spelling (`cc-zero`) would be dropped (safe direction);
+  G5's teeth are the stub-miss, matching the Reverb idiom (acceptable).
 
 - [ ] **T004 — `StockPhotoCopy` in full, and the notice store.**
   Per plan §5 and the Copy section. `StockPhotoCopy` (`nonisolated enum`,
@@ -381,6 +404,10 @@ settled.
 | T001 review (per-task) | opus (`skeptical-reviewer`) | ~30k | signed off, nothing blocking; 2 non-blocking notes (fallback-branch tests carried to T007/T009) |
 | T002 implement (prep half) | opus (`sdd-implementer`) | ~46k | script + hand-built fixtures; **stopped** on README bundle collision (well-specified fork) → orchestrator resolved via unique basename (escape hatch) |
 | T002 live recording | — (person) | — | `search-camera.json`, 20 reusable pages; surfaced host-allowlist correction → plan §2/Q1 + T003 |
+| T003 implement | opus (`sdd-implementer`) | ~100k | service + decoding + licence filter + attribution + tests; 7 guards mutation-verified; `StockPhotoAttribution` made `nonisolated` (required) |
+| T003 review (per-task) | opus (`skeptical-reviewer`) | ~57k | **1 blocking**: ported-licence acceptance unguarded (false-coverage) |
+| T003 fix (ported test) | opus (`sdd-implementer`) | ~27k | added falsifiable classifier-table assertion, mutation-verified; classify unchanged |
+| T003 re-review | opus (`skeptical-reviewer`) | ~25k | **resolved**; nothing open |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the

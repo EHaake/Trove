@@ -1,0 +1,119 @@
+import Foundation
+import Testing
+@testable import Trove
+
+/// The licence filter, the attribution strip, the cap, and the empty state —
+/// run over the recorded fixtures with no session (the `ReverbDecodingTests`
+/// idiom, spec §3).
+@Suite("Wikimedia decoding")
+struct WikimediaDecodingTests {
+
+    // MARK: - The licence filter (G2)
+
+    @Test func onlyReusableFilesSurviveTheMixedResponse() throws {
+        let candidates = try WikimediaDecoding.candidates(
+            from: try wikimediaFixture("search-mixed-licences.json"), cap: 12
+        )
+        let titles = candidates.map(\.title)
+        #expect(candidates.count == 4)
+        #expect(titles.sorted() == [
+            "File:Reusable-cc-by-sa.jpg",
+            "File:Reusable-cc-by.jpg",
+            "File:Reusable-cc0.jpg",
+            "File:Reusable-pd.jpg",
+        ])
+        for title in titles {
+            #expect(!title.contains("Nonfree"), "a non-reusable file was offered: \(title)")
+        }
+    }
+
+    // MARK: - Attribution (G3)
+
+    @Test func theAttributionIsStrippedOfHTMLAndCarriesTheLicenceAndSource() throws {
+        let candidates = try WikimediaDecoding.candidates(
+            from: try wikimediaFixture("search-mixed-licences.json"), cap: 12
+        )
+        let ccBYSA = try #require(candidates.first { $0.title == "File:Reusable-cc-by-sa.jpg" })
+        // The fixture's Artist is `<a href="…">Dave Example</a>` — the tag is
+        // gone only if the strip ran.
+        #expect(ccBYSA.attribution.author == "Dave Example")
+        #expect(!ccBYSA.attribution.author.contains("<"))
+        #expect(ccBYSA.attribution.licenseName == "CC BY-SA 4.0")
+        #expect(ccBYSA.attribution.sourceURL.absoluteString == "https://commons.wikimedia.org/wiki/File:Reusable-cc-by-sa.jpg")
+    }
+
+    @Test func aFileWithNoArtistFallsBackToWikimediaCommons() throws {
+        let candidates = try WikimediaDecoding.candidates(
+            from: try wikimediaFixture("search-no-author.json"), cap: 12
+        )
+        #expect(candidates.count == 1)
+        #expect(candidates.first?.attribution.author == "Wikimedia Commons")
+    }
+
+    // MARK: - The cap (G4)
+
+    @Test func twentyReusableFilesAreCappedToTwelve() throws {
+        let candidates = try WikimediaDecoding.candidates(
+            from: try wikimediaFixture("search-camera.json"), cap: 12
+        )
+        #expect(candidates.count == 12)
+    }
+
+    @Test func fewerReusableFilesThanTheCapAreAllReturned() throws {
+        let candidates = try WikimediaDecoding.candidates(
+            from: try wikimediaFixture("search-mixed-licences.json"), cap: 12
+        )
+        #expect(candidates.count == 4)
+    }
+
+    // MARK: - Empty
+
+    @Test func aResponseWithNoQueryIsAnEmptyList() throws {
+        let candidates = try WikimediaDecoding.candidates(
+            from: try wikimediaFixture("search-empty.json"), cap: 12
+        )
+        #expect(candidates.isEmpty)
+    }
+
+    // MARK: - The classifier table (G2)
+
+    @Test func theClassifierAcceptsReusableAndRejectsTheRest() {
+        // Reusable → non-nil, with the shortName as display.
+        #expect(StockPhotoLicence.classify(shortName: "CC0", license: "cc0")?.displayName == "CC0")
+        #expect(StockPhotoLicence.classify(shortName: "Public domain", license: "pd")?.displayName == "Public domain")
+        #expect(StockPhotoLicence.classify(shortName: "CC BY 3.0", license: "cc-by-3.0")?.displayName == "CC BY 3.0")
+        #expect(StockPhotoLicence.classify(shortName: "CC BY-SA 4.0", license: "cc-by-sa-4.0")?.displayName == "CC BY-SA 4.0")
+        // Ported / jurisdiction versions stay reusable (two such files are in
+        // the recorded search-camera fixture): code begins "cc-by" with no
+        // "-nc"/"-nd", even with a country suffix.
+        let ported = StockPhotoLicence.classify(shortName: "CC BY-SA 3.0 de", license: "cc-by-sa-3.0-de")
+        #expect(ported != nil)
+        #expect(ported == .ccBY(displayName: "CC BY-SA 3.0 de"))
+        #expect(ported?.displayName == "CC BY-SA 3.0 de")
+        // Rejected → nil.
+        #expect(StockPhotoLicence.classify(shortName: "CC BY-NC 2.0", license: "cc-by-nc-2.0") == nil)
+        #expect(StockPhotoLicence.classify(shortName: "CC BY-ND 2.0", license: "cc-by-nd-2.0") == nil)
+        #expect(StockPhotoLicence.classify(shortName: "GFDL", license: "gfdl") == nil)
+        #expect(StockPhotoLicence.classify(shortName: nil, license: nil) == nil)
+        #expect(StockPhotoLicence.classify(shortName: "", license: "") == nil)
+        // NC/ND anywhere in a compound code still fails.
+        #expect(StockPhotoLicence.classify(shortName: "CC BY-NC-SA 3.0", license: "cc-by-nc-sa-3.0") == nil)
+    }
+
+    // MARK: - The HTML strip (G3)
+
+    @Test func plainTextStripsTagsAndDecodesEntities() {
+        #expect(WikimediaDecoding.plainText(fromHTML: "<a href=\"x\">Jane &amp; Co</a>") == "Jane & Co")
+        #expect(WikimediaDecoding.plainText(fromHTML: "  <b>A</b>   &#39;B&#39;  ") == "A 'B'")
+    }
+}
+
+/// A recorded Wikimedia fixture, read from the repo by path — mirrors
+/// `reverbFixture`.
+func wikimediaFixture(_ name: String, file: StaticString = #filePath) throws -> Data {
+    let url = URL(filePath: "\(file)")
+        .deletingLastPathComponent()
+        .appending(path: "Fixtures/Wikimedia")
+        .appending(path: name)
+    return try Data(contentsOf: url)
+}
