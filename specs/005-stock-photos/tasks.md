@@ -260,7 +260,7 @@ with a continuation prompt. Everything the person reads is plain language.
 
 ## Phase 3 — Screens
 
-- [ ] **T007 — The shared badge and credit component.**
+- [x] **T007 — The shared badge and credit component.**
   Per plan §6 (the shared component) and T006's artboards. New
   `Trove/Views/Shared/StockPhotoBadge.swift` (the **Stock photo** capsule, its
   a11y label) and `StockPhotoCredit.swift` (the credit line with a SwiftUI
@@ -269,6 +269,27 @@ with a continuation prompt. Everything the person reads is plain language.
   non-identifier-boundary regex); the strings come from `StockPhotoCopy`; the
   link's hint is present. Mutation: the `Link` made a `Button` → the scan red.
   **Verify:** `scripts/verify.sh` green; the mutation recorded.
+  **Done (2026-09-09):** `StockPhotoBadge` (the "Stock photo" capsule,
+  uppercased by `.textCase(.uppercase)` — stored `StockPhotoCopy.badge`
+  unchanged; `monoLabel`/`monoLabelTracking`/`textBody`; near-opaque
+  `background.opacity(0.9)` ground, ivory 14 %/72 % border+glyph as flagged
+  local literal opacities on `textPrimary`, commented; a11y label from copy)
+  and `StockPhotoCredit(attribution:)` (composed by splitting
+  `StockPhotoCopy.credit(...)` on the padded separator so the plain-text and
+  rendered forms share one source string; body `secondary`/`textLabelSecondary`,
+  licence run `monoMeta`/`textMonoMeta`, source segment a real `Link` in
+  `accentBrass` with `arrow.up.right` a11y-hidden, `creditLinkHint`, identifier
+  `stockphoto.credit.link`). Five guards in `StockPhotoBadgeTests`.
+  **Verify:** 1196 tests / 162 suites passed, exit 0. **Mutations:** `Link(` →
+  `Button(` → Link-not-Button guard red (links → 0); badge string uppercased
+  instead of `.textCase` → the uppercase-by-style guard red; both reverted.
+  (Also caught in development: a `StockPhoto.credit(` call split across lines
+  failed the strings-from-copy scan → fixed to one line — the guard can fail.)
+  **T001 carry-forward:** the no-author fallback (`author == "Wikimedia
+  Commons"`) credit is now tested. **Deviations:** badge glyph
+  `photo.on.rectangle` and the link's `arrow.up.right` use SF Symbol
+  weight as the nearest analog to the artboard's numeric stroke (SF Symbols
+  expose no stroke width — the `MarketMatchView` glyph idiom).
 
 - [ ] **T008 — The notice + candidate-picker sheet, and the picker view model.**
   Per plan §4 (`PhotoFetchViewModel`) and §6 (the sheet). New
@@ -474,6 +495,7 @@ settled.
    design; the VM tests in T009/T010 exercise the rest).
 
 | T006 design pass | — (person + `/design`) | — | brief written (Claude Code); 11 artboards approved + saved; tokens section written; no new copy escalated |
+| T007 implement | opus (`sdd-implementer`) | ~49k | shared `StockPhotoBadge` + `StockPhotoCredit`; 5 guards, 2 mutations verified + 1 caught in dev; T001 no-author fallback covered; 1196 tests |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the
