@@ -1,6 +1,9 @@
 # 005 — Stock Photos: Tasks
 
-**Status**: Draft — pending sign-off
+**Status**: **Signed off** (2026-09-09) — skeptical-reviewer, at Opus under the
+Fallback clause; nothing blocking. T015 gained the picker-`.task` probe and
+T016 records OQ1/OQ2 as already settled. Ready for implementation once the
+person approves the spec-conformance summary.
 
 Drafted against the approved `spec.md` (Approved 2026-09-09) and the draft
 `plan.md` in this directory, for branch `005-stock-photos` off `004-themes`.
@@ -292,14 +295,25 @@ with a continuation prompt. Everything the person reads is plain language.
   partial if a second device isn't available. `-uiTesting` store for anything
   destructive. Full suite twice; UI suite twice. Every finding fixed in place
   or listed for T016.
-  **Verify:** the record written into the Done note with what was seen; both
-  suites green twice.
+  **Instrument the picker's `.task`, don't eyeball it** (CLAUDE.md's Testing
+  rule; the shape 002's sweep caught): a `.task` inside sheet content is
+  invisible to the view-model suite, so add a temporary file/print probe inside
+  `searchPhotos` and confirm on device that the live search fires **once per
+  intended open** and does **not** fire on the notice's **Not now**, on a
+  Keep/Replace prompt, or on any sheet re-render — settle "fired once" by the
+  probe, never by inferring from the rendered grid.
+  **Verify:** the record written into the Done note with what was seen,
+  including the `searchPhotos` probe's firing count per action; both suites
+  green twice.
 
 - [ ] **T016 — Close-out.**
   Criteria 1–11 ticked in `spec.md` with citations, honest partials named (the
   second-device sync check; anything not exercised on the device);
-  `plan.md` gains "As built" (deviations, the licence set as shipped, OQ1's and
-  OQ2's resolutions); this file's status flipped; the pre-merge
+  `plan.md` gains "As built" (deviations, the licence set as shipped, and a
+  pointer to the already-settled OQ1 — confirmed at sign-off, CC-BY-SA image in
+  a PDF is a collection not an adaptation — and OQ2 — spec Decision 6, gate on
+  an owned photo; **neither is an open question to re-decide**); this file's
+  status flipped; the pre-merge
   `skeptical-reviewer` sweep over `git diff main...HEAD` (bundle cut after `git
   add -A`); the post-merge list (`fix/docs-005-shipped`: `ROADMAP.md`'s 005
   entry + status row + the Reverb-catalog-image later enhancement note; README
@@ -324,6 +338,12 @@ settled.
 
 | Task / invocation | Tier | Tokens | Outcome / miss reason |
 |---|---|---|---|
-| Plan + tasks draft | opus (`sdd-planner`) | _fill in_ | this document; Fallback clause |
-| Plan sign-off | opus (`skeptical-reviewer`) | _fill in_ | — |
+| Plan + tasks draft | opus (`sdd-planner`) | ~200k | this document; Fallback clause; surfaced OQ2 → person (Decision 6) |
+| Plan sign-off | opus (`skeptical-reviewer`) | ~71k (55k in / 4k out) | **signed off, nothing blocking**; OQ1 confirmed against CC-BY-SA 4.0 text; 4 second-look notes (3 folded into plan/tasks now, note 4 optional below) |
 | _rows added per dispatch as the spec runs_ | opus | | |
+
+**Sign-off second-look note 4 (optional, non-blocking).** The credit links the
+"Wikimedia Commons" segment to the file page (`descriptionurl`) — standard TASL
+attribution, sound as-is. Optionally the licence short-name could also link to
+`LicenseUrl` (already fetched, Q1). Left to the implementer's discretion at the
+badge/credit task; not required.

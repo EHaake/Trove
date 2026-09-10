@@ -1,6 +1,10 @@
 # 005 — Stock Photos — Technical Plan
 
-**Status**: Draft — pending sign-off
+**Status**: **Signed off** (2026-09-09) — skeptical-reviewer, at Opus under the
+Fallback clause; nothing blocking, OQ1 (share-alike) confirmed against the
+CC-BY-SA 4.0 legal text, three second-look notes folded in (OQ2 prose, the
+Keep-both PDF case, the T015 `.task` probe). Ready for implementation once the
+person approves the spec-conformance summary.
 
 Drafted in-session against the approved `spec.md` (Approved 2026-09-09) and
 the code as it stands on `004-themes` (from which `005-stock-photos` will
@@ -57,24 +61,17 @@ tighten it at sign-off, exactly as `002` deferred the reading of Reverb's
 §7's mapping filters those photos out of the export and the rest of the plan
 is unaffected.
 
-**OQ2 — When does *Find a photo…* disappear? (a criterion/decision
-reconciliation for the person).** Criterion 1 says "an item that already has
-**a photo** does not [show Find a photo…]." Decision 3 and the Core-behavior
-paragraph ("Owned photos and stock photos together") say an item that already
-has an **owned** photo does not offer it — "the action is for the blank case"
-— while P5 ("fetching again replaces it") and P8 ("Replacing it is a fresh,
-deliberate Find a photo…") require the action to still be reachable on an item
-that holds *only* a stock photo, so the stock photo can be replaced. These two
-readings differ in one user-visible way: on an item with a stock photo and no
-owned photo, does **Find a photo…** show (to replace the stock photo) or not?
-**The plan reads the gate as "no *owned* photo"** — Decision 3 + P5 + P8 are
-the authoritative, person-made items and only that reading makes "fetching
-again replaces it" reachable in one step. Criterion 1's looser "a photo" is
-read as "an owned photo." This is recorded for the person to confirm; the
-gating logic (§4, §6) and the UI test (T012) follow it. If the person prefers
-the strict reading (any photo hides the action; replacing means Remove then
-Find again), §4's `canFindPhoto` predicate changes to `photos.isEmpty` and one
-UI-test expectation flips — a contained change.
+**OQ2 — When does *Find a photo…* disappear? — RESOLVED by the person as
+spec Decision 6 (2026-09-09).** The gate is **"no *owned* photo"**: the action
+shows on a blank item or one whose only photo is a stock one (so a stock photo
+is replaced by a fresh Find a photo…, per P8), and hides once an item has an
+owned photo. The spec's criterion 1 was reworded to match ("no photo of the
+person's own … whether it is blank or holds only a stock photo"); the earlier
+"an item that already has a photo does not" wording is gone. The plan's
+`canFindPhoto` predicate (§4, §6) already implements this reading (no `.device`
+photo), so nothing changes — this note is retained only to record that the
+question was raised and settled, not left open. The strict alternative
+(`photos.isEmpty`) was declined by the person.
 
 ## Proposed at planning (Q1–Q12) — approved on plan approval unless overturned
 
@@ -490,7 +487,14 @@ photo's attribution, so the record snapshot (`ItemExportRecord`/
 `PDFComposer.drawEntry` draws `photoCredit`, when present, as a small
 secondary line beneath the photo box (CoreText from the credit string — the
 composer has no SwiftUI, so it composes the text itself). CSV export is
-untouched (criterion 8). **Testable claim** (`PDFComposerStockTests` /
+untouched (criterion 8). **Keep-both case (as built):** the export draws only
+the leading photo (`firstPhotoID`), and the credit is set only when *that*
+photo is `.fetched`. So on an item with an owned photo and a kept stock photo,
+the PDF shows the owned photo with no stock credit and the stock photo does
+not appear — consistent with `011`'s one-photo-per-entry export and with
+"owned leads everywhere." Criterion 8 targets the case where the fetched photo
+*is* the item's photo, which is satisfied; this is not a criterion-8 miss.
+**Testable claim** (`PDFComposerStockTests` /
 `ExportSchema` tests): an entry whose leading photo is `.fetched` carries the
 credit and the composer draws it; a device-photo entry carries no credit
 (mutation: always set `photoCredit` → the device-photo assertion red).
