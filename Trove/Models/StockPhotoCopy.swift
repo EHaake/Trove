@@ -31,6 +31,14 @@ nonisolated enum StockPhotoCopy {
     static let pickerTitle = "Choose a photo"
     static let emptyState = "No usable photos found for that name."
     static let searchAgain = "Search again"
+    /// The picker's status line while a search is in flight (the design's
+    /// analog of MarketCopy.searching). The ellipsis is `…` (\u{2026}).
+    static let searching = "Searching Wikimedia Commons\u{2026}"
+    /// The search field's placeholder when cleared.
+    static let searchPlaceholder = "Search Wikimedia Commons"
+    /// The picker's Cancel toolbar item. 005 stays self-contained from 002's
+    /// `MarketCopy.cancel`, so it carries its own.
+    static let cancel = "Cancel"
 
     // MARK: - The badge
 

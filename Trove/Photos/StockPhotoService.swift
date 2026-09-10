@@ -44,6 +44,15 @@ nonisolated struct StockPhotoCandidate: Sendable, Equatable, Identifiable {
     let attribution: StockPhotoAttribution   // author, licence, file page
 }
 
+/// The result of downloading a chosen candidate: the stored bytes and the
+/// attribution the host records beside them (spec P4). The picker's view model
+/// hands this back from `download(_:)`; the host (T009/T010) decides what to do
+/// with it — this is only the fetched pair.
+nonisolated struct StockPhotoDownload: Sendable, Equatable {
+    let imageData: Data
+    let attribution: StockPhotoAttribution
+}
+
 nonisolated enum StockPhotoError: Error, Equatable, Sendable {
     /// No response at all — offline, DNS, a timeout (spec P8 sibling).
     case unreachable

@@ -16,6 +16,14 @@ struct StockPhotoCopyTests {
         #expect(StockPhotoCopy.badge == "Stock photo")
     }
 
+    /// The picker's status line, search-field placeholder and Cancel — added
+    /// at T008 for the picker sheet (item A), pinned whole like the rest.
+    @Test func thePickerSheetStrings() {
+        #expect(StockPhotoCopy.searching == "Searching Wikimedia Commons…")
+        #expect(StockPhotoCopy.searchPlaceholder == "Search Wikimedia Commons")
+        #expect(StockPhotoCopy.cancel == "Cancel")
+    }
+
     @Test func theNoticeStrings() {
         #expect(StockPhotoCopy.noticeBody == "Finding a photo sends this item’s name to Wikimedia Commons — nothing else about it. The photo you pick is stored on your device and syncs with your other devices, like a photo you take.")
         #expect(StockPhotoCopy.noticeLinkTitle == "See the privacy policy")

@@ -291,7 +291,7 @@ with a continuation prompt. Everything the person reads is plain language.
   weight as the nearest analog to the artboard's numeric stroke (SF Symbols
   expose no stroke width — the `MarketMatchView` glyph idiom).
 
-- [ ] **T008 — The notice + candidate-picker sheet, and the picker view model.**
+- [x] **T008 — The notice + candidate-picker sheet, and the picker view model.**
   Per plan §4 (`PhotoFetchViewModel`) and §6 (the sheet). New
   `Trove/ViewModels/PhotoFetchViewModel.swift` (`query`, `phase`,
   `isDownloading`, `search()` seeded and submit-driven, `download(_:)`; reentry
@@ -308,6 +308,31 @@ with a continuation prompt. Everything the person reads is plain language.
   candidate composes `StockPhotoCredit`; `AsyncImage(` in exactly one photos
   view file; the identifiers.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-09-09):** `PhotoFetchViewModel` (mirrors `MarketMatchViewModel`;
+  `.failed` valueless — one stock failure message; `download(_:)` returns
+  `StockPhotoDownload?`), `PhotoNoticeView` (002's notice shape, `StockPhotoCopy`
+  copy, real privacy `Link`, generic word-free chrome reused per plan not
+  duplicated) and `PhotoPickerSheetView` (`NavigationStack`, `SearchField`,
+  seeded `.task` + `.onSubmit`, inline status line, 2-col `LazyVGrid` of
+  `AsyncImage` cells with the **compact** `StockPhotoCredit` beneath,
+  `EmptyStateView` empty/failed with **Search again**, grid-level downloading
+  spinner). Settled up front: (A) `StockPhotoCopy.searching`/`searchPlaceholder`/
+  `cancel` added + pinned; (B) `StockPhotoDownload` value type in
+  `StockPhotoService.swift`; (C) `StockPhotoCredit` gained `Style{.full,.compact}`
+  (`.full` unchanged, T007 tests green) so the grid composes the one component;
+  (D) notice reuses `.marketFilledChrome`/`.marketOutlinedChrome`.
+  **Verify:** 1211 tests / 164 suites passed, exit 0. **Mutations:** append to
+  the query before the search → seed/trim/reentry tests red; notice `Link`→
+  `Button` → notice-link scan red; `AsyncImage (` spaced → both the photos-dir
+  scan and the 002 network-image guard red; all reverted.
+  **Deviation (outside footprint, required consequence):** T008 legitimately
+  adds a **second** sanctioned network-image surface, so
+  `MarketWiringTests.onlyThePickerFetchesAnImageFromTheNetwork` (a 002 guard
+  asserting exactly one `AsyncImage` file under `Trove/Views`) was **broadened**
+  — not weakened — to the exact ordered pair `[MarketMatchView,
+  PhotoPickerSheetView]`; a third fetcher or a dropped fetch still goes red
+  (confirmed by the spaced-`AsyncImage` mutation). Orchestrator reviewed the
+  edit: teeth intact. Carried to the phase review.
 
 - [ ] **T009 — Detail screens: Find a photo…, storing the pick, badge + credit.**
   Per plan §6 (the hosting view models, detail; the carousel). Both
@@ -496,6 +521,7 @@ settled.
 
 | T006 design pass | — (person + `/design`) | — | brief written (Claude Code); 11 artboards approved + saved; tokens section written; no new copy escalated |
 | T007 implement | opus (`sdd-implementer`) | ~49k | shared `StockPhotoBadge` + `StockPhotoCredit`; 5 guards, 2 mutations verified + 1 caught in dev; T001 no-author fallback covered; 1196 tests |
+| T008 implement | opus (`sdd-implementer`) | ~107k | `PhotoFetchViewModel` + notice/picker sheet views; `StockPhotoCredit` `.compact`; `StockPhotoDownload`; 3 copy strings; 3 mutations verified; broadened (not weakened) the 002 AsyncImage guard for the second sanctioned picker; 1211 tests |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the

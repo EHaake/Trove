@@ -17,16 +17,55 @@ import SwiftUI
 /// (`StockPhotoCopy.creditLinkHint`), and the `stockphoto.credit.link`
 /// identifier plan §6 names for T012.
 struct StockPhotoCredit: View {
+    /// Which credit this is. `.full` is the linked hero credit (unchanged from
+    /// T007); `.compact` is the grid cell's `author · licence` — no link, no
+    /// "Photo:" prefix — the `Main` artboard draws under each candidate.
+    enum Style { case full; case compact }
+
     let attribution: StockPhotoAttribution
+    var style: Style = .full
 
     @Environment(\.theme) private var theme
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            leadingText
-            link
+        switch style {
+        case .full:
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                leadingText
+                link
+            }
+        case .compact:
+            compact
         }
     }
+
+    /// The grid cell's credit: the author takes the slack and truncates, a
+    /// quiet separator, and the licence in mono that never shrinks. No link,
+    /// no "Photo:" prefix — the whole cell is the tap target, and the source
+    /// link lives on the detail hero (item C of T008's brief).
+    private var compact: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text(attribution.author)
+                .font(theme.typography.secondary)
+                .foregroundStyle(theme.colors.textLabelSecondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(StockPhotoCopy.creditSeparator)
+                .font(theme.typography.secondary)
+                .foregroundStyle(theme.colors.textQuiet)
+                .padding(.horizontal, Self.compactSeparatorPadding)
+
+            Text(attribution.licenseName)
+                .font(theme.typography.monoMeta)
+                .foregroundStyle(theme.colors.textMonoMeta)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+    }
+
+    /// The `·`'s side padding in the compact form (the artboard's `5px`).
+    private static let compactSeparatorPadding: CGFloat = 5
 
     /// "Photo: {author} · {licence} · " — everything up to the linked source,
     /// with the licence run in mono. Split from the assembled plain-text credit

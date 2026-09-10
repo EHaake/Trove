@@ -332,13 +332,16 @@ struct MarketWiringTests {
     }
 
     /// Q17: a candidate's thumbnail is fetched by `AsyncImage` through the
-    /// OS's shared URL cache — transport, not app storage. Exactly one file
-    /// under `Trove/Views` may do it, so a second surface can't start
-    /// fetching images without this going red.
+    /// OS's shared URL cache — transport, not app storage. Only the two
+    /// candidate pickers may do it — the Reverb match picker (002) and the
+    /// stock-photo picker (005) — so a *third* surface can't start fetching
+    /// images without this going red. 005's own `PhotoPickerWiringTests` holds
+    /// the stock picker to being the only fetcher under `Trove/Views/Photos`.
     @Test func onlyThePickerFetchesAnImageFromTheNetwork() throws {
         let viewFiles = try SourceScan.swiftFiles(under: "Trove/Views", minimum: 20)
         let fetchers = try viewFiles.filter { try SourceScan.production($0).contains("AsyncImage(") }
-        #expect(fetchers == [Self.picker], "the files fetching images are \(fetchers)")
+        let expected = ["Trove/Views/Market/MarketMatchView.swift", "Trove/Views/Photos/PhotoPickerSheetView.swift"]
+        #expect(fetchers == expected, "the files fetching images are \(fetchers)")
     }
 
     @Test func everyTargetOnTheSheetCarriesTheIdentifierThePlanNames() throws {
