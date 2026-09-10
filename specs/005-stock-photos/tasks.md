@@ -201,7 +201,7 @@ with a continuation prompt. Everything the person reads is plain language.
   `nonisolated(unsafe) let` (UserDefaults is thread-safe; the `SyncMonitor`
   precedent) — the sanctioned pattern for a `UserDefaults`-backed store here.
 
-- [ ] **T005 — The fetch/store logic and the service spy.**
+- [x] **T005 — The fetch/store logic and the service spy.**
   Per plan §4. Add to `PhotoSelection`: `canFindPhoto(_:)`,
   `addingFetched(_:to:)` (at most one `.fetched`, appended after `.device`
   photos, renumbered). `StockPhotoServiceSpy` in `TestSupport` (scripted
@@ -213,6 +213,14 @@ with a continuation prompt. Everything the person reads is plain language.
   before device photos → the leads test red.
   **Verify:** `scripts/verify.sh` green; mutations recorded. **Phase 1 closes
   here — pause for the person.**
+  **Done (2026-09-09):** `PhotoSelection.canFindPhoto(_:)` (no `.device` photo)
+  and `addingFetched(_:to:)` (drops the existing `.fetched`, appends after
+  `.device` photos, renumbers) — pure, store-free. `StockPhotoServiceSpy` added
+  to `TestSupport` (the `MarketServiceSpy` scripted-`Result`/`Mutex` shape,
+  exhausted script throws). New `PhotoSelectionStockTests`. **Verify:** 1190
+  tests / 161 suites, exit 0. **Mutations:** removal skipped → two `.fetched`
+  (and the orphan test) red; ordering reversed → owned-leads test red; both
+  reverted. No deviations.
 
 ## Phase 2 — Design
 
@@ -424,6 +432,7 @@ settled.
 | T003 fix (ported test) | opus (`sdd-implementer`) | ~27k | added falsifiable classifier-table assertion, mutation-verified; classify unchanged |
 | T003 re-review | opus (`skeptical-reviewer`) | ~25k | **resolved**; nothing open |
 | T004 implement | opus (`sdd-implementer`) | ~58k | full copy + notice store; acknowledge() mutation verified; 1182 tests (phase review covers) |
+| T005 implement | opus (`sdd-implementer`) | ~53k | PhotoSelection fetch/store rules + StockPhotoServiceSpy; both mutations verified; 1190 tests |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the

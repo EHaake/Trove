@@ -806,6 +806,59 @@ nonisolated final class GatedMarketServiceSpy: MarketService {
     }
 }
 
+// MARK: - Stock photo service double (005)
+
+/// Answers `StockPhotoService` from scripts — one result per expected call, in
+/// order — and records every call, in the `MarketServiceSpy` shape. An
+/// **exhausted script throws** `ScriptExhausted`, so a view model that calls
+/// once more than the test scripted fails on that call rather than passing on a
+/// repeated answer. Capture behind a `Mutex` because the requirements are
+/// `@concurrent`.
+nonisolated final class StockPhotoServiceSpy: StockPhotoService {
+    enum Call: Equatable, Sendable {
+        case search(String)
+        case imageData(URL)
+    }
+
+    struct ScriptExhausted: Error, Equatable {
+        let call: Call
+    }
+
+    private struct State {
+        var calls: [Call] = []
+        var search: [Result<[StockPhotoCandidate], StockPhotoError>]
+        var imageData: [Result<Data, StockPhotoError>]
+    }
+
+    private let state: Mutex<State>
+
+    init(
+        search: [Result<[StockPhotoCandidate], StockPhotoError>] = [],
+        imageData: [Result<Data, StockPhotoError>] = []
+    ) {
+        state = Mutex(State(search: search, imageData: imageData))
+    }
+
+    var calls: [Call] { state.withLock { $0.calls } }
+
+    @concurrent func searchPhotos(named query: String) async throws -> [StockPhotoCandidate] {
+        try next(.search(query)) { $0.search.isEmpty ? nil : $0.search.removeFirst() }
+    }
+
+    @concurrent func imageData(from url: URL) async throws -> Data {
+        try next(.imageData(url)) { $0.imageData.isEmpty ? nil : $0.imageData.removeFirst() }
+    }
+
+    private func next<T>(_ call: Call, _ pop: @Sendable (inout State) -> Result<T, StockPhotoError>?) throws -> T {
+        let scripted = state.withLock { state -> Result<T, StockPhotoError>? in
+            state.calls.append(call)
+            return pop(&state)
+        }
+        guard let scripted else { throw ScriptExhausted(call: call) }
+        return try scripted.get()
+    }
+}
+
 // MARK: - The figure, before Amendment B's trimmed bounds
 
 extension MarketFigure {
