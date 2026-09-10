@@ -56,7 +56,7 @@ with a continuation prompt. Everything the person reads is plain language.
 
 ## Phase 1 — Foundations, no UI (**foundational**)
 
-- [ ] **T001 — The `Photo` attribution fields, the schema change. `review: per-task`.**
+- [x] **T001 — The `Photo` attribution fields, the schema change. `review: per-task`.**
   Per plan §1. Add `attributionAuthor: String?`, `attributionLicense: String?`,
   `attributionSourceURL: String?` to `Photo` (after `sortOrder`, each
   defaulted), plus the `Photo.attribution` accessor, the `Photo.fetched(...)`
@@ -68,6 +68,24 @@ with a continuation prompt. Everything the person reads is plain language.
   field non-optional without a default → `CloudKitSchemaTests` names it → revert.
   **Verify:** `scripts/verify.sh` green with the new tests; `CloudKitSchemaTests`
   green; the red run recorded in the Done note.
+  **Done (2026-09-09):** three optional-with-default fields added after
+  `sortOrder`; `Photo.attribution` accessor (nil unless `.fetched`; defensive
+  fallbacks — nil author → "Wikimedia Commons", nil licence → "", nil/unparseable
+  URL → Commons main page) and `Photo.fetched(...)` builder in a `Photo`
+  extension; minimal `StockPhotoAttribution` (`Sendable, Equatable`) in new
+  `Trove/Photos/StockPhotoService.swift` (`Equatable` a flagged in-footprint
+  add). New `Trove/Photos/` is auto-membered — `Trove` is a
+  `PBXFileSystemSynchronizedRootGroup`, no `.pbxproj` edit (holds for later
+  `Trove/Photos/` tasks). **Red run:** `attributionLicense` made
+  non-optional-without-default → `CloudKitSchemaTests.schemaMeetsCloudKitRequirements()`
+  red (`SwiftDataError.loadIssueModelContainer`, CloudKitSchemaTests.swift:23) →
+  reverted → green. **Verify (orchestrator re-ran):** 1150 tests / 154 suites
+  passed, exit 0. **Review:** skeptical-reviewer signed off, nothing blocking.
+  Two non-blocking notes: red run demonstrates additive-ness directly for one
+  field and by identical shape for the other two (low risk); the accessor's
+  defensive fallback branches are untested here → **carried to T007/T009**, the
+  credit-rendering tasks, which should test the no-author → "Wikimedia Commons"
+  branch.
 
 - [ ] **T002 — The fixture script and the recorded fixtures. [person: runs it]**
   Per plan §2 (Fixtures). New `scripts/record-wikimedia-fixtures.sh` (curl + a
@@ -340,6 +358,8 @@ settled.
 |---|---|---|---|
 | Plan + tasks draft | opus (`sdd-planner`) | ~200k | this document; Fallback clause; surfaced OQ2 → person (Decision 6) |
 | Plan sign-off | opus (`skeptical-reviewer`) | ~71k (55k in / 4k out) | **signed off, nothing blocking**; OQ1 confirmed against CC-BY-SA 4.0 text; 4 second-look notes (3 folded into plan/tasks now, note 4 optional below) |
+| T001 implement | opus (`sdd-implementer`) | ~39k | `Photo` schema fields + accessor/builder + tests; red run recorded; no `.pbxproj` edit |
+| T001 review (per-task) | opus (`skeptical-reviewer`) | ~30k | signed off, nothing blocking; 2 non-blocking notes (fallback-branch tests carried to T007/T009) |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the
