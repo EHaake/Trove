@@ -387,7 +387,11 @@ with a continuation prompt. Everything the person reads is plain language.
   probe, never by inferring from the rendered grid.
   **Verify:** the record written into the Done note with what was seen,
   including the `searchPhotos` probe's firing count per action; both suites
-  green twice.
+  green twice. **Also (Phase 1 review note 2):** if a Wikimedia file dual-licensed
+  GFDL **and** CC-BY-SA turns up in a live search, confirm it is offered and
+  credited by its CC-BY-SA licence (plan §3/Q4 — no fixture covers this; it
+  depends on the live `License` code); record what the API returned. An honest
+  "not encountered in the device pass" is acceptable.
 
 - [ ] **T016 — Close-out.**
   Criteria 1–11 ticked in `spec.md` with citations, honest partials named (the
@@ -433,6 +437,23 @@ settled.
 | T003 re-review | opus (`skeptical-reviewer`) | ~25k | **resolved**; nothing open |
 | T004 implement | opus (`sdd-implementer`) | ~58k | full copy + notice store; acknowledge() mutation verified; 1182 tests (phase review covers) |
 | T005 implement | opus (`sdd-implementer`) | ~53k | PhotoSelection fetch/store rules + StockPhotoServiceSpy; both mutations verified; 1190 tests |
+| Phase 1 review | opus (`skeptical-reviewer`) | ~86k | **signed off, nothing blocking**; foundation composes; 4 non-blocking notes (below) |
+
+**Phase 1 review notes (non-blocking, carried forward):**
+1. `maxImageBytes` (~8 MB) is a bare literal in `WikimediaPhotoService.init`'s
+   default and again in the test helper's default, rather than a `WikimediaAPI`
+   constant like the other caps → small "one home" cleanup, left for the
+   pre-merge sweep (T016).
+2. Plan §3/Q4's dual-licence claim (a file licensed GFDL **and** CC-BY-SA is
+   offered, credited by CC-BY-SA) has no fixture and can't be settled by the
+   unit suite — it depends on which `License` code the live API returns. **→
+   added as a T015 device-pass check** (below); recorded against plan §3 as an
+   untested claim until then.
+3. `PhotoNoticeStore`'s "a read that fails reads as not acknowledged"
+   doc-comment implies an error branch `UserDefaults.bool` can't take; the
+   fail-safe direction is right by construction — doc-comment nit for the sweep.
+4. `StockPhotoServiceSpy` has only its exhaustion path tested this phase (by
+   design; the VM tests in T009/T010 exercise the rest).
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the
