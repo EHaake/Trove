@@ -859,6 +859,22 @@ nonisolated final class StockPhotoServiceSpy: StockPhotoService {
     }
 }
 
+/// An in-memory `PhotoNoticeStore` for the detail view models' photo tests:
+/// the flag starts wherever the test sets it, `acknowledge()` flips it, and a
+/// test reads it straight back — no `UserDefaults`, no device state, nothing to
+/// tear down. Behind a `Mutex` because the protocol is `Sendable`.
+nonisolated final class PhotoNoticeStoreFake: PhotoNoticeStore {
+    private let acknowledged: Mutex<Bool>
+
+    init(acknowledged: Bool = false) {
+        self.acknowledged = Mutex(acknowledged)
+    }
+
+    var hasAcknowledged: Bool { acknowledged.withLock { $0 } }
+
+    func acknowledge() { acknowledged.withLock { $0 = true } }
+}
+
 // MARK: - The figure, before Amendment B's trimmed bounds
 
 extension MarketFigure {

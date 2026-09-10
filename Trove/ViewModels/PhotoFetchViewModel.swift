@@ -1,6 +1,17 @@
 import Foundation
 import Observation
 
+/// Which phase the stock-photo sheet is showing (spec Decision 14, plan §6):
+/// the one-time notice in front of the picker, or the picker itself. Two
+/// phases only — unlike the market sheet's four — because the download and the
+/// value step have no place here: the pick's bytes are handed straight to the
+/// host's `store(_:)`. Mirrors `MarketSheetStep`'s shape, trimmed to the two
+/// the photo flow needs.
+enum PhotoSheetStep: Equatable, Sendable {
+    case notice
+    case pick
+}
+
 /// The stock-photo picker's view model (spec 005 criterion 2, plan §4): a
 /// query, a phase, and two intents — search Wikimedia Commons for photos by
 /// name, and download the chosen one.

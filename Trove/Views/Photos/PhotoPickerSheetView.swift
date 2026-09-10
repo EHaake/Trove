@@ -21,7 +21,7 @@ import SwiftUI
 /// detents and presents this `NavigationStack` content.
 struct PhotoPickerSheetView: View {
     @State private var viewModel: PhotoFetchViewModel
-    private let pick: (StockPhotoCandidate) async -> Void
+    private let store: (StockPhotoDownload) -> Void
     private let cancel: () -> Void
 
     @Environment(\.theme) private var theme
@@ -29,13 +29,18 @@ struct PhotoPickerSheetView: View {
     /// The view model is made by the host screen, so the seed and the service
     /// both come from there. Held in `@State`, so the sheet's body being
     /// re-evaluated doesn't throw away a search in flight.
+    ///
+    /// The download runs inside the sheet's own view model (so `isDownloading`
+    /// drives the spinner here); the resulting bytes are handed to the host's
+    /// `store` to persist. A failed download hands back nothing and stores
+    /// nothing (spec criterion 7).
     init(
         viewModel: PhotoFetchViewModel,
-        pick: @escaping (StockPhotoCandidate) async -> Void,
+        store: @escaping (StockPhotoDownload) -> Void,
         cancel: @escaping () -> Void
     ) {
         _viewModel = State(initialValue: viewModel)
-        self.pick = pick
+        self.store = store
         self.cancel = cancel
     }
 
@@ -156,10 +161,16 @@ struct PhotoPickerSheetView: View {
 
     /// One candidate: the square fill-cropped image and, beneath it, the
     /// compact `author · licence` credit. The whole cell is the tap target;
-    /// tapping downloads the storage-size image (`pick`).
+    /// tapping downloads the storage-size image and, on success, hands its
+    /// bytes to the host to store. A failed download (a nil result) stores
+    /// nothing (spec criterion 7).
     private func cell(_ candidate: StockPhotoCandidate) -> some View {
         Button {
-            Task { await pick(candidate) }
+            Task {
+                if let download = await viewModel.download(candidate) {
+                    store(download)
+                }
+            }
         } label: {
             VStack(alignment: .leading, spacing: Self.cellCreditGap) {
                 image(candidate)

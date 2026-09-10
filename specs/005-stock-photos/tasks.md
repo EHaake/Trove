@@ -334,7 +334,7 @@ with a continuation prompt. Everything the person reads is plain language.
   (confirmed by the spaced-`AsyncImage` mutation). Orchestrator reviewed the
   edit: teeth intact. Carried to the phase review.
 
-- [ ] **T009 — Detail screens: Find a photo…, storing the pick, badge + credit.**
+- [x] **T009 — Detail screens: Find a photo…, storing the pick, badge + credit.**
   Per plan §6 (the hosting view models, detail; the carousel). Both
   `ItemDetailViewModel` and `WishlistDetailViewModel` gain `photoService`/
   `noticeStore` injection, the shared state and intents (`findPhoto`,
@@ -353,6 +353,33 @@ with a continuation prompt. Everything the person reads is plain language.
   store on a failed download → red; show the badge for a device photo → red.
   **Verify:** `scripts/verify.sh` green; mutations recorded; the states seen by
   eye on the simulator against the artboards (named in the Done note).
+  **Done (2026-09-09):** both detail VMs gained `photoService`/`noticeStore`
+  injection and the photo members (named `findPhoto`/`continuePhotoNotice`/
+  `declinePhotoNotice`/`makePhotoFetchViewModel`/`isFindingPhoto`/`photoSheetStep`/
+  `canFindPhoto`/`store(_:)`) to avoid colliding with the existing Market-sheet
+  members; `store(_:)` builds `Photo.fetched`, `addingFetched`, deletes orphans
+  (no leaked blob), one save, `updatedAt` **owned only** (Decision 24 — the sole
+  divergence), rollback+reload on a refused save. Both detail views attach a
+  second `.sheet` (notice/picker) and an outlined-brass **Find a photo…** action
+  (id `stockphoto.find`) below the carousel, shown iff `canFindPhoto`.
+  `PhotoPickerSheetView` refined: the cell downloads via its fetch VM (driving
+  the spinner) and hands a `StockPhotoDownload` to a host `store` closure — so a
+  nil (failed) download stores nothing (criterion 7). `PhotoCarousel` gained the
+  badge overlay + full credit line beneath the hero for a `.fetched` current
+  photo, and its a11y value announces the representative-image wording + credit.
+  **Verify:** 1227 tests / 167 suites passed, exit 0; T007/T008 suites still
+  green. **Mutations:** orphan-delete skipped → replaced-stock leaks a second
+  row (2nd context) red; `download` returns bytes on `.failure` → failed-download
+  stores-nothing tests red; badge gate `!= nil` → badge-only-for-fetched red;
+  (bonus) credit gated off → credit-adds-height red; all reverted.
+  **Deviations:** (1) the carousel badge render test detects the badge's **light
+  "STOCK PHOTO" label pixels**, not the dark capsule — `ImageRenderer` doesn't
+  render the paging-`ScrollView` hero image (no container size), so both photos
+  render uniformly dark; the label is the reliable differentiator (the bundle's
+  sanctioned fallback, mutation-verified). (2) kept the explicit
+  `modelContext.insert(photo)` in `store` (the second-context test confirms one
+  row lands). Artboards built to: `ItemStockHeroDark/Light`, `ItemOwnedPlusStock`
+  — for the person's phase-pause eye check.
 
 - [ ] **T010 — Forms: Find a photo…, the in-memory append, the replace/keep prompt.**
   Per plan §6 (the hosting view models, form; the replace/keep prompt). Both
@@ -522,6 +549,7 @@ settled.
 | T006 design pass | — (person + `/design`) | — | brief written (Claude Code); 11 artboards approved + saved; tokens section written; no new copy escalated |
 | T007 implement | opus (`sdd-implementer`) | ~49k | shared `StockPhotoBadge` + `StockPhotoCredit`; 5 guards, 2 mutations verified + 1 caught in dev; T001 no-author fallback covered; 1196 tests |
 | T008 implement | opus (`sdd-implementer`) | ~107k | `PhotoFetchViewModel` + notice/picker sheet views; `StockPhotoCredit` `.compact`; `StockPhotoDownload`; 3 copy strings; 3 mutations verified; broadened (not weakened) the 002 AsyncImage guard for the second sanctioned picker; 1211 tests |
+| T009 implement | opus (`sdd-implementer`) | ~198k | both detail VMs + views photo plumbing; `store(_:)` (owned-only `updatedAt`); `PhotoPickerSheetView` `store`-closure refinement; `PhotoCarousel` badge/credit/a11y; 4 mutations verified; carousel badge test keys off label pixels (ImageRenderer won't render the paging hero); 1227 tests |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the

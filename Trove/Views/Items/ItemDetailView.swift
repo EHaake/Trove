@@ -55,6 +55,13 @@ struct ItemDetailView: View {
         .sheet(isPresented: $viewModel.isFindingMatch, onDismiss: viewModel.load) {
             matchSheet
         }
+        // 005 (plan §6): a second sheet, two phases — the one-time notice in
+        // front of the picker, or the picker itself. Modelled on the market
+        // sheet above but simpler, and a separate `isPresented` flag so the
+        // two never fight over one binding.
+        .sheet(isPresented: $viewModel.isFindingPhoto, onDismiss: viewModel.load) {
+            photoSheet
+        }
         // An alert rather than a confirmation dialog: presented from a toolbar
         // button, the dialog renders as an anchored popover that drops the
         // cancel button entirely, leaving "Delete" as the only thing to press
@@ -131,6 +138,43 @@ struct ItemDetailView: View {
         }
     }
 
+    /// The stock-photo sheet's two phases (plan §6): the one-time notice, or
+    /// the picker. Branching the content rather than swapping presentations
+    /// means no binding is written mid-flight; swipe-down over the notice is
+    /// Not now by construction, since only `continuePhotoNotice()` acknowledges.
+    private var photoSheet: some View {
+        Group {
+            switch viewModel.photoSheetStep {
+            case .notice:
+                PhotoNoticeView(
+                    continueAction: viewModel.continuePhotoNotice,
+                    declineAction: viewModel.declinePhotoNotice
+                )
+            case .pick:
+                PhotoPickerSheetView(
+                    viewModel: viewModel.makePhotoFetchViewModel(),
+                    store: { viewModel.store($0) },
+                    cancel: { viewModel.isFindingPhoto = false }
+                )
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    /// Find a photo… — the fetches treatment (outlined brass), the same
+    /// register as Find on Reverb…, reusing the generic word-free chrome
+    /// (plan §6). Sits directly beneath the hero, shown only while
+    /// `canFindPhoto` (no owned photo yet).
+    private var findPhotoAction: some View {
+        Button(action: viewModel.findPhoto) {
+            Text(StockPhotoCopy.findAPhoto)
+                .font(theme.typography.button)
+                .marketOutlinedChrome(fills: true)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("stockphoto.find")
+    }
+
     private func content(for item: Item) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
@@ -138,6 +182,10 @@ struct ItemDetailView: View {
                     photos: viewModel.photos,
                     selectedIndex: $selectedPhotoIndex
                 )
+
+                if viewModel.canFindPhoto {
+                    findPhotoAction
+                }
 
                 VStack(alignment: .leading, spacing: 7) {
                     Text(item.categorySegments.joined(separator: " · ")).monoLabel()
