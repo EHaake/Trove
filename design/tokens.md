@@ -494,6 +494,64 @@ they are the same two tones the owned row's "vs paid" delta already
 wears, deliberately: one voice for "up" and one for "down" on the same
 line.
 
+### Stock photos (`005`)
+
+Source: `design/elements/005-stock-photos/` — eleven `.dc.html` artboards
+and their PNGs, approved 2026-09-09 (spec `005` Design requirements; the
+pass ran through `/design` against `design/brief.md`, this file, and the
+shipped detail/list screens). Every string is a `StockPhotoCopy` string.
+The picker sheet **reuses `002`'s candidate-picker sheet shape** (the
+`background` fill, `12px` top radius, `36×5` grabber at ivory 30 %,
+medium/large detents, the system Cancel/title bar, the `rgba(0,0,0,0.45)`
+scrim) and its notice phase is `002`'s notice exactly with `005`'s copy —
+so the rows below cover only what is new: the **image-first results grid**,
+the **stock-photo badge**, the **credit line**, and the **list-row mark**.
+"As implemented" columns are filled by T007–T013 where the build departs.
+
+**The candidate picker — the results grid** (`Main.dc.html`, large detent).
+The genuinely new surface: the photo is the choice, the credit secondary.
+
+| Property | Value | As implemented |
+|---|---|---|
+| Sheet bar | Cancel (`accentBrass` `17px`) left; title "Choose a photo" (Archivo 600 `20px`) centred; `52px` bar, `4px` top margin under the grabber | |
+| Search field | the shared `SearchField` plate, `40px`, `0 14px` padding, `10px` gaps; magnifier `15px` ivory 40 %; text IBM Plex Sans `13.5px` `textPrimary`; clear glyph ivory 40 %. Seeded with the item's name; searches on submit only; placeholder (proposed) "Search Wikimedia Commons" when cleared | |
+| Status line | IBM Plex Mono `11.5px` `textQuiet` + the `12px` brass arc spinner, `8px` gap; text (proposed) "Searching Wikimedia Commons…" | |
+| Grid | 2 columns, column-gap `12px`, row-gap `16px`; content padding `16px 24px 24px` | |
+| Cell image | square (`aspect-ratio 1/1`), **fill-cropped**, `2px` radius, `surfaceInset` ground with `RowThumbnail`'s hairline photo-glyph placeholder while loading; the whole cell is the tap target | |
+| Cell credit | `7px` under the image, a baseline flex row, `11px` line-height `1.3`: **author** IBM Plex Sans `11px` `textLabelSecondary` (55 %), ellipsis-truncated, takes the slack; separator `·` ivory 35 % with `5px` side padding; **licence** IBM Plex Mono `10.5px` `textMonoMeta` (45 %), never shrinks. The *compact* credit (author · licence) — the full linked form is on the detail screen | |
+| Downloading cell | the tapped cell dims under a `rgba(20,19,17,0.58)` overlay with a centred brass arc spinner; its credit dims to `0.5`; the rest of the grid is unchanged | |
+| Empty / failed | `EmptyStateView` — `34px` light glyph ivory 30 %, Archivo 600 `19px` headline, the outlined **Search again** at the component's capsule. Empty headline `StockPhotoCopy.emptyState`; failed headline `StockPhotoCopy.failure`. No hint line (the design declined one) | |
+
+**The stock-photo badge** (`ItemStockHeroDark/Light.dc.html`,
+`ItemOwnedPlusStock.dc.html`). A capsule over the fetched photo, drawn to
+hold over both a light and a dark image by carrying its own near-opaque
+dark ground — never on an owned photo.
+
+| Property | Value | As implemented |
+|---|---|---|
+| Chip | `top:12px left:12px` over the photo; inline-flex, gap `5px`, padding `5px 9px 5px 8px`, radius `999`; ground `rgba(23,24,26,0.9)` (≈ `background` at 90 %); `1px` border ivory 14 % | |
+| Glyph | a small "photo-on-photo" mark, `12×12`, `1.4` stroke, ivory 72 % | |
+| Label | IBM Plex Mono 500 `10px`, tracked `0.12em`, ivory 75 %, the app's all-caps label idiom — so `StockPhotoCopy.badge` "Stock photo" renders **"STOCK PHOTO"** (uppercased by style, not a copy change); a11y label "Representative stock image" | |
+| Hero | the photo area is `240px`, `3px` radius, the plate shadow set; the badge is the only chrome over it | |
+
+**The credit line** (beneath the hero; `ItemStockHero*`). The full,
+linked form — distinct from the grid's compact credit.
+
+| Property | Value | As implemented |
+|---|---|---|
+| Line | `12px` under the photo; IBM Plex Sans `12.5px`, line-height `1.5`, ivory 55 %; "Photo: {author} · {licence} · {Wikimedia Commons}" | |
+| Licence run | IBM Plex Mono `11.5px` ivory 45 % | |
+| Link | "Wikimedia Commons" in `accentBrass` 500, `white-space:nowrap`, with the `arrow.up.right` glyph (`11px`, `1.7` stroke) `2px` after — the app's "leaves the app" external-link convention; opens the Commons file page; hint "Opens Wikimedia Commons in your browser" | |
+
+**The list-row stock mark** (`WishlistStockMarks.dc.html`,
+`ItemListStockMarks.dc.html`). A tiny corner mark on the row thumbnail,
+only when the leading photo is the fetched one (no owned photo); a row
+with an owned photo leading shows no mark.
+
+| Property | Value | As implemented |
+|---|---|---|
+| Mark | `top:4px left:4px` over the thumbnail; `16×16`, `3px` radius; ground `rgba(23,24,26,0.9)`, `1px` border ivory 16 %; the same photo-on-photo glyph, centred | |
+
 ## Corner radii
 
 | Element | Radius |

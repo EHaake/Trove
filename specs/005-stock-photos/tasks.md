@@ -224,7 +224,7 @@ with a continuation prompt. Everything the person reads is plain language.
 
 ## Phase 2 — Design
 
-- [ ] **T006 — The Design pass. [person: invokes `/design`, approves]**
+- [x] **T006 — The Design pass. [person: invokes `/design`, approves]**
   Per spec's Design requirements (the `002` Decision 10 pattern). Claude Code
   writes the `/design` prompt: the two new surfaces — the **candidate picker**
   (an image-first grid/list with a credit under each) and the **stock-photo
@@ -239,6 +239,24 @@ with a continuation prompt. Everything the person reads is plain language.
   that is a spec question — escalate, don't absorb.**
   **Verify:** artboards and PNGs committed; the tokens section written; the
   person's approval recorded in the Done note. **Phase 2 closes here.**
+  **Done (2026-09-09):** Claude Code wrote the `/design` brief
+  (`design/elements/005-stock-photos/brief.md`); the person ran `/design`,
+  iterated, **approved** ("I like them"), and saved 11 `.dc.html` artboards +
+  PNGs + `canvas.json` into the folder — picker (notice, searching, results
+  grid `Main`, downloading, empty, failed) and presentation (stock hero over
+  dark + light, owned-leading-plus-kept-stock, both lists' stock marks). The
+  grid is image-first: a 2-column square-cropped grid with a compact
+  author·licence credit under each. `design/tokens.md` gained the "Stock photos
+  (`005`)" section from the artboards. **No new copy escalated** — every string
+  matches `StockPhotoCopy`. Two notes carried to the screen tasks:
+  - **T008:** the design uses two functional strings not yet in `StockPhotoCopy`
+    — `searching` = "Searching Wikimedia Commons…" and a field placeholder
+    "Search Wikimedia Commons" (Wikimedia analogs of `002`'s exact strings,
+    adopted by the approved design, so settled, not a product escalation) — add
+    them to `StockPhotoCopy` when the picker view lands.
+  - **T007:** the badge renders "STOCK PHOTO" (uppercase) via the app's mono
+    all-caps label style; keep `StockPhotoCopy.badge` = "Stock photo" and
+    uppercase in the view (`.textCase(.uppercase)`), not in the string.
 
 ## Phase 3 — Screens
 
@@ -454,6 +472,8 @@ settled.
    fail-safe direction is right by construction — doc-comment nit for the sweep.
 4. `StockPhotoServiceSpy` has only its exhaustion path tested this phase (by
    design; the VM tests in T009/T010 exercise the rest).
+
+| T006 design pass | — (person + `/design`) | — | brief written (Claude Code); 11 artboards approved + saved; tokens section written; no new copy escalated |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the

@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#17181A;--surface:#201F1D;--inset:#26272A;--divider:#3A3B3E;--brass:#C79A56;--brassHover:#DDB877;}
+    helmet{display:none!important;}
+    x-dc{display:block;}
+    body{background:var(--bg);font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif;color:#F2EDE4;-webkit-font-smoothing:antialiased;}
+    .mono{font-family:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;}
+    .disp{font-family:'Archivo',system-ui,sans-serif;font-weight:600;}
+    a{color:var(--brass);text-decoration:none;}a:hover{color:var(--brassHover);}
+    .frame{width:390px;height:844px;background:var(--bg);position:relative;overflow:hidden;}
+    .plate{background:var(--surface);border-radius:3px;box-shadow:inset 0 1px 0 rgba(242,237,228,0.055),inset 0 -1px 0 rgba(0,0,0,0.4),0 2px 6px rgba(0,0,0,0.25);}
+    .scrim{position:absolute;inset:0;background:rgba(0,0,0,0.45);}
+    .sheet{position:absolute;left:0;right:0;bottom:0;top:500px;background:var(--bg);border-radius:12px 12px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,0.5);}
+    .grab{width:36px;height:5px;border-radius:3px;background:rgba(242,237,228,0.3);margin:8px auto 0;}
+    .btn{height:48px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+    .btn.fill{background:var(--brass);color:var(--bg);font-weight:600;}
+    .btn.out{border:1px solid var(--brass);color:var(--brass);font-weight:500;}
+  </style>
+</helmet>
+
+<div class="frame">
+  <!-- dimmed wishlist-detail backdrop -->
+  <div class="bd">
+    <div style="height:44px"></div>
+    <div style="height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;">
+      <div style="display:flex;align-items:center;gap:5px;color:var(--brass);font-size:17px;"><span style="font-size:22px;line-height:1">‹</span><span>Wishlist</span></div>
+      <div style="color:var(--brass);font-size:22px;letter-spacing:1.5px;">···</div>
+    </div>
+    <div style="padding:8px 24px 0;">
+      <div class="mono" style="font-size:10.5px;letter-spacing:0.12em;color:rgba(242,237,228,0.45);">WANTED · CAMERAS</div>
+      <div class="disp" style="font-size:27px;line-height:1.12;margin-top:8px;">Leica M6</div>
+      <div class="plate" style="margin-top:22px;padding:18px;">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.14em;color:rgba(242,237,228,0.5);">ESTIMATED COST</div>
+        <div class="disp" style="font-size:34px;line-height:1;color:var(--brass);margin-top:8px;">$1,180</div>
+        <div class="mono" style="font-size:11px;letter-spacing:0.06em;color:rgba(242,237,228,0.45);margin-top:10px;">YOUR ESTIMATE · ADDED 3 SEP 2026</div>
+      </div>
+      <div style="margin-top:22px;font-size:10.5px;font-weight:600;letter-spacing:0.14em;color:rgba(242,237,228,0.45);" class="mono">DETAILS</div>
+      <div style="margin-top:12px;display:flex;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--inset);"><span style="font-size:12.5px;color:rgba(242,237,228,0.55);">Category</span><span style="font-size:13px;">Cameras</span></div>
+    </div>
+  </div>
+  <div class="scrim"></div>
+
+  <!-- notice sheet (medium detent) -->
+  <div class="sheet">
+    <div class="grab"></div>
+    <div style="padding:22px 24px 32px;">
+      <p style="font-size:15px;line-height:1.55;color:rgba(242,237,228,0.75);">Finding a photo sends this item&rsquo;s name to Wikimedia Commons &mdash; nothing else about it. The photo you pick is stored on your device and syncs with your other devices, like a photo you take.</p>
+      <div style="margin-top:14px;"><a href="#" style="font-weight:500;font-size:13.5px;">See the privacy policy</a></div>
+      <div style="margin-top:24px;display:flex;flex-direction:column;gap:8px;">
+        <div class="btn fill">Continue</div>
+        <div class="btn out">Not now</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

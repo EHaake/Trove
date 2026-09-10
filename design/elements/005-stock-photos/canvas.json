@@ -1,0 +1,28 @@
+{
+  "pages": [
+    { "id": "picker", "name": "Surface 1 · Picker" },
+    { "id": "presentation", "name": "Surface 2 · Presentation" }
+  ],
+  "artboards": [
+    { "file": "PickerNotice.dc.html",      "x": 0,   "y": 0,   "w": 390, "h": 844, "title": "Picker · Notice",       "page": "picker" },
+    { "file": "PickerSearching.dc.html",   "x": 480, "y": 0,   "w": 390, "h": 844, "title": "Picker · Searching",    "page": "picker" },
+    { "file": "Main.dc.html",              "x": 960, "y": 0,   "w": 390, "h": 844, "title": "Picker · Results grid", "page": "picker" },
+    { "file": "PickerDownloading.dc.html", "x": 0,   "y": 974, "w": 390, "h": 844, "title": "Picker · Downloading",  "page": "picker" },
+    { "file": "PickerEmpty.dc.html",       "x": 480, "y": 974, "w": 390, "h": 844, "title": "Picker · No results",   "page": "picker" },
+    { "file": "PickerFailed.dc.html",      "x": 960, "y": 974, "w": 390, "h": 844, "title": "Picker · Can't reach",  "page": "picker" },
+
+    { "file": "ItemStockHeroLight.dc.html", "x": 0,   "y": 0,   "w": 390, "h": 844, "title": "Detail · Stock hero (light photo)", "page": "presentation" },
+    { "file": "ItemStockHeroDark.dc.html",  "x": 480, "y": 0,   "w": 390, "h": 844, "title": "Detail · Stock hero (dark photo)",  "page": "presentation" },
+    { "file": "ItemOwnedPlusStock.dc.html", "x": 960, "y": 0,   "w": 390, "h": 844, "title": "Detail · Owned + kept stock",        "page": "presentation" },
+    { "file": "ItemListStockMarks.dc.html", "x": 0,   "y": 974, "w": 390, "h": 844, "title": "Item list · owned + stock rows",    "page": "presentation" },
+    { "file": "WishlistStockMarks.dc.html", "x": 480, "y": 974, "w": 390, "h": 844, "title": "Wishlist list · stock rows",        "page": "presentation" }
+  ],
+  "annotations": [
+    { "id": "picker-title", "page": "picker", "x": 0, "y": -140, "w": 870, "text": "Surface 1 — Candidate picker, drawn on a wishlist Leica M6. Reuses 002's sheet chrome (background fill, 12px top radius, grabber, medium/large detents, Cancel/title bar). The new work is Phase B's image-first grid." },
+    { "id": "grid-note", "page": "picker", "x": 960, "y": -170, "w": 390, "text": "Image-first: a 2-column square-crop grid (aspect-fill, clipped to a square, 2px radius). The photo IS the choice, so it's large; the credit stays secondary. This is a single Leica M6 query — a real search returns one gear type, so the variety here is framing/background/quality, plus a couple of near-misses (a lens, a light meter)." },
+    { "id": "pres-title", "page": "presentation", "x": 0, "y": -140, "w": 870, "text": "Surface 2 — How a stored stock photo is marked and credited everywhere it appears: a STOCK PHOTO badge over the hero, a quiet credit line ending in a Wikimedia external link, and a tiny corner mark on list thumbnails." },
+    { "id": "owned-note", "page": "presentation", "x": 960, "y": -180, "w": 390, "text": "Owned photo leads (photo 1 — no badge, no credit). Swiping to photo 2 shows the kept stock photo, badged and credited (see the two hero artboards to the left). The badge overlays ONLY the fetched image; the credit line follows the active photo, so it isn't shown while the owned photo is up." },
+    { "id": "list-note", "page": "presentation", "x": 0, "y": 1848, "w": 870, "text": "The mark distinguishes a fetched photo from the person's own. On the item list the contrast is real: Hasselblad + Technics are owned but not yet shot (stock photo, marked); Nikon + Stratocaster carry the person's own photo (no mark). Owned items are kept distinct from the wishlist samples (Leica M6, Fender Telecaster, Rega Planar 3), which live only on the wishlist. A wishlist item can never hold an owned photo, so its no-mark row is a not-yet-chosen placeholder (Vox). Wishlist rows gain a 52px thumbnail in 005 — flag this as a layout change." }
+  ],
+  "launch": { "view": "canvas", "page": "picker" }
+}
