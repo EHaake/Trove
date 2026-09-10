@@ -446,7 +446,7 @@ with a continuation prompt. Everything the person reads is plain language.
   Runtime `.accessibilityValue` isn't unit-inspectable → predicate test + source
   scan are the falsifiable decomposition; VoiceOver is the person's device check.
 
-- [ ] **T012 — UI tests, offline, run twice.**
+- [x] **T012 — UI tests, offline, run twice.**
   Per plan §6 (UI tests), Q10. The four tests with `-uiTesting`: an item with
   no photo (owned and wanted) shows `stockphoto.find` and one with an owned
   photo does not; the first Find a photo… shows the notice with Continue and
@@ -458,6 +458,28 @@ with a continuation prompt. Everything the person reads is plain language.
   test red.
   **Verify:** `scripts/verify.sh ui` green twice; mutations recorded. **Phase 3
   closes here — pause for the person.**
+  **Done (2026-09-10):** **scope reconciled to the 002 "offline states only"
+  precedent** — two of the four named tests are infeasible under Q10 and are
+  carried by the unit suites + T015 (no seed/stub added, Q10 honored): the
+  **owned-photo-hides** case needs a `.device` photo (no library/seed available)
+  → covered by `canFindPhoto` (T005/T009/T010, mutation-verified there); the
+  **empty/failure states** live inside the picker, reachable only past Continue
+  (forbidden) → covered by `PhotoFetchViewModelTests` (T008) + the T015 device
+  pass. The two **feasible** tests were added, mirroring 002:
+  `testAnItemWithNoPhotoOffersFindAPhoto` (owned + wanted show `stockphoto.find`)
+  and `testTheFirstFindAPhotoShowsTheNoticeAndNotNowClosesIt` (notice with
+  Continue/Not now, `stockphoto.search` stays behind it, Not now closes without
+  acknowledging, next Find shows it again; **Continue never tapped**). **Verify:**
+  `scripts/verify.sh ui` green **twice** back to back (16 tests, 0 failures each).
+  **Mutations:** `declinePhotoNotice` acknowledging → the notice test red; forced
+  `canFindPhoto = false` → the offers-the-action test red; both reverted.
+  **Finding (carry to T015):** the notice flag lives in `UserDefaults.standard`,
+  which `-uiTesting` does **not** reset (unlike the market notice, which rides
+  the in-memory model store). Harmless in clean code (no UI test taps Continue),
+  but T015's device pass — which does tap Continue — must reset it between the
+  "notice shows once" and any relaunch check (the implementer used `simctl
+  uninstall` to clear it after the acknowledging mutation). An asymmetry worth
+  the phase review's eyes.
 
 ## Phase 4 — Export and policy
 
@@ -587,6 +609,7 @@ settled.
 | T009 implement | opus (`sdd-implementer`) | ~198k | both detail VMs + views photo plumbing; `store(_:)` (owned-only `updatedAt`); `PhotoPickerSheetView` `store`-closure refinement; `PhotoCarousel` badge/credit/a11y; 4 mutations verified; carousel badge test keys off label pixels (ImageRenderer won't render the paging hero); 1227 tests |
 | T010 implement | opus (`sdd-implementer`) | ~138k | both form VMs photo plumbing + in-memory `store`; 3 pure `PhotoSelection` helpers (replace/keep); `PhotoPickerField` replace/keep alert; both form views' action; 3 mutations verified; no deviations; 1246 tests |
 | T011 implement | opus (`sdd-implementer`) | ~69k | `StockPhotoBadge` `.mark` style; `PhotoSelection.leadsWithStock`; `RowThumbnail` corner-mark overlay; both rows' a11y value; 3 mutations verified; row size tests intact; 1252 tests |
+| T012 implement | opus (`sdd-implementer`) | ~62k | 2 feasible UI tests (002 "offline states only" mirror; 2 infeasible ones → unit suites + T015, no seed/stub); UI suite green twice (16 tests); 2 mutations verified; surfaced the UserDefaults.standard notice-flag persistence finding for T015 |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the

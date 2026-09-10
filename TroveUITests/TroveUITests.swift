@@ -652,6 +652,103 @@ final class TroveUITests: XCTestCase {
         // market lines. Nothing above depends on either.
     }
 
+    // MARK: - 005 Stock photos (offline states only)
+
+    /// 005 criterion 1's behavioral half: an item with no photo offers
+    /// Find a photo… on the item screen, and a blank wanted item offers it
+    /// too. Both are added through the real form and arrive with no photo,
+    /// so the action is the one this run can reach without a photo library.
+    ///
+    /// The complementary case — an item that *has* an owned photo hides the
+    /// action — is not UI-testable here: the only way to give an item a
+    /// `.device` photo is the system PhotosPicker (no library in the harness)
+    /// or a seed, which Q10 declines. That invariant is unit-tested and
+    /// mutation-verified in `PhotoSelection.canFindPhoto` (T005) and both
+    /// view models' `canFindPhoto` (T009/T010), and is seen for real in the
+    /// T015 device pass — the same "offline states only" scope 002's UI tests
+    /// kept.
+    ///
+    /// Its mutation: hiding the action (gating `canFindPhoto` off) must turn
+    /// this red at the `stockphoto.find` existence assertion.
+    @MainActor
+    func testAnItemWithNoPhotoOffersFindAPhoto() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        let name = "Rolleiflex \(UUID().uuidString.prefix(6))"
+        addItem(to: app, named: name)
+        openDetail(in: app, named: name)
+
+        let find = app.buttons["stockphoto.find"]
+        XCTAssertTrue(
+            find.waitForExistence(timeout: 5),
+            "an item with no photo must offer Find a photo…"
+        )
+
+        let wanted = "Summicron \(UUID().uuidString.prefix(6))"
+        addWantedItem(to: app, named: wanted)
+        openDetail(in: app, named: wanted)
+
+        XCTAssertTrue(
+            app.buttons["stockphoto.find"].waitForExistence(timeout: 5),
+            "a blank wanted item must offer Find a photo… too"
+        )
+    }
+
+    /// 005's Not-now half: the first Find a photo… on this device puts the
+    /// notice in front of the picker — the picker's search field is not on
+    /// screen yet — and Not now closes the sheet without acknowledging
+    /// anything, so the very next Find a photo… shows the notice again (Q10).
+    ///
+    /// **Continue is never tapped here, and that is deliberate** (Q10):
+    /// tapping it would acknowledge the notice and hand the sheet to the
+    /// picker, which searches Wikimedia on appear. Nothing in this target may
+    /// reach the network, so the flag's persistence is the unit suites' claim
+    /// and the device pass's, not this test's — this covers the half that
+    /// needs no network and no writes.
+    ///
+    /// Its mutation: acknowledging on Not now (calling `noticeStore.acknowledge()`
+    /// from `declinePhotoNotice`) must turn this red at the second showing.
+    @MainActor
+    func testTheFirstFindAPhotoShowsTheNoticeAndNotNowClosesIt() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        let name = "Rolleiflex \(UUID().uuidString.prefix(6))"
+        addItem(to: app, named: name)
+        openDetail(in: app, named: name)
+
+        let find = app.buttons["stockphoto.find"]
+        XCTAssertTrue(find.waitForExistence(timeout: 5))
+        scrollUntilHittable(find, in: app)
+        find.tap()
+
+        let notNow = app.buttons["stockphoto.notice.notNow"]
+        XCTAssertTrue(notNow.waitForExistence(timeout: 5), "the first find must present the notice")
+        XCTAssertTrue(app.buttons["stockphoto.notice.continue"].exists, "the notice must offer Continue")
+        XCTAssertFalse(
+            element(in: app, identifiedBy: "stockphoto.search").exists,
+            "the picker stands behind the notice, not beside it — its search field must not be on screen"
+        )
+
+        notNow.tap()
+        XCTAssertTrue(notNow.waitForNonExistence(timeout: 5), "Not now must close the sheet")
+
+        // The whole point of Q10: Not now acknowledges nothing, so the notice
+        // is back the next time. If this find opened the picker instead, the
+        // app would be searching Wikimedia — which is why the assertion is on
+        // the notice returning rather than on the picker staying away.
+        scrollUntilHittable(find, in: app)
+        find.tap()
+        XCTAssertTrue(
+            notNow.waitForExistence(timeout: 5),
+            "Not now acknowledged the notice — the second find should have shown it again"
+        )
+        // Left closed, so the run ends with no sheet up.
+        notNow.tap()
+        XCTAssertTrue(notNow.waitForNonExistence(timeout: 5))
+    }
+
     // MARK: - Market helpers
 
     /// Any element with this identifier, whatever it is drawn as. The market
