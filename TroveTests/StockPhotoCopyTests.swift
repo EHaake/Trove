@@ -2,11 +2,74 @@ import Foundation
 import Testing
 @testable import Trove
 
-/// Spec 005's copy. This task lands only the one guard that can block work —
-/// the contact address the Wikimedia User-Agent carries (plan Q6, the
-/// `MarketCopyTests.theContactAddressIsARealOne` model). T004 extends this.
+/// Spec 005's copy, pinned whole (the `MarketCopyTests` model): every string
+/// in the spec's Copy section, the notice split reassembled to its full
+/// sentence, the composed credit at its edges, and the one guard that can
+/// block a task — the contact address (plan Q6).
 @Suite("Stock photo copy")
 struct StockPhotoCopyTests {
+    @Test func theActionAndPickerStrings() {
+        #expect(StockPhotoCopy.findAPhoto == "Find a photo…")
+        #expect(StockPhotoCopy.pickerTitle == "Choose a photo")
+        #expect(StockPhotoCopy.emptyState == "No usable photos found for that name.")
+        #expect(StockPhotoCopy.searchAgain == "Search again")
+        #expect(StockPhotoCopy.badge == "Stock photo")
+    }
+
+    @Test func theNoticeStrings() {
+        #expect(StockPhotoCopy.noticeBody == "Finding a photo sends this item’s name to Wikimedia Commons — nothing else about it. The photo you pick is stored on your device and syncs with your other devices, like a photo you take.")
+        #expect(StockPhotoCopy.noticeLinkTitle == "See the privacy policy")
+        #expect(StockPhotoCopy.noticeContinue == "Continue")
+        #expect(StockPhotoCopy.noticeNotNow == "Not now")
+    }
+
+    /// The spec's sentence, reassembled from the body and the link the sheet
+    /// draws separately — the `MarketCopyTests.theNoticeReassemblesToTheSpecsSentence`
+    /// shape. `PRIVACY.md` (T014) quotes this verbatim.
+    @Test func theNoticeReassemblesToTheSpecsSentence() {
+        #expect(StockPhotoCopy.noticeBody + " " + StockPhotoCopy.noticeLinkTitle + "."
+            == "Finding a photo sends this item’s name to Wikimedia Commons — nothing else about it. The photo you pick is stored on your device and syncs with your other devices, like a photo you take. See the privacy policy.")
+    }
+
+    @Test func theCreditPieces() {
+        #expect(StockPhotoCopy.creditSource == "Wikimedia Commons")
+        #expect(StockPhotoCopy.creditSeparator == "·")
+    }
+
+    @Test func theCreditAtARealAuthor() {
+        #expect(StockPhotoCopy.credit(author: "Jane Doe", licenseName: "CC BY-SA 4.0")
+            == "Photo: Jane Doe · CC BY-SA 4.0 · Wikimedia Commons")
+    }
+
+    /// The no-author fallback names Wikimedia Commons as the author, so the
+    /// segment repeats — pinned so the composition doesn't drift.
+    @Test func theCreditAtTheNoAuthorAuthor() {
+        #expect(StockPhotoCopy.credit(author: "Wikimedia Commons", licenseName: "Public domain")
+            == "Photo: Wikimedia Commons · Public domain · Wikimedia Commons")
+    }
+
+    @Test func theReplaceKeepAlert() {
+        #expect(StockPhotoCopy.replaceKeepMessage == "This item has a stock photo. Keep it, or replace it with your photo?")
+        #expect(StockPhotoCopy.keepBoth == "Keep both")
+        #expect(StockPhotoCopy.replace == "Replace")
+    }
+
+    @Test func theFailureCopy() {
+        #expect(StockPhotoCopy.failure == "Couldn’t reach Wikimedia Commons. Try again in a while.")
+    }
+
+    @Test func theAccessibilityStrings() {
+        #expect(StockPhotoCopy.badgeAccessibilityLabel == "Representative stock image")
+        #expect(StockPhotoCopy.creditLinkHint == "Opens Wikimedia Commons in your browser")
+    }
+
+    @Test func theAboutLinks() {
+        #expect(StockPhotoCopy.privacyPolicyTitle == "Privacy policy")
+        #expect(StockPhotoCopy.privacyPolicyFilename == "PRIVACY.md")
+        #expect(StockPhotoCopy.privacyPolicyURL.absoluteString == "https://github.com/EHaake/Trove/blob/main/PRIVACY.md")
+        #expect(StockPhotoCopy.privacyPolicyURL.lastPathComponent == StockPhotoCopy.privacyPolicyFilename)
+    }
+
     @Test func theContactAddressIsARealOne() {
         let address = StockPhotoCopy.contactAddress
         let lowered = address.lowercased()

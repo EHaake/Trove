@@ -170,7 +170,7 @@ with a continuation prompt. Everything the person reads is plain language.
   nonstandard CC0/PD spelling (`cc-zero`) would be dropped (safe direction);
   G5's teeth are the stub-miss, matching the Reverb idiom (acceptable).
 
-- [ ] **T004 — `StockPhotoCopy` in full, and the notice store.**
+- [x] **T004 — `StockPhotoCopy` in full, and the notice store.**
   Per plan §5 and the Copy section. `StockPhotoCopy` (`nonisolated enum`,
   `Trove/Models/`): `findAPhoto`, `noticeBody`, `noticeContinue`,
   `noticeNotNow`, `pickerTitle`, `emptyState`, `searchAgain`, `badge`,
@@ -185,6 +185,21 @@ with a continuation prompt. Everything the person reads is plain language.
   store sees it). Mutations: drop the write in `acknowledge` → the second-store
   test red; a placeholder address → the guard red.
   **Verify:** `scripts/verify.sh` green with the new suites; mutations recorded.
+  **Done (2026-09-09):** `StockPhotoCopy` extended with every string pinned
+  exactly (the spec's proposed copy, P7 settled here); `PhotoNoticeStore`
+  protocol + `UserDefaultsPhotoNoticeStore` (one bool key, missing→false,
+  per-device unsynced). `StockPhotoCopyTests` extended (whole-string pins,
+  notice reassembly to the full spec sentence, credit at real + no-author
+  authors) and new `PhotoNoticeStoreTests` (per-test UUID suite, never
+  `.standard`). **Verify (implementer verbatim, not per-task):** 1182 tests /
+  158 suites, exit 0. **Mutation:** `acknowledge()` write dropped → the
+  second-store persistence test red → reverted. **Deviations/notes:** no
+  separate `replaceKeepTitle` — the spec pins only the question, which serves
+  as the alert's title in T010 (SwiftUI allows it), no separate message
+  needed; the optional a11y credit value left for T009 to request with a
+  pinned string; `UserDefaults` isn't `Sendable`, so the store holds it as
+  `nonisolated(unsafe) let` (UserDefaults is thread-safe; the `SyncMonitor`
+  precedent) — the sanctioned pattern for a `UserDefaults`-backed store here.
 
 - [ ] **T005 — The fetch/store logic and the service spy.**
   Per plan §4. Add to `PhotoSelection`: `canFindPhoto(_:)`,
@@ -408,6 +423,7 @@ settled.
 | T003 review (per-task) | opus (`skeptical-reviewer`) | ~57k | **1 blocking**: ported-licence acceptance unguarded (false-coverage) |
 | T003 fix (ported test) | opus (`sdd-implementer`) | ~27k | added falsifiable classifier-table assertion, mutation-verified; classify unchanged |
 | T003 re-review | opus (`skeptical-reviewer`) | ~25k | **resolved**; nothing open |
+| T004 implement | opus (`sdd-implementer`) | ~58k | full copy + notice store; acknowledge() mutation verified; 1182 tests (phase review covers) |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the
