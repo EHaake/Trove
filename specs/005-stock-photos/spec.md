@@ -1,6 +1,10 @@
 # 005 — Stock Photos
 
-**Status**: Draft — pending review
+**Status**: **Approved** (2026-09-09) — the person approved the Draft and
+directed planning to proceed in this session, at Opus under the Fallback
+clause (below), rather than in a fresh session, since the top tier is
+unavailable and the model rationale for splitting the session is therefore
+moot.
 
 Authored in-session (the fourth use of the per-spec venue clause). Run at
 **Opus 4.8, high effort, under `CLAUDE.md`'s model-policy Fallback clause** —
