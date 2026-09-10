@@ -1,0 +1,25 @@
+{
+  "batchcomplete": true,
+  "query": {
+    "pages": [
+      {
+        "pageid": 201,
+        "title": "File:Authorless-pd.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/9/9c/Authorless-pd.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Authorless-pd.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Authorless-pd.jpg/1024px-Authorless-pd.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "Public domain" },
+              "License": { "value": "pd" },
+              "LicenseUrl": { "value": "" },
+              "UsageTerms": { "value": "Public domain" }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -87,7 +87,7 @@ with a continuation prompt. Everything the person reads is plain language.
   credit-rendering tasks, which should test the no-author → "Wikimedia Commons"
   branch.
 
-- [ ] **T002 — The fixture script and the recorded fixtures. [person: runs it]**
+- [x] **T002 — The fixture script and the recorded fixtures. [person: runs it]**
   Per plan §2 (Fixtures). New `scripts/record-wikimedia-fixtures.sh` (curl + a
   python trim; the User-Agent header) writing `TroveTests/Fixtures/Wikimedia/`:
   `search-camera.json` (a real gear query, each file trimmed to `pageid`,
@@ -102,6 +102,25 @@ with a continuation prompt. Everything the person reads is plain language.
   output is committed and reviewed as a diff. Nothing under `Trove/` changes.
   **Verify:** every fixture parses (`python3 -m json.tool`); the README is
   written; `scripts/verify.sh` count unchanged (no `Trove/` change).
+  **Done (2026-09-09):** recorder `scripts/record-wikimedia-fixtures.sh`
+  (formatversion=2 so `query.pages` is an array; trims each page to
+  `imageinfo[0]` + the five extmetadata keys; marker-preserving doc writer) and
+  the hand-built fixtures written; the person ran the live recording → 20-page
+  `search-camera.json` (Nikon D750), all 20 reusable-licensed (cc-by-2.0 ×8,
+  cc-by-sa-4.0 ×6, cc0 ×2, cc-by-sa-3.0-de ×2, cc-by-sa-2.0 ×2). All fixtures
+  parse; `bash -n` clean; `scripts/verify.sh` 1150 tests / 154 suites, unchanged.
+  **Deviation 1 (escape hatch — implementer stopped on a well-specified fork,
+  orchestrator resolved):** the test target is a synchronized folder that copies
+  every file flat into the test bundle, so a second `README.md` collided with
+  `Fixtures/Reverb/README.md`. Options A/C were `.pbxproj` exclusions, ruled out
+  by this spec's hard "no `.pbxproj` edit" rule; resolved by option B — the
+  Wikimedia doc is `wikimedia-fixtures.md`, a unique basename (plan §2 said
+  `README.md`; the intent — a fixtures doc — is unchanged).
+  **Deviation 2 (plan corrected in place):** the live thumbnails come from
+  `thumb.wikimedia.org` (18/20), not the two literals plan Q1 named, so the
+  image-host allowlist is corrected to a `.wikimedia.org` **suffix** check —
+  updated in plan §2/Q1 and carried into **T003**. URLs also carry `utm_*`
+  params and a 1280 px bucket for a 1024 request (both harmless; noted in plan).
 
 - [ ] **T003 — `StockPhotoService`, `WikimediaPhotoService`, decoding, the licence filter, attribution. `review: per-task`.**
   Per plan §2 and §3. New `Trove/Photos/StockPhotoService.swift` (protocol with
@@ -360,6 +379,8 @@ settled.
 | Plan sign-off | opus (`skeptical-reviewer`) | ~71k (55k in / 4k out) | **signed off, nothing blocking**; OQ1 confirmed against CC-BY-SA 4.0 text; 4 second-look notes (3 folded into plan/tasks now, note 4 optional below) |
 | T001 implement | opus (`sdd-implementer`) | ~39k | `Photo` schema fields + accessor/builder + tests; red run recorded; no `.pbxproj` edit |
 | T001 review (per-task) | opus (`skeptical-reviewer`) | ~30k | signed off, nothing blocking; 2 non-blocking notes (fallback-branch tests carried to T007/T009) |
+| T002 implement (prep half) | opus (`sdd-implementer`) | ~46k | script + hand-built fixtures; **stopped** on README bundle collision (well-specified fork) → orchestrator resolved via unique basename (escape hatch) |
+| T002 live recording | — (person) | — | `search-camera.json`, 20 reusable pages; surfaced host-allowlist correction → plan §2/Q1 + T003 |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the

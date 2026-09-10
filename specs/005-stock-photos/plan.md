@@ -83,8 +83,19 @@ question was raised and settled, not left open. The strict alternative
   (the Commons file page — the link-back), a `thumburl` at `iiurlwidth`, the
   `mime`, and `extmetadata` (`LicenseShortName`, `License`, `Artist`,
   `LicenseUrl`, `UsageTerms`). No API key, no server secret, no third-party
-  package (`CLAUDE.md` Dependencies untouched). One host only; a `thumburl`
-  that leaves `upload.wikimedia.org`/`commons.wikimedia.org` is not fetched.
+  package (`CLAUDE.md` Dependencies untouched). Image bytes are fetched only
+  from a **Wikimedia host** — an exact `wikimedia.org` or any `.wikimedia.org`
+  subdomain — and any URL outside that is not fetched. **Corrected at T002's
+  recording (2026-09-09):** the earlier wording named just
+  `upload.wikimedia.org`/`commons.wikimedia.org`, but the live API serves 18 of
+  20 thumbnails from **`thumb.wikimedia.org`** (originals from
+  `upload.wikimedia.org`), so a two-literal allowlist would refuse most
+  thumbnails. The `.wikimedia.org` suffix check covers upload/thumb/commons and
+  any future subdomain while still rejecting a foreign or look-alike host
+  (`wikimedia.org.evil.com`, `notwikimedia.org`). Recorded URLs also carry
+  `utm_*` query params and may return a slightly larger standard bucket than
+  the requested `iiurlwidth` (1280 px for a 1024 request); both are harmless —
+  the bytes stay bounded under the ceiling (Q2) and are stored as served.
 - **Q2. The app stores a width-capped thumbnail, not the original.** The
   request asks Wikimedia for a thumbnail at a storage width (**1024 px**,
   `iiurlwidth`) and downloads *those* bytes — server-side resizing, so no
