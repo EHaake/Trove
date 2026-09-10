@@ -78,10 +78,13 @@ Reverb's attribution line.
 
 ### Finding a photo
 
-- Any item **without a photo** — owned or wanted (Decision 3) — offers a
-  **Find a photo…** action. The feature is emphasised on the wishlist, where
-  the blank is most common, but is not restricted to it: an owned item with no
-  photo can borrow a stock image until the person takes their own.
+- Any item **without a photo of the person's own** — owned or wanted
+  (Decisions 3, 6) — offers a **Find a photo…** action; that is a blank item
+  *or* one whose only photo is a stock one, so a stock photo can be swapped for
+  a different one in a single tap (P8). The action hides once the item has an
+  owned photo. The feature is emphasised on the wishlist, where the blank is
+  most common, but is not restricted to it: an owned item with no photo can
+  borrow a stock image until the person takes their own.
 - The action is a deliberate, person-initiated act. The app never fetches a
   photo on launch, on appear, or in the background (Decision 5, the posture
   `002` set) — only this action does.
@@ -234,8 +237,10 @@ file. What the app must do, and does:
 
 ## Acceptance criteria
 
-1. [ ] An item with **no photo** — owned or wanted — shows **Find a photo…**;
-   an item that already has a photo does not. The first **Find a photo…** in
+1. [ ] An item with **no photo of the person's own** — owned or wanted, and
+   whether it is blank or holds only a stock photo (Decision 6) — shows **Find
+   a photo…**; an item that has an **owned** photo does not. The first **Find a
+   photo…** in
    the app shows the one-time notice; **Not now** searches nothing; **Continue**
    searches and the notice never shows again on that device.
 2. [ ] Searching sends **only the item's name** to Wikimedia Commons; the
@@ -306,6 +311,18 @@ Made by the person, 2026-09-09, in this spec conversation:
    and to whom, and the privacy policy is updated to name Wikimedia Commons, the
    search query that leaves, and that a fetched photo (unlike the market
    figures) syncs.
+
+Added 2026-09-09, at the plan draft's return (the person, resolving the
+planner's one product question):
+
+6. **Find a photo… gates on an *owned* photo, not any photo.** The action
+   shows whenever the item has no photo the person took — a blank item or one
+   whose only photo is a stock one — so a stock photo is replaced by a fresh
+   **Find a photo…** (P8), and it hides once an owned photo exists. The Draft's
+   criterion 1 read "an item that already has a photo does not", which
+   contradicted P5/P8; that wording is corrected here. (Chosen over the strict
+   "any photo hides it" reading, which would force removing a stock photo
+   before re-searching.)
 
 Proposed at drafting, 2026-09-09, by Claude Code (these become decisions on
 plan approval, as `002`'s P-items did):
