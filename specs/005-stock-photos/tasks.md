@@ -563,7 +563,13 @@ with a continuation prompt. Everything the person reads is plain language.
   status flipped; the pre-merge
   `skeptical-reviewer` sweep over `git diff main...HEAD` (bundle cut after `git
   add -A`); the post-merge list (`fix/docs-005-shipped`: `ROADMAP.md`'s 005
-  entry + status row + the Reverb-catalog-image later enhancement note; README
+  entry + status row + the Reverb-catalog-image later enhancement note; **and,
+  from the person's Phase 3 device testing (2026-09-10), a roadmap note that
+  Wikimedia's coverage gap for brand-new premium gear (e.g. no standard
+  Hasselblad X2D 100C body — only a CC0 "Earth Explorer" limited edition) is what
+  the deferred eBay source would close: eBay carries current-market gear photos
+  but needs the server proxy 002 Decision 19 flagged, so it stays a follow-up
+  spec**; README
   Status/tree/specs listing; `DECISIONS.md` — the second network dependency,
   Wikimedia over the storing-forbidden sources, a fetched photo syncs while
   `002`'s figures don't, the notice flag in `UserDefaults`; **the generalization
