@@ -16,6 +16,11 @@ through `#filePath`; no test opens a network connection.
 - `search-no-author.json` — a single public-domain page with **no `Artist`
   key** in `extmetadata`. The credit falls back to "Wikimedia Commons" and
   the file is still offered.
+- `search-placeholder-author.json` — a single CC-BY-SA page whose `Artist`
+  carries Commons' **placeholder** for a file with no structured author
+  ("No machine-readable author provided. <user> assumed (based on copyright
+  claims).", with the username as a wiki link). The file is still offered
+  and its credit falls back to "Wikimedia Commons" (T015 finding 2).
 - `search-empty.json` — `{"batchcomplete": true}` with **no `query`** key,
   the empty state MediaWiki returns when the generator matches nothing.
 - `image-small.bin` — a tiny (43-byte) valid GIF blob for the

@@ -50,6 +50,31 @@ struct WikimediaDecodingTests {
         #expect(candidates.first?.attribution.author == "Wikimedia Commons")
     }
 
+    /// Commons' *placeholder* author — the `Artist` field of a file with no
+    /// structured author, which reads "No machine-readable author provided.
+    /// <user> assumed (based on copyright claims)." — is not an author, so it
+    /// falls back to "Wikimedia Commons" like an absent field (T015 finding 2).
+    /// Mutation: drop the `isPlaceholderAuthor` guard in `author(fromArtist:)`
+    /// → the placeholder sentence is credited as the author → red.
+    @Test func commonsPlaceholderAuthorFallsBackToWikimediaCommons() throws {
+        let candidates = try WikimediaDecoding.candidates(
+            from: try wikimediaFixture("search-placeholder-author.json"), query: "", cap: 12
+        )
+        #expect(candidates.count == 1, "the file is still offered — only its author is unknown")
+        let author = try #require(candidates.first?.attribution.author)
+        #expect(author == "Wikimedia Commons")
+        #expect(!author.lowercased().contains("machine-readable"), "Commons' placeholder is credited as the author")
+    }
+
+    /// The placeholder is recognised whatever the uploader's name and casing —
+    /// only the leading phrase is fixed — and a real author is left alone.
+    @Test func onlyTheLeadingPlaceholderPhraseIsTreatedAsNoAuthor() {
+        #expect(WikimediaDecoding.isPlaceholderAuthor("No machine-readable author provided. Elya assumed (based on copyright claims)."))
+        #expect(WikimediaDecoding.isPlaceholderAuthor("no MACHINE-READABLE author provided. Someone Else assumed."))
+        #expect(!WikimediaDecoding.isPlaceholderAuthor("Henry S\u{00F6}derlund"))
+        #expect(!WikimediaDecoding.isPlaceholderAuthor("Machine Readable Photography"))
+    }
+
     // MARK: - The cap (G4)
 
     @Test func twentyReusableFilesAreCappedToTwelve() throws {

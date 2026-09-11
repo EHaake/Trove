@@ -606,6 +606,8 @@ exercises the filtered search.
   depends on the live `License` code); record what the API returned. An honest
   "not encountered in the device pass" is acceptable.
 
+- [x] **T015a — Commons' placeholder author falls back to "Wikimedia Commons".** Device-pass finding 2: Commons emits "No machine-readable author provided. {user} assumed (based on copyright claims)." in `Artist` for files with no structured author, and the fallback only fired on an absent or empty field. Now the leading phrase (case-insensitive) counts as no author; the file is still offered. Hand-built fixture `search-placeholder-author.json` + 2 tests; mutation verified. Recorded: no recorded fixture had the placeholder, so the live data has shapes the sample lacks.
+
 - [ ] **T016 — Close-out.**
   Criteria 1–11 ticked in `spec.md` with citations, honest partials named (the
   second-device sync check; anything not exercised on the device);
@@ -696,6 +698,8 @@ settled.
 | T013 implement | opus (`sdd-implementer`) | ~104k | `PDFEntry.photoCredit`; records snapshot `firstPhotoAttribution`; composer draws the credit under the photo box only when the image resolved; 4 tests, 2 mutations verified; 20 mechanical record-construction sites; 1265 tests |
 | T014 implement | opus (`sdd-implementer`) | ~62k | `PRIVACY.md` (second service, photo notice quoted verbatim, two new table rows, one-direction images wording, sync statement), README feature bullet, 4 privacy tests; 3 mutations verified; 1269 tests |
 | Phase 4 review | opus (`skeptical-reviewer`) | ~68k | **signed off, nothing blocking**; 5 non-blocking notes (below); orchestrator re-ran `scripts/verify.sh` at the reviewer's ask (1269 tests green) |
+| T015 device pass | opus (general-purpose w/ simulator tools; `sdd-implementer` has none) | ~259k | live pass on the simulator, in-memory store; probe: 7 firings = 7 intended opens, 0 on Not now/prompt/re-render; 2 findings (credit wraps garbled; placeholder author); offline + VoiceOver + sync pending; both suites green twice (16 UI / 1269 unit) |
+| T015 diagnosis | opus (`sdd-implementer`) | ~72k | finding 2 fixed (T015a, mutation verified, 1271 tests); finding 1 diagnosed as a view-vs-inline-run fork → decision review |
 | _rows added per dispatch as the spec runs_ | opus (subagents) | | |
 
 **Phase 4 review notes (non-blocking, carried to T016 / the sweep):**

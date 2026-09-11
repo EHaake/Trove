@@ -173,10 +173,8 @@ nonisolated enum WikimediaDecoding {
             // Decision 7).
             let categoryTitles = (page.categories ?? []).map { $0.title }
             if isTakenWithSearchedGear(categoryTitles: categoryTitles, query: query) { continue }
-            let rawArtist = meta?.artist?.value
-            let author = rawArtist.map { plainText(fromHTML: $0) }
             let attribution = StockPhotoAttribution(
-                author: (author?.isEmpty == false) ? author! : "Wikimedia Commons",
+                author: author(fromArtist: meta?.artist?.value),
                 licenseName: licence.displayName,
                 sourceURL: sourceURL
             )
@@ -220,6 +218,32 @@ nonisolated enum WikimediaDecoding {
     /// Lowercased maximal alphanumeric runs: "Canon EOS-1D X" → [canon, eos, 1d, x].
     private static func tokens(_ text: String) -> [String] {
         text.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init)
+    }
+
+    /// The credited author for a file's `Artist` field: the tags stripped and
+    /// entities decoded, or the "Wikimedia Commons" fallback (Q5) when the
+    /// field is absent, empty, or one of Commons' *placeholders* for a file
+    /// that names no author.
+    static func author(fromArtist artist: String?) -> String {
+        let stripped = artist.map { plainText(fromHTML: $0) } ?? ""
+        guard !stripped.isEmpty, !isPlaceholderAuthor(stripped) else { return authorFallback }
+        return stripped
+    }
+
+    /// What a file with no author is credited to (plan §3, Q5).
+    static let authorFallback = "Wikimedia Commons"
+
+    /// True for Commons' own "no author" placeholder, which arrives in the
+    /// `Artist` field of a file with no structured author and reads, once the
+    /// tags are stripped, "No machine-readable author provided. Elya assumed
+    /// (based on copyright claims)." — a sentence *about the absence* of an
+    /// author, where the name is the uploader who asserted the licence, not
+    /// the photographer. Matched on the leading phrase, case-insensitively,
+    /// because everything after it varies with the username; anything else is
+    /// taken at face value (the safe direction: a missed placeholder credits
+    /// the wrong words, a wrong match only falls back to "Wikimedia Commons").
+    static func isPlaceholderAuthor(_ author: String) -> Bool {
+        author.lowercased().hasPrefix("no machine-readable author provided")
     }
 
     /// Strip HTML tags, decode the common entities, collapse whitespace, trim.
