@@ -1,0 +1,108 @@
+{
+  "batchcomplete": true,
+  "query": {
+    "pages": [
+      {
+        "pageid": 201,
+        "title": "File:Hasselblad-X2D-product.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Hasselblad-X2D-product.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Hasselblad-X2D-product.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Hasselblad-X2D-product.jpg/1024px-Hasselblad-X2D-product.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC0" },
+              "License": { "value": "cc0" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Alice\">Alice Example</a>" }
+            }
+          }
+        ],
+        "categories": [
+          { "title": "Category:Hasselblad X2D" },
+          { "title": "Category:Cameras and lenses on white background" }
+        ]
+      },
+      {
+        "pageid": 202,
+        "title": "File:Portrait-on-X2D.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/b/b2/Portrait-on-X2D.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Portrait-on-X2D.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Portrait-on-X2D.jpg/1024px-Portrait-on-X2D.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC BY-SA 4.0" },
+              "License": { "value": "cc-by-sa-4.0" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Bob\">Bob Example</a>" }
+            }
+          }
+        ],
+        "categories": [
+          { "title": "Category:Portraits" },
+          { "title": "Category:Taken with Hasselblad X2D 100C" }
+        ]
+      },
+      {
+        "pageid": 203,
+        "title": "File:Canon-R5-product.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/c/c3/Canon-R5-product.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Canon-R5-product.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Canon-R5-product.jpg/1024px-Canon-R5-product.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC0" },
+              "License": { "value": "cc0" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Carol\">Carol Example</a>" }
+            }
+          }
+        ],
+        "categories": [
+          { "title": "Category:Canon EOS R5" },
+          { "title": "Category:Taken with Canon EOS-1D X Mark II" }
+        ]
+      },
+      {
+        "pageid": 204,
+        "title": "File:No-categories-file.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/d/d4/No-categories-file.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:No-categories-file.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/No-categories-file.jpg/1024px-No-categories-file.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC0" },
+              "License": { "value": "cc0" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Dave\">Dave Example</a>" }
+            }
+          }
+        ]
+      },
+      {
+        "pageid": 205,
+        "title": "File:Sony-24-70-product.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Sony-24-70-product.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Sony-24-70-product.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Sony-24-70-product.jpg/1024px-Sony-24-70-product.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC0" },
+              "License": { "value": "cc0" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Erin\">Erin Example</a>" }
+            }
+          }
+        ],
+        "categories": [
+          { "title": "Category:Sony FE 24-70mm F2.8 GM" },
+          { "title": "Category:Taken with Apple iPhone 8" }
+        ]
+      }
+    ]
+  }
+}

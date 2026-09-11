@@ -12,7 +12,7 @@ struct WikimediaDecodingTests {
 
     @Test func onlyReusableFilesSurviveTheMixedResponse() throws {
         let candidates = try WikimediaDecoding.candidates(
-            from: try wikimediaFixture("search-mixed-licences.json"), cap: 12
+            from: try wikimediaFixture("search-mixed-licences.json"), query: "", cap: 12
         )
         let titles = candidates.map(\.title)
         #expect(candidates.count == 4)
@@ -31,7 +31,7 @@ struct WikimediaDecodingTests {
 
     @Test func theAttributionIsStrippedOfHTMLAndCarriesTheLicenceAndSource() throws {
         let candidates = try WikimediaDecoding.candidates(
-            from: try wikimediaFixture("search-mixed-licences.json"), cap: 12
+            from: try wikimediaFixture("search-mixed-licences.json"), query: "", cap: 12
         )
         let ccBYSA = try #require(candidates.first { $0.title == "File:Reusable-cc-by-sa.jpg" })
         // The fixture's Artist is `<a href="…">Dave Example</a>` — the tag is
@@ -44,7 +44,7 @@ struct WikimediaDecodingTests {
 
     @Test func aFileWithNoArtistFallsBackToWikimediaCommons() throws {
         let candidates = try WikimediaDecoding.candidates(
-            from: try wikimediaFixture("search-no-author.json"), cap: 12
+            from: try wikimediaFixture("search-no-author.json"), query: "", cap: 12
         )
         #expect(candidates.count == 1)
         #expect(candidates.first?.attribution.author == "Wikimedia Commons")
@@ -54,14 +54,14 @@ struct WikimediaDecodingTests {
 
     @Test func twentyReusableFilesAreCappedToTwelve() throws {
         let candidates = try WikimediaDecoding.candidates(
-            from: try wikimediaFixture("search-camera.json"), cap: 12
+            from: try wikimediaFixture("search-camera.json"), query: "", cap: 12
         )
         #expect(candidates.count == 12)
     }
 
     @Test func fewerReusableFilesThanTheCapAreAllReturned() throws {
         let candidates = try WikimediaDecoding.candidates(
-            from: try wikimediaFixture("search-mixed-licences.json"), cap: 12
+            from: try wikimediaFixture("search-mixed-licences.json"), query: "", cap: 12
         )
         #expect(candidates.count == 4)
     }
@@ -70,7 +70,7 @@ struct WikimediaDecodingTests {
 
     @Test func aResponseWithNoQueryIsAnEmptyList() throws {
         let candidates = try WikimediaDecoding.candidates(
-            from: try wikimediaFixture("search-empty.json"), cap: 12
+            from: try wikimediaFixture("search-empty.json"), query: "", cap: 12
         )
         #expect(candidates.isEmpty)
     }

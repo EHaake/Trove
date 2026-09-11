@@ -14,8 +14,9 @@
 #
 # What it writes (the one search response, each page trimmed to the
 # fields the app reads — only imageinfo[0], and within it url,
-# descriptionurl, thumburl, mime, and the extmetadata licence/author
-# fields the classifier and credit read):
+# descriptionurl, thumburl, mime, the extmetadata licence/author
+# fields the classifier and credit read, and each page's category
+# titles the taken-with relevance filter reads):
 #
 #   search-camera.json   the gear query, up to 20 File-namespace results
 #   wikimedia-fixtures.md   the date, the query, the licence note
@@ -51,9 +52,10 @@ PARAMS = {
     "gsrsearch": QUERY,
     "gsrnamespace": "6",        # the File namespace
     "gsrlimit": "20",
-    "prop": "imageinfo",
+    "prop": "imageinfo|categories",
     "iiprop": "url|extmetadata|mime",
     "iiurlwidth": "1024",
+    "cllimit": "500",
 }
 
 def get(url):
@@ -82,11 +84,18 @@ def trim_imageinfo(ii):
         "extmetadata": trim_ext(ii.get("extmetadata")),
     }
 
+def trim_categories(cats):
+    # Keep only each category's title — the taken-with filter reads nothing else.
+    return [{"title": c.get("title")} for c in (cats or []) if c.get("title")]
+
 def trim_page(p):
     infos = p.get("imageinfo") or []
     out = {"pageid": p.get("pageid"), "title": p.get("title")}
     if infos:
         out["imageinfo"] = [trim_imageinfo(infos[0])]
+    cats = trim_categories(p.get("categories"))
+    if cats:
+        out["categories"] = cats
     return out
 
 def write(name, obj):

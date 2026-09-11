@@ -106,13 +106,14 @@ nonisolated final class WikimediaPhotoService: StockPhotoService {
             URLQueryItem(name: "gsrsearch", value: query),
             URLQueryItem(name: "gsrnamespace", value: "6"),
             URLQueryItem(name: "gsrlimit", value: "\(searchLimit)"),
-            URLQueryItem(name: "prop", value: "imageinfo"),
+            URLQueryItem(name: "prop", value: "imageinfo|categories"),
             URLQueryItem(name: "iiprop", value: "url|extmetadata|mime"),
             URLQueryItem(name: "iiurlwidth", value: "\(storageWidth)"),
+            URLQueryItem(name: "cllimit", value: "500"),
         ]
         guard let url = components.url else { throw StockPhotoError.malformedResponse }
         let data = try await fetch(url)
-        return try WikimediaDecoding.candidates(from: data, cap: candidateCap)
+        return try WikimediaDecoding.candidates(from: data, query: query, cap: candidateCap)
     }
 
     @concurrent func imageData(from url: URL) async throws -> Data {
@@ -152,9 +153,10 @@ nonisolated final class WikimediaPhotoService: StockPhotoService {
 /// Mirrors `ReverbDecoding`.
 nonisolated enum WikimediaDecoding {
     /// Decode the wire, keep only reusable-licensed files whose URLs parse,
-    /// and return the first `cap` survivors (plan §2). A response with no
-    /// `query` key decodes to an empty page list → `[]`.
-    static func candidates(from data: Data, cap: Int) throws -> [StockPhotoCandidate] {
+    /// drop any file taken with the same gear the person searched, and return
+    /// the first `cap` survivors (plan §2). A response with no `query` key
+    /// decodes to an empty page list → `[]`.
+    static func candidates(from data: Data, query: String, cap: Int) throws -> [StockPhotoCandidate] {
         let wire = try decode(SearchWire.self, from: data)
         var survivors: [StockPhotoCandidate] = []
         for page in wire.query?.pages ?? [] {
@@ -166,6 +168,11 @@ nonisolated enum WikimediaDecoding {
             ) else { continue }
             guard let sourceURL = info.descriptionurl.flatMap(URL.init(string:)),
                   let thumbURL = info.thumburl.flatMap(URL.init(string:)) else { continue }
+            // Drop a photo taken with the same gear the person searched — a
+            // photo *of* the gear outranks a snapshot taken *on* it (spec
+            // Decision 7).
+            let categoryTitles = (page.categories ?? []).map { $0.title }
+            if isTakenWithSearchedGear(categoryTitles: categoryTitles, query: query) { continue }
             let rawArtist = meta?.artist?.value
             let author = rawArtist.map { plainText(fromHTML: $0) }
             let attribution = StockPhotoAttribution(
@@ -182,6 +189,37 @@ nonisolated enum WikimediaDecoding {
             ))
         }
         return Array(survivors.prefix(cap))
+    }
+
+    /// True iff a category marks this file as *taken with* the same gear the
+    /// person searched — a photo of the gear is never "taken with" itself, so it
+    /// survives; a snapshot taken on that camera is dropped. Matches on a shared
+    /// **alphanumeric-fused** token — one carrying both a letter and a digit, a
+    /// model designator like x2d/r5/100c/50mm/f2 — so brand-only overlap (both
+    /// "canon") never drops, a bare number (24, 8) from a lens name never
+    /// collides with an unrelated capture camera's model number ("iPhone 8"),
+    /// and a query with no fused token (e.g. "Leica Summicron") drops nothing.
+    /// Absent/truncated categories → false (keep — the safe direction: a missed
+    /// drop only leaves a taken-with photo on screen; a wrong drop loses a real
+    /// product shot).
+    static func isTakenWithSearchedGear(categoryTitles: [String], query: String) -> Bool {
+        let queryFusedTokens = Set(tokens(query).filter { t in
+            t.contains(where: \.isNumber) && t.contains(where: \.isLetter)
+        })
+        guard !queryFusedTokens.isEmpty else { return false }
+        for title in categoryTitles {
+            let name = title.lowercased()
+                .replacingOccurrences(of: "category:", with: "")   // titles arrive "Category:Taken with …"
+            guard name.hasPrefix("taken with ") else { continue }
+            let cameraTokens = Set(tokens(String(name.dropFirst("taken with ".count))))
+            if !queryFusedTokens.isDisjoint(with: cameraTokens) { return true }
+        }
+        return false
+    }
+
+    /// Lowercased maximal alphanumeric runs: "Canon EOS-1D X" → [canon, eos, 1d, x].
+    private static func tokens(_ text: String) -> [String] {
+        text.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init)
     }
 
     /// Strip HTML tags, decode the common entities, collapse whitespace, trim.
@@ -262,6 +300,11 @@ nonisolated enum WikimediaDecoding {
         let pageid: Int
         let title: String
         let imageinfo: [ImageInfo]?
+        let categories: [Category]?          // absent when a file has none / truncated
+    }
+
+    private struct Category: Decodable {
+        let title: String                    // e.g. "Category:Taken with Hasselblad X2D 100C"
     }
 
     private struct ImageInfo: Decodable {

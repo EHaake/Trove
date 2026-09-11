@@ -35,9 +35,10 @@ struct WikimediaPhotoServiceTests {
             URLQueryItem(name: "gsrsearch", value: name),
             URLQueryItem(name: "gsrnamespace", value: "6"),
             URLQueryItem(name: "gsrlimit", value: "20"),
-            URLQueryItem(name: "prop", value: "imageinfo"),
+            URLQueryItem(name: "prop", value: "imageinfo|categories"),
             URLQueryItem(name: "iiprop", value: "url|extmetadata|mime"),
             URLQueryItem(name: "iiurlwidth", value: "1024"),
+            URLQueryItem(name: "cllimit", value: "500"),
         ]
         return components.url!
     }
@@ -54,9 +55,11 @@ struct WikimediaPhotoServiceTests {
         let asked = try #require(WikimediaStubURLProtocol.seen.first?.url)
         let items = URLComponents(url: asked, resolvingAgainstBaseURL: false)?.queryItems ?? []
         #expect(items.map(\.name).sorted() == [
-            "action", "format", "formatversion", "generator", "gsrlimit",
+            "action", "cllimit", "format", "formatversion", "generator", "gsrlimit",
             "gsrnamespace", "gsrsearch", "iiprop", "iiurlwidth", "prop",
         ])
+        // The one param that carries the item is gsrsearch, and it carries only
+        // the name — the new prop/cllimit params carry no item data.
         #expect(items.first { $0.name == "gsrsearch" }?.value == name)
     }
 

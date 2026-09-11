@@ -503,7 +503,7 @@ before merge**. This one task modifies the T003 correctness core, so it is
 **`review: per-task`**. It runs before the T015 device pass, so the device pass
 exercises the filtered search.
 
-- [ ] **T012a — The taken-with relevance filter. `review: per-task`.**
+- [x] **T012a — The taken-with relevance filter. `review: per-task`.**
   Per plan §3a and spec Decision 7. Extend the search request
   (`WikimediaPhotoService`/`WikimediaAPI`) to ask for `categories`
   (`prop=imageinfo|categories`, high `cllimit`; P1 unchanged — same `gsrsearch`,
@@ -527,6 +527,24 @@ exercises the filtered search.
   truncated-file test red.
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs — `review:
   per-task`); every mutation recorded; no test opens a connection.
+  **Done (2026-09-10):** request adds `prop=imageinfo|categories` + `cllimit=500`
+  (P1 intact — `gsrsearch` still only the name); `Page` wire gains `categories`;
+  `candidates(from:query:cap:)` drops taken-with-same-gear after the licence
+  filter, before the cap; `isTakenWithSearchedGear` matches on **alphanumeric-
+  fused** tokens (a letter AND a digit) so brand words and **bare numbers** never
+  drop a product shot; absent/truncated categories → keep (safe). Hand-built
+  `search-taken-with.json` + `WikimediaRelevanceTests`; recorder updated for
+  future re-records (not run live). **Verify (orchestrator re-ran):** 1261 tests
+  / 174 suites, exit 0. **Review:** per-task — **1 blocking** (bare-number false
+  drop: a `24-70mm F2.8` lens shot taken with an iPhone 8 was wrongly dropped via
+  the shared bare `8`) → fixed by the fused-token rule + a regression fixture/
+  test, **re-review resolved, nothing open**. Also caught: the first review
+  bundle omitted the new untracked test file (my `git diff` miss — CLAUDE.md's
+  `git add -N` rule); re-review saw it in full and confirmed every relevance test
+  falsifiable. Non-blocking: `aNoFusedTokenQueryDropsNothing` is a
+  characterization test (the empty-set guard is a pure optimization, nothing to
+  falsify); gear with no fused designator (`iPhone 15`) is un-droppable by design
+  (plan §3a note). Anchors hold: R5 product shot kept, X2D portrait dropped.
 
 ## Phase 4 — Export and policy
 
@@ -670,6 +688,10 @@ settled.
 | Phase 3 review | opus (`skeptical-reviewer`) | ~124k | **1 blocking** — the `UserDefaults.standard` notice flag breaks `-uiTesting`'s controlled-start contract (CLAUDE.md / 003 amendment); 6 non-blocking notes (recorded in plan §6, carried to T015 + the sweep) |
 | Phase 3 fix | opus (`sdd-implementer`) | ~41k | `resetForUITesting(mode:)` in `TroveApp.init`, structurally gated on the built `.ephemeral` store; 3 tests + mutation verified; `if case` idiom for nonisolated `StorageMode`; 1255 tests |
 | Phase 3 re-review | opus (`skeptical-reviewer`) | ~23k | **resolved, nothing open**; DECISIONS generalization deferred to T016 |
+| T012a implement | opus (`sdd-implementer`) | ~64k | taken-with relevance filter (categories request + digit-token match); 1260 tests; anchors verified |
+| T012a review (per-task) | opus (`skeptical-reviewer`) | ~44k | **1 blocking**: bare-number false drop (lens aperture/focal collides with capture-camera model number); + flagged the orchestrator's untracked-test-file diff omission |
+| T012a fix | opus (`sdd-implementer`) | ~34k | alphanumeric-fused-token rule (letter AND digit) + regression fixture/test; mutation-verified; R5-keep held; 1261 tests |
+| T012a re-review | opus (`skeptical-reviewer`) | ~39k | **resolved, nothing open**; all relevance tests confirmed falsifiable; 2 non-blocking notes |
 | _rows added per dispatch as the spec runs_ | opus | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the
