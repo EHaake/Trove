@@ -608,6 +608,8 @@ exercises the filtered search.
 
 - [x] **T015a — Commons' placeholder author falls back to "Wikimedia Commons".** Device-pass finding 2: Commons emits "No machine-readable author provided. {user} assumed (based on copyright claims)." in `Artist` for files with no structured author, and the fallback only fired on an absent or empty field. Now the leading phrase (case-insensitive) counts as no author; the file is still offered. Hand-built fixture `search-placeholder-author.json` + 2 tests; mutation verified. Recorded: no recorded fixture had the placeholder, so the live data has shapes the sample lacks.
 
+- [ ] **T015b — The `.full` credit as one wrapping paragraph.** Device-pass finding 1, decided at a top-tier decision review (plan §6, "The stock badge and credit", as amended): the credit becomes one `Text` over an `AttributedString` from a pure `StockPhotoCredit.attributedCredit(_:theme:)`, the source run a `.link`, an `accessibilityRepresentation` `Link` carrying the hint and the `stockphoto.credit.link` identifier, no `lineLimit`; the two `Text` `+` deprecation warnings go with it. Tests restated per plan §6 (the value test with its three mutations; the adjusted source scans). **Verify:** `scripts/verify.sh` green; three mutations recorded. The device check (wrap at AX5, sighted tap, VoiceOver focus/double-tap, the recorded fallback if it fails) runs with the pending offline step, below.
+
 - [ ] **T016 — Close-out.**
   Criteria 1–11 ticked in `spec.md` with citations, honest partials named (the
   second-device sync check; anything not exercised on the device);
@@ -700,6 +702,7 @@ settled.
 | Phase 4 review | opus (`skeptical-reviewer`) | ~68k | **signed off, nothing blocking**; 5 non-blocking notes (below); orchestrator re-ran `scripts/verify.sh` at the reviewer's ask (1269 tests green) |
 | T015 device pass | opus (general-purpose w/ simulator tools; `sdd-implementer` has none) | ~259k | live pass on the simulator, in-memory store; probe: 7 firings = 7 intended opens, 0 on Not now/prompt/re-render; 2 findings (credit wraps garbled; placeholder author); offline + VoiceOver + sync pending; both suites green twice (16 UI / 1269 unit) |
 | T015 diagnosis | opus (`sdd-implementer`) | ~72k | finding 2 fixed (T015a, mutation verified, 1271 tests); finding 1 diagnosed as a view-vs-inline-run fork → decision review |
+| Finding 1 decision review | fable (`skeptical-reviewer`, top tier) | ~45k | option 1 (one `Text(AttributedString)`, `.link` run) with an `accessibilityRepresentation` Link instead of the session's label/hint lean (a label strips the Links rotor on iOS 17+); plan §6 amended; fallback recorded; → T015b |
 | _rows added per dispatch as the spec runs_ | opus (subagents) | | |
 
 **Phase 4 review notes (non-blocking, carried to T016 / the sweep):**

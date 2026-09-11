@@ -510,13 +510,51 @@ Presentation from the Design pass (T006).
 `StockPhotoBadge` — a short **Stock photo** capsule in the app's own type and
 tokens (no rendered materials), `accessibilityLabel` "Representative stock
 image". `StockPhotoCredit(attribution:)` — "Photo: {author} · {licence} ·
-Wikimedia Commons", the last part a SwiftUI `Link` to the file page with the
-hint "Opens Wikimedia Commons in your browser" (criterion 11). Both from the
+Wikimedia Commons". **`.full` style, amended at T015 finding 1 (decision
+review, 2026-09-11):** one wrapping paragraph — a single `Text` over an
+`AttributedString` built by a pure `StockPhotoCredit.attributedCredit(_:theme:)`,
+whose characters are exactly `StockPhotoCopy.credit(author:licenseName:)`; the
+licence run in mono, the trailing `StockPhotoCopy.creditSource` run in brass
+carrying `.link = attribution.sourceURL` (set `.tint(accentBrass)` on the
+`Text`; a `.link` run draws with the tint). No `lineLimit`, `truncationMode` or
+`minimumScaleFactor` on the `.full` credit: a long author wraps whole and is
+never cut (the licence's requirement). Tapping the source run opens the
+Commons page through the environment's default `OpenURLAction` — no `Link`
+view in the layout, no `Button`, no `openURL` call. The T007 form (leading
+`Text` + sibling `Link` in an `HStack`) baseline-aligned the link to line 1
+and garbled on wrap; a link can be a *view* (own identifier/label/hint,
+cannot wrap inside a paragraph) or an *inline run* (wraps, no per-run
+accessibility), and any link at the end of a sentence that may wrap faces
+this choice. Accessibility (criterion 11): the paragraph is one element,
+presented through `.accessibilityRepresentation { Link(destination:
+attribution.sourceURL) { Text(plainCredit) } }` with
+`.accessibilityHint(StockPhotoCopy.creditLinkHint)` and the
+`stockphoto.credit.link` identifier on the representation — VoiceOver reads
+the full credit, announces it as a link, says it leaves the app, and
+double-tap opens the page. The `Text` carries no `accessibilityLabel` of its
+own (an override strips the Links rotor from an inline-link `Text` on iOS
+17+). The `arrow.up.right` glyph stays only as a `Text(Image(systemName:))`
+appended after the link run, safe because the representation replaces the
+spoken content. **Fallback, if the close-out device check finds double-tap
+does not activate:** drop the representation, keep the bare `Text` (VoiceOver
+then reads "… Wikimedia Commons, link" and the Links rotor activates it), drop
+the glyph, and record in `DECISIONS.md` that criterion 11's "says it leaves
+the app" is met by the "link" announcement plus Safari opening, not a hint.
+`.compact` is unchanged (its `lineLimit(1)` tail-truncation of the author in
+the grid is T008's deliberate call, outside this decision). Both from the
 Design pass. Referenced by the picker (T008), the carousel (T009) and the rows
 (T011) — one component, not rebuilt per screen. **Testable claims**
-(`StockPhotoBadgeTests`, render/wiring): the credit composes a `Link` (the
-non-identifier-boundary regex, so `NavigationLink` doesn't false-fire); the
-badge and credit read their strings from `StockPhotoCopy`.
+(`StockPhotoBadgeTests`): `theCreditLinksOnlyItsSourceRunAndKeepsTheWholeAuthor`
+— build `attributedCredit` for a long author ("Rama, Wikimedia Commons,
+Cc-by-sa-2.0-fr"); its characters equal the copy string (catches truncation or
+inline strings), exactly one run carries `.link`, that link is `sourceURL`, and
+that run's characters are exactly `creditSource` (catches linking the whole
+line) — mutations that must go red: remove the `.link`; extend it to the
+whole string; drop or shorten the author. Source scans, adjusted: `Link(`
+count == 1 **and** `accessibilityRepresentation` present; no `openURL`; no
+`Button(`. No file-wide `lineLimit` scan (`.compact` legitimately uses one —
+the over-broad shape). The badge and credit read their strings from
+`StockPhotoCopy`.
 
 ### Detail screens (T009)
 

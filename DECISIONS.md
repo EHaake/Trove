@@ -284,3 +284,17 @@ reaches beyond that spec.
   on the spec branch in the close-out task, citing the draft PR's
   number, and the post-merge docs branch exists only if something is
   learned at merge itself.
+- **An inline link in a `Text` gets an `accessibilityRepresentation`,
+  never an `accessibilityLabel` (2026-09-11, `005`'s device pass).** The
+  stock-photo credit's link was a sibling `Link` view beside a wrapping
+  `Text`, so on any credit long enough to wrap the link sat beside line
+  one and the sentence continued under it. A SwiftUI link is either a
+  *view* (its own label, hint and identifier; cannot wrap inside a
+  paragraph) or an *inline run* (wraps; no per-run accessibility). The
+  decision review chose the run for layout and touch, with an
+  `accessibilityRepresentation { Link … }` for VoiceOver — because an
+  `accessibilityLabel` on a `Text` holding inline links strips the Links
+  rotor on iOS 17+, and a hint on an element with no activation is a
+  promise VoiceOver can't keep. Any link at the end of a sentence that
+  may wrap faces the same choice; plan §6 of `005` records the fallback
+  if the representation doesn't activate on device.
