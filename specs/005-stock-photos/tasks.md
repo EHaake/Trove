@@ -493,6 +493,41 @@ with a continuation prompt. Everything the person reads is plain language.
   (the `marketFilledChrome`/`marketOutlinedChrome` name reads coupled though the
   chrome is generic — a rename candidate; verify 005's self-containment wording).
 
+## Phase 3b — Search relevance (added 2026-09-10, spec Decision 7)
+
+Inserted after the person's Phase 3 device testing surfaced that Wikimedia's
+text search returns photos *taken with* the searched gear alongside (and
+sometimes instead of) photos *of* it. The person chose the **filter-only**
+scope (drop taken-with-the-same-camera results; no query broadening) **in 005
+before merge**. This one task modifies the T003 correctness core, so it is
+**`review: per-task`**. It runs before the T015 device pass, so the device pass
+exercises the filtered search.
+
+- [ ] **T012a — The taken-with relevance filter. `review: per-task`.**
+  Per plan §3a and spec Decision 7. Extend the search request
+  (`WikimediaPhotoService`/`WikimediaAPI`) to ask for `categories`
+  (`prop=imageinfo|categories`, high `cllimit`; P1 unchanged — same `gsrsearch`,
+  one extra field back). Extend `WikimediaDecoding` to decode each page's
+  `categories[].title` and add
+  `isTakenWithSearchedGear(categories:query:)` — drop a candidate iff a category
+  title lowercased begins `"taken with "` **and** the camera name after shares a
+  **digit-bearing** token with the query (so brand-only overlap never drops; a
+  no-digit-token name drops nothing; truncated/absent categories → keep, the
+  safe direction). Run the filter after the licence filter and before the ≤ 12
+  cap. Update the T002 recorder to also capture `categories` (trimmed to titles)
+  for future re-records; the tests use **hand-built** fixtures
+  (`search-taken-with.json`, the classifier-oracle pattern), so **no live
+  re-record is needed** — live behaviour is verified in the T015 device pass.
+  New `WikimediaRelevanceTests` (or extend `WikimediaDecodingTests`): same-model
+  taken-with dropped; different-model taken-with (the R5 case) kept; brand-only
+  overlap kept; no-digit-token query drops nothing; truncated/absent categories
+  kept. Mutations (each reverted, recorded): match on any shared token →
+  R5-keep red; drop the `"taken with"` prefix requirement → a subject-category
+  "…X2D…" file wrongly dropped → red; invert keep-on-truncation → the
+  truncated-file test red.
+  **Verify:** `scripts/verify.sh` green (orchestrator re-runs — `review:
+  per-task`); every mutation recorded; no test opens a connection.
+
 ## Phase 4 — Export and policy
 
 - [ ] **T013 — PDF export: the fetched photo with its credit (subject to OQ1).**

@@ -324,6 +324,32 @@ planner's one product question):
    "any photo hides it" reading, which would force removing a stock photo
    before re-searching.)
 
+Added 2026-09-10, from the person's Phase 3 device testing (the person's
+call after Claude Code's live-API research):
+
+7. **Offer photos *of* the item, not photos taken *with* it (v1, filter-only).**
+   Wikimedia's text search matches a camera/lens model in the metadata of
+   photos *taken with* that gear, which crowds out — and for very specific
+   names entirely buries — actual product shots. Confirmed by live testing: a
+   search for "Canon R5" returns real photos of the camera, but a portrait shot
+   on a Hasselblad X2D comes back for "Hasselblad X2D" too. The reliable
+   distinguisher is Wikimedia's structured **"Taken with …"** category: a
+   product shot of the R5 was itself taken with a *different* camera (so it
+   survives), while a portrait taken on the X2D sits in "Taken with Hasselblad
+   X2D 100C" (so it is dropped). The picker therefore **filters out any
+   candidate categorized as taken with the same make/model the person
+   searched.** The query still sends the item's name and nothing else — **P1 is
+   unchanged** — so this is a client-side relevance filter, not a change to what
+   leaves the device.
+   - **Filter-only for v1 (the person's explicit scope).** *Broadening* an
+     over-specific name (trimming "…100C ii" → "X2D" so the good files are
+     returned at all) is **out of scope** and deferred. A consequence the
+     person accepted: a name so specific that Wikimedia returns *no* product
+     shot (the motivating "Hasselblad X2D 100C ii" case) still shows the empty
+     state — the filter can only reorder/prune what search returns, not conjure
+     files it never returned. The eBay follow-up (roadmap) remains the real fix
+     for brand-new gear with thin Wikimedia coverage.
+
 Proposed at drafting, 2026-09-09, by Claude Code (these become decisions on
 plan approval, as `002`'s P-items did):
 

@@ -320,6 +320,72 @@ over the fixtures):
   8 candidates; a search of 20 with 15 reusable → 12 (Q3). Mutation: drop the
   cap → 15 → red.
 
+## 3a. Search relevance — the "taken-with" filter (added 2026-09-10, spec Decision 7; task T012a)
+
+Wikimedia's text search matches a gear model in the metadata of photos *taken
+with* that gear, crowding out product shots (spec Decision 7). The picker drops
+any candidate that is a photo **taken with the same make/model the person
+searched**, using Wikimedia's structured **"Taken with …"** category — a
+reliable signal (live-verified: a product shot of a Canon R5 is itself "Taken
+with Canon EOS-1D X Mark II" — a *different* camera — so it survives, while a
+portrait shot on a Hasselblad X2D sits in "Taken with Hasselblad X2D 100C" and
+is dropped). **Filter-only (Decision 7):** the request is unchanged in what it
+*sends* — `gsrsearch` still carries the item's name and nothing else (P1) — it
+only asks for one more field back and prunes client-side. No query broadening.
+
+**The request** (`WikimediaPhotoService`/`WikimediaAPI`, extending §2): add
+`categories` to the search request's `prop` (`prop=imageinfo|categories`) with a
+high `cllimit`. Categories can be paginated across a 20-page generator; a
+candidate whose categories come back truncated (or absent) is **kept** — the
+safe direction, since a missed drop only leaves a taken-with photo on screen
+(no worse than today), whereas a wrong drop loses a real product shot.
+
+**The decode** (`WikimediaDecoding`, extending §3): each wire page carries its
+`categories[].title`; strip the `Category:` prefix.
+
+**The match rule — `WikimediaDecoding.isTakenWithSearchedGear(categories:query:)`
+(the correctness core; the design pressure-tested at T012a's per-task review).**
+A candidate is dropped iff it has a category whose title, lowercased, begins
+`"taken with "` **and** the camera name after that prefix shares a
+**digit-bearing token** with the query. Tokens are lowercased maximal
+alphanumeric runs (`"eos-1d"` → `eos`,`1d`); a *digit-bearing* token is one
+containing a digit (`x2d`, `r5`, `100c`, `1d`, `50mm`). The digit-bearing test
+is what separates a model designator from a brand word — brand words
+(`canon`, `hasselblad`, `nikon`, `fender`) carry no digit, so **brand-only
+overlap never triggers a drop**:
+- `"Canon R5"` (digit tokens `{r5}`) vs `"Taken with Canon EOS-1D X Mark II"`
+  (digit tokens `{1d, ii?}` — `ii` has no digit; `1d` does): no shared
+  digit-bearing token → **kept** (the R5 product shot survives).
+- `"Hasselblad X2D 100C ii"` (digit tokens `{x2d, 100c}`) vs `"Taken with
+  Hasselblad X2D 100C"`: shares `x2d`/`100c` → **dropped** (the X2D portrait).
+- A name with no digit-bearing token (`"Leica Summicron"`) drops nothing — the
+  filter simply doesn't engage, falling back to today's behaviour (safe: no
+  false drops). A camera never photographs itself, so a genuine product shot of
+  gear X is never in "Taken with X", and the R5 detail (shutter-module) shots
+  that *are* taken with an R5 being pruned is an accepted, minor loss — the body
+  shot (`Canon EOS R5.jpg`, not taken-with-R5) is exactly what stays.
+
+The filter runs **after** the licence filter and **before** the ≤ 12 cap (§3,
+Q3), so the cap counts kept, relevant candidates.
+
+**Fixtures** — hand-built, the classifier-oracle pattern (§2; no live
+re-record needed — the live behaviour is verified in the T015 device pass, as
+the classifier's was): a `TroveTests/Fixtures/Wikimedia/search-taken-with.json`
+carrying, with real category shapes seen in testing, a product shot (subject
+categories, or "Taken with" a *different* model), a same-model taken-with junk
+file, an R5-style product shot ("Taken with" a different Canon body), and a
+categories-truncated/absent file. The T002 recorder script is updated so a
+future re-record also captures `categories` (trimmed to titles), but the tests
+do not depend on a re-record.
+
+**Testable claims** (`WikimediaDecodingTests` / a new `WikimediaRelevanceTests`):
+same-model taken-with is dropped; a *different*-model taken-with (the R5 case)
+is kept; brand-only overlap keeps; a no-digit-token query drops nothing;
+truncated/absent categories keep. **Mutations, each reverted:** match on any
+shared token (not only digit-bearing) → the R5-keep test red; drop the "taken
+with" prefix requirement → a subject-category "…X2D…" file wrongly dropped →
+red; invert the keep-on-truncation default → the truncated-file test red.
+
 ## 4. The fetch/store logic
 
 `PhotoFetchViewModel(seed:service:)` (`@Observable`, no SwiftUI):
@@ -594,6 +660,7 @@ credit and the composer draws it; a device-photo entry carries no credit
 | G10 | the notice persists (§5) | the write in `acknowledge` is dropped |
 | G11 | the PDF credit only on fetched photos (§7) | `photoCredit` is set for a device photo |
 | G12 | the policy quotes the notice verbatim (§8) | one word of `noticeBody` changes |
+| G13 | the taken-with filter keeps a *different*-model taken-with shot, drops a *same*-model one (§3a) | the match fires on any shared token (not only digit-bearing), dropping the R5 product shot |
 
 Every guard is mutation-verified before it lands (`CLAUDE.md` Testing: a
 passing test that cannot fail is a defect); the task's Done note records what
