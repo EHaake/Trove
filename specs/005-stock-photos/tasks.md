@@ -548,7 +548,7 @@ exercises the filtered search.
 
 ## Phase 4 — Export and policy
 
-- [ ] **T013 — PDF export: the fetched photo with its credit (subject to OQ1).**
+- [x] **T013 — PDF export: the fetched photo with its credit (subject to OQ1).**
   Per plan §7. `PDFEntry` gains `photoCredit: String?`; the two `init(record:)`
   mappings read it from the leading photo's attribution (the export record
   snapshot carries the leading photo's author + licence beside `firstPhotoID`);
@@ -693,6 +693,7 @@ settled.
 | T012a fix | opus (`sdd-implementer`) | ~34k | alphanumeric-fused-token rule (letter AND digit) + regression fixture/test; mutation-verified; R5-keep held; 1261 tests |
 | T012a re-review | opus (`skeptical-reviewer`) | ~39k | **resolved, nothing open**; all relevance tests confirmed falsifiable; 2 non-blocking notes |
 | **◆ Experiment 1 — 2026-09-11** | session `claude-fable-5-1` @ medium | Fable allowance 92% | The orchestrating session's seat moves to Fable from Phase 4 on, per the amended model policy (skill's experiment-1 branch). Rows above ran the session on `opus` under the prior policy's Fallback clause (Phases 1–3b), which the intro paragraph describes; that framing is superseded from here. Subagent/review rows below stay `opus` (implementation tier). The 92% reading is experiment 1's baseline allowance draw, to be compared against a later reading. |
+| T013 implement | opus (`sdd-implementer`) | ~104k | `PDFEntry.photoCredit`; records snapshot `firstPhotoAttribution`; composer draws the credit under the photo box only when the image resolved; 4 tests, 2 mutations verified; 20 mechanical record-construction sites; 1265 tests |
 | _rows added per dispatch as the spec runs_ | opus (subagents) | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the

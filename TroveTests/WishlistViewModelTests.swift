@@ -1068,7 +1068,8 @@ func wishlistPreview(
                     name: name, categoryPath: categoryPath,
                     estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 2,
                     createdAt: Date(timeIntervalSince1970: 1_500_000_000),
-                    notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
+                    notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil,
+                    firstPhotoAttribution: nil
                 ),
                 rowNumber: offset + 2,
                 defaultedFieldCount: 0
@@ -1097,7 +1098,8 @@ struct WishlistViewModelCommitTests {
                         name: "Deluxe Reverb", categoryPath: "Music/Amps",
                         estimatedCostCents: 124_999, currencyCode: "USD", desireToOwn: 3,
                         createdAt: Date(timeIntervalSince1970: 1_500_000_000),
-                        notes: nil, reverbProductID: 232, year: 1966, firstPhotoID: nil
+                        notes: nil, reverbProductID: 232, year: 1966, firstPhotoID: nil,
+                        firstPhotoAttribution: nil
                     ),
                     rowNumber: 2,
                     defaultedFieldCount: 0
@@ -1107,7 +1109,8 @@ struct WishlistViewModelCommitTests {
                         name: "Unmatched", categoryPath: "Music/Amps",
                         estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 2,
                         createdAt: Date(timeIntervalSince1970: 1_500_000_000),
-                        notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
+                        notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil,
+                        firstPhotoAttribution: nil
                     ),
                     rowNumber: 3,
                     defaultedFieldCount: 0

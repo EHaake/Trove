@@ -113,7 +113,8 @@ struct PDFComposerTests {
             notes: notes,
             reverbProductID: nil,
             year: nil,
-            firstPhotoID: nil
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
         ))
     }
 
@@ -231,7 +232,8 @@ struct PDFComposerTests {
             notes: "The keeper",
             reverbProductID: 182_769,
             year: 1984,
-            firstPhotoID: nil
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
         )
         let wanted = WishlistExportRecord(
             name: "Deluxe Reverb Reissue",
@@ -243,7 +245,8 @@ struct PDFComposerTests {
             notes: nil,
             reverbProductID: 232,
             year: 1966,
-            firstPhotoID: nil
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
         )
 
         let entries = [PDFEntry(record: matched), PDFEntry(record: wanted)]

@@ -629,6 +629,11 @@ the PDF shows the owned photo with no stock credit and the stock photo does
 not appear — consistent with `011`'s one-photo-per-entry export and with
 "owned leads everywhere." Criterion 8 targets the case where the fetched photo
 *is* the item's photo, which is satisfied; this is not a criterion-8 miss.
+**As built (T013):** the record snapshot carries the leading photo's whole
+`StockPhotoAttribution` (one optional, not two strings), and the composer
+draws the credit only when the photo image actually resolved — a photo
+deleted mid-export renders the entry photo-free *and* credit-free (spec P4:
+never a credit without its image).
 **Testable claim** (`PDFComposerStockTests` /
 `ExportSchema` tests): an entry whose leading photo is `.fetched` carries the
 credit and the composer draws it; a device-photo entry carries no credit

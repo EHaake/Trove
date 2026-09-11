@@ -140,7 +140,8 @@ struct ExportSchemaTests {
             notes: "Body only",
             reverbProductID: 160_322,
             year: 1984,
-            firstPhotoID: nil
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
         )
 
         let row = ExportSchema.row(from: record, timeZone: zone("America/New_York"))
@@ -168,7 +169,8 @@ struct ExportSchemaTests {
             notes: nil,
             reverbProductID: nil,
             year: nil,
-            firstPhotoID: nil
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
         )
 
         let row = ExportSchema.row(from: record)
@@ -198,7 +200,8 @@ struct ExportSchemaTests {
             notes: nil,
             reverbProductID: 232,
             year: 2019,
-            firstPhotoID: nil
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
         )
 
         let row = ExportSchema.row(from: record, timeZone: zone("America/New_York"))
@@ -240,7 +243,8 @@ struct ExportSchemaTests {
             notes: nil,
             reverbProductID: nil,
             year: nil,
-            firstPhotoID: nil
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
         )
 
         let entry = PDFEntry(record: record)
@@ -271,7 +275,8 @@ struct ExportSchemaTests {
             notes: "Custom, not C2",
             reverbProductID: nil,
             year: nil,
-            firstPhotoID: nil
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
         )
 
         let entry = PDFEntry(record: record)
