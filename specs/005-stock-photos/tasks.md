@@ -610,6 +610,17 @@ exercises the filtered search.
 
 - [x] **T015b — The `.full` credit as one wrapping paragraph.** Device-pass finding 1, decided at a top-tier decision review (plan §6, "The stock badge and credit", as amended): the credit becomes one `Text` over an `AttributedString` from a pure `StockPhotoCredit.attributedCredit(_:theme:)`, the source run a `.link`, an `accessibilityRepresentation` `Link` carrying the hint and the `stockphoto.credit.link` identifier, no `lineLimit`; the two `Text` `+` deprecation warnings go with it. Tests restated per plan §6 (the value test with its three mutations; the adjusted source scans). **Verify:** `scripts/verify.sh` green; three mutations recorded. The device check (wrap at AX5, sighted tap, VoiceOver focus/double-tap, the recorded fallback if it fails) runs with the pending offline step, below.
 
+- [x] **T015c — The credit's arrow glyph at accessibility text sizes.**
+  T015b device check: the credit's text is the theme's fixed size, but the
+  appended `Text(Image(systemName: "arrow.up.right"))` follows Dynamic Type —
+  at accessibility XXXL it grows to ~5× the cap height, wraps onto its own
+  line, and draws primary instead of brass (a separate run the link tint
+  doesn't reach). Fix inside the credit: the glyph takes the credit's own font
+  and the brass tint; the `.full` credit stays one paragraph, the value test
+  and scans hold. Test: a guard that can go red. **Verify:**
+  `scripts/verify.sh` green; mutation recorded; a screenshot at accessibility
+  XXXL, content size restored to medium.
+
 - [ ] **T016 — Close-out.**
   Criteria 1–11 ticked in `spec.md` with citations, honest partials named (the
   second-device sync check; anything not exercised on the device);
@@ -704,6 +715,8 @@ settled.
 | T015 diagnosis | opus (`sdd-implementer`) | ~72k | finding 2 fixed (T015a, mutation verified, 1271 tests); finding 1 diagnosed as a view-vs-inline-run fork → decision review |
 | Finding 1 decision review | fable (`skeptical-reviewer`, top tier) | ~45k | option 1 (one `Text(AttributedString)`, `.link` run) with an `accessibilityRepresentation` Link instead of the session's label/hint lean (a label strips the Links rotor on iOS 17+); plan §6 amended; fallback recorded; → T015b |
 | T015b implement | opus (`sdd-implementer`) | ~63k | `.full` credit = one `Text(AttributedString)` via pure `attributedCredit(_:theme:)`, `.link` source run, `accessibilityRepresentation` Link; value test + adjusted scans; 4 mutations verified; 1 `Text +` warning remains (the plan-required glyph append) → T016 as-built; 1272 tests |
+| T015b device check | opus (general-purpose w/ simulator tools) | ~144k | wrap at default + AX5 confirmed; sighted tap opens the Commons file page (URL bar); VoiceOver NOT verifiable on the simulator (`inspect` unavailable, no VO) → person; found the Dynamic-Type arrow glyph defect → T015c; UI suite green twice (16) |
+| T015c implement | opus (general-purpose w/ simulator tools) | ~148k | glyph takes the credit's fixed font + brass; 3 scoped scan guards (a render test was built, probed, found false-passing — ImageRenderer draws an SF Symbol in a Text as a constant placeholder — and deleted); 3 mutations verified; AX5 screenshot confirms; 1275 tests |
 | _rows added per dispatch as the spec runs_ | opus (subagents) | | |
 
 **Phase 4 review notes (non-blocking, carried to T016 / the sweep):**

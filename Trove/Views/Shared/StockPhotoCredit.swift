@@ -53,7 +53,7 @@ struct StockPhotoCredit: View {
     /// the accessibility representation replaces the spoken content entirely.
     private var full: some View {
         (Text(Self.attributedCredit(attribution, theme: theme))
-            + Text(Image(systemName: "arrow.up.right")))
+            + Self.sourceGlyph(theme: theme))
             .tint(theme.colors.accentBrass)
             .accessibilityRepresentation {
                 Link(destination: attribution.sourceURL) {
@@ -63,6 +63,27 @@ struct StockPhotoCredit: View {
                 .accessibilityHint(StockPhotoCopy.creditLinkHint)
                 .accessibilityIdentifier("stockphoto.credit.link")
             }
+    }
+
+    /// The "leaves the app" glyph appended after the link run, carrying the
+    /// credit's own font and ink (T015c).
+    ///
+    /// Both modifiers are the fix, not decoration. An `Image` inside a `Text`
+    /// takes its size from the font that reaches it, and the concatenated
+    /// paragraph applies no font of its own — the styled runs carry theirs
+    /// inside the `AttributedString`, so the bare glyph fell through to the
+    /// environment's Dynamic Type body font. At accessibility XXXL that drew it
+    /// at roughly five times the credit's cap height, on a line of its own,
+    /// while the theme's fixed-size text beside it did not move at all (the
+    /// T015b device pass). Taking `theme.typography.secondary` — the same fixed
+    /// size the credit's own runs use — pins it to the text it belongs to. The
+    /// ink is the second half: appended as a separate run with no colour, the
+    /// glyph drew in the primary text colour, because the paragraph's `.tint`
+    /// reaches `.link` runs and nothing else.
+    static func sourceGlyph(theme: Theme) -> Text {
+        Text(Image(systemName: "arrow.up.right"))
+            .font(theme.typography.secondary)
+            .foregroundStyle(theme.colors.accentBrass)
     }
 
     /// The full credit as one styled value: characters exactly

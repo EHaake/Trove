@@ -133,3 +133,98 @@ struct RowStockA11yTests {
                 "WishlistRow types its stock a11y wording inline")
     }
 }
+
+/// The credit's trailing glyph (T015c).
+///
+/// The T015b device pass found the `arrow.up.right` appended after the link run
+/// scaling with Dynamic Type while the theme's fixed-size text beside it did
+/// not, and drawing in the primary ink rather than the link's brass — an
+/// unstyled `Text(Image(systemName:))` falls through to the environment's body
+/// font, and the paragraph's `.tint` reaches `.link` runs and nothing else.
+///
+/// **This is a source scan because a render cannot see it, which was measured,
+/// not assumed.** `ImageRenderer` draws a symbol inside a `Text` as a constant
+/// 51x55 white placeholder — identical at `.large` and `.accessibility5`, and
+/// identical with or without a font or foreground on the `Text` (a plain
+/// `Image` view renders correctly at 13x12 in brass, so the harness itself is
+/// fine). A size-comparison test over the real construct therefore passes no
+/// matter what the code does: exactly the false-passing shape `CLAUDE.md`
+/// warns about, caught here by probing before trusting it. The behaviour is
+/// attested on the device instead (T015c's accessibility-XXXL screenshot); what
+/// these guards hold is the wiring that produced it.
+@Suite("Stock photo credit glyph")
+struct StockPhotoCreditGlyphTests {
+    private static let credit = "Trove/Views/Shared/StockPhotoCredit.swift"
+
+    /// The glyph takes *the credit's own* font — read out of `attributedCredit`
+    /// rather than named here, so changing the credit's base font without
+    /// moving the glyph with it goes red, which is the defect restated.
+    @Test func theGlyphTakesTheCreditsOwnFixedFont() throws {
+        let code = try SourceScan.production(Self.credit)
+        let creditFont = try creditBaseFont(in: code)
+        let glyph = try body(of: "static func sourceGlyph(theme: Theme) -> Text {", in: code)
+
+        #expect(
+            glyph.contains(".font(\(creditFont))"),
+            "the glyph doesn't take the credit's own font (\(creditFont)) — it follows Dynamic Type: \(glyph)"
+        )
+    }
+
+    /// And the brass, which the tint can't hand it.
+    @Test func theGlyphCarriesTheBrassItself() throws {
+        let code = try SourceScan.production(Self.credit)
+        let glyph = try body(of: "static func sourceGlyph(theme: Theme) -> Text {", in: code)
+
+        #expect(
+            glyph.contains(".foregroundStyle(theme.colors.accentBrass)"),
+            "the glyph carries no brass of its own, so it draws in the primary ink: \(glyph)"
+        )
+    }
+
+    /// And the paragraph composes the styled glyph rather than a bare one — the
+    /// guard that keeps the two above from being bypassed at the call site.
+    @Test func theParagraphAppendsTheStyledGlyph() throws {
+        let code = try SourceScan.production(Self.credit)
+        let full = try body(of: "private var full: some View {", in: code)
+
+        #expect(
+            full.contains("Self.sourceGlyph(theme: theme)"),
+            "the credit doesn't append the styled glyph: \(full)"
+        )
+        #expect(
+            !full.contains("Text(Image("),
+            "the credit appends a bare, unstyled glyph beside the styled one: \(full)"
+        )
+    }
+
+    // MARK: - Helpers
+
+    /// The font `attributedCredit` sets on the whole credit, as written.
+    private func creditBaseFont(in code: String) throws -> String {
+        let assignment = try #require(
+            code.range(of: "credit.font = "),
+            "attributedCredit no longer sets a base font — this guard is measuring nothing"
+        )
+        let rest = code[assignment.upperBound...]
+        let end = try #require(rest.firstIndex(where: { $0.isNewline }), "the base font assignment never ends")
+        return String(rest[..<end]).trimmingCharacters(in: .whitespaces)
+    }
+
+    /// `TrendArrowWiringTests`' brace matcher: the question is what a single
+    /// declaration's body contains.
+    private func body(of declaration: String, in code: String) throws -> String {
+        let start = try #require(code.range(of: declaration), "\(declaration) is gone")
+        var depth = 1
+        var index = start.upperBound
+        while index < code.endIndex {
+            if code[index] == "{" { depth += 1 }
+            if code[index] == "}" {
+                depth -= 1
+                if depth == 0 { return String(code[start.upperBound..<index]) }
+            }
+            index = code.index(after: index)
+        }
+        Issue.record("\(declaration) never closes")
+        return ""
+    }
+}
