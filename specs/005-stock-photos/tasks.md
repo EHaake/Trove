@@ -695,7 +695,27 @@ settled.
 | **◆ Experiment 1 — 2026-09-11** | session `claude-fable-5-1` @ medium | Fable allowance 92% | The orchestrating session's seat moves to Fable from Phase 4 on, per the amended model policy (skill's experiment-1 branch). Rows above ran the session on `opus` under the prior policy's Fallback clause (Phases 1–3b), which the intro paragraph describes; that framing is superseded from here. Subagent/review rows below stay `opus` (implementation tier). The 92% reading is experiment 1's baseline allowance draw, to be compared against a later reading. |
 | T013 implement | opus (`sdd-implementer`) | ~104k | `PDFEntry.photoCredit`; records snapshot `firstPhotoAttribution`; composer draws the credit under the photo box only when the image resolved; 4 tests, 2 mutations verified; 20 mechanical record-construction sites; 1265 tests |
 | T014 implement | opus (`sdd-implementer`) | ~62k | `PRIVACY.md` (second service, photo notice quoted verbatim, two new table rows, one-direction images wording, sync statement), README feature bullet, 4 privacy tests; 3 mutations verified; 1269 tests |
+| Phase 4 review | opus (`skeptical-reviewer`) | ~68k | **signed off, nothing blocking**; 5 non-blocking notes (below); orchestrator re-ran `scripts/verify.sh` at the reviewer's ask (1269 tests green) |
 | _rows added per dispatch as the spec runs_ | opus (subagents) | | |
+
+**Phase 4 review notes (non-blocking, carried to T016 / the sweep):**
+1. Plan §7's new "photo deleted mid-export → no photo, no credit" sentence has
+   no test (every `PDFComposerStockTests` entry has a resolvable photo). One
+   construction closes it: a `PDFEntry` with `photoCredit` set and an
+   unresolvable `photoID`, asserting neither "Photo:" nor the author renders.
+   **→ T016 picks this up** (sub-lettered under T013 if it needs its own commit).
+2. `theStockPhotoLinkPointsAtTheSameExistingFile` is half falsifiable: renaming
+   `PRIVACY.md` goes red, but repointing both constants at `README.md` stays
+   green. Same shape as 002's `theLinkedURLEndsInTheFilename` — audit the shape
+   at the sweep (a containment check on the policy's title line closes both).
+3. The reworded "Images travel in one direction only" sentence has no guard;
+   reverting it to the old wording keeps every test green. Plan §8 asked for none.
+4. "Two things ever leave" front-loads loosely (candidate images are fetched,
+   the market refresh sends a product ID); the detail bullets are accurate.
+5. Bundle hygiene: the review bundle's spec sections came out empty (the
+   orchestrator's awk anchors missed the headings) and carried no verbatim
+   verify output; the reviewer checked plan/tasks instead and asked for the
+   re-run, which the row above records.
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the
 "Wikimedia Commons" segment to the file page (`descriptionurl`) — standard TASL
