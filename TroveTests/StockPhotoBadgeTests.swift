@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import Trove
 
@@ -12,16 +13,50 @@ struct StockPhotoBadgeTests {
     private static let badge = "Trove/Views/Shared/StockPhotoBadge.swift"
     private static let credit = "Trove/Views/Shared/StockPhotoCredit.swift"
 
-    /// The credit draws a real `Link`, once — not a `Button`, not `openURL`.
-    /// The non-identifier-boundary regex is `MarketWiringTests`'
+    /// The credit's one `Link` is the accessibility representation's, not a view
+    /// in the layout (T015b, plan §6): the paragraph has to wrap, so the tap
+    /// target is the `.link` run and VoiceOver gets the `Link` back through
+    /// `accessibilityRepresentation`. Still never a `Button` + `openURL`. The
+    /// non-identifier-boundary regex is `MarketWiringTests`'
     /// `theOutwardLinkIsALinkNotAButton` pattern, so `NavigationLink(` can't
     /// stand in for it.
     @Test func theCreditComposesALinkNotAButton() throws {
         let code = try SourceScan.production(Self.credit)
         let link = try Regex(#"(?:^|[^A-Za-z0-9_])Link\("#)
         let links = code.ranges(of: link).count
-        #expect(links == 1, "the credit draws \(links) links — the source link is the one and only")
+        #expect(links == 1, "the credit draws \(links) links — the represented link is the one and only")
+        #expect(code.contains("accessibilityRepresentation"),
+                "the credit's link isn't presented through an accessibility representation")
         #expect(!code.contains("openURL"), "the credit opens a URL by hand instead of linking")
+        let button = try Regex(#"(?:^|[^A-Za-z0-9_])Button\("#)
+        #expect(code.ranges(of: button).isEmpty, "the credit drives its link from a Button")
+    }
+
+    /// The `.full` credit is one paragraph that links only its source run and
+    /// keeps the whole author (T015b, plan §6): the characters are exactly the
+    /// copy string — so a rebuilt-from-pieces or truncated line fails — exactly
+    /// one run carries `.link`, that link is the Commons file page, and that
+    /// run's characters are exactly `creditSource`, so linking the whole line
+    /// fails too. The author is the real Commons worst case.
+    @Test func theCreditLinksOnlyItsSourceRunAndKeepsTheWholeAuthor() {
+        let attribution = StockPhotoAttribution(
+            author: "Rama, Wikimedia Commons, Cc-by-sa-2.0-fr",
+            licenseName: "CC BY-SA 2.0 FR",
+            sourceURL: URL(string: "https://commons.wikimedia.org/wiki/File:Nikon_F3.jpg")!
+        )
+        let credit = StockPhotoCredit.attributedCredit(attribution, theme: .dark)
+
+        let plain = StockPhotoCopy.credit(
+            author: attribution.author, licenseName: attribution.licenseName)
+        #expect(String(credit.characters) == plain,
+                "the credit's words aren't exactly StockPhotoCopy.credit(author:licenseName:)")
+
+        let linked = credit.runs.filter { $0.link != nil }
+        #expect(linked.count == 1, "\(linked.count) runs carry a link — exactly the source run should")
+        #expect(linked.first?.link == attribution.sourceURL, "the link doesn't open the Commons file page")
+        let linkedText = linked.first.map { String(credit.characters[$0.range]) }
+        #expect(linkedText == StockPhotoCopy.creditSource,
+                "the linked run is \(linkedText ?? "nothing"), not just the source segment")
     }
 
     /// The link carries a hint that it leaves the app (criterion 11).
