@@ -62,6 +62,13 @@ purchases.
   taken; a refresh is one tap, at most once an hour. The figures and
   their history stay on the device that fetched them and never sync,
   and a first search asks you first — see [`PRIVACY.md`](PRIVACY.md).
+- **Stock photos** — an item with no photo of its own can borrow one
+  from Wikimedia Commons: tap Find a photo…, pick from the candidates,
+  and the item gets a representative image, badged as a stock photo and
+  carrying its credit — the photographer, the licence and a link back —
+  in the app and in a PDF export. Searching happens only when you ask,
+  after the same kind of one-time notice the market search uses, and a
+  fetched photo syncs like your own.
 - **Settings** — one sheet, reached from the "…" on either list or on
   the dashboard: export *everything* as a CSV pair or a PDF pair (one
   share sheet, two files), the blank import templates, a live iCloud

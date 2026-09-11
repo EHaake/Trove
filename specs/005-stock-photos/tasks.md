@@ -560,7 +560,7 @@ exercises the filtered search.
   task's mapping filters those photos out — a contained change noted here.
   **Verify:** `scripts/verify.sh` green; mutation recorded.
 
-- [ ] **T014 — `PRIVACY.md`, its guard, and the README sentence.**
+- [x] **T014 — `PRIVACY.md`, its guard, and the README sentence.**
   Per plan §8. `PRIVACY.md`: Wikimedia Commons named as a second outside
   service; the photo search added to "what leaves your device" (the item's
   name, only on the person's action, only after the notice); the statement that
@@ -694,6 +694,7 @@ settled.
 | T012a re-review | opus (`skeptical-reviewer`) | ~39k | **resolved, nothing open**; all relevance tests confirmed falsifiable; 2 non-blocking notes |
 | **◆ Experiment 1 — 2026-09-11** | session `claude-fable-5-1` @ medium | Fable allowance 92% | The orchestrating session's seat moves to Fable from Phase 4 on, per the amended model policy (skill's experiment-1 branch). Rows above ran the session on `opus` under the prior policy's Fallback clause (Phases 1–3b), which the intro paragraph describes; that framing is superseded from here. Subagent/review rows below stay `opus` (implementation tier). The 92% reading is experiment 1's baseline allowance draw, to be compared against a later reading. |
 | T013 implement | opus (`sdd-implementer`) | ~104k | `PDFEntry.photoCredit`; records snapshot `firstPhotoAttribution`; composer draws the credit under the photo box only when the image resolved; 4 tests, 2 mutations verified; 20 mechanical record-construction sites; 1265 tests |
+| T014 implement | opus (`sdd-implementer`) | ~62k | `PRIVACY.md` (second service, photo notice quoted verbatim, two new table rows, one-direction images wording, sync statement), README feature bullet, 4 privacy tests; 3 mutations verified; 1269 tests |
 | _rows added per dispatch as the spec runs_ | opus (subagents) | | |
 
 **Sign-off second-look note 4 (optional, non-blocking).** The credit links the
