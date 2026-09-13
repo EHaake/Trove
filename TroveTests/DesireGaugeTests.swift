@@ -222,3 +222,96 @@ struct DesireGaugeColorTests {
         }
     }
 }
+
+/// The gauge's perceptual separation re-earned on the **light** palette (spec
+/// `004`, criterion 8), sampled off a render made with `theme: .light` over
+/// `ThemeColors.light.surface`. Mirrors `DesireGaugeColorTests`; the dark suite
+/// above is untouched, so the two guarantees can't mask each other.
+@Suite("Light DesireGauge perceptual separation at row size")
+struct LightDesireGaugeColorTests {
+    private let rowSegmentWidth: CGFloat = 12
+    private let rowMaxHeight: CGFloat = 14
+    private let floor = 0.06
+
+    @MainActor
+    private func sampledSegments(atLevel level: Int) throws -> [RGB8] {
+        let gauge = DesireGauge(value: .constant(level))
+            .background(ThemeColors.light.surface)
+
+        let image = try #require(renderBitmap(gauge, theme: .light), "ImageRenderer produced nothing to sample.")
+        let bitmap = try #require(Bitmap(image), "Couldn't read the rendered pixels.")
+
+        return try DesireToOwnLevel.allCases.map { segment in
+            let centre = DesireGauge.segmentCentre(
+                segment,
+                segmentWidth: rowSegmentWidth,
+                maxHeight: rowMaxHeight
+            )
+            return try #require(
+                bitmap.pixel(at: centre),
+                "Segment \(segment.rawValue) centre \(centre) fell outside the \(bitmap.width)×\(bitmap.height) render."
+            )
+        }
+    }
+
+    @Test func everyFilledSegmentIsDistinguishableFromAnEmptyTrack() throws {
+        let empty = try sampledSegments(atLevel: 1)[2]
+
+        for level in DesireToOwnLevel.allCases {
+            let sampled = try sampledSegments(atLevel: level.rawValue)
+            for segment in DesireToOwnLevel.allCases where segment.rawValue <= level.rawValue {
+                let lit = sampled[segment.rawValue - 1]
+                let separation = Perceptual.distance(lit, empty)
+                #expect(
+                    separation > floor,
+                    "level \(level.rawValue) segment \(segment.rawValue) is \(lit), empty track is \(empty), only \(separation) apart"
+                )
+            }
+        }
+    }
+
+    @Test func adjacentFilledTonesAreDistinguishableFromEachOther() throws {
+        let sampled = try sampledSegments(atLevel: 3)
+
+        for index in 0..<sampled.count - 1 {
+            let separation = Perceptual.distance(sampled[index], sampled[index + 1])
+            #expect(
+                separation > floor,
+                "segments \(index + 1) and \(index + 2) are \(sampled[index]) and \(sampled[index + 1]), only \(separation) apart"
+            )
+        }
+    }
+
+    @Test func theThreeReadingsAreTellableApart() throws {
+        let states = try DesireToOwnLevel.allCases.map { try sampledSegments(atLevel: $0.rawValue) }
+
+        for (first, second) in [(0, 1), (1, 2), (0, 2)] {
+            let widest = zip(states[first], states[second])
+                .map { Perceptual.distance($0, $1) }
+                .max() ?? 0
+            #expect(
+                widest > floor,
+                "levels \(first + 1) and \(second + 1) differ by at most \(widest): \(states[first]) vs \(states[second])"
+            )
+        }
+    }
+
+    /// Guards the measurement itself — that sampling lands on fill, not the
+    /// light card behind it. Segment 1 lit is the light palette's dim brass;
+    /// the near-white card is not.
+    @Test func theSamplingLandsOnFillRatherThanTheCardBehindIt() throws {
+        let lit = try sampledSegments(atLevel: 3)
+
+        for (index, pixel) in lit.enumerated() {
+            let expected = DesireGauge.fillTone(
+                DesireToOwnLevel(clamping: index + 1),
+                in: ThemeColors.light
+            )
+            let drift = Perceptual.distance(pixel, expected)
+            #expect(
+                drift < 0.02,
+                "segment \(index + 1) sampled \(pixel), token says \(expected), \(drift) apart"
+            )
+        }
+    }
+}

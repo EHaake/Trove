@@ -50,7 +50,7 @@ nonisolated enum FontFamily: Sendable {
 
 /// Named type roles. Views ask for `theme.typography.rowTitle`, never for a
 /// point size.
-struct ThemeTypography: Sendable {
+struct ThemeTypography: Sendable, Equatable {
     /// The faces in `Trove/Fonts/` are registered through `UIAppFonts` in
     /// `Config/Info.plist`. `FontRegistrationTests` asserts every name this
     /// type asks for is actually registered, because `Font.custom` falls back

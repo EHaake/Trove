@@ -67,6 +67,10 @@ struct WishlistView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.storageMode) private var storageMode
     @Environment(\.storageFallbackReason) private var storageFallbackReason
+    /// 004: threaded into the Settings sheet — see `ItemListView`'s twin.
+    @Environment(AppearanceStore.self) private var appearanceStore
+    /// 004 (T009): the resolved scheme under `ThemedRoot` — see `ItemListView`'s twin.
+    @Environment(\.colorScheme) private var systemColorScheme
 
     /// Kept for the Settings sheet — see `ItemListView`'s twin.
     private let syncMonitor: SyncMonitor
@@ -141,11 +145,15 @@ struct WishlistView: View {
             NavigationStack {
                 SettingsView(
                     modelContext: modelContext,
+                    appearanceStore: appearanceStore,
                     syncMonitor: syncMonitor,
                     storageMode: storageMode,
                     storageFallbackReason: storageFallbackReason
                 )
             }
+            // 004 (T009): the sheet adopts the resolved scheme so a live
+            // appearance switch follows — see `ItemListView`'s twin.
+            .preferredColorScheme(appearanceStore.choice.sheetColorScheme(device: systemColorScheme))
         }
         // Values can change on the detail screen — an edit, the gauge, or a
         // deletion — so the list refetches whenever it comes back into view.

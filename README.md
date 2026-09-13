@@ -78,6 +78,7 @@ purchases.
   count in the title, with "Export first if you want a copy" right
   there), and About — the Reverb attribution, the contact address and
   the privacy policy.
+- **Appearance** — a System / Light / Dark choice in Settings, where Light is a paper-ground variant of the same brass/moss/rust identity rather than a new palette, System follows the device live, and the choice is stored per-device (Dark by default, so an existing install updates to exactly today's look).
 - **Menus that are the app's own** — every menu inside a page (Sort
   By, both "…" badges, the dashboard's category order) opens one
   shared dropdown surface in Trove's own type and tokens, growing out

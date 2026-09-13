@@ -105,6 +105,86 @@ struct TrendArrowRenderTests {
     }
 }
 
+/// The trend arrow re-earned on the **light** palette (spec `004`, criterion
+/// 8): the same moss-up / rust-down tones, drawn from `ThemeColors.light`'s
+/// text-safe lifts and rendered with `theme: .light`, each legible on the
+/// light ground. Mirrors `TrendArrowRenderTests`; the dark suite is untouched.
+@Suite("Light TrendArrow render")
+struct LightTrendArrowRenderTests {
+    private let colors = ThemeColors.light
+    private let tolerance = 0.02
+
+    @Test func aRisingTrendDrawsInTheMossTextTone() throws {
+        let ink = try ink(of: .up)
+        #expect(
+            Perceptual.distance(ink, colors.accentMossText) < tolerance,
+            "a rising arrow is light accentMossText — measured \(ink), ΔE \(Perceptual.distance(ink, colors.accentMossText))"
+        )
+        #expect(
+            Perceptual.distance(ink, colors.accentMossText) < Perceptual.distance(ink, colors.accentRustText),
+            "a rising arrow read closer to the falling tone — measured \(ink)"
+        )
+    }
+
+    @Test func aFallingTrendDrawsInTheRustTextTone() throws {
+        let ink = try ink(of: .down)
+        #expect(
+            Perceptual.distance(ink, colors.accentRustText) < tolerance,
+            "a falling arrow is light accentRustText — measured \(ink), ΔE \(Perceptual.distance(ink, colors.accentRustText))"
+        )
+        #expect(
+            Perceptual.distance(ink, colors.accentRustText) < Perceptual.distance(ink, colors.accentMossText),
+            "a falling arrow read closer to the rising tone — measured \(ink)"
+        )
+    }
+
+    @Test func neitherArrowIsTheBrassTheFiguresWear() throws {
+        for trend in [MarketTrend.up, .down] {
+            let ink = try ink(of: trend)
+            #expect(
+                Perceptual.distance(ink, colors.accentBrass) > tolerance,
+                "\(trend) drew in light accentBrass — measured \(ink)"
+            )
+        }
+    }
+
+    /// The half criterion 8 states directly: the ink stays legible on the
+    /// light ground — well clear of the near-white `surface` it sits on.
+    @Test func eachArrowStaysLegibleOnTheLightGround() throws {
+        for trend in [MarketTrend.up, .down] {
+            let ink = try ink(of: trend)
+            let separation = Perceptual.distance(ink, colors.surface)
+            #expect(
+                separation > 0.06,
+                "\(trend) arrow \(ink) is only \(separation) from the light surface"
+            )
+        }
+    }
+
+    /// The arrow's own ink: the sampled pixel furthest from the transparent
+    /// black the renderer composites onto — the fill at full strength.
+    private func ink(of trend: MarketTrend) throws -> RGB8 {
+        let image = try #require(renderBitmap(TrendArrow(trend: trend), theme: .light), "ImageRenderer produced nothing to sample.")
+        let bitmap = try #require(Bitmap(image), "Couldn't read the rendered pixels.")
+        let backdrop = RGB8(red: 0, green: 0, blue: 0)
+
+        var brightest: RGB8?
+        var distance = 0.0
+        for y in 0..<bitmap.height {
+            for x in 0..<bitmap.width {
+                guard let pixel = bitmap.pixel(at: CGPoint(x: x, y: y)) else { continue }
+                let reach = Perceptual.distance(pixel, backdrop)
+                if reach > distance {
+                    distance = reach
+                    brightest = pixel
+                }
+            }
+        }
+
+        return try #require(brightest, "the \(trend) arrow drew no ink at all")
+    }
+}
+
 /// Where the arrow is drawn — the half the render tests can't see, since a
 /// row that never composes a `TrendArrow` renders perfectly well.
 ///

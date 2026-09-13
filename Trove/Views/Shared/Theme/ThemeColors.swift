@@ -125,3 +125,58 @@ extension ThemeColors {
         gaugeTrack: Color(hex: ink, opacity: 0.16)
     )
 }
+
+extension ThemeColors {
+    /// The warm near-black every light-mode text token is a percentage of —
+    /// the mirror of `.dark`'s ivory `ink`, one dark ink over the light ground.
+    private static let lightInk = "#23201B"
+
+    /// The light palette (spec `004`). Every token `.dark` carries, derived for
+    /// a near-white ground by the Oklab method in `design/tokens.md` and pinned
+    /// by `LightThemeColorTokenTests`. Colour only — `Theme.light` shares
+    /// `.dark`'s typography and metrics.
+    static let light = ThemeColors(
+        background: Color(hex: "#ECE7DC"),
+        surface: Color(hex: "#F7F2E9"),
+        surfaceInset: Color(hex: "#EDE7DA"),
+        divider: Color(hex: "#D5CDBB"),
+
+        textPrimary: Color(hex: lightInk),
+        textBody: Color(hex: lightInk, opacity: 0.75),
+        textLabel: Color(hex: lightInk, opacity: 0.60),
+        textLabelSecondary: Color(hex: lightInk, opacity: 0.55),
+        textMonoMeta: Color(hex: lightInk, opacity: 0.45),
+        textQuiet: Color(hex: lightInk, opacity: 0.40),
+        textDisabled: Color(hex: lightInk, opacity: 0.35),
+        textInactive: Color(hex: lightInk, opacity: 0.30),
+
+        // Brass runs dark on the light ground so the money figure stays
+        // legible (6.5:1 on surface); the direction flips from dark, where
+        // brass is the lightest accent. See tokens.md's light column.
+        accentBrass: Color(hex: "#804A00"),
+        accentBrassHover: Color(hex: "#9C5D0E"),
+        accentBrassDim: Color(hex: "#C6A97C"),
+        accentBrassMid: Color(hex: "#A37946"),
+        accentBrassTint: Color(hex: "#804A00", opacity: 0.12),
+
+        accentMoss: Color(hex: "#889979"),
+        accentMossText: Color(hex: "#3E5137"),
+
+        accentRust: Color(hex: "#D47D5B"),
+        accentRustText: Color(hex: "#8E3A24"),
+
+        // A dark olive-green, not the dark palette's yellow-gold: it doubles
+        // as the level-3 numeral (so it must clear 3:1 as text) and a dark
+        // gold here would collide with the deep-bronze accentBrass on the
+        // dial. Green separates it from brass by hue. See tokens.md.
+        dialMidpoint: Color(hex: "#446A22"),
+
+        categoryNeutral: Color(hex: "#7C7D80"),
+
+        plateHighlight: Color(hex: "#FFFFFF", opacity: 0.70),
+        plateEdgeShadow: Color(hex: "#000000", opacity: 0.12),
+        plateCastShadow: Color(hex: "#000000", opacity: 0.10),
+
+        gaugeTrack: Color(hex: lightInk, opacity: 0.16)
+    )
+}

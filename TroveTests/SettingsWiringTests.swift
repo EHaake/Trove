@@ -230,6 +230,69 @@ struct SettingsWiringTests {
         }
     }
 
+    // MARK: - 004/T004: the appearance control and its threading
+
+    /// G10a: every host reads the appearance store from the environment and
+    /// threads it into `SettingsView` — the `syncMonitor` delivery shape, so
+    /// the sheet never reads an observable it might not have.
+    /// Mutation: drop `appearanceStore: appearanceStore` from a host's
+    /// `SettingsView(...)` → the arg expectation fires; drop the
+    /// `@Environment(AppearanceStore.self)` read → the read expectation fires.
+    @Test(arguments: settingsHosts)
+    func eachHostThreadsTheAppearanceStoreIntoSettings(path: String) throws {
+        let code = try SourceScan.production(path)
+        #expect(
+            code.contains("@Environment(AppearanceStore.self)"),
+            "\(path) doesn't read the appearance store from the environment"
+        )
+        let calls = SourceScan.argumentLists(of: "SettingsView", in: code)
+        #expect(calls.count == 1, "\(path) builds \(calls.count) SettingsViews, expected exactly 1")
+        for call in calls {
+            #expect(
+                call.contains("appearanceStore: appearanceStore"),
+                "\(path) doesn't pass appearanceStore to Settings"
+            )
+        }
+    }
+
+    /// G10b: the Appearance section is composed **first** in the body's
+    /// section stack — checked at composition, not declaration (the
+    /// `theSectionsAppearInSpecOrder` shape) — and its control is a
+    /// `.segmented` `Picker` bound to `$appearanceStore.choice` over
+    /// `AppearanceChoice.allCases`, labelled from `displayName`. The copy
+    /// lives on the model: no typed "System"/"Light"/"Dark" in the view.
+    /// Mutation: move `appearanceSection` out of first position → the order
+    /// expectation fires; `.pickerStyle(.menu)` → `MenuPolicyTests` red.
+    @Test func theAppearanceSectionLeadsAsASegmentedPickerOverTheChoice() throws {
+        let code = try SourceScan.production(Self.settingsView)
+        let stacks = SourceScan.closureBodies(
+            after: "VStack(alignment: .leading, spacing: theme.metrics.sectionGap)",
+            in: code
+        )
+        let body = try #require(stacks.first, "body's section stack not found")
+        let sections = ["appearanceSection", "exportSection", "templatesSection", "marketSection", "iCloudSection", "deleteSection", "aboutSection"]
+        let positions = try sections.map { name in
+            try #require(body.range(of: name)?.lowerBound, "body doesn't compose \(name)")
+        }
+        #expect(positions == positions.sorted(), "sections composed out of spec order — Appearance must lead")
+        #expect(code.contains("DetailSection(title: \"Appearance\")"), "missing the Appearance section")
+
+        let pickers = SourceScan.argumentLists(of: "Picker", in: code)
+        #expect(pickers.count == 1, "expected exactly one Picker in Settings, found \(pickers.count)")
+        #expect(code.contains("selection: $appearanceStore.choice"), "the picker isn't bound to the store's choice")
+        #expect(code.contains("AppearanceChoice.allCases"), "the picker doesn't iterate every case")
+        #expect(code.contains(".pickerStyle(.segmented)"), "the appearance picker isn't segmented")
+        #expect(code.contains(".displayName"), "the picker labels don't read displayName")
+
+        let literals = SourceScan.stringLiterals(in: code)
+        for word in ["System", "Light", "Dark"] {
+            #expect(
+                !literals.contains { $0.contains(word) },
+                "SettingsView types the appearance copy \"\(word)\" — it belongs on AppearanceChoice.displayName"
+            )
+        }
+    }
+
     // MARK: - T005, T011
     /// T005: the store's recorded fallback reason reaches the environment.
     /// `TroveStoreTests` pins that the reason isn't thrown away; this pins

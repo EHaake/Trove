@@ -356,10 +356,11 @@ struct RGB8: Equatable, CustomStringConvertible {
 ///
 /// `ImageRenderer` sizes content to its ideal size, which is what the layout
 /// and colour tests are both asking about. The theme has to be supplied by hand
-/// — there's no host app to inherit it from.
+/// — there's no host app to inherit it from. It defaults to `.dark`, so every
+/// existing render caller is unchanged; `004`'s light suites pass `.light`.
 @MainActor
-func renderBitmap(_ view: some View) -> CGImage? {
-    let renderer = ImageRenderer(content: view.environment(\.theme, .dark))
+func renderBitmap(_ view: some View, theme: Theme = .dark) -> CGImage? {
+    let renderer = ImageRenderer(content: view.environment(\.theme, theme))
     renderer.scale = 1
     return renderer.cgImage
 }

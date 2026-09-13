@@ -30,6 +30,7 @@ own.
 | `013-settings-menu` | **Shipped** — merged to `main` 2026-09-02 via [PR #9](https://github.com/EHaake/Trove/pull/9); seventeen tasks plus Amendment A's nine (the Dashboard "…" and bespoke in-page menus, decided after the first close-out and before merge), twenty-seven criteria verified with per-criterion records in `spec.md`; three false-passing guards caught across the two phases, and the render oracle, the frame-by-frame recording and the safe-area probe each overturned a plan claim before it shipped |
 | `002-live-market-value` | **Shipped** — merged to `main` 2026-09-05 via [PR #11](https://github.com/EHaake/Trove/pull/11); twenty-nine tasks (T001a–T024 with sub-letters, Amendments A and B folded in during implementation), twenty-three criteria verified with per-criterion records in `spec.md`; the first spec under the constitution's model policy, its tier log in `tasks.md`; the pre-merge sweep's one blocking finding settled by instrumentation on the simulator (not a defect) and one two-device gap recorded for a `fix/` branch |
 | `003-trend-aware-sell-plan` | **Shipped** — merged to `main` 2026-09-07 via [PR #15](https://github.com/EHaake/Trove/pull/15); seven tasks (T001–T007 with T004a added at the Phase 2 pause for Decision 14, the person's layout call from the seeded simulator), twelve criteria verified with per-criterion records in `spec.md`; the second spec under the model policy — its tier log in `tasks.md` came in under 002's per-task cost with the review-loop cap holding throughout; two layout facts settled by measurement rather than argument before merge |
+| `004-themes` | **Shipped** — merged to `main` 2026-09-09 via [PR #20](https://github.com/EHaake/Trove/pull/20); seven tasks (T001–T007), ten criteria verified with per-criterion citations in `spec.md`; **light mode of the existing brass/moss/rust identity** plus a System/Light/Dark choice in Settings — alternate-hue palettes stay deferred to their own Design pass (spec Decision 1). The third spec under the model policy, its tier log in `tasks.md` — **every invocation ran at `opus` under the Fallback clause** (`fable`'s budget spent for the whole spec); the T006 device pass signed off the light palette on-brand across every screen, and a one-time, non-reproducible title-refresh transient was recorded and dispositioned "note, don't fix" by the person |
 | `005-stock-photos` | **Shipped** — merged to `main` 2026-09-13 via [PR #21](https://github.com/EHaake/Trove/pull/21); sixteen tasks with four sub-lettered additions (T012a, the taken-with relevance filter the person's Phase 3 device testing asked for; T015a–c, from the device pass), eleven criteria verified with per-criterion records in `spec.md` and **two honest partials named** (no second device for the sync check; no dual-licensed GFDL + CC-BY-SA file in any live search). The app's **second network dependency** — Wikimedia Commons, the one source whose terms let a fetched photo be stored, synced and shown offline. Two review findings were caught as false coverage rather than by failing (a ported-licence acceptance, a bare-number relevance drop), a render test was probed, found false-passing and deleted, and the picker's `.task` firing count was settled by a probe inside the service rather than by inference. The first spec measured under the model policy's **experiment 1** — the orchestrating session moved to Fable at Phase 4, its tier log in `tasks.md`. |
 
 ## Future specs
@@ -103,10 +104,23 @@ actually useful once the app is in daily use.
     only where the row cannot hold it. T004a's `layoutPriority(1)`,
     measured in the same pass, turns out to be inert — kept, and its
     comment now says so.
-- **`004-themes`** — Light mode, plus a small set of additional curated
-  color themes beyond the default. Uses the semantic `Theme` abstraction
-  built into every view from `001` specifically so this is a config
-  change, not a redesign.
+- **`004-themes`** (**Shipped 2026-09-09** via
+  [PR #20](https://github.com/EHaake/Trove/pull/20) — see
+  `specs/004-themes/` for the full record) — **Light mode** of the
+  existing brass/moss/rust identity (a paper-ground variant, not new
+  hues), plus a **System / Light / Dark** choice in Settings. System
+  follows the device live with no relaunch; Light and Dark are explicit
+  overrides; the default is Dark for everyone, so an existing install
+  updates to exactly today's look. The choice is stored per-device in
+  `UserDefaults` and does not sync (spec Decision 4) — the app's first
+  stored preference. Spent the semantic `Theme` abstraction `001` built
+  for exactly this: light mode was "inject a different `ThemeColors`
+  instance," its Oklab-derived tokens pinned and its dial/gauge/trend
+  perceptual guarantees re-earned on the light ground, not a redesign.
+  The exported PDF is unaffected (its `PrintPalette` is paper-fixed).
+  **Alternate-hue colour themes remain deferred** to their own spec and
+  Design pass (spec Decision 1, the same reasoning that held `008`/`009`)
+  — this spec was deliberately light-mode-only.
 - **`005-stock-photos`** (**Shipped 2026-09-13** via
   [PR #21](https://github.com/EHaake/Trove/pull/21) — see
   `specs/005-stock-photos/` for the full record) — an item with no photo
