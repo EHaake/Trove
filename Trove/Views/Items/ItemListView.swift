@@ -233,8 +233,8 @@ struct ItemListView: View {
                 viewModel.delete(id: item.id)
             }
             Button(ItemDeleteCopy.cancel, role: .cancel) {}
-        } message: { _ in
-            Text(ItemDeleteCopy.message)
+        } message: { item in
+            Text(ItemDeleteCopy.message(isSold: item.isSold))
         }
         // 011's share sheet, presented off view-model state so the export
         // intent stays a testable method; dismissal writes nil back through

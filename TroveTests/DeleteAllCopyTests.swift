@@ -83,7 +83,7 @@ struct DeleteAllCopyTests {
         // one *is* the single-item alert, word for word, on both sides — so
         // rewording either single-item alert turns this red (the sweep's S6
         // replaced a magic-number prefix check with these).
-        #expect(DeleteAllCopy.message(for: .items, count: 1, mode: .localOnly) == ItemDeleteCopy.message)
+        #expect(DeleteAllCopy.message(for: .items, count: 1, mode: .localOnly) == ItemDeleteCopy.message(isSold: false))
         #expect(DeleteAllCopy.message(for: .wishlist, count: 1, mode: .localOnly) == WishlistDeleteCopy.message)
     }
 

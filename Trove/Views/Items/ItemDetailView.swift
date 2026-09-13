@@ -78,7 +78,7 @@ struct ItemDetailView: View {
             // Shared with the list's swipe path (T017) — one source, so the
             // two entry points can't drift, and the sell-plan consequence
             // T002 found missing here arrives with it.
-            Text(ItemDeleteCopy.message)
+            Text(ItemDeleteCopy.message(isSold: viewModel.item?.isSold ?? false))
         }
         .onAppear(perform: viewModel.load)
     }

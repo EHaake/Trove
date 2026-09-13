@@ -123,7 +123,7 @@ because the person will feel it before they read it.
   confirm an existing collection opens (T019); S4 G32's scan half lands at
   T009/T010.
 
-- [ ] **T002 — `SaleCopy`, and the sold delete message.**
+- [x] **T002 — `SaleCopy`, and the sold delete message.**
   Per plan Q11 and §5 (`ItemDeleteCopy`). New `Trove/Models/SaleCopy.swift`
   (`nonisolated enum`): every string in the spec's Copy section — the action
   labels (`markAsSold`, `editSale`, `returnToCollection`), the sheet titles
@@ -149,6 +149,18 @@ because the person will feel it before they read it.
   `Trove/Views/Items/ItemListView.swift` + `ItemDetailView.swift` (call sites
   only), `TroveTests/SaleCopyTests.swift` (new), `ItemDeleteCopyTests.swift`.
   **Verify:** `scripts/verify.sh` green; the G17 mutation recorded.
+  **Done (2026-09-13):** `SaleCopy` (Foundation only) with every fixed
+  string and the six composed lines, plus `sellPlanSoldCaption(count:)`
+  (the "2 items" caption can't be a constant), `separator` and `atCost`
+  shared by both outcome lines; `saleLine` also omits an empty place.
+  `ItemDeleteCopy.message(isSold:)` had three readers, not two —
+  `DeleteAllCopyTests` pins the owned message word for word and was updated
+  mechanically. G17 mutation (sold branch returning the owned message) →
+  `ItemDeleteCopyTests` 44/45 red, reverted. The `WishlistDeletionTests`
+  scan on `ItemDeleteCopy.message` stayed green on the new spelling. Verify
+  (implementer's verbatim output): 1348 tests in 188 suites passed. Bundle
+  correction for later dispatches: the currency formatters live in
+  `Trove/Extensions/Int+Currency.swift`, not `Money.swift`.
 
 - [ ] **T003 — `ItemSaleStore`, and the refresher's exclusion. `review: per-task`.**
   Per plan §2 and Q3, Q8, Q13. New `Trove/Models/ItemSaleStore.swift` with
@@ -596,4 +608,5 @@ interpreted here.
 | Spec session (orchestration) | fable, high effort (the person raised it for the spec conversation) | not visible to the session — read with `ccusage` at the merge | spec written with the person (Decisions 1–10), planning dispatched, sign-off loop: one review, one re-review |
 | T001 implement | opus (`sdd-implementer`, high effort) | 94,964 (42 tool uses, 12 min) | done first pass; five mutations + the CloudKit red run reported red; read beyond the bundle: `TestSupport.swift`, `verify.sh`, `WishlistViewModel.delete(id:)`, `Money.swift`, `PhotoSelection.swift` |
 | T001 per-task review | opus (`skeptical-reviewer`) | 42,123 (1 tool use — bundle only) | signed off, nothing blocking; S1–S4 recorded in the Done note |
+| T002 implement | opus (`sdd-implementer`, high effort) | 66,901 (20 tool uses, 6 min) | done first pass; G17 red as reported; one mechanical edit outside the named files (`DeleteAllCopyTests`); bundle miss: named `Money.swift` for formatters that live in `Int+Currency.swift` |
 | _rows added per dispatch as the spec runs_ | | | |
