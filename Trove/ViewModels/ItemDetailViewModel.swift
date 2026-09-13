@@ -420,7 +420,7 @@ final class ItemDetailViewModel {
     var isFindingPhoto = false
 
     /// Which phase the photo sheet is showing — the notice in front of the
-    /// picker, or the picker itself (spec Decision 14). Decided when the sheet
+    /// picker, or the picker itself (plan §6). Decided when the sheet
     /// opens, not while it is open.
     private(set) var photoSheetStep: PhotoSheetStep = .pick
 
@@ -481,9 +481,10 @@ final class ItemDetailViewModel {
         modelContext.insert(photo)
         item.photos = updated
         for orphan in orphans { modelContext.delete(orphan) }
-        // OWNED ONLY: a new photo is an edit to the item (spec P6). The
-        // wishlist mirror omits this line — `WishlistItem` has no `updatedAt`
-        // (spec Decision 24), the one divergence between the two `store`s.
+        // OWNED ONLY: a new photo is an edit to the item, so `updatedAt`
+        // bumps (plan §6). The wishlist mirror omits this line —
+        // `WishlistItem` has no `updatedAt` (002 Decision 24), the one
+        // divergence between the two `store`s.
         item.updatedAt = now()
         do {
             try modelContext.save()

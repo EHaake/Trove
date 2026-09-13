@@ -163,7 +163,7 @@ final class ItemFormViewModel {
     var isFindingPhoto = false
 
     /// Which phase the photo sheet is showing — the notice in front of the
-    /// picker, or the picker itself (spec Decision 14). Decided when the sheet
+    /// picker, or the picker itself (plan §6). Decided when the sheet
     /// opens, not while it is open.
     private(set) var photoSheetStep: PhotoSheetStep = .pick
 

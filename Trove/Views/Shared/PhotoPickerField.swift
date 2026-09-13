@@ -57,8 +57,13 @@ struct PhotoPickerField: View {
         // Adding a device photo to an item that already holds a stock photo
         // asks first (Decision 4a). SwiftUI shows a two-button alert's title as
         // its message, and the spec pins only the question, so no separate
-        // message is drawn. There is no Cancel — the spec pins only the two
-        // choices. Keep both leads with the owned photo; Replace is destructive.
+        // message is drawn. The spec pins two choices, but SwiftUI adds a
+        // Cancel of its own whenever a `.destructive` button is present, so
+        // the alert shows three (as the device pass saw): Keep both, Replace,
+        // Cancel. Cancel runs neither closure — nothing is added, and the
+        // pending device bytes are dropped, since only these two buttons ever
+        // read them and the next pick overwrites them. Keep both leads with
+        // the owned photo; Replace is destructive.
         .alert(
             StockPhotoCopy.replaceKeepMessage,
             isPresented: $isPromptingReplaceKeep

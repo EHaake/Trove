@@ -201,6 +201,17 @@ spec.
   should become one `AppContact` and each `Copy` type should read from
   it. Both are pinned by placeholder guards, so the duplication is
   visible rather than silent.
+- **Self-containment from `002` holds for copy and services, not for
+  view chrome.** `005`'s notice and its Find a photo… actions reuse
+  `002`'s button chrome as it stands — `marketFilledChrome`,
+  `marketOutlinedChrome` and `MarketButtons`' hit/notice heights — in
+  `PhotoNoticeView` and all four detail/form screens. Duplicating a
+  button style to keep the `market` prefix honest would have been two
+  identical modifiers drifting apart; the chrome is app-wide styling
+  that happens to have been written for `002`. The `market` prefix is
+  now a misnomer, and a generic rename (`noticeFilledChrome` or
+  similar) is **deferred** to whichever spec next touches all its call
+  sites.
 
 ## Process and tooling notes
 
@@ -363,3 +374,11 @@ spec.
   test can show the reset refusing a persistent store even with every
   flag set (`PhotoNoticeStoreTests.theResetRefusesAPersistentStore`),
   which a second flag read could never demonstrate.
+- **Two `.sheet` modifiers chained at the same level both present on
+  iOS 26 (2026-09-13, `005`'s pre-merge sweep).** The detail screens
+  chain `002`'s match sheet and `005`'s photo sheet on the same view. The
+  old single-sheet limitation was suspected twice (Phase 3 review, the
+  sweep) and settled once, on the simulator: both present on both
+  screens in either order, no runtime warning. A third sheet can chain
+  the same way; a decision to fold them into one step enum is not
+  needed for that reason.

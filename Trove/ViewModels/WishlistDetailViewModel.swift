@@ -235,7 +235,7 @@ final class WishlistDetailViewModel {
             }
             item.reverbProductID = candidate.id
             // No `updatedAt` to bump, unlike the owned mirror: `WishlistItem`
-            // has no such field (spec Decision 24).
+            // has no such field (002 Decision 24).
             try MarketLocalStore.recordMatch(candidate, for: item.id, at: now(), in: modelContext)
             try modelContext.save()
         } catch {
@@ -392,7 +392,7 @@ final class WishlistDetailViewModel {
     /// for the one path that happens to hold a step.
     ///
     /// No `updatedAt` to bump, unlike the owned side: `WishlistItem` has no
-    /// such field (spec Decision 24), which is why the two adopt intents
+    /// such field (002 Decision 24), which is why the two adopt intents
     /// differ by that one line and nothing else.
     @discardableResult
     func adopt(cents: Int) -> Bool {
@@ -407,7 +407,7 @@ final class WishlistDetailViewModel {
 
         item.estimatedCostCents = MarketAdoption.wholeCurrencyCents(from: cents)
         // No `updatedAt` to bump, unlike the owned mirror: `WishlistItem`
-        // has no such field (spec Decision 24).
+        // has no such field (002 Decision 24).
         do {
             try modelContext.save()
         } catch {
@@ -431,7 +431,7 @@ final class WishlistDetailViewModel {
         do {
             item.reverbProductID = nil
             // No `updatedAt` to bump, unlike the owned mirror: `WishlistItem`
-            // has no such field (spec Decision 24).
+            // has no such field (002 Decision 24).
             try MarketLocalStore.clear(subjectID: item.id, in: modelContext)
             try modelContext.save()
         } catch {
@@ -457,7 +457,7 @@ final class WishlistDetailViewModel {
     var isFindingPhoto = false
 
     /// Which phase the photo sheet is showing — the notice in front of the
-    /// picker, or the picker itself (spec Decision 14). Decided when the sheet
+    /// picker, or the picker itself (plan §6). Decided when the sheet
     /// opens, not while it is open.
     private(set) var photoSheetStep: PhotoSheetStep = .pick
 
@@ -506,7 +506,7 @@ final class WishlistDetailViewModel {
     /// documents. A refused save rolls back and stores nothing (spec P8).
     ///
     /// No `updatedAt` to bump, unlike the owned mirror: `WishlistItem` has no
-    /// such field (spec Decision 24) — the one line by which the two `store`s
+    /// such field (002 Decision 24) — the one line by which the two `store`s
     /// differ.
     @discardableResult
     func store(_ download: StockPhotoDownload) -> Bool {

@@ -213,6 +213,10 @@ file. What the app must do, and does:
 - The replace/keep prompt (Decision 4a): "This item has a stock photo. Keep it,
   or replace it with your photo?" with **Keep both** and **Replace**.
 - Failure: "Couldn't reach Wikimedia Commons. Try again in a while."
+- The picker's finer strings, **settled at the design pass** (P7) and shipped
+  as written: the in-flight status line "Searching Wikimedia Commons…", the
+  search field's placeholder **Search Wikimedia Commons**, and the sheet's
+  toolbar **Cancel**.
 - Copy this spec doesn't fix — the exact badge word, the picker's finer strings
   — is proposed in `plan.md` and joins this section on plan approval, as `002`'s
   did.

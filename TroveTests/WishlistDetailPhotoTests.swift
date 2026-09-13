@@ -6,7 +6,7 @@ import Testing
 /// The wanted detail view model's stock-photo state and intents (spec 005,
 /// plan §6) — the mirror of `ItemDetailPhotoTests`, checked to behave the same
 /// as the owned side except for the one divergence: `WishlistItem` has no
-/// `updatedAt` to bump (spec Decision 24). Every persistence claim is read on a
+/// `updatedAt` to bump (002 Decision 24). Every persistence claim is read on a
 /// **second context**; the photo service is a spy and the notice flag an
 /// in-memory fake.
 @Suite("WishlistDetailViewModel — stock photo")

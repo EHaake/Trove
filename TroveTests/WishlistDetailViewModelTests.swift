@@ -350,7 +350,7 @@ struct WishlistDetailViewModelTests {
 /// The wanted detail view model's market state and intents (plan §6) —
 /// the mirror of `ItemDetailViewModelMarketTests`, differing only where the
 /// two items differ: `.wanted` listings, "Use as estimated cost", and no
-/// `updatedAt` to bump (spec Decision 24). Every fetch goes through a spy,
+/// `updatedAt` to bump (002 Decision 24). Every fetch goes through a spy,
 /// and every persistence claim is read on a **second context**.
 @Suite("WishlistDetailViewModel — market")
 struct WishlistDetailViewModelMarketTests {

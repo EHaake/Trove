@@ -155,10 +155,11 @@ nonisolated final class WikimediaPhotoService: StockPhotoService {
 /// `WikimediaDecodingTests` can run every fixture through it without a socket.
 /// Mirrors `ReverbDecoding`.
 nonisolated enum WikimediaDecoding {
-    /// Decode the wire, keep only reusable-licensed files whose URLs parse,
-    /// drop any file taken with the same gear the person searched, and return
-    /// the first `cap` survivors (plan §2). A response with no `query` key
-    /// decodes to an empty page list → `[]`.
+    /// Decode the wire, keep only reusable-licensed files whose URLs parse and
+    /// whose image URL is on a Wikimedia host, drop any file taken with the
+    /// same gear the person searched, and return the first `cap` survivors
+    /// (plan §2, Q1). A response with no `query` key decodes to an empty page
+    /// list → `[]`.
     static func candidates(from data: Data, query: String, cap: Int) throws -> [StockPhotoCandidate] {
         let wire = try decode(SearchWire.self, from: data)
         var survivors: [StockPhotoCandidate] = []
@@ -171,6 +172,12 @@ nonisolated enum WikimediaDecoding {
             ) else { continue }
             guard let sourceURL = info.descriptionurl.flatMap(URL.init(string:)),
                   let thumbURL = info.thumburl.flatMap(URL.init(string:)) else { continue }
+            // Image bytes only ever come from a Wikimedia host (plan Q1). The
+            // client refuses an off-host download in `imageData(from:)`, but a
+            // candidate's URL is also handed to the picker's `AsyncImage`,
+            // which fetches on its own — so a candidate whose image URL is
+            // off-host is dropped here, before it can become a row.
+            guard WikimediaAPI.isWikimediaHost(thumbURL.host) else { continue }
             // Drop a photo taken with the same gear the person searched — a
             // photo *of* the gear outranks a snapshot taken *on* it (spec
             // Decision 7).

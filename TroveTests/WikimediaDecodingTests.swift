@@ -75,6 +75,30 @@ struct WikimediaDecodingTests {
         #expect(!WikimediaDecoding.isPlaceholderAuthor("Machine Readable Photography"))
     }
 
+    // MARK: - The host filter (plan Q1)
+
+    /// Image bytes only ever come from a Wikimedia host, and the picker's
+    /// thumbnails fetch straight from the candidate's URL — so a candidate
+    /// whose image URL is off-host never reaches the picker at all. The
+    /// fixture holds one on-host file, one plainly foreign host, and one
+    /// look-alike (`upload.wikimedia.org.evil.example`); only the first
+    /// survives, and its licence and author are identical to the other two,
+    /// so the host is the only thing that can be doing the dropping.
+    ///
+    /// Mutation: remove the `isWikimediaHost` guard in `candidates` → all
+    /// three survive → red.
+    @Test func onlyCandidatesServedFromAWikimediaHostSurvive() throws {
+        let candidates = try WikimediaDecoding.candidates(
+            from: try wikimediaFixture("search-off-host.json"), query: "", cap: 12
+        )
+        #expect(candidates.count == 1)
+        #expect(candidates.first?.title == "File:On-host-cc-by.jpg")
+        for candidate in candidates {
+            #expect(WikimediaAPI.isWikimediaHost(candidate.thumbnailURL.host))
+            #expect(WikimediaAPI.isWikimediaHost(candidate.storageURL.host))
+        }
+    }
+
     // MARK: - The cap (G4)
 
     @Test func twentyReusableFilesAreCappedToTwelve() throws {

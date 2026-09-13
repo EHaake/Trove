@@ -1,6 +1,6 @@
 # Trove — Privacy Policy
 
-Last updated: 2026-09-11
+Last updated: 2026-09-13
 
 Trove is a personal gear inventory app. It has no accounts and no sign-up:
 there is nothing to log into, and nothing about you is collected, profiled or

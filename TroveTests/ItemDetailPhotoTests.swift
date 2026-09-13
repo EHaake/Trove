@@ -112,7 +112,7 @@ struct ItemDetailPhotoTests {
         #expect(stored.source == .fetched)
         #expect(stored.attribution == attribution)
 
-        // OWNED ONLY: storing a stock photo marks the item edited (spec P6).
+        // OWNED ONLY: storing a stock photo marks the item edited (plan §6).
         let read = ModelContext(world.container)
         let id = world.item.id
         var descriptor = FetchDescriptor<Item>(predicate: #Predicate { $0.id == id })

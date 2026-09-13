@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Which phase the stock-photo sheet is showing (spec Decision 14, plan §6):
+/// Which phase the stock-photo sheet is showing (plan §6):
 /// the one-time notice in front of the picker, or the picker itself. Two
 /// phases only — unlike the market sheet's four — because the download and the
 /// value step have no place here: the pick's bytes are handed straight to the

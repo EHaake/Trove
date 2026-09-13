@@ -21,6 +21,13 @@ through `#filePath`; no test opens a network connection.
   ("No machine-readable author provided. <user> assumed (based on copyright
   claims).", with the username as a wiki link). The file is still offered
   and its credit falls back to "Wikimedia Commons" (T015 finding 2).
+- `search-off-host.json` — three otherwise-identical CC-BY pages whose
+  `thumburl` hosts differ: `thumb.wikimedia.org` (kept), `cdn.example.com`
+  (dropped), and the look-alike `upload.wikimedia.org.evil.example`
+  (dropped). Hand-built because the live API can only ever serve Wikimedia
+  hosts, so the off-host case cannot be recorded — it guards the decode-time
+  host filter (plan Q1) that keeps an off-host URL out of the picker's
+  `AsyncImage`.
 - `search-empty.json` — `{"batchcomplete": true}` with **no `query`** key,
   the empty state MediaWiki returns when the generator matches nothing.
 - `image-small.bin` — a tiny (43-byte) valid GIF blob for the

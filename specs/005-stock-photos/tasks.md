@@ -50,7 +50,10 @@ pattern file — and the implementer is told not to read `plan.md`/`spec.md`/
 verbose, re-run by the orchestrator for the two `review: per-task` tasks and
 taken from the implementer's verbatim output otherwise; the `skeptical-reviewer`
 reviews per phase (and the two marked tasks), one review and at most one
-re-review each; the orchestrator starts a **fresh session at each phase pause**,
+re-review each; the orchestrator starts a **fresh session at each phase pause** (*the prior
+policy — superseded from the experiment-1 tier-log row on by `CLAUDE.md`'s
+"One implementation session per spec": a phase pause is a pause in it, not a
+boundary*),
 resuming from the first unchecked task, and every session-ending pause ends
 with a continuation prompt. Everything the person reads is plain language.
 
@@ -735,6 +738,13 @@ exercises the filtered search.
   Commons file page. The `accessibilityRepresentation` route works; plan §6's
   recorded fallback was not needed.
 
+  **Sweep finding B1, checked on device (2026-09-13)**: the two `.sheet`
+  modifiers chained on each detail view (`isFindingMatch`, `isFindingPhoto`)
+  both present, on both detail screens, in either order — Find on Reverb…,
+  then Find a photo…, then Find on Reverb… again — and the simulator log
+  carries no "only presenting a single sheet" warning. The Phase 3 worry does
+  not reproduce on iOS 26; recorded in `DECISIONS.md` for the next sheet.
+
   **Not covered**: sync of a fetched photo to a second device (criterion 4)
   — no second device; an honest partial, resting on the CloudKit schema test
   and on `002`'s owned-photo sync path that the fetched photo shares.
@@ -852,6 +862,9 @@ settled.
 | T015c implement | opus (general-purpose w/ simulator tools) | ~148k | glyph takes the credit's fixed font + brass; 3 scoped scan guards (a render test was built, probed, found false-passing — ImageRenderer draws an SF Symbol in a Text as a constant placeholder — and deleted); 3 mutations verified; AX5 screenshot confirms; 1275 tests |
 | T015 offline + VoiceOver | — (person, by hand: Link Conditioner; Accessibility Inspector) | — | offline failure copy seen, nothing stored; credit one element, Button+Link, hint, Activate opens Commons — fallback not needed; T015 closed |
 | T016 close-out | opus (`sdd-implementer`) | ~153k | spec ticks, plan As built, roadmap/README/DECISIONS, 2 carried-note tests (mutations verified), one-home `maxImageBytes`; README count caught up 003/004; 1276 unit + 16 UI green |
+| Pre-merge sweep | opus (`skeptical-reviewer`) | ~268k | **2 blocking** (B1 chained sheets unverified; B2 tasks.md cadence paragraph contradicts amended CLAUDE.md) + 12 notes; verdict fix and re-review |
+| Sweep B1 device check | opus (general-purpose w/ simulator tools) | ~188k | both sheets present on both screens in either order; no runtime warning; B1 closed |
+| Sweep notes fix | opus (`sdd-implementer`) | ~95k | 10 routine notes closed (attribution fallback tests, decode-time host filter + fixture, docs/comments/citations, DECISIONS chrome-reuse line, plan/spec additions); 3 mutations verified; 1279 tests |
 | _rows added per dispatch as the spec runs_ | opus (subagents) | | |
 
 **Phase 4 review notes (non-blocking, carried to T016 / the sweep):**

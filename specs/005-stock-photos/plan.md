@@ -580,7 +580,12 @@ asks before committing. **Replace** removes the fetched photo (through
 `addingFetched` ordering already puts device photos first, so the newly added
 device photo sorts ahead of the fetched one). A bespoke surface is not
 warranted for a two-choice question (the app's "system in the bars, bespoke in
-the page" rule). Tests (`PhotoPickerFieldTests` / the forms' suites): adding a
+the page" rule). **As built:** the alert shows **three** buttons, not
+two — SwiftUI adds its own **Cancel** whenever a `.destructive` button is
+present, so the device pass saw Keep both / Replace / Cancel. Cancel runs
+neither closure: nothing is added and the held device bytes are dropped, which
+is the third outcome the spec's two-choice wording left unnamed and the safe
+one. Tests (`PhotoPickerFieldTests` / the forms' suites): adding a
 device photo with a stock photo present raises the prompt; Replace leaves one
 `.device` photo; Keep both leaves two with the device photo leading.
 
@@ -801,6 +806,26 @@ since it turns on the code the live API returns.
   persistent store keeps the acknowledgement even with every flag set, and
   `PhotoNoticeStoreTests.theResetRefusesAPersistentStore` shows it refusing.
   The generalization is in `DECISIONS.md`.
+- **Two error mappings are wider than they read, both in the safe
+  direction** (T003, recorded at the pre-merge sweep). `WikimediaPhotoService.fetch`
+  turns *every* thrown transport error into `.unreachable`, not just
+  `URLError` — a `CancellationError` from a torn-down search therefore reads
+  to the person as "Couldn't reach Wikimedia Commons", which is the harmless
+  direction (a retry costs one tap; a raw error string would not be copy the
+  spec settled). And `StockPhotoLicence.classify` reads Wikimedia's `License`
+  code, so a nonstandard code — `cc-zero` rather than `cc0` — drops a file
+  that is in fact reusable. Dropping a usable file is the safe direction: the
+  alternative is offering one the licence set does not cover.
+- **A candidate whose image download fails shows nothing**, and that is
+  accepted as shipped. Criterion 7 speaks only to a *failed search*, so the
+  picker has copy for that and none for a single candidate's bytes failing
+  after the search succeeded; the tap simply leaves the sheet as it was. A
+  later spec may add a toast — it is a copy addition, not a redesign.
+- **Criterion 4's second-device observation is a scheduled follow-up.** It
+  rests on `CloudKitSchemaTests` and the owned-photo sync path today (see the
+  paragraph below); the person confirms a fetched photo arriving on a second
+  device at their next two-device session. No fix branch is needed unless that
+  observation fails.
 - **`StockPhotoAttribution` is `nonisolated`** (T003), required for it to cross
   into the `nonisolated` service protocol.
 - **The fixture script's basename** (T002): the first draft collided with the

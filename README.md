@@ -174,7 +174,7 @@ Trove/                 App source
   Models/               SwiftData models
   Photos/                Wikimedia Commons client, licence filter, the notice store
   ViewModels/            One per screen
-  Views/                 Dashboard/, Items/, Wishlist/, Settings/, Market/, Shared/
+  Views/                 Dashboard/, Items/, Wishlist/, Settings/, Market/, Photos/, Shared/
   Extensions/            Small, flagged UIKit-bridge exceptions live here
 Trove/Fonts/            Bundled type (Archivo, IBM Plex Sans/Mono)
 TroveTests/             Swift Testing, one file per view model
@@ -186,7 +186,7 @@ specs/
   012-data-import/       Shipped — CSV import against that schema
   013-settings-menu/     Shipped — Settings, and the bespoke in-page menus
   002-live-market-value/ Shipped — Reverb asking prices beside your value
-  003-.../               Shipped — the trend-aware Sell Plan
+  003-trend-aware-sell-plan/ Shipped — the trend-aware Sell Plan
   004-themes/            Shipped — light mode and the appearance choice
   005-stock-photos/      Shipped — credited stock photos from Wikimedia Commons
   ROADMAP.md             Backlog of future specs
