@@ -230,7 +230,7 @@ because the person will feel it before they read it.
   dropped → :62/63; the `.mark` seed reading the sale → :156. Verify
   (implementer's verbatim output): 1374 tests in 191 suites passed.
 
-- [ ] **T005 — The router's sold request, and the Sold side's empty reason.**
+- [x] **T005 — The router's sold request, and the Sold side's empty reason.**
   Per plan §4 and Q4, Q9. `AppRouter.ItemsRequest.sold`, `showSoldItems()`
   (request + `popToItemsRoot()`); `ListEmptyReason.nothingSold`. Pattern:
   `showItems(inCategory:)`, `ListEmptyReason.everythingIsValued`. Tests:
@@ -243,6 +243,17 @@ because the person will feel it before they read it.
   `TroveTests/AppRouterTests.swift`, `ListEmptyReasonTests.swift`.
   **Verify:** `scripts/verify.sh` green. **Phase 1 closes here — pause for
   the person** (nothing to try yet; the pause is the review gate).
+  **Done (2026-09-13):** `.sold` + `showSoldItems()`, `.nothingSold`; four
+  tests, each mutation-checked (wrong request / no pop, `showItem` not
+  clearing, `clearItemsRequest` a no-op, `reason` returning `.nothingSold`
+  → each red). Two exhaustive switches in `ItemListView` and one in
+  `WishlistView` gained placeholder cases to compile (unreachable today,
+  each commented with the owning task T009/T015 — **T015's bundle must
+  name both files** so the placeholders don't survive the spec). Bundle
+  note for T015: plan §4 names `SaleCopy.nothingSoldHeadline`/`Detail`,
+  but T002 shipped one `SaleCopy.emptyState` string — T015 maps or splits
+  it, settled in its bundle. Verify (implementer's verbatim output): 1378
+  tests in 191 suites passed.
 
 ## Phase 2 — The CSV contract and import (**foundational**)
 
@@ -638,4 +649,5 @@ interpreted here.
 | T003 implement | opus (`sdd-implementer`, high effort) | 85,496 (40 tool uses, 13 min) | done first pass; ten mutations red as reported; bundle miss (orchestrator): the task-line excerpt was cut by line number after T001's Done note shifted the file, so it quoted T002 — extraction is anchor-based from here on |
 | T003 per-task review | opus (`skeptical-reviewer`) | 49,906 (5 tool uses — four targeted looks, stated) | signed off, nothing blocking; S1–S5 in the Done note |
 | T004 implement | opus (`sdd-implementer`, high effort) | 54,854 (14 tool uses, 5 min) | done first pass; three mutations red as reported; one plan-vs-shipped spelling reconciled inside the contract (`SaleCopy` constants, not a mode function) |
+| T005 implement | opus (`sdd-implementer`, high effort) | 61,715 (24 tool uses, 5 min) | done first pass; three placeholder switch cases outside the named files (mechanical, required to compile), declared |
 | _rows added per dispatch as the spec runs_ | | | |

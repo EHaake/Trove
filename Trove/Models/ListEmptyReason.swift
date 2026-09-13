@@ -25,6 +25,15 @@ enum ListEmptyReason: Equatable {
     /// value the last item and this is what you land on.
     case everythingIsValued
 
+    /// The Items tab's Sold side is empty — nothing has been sold yet.
+    ///
+    /// Never returned by `reason(...)`: the Sold side has no narrowing to
+    /// weigh (`ItemListViewModel.show(.sold)` clears all three filters), so
+    /// its emptiness has exactly one cause and no precedence to settle.
+    /// `ItemListViewModel.emptyReason` picks this case directly when the side
+    /// is `.sold`, and `reason(...)` stays the rule for the narrowed sides.
+    case nothingSold
+
     /// The collection may not all be here yet: CloudKit hasn't finished its
     /// first import on this device, so what's on screen is what has arrived
     /// rather than what exists. T048 measured that window at several minutes.

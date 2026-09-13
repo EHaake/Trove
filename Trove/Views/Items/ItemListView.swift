@@ -530,6 +530,11 @@ struct ItemListView: View {
             viewModel.categoryFilter = ""
             viewModel.showsOnlyUnvalued = true
             chipToReveal = Self.unvaluedChipID
+        case .sold:
+            // Becomes the single `viewModel.show(.sold)` call once the side
+            // exists (T009/T015). Unreachable until then — nothing calls
+            // `router.showSoldItems()` yet.
+            break
         }
         router.clearItemsRequest()
     }
@@ -700,6 +705,15 @@ struct ItemListView: View {
                     viewModel.categoryFilter = ""
                     viewModel.load()
                 }
+            )
+
+        // Placeholder until the Sold side itself lands (T015), which owns how
+        // this state reads. Unreachable before then: only the Sold side's
+        // `emptyReason` produces `.nothingSold`, and there is no Sold side yet.
+        case .nothingSold:
+            EmptyStateView(
+                mark: .asset("TabItems"),
+                headline: SaleCopy.emptyState
             )
 
         case .everythingIsValued:

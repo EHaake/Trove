@@ -471,9 +471,10 @@ struct WishlistView: View {
         ListEmptyReason.detail(base, mayStillBeImporting: viewModel.mayStillBeImporting)
     }
 
-    /// Every case the item list has except the un-valued one, which can't
-    /// arise here — nothing on a wishlist is owned yet, so nothing on it has a
-    /// value to be missing. The shared `ListEmptyReason` is still what decides
+    /// Every case the item list has except the un-valued one and the sold one,
+    /// neither of which can arise here — nothing on a wishlist is owned yet, so
+    /// nothing on it has a value to be missing or a sale to have happened. The
+    /// shared `ListEmptyReason` is still what decides
     /// which, so the two screens can't end up disagreeing about what "empty"
     /// means.
     ///
@@ -490,7 +491,7 @@ struct WishlistView: View {
                 detail: "Your list is on its way to this device. It'll appear here as it arrives."
             )
 
-        case .nothingAdded, .everythingIsValued:
+        case .nothingAdded, .everythingIsValued, .nothingSold:
             EmptyStateView(
                 mark: .asset("TabWishlist"),
                 headline: "Nothing on the list yet",
