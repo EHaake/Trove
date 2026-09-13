@@ -467,7 +467,8 @@ nonisolated enum ImportSchema {
                 notes: FieldNormalization.nilIfBlank(cells[notesColumn]),
                 reverbProductID: productID,
                 year: itemYear,
-                firstPhotoID: nil
+                firstPhotoID: nil,
+                firstPhotoAttribution: nil
             )
             validated.append(
                 ValidatedRow(record: record, rowNumber: row.number, defaultedFieldCount: defaulted)
@@ -598,7 +599,8 @@ nonisolated enum ImportSchema {
                 notes: FieldNormalization.nilIfBlank(cells[notesColumn]),
                 reverbProductID: productID,
                 year: wantedYear,
-                firstPhotoID: nil
+                firstPhotoID: nil,
+                firstPhotoAttribution: nil
             )
             validated.append(
                 ValidatedRow(record: record, rowNumber: row.number, defaultedFieldCount: defaulted)

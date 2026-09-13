@@ -62,6 +62,13 @@ purchases.
   taken; a refresh is one tap, at most once an hour. The figures and
   their history stay on the device that fetched them and never sync,
   and a first search asks you first — see [`PRIVACY.md`](PRIVACY.md).
+- **Stock photos** — an item with no photo of its own can borrow one
+  from Wikimedia Commons: tap Find a photo…, pick from the candidates,
+  and the item gets a representative image, badged as a stock photo and
+  carrying its credit — the photographer, the licence and a link back —
+  in the app and in a PDF export. Searching happens only when you ask,
+  after the same kind of one-time notice the market search uses, and a
+  fetched photo syncs like your own.
 - **Settings** — one sheet, reached from the "…" on either list or on
   the dashboard: export *everything* as a CSV pair or a PDF pair (one
   share sheet, two files), the blank import templates, a live iCloud
@@ -83,7 +90,7 @@ purchases.
 
 ## Status
 
-Six specs shipped: `001-core-inventory` (v1 — item tracking, the
+Nine specs shipped: `001-core-inventory` (v1 — item tracking, the
 dashboard, the wishlist, the Sell Plan, CloudKit sync),
 `010-item-management-enhancements` (merged 2026-08-30 — swipe actions,
 drag-to-reorder, duplication, expanded sorting, and a design-depth
@@ -96,12 +103,19 @@ and tested sample files), and `013-settings-menu` (merged 2026-09-02
 — the Settings sheet with export-everything, the templates, iCloud
 status, Delete All and About, reached from every root's "…"; and, by
 its Amendment A, the dashboard's "…" and every in-page menu on one
-bespoke dropdown surface), and `002-live-market-value` (merged
+bespoke dropdown surface), `002-live-market-value` (merged
 2026-09-05 — a Reverb asking-price indicator beside your own value:
 pick the match, set your value from the asking prices on a slider, and
 see the median on the detail, the rows, a sort and the dashboard, with
 the figures kept on the device that fetched them; `PRIVACY.md` and the
-one-time notice came with it).
+one-time notice came with it), `003-trend-aware-sell-plan` (merged
+2026-09-07 — the Sell Plan ranks rising items first and falling last
+within a desire level, with the median on each matched row and one
+dated sentence saying why), `004-themes` (merged 2026-09-09 — light
+mode of the brass/moss/rust identity, with a System/Light/Dark choice
+in Settings), and `005-stock-photos` (merged 2026-09-13 — an item with
+no photo of its own can borrow a credited one from Wikimedia Commons,
+in the app and in the PDF export).
 See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.
@@ -159,8 +173,9 @@ Trove/                 App source
   Import/               CSV import — parser, field policy, service
   Market/               Reverb client, the local (unsynced) market store, figures and trend
   Models/               SwiftData models
+  Photos/                Wikimedia Commons client, licence filter, the notice store
   ViewModels/            One per screen
-  Views/                 Dashboard/, Items/, Wishlist/, Settings/, Market/, Shared/
+  Views/                 Dashboard/, Items/, Wishlist/, Settings/, Market/, Photos/, Shared/
   Extensions/            Small, flagged UIKit-bridge exceptions live here
 Trove/Fonts/            Bundled type (Archivo, IBM Plex Sans/Mono)
 TroveTests/             Swift Testing, one file per view model
@@ -172,16 +187,19 @@ specs/
   012-data-import/       Shipped — CSV import against that schema
   013-settings-menu/     Shipped — Settings, and the bespoke in-page menus
   002-live-market-value/ Shipped — Reverb asking prices beside your value
+  003-trend-aware-sell-plan/ Shipped — the trend-aware Sell Plan
+  004-themes/            Shipped — light mode and the appearance choice
+  005-stock-photos/      Shipped — credited stock photos from Wikimedia Commons
   ROADMAP.md             Backlog of future specs
 design/
   brief.md               Visual/interaction direction
   tokens.md               Colors, type, spacing as implemented
   screens/                Design references
-  elements/               Design-pass artboards per spec (002's market surfaces)
+  elements/               Design-pass artboards per spec (002's market surfaces, 005's photo surfaces)
 docs/
   csv-reference.md       The CSV columns, formats, and Excel caveats
   samples/                Tested sample CSVs for every import state
-scripts/                 record-reverb-fixtures.sh — run by hand, never by the build
+scripts/                 verify.sh, and the fixture recorders (Reverb, Wikimedia) — run by hand, never by the build
 PRIVACY.md               The privacy policy — what leaves the device, what is stored
 CLAUDE.md                Project constitution — read this first
 DECISIONS.md             Business/product/process context

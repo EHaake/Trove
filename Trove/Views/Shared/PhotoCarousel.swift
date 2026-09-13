@@ -30,8 +30,27 @@ struct PhotoCarousel: View {
 
     private var safeIndex: Int { min(max(selectedIndex, 0), max(photos.count - 1, 0)) }
 
+    /// The photo the pager is settled on, or nil when the set is empty — what
+    /// the badge and credit are decided from (a stock photo shows both, an
+    /// owned photo neither).
+    private var currentPhoto: Photo? {
+        photos.indices.contains(safeIndex) ? photos[safeIndex] : nil
+    }
+
+    /// The stock-photo badge's inset over the hero, `top:12 left:12` (the
+    /// `ItemStockHero` artboards).
+    private static let badgeInset = EdgeInsets(top: 12, leading: 12, bottom: 0, trailing: 0)
+
     var body: some View {
-        hero
+        VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
+            hero
+            // The credit sits beneath the hero, and only under a stock photo
+            // (spec criterion 3). `attribution` is nil for a `.device` photo,
+            // so the source check and the binding agree by construction.
+            if currentPhoto?.source == .fetched, let attribution = currentPhoto?.attribution {
+                StockPhotoCredit(attribution: attribution)
+            }
+        }
     }
 
     // MARK: - Hero
@@ -52,6 +71,16 @@ struct PhotoCarousel: View {
                         dots
                     }
                 }
+                // The Stock photo badge marks a fetched hero, never an owned
+                // one (spec criterion 3). Hidden from VoiceOver here — the
+                // combined element's value carries the announcement instead.
+                .overlay(alignment: .topLeading) {
+                    if currentPhoto?.source == .fetched {
+                        StockPhotoBadge()
+                            .padding(Self.badgeInset)
+                            .accessibilityHidden(true)
+                    }
+                }
 
             if photos.isEmpty {
                 Text("No photos")
@@ -63,7 +92,7 @@ struct PhotoCarousel: View {
         // The removed caption was also the accessible position read-out;
         // the dots are visual-only, so the combined element carries it.
         .accessibilityLabel(photos.isEmpty ? "No photos" : "\(noun) photos")
-        .accessibilityValue(photos.isEmpty ? "" : "Photo \(safeIndex + 1) of \(photos.count)")
+        .accessibilityValue(accessibilityValueText)
         .accessibilityAdjustableAction { direction in
             switch direction {
             case .increment: step(by: 1)
@@ -71,6 +100,20 @@ struct PhotoCarousel: View {
             default: break
             }
         }
+    }
+
+    /// The combined hero's spoken value: the position, and — under a stock
+    /// photo (spec criterion 11) — that it is a representative image and its
+    /// credit, every stock word read from `StockPhotoCopy` rather than typed.
+    private var accessibilityValueText: String {
+        guard !photos.isEmpty else { return "" }
+        var value = "Photo \(safeIndex + 1) of \(photos.count)"
+        if currentPhoto?.source == .fetched, let attribution = currentPhoto?.attribution {
+            value += ". " + StockPhotoCopy.badgeAccessibilityLabel
+            value += ". " + StockPhotoCopy.credit(
+                author: attribution.author, licenseName: attribution.licenseName)
+        }
+        return value
     }
 
     /// Swiping the hero is the gesture people try first; before `010` the

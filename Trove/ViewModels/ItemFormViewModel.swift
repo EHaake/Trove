@@ -75,6 +75,8 @@ final class ItemFormViewModel {
 
     private let modelContext: ModelContext
     private let editingItem: Item?
+    private let photoService: any StockPhotoService
+    private let noticeStore: any PhotoNoticeStore
 
     var isEditing: Bool { editingItem != nil }
 
@@ -83,9 +85,16 @@ final class ItemFormViewModel {
     /// so a form left open across midnight on 31 December isn't stale.
     var maximumYear: Int { Calendar.current.component(.year, from: .now) + 1 }
 
-    init(modelContext: ModelContext, editing item: Item? = nil) {
+    init(
+        modelContext: ModelContext,
+        editing item: Item? = nil,
+        photoService: (any StockPhotoService)? = nil,
+        noticeStore: (any PhotoNoticeStore)? = nil
+    ) {
         self.modelContext = modelContext
         self.editingItem = item
+        self.photoService = photoService ?? WikimediaPhotoService()
+        self.noticeStore = noticeStore ?? UserDefaultsPhotoNoticeStore()
         if let item {
             populate(from: item)
         }
@@ -144,6 +153,72 @@ final class ItemFormViewModel {
             saveFailureMessage = error.localizedDescription
             return false
         }
+    }
+
+    // MARK: - Stock photo (005)
+
+    /// Settable by the view: the photo sheet's `isPresented` binding writes
+    /// false back on dismissal, exactly as `ItemDetailViewModel.isFindingPhoto`
+    /// does for the detail screen's sheet.
+    var isFindingPhoto = false
+
+    /// Which phase the photo sheet is showing — the notice in front of the
+    /// picker, or the picker itself (plan §6). Decided when the sheet
+    /// opens, not while it is open.
+    private(set) var photoSheetStep: PhotoSheetStep = .pick
+
+    /// Whether Find a photo… is offered: true until an owned (`.device`) photo
+    /// exists, a stock-only set still qualifying so it can be replaced (spec
+    /// Decision 6). Delegates to `PhotoSelection`, unit-tested at T005.
+    var canFindPhoto: Bool { PhotoSelection.canFindPhoto(photos) }
+
+    /// The picker's view model, seeded with the form's current **name** and
+    /// nothing else — the whole of what a search may send (spec P1) — mirroring
+    /// how `ItemDetailViewModel.makePhotoFetchViewModel` seeds it.
+    func makePhotoFetchViewModel() -> PhotoFetchViewModel {
+        PhotoFetchViewModel(seed: Self.trimmed(name), service: photoService)
+    }
+
+    /// Find a photo…: the notice stands in front the first time on this
+    /// device, the picker directly after. The flag lives in `UserDefaults` via
+    /// `PhotoNoticeStore`, shared with the detail screen's sheet.
+    func findPhoto() {
+        photoSheetStep = noticeStore.hasAcknowledged ? .pick : .notice
+        isFindingPhoto = true
+    }
+
+    /// Continue: the notice is done with on this device, and the picker takes
+    /// over the sheet. `acknowledge()` persists itself, so there is no save or
+    /// rollback around it.
+    func continuePhotoNotice() {
+        noticeStore.acknowledge()
+        photoSheetStep = .pick
+    }
+
+    /// Not now, and the swipe-down the view treats as Not now: the sheet
+    /// closes and the flag is left unacknowledged, so the notice comes back
+    /// next time Find a photo… is tapped.
+    func declinePhotoNotice() {
+        photoSheetStep = .pick
+        isFindingPhoto = false
+    }
+
+    /// The pick's landing on the form — the in-memory variant of the detail
+    /// screen's `store`. The downloaded bytes become a `.fetched` photo, added
+    /// through `PhotoSelection.addingFetched` so at most one stock photo is
+    /// kept (spec P5) and it sits after the owned photos (Decision 4a). Nothing
+    /// is persisted or inserted here: the form's own `save()` writes `photos`
+    /// into the item and runs `PhotoSelection.orphaned(...)` to delete any
+    /// replaced fetched photo — device photos ride into the store the same way.
+    func store(_ download: StockPhotoDownload) {
+        let photo = Photo.fetched(
+            imageData: download.imageData,
+            attribution: download.attribution,
+            sortOrder: photos.count
+        )
+        photos = PhotoSelection.addingFetched(photo, to: photos)
+        isFindingPhoto = false
+        photoSheetStep = .pick
     }
 
     // MARK: - Private

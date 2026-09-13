@@ -26,17 +26,23 @@ final class WishlistDetailViewModel {
     private let modelContext: ModelContext
     private let itemID: UUID
     private let marketService: any MarketService
+    private let photoService: any StockPhotoService
+    private let noticeStore: any PhotoNoticeStore
     private let now: () -> Date
 
     init(
         modelContext: ModelContext,
         itemID: UUID,
         marketService: (any MarketService)? = nil,
+        photoService: (any StockPhotoService)? = nil,
+        noticeStore: (any PhotoNoticeStore)? = nil,
         now: @escaping () -> Date = Date.init
     ) {
         self.modelContext = modelContext
         self.itemID = itemID
         self.marketService = marketService ?? ReverbMarketService()
+        self.photoService = photoService ?? WikimediaPhotoService()
+        self.noticeStore = noticeStore ?? UserDefaultsPhotoNoticeStore()
         self.now = now
     }
 
@@ -229,7 +235,7 @@ final class WishlistDetailViewModel {
             }
             item.reverbProductID = candidate.id
             // No `updatedAt` to bump, unlike the owned mirror: `WishlistItem`
-            // has no such field (spec Decision 24).
+            // has no such field (002 Decision 24).
             try MarketLocalStore.recordMatch(candidate, for: item.id, at: now(), in: modelContext)
             try modelContext.save()
         } catch {
@@ -386,7 +392,7 @@ final class WishlistDetailViewModel {
     /// for the one path that happens to hold a step.
     ///
     /// No `updatedAt` to bump, unlike the owned side: `WishlistItem` has no
-    /// such field (spec Decision 24), which is why the two adopt intents
+    /// such field (002 Decision 24), which is why the two adopt intents
     /// differ by that one line and nothing else.
     @discardableResult
     func adopt(cents: Int) -> Bool {
@@ -401,7 +407,7 @@ final class WishlistDetailViewModel {
 
         item.estimatedCostCents = MarketAdoption.wholeCurrencyCents(from: cents)
         // No `updatedAt` to bump, unlike the owned mirror: `WishlistItem`
-        // has no such field (spec Decision 24).
+        // has no such field (002 Decision 24).
         do {
             try modelContext.save()
         } catch {
@@ -425,7 +431,7 @@ final class WishlistDetailViewModel {
         do {
             item.reverbProductID = nil
             // No `updatedAt` to bump, unlike the owned mirror: `WishlistItem`
-            // has no such field (spec Decision 24).
+            // has no such field (002 Decision 24).
             try MarketLocalStore.clear(subjectID: item.id, in: modelContext)
             try modelContext.save()
         } catch {
@@ -443,4 +449,96 @@ final class WishlistDetailViewModel {
         marketState = MarketSectionState.resolve(subjectID: itemID, productID: item?.reverbProductID, in: modelContext, now: now())
     }
 
+    // MARK: - Stock photo (005)
+
+    /// Settable by the view: the photo sheet's `isPresented` binding writes
+    /// false back on dismissal, exactly as `isFindingMatch` does for the
+    /// market sheet. A separate flag so the two sheets never fight over one.
+    var isFindingPhoto = false
+
+    /// Which phase the photo sheet is showing — the notice in front of the
+    /// picker, or the picker itself (plan §6). Decided when the sheet
+    /// opens, not while it is open.
+    private(set) var photoSheetStep: PhotoSheetStep = .pick
+
+    /// Whether Find a photo… is offered: true until an owned (`.device`) photo
+    /// exists, a stock-only set still qualifying so it can be replaced (spec
+    /// Decision 6). Delegates to `PhotoSelection`, unit-tested at T005.
+    var canFindPhoto: Bool { PhotoSelection.canFindPhoto(photos) }
+
+    /// The picker's view model, seeded with the item's **name** and nothing
+    /// else — the whole of what a search may send (spec P1) — mirroring how
+    /// `makeMatchViewModel` seeds the market picker.
+    func makePhotoFetchViewModel() -> PhotoFetchViewModel {
+        PhotoFetchViewModel(seed: item?.name ?? "", service: photoService)
+    }
+
+    /// Find a photo…: the notice stands in front the first time on this
+    /// device, the picker directly after. Unlike the market notice, the flag
+    /// lives in `UserDefaults` via `PhotoNoticeStore`, not the model context.
+    func findPhoto() {
+        photoSheetStep = noticeStore.hasAcknowledged ? .pick : .notice
+        isFindingPhoto = true
+    }
+
+    /// Continue: the notice is done with on this device, and the picker takes
+    /// over the sheet. `acknowledge()` persists itself, so there is no save or
+    /// rollback around it.
+    func continuePhotoNotice() {
+        noticeStore.acknowledge()
+        photoSheetStep = .pick
+    }
+
+    /// Not now, and the swipe-down the view treats as Not now: the sheet
+    /// closes and the flag is left unacknowledged, so the notice comes back
+    /// next time Find a photo… is tapped.
+    func declinePhotoNotice() {
+        photoSheetStep = .pick
+        isFindingPhoto = false
+    }
+
+    /// The pick's landing: the downloaded bytes become a `.fetched` photo,
+    /// added through `PhotoSelection.addingFetched` so at most one stock photo
+    /// is kept (spec P5) and it sits after the owned photos (Decision 4a). Any
+    /// replaced stock photo is an orphan — dropped from the set but still in
+    /// the store holding its external-storage blob — so it is deleted in the
+    /// same save, the leaked-blob invariant `PhotoSelection.orphaned`
+    /// documents. A refused save rolls back and stores nothing (spec P8).
+    ///
+    /// No `updatedAt` to bump, unlike the owned mirror: `WishlistItem` has no
+    /// such field (002 Decision 24) — the one line by which the two `store`s
+    /// differ.
+    @discardableResult
+    func store(_ download: StockPhotoDownload) -> Bool {
+        guard let item else { return false }
+        let existing = item.photos ?? []
+        let photo = Photo.fetched(
+            imageData: download.imageData,
+            attribution: download.attribution,
+            sortOrder: existing.count
+        )
+        let updated = PhotoSelection.addingFetched(photo, to: existing)
+        let orphans = PhotoSelection.orphaned(previous: existing, current: updated)
+        modelContext.insert(photo)
+        item.photos = updated
+        for orphan in orphans { modelContext.delete(orphan) }
+        do {
+            try modelContext.save()
+        } catch {
+            // `rollback()` discards every pending change on the shared context
+            // — the same recovery the market intents use — so a refused save
+            // leaves the item's photos exactly as they were.
+            modelContext.rollback()
+            load()
+            return false
+        }
+        closePhotoSheet()
+        load()
+        return true
+    }
+
+    private func closePhotoSheet() {
+        isFindingPhoto = false
+        photoSheetStep = .pick
+    }
 }

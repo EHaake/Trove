@@ -636,7 +636,8 @@ struct ImportSchemaTests {
                 purchaseLocation: "Sweetwater", currentValueCents: 35_000, desireToKeep: 5,
                 conditionRawValue: "new", conditionNotes: "still sealed",
                 serialNumber: "SN=1+2", notes: nil, reverbProductID: 160_322, year: 1984,
-                firstPhotoID: nil
+                firstPhotoID: nil,
+                firstPhotoAttribution: nil
             ),
         ]
         let text = CSVWriter.write(ExportSchema.itemsTable(originals, timeZone: zone))
@@ -751,13 +752,15 @@ struct ImportSchemaTests {
                 estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 3,
                 createdAt: Date(timeIntervalSince1970: 1_500_000_000),
                 notes: "wants: \"clean glass\", meter\nworking", reverbProductID: 232, year: 1966,
-                firstPhotoID: nil
+                firstPhotoID: nil,
+                firstPhotoAttribution: nil
             ),
             WishlistExportRecord(
                 name: "Big Muff", categoryPath: "Music/Pedals",
                 estimatedCostCents: 9_900, currencyCode: "USD", desireToOwn: 1,
                 createdAt: Date(timeIntervalSince1970: 1_650_000_000),
-                notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil
+                notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil,
+                firstPhotoAttribution: nil
             ),
         ]
         let text = CSVWriter.write(ExportSchema.wishlistTable(originals, timeZone: zone))
@@ -881,7 +884,8 @@ struct ImportSchemaTests {
             notes: notes.isEmpty ? nil : notes,
             reverbProductID: nil,
             year: nil,
-            firstPhotoID: nil
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
         )
     }
 }

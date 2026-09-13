@@ -31,6 +31,7 @@ own.
 | `002-live-market-value` | **Shipped** — merged to `main` 2026-09-05 via [PR #11](https://github.com/EHaake/Trove/pull/11); twenty-nine tasks (T001a–T024 with sub-letters, Amendments A and B folded in during implementation), twenty-three criteria verified with per-criterion records in `spec.md`; the first spec under the constitution's model policy, its tier log in `tasks.md`; the pre-merge sweep's one blocking finding settled by instrumentation on the simulator (not a defect) and one two-device gap recorded for a `fix/` branch |
 | `003-trend-aware-sell-plan` | **Shipped** — merged to `main` 2026-09-07 via [PR #15](https://github.com/EHaake/Trove/pull/15); seven tasks (T001–T007 with T004a added at the Phase 2 pause for Decision 14, the person's layout call from the seeded simulator), twelve criteria verified with per-criterion records in `spec.md`; the second spec under the model policy — its tier log in `tasks.md` came in under 002's per-task cost with the review-loop cap holding throughout; two layout facts settled by measurement rather than argument before merge |
 | `004-themes` | **Shipped** — merged to `main` 2026-09-09 via [PR #20](https://github.com/EHaake/Trove/pull/20); seven tasks (T001–T007), ten criteria verified with per-criterion citations in `spec.md`; **light mode of the existing brass/moss/rust identity** plus a System/Light/Dark choice in Settings — alternate-hue palettes stay deferred to their own Design pass (spec Decision 1). The third spec under the model policy, its tier log in `tasks.md` — **every invocation ran at `opus` under the Fallback clause** (`fable`'s budget spent for the whole spec); the T006 device pass signed off the light palette on-brand across every screen, and a one-time, non-reproducible title-refresh transient was recorded and dispositioned "note, don't fix" by the person |
+| `005-stock-photos` | **Shipped** — merged to `main` 2026-09-13 via [PR #21](https://github.com/EHaake/Trove/pull/21); sixteen tasks with four sub-lettered additions (T012a, the taken-with relevance filter the person's Phase 3 device testing asked for; T015a–c, from the device pass), eleven criteria verified with per-criterion records in `spec.md` and **two honest partials named** (no second device for the sync check; no dual-licensed GFDL + CC-BY-SA file in any live search). The app's **second network dependency** — Wikimedia Commons, the one source whose terms let a fetched photo be stored, synced and shown offline. Two review findings were caught as false coverage rather than by failing (a ported-licence acceptance, a bare-number relevance drop), a render test was probed, found false-passing and deleted, and the picker's `.task` firing count was settled by a probe inside the service rather than by inference. The first spec measured under the model policy's **experiment 1** — the orchestrating session moved to Fable at Phase 4, its tier log in `tasks.md`. |
 
 ## Future specs
 
@@ -65,7 +66,11 @@ actually useful once the app is in daily use.
   so the app could only ever display what a server relays), and a
   **decision to accept that access** — production access is documented
   as partner-only. Cameras and hi-fi, which Reverb barely covers, wait
-  on this.
+  on this. `005-stock-photos` added a second reason to want it:
+  Wikimedia has little or no coverage of brand-new premium gear (no
+  standard Hasselblad X2D 100C body, for one), and eBay is where photos
+  of current-market gear actually live — so the same proxy would close
+  the stock-photo gap and the asking-price one together.
 - **`003-trend-aware-sell-plan`** (**Shipped 2026-09-07** via
   [PR #15](https://github.com/EHaake/Trove/pull/15) — see
   `specs/003-trend-aware-sell-plan/` for the full record) — the Sell
@@ -116,10 +121,48 @@ actually useful once the app is in daily use.
   **Alternate-hue colour themes remain deferred** to their own spec and
   Design pass (spec Decision 1, the same reasoning that held `008`/`009`)
   — this spec was deliberately light-mode-only.
-- **`005-stock-photos`** — Auto-fetch a representative photo for items
-  you don't own yet (most useful for wishlist items). Needs a real
-  third-party image API with licensing terms to honor. Uses
-  `Photo.source`, already sitting on the model unused since `001`.
+- **`005-stock-photos`** (**Shipped 2026-09-13** via
+  [PR #21](https://github.com/EHaake/Trove/pull/21) — see
+  `specs/005-stock-photos/` for the full record) — an item with no photo
+  of its own borrows one from **Wikimedia Commons**: **Find a photo…**
+  sends the item's name and nothing else, a picker offers a small set of
+  candidates with their author and licence, and the one you pick is
+  stored on the item as a `Photo` with `source = .fetched` — the case
+  that has sat unused on the model since `001`. It shows on the detail
+  and as the row thumbnail, badged as a stock photo and carrying its
+  credit — photographer, licence, and a link back to the Commons file
+  page — in the app and in the PDF export. Only CC-BY, CC-BY-SA, CC0 and
+  public-domain files are ever offered; the source was chosen for that
+  reason, since it is the only one whose terms permit *storing* the
+  image, which is what lets a fetched photo sync to your other devices
+  and show offline like a photo you took. A one-time notice precedes the
+  first search, nothing is fetched on launch, on appear or in the
+  background, and `PRIVACY.md` names the second service. What it
+  recorded on the way out:
+  - **Photos *of* the gear, not photos taken *with* it** (spec
+    Decision 7, added from the person's device testing) — Wikimedia's
+    text search matches gear named in a photo's capture metadata, so
+    portraits shot on an X2D came back for "Hasselblad X2D". The picker
+    drops any candidate categorized as taken with the same model
+    searched. **Filter-only for v1**: broadening an over-specific name
+    ("…100C ii" → "X2D") is deferred, so a name Wikimedia has no product
+    shot for still shows the empty state.
+  - **Wikimedia's coverage gap for brand-new premium gear is real, and
+    the deferred eBay source is what would close it** (the person's
+    Phase 3 device testing, 2026-09-10). Commons has no standard
+    Hasselblad X2D 100C body — only a CC0 "Earth Explorer" limited
+    edition — and the same thinness applies to most gear released in the
+    last year or two. eBay carries current-market photos of exactly that
+    gear, but reaching it needs the hosted proxy `002`'s Decision 19
+    flagged, so it stays a follow-up spec (see the eBay entry above),
+    not a patch to this one.
+  - **Reusing Reverb's catalog image for matched music gear** (spec
+    Decision 1) — noted as a possible later enhancement, not built.
+    Reverb's terms are hotlink-only and matched-music-only, so its image
+    could be *shown* beside a matched item but never stored, never
+    synced and never exported: a different feature from this one, with a
+    different privacy and offline story, and it would only ever cover
+    items that already have a Reverb match.
 - **`006-mark-as-sold`** — Real transaction tracking for the Sell Plan:
   marking a planned item as actually sold, removing it from inventory,
   a sale history. Deliberately excluded from `001` to keep the Sell Plan

@@ -38,6 +38,12 @@ struct ItemRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .extrudedPlate()
         .accessibilityElement(children: .combine)
+        // A stock-leading row announces its thumbnail as representative, not as
+        // the person's own (criterion 11). An empty value adds nothing to a
+        // normal row's combined label. Same predicate as the visible mark, so
+        // the two can't drift.
+        .accessibilityValue(PhotoSelection.leadsWithStock(item.photos ?? [])
+            ? StockPhotoCopy.badgeAccessibilityLabel : "")
     }
 
     /// Design's meta line reads "LEICA · CAMERAS" — brand then category. There

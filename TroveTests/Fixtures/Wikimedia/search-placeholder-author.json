@@ -1,0 +1,26 @@
+{
+  "batchcomplete": true,
+  "query": {
+    "pages": [
+      {
+        "pageid": 202,
+        "title": "File:Placeholder-author-cc-by-sa.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/3/3e/Placeholder-author-cc-by-sa.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Placeholder-author-cc-by-sa.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Placeholder-author-cc-by-sa.jpg/1024px-Placeholder-author-cc-by-sa.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC BY-SA 3.0" },
+              "License": { "value": "cc-by-sa-3.0" },
+              "LicenseUrl": { "value": "https://creativecommons.org/licenses/by-sa/3.0" },
+              "Artist": { "value": "No machine-readable author provided. <a href=\"//commons.wikimedia.org/wiki/User:Elya\" title=\"User:Elya\">Elya</a> assumed (based on copyright claims)." },
+              "UsageTerms": { "value": "Creative Commons Attribution-Share Alike 3.0" }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

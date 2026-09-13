@@ -42,6 +42,16 @@ nonisolated struct ItemExportRecord: Sendable {
     /// snapshot. Export-side code may rely on the *shape*, never on the
     /// field being populated.
     let firstPhotoID: PersistentIdentifier?
+
+    /// 005: the leading photo's author and licence, when that photo is a
+    /// fetched stock photo — what the PDF's credit line is composed from
+    /// (spec criterion 8, plan §7). Nil when the leading photo is the
+    /// person's own, which is what keeps a credit off an owned photo (guard
+    /// G11), and nil on an import-built record exactly like `firstPhotoID`.
+    /// `StockPhotoAttribution` is itself a `Sendable` value, so the record
+    /// stays a plain snapshot; `Photo.attribution` has already applied the
+    /// missing-author fallback by the time it lands here.
+    let firstPhotoAttribution: StockPhotoAttribution?
 }
 
 /// One wanted item, same snapshot rules as `ItemExportRecord`.
@@ -57,6 +67,8 @@ nonisolated struct WishlistExportRecord: Sendable {
     let reverbProductID: Int?
     let year: Int?
     let firstPhotoID: PersistentIdentifier?
+    /// As on `ItemExportRecord` (005).
+    let firstPhotoAttribution: StockPhotoAttribution?
 }
 
 /// The PDF cover page's figures, computed by the view model with its own
@@ -107,6 +119,11 @@ nonisolated struct PDFEntry: Sendable {
     let fields: [PDFField]
     let notes: String?
     let photoID: PersistentIdentifier?
+    /// 005: the plain-text credit for `photoID`'s image — set only when that
+    /// photo is a fetched stock photo, nil for the person's own (guard G11).
+    /// The composer draws it beneath the photo box; a credit is never drawn
+    /// without its image (spec P4).
+    let photoCredit: String?
 }
 
 /// Everything `PDFComposer` needs to render one document.
@@ -124,6 +141,9 @@ extension ItemExportRecord {
     /// one definition of photo display order.
     @MainActor
     init(item: Item) {
+        // One read of the display order, so the identifier and the credit
+        // can never describe two different photos.
+        let leadingPhoto = PhotoSelection.inDisplayOrder(item.photos ?? []).first
         self.init(
             name: item.name,
             categoryPath: item.categoryPath,
@@ -139,7 +159,8 @@ extension ItemExportRecord {
             notes: item.notes,
             reverbProductID: item.reverbProductID,
             year: item.year,
-            firstPhotoID: PhotoSelection.inDisplayOrder(item.photos ?? []).first?.persistentModelID
+            firstPhotoID: leadingPhoto?.persistentModelID,
+            firstPhotoAttribution: leadingPhoto?.attribution
         )
     }
 }
@@ -149,6 +170,7 @@ extension WishlistExportRecord {
     /// fields.
     @MainActor
     init(item: WishlistItem) {
+        let leadingPhoto = PhotoSelection.inDisplayOrder(item.photos ?? []).first
         self.init(
             name: item.name,
             categoryPath: item.categoryPath,
@@ -159,7 +181,8 @@ extension WishlistExportRecord {
             notes: item.notes,
             reverbProductID: item.reverbProductID,
             year: item.year,
-            firstPhotoID: PhotoSelection.inDisplayOrder(item.photos ?? []).first?.persistentModelID
+            firstPhotoID: leadingPhoto?.persistentModelID,
+            firstPhotoAttribution: leadingPhoto?.attribution
         )
     }
 }
@@ -212,7 +235,8 @@ extension PDFEntry {
             name: record.name,
             fields: fields,
             notes: (record.notes?.isEmpty == false) ? record.notes : nil,
-            photoID: record.firstPhotoID
+            photoID: record.firstPhotoID,
+            photoCredit: Self.credit(for: record.firstPhotoAttribution)
         )
     }
 
@@ -237,8 +261,18 @@ extension PDFEntry {
                 ),
             ],
             notes: (record.notes?.isEmpty == false) ? record.notes : nil,
-            photoID: record.firstPhotoID
+            photoID: record.firstPhotoID,
+            photoCredit: Self.credit(for: record.firstPhotoAttribution)
         )
+    }
+
+    /// The leading photo's credit, in `StockPhotoCopy`'s one wording — nil
+    /// unless the snapshot carries a fetched photo's attribution, which is
+    /// the whole of the "credit only on a stock photo" rule (guard G11).
+    nonisolated private static func credit(for attribution: StockPhotoAttribution?) -> String? {
+        attribution.map {
+            StockPhotoCopy.credit(author: $0.author, licenseName: $0.licenseName)
+        }
     }
 }
 

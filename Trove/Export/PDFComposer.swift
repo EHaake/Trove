@@ -99,6 +99,8 @@ nonisolated enum PDFComposer {
     /// The reserved photo box (T008 draws into it); text narrows beside it.
     static let photoBox = CGSize(width: 132, height: 99)
     private static let photoGap: CGFloat = 16
+    /// The gap between the photo box and its credit line (005, §7).
+    private static let creditGap: CGFloat = 4
     private static let fieldLabelWidth: CGFloat = 96
     private static let fieldColumnGap: CGFloat = 10
 
@@ -124,6 +126,16 @@ nonisolated enum PDFComposer {
         let hasPhoto = image != nil
         let columnWidth = hasPhoto ? contentWidth - photoBox.width - photoGap : contentWidth
 
+        // 005: a stock photo's credit rides under its picture. Only when the
+        // picture is actually drawn — a credit without its image would credit
+        // nothing (spec P4) — and only for a `.fetched` leading photo, which
+        // is what `photoCredit` already means (guard G11).
+        let creditText = (hasPhoto ? entry.photoCredit : nil).map {
+            styled($0, font: PrintType.sans(6.5), color: PrintPalette.secondary)
+        }
+        let creditHeight = creditText.map { creditGap + measuredHeight($0, width: photoBox.width) } ?? 0
+        let photoColumnHeight = hasPhoto ? photoBox.height + creditHeight : 0
+
         let eyebrowText = styled(
             entry.eyebrow.uppercased(),
             font: PrintType.mono(7.5, weight: .medium),
@@ -138,7 +150,7 @@ nonisolated enum PDFComposer {
             + measuredHeight(nameText, width: columnWidth) + 10
         let firstRowHeight = entry.fields.first.map { fieldRowHeight($0, width: columnWidth) } ?? 0
         let keepTogether = 18 + 0.75 + 14
-            + max(headHeight + firstRowHeight, hasPhoto ? photoBox.height : 0)
+            + max(headHeight + firstRowHeight, photoColumnHeight)
         if writer.remaining < keepTogether {
             writer.newPage()
         }
@@ -158,6 +170,14 @@ nonisolated enum PDFComposer {
                 height: photoBox.height
             )
             writer.context.draw(image, in: aspectFitRect(for: image, in: box))
+            if let creditText {
+                writer.drawFixed(
+                    creditText,
+                    x: box.minX,
+                    top: box.minY - creditGap,
+                    width: photoBox.width
+                )
+            }
         }
 
         writer.draw(eyebrowText, width: columnWidth)
@@ -172,7 +192,9 @@ nonisolated enum PDFComposer {
         // Notes clear the photo box — but only while still on the entry's
         // first page; a page break has already cleared it otherwise.
         if hasPhoto, writer.pageIndex == entryTopPage {
-            let photoBottom = entryTopCursor - photoBox.height
+            // The credit counts as part of the photo column, so notes clear
+            // it too rather than flowing across the credit line.
+            let photoBottom = entryTopCursor - photoColumnHeight
             if writer.cursor > photoBottom {
                 writer.advance(writer.cursor - photoBottom)
             }
@@ -473,6 +495,19 @@ private nonisolated final class PageWriter {
         drawAt(label, x: PDFComposer.margin, top: cursor - 2, width: labelWidth, height: labelHeight)
         drawAt(value, x: PDFComposer.margin + labelWidth + gap, top: cursor, width: valueWidth, height: valueHeight)
         advance(max(labelHeight, valueHeight) + 7)
+    }
+
+    /// Draws at an absolute top edge and leaves the cursor alone — the photo
+    /// column's credit line sits beside the flowing text, not in it, exactly
+    /// as the photo itself is drawn straight into the context.
+    func drawFixed(_ text: NSAttributedString, x: CGFloat, top: CGFloat, width: CGFloat) {
+        drawAt(
+            text,
+            x: x,
+            top: top,
+            width: width,
+            height: PDFComposer.measuredHeight(text, width: width)
+        )
     }
 
     private func drawAt(

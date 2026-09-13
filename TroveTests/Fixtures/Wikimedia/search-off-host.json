@@ -1,0 +1,61 @@
+{
+  "batchcomplete": true,
+  "query": {
+    "pages": [
+      {
+        "pageid": 301,
+        "title": "File:On-host-cc-by.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/1/11/On-host-cc-by.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:On-host-cc-by.jpg",
+            "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/On-host-cc-by.jpg/1024px-On-host-cc-by.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC BY 4.0" },
+              "License": { "value": "cc-by-4.0" },
+              "Artist": { "value": "Dave Example" },
+              "UsageTerms": { "value": "Creative Commons Attribution 4.0" }
+            }
+          }
+        ]
+      },
+      {
+        "pageid": 302,
+        "title": "File:Off-host-cc-by.jpg",
+        "imageinfo": [
+          {
+            "url": "https://cdn.example.com/wikipedia/commons/2/22/Off-host-cc-by.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Off-host-cc-by.jpg",
+            "thumburl": "https://cdn.example.com/thumb/2/22/Off-host-cc-by.jpg/1024px-Off-host-cc-by.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC BY 4.0" },
+              "License": { "value": "cc-by-4.0" },
+              "Artist": { "value": "Dave Example" },
+              "UsageTerms": { "value": "Creative Commons Attribution 4.0" }
+            }
+          }
+        ]
+      },
+      {
+        "pageid": 303,
+        "title": "File:Lookalike-host-cc-by.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org.evil.example/2/23/Lookalike-host-cc-by.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Lookalike-host-cc-by.jpg",
+            "thumburl": "https://upload.wikimedia.org.evil.example/thumb/2/23/Lookalike-host-cc-by.jpg/1024px-Lookalike-host-cc-by.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC BY 4.0" },
+              "License": { "value": "cc-by-4.0" },
+              "Artist": { "value": "Dave Example" },
+              "UsageTerms": { "value": "Creative Commons Attribution 4.0" }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

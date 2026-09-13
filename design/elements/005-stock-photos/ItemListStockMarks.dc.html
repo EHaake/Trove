@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#17181A;--surface:#201F1D;--inset:#26272A;--divider:#3A3B3E;--brass:#C79A56;--brassTint:rgba(199,154,86,0.12);--mossText:#7E9679;--rustText:#B8674F;--mid:#8F8C38;}
+    helmet{display:none!important;}
+    x-dc{display:block;}
+    body{background:var(--bg);font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif;color:#F2EDE4;-webkit-font-smoothing:antialiased;}
+    .mono{font-family:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;}
+    .disp{font-family:'Archivo',system-ui,sans-serif;font-weight:600;}
+    .frame{width:390px;height:844px;background:var(--bg);position:relative;overflow:hidden;}
+    .plate{background:var(--surface);border-radius:3px;box-shadow:inset 0 1px 0 rgba(242,237,228,0.055),inset 0 -1px 0 rgba(0,0,0,0.4),0 2px 6px rgba(0,0,0,0.25);}
+    .row{display:flex;align-items:center;gap:13px;padding:13px;margin-bottom:10px;}
+    .thumb{position:relative;width:52px;height:52px;flex:0 0 52px;border-radius:2px;overflow:hidden;background:var(--inset);}
+    .thumb .pic{width:100%;height:100%;display:block;}
+    .mark{position:absolute;top:4px;left:4px;width:16px;height:16px;border-radius:3px;background:rgba(23,24,26,0.9);border:1px solid rgba(242,237,228,0.16);display:flex;align-items:center;justify-content:center;}
+    .rbody{flex:1;min-width:0;}
+    .rtitle{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .rmeta{font-size:10.5px;letter-spacing:0.08em;color:rgba(242,237,228,0.45);margin-top:3px;}
+    .rvalue{margin-top:6px;display:flex;align-items:baseline;gap:7px;white-space:nowrap;}
+    .money{font-size:15px;font-weight:500;}
+    .delta{font-size:12px;}
+    .rdial{position:relative;width:46px;height:46px;flex:0 0 46px;}
+    .rdial .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:600;font-size:16px;}
+    .chip{border:1px solid var(--divider);border-radius:999px;padding:8px 17px;font-size:14px;font-weight:500;color:rgba(242,237,228,0.75);}
+    .chip.on{border-color:var(--brass);color:var(--brass);background:var(--brassTint);}
+    .sbadge{border:1px solid var(--brass);border-radius:3px;padding:8px 12px;display:flex;align-items:center;gap:8px;color:var(--brass);}
+  </style>
+</helmet>
+
+<div class="frame">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="hb" viewBox="0 0 120 120"><rect x="34" y="34" width="52" height="56" rx="4" fill="#33323a"/><rect x="34" y="26" width="52" height="12" rx="2" fill="#26252b"/><rect x="34" y="60" width="52" height="16" fill="#2a2930"/><circle cx="60" cy="66" r="20" fill="#17161a"/><circle cx="60" cy="66" r="20" fill="none" stroke="#565560" stroke-width="3"/><circle cx="60" cy="66" r="10" fill="#0d0c10"/><rect x="84" y="44" width="10" height="30" rx="2" fill="#3a3940"/><circle cx="41" cy="44" r="3.5" fill="#8a8a90"/></symbol>
+    <symbol id="tt" viewBox="0 0 120 120"><rect x="12" y="18" width="96" height="84" rx="4" fill="#2a2722"/><circle cx="54" cy="60" r="34" fill="#18171b"/><circle cx="54" cy="60" r="34" fill="none" stroke="#3a3a3c" stroke-width="1.5"/><circle cx="54" cy="60" r="12" fill="#b58a4a"/><circle cx="96" cy="30" r="6" fill="#3a3940"/><path d="M96 30 L64 66" stroke="#8a8a90" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="lens" viewBox="0 0 120 120"><rect x="30" y="40" width="60" height="46" rx="6" fill="#2b2a30"/><rect x="30" y="40" width="60" height="46" rx="6" fill="none" stroke="#55545d" stroke-width="2"/><rect x="40" y="40" width="3" height="46" fill="#3a3940"/><rect x="50" y="40" width="3" height="46" fill="#3a3940"/><rect x="70" y="40" width="3" height="46" fill="#3a3940"/><rect x="80" y="40" width="3" height="46" fill="#3a3940"/><ellipse cx="60" cy="63" rx="18" ry="16" fill="#14141a"/><ellipse cx="60" cy="63" rx="18" ry="16" fill="none" stroke="#5a5962" stroke-width="2"/><ellipse cx="53" cy="56" rx="4" ry="3" fill="rgba(126,150,121,0.28)"/></symbol>
+    <symbol id="gtr" viewBox="0 0 120 120"><rect x="55" y="6" width="10" height="48" rx="2" fill="#3a2f22"/><rect x="52" y="3" width="16" height="11" rx="2" fill="#281f17"/><path d="M42 52 q-17 3 -17 27 q0 25 21 31 q18 5 33 0 q18 -6 18 -31 q0 -25 -18 -27 q-7 -1 -14 -1 q-4 -4 -10 -4 q-8 0 -16 6 z" fill="#c19a5b"/><path d="M45 61 q-6 7 -4 22 q2 12 14 14 l9 -2 q-6 -20 -4 -34 z" fill="#1c1b1a"/><rect x="66" y="76" width="14" height="10" rx="1" fill="#8a8a8a"/></symbol>
+    <symbol id="mk" viewBox="0 0 16 16"><rect x="2.4" y="5" width="8.4" height="7" rx="1.4" fill="none" stroke="rgba(242,237,228,0.72)" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.3 5V3.6A1.1 1.1 0 0 1 6.4 2.5h6A1.1 1.1 0 0 1 13.5 3.6v6A1.1 1.1 0 0 1 12.4 10.7h-1.6" fill="none" stroke="rgba(242,237,228,0.72)" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  </defs></svg>
+
+  <div style="height:44px"></div>
+  <div style="padding:14px 24px 0;display:flex;align-items:flex-start;justify-content:space-between;">
+    <div>
+      <div class="disp" style="font-size:30px;">Items</div>
+      <div class="mono" style="font-size:12.5px;letter-spacing:0.04em;color:rgba(242,237,228,0.45);margin-top:6px;">34 ITEMS · $18,420</div>
+    </div>
+    <div class="sbadge">
+      <span style="display:flex;flex-direction:column;gap:2.5px;"><span style="width:10px;height:1.5px;background:currentColor;"></span><span style="width:7px;height:1.5px;background:currentColor;"></span><span style="width:4px;height:1.5px;background:currentColor;"></span></span>
+      <span class="mono" style="font-size:11px;">Value</span>
+    </div>
+  </div>
+
+  <div style="padding:16px 24px 0;">
+    <div class="plate" style="height:40px;display:flex;align-items:center;gap:10px;padding:0 14px;">
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="rgba(242,237,228,0.4)" stroke-width="1.8"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg>
+      <span style="font-size:13.5px;color:rgba(242,237,228,0.4);">Search name, brand, serial</span>
+    </div>
+  </div>
+
+  <div style="padding:16px 0 4px 24px;display:flex;gap:10px;overflow:hidden;">
+    <span class="chip on">All</span><span class="chip">Cameras</span><span class="chip">Lenses</span><span class="chip">Guitars</span>
+  </div>
+
+  <div style="padding:12px 24px 0;">
+    <!-- owned-but-unshot: STOCK photo, marked -->
+    <div class="row plate">
+      <div class="thumb"><svg class="pic" viewBox="28 22 64 76" preserveAspectRatio="xMidYMid slice"><use href="#hb" width="120" height="120"/></svg><div class="mark"><svg width="10" height="10" viewBox="0 0 16 16"><use href="#mk"/></svg></div></div>
+      <div class="rbody">
+        <div class="rtitle">Hasselblad 500C/M</div>
+        <div class="rmeta mono">HASSELBLAD · CAMERAS</div>
+        <div class="rvalue"><span class="money mono">$1,780</span><span class="delta" style="color:var(--mossText);">+530 vs paid</span></div>
+      </div>
+      <div class="rdial"><svg width="46" height="46" viewBox="0 0 46 46"><path d="M10 35 A17 17 0 1 1 36 35" fill="none" stroke="#7E9679" stroke-width="2.5" stroke-linecap="round"/><circle cx="36" cy="35" r="2.5" fill="#7E9679"/></svg><span class="num" style="color:#7E9679;">5</span></div>
+    </div>
+
+    <!-- owned-but-unshot: STOCK photo, marked -->
+    <div class="row plate">
+      <div class="thumb"><svg class="pic" viewBox="8 18 104 84" preserveAspectRatio="xMidYMid slice"><use href="#tt" width="120" height="120"/></svg><div class="mark"><svg width="10" height="10" viewBox="0 0 16 16"><use href="#mk"/></svg></div></div>
+      <div class="rbody">
+        <div class="rtitle">Technics SL-1200</div>
+        <div class="rmeta mono">TECHNICS · HI-FI</div>
+        <div class="rvalue"><span class="money mono">$900</span><span class="delta" style="color:var(--mossText);">+50 vs paid</span></div>
+      </div>
+      <div class="rdial"><svg width="46" height="46" viewBox="0 0 46 46"><path d="M10 35 A17 17 0 1 1 30 10" fill="none" stroke="#8F8C38" stroke-width="2.5" stroke-linecap="round"/><circle cx="30" cy="10" r="2.5" fill="#8F8C38"/></svg><span class="num" style="color:#8F8C38;">3</span></div>
+    </div>
+
+    <!-- the person's OWN photo: no mark -->
+    <div class="row plate">
+      <div class="thumb"><svg class="pic" viewBox="20 30 80 66" preserveAspectRatio="xMidYMid slice"><use href="#lens" width="120" height="120"/></svg></div>
+      <div class="rbody">
+        <div class="rtitle">Nikon 105mm f/2.5 Ai-S</div>
+        <div class="rmeta mono">NIKON · LENSES</div>
+        <div class="rvalue"><span class="money mono">$310</span><span class="delta" style="color:var(--mossText);">+70 vs paid</span></div>
+      </div>
+      <div class="rdial"><svg width="46" height="46" viewBox="0 0 46 46"><path d="M10 35 A17 17 0 1 1 36 35" fill="none" stroke="#7E9679" stroke-width="2.5" stroke-linecap="round"/><circle cx="36" cy="35" r="2.5" fill="#7E9679"/></svg><span class="num" style="color:#7E9679;">4</span></div>
+    </div>
+
+    <!-- the person's OWN photo: no mark -->
+    <div class="row plate">
+      <div class="thumb"><svg class="pic" viewBox="18 40 84 58" preserveAspectRatio="xMidYMid slice"><use href="#gtr" width="120" height="120"/></svg></div>
+      <div class="rbody">
+        <div class="rtitle">Fender Stratocaster</div>
+        <div class="rmeta mono">FENDER · GUITARS</div>
+        <div class="rvalue"><span class="money mono">$1,300</span><span class="delta" style="color:var(--mossText);">+150 vs paid</span></div>
+      </div>
+      <div class="rdial"><svg width="46" height="46" viewBox="0 0 46 46"><path d="M10 35 A17 17 0 0 1 8 16" fill="none" stroke="#B8674F" stroke-width="2.5" stroke-linecap="round"/><circle cx="8" cy="16" r="2.5" fill="#B8674F"/></svg><span class="num" style="color:#B8674F;">2</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

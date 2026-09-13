@@ -4,9 +4,11 @@ import SwiftUI
 /// Multi-photo selection from the user's own library, shown as the thumbnail
 /// strip plus dashed add-tile from `design/screens/Trove Item Detail.png`.
 ///
-/// Device photos only in v1 — every `Photo` it makes is `.device`. Fetching a
-/// stock photo is a deferred feature (spec.md non-goals), which is why
-/// `Photo.source` exists at all.
+/// This field only ever *adds* device photos — every `Photo` it makes is
+/// `.device`. An item may already hold a fetched stock photo (spec 005), and
+/// adding a device photo to such an item asks the person whether to replace the
+/// stock photo or keep both (Decision 4a); the field never fetches a stock
+/// photo itself — that is the separate Find a photo… sheet the host presents.
 struct PhotoPickerField: View {
     var label: String = "Photos"
     @Binding var photos: [Photo]
@@ -15,6 +17,10 @@ struct PhotoPickerField: View {
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var isLoading = false
     @State private var unreadableCount = 0
+    /// The picked device bytes held while the replace/keep prompt is up, since
+    /// the alert's buttons decide what to do with them (Decision 4a).
+    @State private var pendingDeviceData: [Data] = []
+    @State private var isPromptingReplaceKeep = false
 
     /// Derived from Design's thumbnail strip: four tiles across the content
     /// width at roughly 10:7. tokens.md gives the corner radius but not the
@@ -47,6 +53,29 @@ struct PhotoPickerField: View {
         }
         .onChange(of: pickerItems) { _, items in
             Task { await load(items) }
+        }
+        // Adding a device photo to an item that already holds a stock photo
+        // asks first (Decision 4a). SwiftUI shows a two-button alert's title as
+        // its message, and the spec pins only the question, so no separate
+        // message is drawn. The spec pins two choices, but SwiftUI adds a
+        // Cancel of its own whenever a `.destructive` button is present, so
+        // the alert shows three (as the device pass saw): Keep both, Replace,
+        // Cancel. Cancel runs neither closure — nothing is added, and the
+        // pending device bytes are dropped, since only these two buttons ever
+        // read them and the next pick overwrites them. Keep both leads with
+        // the owned photo; Replace is destructive.
+        .alert(
+            StockPhotoCopy.replaceKeepMessage,
+            isPresented: $isPromptingReplaceKeep
+        ) {
+            Button(StockPhotoCopy.keepBoth) {
+                photos = PhotoSelection.addingKeepingStock(pendingDeviceData, to: photos)
+                pendingDeviceData = []
+            }
+            Button(StockPhotoCopy.replace, role: .destructive) {
+                photos = PhotoSelection.addingReplacingStock(pendingDeviceData, to: photos)
+                pendingDeviceData = []
+            }
         }
     }
 
@@ -159,7 +188,12 @@ struct PhotoPickerField: View {
         }
 
         unreadableCount = items.count - loaded.count
-        if !loaded.isEmpty {
+        if PhotoSelection.shouldPromptReplaceOrKeep(addingCount: loaded.count, to: photos) {
+            // A stock photo is present: hold the bytes and ask whether to
+            // replace it or keep both (Decision 4a) rather than appending.
+            pendingDeviceData = loaded
+            isPromptingReplaceKeep = true
+        } else if !loaded.isEmpty {
             photos = PhotoSelection.appending(loaded, to: photos)
         }
         pickerItems = []

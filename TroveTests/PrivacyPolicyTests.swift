@@ -15,11 +15,14 @@ import Testing
 /// stays a by-hand line item (T018 / post-merge).
 @Suite("Privacy policy")
 struct PrivacyPolicyTests {
-    private static func policyText(file: StaticString = #filePath) throws -> String {
+    private static func policyText(
+        named filename: String = MarketCopy.privacyPolicyFilename,
+        file: StaticString = #filePath
+    ) throws -> String {
         let url = URL(filePath: "\(file)")
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appending(path: MarketCopy.privacyPolicyFilename)
+            .appending(path: filename)
         return try String(contentsOf: url, encoding: .utf8)
     }
 
@@ -60,7 +63,9 @@ struct PrivacyPolicyTests {
             "| The last figure for a matched item — median, low, high, count, when it was fetched",
             "| The matched product's catalog slug and title",
             "| The history of figures for a matched item",
-            "| When you tapped Continue on the one-time notice",
+            "| When you tapped Continue on the one-time notice before a first search of Reverb",
+            "| When you tapped Continue on the one-time notice before a first photo search",
+            "| A stock photo you picked from Wikimedia Commons",
             "| Anything from an individual listing — its title, seller, image or listing identifier | nowhere; it is never stored |",
         ]
         for row in rows {
@@ -84,9 +89,77 @@ struct PrivacyPolicyTests {
         #expect(head.contains { $0.wholeMatch(of: line) != nil })
     }
 
+    /// The line every copy of this document opens with. Asserting the linked
+    /// name resolves to a file that *says* it is the privacy policy is what
+    /// makes these two link tests falsifiable: matching the URL's last
+    /// component against the filename constant passes for any pair of equal
+    /// strings, so repointing both constants at `README.md` used to stay
+    /// green (Phase 4 review note 2, the 002 shape it inherited).
+    private static let policyTitle = "# Trove — Privacy Policy"
+
     /// The link in Settings › About and the file in the repository are the
-    /// same document — the filename is the only thing tying them together.
-    @Test func theLinkedURLEndsInTheFilename() {
+    /// same document — the filename ties them together, and the file it names
+    /// has to be the policy itself.
+    @Test func theLinkedURLEndsInTheFilename() throws {
         #expect(MarketCopy.privacyPolicyURL.lastPathComponent == MarketCopy.privacyPolicyFilename)
+        let text = try Self.policyText(named: MarketCopy.privacyPolicyFilename)
+        #expect(
+            text.contains(Self.policyTitle),
+            "the name the app links by is not the privacy policy"
+        )
+    }
+
+    // MARK: - Spec 005: the stock-photo half (criterion 9, P6)
+
+    /// The same coupling as the Reverb notice, for the photo notice: the
+    /// sheet's words and the policy's words are one string, so a reworded
+    /// notice that leaves the policy behind goes red (guard G12).
+    @Test func thePolicyQuotesTheStockPhotoNoticeVerbatim() throws {
+        let text = try Self.policyText()
+        #expect(text.contains(StockPhotoCopy.noticeBody))
+    }
+
+    /// Criterion 9's two substantive claims: Wikimedia Commons is named as a
+    /// second outside service, and the policy says a fetched photo *does*
+    /// sync — the one place stock photos differ from the market figures.
+    /// Pinned as whole lines, so flipping the table's answer to "no" or
+    /// dropping the sentence goes red rather than passing on the noun alone.
+    @Test func thePolicyNamesWikimediaCommonsAndStatesThatAFetchedPhotoSyncs() throws {
+        let text = try Self.policyText()
+        #expect(text.contains("Wikimedia Commons"))
+        #expect(
+            text.contains(
+                "| A stock photo you picked from Wikimedia Commons, with its credit — the photographer, the licence and the link back | on your device | yes, to your private iCloud database |"
+            ),
+            "the retention table no longer says a fetched photo syncs"
+        )
+        // Unwrapped first: the sentence is prose, so its line breaks move
+        // whenever the paragraph reflows, and only its words should matter.
+        let unwrapped = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        #expect(
+            unwrapped.contains("A stock photo you picked does sync, with its credit"),
+            "the iCloud section no longer states that a fetched photo syncs"
+        )
+    }
+
+    /// Wikimedia's User-Agent policy asks for a way to reach the developer,
+    /// the same way Reverb's terms do, and `StockPhotoCopy` is 005's home for
+    /// that address — so changing it there turns this red until the policy
+    /// follows.
+    @Test func thePolicyCarriesTheStockPhotoContactAddress() throws {
+        let text = try Self.policyText()
+        #expect(text.contains(StockPhotoCopy.contactAddress))
+    }
+
+    /// The photo notice's "See the privacy policy" link and the committed
+    /// file are the same document, by the same two ties the market notice
+    /// uses: the filename the app links by, and a file that exists under it.
+    @Test func theStockPhotoLinkPointsAtTheSameExistingFile() throws {
+        #expect(StockPhotoCopy.privacyPolicyURL.lastPathComponent == StockPhotoCopy.privacyPolicyFilename)
+        let text = try Self.policyText(named: StockPhotoCopy.privacyPolicyFilename)
+        #expect(
+            text.contains(Self.policyTitle),
+            "the name the photo notice links by is not the privacy policy"
+        )
     }
 }

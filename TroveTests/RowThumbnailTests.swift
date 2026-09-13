@@ -68,7 +68,53 @@ struct RowThumbnailTests {
         #expect(pixel.green > 150, "Expected the sortOrder-0 photo; got \(pixel)")
         #expect(pixel.red < 100, "Expected the sortOrder-0 photo; got \(pixel)")
     }
+
+    // MARK: - The stock mark (T011)
+
+    /// A stock-only row draws the mark; an owned-leading row draws none, even
+    /// when a stock photo trails (spec criterion 3, Decision 4a). Both rows
+    /// render the same bright leading image, so the mark's dark ground is the
+    /// only difference — found by locating the darkest pixel in the stock render
+    /// (which must be the mark) and confirming that same spot is bright in the
+    /// owned-leading render.
+    ///
+    /// **Mutation:** gate the overlay on `photos.contains { $0.source ==
+    /// .fetched }` instead of `PhotoSelection.leadsWithStock` → the
+    /// owned-leading corner goes dark → the `owned is bright` expectation red.
+    @Test func theStockMarkRidesAStockLeadingRowButNotAnOwnedLeadingOne() throws {
+        let brightPNG = try makePNGData(red: 255, green: 255, blue: 255)
+
+        let stockOnly = [
+            Photo.fetched(imageData: brightPNG, attribution: stockAttribution, sortOrder: 0)
+        ]
+        // Owned leads (sortOrder 0), stock trails (sortOrder 1) — passed out of
+        // array order so the predicate must sort by sortOrder, not position.
+        let ownedLeading = [
+            Photo.fetched(imageData: brightPNG, attribution: stockAttribution, sortOrder: 1),
+            Photo(imageData: brightPNG, source: .device, sortOrder: 0),
+        ]
+
+        let stockImage = try render(RowThumbnail(photos: stockOnly))
+        let ownedImage = try render(RowThumbnail(photos: ownedLeading))
+
+        // The darkest pixel of the stock render is the mark's ground.
+        let mark = try darkestPixel(of: stockImage)
+        #expect(mark.brightness < 350, "Expected the stock mark's dark ground; got \(mark)")
+
+        // The same location in the owned-leading render is the bright image —
+        // no mark there, because an owned photo leads.
+        let ownedAtMark = try pixel(of: ownedImage, x: mark.x, y: mark.y)
+        #expect(ownedAtMark.red + ownedAtMark.green + ownedAtMark.blue > 600,
+                "Expected the bright leading image (no mark); got \(ownedAtMark)")
+    }
 }
+
+/// A stock attribution for building `.fetched` photos in these tests.
+private let stockAttribution = StockPhotoAttribution(
+    author: "A",
+    licenseName: "CC BY-SA 4.0",
+    sourceURL: URL(string: "https://commons.wikimedia.org/wiki/File:A.jpg")!
+)
 
 // MARK: - Rendering helpers
 
@@ -121,6 +167,61 @@ private func makePNGData(red: Int, green: Int, blue: Int, side: Int = 8) throws 
     CGImageDestinationAddImage(destination, image, nil)
     #expect(CGImageDestinationFinalize(destination))
     return output as Data
+}
+
+/// Reads every pixel into a raw RGBA buffer, running `body` with a sampler
+/// closure. Coordinates are (x, y) from the buffer's own origin — the flip
+/// between Quartz and buffer memory doesn't matter here, because callers compare
+/// the *same* buffer coordinate across two renders.
+private func withPixels(
+    of image: CGImage,
+    _ body: (_ width: Int, _ height: Int, _ sample: (Int, Int) -> (red: Int, green: Int, blue: Int)) throws -> Void
+) throws {
+    let width = image.width
+    let height = image.height
+    let space = try #require(CGColorSpace(name: CGColorSpace.sRGB))
+    let context = try #require(CGContext(
+        data: nil,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: width * 4,
+        space: space,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ))
+    context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+    let raw = try #require(context.data)
+    let bytes = raw.bindMemory(to: UInt8.self, capacity: width * height * 4)
+    try body(width, height) { x, y in
+        let offset = (y * width + x) * 4
+        return (Int(bytes[offset]), Int(bytes[offset + 1]), Int(bytes[offset + 2]))
+    }
+}
+
+/// The location and brightness of the darkest pixel in the image.
+private func darkestPixel(of image: CGImage) throws -> (x: Int, y: Int, brightness: Int) {
+    var best = (x: 0, y: 0, brightness: Int.max)
+    try withPixels(of: image) { width, height, sample in
+        for y in 0..<height {
+            for x in 0..<width {
+                let p = sample(x, y)
+                let brightness = p.red + p.green + p.blue
+                if brightness < best.brightness {
+                    best = (x, y, brightness)
+                }
+            }
+        }
+    }
+    return best
+}
+
+/// The pixel at a specific buffer coordinate.
+private func pixel(of image: CGImage, x: Int, y: Int) throws -> (red: Int, green: Int, blue: Int) {
+    var result = (red: 0, green: 0, blue: 0)
+    try withPixels(of: image) { _, _, sample in
+        result = sample(x, y)
+    }
+    return result
 }
 
 private func centrePixel(of image: CGImage) throws -> (red: Int, green: Int, blue: Int) {

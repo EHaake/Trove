@@ -594,6 +594,11 @@ private struct WishlistRow: View {
         // which combining would have swallowed; with nothing to reach in here,
         // a single description reads better than five fragments.
         .accessibilityElement(children: .combine)
+        // A stock-leading row announces its thumbnail as representative, not as
+        // the person's own (criterion 11). An empty value adds nothing to a
+        // normal row's combined label. Same predicate as the visible mark.
+        .accessibilityValue(PhotoSelection.leadsWithStock(item.photos ?? [])
+            ? StockPhotoCopy.badgeAccessibilityLabel : "")
         .padding(theme.metrics.rowPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .extrudedPlate()

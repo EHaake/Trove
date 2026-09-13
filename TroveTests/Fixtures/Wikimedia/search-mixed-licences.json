@@ -1,0 +1,153 @@
+{
+  "batchcomplete": true,
+  "query": {
+    "pages": [
+      {
+        "pageid": 101,
+        "title": "File:Reusable-cc0.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/1/1a/Reusable-cc0.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Reusable-cc0.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Reusable-cc0.jpg/1024px-Reusable-cc0.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC0" },
+              "License": { "value": "cc0" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Alice\">Alice Example</a>" },
+              "LicenseUrl": { "value": "https://creativecommons.org/publicdomain/zero/1.0/" },
+              "UsageTerms": { "value": "Creative Commons Zero, Public Domain Dedication" }
+            }
+          }
+        ]
+      },
+      {
+        "pageid": 102,
+        "title": "File:Reusable-pd.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Reusable-pd.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Reusable-pd.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Reusable-pd.jpg/1024px-Reusable-pd.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "Public domain" },
+              "License": { "value": "pd" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Bob\">Bob Example</a>" },
+              "LicenseUrl": { "value": "" },
+              "UsageTerms": { "value": "Public domain" }
+            }
+          }
+        ]
+      },
+      {
+        "pageid": 103,
+        "title": "File:Reusable-cc-by.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/3/3c/Reusable-cc-by.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Reusable-cc-by.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Reusable-cc-by.jpg/1024px-Reusable-cc-by.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC BY 3.0" },
+              "License": { "value": "cc-by-3.0" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Carol\">Carol Example</a>" },
+              "LicenseUrl": { "value": "https://creativecommons.org/licenses/by/3.0" },
+              "UsageTerms": { "value": "Creative Commons Attribution 3.0" }
+            }
+          }
+        ]
+      },
+      {
+        "pageid": 104,
+        "title": "File:Reusable-cc-by-sa.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/4/4d/Reusable-cc-by-sa.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Reusable-cc-by-sa.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Reusable-cc-by-sa.jpg/1024px-Reusable-cc-by-sa.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC BY-SA 4.0" },
+              "License": { "value": "cc-by-sa-4.0" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Dave\">Dave Example</a>" },
+              "LicenseUrl": { "value": "https://creativecommons.org/licenses/by-sa/4.0" },
+              "UsageTerms": { "value": "Creative Commons Attribution-Share Alike 4.0" }
+            }
+          }
+        ]
+      },
+      {
+        "pageid": 105,
+        "title": "File:Nonfree-cc-by-nc.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Nonfree-cc-by-nc.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Nonfree-cc-by-nc.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Nonfree-cc-by-nc.jpg/1024px-Nonfree-cc-by-nc.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC BY-NC 2.0" },
+              "License": { "value": "cc-by-nc-2.0" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Erin\">Erin Example</a>" },
+              "LicenseUrl": { "value": "https://creativecommons.org/licenses/by-nc/2.0" },
+              "UsageTerms": { "value": "Creative Commons Attribution-NonCommercial 2.0" }
+            }
+          }
+        ]
+      },
+      {
+        "pageid": 106,
+        "title": "File:Nonfree-cc-by-nd.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/6/6f/Nonfree-cc-by-nd.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Nonfree-cc-by-nd.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Nonfree-cc-by-nd.jpg/1024px-Nonfree-cc-by-nd.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC BY-ND 2.0" },
+              "License": { "value": "cc-by-nd-2.0" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Frank\">Frank Example</a>" },
+              "LicenseUrl": { "value": "https://creativecommons.org/licenses/by-nd/2.0" },
+              "UsageTerms": { "value": "Creative Commons Attribution-NoDerivs 2.0" }
+            }
+          }
+        ]
+      },
+      {
+        "pageid": 107,
+        "title": "File:Nonfree-gfdl.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/7/7a/Nonfree-gfdl.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Nonfree-gfdl.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Nonfree-gfdl.jpg/1024px-Nonfree-gfdl.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "GFDL" },
+              "License": { "value": "gfdl" },
+              "Artist": { "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Grace\">Grace Example</a>" },
+              "LicenseUrl": { "value": "https://www.gnu.org/copyleft/fdl.html" },
+              "UsageTerms": { "value": "GNU Free Documentation License" }
+            }
+          }
+        ]
+      },
+      {
+        "pageid": 108,
+        "title": "File:Nonfree-none.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/8/8b/Nonfree-none.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Nonfree-none.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Nonfree-none.jpg/1024px-Nonfree-none.jpg",
+            "mime": "image/jpeg",
+            "extmetadata": {}
+          }
+        ]
+      }
+    ]
+  }
+}
