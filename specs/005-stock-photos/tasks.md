@@ -1,6 +1,6 @@
 # 005 — Stock Photos: Tasks
 
-**Status**: **Complete** (2026-09-13; pre-merge sweep pending below) — was **Signed off** (2026-09-09) — skeptical-reviewer, at Opus under the
+**Status**: **Complete and swept** (2026-09-13; sweep signed off after one re-review — awaiting the person's word to mark PR #21 ready) — was **Signed off** (2026-09-09) — skeptical-reviewer, at Opus under the
 Fallback clause; nothing blocking. T015 gained the picker-`.task` probe and
 T016 records OQ1/OQ2 as already settled. Ready for implementation once the
 person approves the spec-conformance summary.
@@ -865,7 +865,21 @@ settled.
 | Pre-merge sweep | opus (`skeptical-reviewer`) | ~268k | **2 blocking** (B1 chained sheets unverified; B2 tasks.md cadence paragraph contradicts amended CLAUDE.md) + 12 notes; verdict fix and re-review |
 | Sweep B1 device check | opus (general-purpose w/ simulator tools) | ~188k | both sheets present on both screens in either order; no runtime warning; B1 closed |
 | Sweep notes fix | opus (`sdd-implementer`) | ~95k | 10 routine notes closed (attribution fallback tests, decode-time host filter + fixture, docs/comments/citations, DECISIONS chrome-reuse line, plan/spec additions); 3 mutations verified; 1279 tests |
+| Sweep re-review | opus (`skeptical-reviewer`) | ~41k | **signed off, clear to merge**; 5 non-blocking notes carried to the next close-out (below) |
 | _rows added per dispatch as the spec runs_ | opus (subagents) | | |
+
+**Carried to the next spec's close-out (sweep re-review, non-blocking):**
+1. `WikimediaDecodingTests.onlyCandidatesServedFromAWikimediaHostSurvive`'s
+   `storageURL` assertion is a tautology — the guard tests `thumbURL.host`
+   only and no fixture page has an on-host thumb with an off-host `url`. Add
+   that fourth page or drop the assertion (the false-passing shape).
+2. `search-off-host.json` uses `thumb.wikimedia.org` as the kept host; Commons
+   serves thumbs from `upload.wikimedia.org/.../thumb/...` — hand-built, but
+   readers may take it as recorded.
+3. The Keep/Replace alert's Cancel outcome (nothing added, bytes dropped) has
+   no test; the As-built sentence stands in for one.
+4. README's `010-.../` placeholder in the specs tree.
+5. The B2 cadence sentence keeps the superseded claim in its main clause.
 
 **Phase 4 review notes (non-blocking, carried to T016 / the sweep):**
 1. Plan §7's new "photo deleted mid-export → no photo, no credit" sentence has
