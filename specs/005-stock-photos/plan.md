@@ -723,3 +723,116 @@ credit and the composer draws it; a device-photo entry carries no credit
 Every guard is mutation-verified before it lands (`CLAUDE.md` Testing: a
 passing test that cannot fail is a defect); the task's Done note records what
 was broken and what went red.
+
+## As built (2026-09-13, at T016's close-out)
+
+Where the shipped code differs from the sections above, what the licence set
+turned out to be, and the two questions this document is sometimes read as
+leaving open (it doesn't — both were settled before implementation).
+
+**The open questions are closed, and neither is a decision to re-make.** *OQ1*
+(share-alike / the PDF) was **confirmed at sign-off against the CC-BY-SA 4.0
+legal text**: an unmodified CC-BY-SA image placed beside the person's own
+content in an export is a *collection*, not an *adaptation*, so no share-alike
+obligation attaches to their document — and the app never modifies a fetched
+image, which is what keeps it a collection. §7 shipped to that reading, credit
+and all. *OQ2* (when *Find a photo…* disappears) was resolved by the person as
+**spec Decision 6** before the plan was signed off: the gate is "no *owned*
+photo". Both notes are retained above as a record that the questions were
+raised and answered.
+
+**The licence set as shipped.** `StockPhotoLicence.classify` decides from
+Wikimedia's `License` code and shows `LicenseShortName`: **CC0** (code begins
+`cc0`), **public domain** (code begins `pd`, covering `PD-*`), and **CC-BY /
+CC-BY-SA of any version, ported or not** (code begins `cc-by` and contains
+neither `-nc` nor `-nd`). Everything else — GFDL-only, NC, ND, missing or
+unknown — is dropped before the candidate ever reaches the picker. The
+classifier table (`WikimediaDecodingTests.theClassifierAcceptsReusableAndRejectsTheRest`,
+added when T003's review found the ported-licence acceptance unguarded) is the
+falsifiable form of that list. Live, the three device-pass searches returned
+only CC BY-SA 2.0/3.0, CC BY 2.0/3.0 and public domain; **a file dual-licensed
+GFDL *and* CC-BY-SA was never encountered**, so §3/Q4's "offered, credited by
+its CC-BY-SA licence" path remains unexercised — no fixture can settle it,
+since it turns on the code the live API returns.
+
+**Deviations and additions, in the order they happened.**
+
+- **§3a, the taken-with relevance filter, did not exist at sign-off.** It was
+  added mid-spec from the person's Phase 3 device testing (spec Decision 7):
+  Wikimedia's text search matches gear named in a photo's *capture metadata*,
+  so portraits shot on an X2D came back for "Hasselblad X2D". The filter drops
+  a candidate categorized as *taken with* the same make/model searched. Its
+  first form matched on any shared token, which the per-task review caught as a
+  false drop (a lens's bare "24" colliding with an "iPhone 8"); the shipped rule
+  matches only **alphanumeric-fused** tokens — one carrying both a letter and a
+  digit. Filter-only, per the person's explicit scope: broadening an
+  over-specific name is deferred, so "Hasselblad X2D 100C ii" still shows the
+  empty state.
+- **§6's credit became one paragraph, not a `Text` beside a `Link`** (T015b,
+  after a top-tier decision review; §6 carries the amendment). The device pass
+  found the credit garbled on any credit long enough to wrap. It is now one
+  `Text` over an `AttributedString` from the pure
+  `StockPhotoCredit.attributedCredit(_:theme:)`, the source segment a `.link`
+  run, with an `accessibilityRepresentation { Link … }` for VoiceOver — an
+  `accessibilityLabel` would have stripped the Links rotor on iOS 17+.
+  `DECISIONS.md` records the general rule.
+- **The credit's arrow glyph takes the credit's own font and tint** (T015c).
+  The appended `Text(Image(systemName:))` followed Dynamic Type while the
+  credit's text does not, so at accessibility XXXL it grew to about five times
+  the cap height, wrapped alone and drew primary instead of brass. A render
+  test written for it was **probed, found false-passing — `ImageRenderer` draws
+  an SF Symbol inside a `Text` as a constant placeholder — and deleted**; three
+  scoped scan guards hold it instead. One `Text` `+` deprecation warning
+  remains, from that plan-required glyph append; it is the only warning this
+  spec leaves behind.
+- **Commons' placeholder author counts as no author** (T015a). Commons emits
+  "No machine-readable author provided. {user} assumed (based on copyright
+  claims)." in `Artist`; the fallback only fired on an absent or empty field, so
+  that sentence was credited verbatim. The leading phrase (case-insensitive) now
+  reads as no author and the file is still offered. **No recorded fixture had
+  the placeholder** — live data has shapes the sample lacks, which is worth
+  remembering the next time a fixture set is trimmed.
+- **The notice flag needed its own controlled-start reset** (Phase 3's one
+  blocking finding). `UserDefaults.standard` is not reset by `-uiTesting`, so a
+  UI test's starting state depended on whatever a previous run had
+  acknowledged. `UserDefaultsPhotoNoticeStore.resetForUITesting(mode:)` clears
+  it at startup, **gated on the store the app actually built being
+  `.ephemeral`** — never on a second read of the launch argument — so a
+  persistent store keeps the acknowledgement even with every flag set, and
+  `PhotoNoticeStoreTests.theResetRefusesAPersistentStore` shows it refusing.
+  The generalization is in `DECISIONS.md`.
+- **`StockPhotoAttribution` is `nonisolated`** (T003), required for it to cross
+  into the `nonisolated` service protocol.
+- **The fixture script's basename** (T002): the first draft collided with the
+  repo `README.md`; the fixtures' own notes live at
+  `TroveTests/Fixtures/Wikimedia/wikimedia-fixtures.md`. That was the spec's one
+  escape-hatch use — a well-specified fork returned rather than decided.
+- **T016's carried cleanups.** `maxImageBytes` (8 MB) moved from two bare
+  literals into `WikimediaAPI`, beside the other caps (Phase 1 note 1);
+  `PhotoNoticeStore`'s doc comment no longer implies a failing read
+  `UserDefaults.bool` can't have (note 3); `theStockPhotoLinkPointsAtTheSameExistingFile`
+  **and** `002`'s `theLinkedURLEndsInTheFilename` now assert the linked name
+  resolves to a file opening "# Trove — Privacy Policy", so repointing both
+  constants at `README.md` goes red where it used to stay green (note 2 — the
+  same shape audited across both, not patched in one place); §7's "photo
+  deleted mid-export" sentence gained the test it never had (note 1); and
+  `PRIVACY.md`'s "Two things ever leave" sentence now says the follow-up
+  requests are listed below (note 4). Note 3 of Phase 4 (the "one direction
+  only" sentence has no guard) stands as recorded — §8 asked for none.
+
+**What was verified by hand rather than by a test**, and stays that way: the
+live API itself (touched exactly twice, by the recording script and the device
+pass), the offline failure copy (Network Link Conditioner, the person), the
+VoiceOver reading of the credit (Accessibility Inspector, the person), and the
+`.task`-inside-a-sheet firing count (a temporary file probe inside
+`searchPhotos`, removed before the suites ran). **A fetched photo arriving on a
+second device was not observed** — no second device — so criterion 4 rests on
+`CloudKitSchemaTests` and on the owned-photo sync path a fetched photo shares.
+
+**Docs on the spec branch.** `specs/ROADMAP.md`'s status row and entry, the
+README and `DECISIONS.md` are written here, not on a post-merge branch
+(`DECISIONS.md`, 2026-09-07), citing draft **PR #21**. Two things the merge
+reconciles: `004-themes` merged to `main` while this branch was already cut
+from an earlier `main`, so `specs/004-themes/` and 004's roadmap rows are not
+in this diff; and the README's Status paragraph, which neither `003` nor `004`
+updated, is brought up to date here for all three.

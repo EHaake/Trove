@@ -91,16 +91,25 @@ struct PDFComposerStockTests {
         try context.save()
 
         let entry = PDFEntry(record: ItemExportRecord(item: item))
+        return (entry, try await renderedText(of: entry, in: container))
+    }
+
+    /// The rendering half on its own, so a test can change the store between
+    /// the snapshot and the export the way a real delete does.
+    private func renderedText(
+        of entry: PDFEntry,
+        in container: ModelContainer,
+        filename: String = "stock.pdf"
+    ) async throws -> String {
         let scratch = scratchDirectory()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let service = FileExportService(container: container, directory: scratch)
         let url = try await service.exportPDF(
             PDFDocumentModel(cover: cover(), entries: [entry]),
-            filename: "stock.pdf"
+            filename: filename
         )
         let pdf = try #require(PDFDocument(data: try Data(contentsOf: url)))
-        let text = (0..<pdf.pageCount).compactMap { pdf.page(at: $0)?.string }.joined(separator: "\n")
-        return (entry, text)
+        return (0..<pdf.pageCount).compactMap { pdf.page(at: $0)?.string }.joined(separator: "\n")
     }
 
     // MARK: - A fetched leading photo
@@ -168,6 +177,53 @@ struct PDFComposerStockTests {
 
         #expect(entry.photoID == owned.persistentModelID)
         #expect(entry.photoCredit == nil)
+        #expect(!text.contains(author))
+        #expect(!text.contains("Wikimedia"))
+    }
+
+    // MARK: - The photo deleted between snapshot and render (plan §7)
+
+    /// Plan §7's "photo deleted mid-export → no photo, no credit" sentence,
+    /// which had no test (Phase 4 review note 1): the entry is snapshotted
+    /// while the fetched photo is there, so it carries both the identifier
+    /// and the credit, and the photo is then deleted — the CloudKit-delete
+    /// race `PhotoFetcher` documents. The composer lays the entry out
+    /// photo-free, and a credit is never drawn without its image.
+    ///
+    /// Mutation: draw the credit whether or not the image resolved (hoist the
+    /// credit out of the composer's `if let image`) → red.
+    @Test func aCreditWhosePhotoVanishedMidExportDrawsNeitherCreditNorAuthor() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let photo = Photo.fetched(imageData: try pngData(), attribution: attribution, sortOrder: 0)
+        let item = Item(
+            name: "Leica M6",
+            categoryPath: "Photography/Cameras",
+            purchasePriceCents: 90_000,
+            photos: [photo]
+        )
+        context.insert(item)
+        try context.save()
+
+        let entry = PDFEntry(record: ItemExportRecord(item: item))
+        let vanishedID = try #require(entry.photoID)
+        #expect(entry.photoCredit != nil, "the entry must carry a credit, or this proves nothing")
+
+        // The photo goes after the snapshot, so the identifier resolves to
+        // nothing when the composer asks for its bytes.
+        context.delete(photo)
+        try context.save()
+        var gone = FetchDescriptor<Photo>(predicate: #Predicate { $0.persistentModelID == vanishedID })
+        gone.fetchLimit = 1
+        #expect(
+            try ModelContext(container).fetch(gone).isEmpty,
+            "the photo is still in the store, so the export would resolve it"
+        )
+
+        let text = try await renderedText(of: entry, in: container, filename: "vanished.pdf")
+
+        #expect(text.contains("Leica M6"), "the entry itself still has to render")
+        #expect(!text.contains("Photo:"), "a credit was drawn with no photo above it")
         #expect(!text.contains(author))
         #expect(!text.contains("Wikimedia"))
     }

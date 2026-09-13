@@ -11,7 +11,7 @@ import Testing
 @Suite("Wikimedia photo service", .serialized)
 struct WikimediaPhotoServiceTests {
     private func service(
-        maxImageBytes: Int = 8 * 1024 * 1024,
+        maxImageBytes: Int = WikimediaAPI.maxImageBytes,
         probe: (@Sendable (Bool) -> Void)? = nil
     ) -> WikimediaPhotoService {
         WikimediaStubURLProtocol.reset()

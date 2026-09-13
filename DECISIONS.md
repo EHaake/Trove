@@ -152,6 +152,56 @@ reaches beyond that spec.
   rather than argument. Compare against the next spec before treating
   the policy as settled.
 
+## Stock photos (`005`, shipped 2026-09-13)
+
+The product decisions are numbered 1–7 (plus the P-items) in
+`specs/005-stock-photos/spec.md`; this records what reaches beyond that
+spec.
+
+- **The second network dependency, and the first one that stores what
+  it fetches.** `002` established the posture — on demand only, a
+  one-time notice, a policy that names the service. `005` reuses all of
+  it for Wikimedia Commons and breaks one half of it deliberately: the
+  bytes stay. A market figure is Reverb's data about a moving market, so
+  it lives in an unsynced local store and dies with the match; a stock
+  photo, once picked, is a file the person is licensed to keep, so it is
+  an ordinary `Photo` row on the synced store. Two outside services now,
+  each with a notice, and one of them leaves something behind.
+- **Wikimedia Commons because storing is allowed at all.** Unsplash and
+  Pexels were ruled out on their terms (no storing a copy, and their
+  content is artistic rather than product photography); Reverb's own
+  catalog image is hotlink-only and matched-music-only. Wikimedia's
+  CC-BY / CC-BY-SA / CC0 / public-domain files are the only ones that
+  can be *kept* — which is what makes a fetched photo sync to a second
+  device and show with no network, the same as a photo the person took.
+  The licence set is enforced in code (`StockPhotoLicence.classify`) and
+  the credit is composed in one place, because the permission depends on
+  the attribution travelling with the image everywhere it appears,
+  including the PDF export.
+- **A fetched photo syncs; `002`'s figures still don't — and the policy
+  says both.** This is the one place the two network features differ in
+  what the person can observe, so `PRIVACY.md`'s retention table and its
+  iCloud section each state it in a line a test pins whole. The reason
+  isn't a change of mind about sync: it's that the figures are somebody
+  else's data held under retention terms, and the photo is the person's
+  to keep.
+- **The notice flag is one `UserDefaults` bool, not a row in `002`'s
+  local store** (plan Q7). A per-device acknowledgement is the lighter
+  pattern `004` used for the appearance choice, and reusing
+  `MarketDeviceState` would have made `005` depend on `002`'s two-store
+  arrangement for a single boolean. The cost showed up immediately, and
+  is recorded in the process note below: a flag outside the SwiftData
+  store is a flag `-uiTesting` doesn't reset.
+- **`AppContact` is a unification candidate, not done here** (plan Q6).
+  Wikimedia's User-Agent policy asks for a contact address exactly as
+  Reverb's terms do, so `StockPhotoCopy.contactAddress` now holds the
+  same real address as `MarketCopy.contactAddress`. `005` kept it
+  self-contained rather than depending on `002`'s copy; the moment a
+  third service or a publication-time address swap arrives, the two
+  should become one `AppContact` and each `Copy` type should read from
+  it. Both are pinned by placeholder guards, so the duplication is
+  visible rather than silent.
+
 ## Process and tooling notes
 
 - **Git routing**: edits to `CLAUDE.md`, `specs/ROADMAP.md`, and this
@@ -298,3 +348,18 @@ reaches beyond that spec.
   promise VoiceOver can't keep. Any link at the end of a sentence that
   may wrap faces the same choice; plan §6 of `005` records the fallback
   if the representation doesn't activate on device.
+- **A controlled UI-test starting state has to be structural for every
+  persisted flag, not just the store (2026-09-10, `005`'s Phase 3
+  review).** `CLAUDE.md`'s `-uiTesting` rule was written for the
+  SwiftData store, and read as if swapping the store were the whole of
+  a controlled start. `005` put one bool in `UserDefaults`, which
+  `-uiTesting` doesn't touch — so a UI test's starting state depended on
+  whether an earlier run had tapped Continue, the indeterminate-start
+  defect the rule exists to prevent. The generalization: **every piece
+  of state that survives a launch needs its own reset**, and the reset
+  must be gated on *the store the app actually built* being the
+  in-memory one, never on reading the launch argument a second time.
+  Gating it that way is what makes the in-memory bound structural — a
+  test can show the reset refusing a persistent store even with every
+  flag set (`PhotoNoticeStoreTests.theResetRefusesAPersistentStore`),
+  which a second flag read could never demonstrate.

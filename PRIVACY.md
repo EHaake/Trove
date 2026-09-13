@@ -40,8 +40,9 @@ its history. Deleting an item deletes everything Trove held about it.
 ## What leaves your device
 
 Two things ever leave, and only because you asked for them: a search for a
-market match, and a search for a photo. Each is preceded, the first time, by a
-notice that says so:
+market match, and a search for a photo — each with the follow-up requests it
+takes to show you the result, listed in full below. Each is preceded, the
+first time, by a notice that says so:
 
 > Finding a match sends this item’s name to Reverb — nothing else about it. Refreshing later sends only which product it is — your item’s details stay on this device.
 

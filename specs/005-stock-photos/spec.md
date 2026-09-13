@@ -237,46 +237,204 @@ file. What the app must do, and does:
 
 ## Acceptance criteria
 
-1. [ ] An item with **no photo of the person's own** — owned or wanted, and
+All eleven verified at T016's close-out (2026-09-13), with the two honest
+partials named where they fall: the second-device sync check (criterion 4) and
+the dual-licensed GFDL + CC-BY-SA file the device pass never met (criterion 2).
+
+1. [x] An item with **no photo of the person's own** — owned or wanted, and
    whether it is blank or holds only a stock photo (Decision 6) — shows **Find
    a photo…**; an item that has an **owned** photo does not. The first **Find a
    photo…** in
    the app shows the one-time notice; **Not now** searches nothing; **Continue**
    searches and the notice never shows again on that device.
-2. [ ] Searching sends **only the item's name** to Wikimedia Commons; the
+    *Verified by*: the gate — `PhotoSelectionCanFindPhotoTests`
+    (`falseWhenADevicePhotoIsPresent`, `trueForAnEmptySet`,
+    `trueForAStockOnlySet`) and `canFindPhotoFollowsTheOwnedPhotoRule` in all
+    four hosting view models (`ItemDetailPhotoTests`,
+    `WishlistDetailPhotoTests`, `ItemFormPhotoTests`, `WishlistFormPhotoTests`);
+    the notice — the same four suites'
+    `findPhotoShowsTheNoticeFirstAndContinueHandsToThePicker`,
+    `findPhotoGoesStraightToThePickerWhenAlreadyAcknowledged` and
+    `declineLeavesTheFlagFalseAndClosesTheSheet`, over
+    `PhotoNoticeStoreTests` for the flag itself (`aFreshStoreHasNotAcknowledged`,
+    `acknowledgingSetsTheFlag`,
+    `asecondStoreOverTheSameDefaultsSeesTheAcknowledgement` — plan G10). On
+    screen: `testAnItemWithNoPhotoOffersFindAPhoto` and
+    `testTheFirstFindAPhotoShowsTheNoticeAndNotNowClosesIt`. On the device
+    (T015): the notice shown once, **Not now** searching nothing (the
+    `searchPhotos` probe empty before and after, and demonstrably live —
+    the next action wrote to it), **Continue** firing exactly one search, no
+    notice on a second item in the same launch, and the acknowledgement
+    surviving relaunches. *Partial*: the acknowledgement that survived the
+    relaunch was set in an earlier session, so what the device showed is the
+    flag's persistence, not a Continue-then-relaunch in one sitting; the
+    Continue → written flag half is the unit suites'.
+2. [x] Searching sends **only the item's name** to Wikimedia Commons; the
    picker shows candidate images from Wikimedia Commons, each with its author
    and licence; **only** CC-BY, CC-BY-SA or public-domain / CC0 images are
    offered. A search with no usable results shows the empty state and stores
    nothing.
-3. [ ] Picking a candidate stores it on the item as a `Photo` with
+    *Verified by*: what is sent — `WikimediaPhotoServiceTests.searchSendsOnlyTheNameBesideTheFixedParams`
+    (plan G5), `punctuationInTheNameSurvivesTheRoundTrip`,
+    `everyRequestCarriesTheUserAgentAndNeverAnAuthorization`; the licence set —
+    `WikimediaDecodingTests.onlyReusableFilesSurviveTheMixedResponse` and
+    `theClassifierAcceptsReusableAndRejectsTheRest` (G2, the falsifiable
+    classifier table added at T003's review); the credit each candidate carries
+    — `theAttributionIsStrippedOfHTMLAndCarriesTheLicenceAndSource`,
+    `aFileWithNoArtistFallsBackToWikimediaCommons`,
+    `commonsPlaceholderAuthorFallsBackToWikimediaCommons` (T015a) and
+    `PhotoPickerWiringTests.theCandidateComposesStockPhotoCredit`; the cap —
+    `twentyReusableFilesAreCappedToTwelve` (G4); the relevance filter Decision 7
+    added — `WikimediaRelevanceTests` (G13); the empty state —
+    `PhotoFetchViewModelTests.noCandidatesBecomesTheEmptyPhaseCarryingTheTrimmedQuery`
+    and `aBlankQueryReachesNothingAndLeavesTheSheetIdle`, storing nothing by
+    construction (only a pick calls `store`). On the device (T015): six Nikon F3
+    candidates, each credited, every licence CC-BY, CC-BY-SA or public domain;
+    the empty state on a name nothing matches and on "Hasselblad X2D 100C ii".
+    *Partial*: no **dual-licensed GFDL + CC-BY-SA** file turned up in the three
+    live searches, so plan §3/Q4's "offered, credited by its CC-BY-SA licence"
+    path is still unexercised — no fixture can settle it, since it depends on
+    the `License` code the live API returns.
+3. [x] Picking a candidate stores it on the item as a `Photo` with
    `source = .fetched`; it shows on the detail screen and, when the item has no
    owned photo, as the item's list-row thumbnail; it is **visibly marked as a
    stock image** and its **credit** (author, licence, link to the Commons file
    page) shows wherever it appears.
-4. [ ] A fetched photo **syncs** to the person's other devices like an owned
+    *Verified by*: the store — `aStoredPickLandsOneFetchedPhotoOnASecondContext`
+    (`ItemDetailPhotoTests`, `WishlistDetailPhotoTests`) and
+    `aStoredPickLandsOneFetchedPhotoInPhotos` (`ItemFormPhotoTests`,
+    `WishlistFormPhotoTests`), over `PhotoAttributionTests`
+    (`theFetchedBuilderSetsSourceToFetched`, `aDevicePhotoHasNoAttribution`,
+    `aFetchedPhotoRoundTripsItsAttributionThroughASecondContext`); the detail —
+    `PhotoCarouselTests.theBadgeShowsOnlyForAFetchedCurrentPhoto` and
+    `theCreditShowsOnlyForAFetchedCurrentPhoto`; the mark and credit themselves
+    — `StockPhotoBadgeTests` (`theCreditComposesALinkNotAButton`,
+    `theCreditLinksOnlyItsSourceRunAndKeepsTheWholeAuthor`,
+    `theCreditReadsItsStringsFromCopy`, `theBadgeReadsItsStringsFromCopy`,
+    `theBadgeUppercasesByStyleNotByString`, `theNoAuthorFallbackComposes`) and
+    `StockPhotoCreditGlyphTests` (T015c); the row —
+    `RowThumbnailTests.theStockMarkRidesAStockLeadingRowButNotAnOwnedLeadingOne`
+    over `PhotoSelectionLeadsWithStockTests`. On the device (T015): the stored
+    photo on the detail with **STOCK PHOTO** and its credit, the same photo as
+    the wishlist row's thumbnail with the corner mark, and the credit's link
+    opening *File:Nikon F3.jpg* on Commons.
+4. [x] A fetched photo **syncs** to the person's other devices like an owned
    photo — its bytes and its attribution both — and shows there; the market
    figures' no-sync rule does not apply to it.
-5. [ ] Adding an owned photo to an item that already has a stock photo
+    *Verified by*: `CloudKitSchemaTests` — the three new `Photo` fields validate
+    against a real CloudKit `ModelConfiguration` (plan G1: a field declared
+    non-optional without a default turns it red), which is what makes them
+    syncable at all; `PhotoAttributionTests.aFetchedPhotoRoundTripsItsAttributionThroughASecondContext`
+    for the bytes and the attribution travelling together; the policy half in
+    `PrivacyPolicyTests.thePolicyNamesWikimediaCommonsAndStatesThatAFetchedPhotoSyncs`.
+    A fetched photo is an ordinary `Photo` row on the synced default store — the
+    same path `001`'s owned photos take, unchanged by this spec. *Partial, and
+    the honest one*: **a second device was not available**, so nobody has
+    watched a fetched photo arrive on one. This criterion rests on the schema
+    test and on the shared owned-photo path, not on an observation.
+5. [x] Adding an owned photo to an item that already has a stock photo
    **prompts** the person to **Keep both** or **Replace**; **Replace** removes
    the fetched photo, **Keep both** retains both with the **owned photo
    leading**.
-6. [ ] An item holds at most one fetched photo; fetching again replaces the
+    *Verified by*: `PhotoSelectionReplaceKeepTests`
+    (`promptsWhenAddingToASetWithAStockPhoto`,
+    `doesNotPromptWithNoStockPhotoPresent`, `doesNotPromptWhenThereIsNothingToAdd`,
+    `replaceLeavesExactlyOneDevicePhotoAndNoStock`, `theReplacedStockPhotoIsOrphaned`,
+    `keepBothLeadsWithTheDevicePhotoAndTrailsWithTheStock`,
+    `keepBothNumbersTheResultFromZero` — G9); the wiring —
+    `PhotoPickerFieldTests.drawsTheAlertFromStockPhotoCopy` and
+    `consultsPhotoSelectionForTheDecisionAndTheOutcomes`; the words —
+    `StockPhotoCopyTests.theReplaceKeepAlert`. On the device (T015): both
+    outcomes taken — **Keep both** giving PHOTOS 2 with the owned photo leading
+    (page 1 unbadged, the stock photo page 2 badged and credited) and
+    **Replace** leaving PHOTOS 1, the owned one.
+6. [x] An item holds at most one fetched photo; fetching again replaces the
    previous fetched photo; a fetched photo can be removed like any photo.
-7. [ ] Offline or a failed search shows the failure copy and stores nothing;
+    *Verified by*: `PhotoSelectionAddingFetchedTests` (`keepsAtMostOneFetchedPhoto`
+    — G8, `ownedPhotosLeadTheFetchedOne`, `theReplacedFetchedPhotoIsOrphaned`,
+    `numbersTheResultFromZero`) and
+    `storingASecondStockPhotoReplacesTheFirstWithNoLeakedBlob` in both detail
+    suites. Removal is unchanged from `001` — a fetched photo is a `Photo` row
+    in the same strip, and `001`'s photo-removal suites are untouched and green.
+    On the device (T015): a second pick left PHOTOS at 1 with the new credit,
+    and the fetched photo was removed from the edit strip like any other.
+7. [x] Offline or a failed search shows the failure copy and stores nothing;
    a stock photo the item already has is untouched.
-8. [ ] A fetched photo **appears in the PDF export** with its credit; the CSV
+    *Verified by*: the service's error mapping —
+    `WikimediaPhotoServiceTests.offlineIsUnreachable`, `aFiveHundredIsAServerError`,
+    `anOversizeImageIsImageTooLarge`, `aForeignHostImageURLIsNotFetched` (G7);
+    the sheet — `PhotoFetchViewModelTests.anErrorBecomesTheFailedPhase`,
+    `anErrorThatIsNotAStockPhotoErrorReadsAsFailed`, `aFailedDownloadReturnsNil`;
+    nothing stored — `aFailedDownloadStoresNothing` in both detail suites; the
+    words — `StockPhotoCopyTests.theFailureCopy`. On the device, by the person
+    (2026-09-12, Network Link Conditioner at 100 % loss): "Couldn't reach
+    Wikimedia Commons. Try again in a while." with **Search again**, and the
+    item still showing NO PHOTOS — nothing stored.
+8. [x] A fetched photo **appears in the PDF export** with its credit; the CSV
    export is unaffected.
-9. [ ] `PRIVACY.md` names Wikimedia Commons as a second outside service, states
+    *Verified by*: `PDFComposerStockTests` — the credit reaches the page
+    (`aFetchedLeadingPhotoCarriesItsCreditAndDrawsIt`), the snapshot carries the
+    leading photo's attribution (`theRecordSnapshotCarriesTheLeadingPhotosAttribution`),
+    an owned photo draws no credit (`aDevicePhotoEntryCarriesNoCreditAndDrawsNone`,
+    `keepingBothDrawsTheOwnedPhotoWithNoCredit` — G11) and a photo deleted
+    between snapshot and render draws neither photo nor credit
+    (`aCreditWhosePhotoVanishedMidExportDrawsNeitherCreditNorAuthor`, added at
+    T016 for plan §7's untested sentence). CSV: nothing in this spec touches the
+    schema — `011`'s CSV suites are unchanged and green, and the device pass's
+    export carried the same fourteen-column header with no photo column. On the
+    device (T015): a two-page PDF with the stock photo drawn in its box and the
+    full credit beneath it.
+9. [x] `PRIVACY.md` names Wikimedia Commons as a second outside service, states
    that a photo search sends the item's name and only on the person's action,
    states that a fetched photo (unlike the market figures) syncs, and no longer
    reads in a way that a fetched, stored image would contradict; the one-time
    notice's words match the policy.
-10. [ ] The app never fetches a photo on launch, on appear, or in the
+    *Verified by*: `PrivacyPolicyTests` —
+    `thePolicyQuotesTheStockPhotoNoticeVerbatim` (G12),
+    `thePolicyNamesWikimediaCommonsAndStatesThatAFetchedPhotoSyncs` (the
+    retention row and the iCloud sentence pinned whole),
+    `thePolicyNamesEveryRowOfTheRetentionTable` (the two new rows),
+    `thePolicyCarriesTheStockPhotoContactAddress`, `thePolicyCarriesNoPlaceholder`
+    and `theStockPhotoLinkPointsAtTheSameExistingFile` — the last one made
+    falsifiable at T016 by asserting the linked name resolves to a file that
+    opens "# Trove — Privacy Policy" (the same repair applied to `002`'s
+    `theLinkedURLEndsInTheFilename`); the notice's own wording in
+    `StockPhotoCopyTests.theNoticeStrings` and
+    `theNoticeReassemblesToTheSpecsSentence`. The "images travel in one
+    direction only" rewording carries no guard, as plan §8 said it would not
+    (Phase 4 review note 3).
+10. [x] The app never fetches a photo on launch, on appear, or in the
     background — only **Find a photo…** does.
-11. [ ] VoiceOver: the **Find a photo…** action, each picker candidate, the
+    *Verified by*: instrumentation, not inference (CLAUDE.md's Testing rule — a
+    `.task` inside sheet content is invisible to the view-model suite). T015's
+    temporary file probe inside `WikimediaPhotoService.searchPhotos` recorded
+    **seven firings across three launches, one per deliberate action**, and zero
+    on launch, appear, tab switch, sheet re-render, picker scroll, return from
+    Safari, **Not now**, **Cancel** or the Keep/Replace prompt. In the suites:
+    `PhotoFetchViewModelTests.theSeedDrivesTheSearchVerbatim`,
+    `aBlankQueryReachesNothingAndLeavesTheSheetIdle` and
+    `aSecondSearchWhileOneIsRunningIsIgnored`; nothing searches before Continue
+    (`declineLeavesTheFlagFalseAndClosesTheSheet` in all four hosting suites);
+    and no test in `TroveTests` opens a connection at all.
+11. [x] VoiceOver: the **Find a photo…** action, each picker candidate, the
     stock badge and the credit line are labelled; a stock photo is announced as
     a representative image with its credit, not as the person's own; the
     Wikimedia link says it leaves the app.
+    *Verified by*: `StockPhotoBadgeTests.theLinkSaysItLeavesTheApp`,
+    `theCreditReadsItsStringsFromCopy`, `theBadgeReadsItsStringsFromCopy`;
+    `RowStockA11yTests.itemRowAnnouncesTheStockThumbnailFromTheSharedSources`
+    and `wishlistRowAnnouncesTheStockThumbnailFromTheSharedSources` (the row
+    announces a *representative image*, from the same copy source);
+    `StockPhotoCopyTests.theAccessibilityStrings`;
+    `PhotoPickerWiringTests.theIdentifiersArePresent`. On the device, by the
+    person (Xcode's Accessibility Inspector, 2026-09-13): the credit is **one
+    element**, Label "Photo: Wikimedia Commons · CC BY-SA 3.0 · Wikimedia
+    Commons", Traits **Button, Link**, Hint "Opens Wikimedia Commons in your
+    browser", and **Activate** opened the Commons file page — so plan §6's
+    recorded fallback was not needed. *Partial*: that inspector session settled
+    the credit, the hardest case; the action's, the candidates' and the badge's
+    labels rest on the copy and wiring tests above and on the sighted device
+    pass, not on a second inspector run over each.
 
 ## Decisions record
 

@@ -13,8 +13,9 @@ nonisolated protocol PhotoNoticeStore: Sendable {
 
 /// The live store: one bool key in `UserDefaults`, per-device and unsynced
 /// (criterion 9's "stored on the device and does not sync"). A missing key
-/// reads `false`; a read that fails reads as *not acknowledged* — the safe
-/// direction, where the notice shows once more rather than being suppressed.
+/// reads `false` — `UserDefaults.bool(forKey:)` has no failing branch, so the
+/// only unset state is *not acknowledged*, which is the safe direction: the
+/// notice shows once more rather than being suppressed.
 nonisolated final class UserDefaultsPhotoNoticeStore: PhotoNoticeStore {
     private static let key = "stockPhotoNoticeAcknowledged"
 

@@ -12,6 +12,9 @@ nonisolated enum WikimediaAPI {
     static let storageWidth = 1024
     /// At most this many candidates reach the picker (plan §2).
     static let candidateCap = 12
+    /// The largest image the app will accept from Wikimedia — one home for
+    /// the cap, beside the others (Phase 1 review note 1).
+    static let maxImageBytes = 8 * 1024 * 1024
     static let requestTimeout: TimeInterval = 15
     static let resourceTimeout: TimeInterval = 60
 
@@ -69,7 +72,7 @@ nonisolated final class WikimediaPhotoService: StockPhotoService {
         userAgent: String = WikimediaAPI.userAgent(version: .current),
         searchLimit: Int = WikimediaAPI.searchLimit,
         storageWidth: Int = WikimediaAPI.storageWidth,
-        maxImageBytes: Int = 8 * 1024 * 1024,
+        maxImageBytes: Int = WikimediaAPI.maxImageBytes,
         candidateCap: Int = WikimediaAPI.candidateCap,
         requestProbe: (@Sendable (_ isMainThread: Bool) -> Void)? = nil
     ) {

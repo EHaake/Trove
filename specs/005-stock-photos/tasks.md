@@ -1,6 +1,6 @@
 # 005 — Stock Photos: Tasks
 
-**Status**: **Signed off** (2026-09-09) — skeptical-reviewer, at Opus under the
+**Status**: **Complete** (2026-09-13; pre-merge sweep pending below) — was **Signed off** (2026-09-09) — skeptical-reviewer, at Opus under the
 Fallback clause; nothing blocking. T015 gained the picker-`.task` probe and
 T016 records OQ1/OQ2 as already settled. Ready for implementation once the
 person approves the spec-conformance summary.
@@ -754,7 +754,7 @@ exercises the filtered search.
   `scripts/verify.sh` green; mutation recorded; a screenshot at accessibility
   XXXL, content size restored to medium.
 
-- [ ] **T016 — Close-out.**
+- [x] **T016 — Close-out.** *Done 2026-09-13* — spec criteria ticked with citations; plan "As built"; ROADMAP/README/DECISIONS on this branch; carried notes closed (Phase 4 notes 1, 2, 4; Phase 1 notes 1, 3); `scripts/verify.sh all`: 16 UI tests, 1276 unit tests in 176 suites, green. Sweep and PR-ready follow below.
   Criteria 1–11 ticked in `spec.md` with citations, honest partials named (the
   second-device sync check; anything not exercised on the device);
   `plan.md` gains "As built" (deviations, the licence set as shipped, and a
@@ -851,6 +851,7 @@ settled.
 | T015b device check | opus (general-purpose w/ simulator tools) | ~144k | wrap at default + AX5 confirmed; sighted tap opens the Commons file page (URL bar); VoiceOver NOT verifiable on the simulator (`inspect` unavailable, no VO) → person; found the Dynamic-Type arrow glyph defect → T015c; UI suite green twice (16) |
 | T015c implement | opus (general-purpose w/ simulator tools) | ~148k | glyph takes the credit's fixed font + brass; 3 scoped scan guards (a render test was built, probed, found false-passing — ImageRenderer draws an SF Symbol in a Text as a constant placeholder — and deleted); 3 mutations verified; AX5 screenshot confirms; 1275 tests |
 | T015 offline + VoiceOver | — (person, by hand: Link Conditioner; Accessibility Inspector) | — | offline failure copy seen, nothing stored; credit one element, Button+Link, hint, Activate opens Commons — fallback not needed; T015 closed |
+| T016 close-out | opus (`sdd-implementer`) | ~153k | spec ticks, plan As built, roadmap/README/DECISIONS, 2 carried-note tests (mutations verified), one-home `maxImageBytes`; README count caught up 003/004; 1276 unit + 16 UI green |
 | _rows added per dispatch as the spec runs_ | opus (subagents) | | |
 
 **Phase 4 review notes (non-blocking, carried to T016 / the sweep):**

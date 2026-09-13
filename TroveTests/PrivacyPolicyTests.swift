@@ -89,10 +89,24 @@ struct PrivacyPolicyTests {
         #expect(head.contains { $0.wholeMatch(of: line) != nil })
     }
 
+    /// The line every copy of this document opens with. Asserting the linked
+    /// name resolves to a file that *says* it is the privacy policy is what
+    /// makes these two link tests falsifiable: matching the URL's last
+    /// component against the filename constant passes for any pair of equal
+    /// strings, so repointing both constants at `README.md` used to stay
+    /// green (Phase 4 review note 2, the 002 shape it inherited).
+    private static let policyTitle = "# Trove — Privacy Policy"
+
     /// The link in Settings › About and the file in the repository are the
-    /// same document — the filename is the only thing tying them together.
-    @Test func theLinkedURLEndsInTheFilename() {
+    /// same document — the filename ties them together, and the file it names
+    /// has to be the policy itself.
+    @Test func theLinkedURLEndsInTheFilename() throws {
         #expect(MarketCopy.privacyPolicyURL.lastPathComponent == MarketCopy.privacyPolicyFilename)
+        let text = try Self.policyText(named: MarketCopy.privacyPolicyFilename)
+        #expect(
+            text.contains(Self.policyTitle),
+            "the name the app links by is not the privacy policy"
+        )
     }
 
     // MARK: - Spec 005: the stock-photo half (criterion 9, P6)
@@ -143,6 +157,9 @@ struct PrivacyPolicyTests {
     @Test func theStockPhotoLinkPointsAtTheSameExistingFile() throws {
         #expect(StockPhotoCopy.privacyPolicyURL.lastPathComponent == StockPhotoCopy.privacyPolicyFilename)
         let text = try Self.policyText(named: StockPhotoCopy.privacyPolicyFilename)
-        #expect(!text.isEmpty)
+        #expect(
+            text.contains(Self.policyTitle),
+            "the name the photo notice links by is not the privacy policy"
+        )
     }
 }
