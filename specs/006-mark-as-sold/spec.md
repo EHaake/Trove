@@ -1,7 +1,8 @@
 # 006 — Mark as Sold
 
 **Status**: **Draft** (2026-09-13) — written with the person in this spec
-session; not yet approved.
+session; amended the same day at the person's reading of the Draft (Decision
+9, the two-sided Items view); not yet approved.
 
 Authored in a Claude Code spec session of its own, per `CLAUDE.md`'s model
 policy (Fable 5.1, the session raised to high effort for the spec
@@ -26,8 +27,9 @@ you want. Until now it stopped there: nothing in the app could record that you
 actually sold something. The only way an item left your collection was to
 delete it — photos, history and all. This feature adds **Mark as sold…**: a
 sold item leaves your collection and your totals but stays in the app, with
-the price, date and place of the sale, in a **Sold** list you reach from a new
-Dashboard card. A sale can be undone. The Sell Plan learns what was sold
+the price, date and place of the sale, on a **Sold** side of the Items tab —
+one tap from what you own — and at a glance on a new Dashboard card. A sale
+can be undone. The Sell Plan learns what was sold
 toward a wishlist item and says so, still without ever doing your arithmetic
 for you.
 
@@ -101,8 +103,8 @@ A sold item **leaves the collection and stays in the app** (Decision 1):
 - Its **market figures on this device are cleared**, as deletion clears them
   today, and it is no longer refreshed (Decision 7). A sold item has no market
   value to track.
-- It **appears in the Sold list**, and its sale contributes to the Dashboard's
-  Sold card and to the Sell Plan it was sold toward.
+- It **appears on the Sold side of the Items tab**, and its sale contributes
+  to the Dashboard's Sold card and to the Sell Plan it was sold toward.
 - It **stays out of the PDF export** and **appears in the CSV export** with its
   sale columns filled (Decision 7; below).
 - It is **synced** like any item: the sale details are part of the person's
@@ -110,8 +112,8 @@ A sold item **leaves the collection and stays in the app** (Decision 1):
 
 ### The sold item's page
 
-- Tapping a Sold-list row opens the item's own detail screen in a **sold
-  state** (P4): a **Sold** mark at the top with the sale — price, date, place,
+- Tapping a row on the Sold side opens the item's own detail screen in a
+  **sold state** (P4): a **Sold** mark at the top with the sale — price, date, place,
   note — and the **gain or loss against what was paid**, then the item's
   ordinary content below it, read-only. Its photos, notes and details remain
   visible; a stock photo keeps its badge and credit.
@@ -127,19 +129,29 @@ A sold item **leaves the collection and stays in the app** (Decision 1):
   is just as permanent (Decision 3). Its message need not mention sell plans,
   since a sold item is on none (P13).
 
-### The Sold list
+### The two sides of Items
 
-- Reached from the **Dashboard's Sold card** (Decision 6; below). Titled
-  **Sold**. Rows show the item's thumbnail, name, sold date, sale price, and
-  the gain or loss against what was paid, in the same quiet moss/rust tone
-  the Sell Plan and the detail screen already use for value-versus-cost.
-- Ordered **most recent sale first** (P3). No sorting, filtering or grouping in
-  this version (Non-goals).
-- The list opens with a short summary line — how many sold, total proceeds,
-  and the realised gain or loss — the same figures the Dashboard card shows.
-- An empty Sold list is unreachable from the Dashboard (the card hides when
-  nothing is sold), but the screen still has an empty state for the case
-  where the last sale is returned or deleted while it is open.
+- The **Items tab has two sides, Owned and Sold**, switched in one tap by a
+  control at the top of the page (Decision 9). Owned is today's Items list,
+  unchanged. Sold is the list of sold items. The tab opens on Owned at every
+  launch (P16); the Dashboard's Sold card jumps straight to the Sold side
+  (Decision 6).
+- **The Sold side**: rows show the item's thumbnail, name, sold date, sale
+  price, and the gain or loss against what was paid, in the same quiet
+  moss/rust tone the Sell Plan and the detail screen already use for
+  value-versus-cost. Above the rows, a short summary line — how many sold,
+  total proceeds, and the realised gain or loss — the same figures the
+  Dashboard card shows.
+- Ordered **most recent sale first** (P3); the **Sort By** control is hidden on
+  the Sold side, and there is no filtering or grouping in this version
+  (Non-goals). Swipe-to-delete works on a sold row with the same confirmation
+  as an owned one (P16).
+- The **"…" menu stays on both sides** (P17): its **CSV export covers both
+  sides** — the sale columns already say which side each row is on — its
+  **PDF export stays owned-only**, and Import and Settings are unchanged.
+- The Sold side's **empty state** ("Nothing sold yet…") shows when nothing has
+  been sold, and when the last sale is returned or deleted while the side is
+  open.
 
 ### The Dashboard
 
@@ -153,9 +165,10 @@ proposal, for reaction at the draft (P7, P8):
 - A new **Sold card** joins the Dashboard: a header **Sold**, the count and
   the total proceeds ("3 items · $2,400"), and the **realised gain or loss** —
   proceeds minus what was paid for those items ("+$350 vs paid"), in the
-  moss/rust tone. Tapping it opens the Sold list. The card **hides entirely
-  when nothing in scope has been sold**, so an existing install sees no
-  change until its first sale.
+  moss/rust tone. Tapping it jumps to the **Sold side of the Items tab**,
+  the way a category slice already jumps into Items. The card **hides
+  entirely when nothing in scope has been sold**, so an existing install
+  sees no change until its first sale.
 - The card **follows the Dashboard's scope**: on the root it covers every
   sale; drilled into a category it covers sales in that category, hiding when
   there are none.
@@ -235,9 +248,9 @@ section on plan approval (P8).
 - The return confirmation: "Return {name} to your collection? Its sale details
   will be removed." with **Return** and **Keep as sold**.
 - The Dashboard card: header **Sold**; "3 items · $2,400"; "+$350 vs paid".
-- The Sold list: title **Sold**; summary "3 sold · $2,400 · +$350 vs paid";
-  empty state "Nothing sold yet. Mark an item as sold from its page or from a
-  sell plan."
+- The Items tab's switch: **Owned** and **Sold**.
+- The Sold side: summary "3 sold · $2,400 · +$350 vs paid"; empty state
+  "Nothing sold yet. Mark an item as sold from its page or from a sell plan."
 - The Sell Plan: the third figure's header **Sold**, captioned "2 items"; the
   section beneath the candidates titled **Sold**.
 - Sell Plan row action: **Mark as sold…**.
@@ -245,10 +258,13 @@ section on plan approval (P8).
 ## Design requirements
 
 - A **Design pass, in-session with the `design` skill** (the pattern `002` and
-  `005` used), for the genuinely new surfaces: the **Sold card** on the
-  Dashboard (it must sit apart from the collection totals and read as a
-  separate ledger, not a fourth headline figure), the **Sold list** row and
-  summary, the **sold state** of the item detail screen (the Sold mark and
+  `005` used), for the genuinely new surfaces: the **Owned / Sold switch** at
+  the top of the Items page (a bespoke in-page control in the family of the
+  Sort By dropdown — the person's "two sides of the same view" is the brief,
+  and a flip or turn is a fair thing for the pass to try, not a mandate), the
+  **Sold card** on the Dashboard (it must sit apart from the collection totals
+  and read as a separate ledger, not a fourth headline figure), the **Sold
+  side's** row and summary, the **sold state** of the item detail screen (the Sold mark and
   sale line at the top of a page whose rest is the familiar detail), and the
   Sell Plan's **third figure and Sold section**. The design brief's rules
   apply; no rendered materials; the app's own type and tokens.
@@ -284,12 +300,18 @@ section on plan approval (P8).
    it is not refreshed afterwards.
 6. [ ] The Dashboard shows a **Sold** card — count, total proceeds, realised
    gain or loss against what was paid — only when something in scope has been
-   sold; it follows the category scope; tapping it opens the Sold list. The
-   collection figures exclude sold items and still reconcile (value − paid =
-   delta over valued items).
-7. [ ] The Sold list shows every sold item, most recent sale first, each row
-   with name, sold date, sale price and gain or loss; its summary line matches
-   the card; the empty state shows when the last sale is removed.
+   sold; it follows the category scope; tapping it lands on the Items tab's
+   Sold side. The collection figures exclude sold items and still reconcile
+   (value − paid = delta over valued items).
+7. [ ] The Items tab switches between **Owned** and **Sold** in one tap and
+   opens on Owned at launch. The Sold side shows every sold item, most recent
+   sale first, each row with name, sold date, sale price and gain or loss;
+   its summary line matches the card; Sort By is hidden there; swipe-to-delete
+   works with the usual confirmation; the empty state shows when nothing is
+   sold or the last sale is removed.
+7a. [ ] From either side, the "…" menu's CSV export includes both owned and
+   sold items and its PDF export includes owned items only; Import and
+   Settings behave as before.
 8. [ ] A sold item's page shows the Sold mark, the sale details and the
    comparison against what was paid, with the item's content read-only
    beneath; it offers exactly **Edit sale…**, **Return to collection…** and
@@ -318,9 +340,10 @@ section on plan approval (P8).
 15. [ ] Sale details sync with the item to a second device signed into the
     same iCloud account (attested by the person, or recorded as an honest
     partial as `005` did).
-16. [ ] VoiceOver: **Mark as sold…**, the Sold card, each Sold-list row, the
-    sold mark and the sale line, and the Sell Plan's Sold figure are labelled;
-    a sold item is announced as sold with its price and date.
+16. [ ] VoiceOver: **Mark as sold…**, the Owned / Sold switch and which side
+    is showing, the Sold card, each Sold-side row, the sold mark and the sale
+    line, and the Sell Plan's Sold figure are labelled; a sold item is
+    announced as sold with its price and date.
 
 ## Decisions record
 
@@ -342,10 +365,12 @@ Made by the person, 2026-09-13, in this spec conversation:
    nothing.** A sale sold from a plan remembers that wishlist item; the plan
    shows a Sold figure beside Selected. `001`'s no-arithmetic framing holds.
    Buying the wishlist item with the proceeds is a separate feature.
-6. **A Dashboard card opens the Sold list.** "N sold · $X realised", following
-   the roadmap's own reasoning (`009`) that a new place to be is a card, not a
-   fourth tab. Rows show name, date, price and gain or loss. These are the
-   only places sold money appears.
+6. **A Dashboard card shows sales at a glance and jumps to the Sold side.**
+   "N sold · $X realised", following the roadmap's own reasoning (`009`) that
+   a new place to be is a card, not a fourth tab. Rows show name, date, price
+   and gain or loss. The card, the Sold side and the Sell Plan are the only
+   places sold money appears. (Amended by Decision 9: the card's destination
+   is the Items tab's Sold side, not a screen of its own.)
 7. **Exports and market data.** Sale columns are appended to the items CSV so
    a full export includes sold items and round-trips through import; the PDF
    stays a document of what you own; a sold item's market figures are cleared
@@ -354,6 +379,19 @@ Made by the person, 2026-09-13, in this spec conversation:
    be considered; the shape (the Sold card apart from the collection totals,
    scoped, hidden at zero, sold money never combined with collection money) is
    proposed at P7 and confirmed or amended when the person approves the Draft.
+
+Added 2026-09-13, at the person's reading of the Draft:
+
+9. **The Items tab has two sides, Owned and Sold, one tap apart.** The
+   person's proposal — "almost like two sides of the same view" — in place of
+   the Draft's standalone Sold list reached only from the Dashboard. Sold
+   items are things you used to own, so Items is where you'd look for them;
+   the card on the Overview tab hides at zero and put the list two taps away;
+   and a switch inside the page is a bespoke Trove control under `013`'s
+   rule, which the design pass can make literal. The Dashboard card stays
+   and jumps to the Sold side. Consequences settled with it: Sort By hides on
+   the Sold side (P16), the "…" menu's CSV export covers both sides and the
+   PDF stays owned-only (P17).
 
 Proposed at drafting, 2026-09-13, by Claude Code (these become decisions on
 plan approval):
@@ -399,6 +437,16 @@ plan approval):
 - **P15. The Sell Plan lists the sales made toward it** in a short Sold
   section under the candidates — name, date, price — so the plan is a record
   of what was done as well as what might be.
+- **P16. The Items tab opens on Owned at every launch**; the side is not
+  remembered across launches, and the Dashboard card is what lands on Sold.
+  Sort By is hidden on the Sold side, which is always most recent first;
+  swipe-to-delete works on a sold row with the same confirmation as an owned
+  one, since Delete is one of the sold page's three actions anyway.
+- **P17. The "…" menu is the same on both sides.** Its CSV export covers
+  both owned and sold items (the file is the complete record and the sale
+  columns mark the side), its PDF export stays owned-only (the collection
+  document), and Import and Settings are unchanged. Export follows the tab,
+  not the side.
 
 ## Non-goals (explicit)
 
@@ -410,9 +458,10 @@ plan approval):
   lifetime, net-position or "total ever spent" figure on the Dashboard.
 - **Sales over time** — no chart, no year filter, no grouping; the Sold list is
   a flat, dated list. A natural follow-up once there is history to show.
-- **Sorting, filtering or searching the Sold list**, or showing sold items in
-  the Items list behind a filter.
-- **A sold-items PDF**, or sold items in the collection PDF (Decision 7).
+- **Sorting, filtering or searching the Sold side**, or mixing sold items into
+  the Owned side behind a filter — the two sides stay distinct.
+- **A sold-items PDF**, or sold items in the collection PDF (Decision 7); the
+  Sold side's "…" offers the same owned-only PDF as the Owned side (P17).
 - **Multiple sales per item, quantities, or partial sales** — an item is sold
   once, whole.
 - **Editing an item's own fields while it is sold** — return it first (P4).
