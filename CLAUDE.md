@@ -371,6 +371,28 @@ do, the roles don't.
   `003-trend-aware-sell-plan`'s tier logs are the prior-policy
   baselines, and `005-stock-photos`'s experiment-1 rows are the first
   measured under experiment 1.
+- **Experiment 1 results (recorded 2026-09-13, at `005`'s merge; the
+  full rows are in `specs/005-stock-photos/tasks.md`'s tier log).** The
+  session ran on `claude-fable-5-1` at medium from `005`'s Phase 4 to
+  the merge, and the fallback was never needed. Measured with `ccusage`
+  on that session's transcript: the seat was about 4.5 M tokens, 96 %
+  of them cache reads, for about $5.80, against about $58.70 of Opus
+  subagent rows in the same stretch — the seat is roughly a tenth of
+  the spend, so which model sits in it moves a spec's total by a few
+  percent either way (hypothesis 1 holds at the spec level; the older
+  "eight to nine times the implementers' volume" figure above did not
+  reproduce under the bundle discipline). Allowance: 92 % at the start
+  row and 32 % used / 68 % available at the merge, read from the usage
+  page with three projects drawing on the same allowance — recorded as
+  read for the experiment's coordinator, not interpreted here
+  (hypothesis 2 open). Report readability: no verdict given, no report
+  sent back (hypothesis 3 open). Procedural misses: none of the four
+  named above; three bundle-hygiene misses and one policy gap are in
+  the tier log — the `sdd-implementer` has no simulator tools, so a
+  device pass runs in a `general-purpose` agent at the implementation
+  tier until the definitions say otherwise (hypothesis 4 holds). The
+  policy stays as written until the coordinator applies the decision
+  rule; nothing here changes a tier.
 
 ## Spec-driven workflow
 
