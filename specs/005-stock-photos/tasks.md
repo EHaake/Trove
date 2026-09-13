@@ -575,7 +575,7 @@ exercises the filtered search.
 
 ## Phase 5 — Verification and close-out
 
-- [ ] **T015 — Device pass with the live API. [person: watches the live half]**
+- [x] **T015 — Device pass with the live API. [person: watches the live half]**
   Per every criterion — the second and last time the network is touched.
   iPhone simulator, dev store: on a wishlist item with no photo, Find a photo…
   → the notice once (Not now first, then Continue, and no notice on a second
@@ -605,6 +605,139 @@ exercises the filtered search.
   credited by its CC-BY-SA licence (plan §3/Q4 — no fixture covers this; it
   depends on the live `License` code); record what the API returned. An honest
   "not encountered in the device pass" is acceptable.
+  *Done 2026-09-11* — iPhone 17 Pro simulator (iOS 26.0), the `-uiTesting`
+  in-memory store for the whole walkthrough except the one relaunch step that
+  needs the persistent store, the live Wikimedia API touched by hand: seven
+  searches and five image downloads, the second and last time the network is
+  touched in this spec. A temporary file probe inside
+  `WikimediaPhotoService.searchPhotos` recorded every firing; it was removed
+  before the suites ran and the working tree is clean of it. What was seen, in
+  order:
+
+  - **The action and the notice** (wanted item *Nikon F3*,
+    Photography/Cameras, $500, no photo). The detail showed **Find a photo…**
+    over a NO PHOTOS box. Tapping it showed the notice once — "Finding a photo
+    sends this item's name to Wikimedia Commons — nothing else about it. The
+    photo you pick is stored on your device and syncs with your other devices,
+    like a photo you take.", a **See the privacy policy** link, **Continue**
+    and **Not now**. **Not now** closed it and searched nothing — the probe was
+    empty before and after, and the probe is not merely silent: the very next
+    action wrote to it. Tapping **Find a photo…** again showed the notice again
+    (Not now does not acknowledge); **Continue** fired the search **once**
+    (probe line 1) and opened the picker.
+  - **The picker** (query "Nikon F3"). Six candidates, every one an actual
+    product shot of the camera, each credited beneath: Photopath… · CC BY-SA
+    2.0; Arne List · CC BY-SA 3.0; Arne List · CC BY-SA 3.0; Paolo.bec… ·
+    Public domain; Roberta F. · CC BY-SA 3.0; Martintoy · CC BY 3.0. Only
+    CC-BY, CC-BY-SA and public-domain files were offered. Scrolling the grid
+    and re-rendering the sheet fired nothing further (probe still 1) — the
+    `.task`-inside-sheet worry `002`'s sweep raised does not reproduce here.
+  - **Picking** the first candidate stored it: the detail hero showed the photo
+    with the **STOCK PHOTO** badge top-left and the credit beneath it, and the
+    wishlist row showed the photo as its thumbnail with the small stock glyph
+    in the corner. The credit's **Wikimedia Commons ↗** link opened
+    *File:Nikon F3.jpg* on Commons in Safari; coming back left the photo intact
+    and fired no search (probe still 1).
+  - **A second item, same launch** (wanted item *Zxqv Blorpanite 9000*, a name
+    nothing matches). **Find a photo…** showed **no notice** — already
+    acknowledged this launch — and searched once (probe 2): "No usable photos
+    found for that name." with **Search again**, and nothing stored. **Search
+    again** fired exactly one more search (probe 3). **Cancel** dismissed the
+    sheet and fired nothing (probe still 3).
+  - **Fetching again replaces** (criterion 6). On *Nikon F3*, **Find a photo…**
+    opened straight into the picker (no notice) and searched once (probe 4);
+    picking the second candidate replaced the first — the edit form's PHOTOS
+    count read **1**, and the credit became "Photo: Arne List · CC BY-SA 3.0 ·
+    Wikimedia Commons ↗".
+  - **Keep both / Replace** (criterion 5). Adding a photo from the library to
+    that item prompted "This item has a stock photo. Keep it, or replace it
+    with your photo?" with **Keep both**, **Replace**, **Cancel**; the prompt
+    fired no search (probe still 4). **Keep both** gave PHOTOS **2** with the
+    owned photo leading; on the detail the owned photo was page 1 of 2 with no
+    badge and no credit, the stock photo page 2 with both, and **Find a
+    photo…** was gone — the item now has a photo of the person's own
+    (Decision 6). Removing the fetched photo from the edit strip worked like
+    any photo (PHOTOS 1). After clearing both photos and fetching a fresh stock
+    photo (probe 5), adding a library photo again and choosing **Replace** left
+    PHOTOS **1**, the owned one — the fetched photo gone.
+  - **An owned item borrows a stock photo** (Decision 3). New owned item *Leica
+    M6*, Photography/Cameras, paid $2,200, no photo: **Find a photo…** showed,
+    searched once (probe 6), and offered Leica M6 product shots; picking one
+    stored it with badge, credit and list-row thumbnail.
+  - **Export** (criterion 8). **Export as PDF…** produced
+    `Trove-Items-2026-09-11.pdf`, 128 KB, two pages: the summary, then the
+    Leica M6 row with the stock photo drawn in the photo box and its full
+    credit beneath it, in the right order and correctly wrapped — "Photo: No
+    machine-readable author provided. Elya assumed (based on copyright
+    claims). · CC BY-SA 3.0 · Wikimedia Commons". **Export as CSV…** produced a
+    244-byte file whose header is
+    `Name,Category,Purchase Price,Currency,Purchase Date,Purchase Location,Current Value,Desire to Keep,Condition,Condition Notes,Serial Number,Notes,Reverb Product ID,Year`
+    — no photo column, unchanged by this spec.
+  - **Nothing fetches on its own** (criterion 10). Across three launches and
+    every screen visited, the probe recorded exactly seven firings, one per
+    deliberate action: Continue, the empty-state search, Search again, three
+    re-fetches, and the dev-store search below. No launch, appear, tab switch,
+    sheet dismissal, return-from-Safari or Keep/Replace prompt fired anything.
+  - **The notice across a relaunch**, on the persistent dev store (the
+    `-uiTesting` launch resets the flag by design, so this step had to run
+    without it; it only reads and sets the notice flag, nothing destructive).
+    Relaunched without the flag: **Find a photo…** on the dev store's
+    *Hasselblad X2D 100C ii* showed **no notice** — the acknowledgement set in
+    the person's earlier Phase 3 session has survived every relaunch since,
+    including a fresh install of the binary. (The Continue that set it happened
+    before this session, so what this step shows is persistence, not the
+    Continue-then-relaunch sequence in one sitting.) That search also confirmed
+    Decision 7's accepted consequence live: "Hasselblad X2D 100C ii" returns
+    the empty state, because no product shot comes back to filter (probe 7).
+
+  **Probe firings per action** — Not now: 0. Continue: 1. Picker scroll /
+  sheet re-render: 0. Return from Safari: 0. Second item's first open: 1.
+  Search again: 1. Cancel: 0. Re-fetch on an item that already has a stock
+  photo: 1 per open (three opens, three firings). Keep/Replace prompt: 0.
+  Launch / appear / tab switch: 0. Total 7, matching the 7 intended opens
+  exactly.
+
+  **Dual-licensed GFDL + CC-BY-SA file**: not encountered. Every candidate the
+  three live searches returned carried a single licence code (CC BY-SA 2.0/3.0,
+  CC BY 2.0/3.0, or public domain), so the plan §3/Q4 path was not exercised.
+
+  **Findings and what became of them.** (1) The detail credit garbled
+  whenever it wrapped — the link was a sibling view beside a wrapping `Text`
+  → a top-tier decision review (plan §6 amended) → **T015b**, then its
+  device check found the arrow glyph following Dynamic Type while the credit
+  text did not → **T015c**. (2) Commons' placeholder author ("No
+  machine-readable author provided. … assumed …") credited verbatim →
+  **T015a**. Two `Text` `+` deprecation warnings: one cleared by T015b, the
+  other is the plan-required glyph append (recorded for T016's as-built).
+
+  **T015b/T015c device check** (2026-09-12, `-uiTesting`, one live "Leica
+  M6" search): a wrapping credit reads "Photo: Wikimedia Commons · CC BY-SA
+  3.0 ·" / "Wikimedia Commons ↗" — author whole, licence intact in mono, no
+  orphan separator, the link and glyph together on line 2; unchanged at
+  accessibility XXXL after T015c, the arrow inline at the credit's cap height
+  in brass. Tapping the author or licence does nothing; tapping "Wikimedia
+  Commons" foregrounds Safari on `commons.wikimedia.org` /
+  *File:Leica M6 img 1834.jpg* (URL bar, not the credit's appearance).
+  UI suite twice, 16 tests, green both times.
+
+  **Offline** (criterion 7) — the person, by hand, 2026-09-12: Network Link
+  Conditioner at 100 % Loss on the Mac (which also cuts the session off, so
+  the step can't be driven by a tool), dev store, wanted item *Canon R5*:
+  **Find a photo…** → the sheet with "Couldn't reach Wikimedia Commons. Try
+  again in a while." and **Search again**; NO PHOTOS still on the item,
+  nothing stored (screenshot kept with the pass's shots).
+
+  **VoiceOver** (criterion 11) — the person, Xcode's Accessibility Inspector
+  against the simulator, 2026-09-13, on a stock photo with the fallback
+  author: the credit is **one element**; Label "Photo: Wikimedia Commons · CC
+  BY-SA 3.0 · Wikimedia Commons" (no arrow spoken); Traits **Button, Link**;
+  Hint "Opens Wikimedia Commons in your browser"; **Activate** opened the
+  Commons file page. The `accessibilityRepresentation` route works; plan §6's
+  recorded fallback was not needed.
+
+  **Not covered**: sync of a fetched photo to a second device (criterion 4)
+  — no second device; an honest partial, resting on the CloudKit schema test
+  and on `002`'s owned-photo sync path that the fetched photo shares.
 
 - [x] **T015a — Commons' placeholder author falls back to "Wikimedia Commons".** Device-pass finding 2: Commons emits "No machine-readable author provided. {user} assumed (based on copyright claims)." in `Artist` for files with no structured author, and the fallback only fired on an absent or empty field. Now the leading phrase (case-insensitive) counts as no author; the file is still offered. Hand-built fixture `search-placeholder-author.json` + 2 tests; mutation verified. Recorded: no recorded fixture had the placeholder, so the live data has shapes the sample lacks.
 
@@ -717,6 +850,7 @@ settled.
 | T015b implement | opus (`sdd-implementer`) | ~63k | `.full` credit = one `Text(AttributedString)` via pure `attributedCredit(_:theme:)`, `.link` source run, `accessibilityRepresentation` Link; value test + adjusted scans; 4 mutations verified; 1 `Text +` warning remains (the plan-required glyph append) → T016 as-built; 1272 tests |
 | T015b device check | opus (general-purpose w/ simulator tools) | ~144k | wrap at default + AX5 confirmed; sighted tap opens the Commons file page (URL bar); VoiceOver NOT verifiable on the simulator (`inspect` unavailable, no VO) → person; found the Dynamic-Type arrow glyph defect → T015c; UI suite green twice (16) |
 | T015c implement | opus (general-purpose w/ simulator tools) | ~148k | glyph takes the credit's fixed font + brass; 3 scoped scan guards (a render test was built, probed, found false-passing — ImageRenderer draws an SF Symbol in a Text as a constant placeholder — and deleted); 3 mutations verified; AX5 screenshot confirms; 1275 tests |
+| T015 offline + VoiceOver | — (person, by hand: Link Conditioner; Accessibility Inspector) | — | offline failure copy seen, nothing stored; credit one element, Button+Link, hint, Activate opens Commons — fallback not needed; T015 closed |
 | _rows added per dispatch as the spec runs_ | opus (subagents) | | |
 
 **Phase 4 review notes (non-blocking, carried to T016 / the sweep):**
