@@ -273,7 +273,7 @@ because the person will feel it before they read it.
 
 ## Phase 2 — The CSV contract and import (**foundational**)
 
-- [ ] **T006 — Four appended columns, the boundary, the pair rule, the commit. `review: per-task`.**
+- [x] **T006 — Four appended columns, the boundary, the pair rule, the commit. `review: per-task`.**
   Per plan §7 and Q5 (records/Settings split), Q6/R3. `ItemExportRecord`
   gains the four sale fields (from `item.sale` in `init(item:)`);
   `ExportSchema.itemHeaders` += `Sold Date`, `Sale Price`, `Sold At`, `Sale
@@ -308,6 +308,32 @@ because the person will feel it before they read it.
   `ItemListViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every mutation
   recorded.
+  **Done (2026-09-13):** four fields on `ItemExportRecord` (no defaults, the
+  002 shape — twelve memberwise sites across six test files, including
+  `PDFComposerTests`, outside the file list, mechanical); headers, `[12,
+  14]`, blank-when-nil cells in the existing day/money formats; the pair
+  rule with one default per dropped sale; `areInSoldOrder` (date desc, name
+  case-insensitive, id; no sale last); the commit sets `sale`, no plan;
+  Settings `(owned, sold, wanted)`. Mutations, each red then reverted:
+  `[12, 13, 14]` → `ExportSchemaTests:56` + `ImportSchemaTests:711`; price
+  written for owned → `ExportSchemaTests:221` + `SettingsViewModelTests:418`;
+  any prefix accepted → `ImportSchemaTests:711/141`; one default per cell →
+  :767 (2 ≠ 1) + :822; a lone half accepted → :768/805; the commit dropping
+  `sale` → `ItemListViewModelTests:1447`; sold in Custom order →
+  `SettingsViewModelTests:413`; PDF given owned + sold → :445/448; and, on
+  the review's S1, the record reading `soldDate` alone →
+  `ExportSchemaTests:436–438`, the commit setting a plan link →
+  `ItemListViewModelTests:1451`. Verify (orchestrator re-run): 1391 tests in
+  191 suites passed. Per-task review signed off, nothing blocking; carried:
+  S2 two import assertions use `day(from:)` as their own oracle (rescued by
+  the count assertion; sweep); S3 Settings' PDF is reachable with zero
+  entries for an all-sold collection while the list's is gated (T009
+  confirms deliberate); S4 G28's byte identity completes at T009; **S5 the
+  sale date is day-granular on a round trip, like Purchase Date — the sheet
+  task (T013) must be told, since a `Date.now` sale shifts to midnight on
+  re-import and same-day sales then tie only by name**; S6 a stale blanket
+  sentence in `everythingInCustomOrder`'s comment (sweep). G28's list half
+  waits for T009.
 
 - [ ] **T007 — Docs, samples, the 011 schema section, `PRIVACY.md`.**
   Per plan §7 (docs) and §9. `docs/csv-reference.md` (18 columns, four new
@@ -672,4 +698,7 @@ interpreted here.
 | Phase 1 review | opus (`skeptical-reviewer`) | 105,930 (5 tool uses — one targeted look, stated) | **one blocking** (B1: plan §4/§5 named three `SaleCopy` members T002 shipped differently, and the empty state was one string where the plan calls for headline + detail) + S1–S6 |
 | T002a fix (B1, S1, S4) | opus (`sdd-implementer`, high effort) | 50,574 (15 tool uses, 3 min) | done; the bundle's mutation was equivalent and the implementer shifted it to a reachable boundary, stated |
 | Phase 1 re-review | opus (`skeptical-reviewer`, resumed) | 111,499 cumulative (~5.5k this round; 1 tool use) | **signed off**, no new blocking |
+| T006 implement | opus (`sdd-implementer`, high effort) | 166,658 (64 tool uses, 19 min) | done first pass; eight mutations red; bundle miss (orchestrator): `areInSoldOrder`'s rule (plan Q9) was not in the bundle and `PDFComposerTests` was not named — the implementer grepped two plan windows, stated |
+| T006 per-task review | opus (`skeptical-reviewer`) | 80,532 (9 tool uses — five targeted looks, stated) | signed off, nothing blocking; S1–S6 in the Done note |
+| T006 follow-up (S1) | opus (`sdd-implementer`, resumed) | 172,513 cumulative (~6k this round) | two comment-claimed mutations run and red |
 | _rows added per dispatch as the spec runs_ | | | |

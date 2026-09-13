@@ -113,6 +113,7 @@ struct PDFComposerTests {
             notes: notes,
             reverbProductID: nil,
             year: nil,
+            soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
             firstPhotoID: nil,
             firstPhotoAttribution: nil
         ))
@@ -232,6 +233,7 @@ struct PDFComposerTests {
             notes: "The keeper",
             reverbProductID: 182_769,
             year: 1984,
+            soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
             firstPhotoID: nil,
             firstPhotoAttribution: nil
         )

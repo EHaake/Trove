@@ -1300,7 +1300,9 @@ func itemsPreview(names: [String]) -> ItemsImportPreview {
                     currencyCode: "USD", purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
                     purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
                     conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
-                    notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil,
+                    notes: nil, reverbProductID: nil, year: nil,
+                    soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
+                    firstPhotoID: nil,
                     firstPhotoAttribution: nil
                 ),
                 rowNumber: offset + 2,
@@ -1363,7 +1365,9 @@ struct ItemListViewModelCommitTests {
                         purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
                         purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
                         conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
-                        notes: nil, reverbProductID: 182_769, year: 1984, firstPhotoID: nil,
+                        notes: nil, reverbProductID: 182_769, year: 1984,
+                        soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
+                        firstPhotoID: nil,
                         firstPhotoAttribution: nil
                     ),
                     rowNumber: 2,
@@ -1391,6 +1395,62 @@ struct ItemListViewModelCommitTests {
         // An unmatched row stays unmatched — no id invented, no year.
         #expect(saved[1].reverbProductID == nil)
         #expect(saved[1].year == nil)
+    }
+
+    /// 006/T006: a sold row commits as a sold item, and an owned row beside
+    /// it stays owned. The whole loop runs through production code — a live
+    /// sale → its export record → CSV bytes → the real parse pipeline → the
+    /// commit — so the four columns, the pair rule and the commit are tied
+    /// together with none of them as the other's oracle. Verified on a
+    /// SECOND context over the same store, the shape a same-context refetch
+    /// would fake.
+    ///
+    /// The link is asserted absent deliberately (P11): an imported sale
+    /// funded nothing on this device, and the commit must not invent a plan
+    /// for it. Mutation: set `soldTowardWishlistItem` in the commit → red.
+    @Test func commitRestoresTheSaleAndPointsAtNoPlan() async throws {
+        let zone = TimeZone(identifier: "UTC")!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let soldOn = try #require(calendar.date(from: DateComponents(year: 2026, month: 7, day: 4)))
+
+        // The source lives in its own store, so nothing but the CSV bytes
+        // crosses into the store the commit writes to.
+        let sourceContext = try makeInMemoryContext()
+        let sold = Item(name: "Blues Junior", categoryPath: "Music/Amps", purchasePriceCents: 69_000)
+        sold.sale = Sale(date: soldOn, priceCents: 55_000, location: "Reverb", note: "Shipped")
+        let owned = Item(name: "Strat", categoryPath: "Music/Guitars", purchasePriceCents: 120_000)
+        sourceContext.insert(sold)
+        sourceContext.insert(owned)
+        try sourceContext.save()
+
+        let table = ExportSchema.itemsTable(
+            [sold, owned].map { ItemExportRecord(item: $0) }, timeZone: zone
+        )
+        let preview = try ImportSchema.itemsPreview(
+            from: try CSVParser.parse(CSVWriter.write(table)), timeZone: zone
+        )
+        try #require(preview.defaultedFieldCount == 0)
+
+        let container = try makeInMemoryContainer()
+        let viewModel = ItemListViewModel(
+            modelContext: ModelContext(container),
+            importService: ImportServiceSpy(items: .success(preview))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        let saved = try ModelContext(container).fetch(
+            FetchDescriptor<Item>(sortBy: [SortDescriptor(\.sortOrder)])
+        )
+        #expect(saved.map(\.name) == ["Blues Junior", "Strat"])
+        #expect(saved[0].sale == Sale(
+            date: soldOn, priceCents: 55_000, location: "Reverb", note: "Shipped"
+        ))
+        // An imported sale funded nothing on this device (P11).
+        #expect(saved[0].soldTowardWishlistItem == nil)
+        // And the owned row stays owned — no phantom sale from a blank pair.
+        #expect(saved[1].sale == nil)
     }
 
     @Test func thePlacementBaseIsComputedAtCommitTimeNotParseTime() async throws {
@@ -1491,7 +1551,9 @@ struct ItemListViewModelCommitTests {
                             purchaseDate: row.record.purchaseDate, purchaseLocation: nil,
                             currentValueCents: nil, desireToKeep: 3,
                             conditionRawValue: "good", conditionNotes: nil,
-                            serialNumber: nil, notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil,
+                            serialNumber: nil, notes: nil, reverbProductID: nil, year: nil,
+                            soldDate: nil, salePriceCents: nil, saleLocation: nil,
+                            saleNote: nil, firstPhotoID: nil,
                             firstPhotoAttribution: nil
                         ),
                         rowNumber: row.rowNumber,

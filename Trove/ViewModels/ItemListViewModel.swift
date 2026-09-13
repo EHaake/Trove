@@ -397,6 +397,30 @@ final class ItemListViewModel {
     static let documentTitle = "Owned Items"
     static let wholeCoverageLabel = "All items"
 
+    /// The Sold side's order (plan Q9): most recent sale first, then name
+    /// case-insensitively, then id — fully determined by the data, the
+    /// `SellPlanRanking` tie-break rule, so two sales on the same day can't
+    /// reshuffle between visits. Static for `documentTitle`'s reason:
+    /// Settings' export-everything sorts its sold rows with this very
+    /// function (Q5), so the CSV it writes and the Sold side the person
+    /// reads are one order, not two that happen to agree.
+    ///
+    /// An item with no sale sorts last rather than crashing or landing
+    /// somewhere plausible — it has no place on this side at all, and the
+    /// callers filter before sorting.
+    static func areInSoldOrder(_ lhs: Item, _ rhs: Item) -> Bool {
+        if lhs.soldDate != rhs.soldDate {
+            guard let left = lhs.soldDate else { return false }
+            guard let right = rhs.soldDate else { return true }
+            return left > right
+        }
+        let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+        if byName != .orderedSame {
+            return byName == .orderedAscending
+        }
+        return lhs.id.uuidString < rhs.id.uuidString
+    }
+
     /// Exports the visible items, in visible order, as the canonical CSV.
     /// Records are built from `items` as-is — never a refetch: visible order
     /// comes from `isOrderedBefore` over live filter/sort state and is not
@@ -584,7 +608,7 @@ final class ItemListViewModel {
                    !knownPaths.contains(where: { $0.caseInsensitiveCompare(path) == .orderedSame }) {
                     knownPaths.append(path)
                 }
-                modelContext.insert(Item(
+                let item = Item(
                     name: record.name,
                     categoryPath: path,
                     purchasePriceCents: record.purchasePriceCents,
@@ -603,7 +627,21 @@ final class ItemListViewModel {
                     // the same question of the market as before it left.
                     reverbProductID: record.reverbProductID,
                     year: record.year
-                ))
+                )
+                modelContext.insert(item)
+                // 006 (plan §7, Q6): a row carrying both halves of the pair
+                // arrives sold. It points at no plan — an imported sale has
+                // no wishlist item on this device it could have funded
+                // (P11) — and `Item.sale` writes the four fields, so the
+                // date-without-price shape never reaches the store.
+                if let soldDate = record.soldDate, let salePriceCents = record.salePriceCents {
+                    item.sale = Sale(
+                        date: soldDate,
+                        priceCents: salePriceCents,
+                        location: record.saleLocation,
+                        note: record.saleNote
+                    )
+                }
             }
 
             do {

@@ -377,6 +377,80 @@ struct SettingsViewModelExportTests {
         ])
     }
 
+    /// A day in UTC, for the sale fixtures below — built here rather than
+    /// read from a clock so the expected order is a fact about the data.
+    private func day(_ year: Int, _ month: Int, _ day: Int) throws -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return try #require(calendar.date(from: DateComponents(year: year, month: month, day: day)))
+    }
+
+    /// 006/G28, the Settings half: with a sale present the items CSV is the
+    /// owned rows in Custom order, then the sold rows in Sold-side order —
+    /// most recent sale first, name case-insensitively on a tie. The sold
+    /// rows' own `sortOrder` runs against that order on purpose, so a single
+    /// Custom sort over everything, or a fetch-order pass-through, fails
+    /// this. (The other half — byte-identity with the list's own unfiltered
+    /// CSV — completes at T009, when the list gains its sides.)
+    @Test func theItemsCSVIsOwnedInCustomOrderThenSoldInSoldSideOrder() async throws {
+        let context = try makeInMemoryContext()
+        try seedTieFixture(into: context)
+        // Sale dates and manual positions deliberately disagree.
+        let zebra = insertItem("Zebra", order: 9, into: context)
+        zebra.sale = Sale(date: try day(2026, 6, 1), priceCents: 90_000, location: "Reverb", note: nil)
+        let beta = insertItem("beta", order: 1, into: context)
+        beta.sale = Sale(date: try day(2026, 3, 1), priceCents: 20_000, location: nil, note: nil)
+        let alpha = insertItem("Alpha", order: 2, into: context)
+        alpha.sale = Sale(date: try day(2026, 3, 1), priceCents: 30_000, location: nil, note: nil)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+        await viewModel.exportEverythingAsCSV()
+
+        let items = try #require(spy.tables.first)
+        #expect(items.rows.map { $0[0] } == [
+            "Charlie", "Bravo", "alpha", "Zulu", "Zebra", "Alpha", "beta",
+        ])
+        // And the sold rows carry the sale the owned ones leave blank.
+        let priceColumn = try #require(ExportSchema.itemHeaders.firstIndex(of: "Sale Price"))
+        #expect(items.rows.map { $0[priceColumn] } == [
+            "", "", "", "", "900.00", "300.00", "200.00",
+        ])
+        // The wishlist file is untouched by any of this (criterion 12).
+        #expect(spy.tables[1].rows.map { $0[0] } == ["alpha", "Bravo", "Charlie", "Zed"])
+    }
+
+    /// 006/G16: the everything-PDF is the owned collection only — its
+    /// entries, its `itemCount` and its cover totals — so the figures on the
+    /// cover are the Dashboard's collection figures rather than a mix of
+    /// what is owned and what was sold (criterion 14). Mutation: hand the
+    /// document all the items and the count reads 2 → red.
+    @Test func theEverythingPDFLeavesSoldItemsOut() async throws {
+        let context = try makeInMemoryContext()
+        _ = insertItem("Kept", priceCents: 100_00, valueCents: 150_00, order: 0, into: context)
+        let gone = insertItem("Gone", priceCents: 50_00, valueCents: 200_00, order: 1, into: context)
+        gone.sale = Sale(date: try day(2026, 6, 1), priceCents: 75_00, location: nil, note: nil)
+        insertWanted("Pedal", costCents: 20_00, order: 0, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+        await viewModel.exportEverythingAsPDF()
+
+        let document = try #require(spy.documents.first)
+        #expect(document.entries.map(\.name) == ["Kept"])
+        #expect(document.cover.itemCount == 1)
+        switch document.cover.totals {
+        case let .items(value, paid, unvalued):
+            #expect((value, paid, unvalued) == (150_00, 100_00, 0))
+        case .wishlist:
+            Issue.record("the items document carries wishlist totals")
+        }
+    }
+
     @Test func nothingIsExportedWhenBothCollectionsAreEmpty() async throws {
         let spy = ExportServiceSpy()
         let viewModel = SettingsViewModel(modelContext: try makeInMemoryContext(), exportService: spy)
