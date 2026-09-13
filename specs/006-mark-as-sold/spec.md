@@ -352,7 +352,7 @@ Made by the person, 2026-09-13, in this spec conversation:
 1. **A sold item stays in the app and leaves the collection.** It disappears
    from the Items list, every Dashboard figure, Sell Plan candidates and the
    collection exports, and keeps its photos, notes, details and history in a
-   Sold list. Chosen over "delete it and keep a small sale record", which
+   Sold side of the Items tab. Chosen over "delete it and keep a small sale record", which
    would lose the photos and make a mistaken sale unrecoverable.
 2. **A sale records price, date, place and an optional note.** Price defaults
    to the current value, date to today. No fees or shipping in this version.
@@ -402,7 +402,7 @@ plan approval):
 - **P2. The sale date cannot be in the future.** Any past date is allowed,
   including before the purchase date (data entry is the person's; the app
   does not second-guess it). Default: today.
-- **P3. The Sold list is ordered most recent sale first**, with no sort or
+- **P3. The Sold side is ordered most recent sale first**, with no sort or
   filter controls in this version.
 - **P4. A sold item's page is the existing detail screen in a sold state**,
   read-only beneath a Sold mark, with exactly three actions: Edit sale…,
@@ -456,7 +456,7 @@ plan approval):
   any "acquired" tracking — a separate feature (Decision 5).
 - **Any figure that combines sold money with collection money** — no
   lifetime, net-position or "total ever spent" figure on the Dashboard.
-- **Sales over time** — no chart, no year filter, no grouping; the Sold list is
+- **Sales over time** — no chart, no year filter, no grouping; the Sold side is
   a flat, dated list. A natural follow-up once there is history to show.
 - **Sorting, filtering or searching the Sold side**, or mixing sold items into
   the Owned side behind a filter — the two sides stay distinct.
