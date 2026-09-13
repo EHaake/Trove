@@ -116,6 +116,33 @@ struct WishlistDeletionTests {
         #expect(try marketRowsRemain(for: kept.id, in: container), "another item's rows went too")
     }
 
+    /// 006/T001, G3 (spec P10): a sale recorded toward a wishlist item is
+    /// history, and history survives the plan. Deleting the wanted item
+    /// nullifies `soldTowardWishlistItem` and leaves the sale — the date, the
+    /// price and both text fields — standing, read back on a second context.
+    @Test func deleteLeavesSalesRecordedTowardItStandingWithNoPlan() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let wanted = makeWanted(in: context, name: "Rickenbacker 330")
+        let soldOn = Date(timeIntervalSince1970: 1_770_000_000)
+        let sold = Item(name: "Blues Junior", categoryPath: "Music/Amps", purchasePriceCents: 60_000)
+        context.insert(sold)
+        sold.sale = Sale(date: soldOn, priceCents: 45_000, location: "Reverb", note: "Local pickup")
+        sold.soldTowardWishlistItem = wanted
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.load()
+        viewModel.delete(id: wanted.id)
+
+        let fresh = ModelContext(container)
+        let survivor = try #require(try fresh.fetch(FetchDescriptor<Item>()).first)
+        #expect(survivor.name == "Blues Junior", "the sold gear must survive its plan")
+        #expect(survivor.sale == Sale(date: soldOn, priceCents: 45_000, location: "Reverb", note: "Local pickup"))
+        #expect(survivor.isSold, "deleting the plan must not un-sell the item")
+        #expect(survivor.soldTowardWishlistItem == nil, "the link should be nullified, not left dangling")
+    }
+
 }
 
 /// The structural half: where deletion is allowed to live, and what both

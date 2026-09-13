@@ -66,6 +66,29 @@ final class Item {
     /// market listings a figure is computed from; never leaves the device.
     var year: Int?
 
+    /// 006: when this item was sold, or nil while it is owned. **The one sold
+    /// predicate** — `soldDate == nil` is "owned" everywhere, in `#Predicate`
+    /// and in memory alike (plan Q2). Written together with `salePriceCents`
+    /// by `ItemSaleStore` and the import commit, never alone.
+    var soldDate: Date?
+
+    /// The sale price in minor units, as every money field is. Nil while owned.
+    var salePriceCents: Int?
+
+    /// Where it sold ("eBay, Reverb, a friend…"), optional as `purchaseLocation` is.
+    var saleLocation: String?
+
+    var saleNote: String?
+
+    /// 006 (spec P5): the wishlist item this sale was recorded toward, set only
+    /// when sold from that item's Sell Plan. `.nullify` both ways: deleting the
+    /// wishlist item leaves the sale standing with no plan (P10); deleting the
+    /// item drops it from the wishlist item's list. Distinct from
+    /// `plannedForWishlistItems`, which is a *selection* and is emptied at the
+    /// sale (P6).
+    @Relationship(deleteRule: .nullify, inverse: \WishlistItem.itemsSoldToward)
+    var soldTowardWishlistItem: WishlistItem?
+
     /// Optional, not `[Photo]`, because CloudKit rejects non-optional
     /// relationships outright — see the note in plan.md. Read it as
     /// `photos ?? []`; nil and empty mean the same thing here.

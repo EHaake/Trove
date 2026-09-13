@@ -78,7 +78,7 @@ because the person will feel it before they read it.
 
 ## Phase 1 — Foundations, no UI (**foundational**)
 
-- [ ] **T001 — The sale on `Item`: four fields, the relationship, `Sale`. `review: per-task`.**
+- [x] **T001 — The sale on `Item`: four fields, the relationship, `Sale`. `review: per-task`.**
   Per plan §1 and Q1–Q2. Add `soldDate`, `salePriceCents`, `saleLocation`,
   `saleNote` and `soldTowardWishlistItem` to `Item` (after `year`, every one
   optional; the relationship `.nullify` with `inverse:` on the `Item` side)
@@ -104,6 +104,24 @@ because the person will feel it before they read it.
   `SaleOutcomeTests.swift` (new).
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); the red run and
   the G2/G3/G32 mutations recorded in the Done note.
+  **Done (2026-09-13):** six files, no `.pbxproj` edit. Mutations, each
+  reverted and red: G2 (setter leaving the link → `ModelTests` 367/370), G3
+  (`itemsSoldToward` `.nullify` → `.cascade` → `WishlistDeletionTests:139`),
+  G32 (count the owned item → `SaleOutcomeTests` 59/71; sum proceeds as
+  delta → line 61), plus `isLoss` `<` → `<=` → line 25. **CloudKit red run**:
+  `soldDate` non-optional without a default → `CloudKitSchemaTests` names
+  `Item: soldDate` ("CloudKit integration requires that all attributes be
+  optional, or have a default value set"). Trap recorded: the first attempt
+  crashed the test *host* migrating the simulator's real store (a migration
+  error naming the same field, not the guard) — the store had to be moved
+  aside to see the guard fire, then was restored, and the final green run
+  migrated that pre-006 store under the five new fields. Verify (orchestrator
+  re-run): 1332 tests in 187 suites passed. Per-task review signed off,
+  nothing blocking; notes carried: S1 "set a sale leaves the link alone" is
+  untested here (T003's G21 covers it through `editSale`); S2 the Item-side
+  delete rule is asserted by comment only (sweep); S3 the device pass should
+  confirm an existing collection opens (T019); S4 G32's scan half lands at
+  T009/T010.
 
 - [ ] **T002 — `SaleCopy`, and the sold delete message.**
   Per plan Q11 and §5 (`ItemDeleteCopy`). New `Trove/Models/SaleCopy.swift`
@@ -576,4 +594,6 @@ interpreted here.
 | Plan fix round | fable (`sdd-planner`, resumed with its context) | 420,045 (as reported by the resumed dispatch; includes the carried first-run context) | B1 fixed as Q15 + G33 (`show(_ side:)` clears the narrowing, both directions); S1–S11 all folded — `SaleTotals`/G32, `isLoss` on the model, cross-references, the Sell Plan sale-form factory, the pause-report handoff notes, Q6's import edges, the anchor-found house rule, `.nothingAdded` pin, the switch in the header, the 011 order line |
 | Plan re-review | fable (`skeptical-reviewer`, resumed) | 126,038 (as reported by the resumed dispatch; ~14k of it this round) | **signed off, nothing open**; one non-blocking observation for the log: T015's "`SideSwitch` names `viewModel.show`, no `$viewModel.side`" scan is mostly enforced by the compiler once `side` is `private(set)` — it can still go red, but the clearing's coverage is G33, not that scan |
 | Spec session (orchestration) | fable, high effort (the person raised it for the spec conversation) | not visible to the session — read with `ccusage` at the merge | spec written with the person (Decisions 1–10), planning dispatched, sign-off loop: one review, one re-review |
+| T001 implement | opus (`sdd-implementer`, high effort) | 94,964 (42 tool uses, 12 min) | done first pass; five mutations + the CloudKit red run reported red; read beyond the bundle: `TestSupport.swift`, `verify.sh`, `WishlistViewModel.delete(id:)`, `Money.swift`, `PhotoSelection.swift` |
+| T001 per-task review | opus (`skeptical-reviewer`) | 42,123 (1 tool use — bundle only) | signed off, nothing blocking; S1–S4 recorded in the Done note |
 | _rows added per dispatch as the spec runs_ | | | |
