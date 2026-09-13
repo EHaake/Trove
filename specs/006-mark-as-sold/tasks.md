@@ -335,7 +335,7 @@ because the person will feel it before they read it.
   sentence in `everythingInCustomOrder`'s comment (sweep). G28's list half
   waits for T009.
 
-- [ ] **T007 — Docs, samples, the 011 schema section, `PRIVACY.md`.**
+- [x] **T007 — Docs, samples, the 011 schema section, `PRIVACY.md`.**
   Per plan §7 (docs) and §9. `docs/csv-reference.md` (18 columns, four new
   table rows, the legacy widths 12 and 14, the pair rule in "Field formats");
   `docs/samples/items-full.csv` gains the four columns with two rows sold
@@ -359,6 +359,21 @@ because the person will feel it before they read it.
   **Verify:** `scripts/verify.sh` green; mutations recorded. **Phase 2 closes
   here — pause for the person** (what can be tried: export a CSV from the
   Items tab and re-import it — the four new columns are present and blank).
+  **Done (2026-09-13):** csv-reference at 18 columns with a `‡` footnote for
+  the sale set and the pair rule under "Field formats"; `items-full.csv` at
+  18 with the Technics (gain) and HD 650 (loss) rows sold, in place rather
+  than moved after the owned rows (a hand-built import fixture; export
+  order is not asked for); README of the samples names the 14-boundary
+  fixture; the 011 plan's italic note and one bullet appended at the end
+  of the decisions list; `PRIVACY.md`'s first storage row; README's one
+  sentence as its own bullet, worded from the commit log since the bundle
+  carried no user-facing description. Mutations, each red then reverted:
+  `items-resaved.csv` regenerated at 18 → `DocsSampleTests:129/130`; the
+  privacy phrase removed → `PrivacyPolicyTests:174`, plus the Technics
+  price blanked → `DocsSampleTests:18/56/72`. Note: the re-saved sample's
+  header carries trailing empty cells, so its width pin goes through
+  `ImportSchema.shaped` (a raw header reads 17). Verify (implementer's
+  verbatim output): 1392 tests in 191 suites passed.
 
 ## Phase 3 — Design
 
@@ -701,4 +716,5 @@ interpreted here.
 | T006 implement | opus (`sdd-implementer`, high effort) | 166,658 (64 tool uses, 19 min) | done first pass; eight mutations red; bundle miss (orchestrator): `areInSoldOrder`'s rule (plan Q9) was not in the bundle and `PDFComposerTests` was not named — the implementer grepped two plan windows, stated |
 | T006 per-task review | opus (`skeptical-reviewer`) | 80,532 (9 tool uses — five targeted looks, stated) | signed off, nothing blocking; S1–S6 in the Done note |
 | T006 follow-up (S1) | opus (`sdd-implementer`, resumed) | 172,513 cumulative (~6k this round) | two comment-claimed mutations run and red |
+| T007 implement | opus (`sdd-implementer`, high effort) | 96,006 (31 tool uses, 7 min) | done first pass; both mutations red; README wording drawn from commit messages (bundle carried no user-facing description — a bundle gap, stated) |
 | _rows added per dispatch as the spec runs_ | | | |

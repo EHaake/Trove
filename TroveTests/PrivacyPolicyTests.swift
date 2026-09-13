@@ -162,4 +162,20 @@ struct PrivacyPolicyTests {
             "the name the photo notice links by is not the privacy policy"
         )
     }
+
+    // MARK: - Spec 006: the sale half (P9)
+
+    /// P9: marking something sold adds four more things Trove keeps about an
+    /// item, and they live in the same row as the rest of an item's fields
+    /// and sync the same way — so the row is pinned whole. Striking the sale
+    /// phrase out of it goes red (guard G31).
+    @Test func theStorageRowNamesTheSaleDetails() throws {
+        let text = try Self.policyText()
+        #expect(
+            text.contains(
+                "| Your owned items and wishlist items — names, categories, prices, dates, conditions, notes, ratings, and, once you mark something sold, what it sold for, when, where and any note | on your device | yes, to your private iCloud database |"
+            ),
+            "the storage table's first row no longer names the sale details"
+        )
+    }
 }
