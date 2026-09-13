@@ -1,11 +1,16 @@
 # 006 — Mark as Sold — Technical Plan
 
-**Status**: Draft — pending sign-off
+**Status**: **Signed off** (2026-09-13) — skeptical-reviewer at `fable` (experiment
+1's top tier); one blocking finding at the first review (B1, the Sold side's
+CSV export inheriting the Owned side's narrowing — fixed as Q15/G33) and
+eleven second-look notes, all folded in; the re-review signed off with
+nothing open. Ready for implementation once the person approves the
+spec-conformance summary.
 
 Drafted by the `sdd-planner` (Fable 5.1, high effort — experiment 1's top
 tier) against the approved `spec.md` (Approved 2026-09-13) and the code as it
 stands on `main` at `465e733`, from which `006-mark-as-sold` branches.
-Planning proposals (Q1–Q14) become decisions on plan approval, the way `005`'s
+Planning proposals (Q1–Q15) become decisions on plan approval, the way `005`'s
 Q-items and this spec's P-items do. Three readings of the spec that the plan
 had to take a side on are listed under **Readings for sign-off**; none is a
 product fork, each is stated so the reviewer can overturn it.
@@ -48,7 +53,7 @@ types (spec "What and why"). So there is no Phase 0.
   nothing when all four are blank. Two counts for one dropped sale would
   overstate the damage the confirmation reports.
 
-## Proposed at planning (Q1–Q14) — approved on plan approval unless overturned
+## Proposed at planning (Q1–Q15) — approved on plan approval unless overturned
 
 - **Q1. Fields on `Item`, not a `Sale` model.** Four optional stored
   properties and one optional to-one relationship on `Item` (§1). Reasons,
@@ -84,15 +89,18 @@ types (spec "What and why"). So there is no Phase 0.
   every launch by construction (P16) and keeps its side across tab switches
   within a launch. `AppRouter.ItemsRequest` gains `.sold`;
   `router.showSoldItems()` sets it and pops to the Items root, exactly as
-  `showItems(inCategory:)` does; `ItemListView.apply` turns `.sold` into
-  `side = .sold` with every narrowing cleared, and turns `.category`/
-  `.unvalued` into `side = .owned` — a request from the Dashboard always
-  lands on the side it was about (§4).
+  `showItems(inCategory:)` does; `ItemListView.apply` turns `.sold` into one
+  `viewModel.show(.sold)` call (Q15), and turns `.category`/`.unvalued` into
+  `show(.owned)` plus today's narrowing — a request from the Dashboard
+  always lands on the side it was about (§4).
 - **Q5. Exports.** The list's **CSV** is the Owned side's visible rows, in
   visible order, followed by the sold items that pass the *same* narrowing
   (category, search, un-valued — a narrowing is about which gear, and sold
   gear still has a category, a name and a value field), in Sold-side order.
-  Settings' export-everything CSV is owned-in-Custom-order then sold in
+  Because changing side clears every narrowing (Q15), the narrowing is the
+  identity on the Sold side, so a CSV exported from there is the complete
+  record; from the Owned side a *visible* chip or query narrows both halves
+  and the coverage label stays true. Settings' export-everything CSV is owned-in-Custom-order then sold in
   Sold-side order, through the same two comparators, so `013`'s byte-identity
   (unfiltered Custom list CSV == Settings CSV) still holds with sales
   present. The **PDF** is the Owned side only, on both paths, and its cover
@@ -105,7 +113,15 @@ types (spec "What and why"). So there is no Phase 0.
   `Sale Price` parse (the schema's own date and money parsers). Otherwise the
   item imports unsold, and — if *any* of the four sale cells was non-blank —
   the dropped sale counts **one** default (R3). An imported sale points at no
-  plan (P11): the record carries no plan and the commit sets none.
+  plan (P11): the record carries no plan and the commit sets none. Two rules
+  the sheet enforces (Q12) and import does not repeat, stated: a **negative
+  `Sale Price`** is unreadable to `012`'s parser already — `ImportSchema.cents`
+  rejects any sign — so it is the "price unreadable" case, the sale is
+  dropped and counted, the item imports unsold; a **future `Sold Date`**
+  imports as a sale as written, because `ImportSchema.day` has no clock and
+  `Purchase Date` is accepted unbounded the same way — the sheet's bound is a
+  data-entry courtesy, import trusts the file, and the asymmetry is recorded
+  here rather than hidden in a parser that would need a `now` it doesn't take.
 - **Q7. Delete All items includes sold items** (R2). `itemCount` in Settings
   keeps counting every `Item`.
 - **Q8. The sold detail state hides what would act.** The Market section and
@@ -122,7 +138,8 @@ types (spec "What and why"). So there is no Phase 0.
   rule. `ListEmptyReason` gains `.nothingSold`; on the Sold side the reason is
   `stillSyncing` if the store may still be importing and nothing sold is
   here, else `nothingSold` when empty, else nil — no search/category cases,
-  since the side has no narrowing.
+  since the side has no narrowing (Q15 is what makes that true by
+  construction, not only by what the page renders).
 - **Q10. A second UI-test seed, `-seedSold`**, mirrored on `UITestSeed`'s
   shape: its own argument (`UITestSeed.soldArgument`), its own structural
   gate (`shouldSeedSold(mode:arguments:)`), its own guard in `TroveApp`, and
@@ -142,15 +159,18 @@ types (spec "What and why"). So there is no Phase 0.
   fixed order). A realised delta of zero on the card and summary
   reads "+$0 vs paid" through the Dashboard's own
   `formattedAsSignedWholeCurrency` (the Gain figure already prints "+$0");
-  the rows and page say "Sold at cost" in words. Colour: delta < 0 → rust
-  text, else moss text — the exact rule `DashboardView.spentAndGain` and
-  `ItemRow` use, so "Sold at cost" is moss like a zero Gain is today.
+  the rows and page say "Sold at cost" in words. Colour: the *rule* lives on
+  the model as `SaleOutcome.isLoss` (`deltaCents < 0`) — `SaleCopy` is a
+  `Trove/Models/` file and names no colour — and `SoldItemRow`, `SoldMark`
+  and `SoldCard` each map it to `accentRustText` / `accentMossText` exactly
+  as `ItemRow` maps its delta, so "Sold at cost" is moss like a zero Gain is
+  today.
   **The two outcome strings are placeholders** (spec Decision 10, as
   clarified): what is fixed is that a row and the page make the gain or loss
   and its amount unmistakable without colour carrying it; the Design pass
   (T008) may replace the words with a labelled figure or a mark, in which
   case `SaleCopy` and `SaleCopyTests` change in the T008-following screen
-  task and the UI tests (T016, written after T008) assert the settled form.
+  task and the UI tests (T018, written after T008) assert the settled form.
   A form change there is a copy change inside the spec, not new copy.
 - **Q12. Sale price rules mirror the form's purchase price.** Required
   (blank rejected), zero allowed (given away is a sale of $0), negative
@@ -169,6 +189,17 @@ types (spec "What and why"). So there is no Phase 0.
   `selectedValueMeetsCost` becomes `(selectedCount + soldCount) > 0 &&
   selectedValueCents + soldValueCents >= estimatedCostCents` (P14). The name
   is kept so the guard that pins it as a boolean keeps its target.
+- **Q15. Changing side is an intent that clears every narrowing** (added at
+  sign-off, blocking finding B1). `ItemListViewModel.show(_ side: Side)` sets
+  `side` and, whenever the side actually changes, clears `searchText`,
+  `categoryFilter` and `showsOnlyUnvalued` in both directions — Owned is
+  "today's Items list" (P16), never today's list under a filter left behind
+  by a visit to Sold, and the Sold side can never carry a narrowing it does
+  not show. `side` becomes `private(set)`; `SideSwitch` binds through
+  `show(_:)`; `ItemListView.apply(.sold)` is one call to it. The former
+  design cleared the narrowing only on the router path, so tapping the
+  switch after filtering Owned to "Cameras" would have exported a Cameras-only
+  CSV from a Sold side that showed every sale.
 
 ---
 
@@ -249,7 +280,23 @@ nonisolated struct Sale: Sendable, Equatable {
 /// Gain or loss against what was paid — the one arithmetic this spec adds.
 nonisolated struct SaleOutcome: Sendable, Equatable {
     let deltaCents: Int            // priceCents − purchasePriceCents
+    var isLoss: Bool { deltaCents < 0 }   // the colour rule, on the model (Q11)
     init(salePriceCents: Int, purchasePriceCents: Int)
+}
+
+/// The three figures every "what was sold" surface shows, summed once.
+/// `ItemListViewModel`, `DashboardViewModel` and the UI seed's expected
+/// numbers all read this, so AC7's "the summary matches the card" is one
+/// sum, not two hand-written ones agreeing.
+nonisolated struct SaleTotals: Sendable, Equatable {
+    let count: Int
+    let proceedsCents: Int         // Σ salePriceCents
+    let realisedDeltaCents: Int    // Σ SaleOutcome.deltaCents
+}
+
+extension SaleOutcome {
+    /// Over the sold items among `items` — an unsold item contributes nothing.
+    @MainActor static func totals(over items: [Item]) -> SaleTotals
 }
 
 extension Item {
@@ -269,7 +316,12 @@ branch as the defensive one. **Testable claims**: the schema stays
 CloudKit-compatible — `CloudKitSchemaTests` (T001, G1); `sale = nil` clears
 the link and all four fields on a second context — `ModelTests` (T001, G2);
 deleting the wishlist item nullifies `soldTowardWishlistItem` and the sale
-stands — `WishlistDeletionTests` (T001, G3).
+stands — `WishlistDeletionTests` (T001, G3); `SaleOutcome.totals` over a
+gain, a loss, an at-cost sale and an owned item gives count 3, the summed
+proceeds and the summed delta, and neither list nor dashboard view model
+does the arithmetic itself — `SaleOutcomeTests` plus a scan that both view
+models call `SaleOutcome.totals(` and neither contains `salePriceCents -`
+(T001, T009, T010, G32).
 
 ## 2. The writer, and who reads the flag
 
@@ -334,6 +386,10 @@ toward `ownedCount`/`lowDesireCount`. New intent:
 @discardableResult func markSold(_ item: Item, sale: Sale) -> Bool
 /// The row whose sheet is up — `.sheet(item:)` state, view-settable.
 var saleCandidate: Item?
+/// The sheet's view model for a row, seeded exactly as the detail seeds
+/// its `.mark` sheet (P1: the price from the item's current value, the
+/// date today) — one seeding rule for both hosts.
+func makeSaleFormViewModel(for item: Item) -> SaleFormViewModel
 ```
 
 `SellPlanView`: the figures row becomes three cells when `hasSales` — Selected
@@ -370,32 +426,36 @@ red, G12); `soldItems` order.
 
 ```swift
 enum Side: Hashable { case owned, sold }
-var side: Side = .owned
+private(set) var side: Side = .owned
+/// The one way the side changes (Q15): sets it and, when it actually
+/// changes, clears every narrowing — then `load()`.
+func show(_ side: Side)
 private(set) var soldItems: [Item] = []       // Sold-side order
-var soldCount: Int
-var soldProceedsCents: Int                    // Σ salePriceCents
-var soldRealisedDeltaCents: Int               // Σ (salePriceCents − purchasePriceCents)
-var soldSummaryLine: String                   // SaleCopy.soldSideSummary(…)
+private(set) var soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)   // SaleOutcome.totals(over: sold)
+var soldSummaryLine: String                   // SaleCopy.soldSideSummary(soldTotals)
 static func areInSoldOrder(_ lhs: Item, _ rhs: Item) -> Bool   // date desc, name, id
 ```
 
 `load()` fetches once and splits: `items`, `totalCount`, `categoryOptions`,
 `marketSummaries`, `unvaluedCount`, `totalCurrentValueCents` — every existing
-member — derive from `owned`; `soldItems` from `sold`, sorted. `emptyReason`
+member — derive from `owned`; `soldItems` from `sold`, sorted, and
+`soldTotals` through `SaleOutcome.totals` (no arithmetic here). `emptyReason`
 switches on `side` (Q9). `canReorder` adds `side == .owned`. `delete(id:)`
 looks in both arrays (the Sold side's swipe, P16). `canExport` → `canExportCSV`
 / `canExportPDF` (Q5); `exportCSV` appends the narrowed sold rows; `exportPDF`
 unchanged in body (it reads `items`). The narrowing applied to sold rows is
 the same three filters, extracted into one `narrowed(_:)` so the two sides
-can't drift.
+can't drift — and on the Sold side `narrowed` is the identity, because
+`show(.sold)` cleared the three fields (Q15).
 
 `AppRouter`: `ItemsRequest.sold`, `func showSoldItems()` (sets the request,
-`popToItemsRoot()`). `ItemListView.apply`: `.sold` → `side = .sold`,
-`searchText = ""`, `categoryFilter = ""`, `showsOnlyUnvalued = false`;
-`.category`/`.unvalued` → `side = .owned` plus today's behaviour.
+`popToItemsRoot()`). `ItemListView.apply`: `.sold` → `viewModel.show(.sold)`;
+`.category`/`.unvalued` → `viewModel.show(.owned)` then today's writes.
 
-`ItemListView`: the `SideSwitch` (Design pass) bound to `viewModel.side`
-under the title; `onChange(of: side)` → `viewModel.load()`. On the Sold side:
+`ItemListView`: the `SideSwitch` (Design pass) sits in the **header**, which
+both branches of `body` compose — so it is there when the Owned side is
+empty (a person whose only item is now sold) exactly as it is over rows — and
+binds through `viewModel.show(_:)`, never to `side` directly. On the Sold side:
 the summary line is `soldSummaryLine`; the search field and chips are not
 rendered; `sortControl` is not rendered (P16); `overflowControl` stays; the
 rows are `SoldItemRow`s in the same `List` chrome, tap → `router.itemsPath.append`,
@@ -414,15 +474,22 @@ has no market line).
 `ItemListSidesWiringTests`): a sold item is absent from `items`, `totalCount`,
 `totalCurrentValueCents`, `unvaluedCount` and `categoryOptions` and present in
 `soldItems` (mutation: drop the split → red, G13); Sold-side order (G14);
-`soldSummaryLine` equals `SaleCopy.soldSideSummary` over the same figures; a
-category filter narrows the CSV's sold rows too and the un-filtered CSV lists
-owned then sold (G15); the PDF's entries and cover totals exclude a sold item
-(G16); `delete(id:)` on a sold item removes it and reloads both arrays;
-`showSoldItems()` sets `.sold` and pops; `canReorder` is false on the Sold
-side; source scans: `ItemListView` renders no `sortControl` and no
-`SearchField` inside the Sold branch, the swipe block on the Owned rows
-contains no `SaleCopy.markAsSold` (criterion 1), and the Sold rows compose
-`SoldItemRow`.
+`soldSummaryLine` equals `SaleCopy.soldSideSummary` over the same figures; on
+the Owned side a category filter narrows the CSV's sold rows too and the
+un-filtered CSV lists owned then sold (G15); **`show(_:)` clears the
+narrowing**: set a category filter and a query, `show(.sold)`, and
+`exportCSV` lists every owned and every sold row while `categoryFilter`,
+`searchText` and `showsOnlyUnvalued` read empty; `show(.owned)` from a
+filtered Sold side likewise; `show(.owned)` on the Owned side leaves a filter
+alone (mutation: keep the filter across the switch → red, G33); the PDF's
+entries and cover totals exclude a sold item (G16); `delete(id:)` on a sold
+item removes it and reloads both arrays; `showSoldItems()` sets `.sold` and
+pops; `canReorder` is false on the Sold side; source scans: `ItemListView`
+renders no `sortControl` and no `SearchField` inside the Sold branch, the
+swipe block on the Owned rows contains no `SaleCopy.markAsSold` (criterion
+1), the Sold rows compose `SoldItemRow`, the `.sold` case of `apply` is one
+`viewModel.show(.sold)` call, and the `SideSwitch` call site names
+`viewModel.show` and no `$viewModel.side`.
 
 ## 5. The item detail: mark, sold state, edit, return
 
@@ -515,7 +582,8 @@ it and its photos. Source scans (`SoldStateWiringTests`): `ItemDetailView`
 passes both middle rows through `SaleCopy`; `WishlistDetailView` names no
 `SaleCopy` member; the sold branch of `ItemDetailView` composes no
 `MarketSection(` and no `findPhotoAction` (a brace-span scan, the
-`ImportWiringTests` shape).
+`ImportWiringTests` shape, which `#require`s its `if viewModel.isSold` anchor
+found before asserting anything about the span).
 
 ## 6. The Dashboard
 
@@ -525,11 +593,9 @@ ruler, breakdown, `unvaluedDestination` and the market line exclude sold
 items by construction — and the sold figures come from `sold`:
 
 ```swift
-private(set) var soldCount = 0
-private(set) var soldProceedsCents = 0
-private(set) var soldRealisedDeltaCents = 0      // Σ (sale − paid) over sold scoped items
-var hasSales: Bool { soldCount > 0 }
-var soldLine: String        // SaleCopy.dashboardSummary(count:proceedsCents:) — "3 items · $2,400"
+private(set) var soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)   // SaleOutcome.totals(over: sold scoped items)
+var hasSales: Bool { soldTotals.count > 0 }
+var soldLine: String        // SaleCopy.dashboardSummary(soldTotals) — "3 items · $2,400"
 var soldDeltaLine: String   // SaleCopy.realised(deltaCents:) — "+$350 vs paid"
 ```
 
@@ -552,7 +618,9 @@ valueDeltaCents`, and the sold item's value and cost are in neither, nor in
 follow `scope` (a sale outside the scope is absent; `hasSales` false when
 none in scope, G23); `soldLine`/`soldDeltaLine` equal `SaleCopy` over the
 same numbers. `DashboardWiringTests` (scan): `SoldCard(` appears once, inside
-an `if viewModel.hasSales` span, and its closure calls `router.showSoldItems()`.
+an `if viewModel.hasSales` span, and its closure calls `router.showSoldItems()`
+— the scan first `#require`s that the `if viewModel.hasSales` anchor was found
+exactly once, so it cannot pass over a file that never renders the card.
 
 ## 7. Exports and import
 
@@ -594,9 +662,13 @@ with two rows sold (one at a gain, one at a loss) and `README.md` says so;
 fixture, pinned by width in `DocsSampleTests` exactly as the 12-column file
 is. `specs/011-data-export/plan.md` §"The canonical CSV schema": the italic
 note under the heading names `006`'s four columns, and "Recorded schema
-decisions" gains one bullet — the columns, the pair rule, and
-`itemSchemaBoundaries = [12, 14]` — appended, nothing above it edited (the
-append rule applied to the prose too).
+decisions" gains one bullet — the columns, the pair rule,
+`itemSchemaBoundaries = [12, 14]`, and one line on positional order: sold
+rows are written after the owned rows, so an item returned to the collection
+after a CSV round trip lands at the end of Custom order, not at its former
+place — inherent to the schema's "no `sortOrder` column" decision and outside
+this spec — appended, nothing above it edited (the append rule applied to the
+prose too).
 
 **Testable claims** (`ExportSchemaTests`, `ImportSchemaTests`,
 `DocsSampleTests`, `SettingsViewModelTests`, `ExportWiringTests`): headers
@@ -626,8 +698,10 @@ wishlist item ("Summicron 35mm f/2", $2,400) with the Telecaster's sale
 recorded toward it, written through `ItemSaleStore.markSold` so the seed can't
 produce a shape the app can't. Totals the tests read: 2 sold · $1,800 · +$200
 vs paid; Telecaster above Blues Junior; "Gain $350", "Loss $150"; the plan's
-Sold figure $1,250 · 1 item. `TroveApp` gets a second guard under the first,
-same shape. `UITestSeedTests` mirrors G8-style gates for the sold seed and
+Sold figure $1,250 · 1 item — the seed's test reads those totals through
+`SaleOutcome.totals`, not a second hand-written sum. `TroveApp` gets a second
+guard under the first, same shape. `UITestSeedTests` mirrors the existing
+gate tests (`seedsOnlyTheInMemoryStoreAndOnlyWithItsOwnArgument`) for the sold seed and
 the "called once under its guard, argument spelled only in `UITestSeed`"
 scan; `theAppCallsTheSeedOnceUnderTheGuardAndReadsTheFlagOnce` stays green
 because `shouldSeedSold(mode:` does not match its `shouldSeed(mode:` anchor.
@@ -688,7 +762,7 @@ close-out (§"Docs on the spec branch", the `005` split).
 | G12 | a sold item is never a candidate | the sold filter in `load` is dropped |
 | G13 | `ItemListViewModelTests`: sold absent from every Owned figure, present in `soldItems` | the split is dropped |
 | G14 | Sold-side order: date desc, name, id | the comparator is reversed or unterminated |
-| G15 | CSV: owned then narrowed sold; a filter narrows sold rows | sold rows unfiltered, or omitted |
+| G15 | CSV: owned then sold, both under the Owned side's *visible* narrowing | sold rows unfiltered while a chip shows, or omitted |
 | G16 | PDF entries and cover totals exclude sold, both paths | a sold record reaches `PDFEntry` |
 | G17 | `ItemDeleteCopyTests`: the sold message omits "sell plan", keeps the rest | the owned message is reused |
 | G18 | `SaleFormViewModelTests`: future date refused, past-before-purchase accepted | `dateInFuture` uses `<` or the check is dropped |
@@ -705,10 +779,16 @@ close-out (§"Docs on the spec branch", the `005` split).
 | G29 | `ExportWiringTests`: one gate per export row, Import/Settings ungated | a gate is shared or dropped |
 | G30 | `DocsSampleTests`: `items-full.csv` sold rows; `items-resaved.csv` width 14 | a sample is regenerated at the wrong width |
 | G31 | `PrivacyPolicyTests`: the storage row names the sale details | the phrase is removed |
+| G32 | `SaleOutcomeTests` + scan: `totals` sums count/proceeds/delta; both view models read it | a view model sums `salePriceCents` itself |
+| G33 | `ItemListViewModelTests`: `show(_:)` clears every narrowing on a side change | the filter survives the switch |
 
 Every guard is mutation-verified before it lands (`CLAUDE.md` Testing); the
-task's Done note records what was broken and what went red. Two things the
-suites cannot see and the device pass (T020) instruments instead: that the
+task's Done note records what was broken and what went red. Every source scan
+this spec adds first asserts its anchor was found (`#require` on the anchor
+count, `#expect(!literals.isEmpty, …)` on a literal scan — the
+`SellPlanFramingTests` shape), so none can pass over a file that lacks the
+thing it guards. Two things the
+suites cannot see and the device pass (T019) instruments instead: that the
 sale sheet's `DatePicker` really refuses a future day on screen, and that a
 `.sheet(item:)` over a row's `Item` presents once per tap (the `002`/`005`
 `.task`-in-a-sheet lesson — a probe in `ItemSaleStore.markSold`, removed
