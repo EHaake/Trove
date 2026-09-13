@@ -203,7 +203,7 @@ because the person will feel it before they read it.
   is already T001's G3 (`WishlistDeletionTests:123`); S5 `MarketLocalStore
   .clear`'s partial-throw window is pre-existing and unreachable.
 
-- [ ] **T004 — `SaleFormViewModel`.**
+- [x] **T004 — `SaleFormViewModel`.**
   Per plan §5 and Q12. New `Trove/ViewModels/SaleFormViewModel.swift`
   (`@Observable`, no SwiftUI): `Mode`, `price: Decimal?`, `date`, `location`,
   `note`, `validationErrors`, `title`/`confirmLabel` from `SaleCopy`,
@@ -220,6 +220,15 @@ because the person will feel it before they read it.
   Files: `Trove/ViewModels/SaleFormViewModel.swift` (new),
   `TroveTests/SaleFormViewModelTests.swift` (new).
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-09-13):** `SaleFormViewModel` (no SwiftUI), 16 tests in two
+  suites. `title`/`confirmLabel` switch on `mode` over `SaleCopy`'s four
+  constants — the plan's `sheetTitle(mode:)` spelling is not what T002
+  shipped, by that file's own design (a string table, no view-model type).
+  `.edit` with a nil prefill (unreachable from the app) falls back to the
+  `.mark` seed, documented. Mutations, each red then reverted: `<` for `<=`
+  → `SaleFormViewModelTests:73` (exactly-now refused); the date check
+  dropped → :62/63; the `.mark` seed reading the sale → :156. Verify
+  (implementer's verbatim output): 1374 tests in 191 suites passed.
 
 - [ ] **T005 — The router's sold request, and the Sold side's empty reason.**
   Per plan §4 and Q4, Q9. `AppRouter.ItemsRequest.sold`, `showSoldItems()`
@@ -628,4 +637,5 @@ interpreted here.
 | T002 implement | opus (`sdd-implementer`, high effort) | 66,901 (20 tool uses, 6 min) | done first pass; G17 red as reported; one mechanical edit outside the named files (`DeleteAllCopyTests`); bundle miss: named `Money.swift` for formatters that live in `Int+Currency.swift` |
 | T003 implement | opus (`sdd-implementer`, high effort) | 85,496 (40 tool uses, 13 min) | done first pass; ten mutations red as reported; bundle miss (orchestrator): the task-line excerpt was cut by line number after T001's Done note shifted the file, so it quoted T002 — extraction is anchor-based from here on |
 | T003 per-task review | opus (`skeptical-reviewer`) | 49,906 (5 tool uses — four targeted looks, stated) | signed off, nothing blocking; S1–S5 in the Done note |
+| T004 implement | opus (`sdd-implementer`, high effort) | 54,854 (14 tool uses, 5 min) | done first pass; three mutations red as reported; one plan-vs-shipped spelling reconciled inside the contract (`SaleCopy` constants, not a mode function) |
 | _rows added per dispatch as the spec runs_ | | | |
