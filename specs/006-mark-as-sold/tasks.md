@@ -162,6 +162,22 @@ because the person will feel it before they read it.
   correction for later dispatches: the currency formatters live in
   `Trove/Extensions/Int+Currency.swift`, not `Money.swift`.
 
+- [x] **T002a — Phase 1 review fix (B1): the Sold side's empty state split
+  as plan §4 says.** `SaleCopy.emptyState` → `nothingSoldHeadline` /
+  `nothingSoldDetail`, both pinned; T005's placeholder passes both; plan
+  §5's `sheetTitle(mode:)` comment corrected to the shipped constants; the
+  S4 comment word (T003 → T004). S1 folded: a test pins `rowOutcome` /
+  `pageOutcome`'s word against `SaleOutcome.isLoss` at −1/0/+1 — the
+  mutation had to shift to `<= 1`, since `<= 0` is equivalent behind the
+  `!= 0` guard (record: a `< 0` → `<= 0` mutation on those two functions is
+  a false green). Red at `SaleCopyTests:134`, reverted. Verify (implementer's
+  verbatim output): 1379 tests in 191 suites passed. Re-review: signed off.
+  Carried to the sweep: S3 (the delete-message wiring passes the item's own
+  `isSold` — no scan), S5 (`dashboardSummary` duplicates the
+  `sellPlanSoldCaption` pluralisation; `separator` claims to match
+  `MarketCopy` untested), S6 (`acceptsADateYearsBeforeThePurchase` guards
+  only against a lower bound being added).
+
 - [x] **T003 — `ItemSaleStore`, and the refresher's exclusion. `review: per-task`.**
   Per plan §2 and Q3, Q8, Q13. New `Trove/Models/ItemSaleStore.swift` with
   `markSold(_:sale:toward:at:in:)` (sets `sale`, sets the link iff a plan is
@@ -511,7 +527,10 @@ because the person will feel it before they read it.
   scan; the switch sits outside the `if let reason = viewModel.emptyReason`
   span.
   Files: `Trove/Views/Items/SideSwitch.swift` (new), `SoldItemRow.swift` (new),
-  `ItemListView.swift`, `TroveTests/ItemListSidesWiringTests.swift` (new),
+  `ItemListView.swift` (**both** the `apply` switch's `.sold` placeholder and
+  the `emptyState` switch's `.nothingSold` placeholder left by T005 are
+  replaced here), `Trove/Views/Wishlist/WishlistView.swift` (its
+  `.nothingSold` fold from T005, re-checked), `TroveTests/ItemListSidesWiringTests.swift` (new),
   `SoldItemRowTests.swift` (new).
   **Verify:** `scripts/verify.sh` green; mutations recorded; both sides seen
   by eye against the artboards.
@@ -650,4 +669,7 @@ interpreted here.
 | T003 per-task review | opus (`skeptical-reviewer`) | 49,906 (5 tool uses — four targeted looks, stated) | signed off, nothing blocking; S1–S5 in the Done note |
 | T004 implement | opus (`sdd-implementer`, high effort) | 54,854 (14 tool uses, 5 min) | done first pass; three mutations red as reported; one plan-vs-shipped spelling reconciled inside the contract (`SaleCopy` constants, not a mode function) |
 | T005 implement | opus (`sdd-implementer`, high effort) | 61,715 (24 tool uses, 5 min) | done first pass; three placeholder switch cases outside the named files (mechanical, required to compile), declared |
+| Phase 1 review | opus (`skeptical-reviewer`) | 105,930 (5 tool uses — one targeted look, stated) | **one blocking** (B1: plan §4/§5 named three `SaleCopy` members T002 shipped differently, and the empty state was one string where the plan calls for headline + detail) + S1–S6 |
+| T002a fix (B1, S1, S4) | opus (`sdd-implementer`, high effort) | 50,574 (15 tool uses, 3 min) | done; the bundle's mutation was equivalent and the implementer shifted it to a reachable boundary, stated |
+| Phase 1 re-review | opus (`skeptical-reviewer`, resumed) | 111,499 cumulative (~5.5k this round; 1 tool use) | **signed off**, no new blocking |
 | _rows added per dispatch as the spec runs_ | | | |

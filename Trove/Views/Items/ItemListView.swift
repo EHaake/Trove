@@ -713,7 +713,8 @@ struct ItemListView: View {
         case .nothingSold:
             EmptyStateView(
                 mark: .asset("TabItems"),
-                headline: SaleCopy.emptyState
+                headline: SaleCopy.nothingSoldHeadline,
+                detail: SaleCopy.nothingSoldDetail
             )
 
         case .everythingIsValued:

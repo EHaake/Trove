@@ -501,7 +501,7 @@ enum Mode { case mark, edit }
 var price: Decimal?; var date: Date; var location: String; var note: String
 private(set) var validationErrors: Set<ValidationError>
 let mode: Mode
-var title: String   // SaleCopy.sheetTitle(mode:) — "Mark as sold" / "Edit sale"
+var title: String   // by mode over SaleCopy.sheetTitleMark / sheetTitleEdit — "Mark as sold" / "Edit sale" (as shipped at T002: constants, not a mode function, since the mode is a view-model type and SaleCopy stays a plain string table; corrected at the Phase 1 review)
 var confirmLabel: String   // "Mark as sold" / "Save"
 var latestDate: Date { now() }
 init(mode: Mode, prefill: Sale?, currentValueCents: Int?, now: @escaping () -> Date = Date.init)

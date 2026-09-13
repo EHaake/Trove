@@ -32,7 +32,7 @@ nonisolated enum SaleCopy {
 
     /// Title and confirm button by mode. Two constants each rather than a
     /// function of the sheet's mode, because the mode is a view-model type
-    /// (T003) and this file stays a plain string table.
+    /// (T004) and this file stays a plain string table.
     static let sheetTitleMark = "Mark as sold"
     static let sheetTitleEdit = "Edit sale"
     static let confirmMark = "Mark as sold"
@@ -71,7 +71,8 @@ nonisolated enum SaleCopy {
 
     // MARK: - The Sold side
 
-    static let emptyState = "Nothing sold yet. Mark an item as sold from its page or from a sell plan."
+    static let nothingSoldHeadline = "Nothing sold yet."
+    static let nothingSoldDetail = "Mark an item as sold from its page or from a sell plan."
 
     // MARK: - Composed lines
 

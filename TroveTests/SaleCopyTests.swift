@@ -46,8 +46,9 @@ struct SaleCopyTests {
         #expect(SaleCopy.cardHeader == "Sold")
         #expect(SaleCopy.sellPlanFigureHeader == "Sold")
         #expect(SaleCopy.sellPlanSectionTitle == "Sold")
-        #expect(SaleCopy.emptyState
-            == "Nothing sold yet. Mark an item as sold from its page or from a sell plan.")
+        #expect(SaleCopy.nothingSoldHeadline == "Nothing sold yet.")
+        #expect(SaleCopy.nothingSoldDetail
+            == "Mark an item as sold from its page or from a sell plan.")
     }
 
     @Test func theSellPlanCaptionCountsItems() {
@@ -114,6 +115,25 @@ struct SaleCopyTests {
         #expect(!SaleCopy.pageOutcome(deltaCents: -15_000).localizedCaseInsensitiveContains("gain"))
         #expect(!SaleCopy.rowOutcome(deltaCents: 35_000).localizedCaseInsensitiveContains("loss"))
         #expect(!SaleCopy.pageOutcome(deltaCents: 35_000).localizedCaseInsensitiveContains("loss"))
+    }
+
+    /// The word and the colour must not disagree. `rowOutcome` and
+    /// `pageOutcome` re-derive the loss boundary with their own
+    /// `deltaCents < 0`, while the colour comes from `SaleOutcome.isLoss`
+    /// (breaking even is not a loss) — so the two are compared directly at
+    /// the boundary and either side of it.
+    @Test func theOutcomeWordAgreesWithTheColourRuleAtTheBoundary() {
+        let purchase = 120_000
+
+        for delta in [-1, 0, 1] {
+            let outcome = SaleOutcome(
+                salePriceCents: purchase + delta,
+                purchasePriceCents: purchase
+            )
+
+            #expect(SaleCopy.rowOutcome(deltaCents: delta).hasPrefix("Loss") == outcome.isLoss)
+            #expect(SaleCopy.pageOutcome(deltaCents: delta).contains("at a loss") == outcome.isLoss)
+        }
     }
 
     /// The date is the device's own abbreviated form — the detail's "Bought"
