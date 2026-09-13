@@ -770,6 +770,22 @@ struct ImportSchemaTests {
         }
     }
 
+    /// The pair rule's zero: `0.00` is a price, not a missing one — an item
+    /// given away is still sold, and `docs/csv-reference.md` documents it
+    /// ("`0` allowed (given away)") beside the negative amount, which is the
+    /// one figure that is unreadable. Mutation: reject zero in the pair rule
+    /// or in `cents(from:)` and all three expectations go red.
+    @Test func aZeroSalePriceImportsAsAnItemGivenAway() throws {
+        let preview = try ImportSchema.itemsPreview(
+            from: itemsFile([cells(["Sold Date": "2026-07-04", "Sale Price": "0.00"])]),
+            timeZone: utc()
+        )
+        let row = try #require(preview.validated.first)
+        #expect(preview.defaultedFieldCount == 0)
+        #expect(row.record.soldDate == ImportSchema.day(from: "2026-07-04", timeZone: utc()))
+        #expect(row.record.salePriceCents == 0)
+    }
+
     /// The sold row in full: both halves parse, so the other two cells come
     /// with them — and they come only with them. A dropped sale takes `Sold
     /// At` and `Sale Note` down with it rather than leaving an orphaned

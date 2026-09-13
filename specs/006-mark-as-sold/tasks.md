@@ -375,6 +375,25 @@ because the person will feel it before they read it.
   `ImportSchema.shaped` (a raw header reads 17). Verify (implementer's
   verbatim output): 1392 tests in 191 suites passed.
 
+- [x] **T007a — Phase 2 review fix (B1): the README clause.** README's new
+  bullet had promised a one-tap return; the spec's Return to collection
+  asks first, so it now says the item is returned after a confirmation
+  with its sale details removed. Folded from the same review: S1 a
+  zero-price row imports as a $0 sale (mutation `parsedPrice > 0` in the
+  pair rule → `ImportSchemaTests:784–786` red, reverted); S3 the
+  csv-reference rows for Sold At / Sale Note point at the ‡ pair rule.
+  Verify (implementer's verbatim output): 1393 tests in 191 suites passed.
+  Re-review: signed off. Carried: S2 nothing in the suite reads
+  `csv-reference.md` (a containment check on the column count and
+  boundaries would close it; sweep); S4 the 011 plan's italic pointer names
+  the old boundaries entry — name both at close-out (T020); S5 no sample
+  shows owned-then-sold write order (G28's list half at T009); **S6
+  README's Export bullet drifts at T009** ("filters and sort respected",
+  no sale columns) — T009's bundle names it; **S7 the person's attestation
+  at this pause covers criteria 12, 13 and the Settings half of 14, not
+  7a** (T009); S8 the import date expectations use `day(from:)` as their
+  own oracle, rescued by neighbours (sweep).
+
 ## Phase 3 — Design
 
 - [ ] **T008 — The Design pass. [person: invokes `/design`, approves]**
@@ -717,4 +736,8 @@ interpreted here.
 | T006 per-task review | opus (`skeptical-reviewer`) | 80,532 (9 tool uses — five targeted looks, stated) | signed off, nothing blocking; S1–S6 in the Done note |
 | T006 follow-up (S1) | opus (`sdd-implementer`, resumed) | 172,513 cumulative (~6k this round) | two comment-claimed mutations run and red |
 | T007 implement | opus (`sdd-implementer`, high effort) | 96,006 (31 tool uses, 7 min) | done first pass; both mutations red; README wording drawn from commit messages (bundle carried no user-facing description — a bundle gap, stated) |
+| Phase 2 review | opus (`skeptical-reviewer`) | 95,410 (15 tool uses — seven targeted looks, stated) | **one blocking** (B1: README's new sentence promised a one-tap return the spec forbids — the bundle carried no user-facing description, so the implementer worded it from commit messages) + S1–S8 |
+| T007a fix (B1, S1, S3) | opus (`sdd-implementer`, resumed) | 107,802 cumulative (~12k this round; 9 tool uses) | done; mutation red as reported |
+| Phase 2 re-review | opus (`skeptical-reviewer`, resumed) | 98,879 cumulative (~3.5k this round; 1 tool use) | **signed off**, no new blocking |
+| T008 brief | fable, medium (the session — transcription from spec, plan, `SaleCopy`, tokens) | — | `design/elements/006-mark-as-sold/brief.md` written; awaits the person's `/design` run |
 | _rows added per dispatch as the spec runs_ | | | |

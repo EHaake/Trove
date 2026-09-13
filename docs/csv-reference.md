@@ -57,8 +57,8 @@ short of any of those widths fails like any other mismatch.
 | 14 | `Year` | four digits, `1900` through next year | no year | no year † |
 | 15 | `Sold Date` | `2026-03-09` (`yyyy-MM-dd`) — the day you sold it | still owned | still owned ‡ |
 | 16 | `Sale Price` | plain number, e.g. `700.00` — what it sold for | still owned | still owned ‡ |
-| 17 | `Sold At` | text — who or where you sold it to | empty | — |
-| 18 | `Sale Note` | text | empty | — |
+| 17 | `Sold At` | text — who or where you sold it to | empty | kept only with the pair ‡ |
+| 18 | `Sale Note` | text | empty | kept only with the pair ‡ |
 
 † counted and shown in the confirmation as a field that will use a
 default. Blank optional fields (and a blank currency) import
