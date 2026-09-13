@@ -1,0 +1,439 @@
+# 006 — Mark as Sold
+
+**Status**: **Draft** (2026-09-13) — written with the person in this spec
+session; not yet approved.
+
+Authored in a Claude Code spec session of its own, per `CLAUDE.md`'s model
+policy (Fable 5.1, the session raised to high effort for the spec
+conversation). Every product decision below was made by the person and is
+listed in the Decisions record; the P-items are Claude Code's proposals and
+become decisions on plan approval, as `002`'s and `005`'s did.
+
+**Depends on**: `001-core-inventory` (`Item`, the item detail screen, the
+Dashboard and its figures, the Sell Plan), `003-trend-aware-sell-plan` (the
+Sell Plan rows this spec adds an action to), `010-item-management-enhancements`
+(the delete flow and its confirmation copy, which a sold item reuses),
+`011-data-export` and `012-data-import` (the append-only CSV schema this spec
+extends, and the parser that must accept the new columns), `013-settings-menu`
+(the Dashboard's "…" and the "bespoke in the page, system in the bars" rule
+that places the new action). It touches nothing in `002`'s network code and
+adds no outside service.
+
+## Summary
+
+Trove's Sell Plan helps you decide what you would sell to fund the next thing
+you want. Until now it stopped there: nothing in the app could record that you
+actually sold something. The only way an item left your collection was to
+delete it — photos, history and all. This feature adds **Mark as sold…**: a
+sold item leaves your collection and your totals but stays in the app, with
+the price, date and place of the sale, in a **Sold** list you reach from a new
+Dashboard card. A sale can be undone. The Sell Plan learns what was sold
+toward a wishlist item and says so, still without ever doing your arithmetic
+for you.
+
+## What and why
+
+The roadmap's `006-mark-as-sold` entry reads: "Real transaction tracking for
+the Sell Plan: marking a planned item as actually sold, removing it from
+inventory, a sale history. Deliberately excluded from `001` to keep the Sell
+Plan a decision-support tool rather than a ledger — worth revisiting once it's
+clear the decision-support version is actually useful day to day."
+
+It is. Three specs have built on the Sell Plan since `001`, and the gap it
+leaves is now the one a hobbyist meets first: gear does get sold, and the app
+offers only **Delete**, which is the wrong verb — it forgets the item, the
+photos, what was paid and what it fetched, and it silently drops the item from
+the plan it was sold for. What is wanted is the opposite: keep everything, and
+add the one fact the app never had, **what it actually sold for**.
+
+Two things this spec deliberately preserves from `001`:
+
+- **The Sell Plan stays a decision tool.** It gains a "Sold" figure beside
+  "Selected", and it still never subtracts anything from the estimated cost.
+  The framing decision `001` made — two figures side by side, a colour cue,
+  no gap, surplus or shortfall — holds unchanged (Decision 5).
+- **"Sold" is the person's word, not the market's.** `002` and `CLAUDE.md` say
+  no *market* sold price may ever appear in the app, because no source offers
+  one to a non-partner app. That rule is about Reverb's data and is untouched.
+  A sale price the person types in is their own record of their own
+  transaction — the first real "sold" number in the app, and the only kind
+  there will be.
+
+## Core behavior
+
+### Marking an item as sold
+
+- Any owned item offers **Mark as sold…** (Decision 4), from two places:
+  - the item detail screen's top-right menu, beside **Edit** and **Delete**;
+  - each row of a wishlist item's **Sell Plan**, since that is where the
+    decision to sell was made.
+  It is not on the Items list's swipe, which stays delete-only.
+- The action opens a **sale sheet** asking for (Decision 2):
+  - **Sale price** — required; pre-filled with the item's current value when
+    it has one, otherwise blank (P1);
+  - **Sold on** — the sale date; defaults to today; cannot be in the future
+    (P2);
+  - **Sold at** — where it sold, free text, optional (as the item's purchase
+    location is);
+  - **Note** — optional.
+  No fees, shipping or net-proceeds fields (Non-goals).
+- Confirming the sheet marks the item sold. The item's own fields — name,
+  category, what was paid, current value, desire to keep, condition, photos,
+  notes, market match — are left exactly as they were; the sale is recorded
+  alongside them, not in place of them (Decision 1).
+- **Sold from a Sell Plan row**, the sale also remembers **which wishlist item
+  it was sold toward** (Decision 5, P5). Sold from the detail screen, it
+  remembers no plan.
+
+### What "sold" does
+
+A sold item **leaves the collection and stays in the app** (Decision 1):
+
+- It is **gone from the Items list**, from every **Dashboard figure** — total
+  value, paid, the delta, the counts, the value ruler, the category breakdown
+  and the market line — and from **Sell Plan candidates**. Its cost leaves
+  "paid" with it: the collection figures describe what you own now, nothing
+  more.
+- It is **removed from every Sell Plan it was selected on** at the moment of
+  the sale (it can no longer be sold), the same way deletion drops it today —
+  but, when sold from a plan, the plan keeps the funding link described below
+  (P6).
+- Its **market figures on this device are cleared**, as deletion clears them
+  today, and it is no longer refreshed (Decision 7). A sold item has no market
+  value to track.
+- It **appears in the Sold list**, and its sale contributes to the Dashboard's
+  Sold card and to the Sell Plan it was sold toward.
+- It **stays out of the PDF export** and **appears in the CSV export** with its
+  sale columns filled (Decision 7; below).
+- It is **synced** like any item: the sale details are part of the person's
+  own data and travel to their other devices (P9).
+
+### The sold item's page
+
+- Tapping a Sold-list row opens the item's own detail screen in a **sold
+  state** (P4): a **Sold** mark at the top with the sale — price, date, place,
+  note — and the **gain or loss against what was paid**, then the item's
+  ordinary content below it, read-only. Its photos, notes and details remain
+  visible; a stock photo keeps its badge and credit.
+- The page offers exactly three actions (P4): **Edit sale…** (the sale sheet
+  again, pre-filled), **Return to collection…** (Decision 3), and **Delete**.
+  Editing the item's *own* fields while sold is not offered — return it to the
+  collection first.
+- **Return to collection…** asks first, because the sale details are
+  discarded: confirmed, the item reappears in the collection exactly as it
+  was, with no sale, at its former place in the custom order. It does not
+  rejoin any Sell Plan it had been on (P12).
+- **Delete** on a sold item uses the same confirmation as today's delete and
+  is just as permanent (Decision 3). Its message need not mention sell plans,
+  since a sold item is on none (P13).
+
+### The Sold list
+
+- Reached from the **Dashboard's Sold card** (Decision 6; below). Titled
+  **Sold**. Rows show the item's thumbnail, name, sold date, sale price, and
+  the gain or loss against what was paid, in the same quiet moss/rust tone
+  the Sell Plan and the detail screen already use for value-versus-cost.
+- Ordered **most recent sale first** (P3). No sorting, filtering or grouping in
+  this version (Non-goals).
+- The list opens with a short summary line — how many sold, total proceeds,
+  and the realised gain or loss — the same figures the Dashboard card shows.
+- An empty Sold list is unreachable from the Dashboard (the card hides when
+  nothing is sold), but the screen still has an empty state for the case
+  where the last sale is returned or deleted while it is open.
+
+### The Dashboard
+
+The person asked that the Dashboard take sales into account; this is the
+proposal, for reaction at the draft (P7, P8):
+
+- The collection figures are **unchanged in meaning** and simply exclude sold
+  items: total current value, paid and the delta still describe what you own
+  and reconcile exactly as `001` made them (value − paid = delta, valued items
+  only).
+- A new **Sold card** joins the Dashboard: a header **Sold**, the count and
+  the total proceeds ("3 items · $2,400"), and the **realised gain or loss** —
+  proceeds minus what was paid for those items ("+$350 vs paid"), in the
+  moss/rust tone. Tapping it opens the Sold list. The card **hides entirely
+  when nothing in scope has been sold**, so an existing install sees no
+  change until its first sale.
+- The card **follows the Dashboard's scope**: on the root it covers every
+  sale; drilled into a category it covers sales in that category, hiding when
+  there are none.
+- Sold money and collection money are **never added together** anywhere on
+  the Dashboard: the card sits apart from the totals, and no "lifetime" or
+  "net position" figure combines them (Non-goals).
+- The market line is unaffected except that sold items no longer count toward
+  it.
+
+### The Sell Plan
+
+- Each Sell Plan row of a candidate gains **Mark as sold…** (Decision 4);
+  marking it sold from here records the plan's wishlist item on the sale (P5)
+  and removes the item from the candidates, since a sold item cannot be sold.
+- The plan's header gains a **Sold** figure beside **Selected** and
+  **Estimated cost** — the total of sales recorded toward this wishlist item,
+  captioned with the count ("2 items") — shown only once at least one sale
+  points at the plan (Decision 5). As `001` settled: three figures side by
+  side, **nothing subtracted from the cost**, no gap, surplus or shortfall
+  (Decision 5); the existing colour cue is unchanged in meaning and now reads
+  from **Selected plus Sold** against the cost, so a plan whose sales alone
+  meet the cost reads as met (P14).
+- The sold items themselves are listed under the plan's candidates in a
+  short **Sold** section — name, date, price — so the plan reads as a
+  record of what was actually done toward it, not only what might be (P15).
+- Deleting the wishlist item leaves its sales standing; they simply no longer
+  point at a plan (P10). Buying the wishlist item, or turning it into an owned
+  item, is a different feature (Non-goals).
+
+### Exports and import
+
+- **CSV** (Decision 7): three columns are **appended** to the items CSV, in
+  this order, after `Year`: **Sold Date**, **Sale Price**, **Sold At** — and a
+  fourth, **Sale Note**. They are blank for an unsold item and filled for a
+  sold one, so an export of items **includes sold items** and is a complete
+  record. The wishlist CSV is unchanged. The columns follow `011`'s schema
+  rules exactly: appended at the end, never renamed or reordered, money and
+  dates in the schema's existing formats, and the shipped-layout boundary
+  recorded so an older file still imports as a prefix.
+- **Import** (`012`) accepts the new columns: a row with a sold date and a
+  sale price imports as a **sold item**; a row with neither imports as before;
+  a row with one but not the other imports as **unsold**, and the dropped sale
+  is a **counted default** in the import report, per `012`'s skip-and-report
+  rules (P11). The Sold At and Sale Note columns without a date and price are
+  ignored the same way. A sale imported from CSV points at no plan.
+- **PDF** (Decision 7): the collection document describes what you own and
+  **leaves sold items out**. A sold-items document is not part of this spec
+  (Non-goals). The PDF's cover totals therefore match the Dashboard's
+  collection figures, as they do today.
+- `docs/csv-reference.md` and the sample files gain the new columns.
+
+### Privacy and sync
+
+- **Nothing new leaves the device.** No outside service is involved; there is
+  no notice, and `PRIVACY.md` needs no new service entry. If its description of
+  what the app stores enumerates item fields, it gains the sale details (P9).
+- **Sale details sync** with the item, like every other item field — they are
+  the person's own data — and, like every item field, are included in the CSV
+  export and the "export everything" pair in Settings.
+
+## Copy
+
+Proposed wording; the exact strings are settled at the copy task and join this
+section on plan approval (P8).
+
+- The action: **Mark as sold…** — in the detail's top-right menu (with a
+  "tag"-style symbol beside Edit's pencil and Delete's trash) and on each Sell
+  Plan row.
+- The sale sheet: title **Mark as sold**; fields **Sale price**, **Sold on**,
+  **Sold at** (placeholder "eBay, Reverb, a friend…"), **Note**; buttons
+  **Cancel** and **Mark as sold**. Reopened for editing, the title is **Edit
+  sale** and the confirm button **Save**.
+- The sold mark on the item's page: **Sold** with the sale in one line, "Sold
+  12 Sep 2026 · $1,200 · eBay", and beneath it the comparison, "+$350 vs paid"
+  or "−$150 vs paid".
+- The page's actions: **Edit sale…**, **Return to collection…**, **Delete**.
+- The return confirmation: "Return {name} to your collection? Its sale details
+  will be removed." with **Return** and **Keep as sold**.
+- The Dashboard card: header **Sold**; "3 items · $2,400"; "+$350 vs paid".
+- The Sold list: title **Sold**; summary "3 sold · $2,400 · +$350 vs paid";
+  empty state "Nothing sold yet. Mark an item as sold from its page or from a
+  sell plan."
+- The Sell Plan: the third figure's header **Sold**, captioned "2 items"; the
+  section beneath the candidates titled **Sold**.
+- Sell Plan row action: **Mark as sold…**.
+
+## Design requirements
+
+- A **Design pass, in-session with the `design` skill** (the pattern `002` and
+  `005` used), for the genuinely new surfaces: the **Sold card** on the
+  Dashboard (it must sit apart from the collection totals and read as a
+  separate ledger, not a fourth headline figure), the **Sold list** row and
+  summary, the **sold state** of the item detail screen (the Sold mark and
+  sale line at the top of a page whose rest is the familiar detail), and the
+  Sell Plan's **third figure and Sold section**. The design brief's rules
+  apply; no rendered materials; the app's own type and tokens.
+- The **sale sheet** is a form in the app's existing form style (the item
+  form's fields, the money field's formatting, the date picker the item form
+  uses for the purchase date).
+- **System in the bars, bespoke in the page** (`013`): **Mark as sold…** joins
+  the detail's system menu, which is the app's one system `Menu`; the Sell Plan
+  row's action is a bespoke in-page control in the row's own style; the return
+  confirmation and the delete confirmation are standard alerts (two-choice
+  questions).
+- Gain-or-loss figures use the **same moss/rust cue** the app already uses for
+  value against cost — never a new colour, never red/green.
+- The Dashboard card **hides rather than shows zero**, matching how the
+  Dashboard already treats an unpriced collection.
+- Every action is one tap plus, where something is discarded, one
+  confirmation.
+
+## Acceptance criteria
+
+1. [ ] An owned item's detail screen offers **Mark as sold…** in its top-right
+   menu beside Edit and Delete; the Items list's swipe does not offer it.
+2. [ ] The sale sheet requires a sale price (pre-filled with the current value
+   when the item has one), defaults the date to today and refuses a future
+   date, and takes an optional place and note. Cancel records nothing.
+3. [ ] Confirming the sheet marks the item sold with those details; the item's
+   own fields and photos are unchanged.
+4. [ ] A sold item no longer appears in the Items list, in any Dashboard
+   figure (value, paid, delta, counts, ruler, category breakdown, market
+   line), or among any Sell Plan's candidates, and is removed from every plan
+   it was selected on.
+5. [ ] A sold item's device-local market figures are cleared on the sale and
+   it is not refreshed afterwards.
+6. [ ] The Dashboard shows a **Sold** card — count, total proceeds, realised
+   gain or loss against what was paid — only when something in scope has been
+   sold; it follows the category scope; tapping it opens the Sold list. The
+   collection figures exclude sold items and still reconcile (value − paid =
+   delta over valued items).
+7. [ ] The Sold list shows every sold item, most recent sale first, each row
+   with name, sold date, sale price and gain or loss; its summary line matches
+   the card; the empty state shows when the last sale is removed.
+8. [ ] A sold item's page shows the Sold mark, the sale details and the
+   comparison against what was paid, with the item's content read-only
+   beneath; it offers exactly **Edit sale…**, **Return to collection…** and
+   **Delete**.
+9. [ ] **Edit sale…** changes the sale details in place; **Return to
+   collection…** asks first, then restores the item to the collection with no
+   sale and at its former order position, on no Sell Plan; **Delete** confirms
+   and deletes permanently, photos included.
+10. [ ] A Sell Plan row offers **Mark as sold…**; sold from there, the sale
+    points at that wishlist item, and the plan shows a **Sold** figure beside
+    Selected and Estimated cost with the count, plus a Sold section listing
+    the sale — with nothing subtracted from the cost anywhere on the screen.
+    The colour cue reads Selected plus Sold against the cost.
+11. [ ] Sold from the detail screen, a sale points at no plan; deleting a
+    wishlist item leaves its sales standing.
+12. [ ] The items CSV export carries four appended columns — Sold Date, Sale
+    Price, Sold At, Sale Note — blank for unsold items and filled for sold
+    ones, so sold items are included; the wishlist CSV is unchanged; an
+    export from before this spec still imports as a prefix.
+13. [ ] Import creates a sold item from a row with both a sold date and a sale
+    price, an unsold item from a row with neither, and an unsold item with a
+    counted default from a row with only one; an imported sale points at no
+    plan.
+14. [ ] The PDF export leaves sold items out and its cover totals match the
+    Dashboard's collection figures.
+15. [ ] Sale details sync with the item to a second device signed into the
+    same iCloud account (attested by the person, or recorded as an honest
+    partial as `005` did).
+16. [ ] VoiceOver: **Mark as sold…**, the Sold card, each Sold-list row, the
+    sold mark and the sale line, and the Sell Plan's Sold figure are labelled;
+    a sold item is announced as sold with its price and date.
+
+## Decisions record
+
+Made by the person, 2026-09-13, in this spec conversation:
+
+1. **A sold item stays in the app and leaves the collection.** It disappears
+   from the Items list, every Dashboard figure, Sell Plan candidates and the
+   collection exports, and keeps its photos, notes, details and history in a
+   Sold list. Chosen over "delete it and keep a small sale record", which
+   would lose the photos and make a mistaken sale unrecoverable.
+2. **A sale records price, date, place and an optional note.** Price defaults
+   to the current value, date to today. No fees or shipping in this version.
+3. **A sale can be undone, and a sold item can be deleted.** Return to
+   collection restores the item exactly as it was; Delete keeps today's
+   confirmation and permanence.
+4. **Mark as sold… lives in the detail's top-right menu and on Sell Plan
+   rows.** Not on the Items list's swipe, which stays delete-only.
+5. **The Sell Plan learns what was sold toward it, and still subtracts
+   nothing.** A sale sold from a plan remembers that wishlist item; the plan
+   shows a Sold figure beside Selected. `001`'s no-arithmetic framing holds.
+   Buying the wishlist item with the proceeds is a separate feature.
+6. **A Dashboard card opens the Sold list.** "N sold · $X realised", following
+   the roadmap's own reasoning (`009`) that a new place to be is a card, not a
+   fourth tab. Rows show name, date, price and gain or loss. These are the
+   only places sold money appears.
+7. **Exports and market data.** Sale columns are appended to the items CSV so
+   a full export includes sold items and round-trips through import; the PDF
+   stays a document of what you own; a sold item's market figures are cleared
+   on this device as deletion clears them today.
+8. **The Dashboard takes sales into account** — the person asked for this to
+   be considered; the shape (the Sold card apart from the collection totals,
+   scoped, hidden at zero, sold money never combined with collection money) is
+   proposed at P7 and confirmed or amended when the person approves the Draft.
+
+Proposed at drafting, 2026-09-13, by Claude Code (these become decisions on
+plan approval):
+
+- **P1. Sale price is required.** Pre-filled with the current value when the
+  item has one; blank and required otherwise, because a sale without a price
+  is the one fact this feature exists to record.
+- **P2. The sale date cannot be in the future.** Any past date is allowed,
+  including before the purchase date (data entry is the person's; the app
+  does not second-guess it). Default: today.
+- **P3. The Sold list is ordered most recent sale first**, with no sort or
+  filter controls in this version.
+- **P4. A sold item's page is the existing detail screen in a sold state**,
+  read-only beneath a Sold mark, with exactly three actions: Edit sale…,
+  Return to collection…, Delete. Editing the item's own fields while sold is
+  not offered.
+- **P5. A sale points at a wishlist item only when sold from that item's Sell
+  Plan.** Sold from the detail screen, it points at none; there is no picker
+  to attach a plan after the fact.
+- **P6. Marking sold removes the item from every plan's selection**, exactly
+  as deletion does today; the funding link is a separate fact on the sale,
+  not a selection.
+- **P7. The Sold card** — header, count and proceeds, realised gain or loss —
+  sits apart from the collection totals, follows the Dashboard's scope, and
+  hides when nothing in scope is sold.
+- **P8. Copy this spec doesn't fix is settled at the copy and design tasks**
+  and joins the Copy section on plan approval.
+- **P9. Sale details are item data**: they sync, they export, nothing leaves
+  the device, and `PRIVACY.md` changes only if it enumerates stored item
+  fields.
+- **P10. Deleting a wishlist item leaves its sales standing**, pointing at no
+  plan.
+- **P11. Import treats a sale as a pair**: a sold date and a sale price
+  together make a sold item; either alone is dropped as a counted default and
+  the item imports unsold.
+- **P12. Returning an item to the collection does not rejoin any Sell Plan.**
+  The selections it was removed from at the sale are not remembered.
+- **P13. The delete confirmation for a sold item omits the sell-plan
+  sentence** — a sold item is on no plan — and keeps the rest.
+- **P14. The Sell Plan's colour cue reads Selected plus Sold against the
+  cost.** Still a boolean cue, still no figure; a plan funded by sales alone
+  reads as met.
+- **P15. The Sell Plan lists the sales made toward it** in a short Sold
+  section under the candidates — name, date, price — so the plan is a record
+  of what was done as well as what might be.
+
+## Non-goals (explicit)
+
+- **Fees, shipping, or net proceeds** — a single sale price, nothing deducted
+  (Decision 2).
+- **Buying the wishlist item**, turning a wishlist item into an owned item, or
+  any "acquired" tracking — a separate feature (Decision 5).
+- **Any figure that combines sold money with collection money** — no
+  lifetime, net-position or "total ever spent" figure on the Dashboard.
+- **Sales over time** — no chart, no year filter, no grouping; the Sold list is
+  a flat, dated list. A natural follow-up once there is history to show.
+- **Sorting, filtering or searching the Sold list**, or showing sold items in
+  the Items list behind a filter.
+- **A sold-items PDF**, or sold items in the collection PDF (Decision 7).
+- **Multiple sales per item, quantities, or partial sales** — an item is sold
+  once, whole.
+- **Editing an item's own fields while it is sold** — return it first (P4).
+- **Attaching a sale to a plan after the fact** (P5).
+- **Recovering a deleted sold item** — Delete stays permanent; a recycle bin
+  remains `010`'s deferral.
+- **Any market "sold" figure** — `002`'s rule stands; the only sold price in
+  the app is the one the person types.
+- **Listing management** — posting to eBay or Reverb, tracking a listing's
+  status, or anything before the sale itself.
+- **Currencies other than USD** — the app is single-currency; the sale price
+  is in the item's currency.
+
+## Inherited caveats
+
+- `001`'s fixed type sizes apply to the new surfaces.
+- The app is USD-only and single-region; nothing here changes that.
+- `011`'s append-only CSV rule governs the new columns; `012`'s
+  skip-and-report rules govern their import.
+- `013`'s "system in the bars, bespoke in the page" rule places the action.
+- A UI test that needs sold items starts from a seeded in-memory store under
+  its own launch argument, per `CLAUDE.md`'s amended `-uiTesting` rule
+  (`003`'s pattern); the flag alone keeps starting from an empty collection.
+- `010`'s "no recycle bin" deferral stands: a deleted sold item is gone.
