@@ -966,12 +966,17 @@ struct SettingsViewModelMarketRefreshTests {
         context.insert(Item(name: "Telecaster", sortOrder: 0, reverbProductID: 111))
         context.insert(Item(name: "Amp", sortOrder: 1, reverbProductID: 222))
         context.insert(Item(name: "Pedal", sortOrder: 2))
+        // 006/G8: matched but sold — no market value to track, so the count
+        // and the walk both pass it by, through the one definition.
+        let sold = Item(name: "Jazzmaster", sortOrder: 3, reverbProductID: 333)
+        sold.sale = Sale(date: Date(timeIntervalSince1970: 1_770_000_000), priceCents: 130_000, location: nil, note: nil)
+        context.insert(sold)
         context.insert(WishlistItem(name: "D-18", sortOrder: 0, reverbProductID: 444))
         context.insert(WishlistItem(name: "Pedal Steel", sortOrder: 1))
         try context.save()
         viewModel.load()
 
-        #expect(viewModel.matchedCount == 3, "the count misses one of the two lists")
+        #expect(viewModel.matchedCount == 3, "the count misses one of the two lists, or counts a sold item")
         #expect(viewModel.canRefreshMarketValues)
     }
 }

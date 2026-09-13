@@ -110,8 +110,13 @@ final class MarketRefresher {
 
     /// Every matched item, owned first in custom order, then wanted — the
     /// one definition of "matched" (Settings counts through it too).
+    ///
+    /// A sold item is never a target (006, Decision 7): it has no market
+    /// value to track, so it drops out of the walk and out of Settings'
+    /// count. The predicate reads `soldDate`, not the match, which is kept —
+    /// so returning the item to the collection resumes refreshing it.
     static func targets(in context: ModelContext) throws -> [MarketRefreshTarget] {
-        let items = try context.fetch(FetchDescriptor<Item>(predicate: #Predicate { $0.reverbProductID != nil }))
+        let items = try context.fetch(FetchDescriptor<Item>(predicate: #Predicate { $0.reverbProductID != nil && $0.soldDate == nil }))
             .sorted(by: ManualOrderHelper.areInCustomOrder)
         let wanted = try context.fetch(FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.reverbProductID != nil }))
             .sorted(by: ManualOrderHelper.areInCustomOrder)

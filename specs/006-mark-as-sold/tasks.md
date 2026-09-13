@@ -162,7 +162,7 @@ because the person will feel it before they read it.
   correction for later dispatches: the currency formatters live in
   `Trove/Extensions/Int+Currency.swift`, not `Money.swift`.
 
-- [ ] **T003 — `ItemSaleStore`, and the refresher's exclusion. `review: per-task`.**
+- [x] **T003 — `ItemSaleStore`, and the refresher's exclusion. `review: per-task`.**
   Per plan §2 and Q3, Q8, Q13. New `Trove/Models/ItemSaleStore.swift` with
   `markSold(_:sale:toward:at:in:)` (sets `sale`, sets the link iff a plan is
   passed, empties `plannedForWishlistItems`, `MarketLocalStore.clear`,
@@ -185,6 +185,23 @@ because the person will feel it before they read it.
   `SettingsViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every mutation
   recorded.
+  **Done (2026-09-13):** `ItemSaleStore` in the `MarketLocalStore` shape
+  (callers save); `markSold` runs the throwing market clear first so a
+  failure leaves the item unwritten. Mutations, each red then reverted: G4
+  (drop the emptying → `ItemSaleStoreTests:67`), G5 (drop the clear → :92),
+  G6 (ignore `toward:` → :118), G7 (return resets `sortOrder` → :287, the
+  Custom slot order wrong), G8 (drop the clause → `MarketRefresherTests:219`
+  and `SettingsViewModelTests:979`, count 4 ≠ 3), G9 (date alone → :200),
+  G20 (clear the match → :173), G21 (edit nils the link → :226), the
+  T001-review setter test (value branch clearing the link → :248), Q13
+  (drop the bump on return → :311). Verify (orchestrator re-run): 1358
+  tests in 189 suites passed. Per-task review signed off, nothing blocking;
+  notes carried: S1 the link assignment is unconditional (no reachable
+  caller marks an already-linked item; a docstring word, sweep); S2/S3 the
+  G7 and G9 tests lean on `ModelTests` for "all five cleared" and the pair
+  round trip; S4 the reviewer's "criterion 11's second half has no guard"
+  is already T001's G3 (`WishlistDeletionTests:123`); S5 `MarketLocalStore
+  .clear`'s partial-throw window is pre-existing and unreachable.
 
 - [ ] **T004 — `SaleFormViewModel`.**
   Per plan §5 and Q12. New `Trove/ViewModels/SaleFormViewModel.swift`
@@ -609,4 +626,6 @@ interpreted here.
 | T001 implement | opus (`sdd-implementer`, high effort) | 94,964 (42 tool uses, 12 min) | done first pass; five mutations + the CloudKit red run reported red; read beyond the bundle: `TestSupport.swift`, `verify.sh`, `WishlistViewModel.delete(id:)`, `Money.swift`, `PhotoSelection.swift` |
 | T001 per-task review | opus (`skeptical-reviewer`) | 42,123 (1 tool use — bundle only) | signed off, nothing blocking; S1–S4 recorded in the Done note |
 | T002 implement | opus (`sdd-implementer`, high effort) | 66,901 (20 tool uses, 6 min) | done first pass; G17 red as reported; one mechanical edit outside the named files (`DeleteAllCopyTests`); bundle miss: named `Money.swift` for formatters that live in `Int+Currency.swift` |
+| T003 implement | opus (`sdd-implementer`, high effort) | 85,496 (40 tool uses, 13 min) | done first pass; ten mutations red as reported; bundle miss (orchestrator): the task-line excerpt was cut by line number after T001's Done note shifted the file, so it quoted T002 — extraction is anchor-based from here on |
+| T003 per-task review | opus (`skeptical-reviewer`) | 49,906 (5 tool uses — four targeted looks, stated) | signed off, nothing blocking; S1–S5 in the Done note |
 | _rows added per dispatch as the spec runs_ | | | |
