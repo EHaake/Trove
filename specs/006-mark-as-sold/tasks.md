@@ -1,0 +1,513 @@
+# 006 — Mark as Sold: Tasks
+
+**Status**: Draft — pending sign-off
+
+Drafted against the approved `spec.md` (Approved 2026-09-13) and the draft
+`plan.md` in this directory, for branch `006-mark-as-sold` off `main`
+(`465e733`). No new technical decisions are made here — every call below
+traces to a plan section; where a task says "per plan," that section is the
+authority. Runs under **experiment 1**: the planner and the sign-off at
+`fable`, the `skeptical-reviewer` on phase and marked-task reviews and the
+`sdd-implementer` at `opus`, the session at `fable` medium; the tier log
+records what actually ran.
+
+**Foundational phases**: **Phase 1** (T001–T005) — the schema change, the one
+writer, the copy, the sale form's logic and the router request that every
+screen builds on; and **Phase 2** (T006–T007) — the CSV contract, which
+import, both exports and the docs inherit. **Tasks marked `review:
+per-task`**: **T001** (the `Item` schema change — every reader inherits the
+sold predicate and the relationship), **T003** (`ItemSaleStore` — the one
+writer every entry point, the Sell Plan and the market exclusion depend on)
+and **T006** (the append-only CSV schema and the import pair rule — a mistake
+here corrupts files the person keeps). Every other task gets the default one
+review per phase. An orchestrator left to guess guesses "all of them" — these
+three are the ones marked.
+
+Ordering note, recorded up front: the schema lands first and is proven
+CloudKit-compatible before any code reads the new fields; the writer, the
+copy, the form logic and the router follow bottom-up, then the CSV contract —
+data-layer only, so import round-trips a sale before a single screen shows
+one. Nothing user-visible lands until the Design pass (T008) has approved
+visuals for the six new surfaces. View models come before the views that read
+them (Phase 4 before Phase 5); the shared sale sheet (T013) lands before the
+two screens that host it; the seed and UI tests close the screens phase.
+Tasks marked **[person]** block on something only the person has.
+
+House rules carried over: one commit per completed task, referencing the task
+ID; every guard test is **mutation-verified** (break the rule deliberately,
+confirm red) before it lands, and the Done note records what was broken and
+what went red; a task is not done until `scripts/verify.sh` is green and its
+actual output is reported (suite-level `-only-testing`, test count checked —
+per-function selectors run zero tests and report success); persisted-state
+assertions refetch on a **second `ModelContext`**. Every new file lands
+through the synchronized root groups — **no `.pbxproj` edit** anywhere in
+this spec; if one is ever needed, stop and flag. **No test opens a network
+connection** (nothing here needs one).
+
+Cadence (per `CLAUDE.md`'s model policy, as amended for experiment 1): each
+dispatch gets a **task bundle** assembled with shell — task line, plan
+section, acceptance criteria, files, pattern file — and the implementer is
+told not to read `plan.md`/`spec.md`/`tasks.md` in full; verification is
+`scripts/verify.sh` and nothing more verbose, re-run by the orchestrator for
+the three `review: per-task` tasks and taken from the implementer's verbatim
+output otherwise; the `skeptical-reviewer` reviews per phase (and the three
+marked tasks), one review and at most one re-review each, on a bundle cut
+after `git add -A`; **one implementation session for the whole spec** — a
+phase pause is a pause in it, the person attests and says continue, and only
+a session-ending pause gets a continuation prompt; the device pass runs in a
+`general-purpose` agent at the implementation tier (the `sdd-implementer` has
+no simulator tools). Everything the person reads is plain language.
+
+## Phase 1 — Foundations, no UI (**foundational**)
+
+- [ ] **T001 — The sale on `Item`: four fields, the relationship, `Sale`. `review: per-task`.**
+  Per plan §1 and Q1–Q2. Add `soldDate`, `salePriceCents`, `saleLocation`,
+  `saleNote` and `soldTowardWishlistItem` to `Item` (after `year`, every one
+  optional; the relationship `.nullify` with `inverse:` on the `Item` side)
+  and `itemsSoldToward: [Item]? = []` to `WishlistItem`; new
+  `Trove/Models/Sale.swift` with `Sale`, `SaleOutcome`, `Item.isSold`,
+  `Item.sale` (get/set; set nil clears the four and the link), `Item.saleOutcome`.
+  Pattern: `Photo`'s 005 fields and `Item.plannedForWishlistItems`. Tests:
+  `ModelTests` (an owned item's `sale` is nil; a built sale round-trips all
+  four through a second context; `sale = nil` clears the link — G2; the
+  date-without-price branch reads price 0, recorded as defensive);
+  `WishlistDeletionTests` (deleting the wanted item leaves the sale, link nil
+  — G3). **CloudKit red run**: `soldDate` declared non-optional without a
+  default → `CloudKitSchemaTests` names it → revert (G1).
+  Files: `Trove/Models/Item.swift`, `WishlistItem.swift`, `Sale.swift` (new),
+  `TroveTests/ModelTests.swift`, `WishlistDeletionTests.swift`.
+  **Verify:** `scripts/verify.sh` green (orchestrator re-runs); the red run and
+  the G2/G3 mutations recorded in the Done note.
+
+- [ ] **T002 — `SaleCopy`, and the sold delete message.**
+  Per plan Q11 and §5 (`ItemDeleteCopy`). New `Trove/Models/SaleCopy.swift`
+  (`nonisolated enum`): every string in the spec's Copy section — the action
+  labels (`markAsSold`, `editSale`, `returnToCollection`), the sheet titles
+  and buttons by mode, field labels and the "Sold at" placeholder, the
+  return alert's title/message/buttons, the switch's two words, the empty
+  state, the card header, the Sell Plan headers — and the composed lines:
+  `dashboardSummary(count:proceedsCents:)`, `realised(deltaCents:)`,
+  `soldSideSummary(count:proceedsCents:deltaCents:)`, `rowOutcome(deltaCents:)`,
+  `pageOutcome(deltaCents:)`, `saleLine(_ sale: Sale)` (place omitted when
+  nil; date `.abbreviated`). `ItemDeleteCopy.message` → `message(isSold:)`
+  (owned = today's string verbatim; sold omits the sell-plan sentence, P13);
+  the two call sites updated mechanically. Pattern: `StockPhotoCopy` and
+  `StockPhotoCopyTests` (every string pinned whole). Tests: `SaleCopyTests`
+  (each composed line at a gain, a loss and zero — "Gain $350", "Loss $150",
+  "Sold at cost", "+$0 vs paid"; the sale line with and without a place —
+  the two outcome strings are placeholders T008 may reshape, plan Q11);
+  `ItemDeleteCopyTests` gains the sold case (G17; mutation: reuse the owned
+  message → red). `DeletionGuardTests`' two item scans stay green on the
+  `ItemDeleteCopy.message(isSold:` call.
+  Files: `Trove/Models/SaleCopy.swift` (new), `ItemDeleteCopy.swift`,
+  `Trove/Views/Items/ItemListView.swift` + `ItemDetailView.swift` (call sites
+  only), `TroveTests/SaleCopyTests.swift` (new), `ItemDeleteCopyTests.swift`.
+  **Verify:** `scripts/verify.sh` green; the G17 mutation recorded.
+
+- [ ] **T003 — `ItemSaleStore`, and the refresher's exclusion. `review: per-task`.**
+  Per plan §2 and Q3, Q8, Q13. New `Trove/Models/ItemSaleStore.swift` with
+  `markSold(_:sale:toward:at:in:)` (sets `sale`, sets the link iff a plan is
+  passed, empties `plannedForWishlistItems`, `MarketLocalStore.clear`,
+  `updatedAt`; never touches `sortOrder` or the match), `editSale(_:sale:at:)`,
+  `returnToCollection(_:at:)`. `MarketRefresher.targets(in:)` adds
+  `soldDate == nil` to the owned predicate. Pattern: `MarketLocalStore`
+  (callers save). New `ItemSaleStoreTests`, second-context throughout: G4
+  (selection dropped, the wanted item survives — mutation: drop the
+  emptying), G5 (this item's market rows gone, another's kept — mutation:
+  drop the clear), G6 (link only with a plan), G7 (mark then return leaves
+  `sortOrder` equal and the item in its Custom slot among three others —
+  mutation: reset `sortOrder` on return), G9 (date and price always written
+  together), G20 (name, category, paid, value, desire, condition, photos,
+  notes and `reverbProductID` unchanged across mark — mutation: clear the
+  match), G21 (edit keeps the link); `MarketRefresherTests` gains G8 (a sold
+  matched item is not a target; `SettingsViewModelTests`' `matchedCount`
+  follows — mutation: drop the clause).
+  Files: `Trove/Models/ItemSaleStore.swift` (new), `Trove/Market/MarketRefresher.swift`,
+  `TroveTests/ItemSaleStoreTests.swift` (new), `MarketRefresherTests.swift`,
+  `SettingsViewModelTests.swift`.
+  **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every mutation
+  recorded.
+
+- [ ] **T004 — `SaleFormViewModel`.**
+  Per plan §5 and Q12. New `Trove/ViewModels/SaleFormViewModel.swift`
+  (`@Observable`, no SwiftUI): `Mode`, `price: Decimal?`, `date`, `location`,
+  `note`, `validationErrors`, `title`/`confirmLabel` from `SaleCopy`,
+  `latestDate`, `init(mode:prefill:currentValueCents:now:)`, `sale() -> Sale?`
+  (`Money.cents(from:)`; blanks nil'd through `FieldNormalization`). Pattern:
+  `ItemFormViewModel` (the price rules, `validate()`, `populate`). New
+  `SaleFormViewModelTests`: G18 (blank → `.priceMissing`; negative →
+  `.priceNegative`; zero accepted; `now + 1 s` → `.dateInFuture`; a date years
+  before "purchase" accepted — mutation: `<` for `<=` in the date check, and
+  the check dropped, both red), G19 (`.mark` prefills the current value and
+  today; blank price without a value; `.edit` prefills every field of the
+  sale — mutation: seed the price from the sale in `.mark` → red); `sale()`
+  trims and nils blank location/note.
+  Files: `Trove/ViewModels/SaleFormViewModel.swift` (new),
+  `TroveTests/SaleFormViewModelTests.swift` (new).
+  **Verify:** `scripts/verify.sh` green; mutations recorded.
+
+- [ ] **T005 — The router's sold request, and the Sold side's empty reason.**
+  Per plan §4 and Q4, Q9. `AppRouter.ItemsRequest.sold`, `showSoldItems()`
+  (request + `popToItemsRoot()`); `ListEmptyReason.nothingSold`. Pattern:
+  `showItems(inCategory:)`, `ListEmptyReason.everythingIsValued`. Tests:
+  `AppRouterTests` (`showSoldItems` sets `.sold`, selects Items, empties the
+  path; `clearItemsRequest` clears it; `showItem` clears a pending `.sold`);
+  `ListEmptyReasonTests` (the new case is distinct from every other and never
+  returned by `reason(...)` — it is the Sold side's own).
+  Files: `Trove/ViewModels/AppRouter.swift`, `Trove/Models/ListEmptyReason.swift`,
+  `TroveTests/AppRouterTests.swift`, `ListEmptyReasonTests.swift`.
+  **Verify:** `scripts/verify.sh` green. **Phase 1 closes here — pause for
+  the person** (nothing to try yet; the pause is the review gate).
+
+## Phase 2 — The CSV contract and import (**foundational**)
+
+- [ ] **T006 — Four appended columns, the boundary, the pair rule, the commit. `review: per-task`.**
+  Per plan §7 and Q5 (records/Settings split), Q6/R3. `ItemExportRecord`
+  gains the four sale fields (from `item.sale` in `init(item:)`);
+  `ExportSchema.itemHeaders` += `Sold Date`, `Sale Price`, `Sold At`, `Sale
+  Note`; `itemSchemaBoundaries = [12, 14]`; `row(from:)` writes the four
+  (blank when nil). `ImportSchema.itemsPreview`: the four columns, the pair
+  rule, one counted default per dropped sale. `ItemListViewModel.confirmImport`
+  sets `item.sale` when the record carries the pair (no plan).
+  `SettingsViewModel.everythingInCustomOrder` → `(owned, sold, wanted)`;
+  `exportEverythingAsCSV` writes owned then sold in Sold-side order
+  (`ItemListViewModel.areInSoldOrder`, added here as a static beside
+  `documentTitle`); `exportEverythingAsPDF` uses owned only. Pattern: 002's
+  T016a (`Reverb Product ID`/`Year` — the last append) and its tests. Tests:
+  `ExportSchemaTests` G24 (headers and `[12, 14]` by literal), G25 (owned
+  blank, sold filled — mutation: write the price for owned); `ImportSchemaTests`
+  G26 (18/14/12 accepted, 13 and 17 refused — mutation: accept any prefix),
+  G27 (five cases, counts 0/1/1/0/1, plus a date-unreadable-with-price row
+  counting 1 — mutation: count per cell → 2 → red; and a lone half accepted
+  → the unsold assertion red), a sold row round-trips to `Item.sale`;
+  `ImportServiceTests`/`ItemListViewModelTests`: the commit sets the sale and
+  no link; `SettingsViewModelTests` G28 (Settings CSV bytes == the unfiltered
+  Custom list CSV with a sale present — the list half arrives at T009, so
+  this half pins Settings' own order now and the equality test is completed
+  at T009) and G16 (the everything-PDF's `itemCount`/totals exclude the sold
+  item — mutation: pass all items → red).
+  Files: `Trove/Export/ExportSchema.swift`, `Trove/Import/ImportSchema.swift`,
+  `Trove/ViewModels/ItemListViewModel.swift` (`confirmImport` + the static
+  comparator only), `Trove/ViewModels/SettingsViewModel.swift`,
+  `TroveTests/ExportSchemaTests.swift`, `ImportSchemaTests.swift`,
+  `ImportServiceTests.swift`, `SettingsViewModelTests.swift`,
+  `ItemListViewModelTests.swift`.
+  **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every mutation
+  recorded.
+
+- [ ] **T007 — Docs, samples, the 011 schema section, `PRIVACY.md`.**
+  Per plan §7 (docs) and §9. `docs/csv-reference.md` (18 columns, four new
+  table rows, the legacy widths 12 and 14, the pair rule in "Field formats");
+  `docs/samples/items-full.csv` gains the four columns with two rows sold
+  (one gain, one loss) and `docs/samples/README.md` says which;
+  `items-partial.csv` untouched at 12; `items-resaved.csv` **left at 14
+  deliberately** and named in the README as the 14-boundary fixture;
+  `specs/011-data-export/plan.md` §"The canonical CSV schema": the italic
+  note under the heading names 006's columns, and one bullet appended to
+  "Recorded schema decisions" (columns, pair rule, `[12, 14]`) — nothing
+  above it edited. `PRIVACY.md`'s first storage row gains the sale details
+  (P9); README's feature list gains one sentence. Pattern: 002's T016a docs
+  commit. Tests: `DocsSampleTests` G30 (`items-full.csv`: the two sold rows'
+  `sale` fields and every other row unsold, `defaultedFieldCount == 0`;
+  `items-resaved.csv` header width 14 == `itemHeaders.prefix(14)`, every row
+  unsold, the 12-column pin unchanged — mutation: regenerate the resaved file
+  at 18 → red); `PrivacyPolicyTests` G31 (mutation: remove the phrase → red).
+  Files: the docs above, `PRIVACY.md`, `README.md`,
+  `TroveTests/DocsSampleTests.swift`, `PrivacyPolicyTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded. **Phase 2 closes
+  here — pause for the person** (what can be tried: export a CSV from the
+  Items tab and re-import it — the four new columns are present and blank).
+
+## Phase 3 — Design
+
+- [ ] **T008 — The Design pass. [person: invokes `/design`, approves]**
+  Per spec's Design requirements (the `002`/`005` pattern). Claude Code writes
+  the `/design` brief: the six surfaces — the **Owned / Sold switch** at the
+  top of the Items page (bespoke, in the Sort By family; "two sides of the
+  same view"; a flip or turn is fair to try, not a mandate), the **Sold card**
+  on the Dashboard (apart from the totals, a separate ledger, never a fourth
+  headline figure), the **Sold side's row and summary line**, the **sold
+  state** of the item detail (the Sold mark and sale line over the familiar
+  page, read-only), the **Sell Plan's third figure and Sold section**, and
+  the **sale sheet** in the item form's field style — every string from
+  `SaleCopy`, `design/brief.md`'s rules, `001`'s fixed type sizes, the
+  moss/rust cue for gain/loss (never a new colour), the existing screen PNGs
+  for context. One thing the pass must settle explicitly (spec Decision 10):
+  the **form of a row's and the page's outcome** — the placeholder words
+  "Gain $350" / "Loss $150" / "Sold at cost", a labelled signed figure, or a
+  mark — with the rule that the gain or loss and its amount are unmistakable
+  and colour alone never carries it. Replacing the placeholder strings is
+  inside the spec, not new copy. The person runs it, iterates, drops the `.dc.html` artboards
+  and PNGs under `design/elements/006-mark-as-sold/`, and `design/tokens.md`
+  gains a "Mark as sold (`006`)" section with "as implemented" cells for the
+  screen tasks. **If the pass proposes new copy, that is a spec question —
+  escalate, don't absorb.**
+  **Verify:** artboards and PNGs committed; the tokens section written; the
+  person's approval recorded in the Done note. **Phase 3 closes here.**
+
+## Phase 4 — View models
+
+- [ ] **T009 — `ItemListViewModel`: two sides, both exports.**
+  Per plan §4 and Q5. `Side`, `side`, `soldItems`, `soldCount`,
+  `soldProceedsCents`, `soldRealisedDeltaCents`, `soldSummaryLine`; `load()`
+  splits once and derives every existing member from `owned`; `emptyReason`
+  by side; `canReorder` owned-only; `delete(id:)` over both arrays;
+  `narrowed(_:)` shared by both sides; `canExport` → `canExportCSV` /
+  `canExportPDF`; `exportCSV` appends the narrowed sold rows. The contract
+  change lands whole: `OverflowDropdown(canExportCSV:canExportPDF:…)`, the
+  two list views' calls (`WishlistView` passes its one `canExport` to both),
+  `ExportWiringTests` and `OverflowDropdownRenderTests` updated — broadened
+  (one gate per export row, still exactly two, Import and Settings ungated),
+  not weakened. Pattern: `load()`'s existing filter chain; `WishlistViewModel`
+  for the mirror. Tests (`ItemListViewModelTests`): G13 (mutation: drop the
+  split), G14 (mutation: reverse the comparator), G15 (a category filter
+  narrows the sold rows; unfiltered CSV is owned then sold — mutation: skip
+  the narrowing), G16's list half (the PDF entries and cover exclude a sold
+  item), G28 completed (the list's unfiltered Custom CSV bytes == Settings'),
+  `delete` on a sold id, `canReorder` false on `.sold`, `emptyReason` on the
+  Sold side (`nothingSold`; `stillSyncing` when the monitor says so),
+  `canExportCSV` true with only sold items while `canExportPDF` is false;
+  `ExportWiringTests` G29.
+  Files: `Trove/ViewModels/ItemListViewModel.swift`, `Trove/Views/Shared/OverflowDropdown.swift`,
+  `Trove/Views/Items/ItemListView.swift` + `Trove/Views/Wishlist/WishlistView.swift`
+  (the dropdown call only), `TroveTests/ItemListViewModelTests.swift`,
+  `ExportWiringTests.swift`, `OverflowDropdownRenderTests.swift`,
+  `SettingsViewModelTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded.
+
+- [ ] **T010 — `DashboardViewModel`: the sold figures.**
+  Per plan §6. `load()` splits `scoped` into owned and sold; `apply` unchanged
+  in body; `soldCount`, `soldProceedsCents`, `soldRealisedDeltaCents`,
+  `hasSales`, `soldLine`, `soldDeltaLine`. Pattern: `apply` and
+  `marketFigureCount`'s gating. Tests (`DashboardViewModelTests`): G22 (with a
+  sold item among valued owned ones the three figures reconcile and the sold
+  item is in none of value, spent, counts, breakdown, `unvaluedDestination`,
+  market count — mutation: count sold in `apply` → red), G23 (scope: a sale
+  in another category is absent from a scoped copy; `hasSales` false with
+  none in scope — mutation: skip the scope filter for sold), the two lines
+  equal `SaleCopy` over the same numbers.
+  Files: `Trove/ViewModels/DashboardViewModel.swift`, `TroveTests/DashboardViewModelTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded.
+
+- [ ] **T011 — `SellPlanViewModel`: the Sold figure, the cue, `markSold`, the framing guard.**
+  Per plan §3 and Q14. `soldItems`, `soldCount`, `soldValueCents`, `hasSales`
+  read off `itemsSoldToward`; `selectedValueMeetsCost` reads Selected plus
+  Sold; `load()` drops sold items from `owned`; `markSold(_:sale:)`
+  (`ItemSaleStore.markSold(toward: wishlistItem)`, save, rollback on refusal,
+  `load()`); `saleCandidate: Item?`. Pattern: `toggle(_:)`. Tests
+  (`SellPlanViewModelTests`, `SellPlanFramingTests`): G6/G12 (sold from the
+  plan links to it and leaves the candidates; a sold item never qualifies —
+  mutation: drop the sold filter), G10 (`bothFiguresExistIndependently` gains
+  the third figure: cost unchanged with a sale — mutation: subtract sold from
+  the cost), G11 (sales alone meeting the cost read as met; sales short of it
+  don't; an empty plan with no sales never does — mutation: read Selected
+  alone), `soldItems` most recent first, a sale recorded from the detail is
+  not in this plan's `soldItems`. The term scan already covers the new
+  members; confirm by running it against a deliberately named `remainingCents`
+  → red → remove.
+  Files: `Trove/ViewModels/SellPlanViewModel.swift`, `TroveTests/SellPlanViewModelTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded.
+
+- [ ] **T012 — `ItemDetailViewModel`: mark, edit, return.**
+  Per plan §5. `isSold`, `sale`, `saleOutcome`, `saleSheet: SaleSheet?`,
+  `makeSaleFormViewModel()`, `markSold(_:)`, `editSale(_:)`,
+  `returnToCollection()` — each through `ItemSaleStore`, one save, rollback
+  + `load()` on refusal (the `store(_:)` shape). Pattern: `store(_:)` and
+  `removeMatch()`. Tests (`ItemDetailViewModelTests`, second context): G20
+  and G5 for the detail path (mutation: pass a plan → G6 red), `editSale`
+  keeps an earlier plan link (G21), `returnToCollection` clears all five and
+  the item is back in `ItemListViewModel.items` at its slot (G7 through the
+  detail path), a refused save leaves the item owned (`SaveFailingContext`
+  or the existing refusal shape), `makeSaleFormViewModel()` seeds per P1 for
+  `.mark` and from the sale for `.edit`, `delete()` on a sold item removes it
+  and its photos.
+  Files: `Trove/ViewModels/ItemDetailViewModel.swift`, `TroveTests/ItemDetailViewModelTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded. **Phase 4 closes
+  here — pause for the person** (nothing new to see; the review gate).
+
+## Phase 5 — Screens
+
+- [ ] **T013 — The sale sheet (shared).**
+  Per plan §5 (`SaleFormView`) and T008's artboard. New
+  `Trove/Views/Items/SaleFormView.swift`: `NavigationStack`, the money field,
+  the bounded date popover (`in: ...viewModel.latestDate`), Sold at, Note,
+  Cancel / confirm, detents; `confirm` receives the `Sale`. Identifiers
+  `sale.sheet.price`, `sale.sheet.confirm`. Pattern: `ItemFormView`'s
+  `priceAndDate` and `dateField`; `PhotoPickerSheetView` for the host-closure
+  shape. Tests (`SaleFormWiringTests`, scans): the date picker carries an
+  upper bound `in:` ending at `latestDate` (mutation: drop the bound → red);
+  confirm calls `viewModel.sale()` and nothing writes to a `modelContext`
+  inside the file (`DeletionGuardTests`' no-store-in-views instinct); the
+  strings come from `SaleCopy` (the T007-of-005 strings-from-copy scan).
+  Files: `Trove/Views/Items/SaleFormView.swift` (new), `TroveTests/SaleFormWiringTests.swift` (new).
+  **Verify:** `scripts/verify.sh` green; mutation recorded; the sheet seen by
+  eye on the simulator against the artboard (named in the Done note).
+
+- [ ] **T014 — The item detail: menu rows, the sold state, edit, return, delete.**
+  Per plan §5 and Q8. `DetailOverflowMenu` gains `Row`, `middle`, the second
+  initializer (the first kept; `WishlistDetailView` untouched;
+  `MenuPolicyTests` green). `ItemDetailView`: the owned menu (Edit, Mark as
+  sold…, Delete) and the sold menu (Edit sale…, Return to collection…,
+  Delete); `.sheet(item: $viewModel.saleSheet)` hosting `SaleFormView`; new
+  `SoldMark` (`Trove/Views/Items/SoldMark.swift`, `sold.mark`,
+  `.accessibilityElement(children: .combine)` reading "Sold", the sale line
+  and the outcome — criterion 16) above the category/name when `isSold`;
+  the Market section and Find a photo… omitted and the dial
+  `isInteractive: false` in the sold state; the return alert; the delete
+  alert's `message(isSold:)`. Pattern: the existing `.sheet`/`.alert` chain
+  in `ItemDetailView`. Tests (`SoldStateWiringTests`, scans): both middle
+  rows and the edit label read `SaleCopy`; `WishlistDetailView` names no
+  `SaleCopy` member; the sold branch composes no `MarketSection(` and no
+  `findPhotoAction` (brace-span scan); `DetailOverflowMenu` still hosts one
+  `Menu` (mutation: a second `Menu` in `ItemDetailView` → `MenuPolicyTests`
+  red — the existing guard, re-confirmed).
+  Files: `Trove/Views/Shared/DetailOverflowMenu.swift`, `Trove/Views/Items/ItemDetailView.swift`,
+  `SoldMark.swift` (new), `TroveTests/SoldStateWiringTests.swift` (new).
+  **Verify:** `scripts/verify.sh` green; mutations recorded; both menus and
+  the sold state seen by eye against the artboards.
+
+- [ ] **T015 — The Items tab: the switch, the Sold side, its row, its delete.**
+  Per plan §4 and T008's artboards. New `Trove/Views/Items/SideSwitch.swift`
+  (bespoke, `items.sideSwitch`, label "Owned or sold", value = the side,
+  `.isSelected` on the active half) and `SoldItemRow.swift` (thumbnail, name,
+  sold date, price, outcome in the Q11 colour, combined a11y). `ItemListView`:
+  the switch under the title, `onChange(of: side)` → `load()`; on Sold no
+  search/chips/sort, the `soldSummaryLine`, `SoldItemRow`s with tap and
+  trailing-swipe delete only, the `.nothingSold` empty state;
+  `apply(_:)` handles `.sold` (side + cleared narrowing) and sets `.owned`
+  for the other two. Pattern: `rows` and `header` in `ItemListView`;
+  `ItemRow` for the row; `SortBadge` for the control's drawing. Tests
+  (`ItemListSidesWiringTests`, scans + a `SoldItemRow` render/label test in
+  the `ItemRow` tests' shape): no `sortControl`/`SearchField` in the Sold
+  branch; the Owned rows' swipe block contains no `SaleCopy.markAsSold`
+  (criterion 1); the Sold rows compose `SoldItemRow` and no leading swipe; a
+  row built over a loss reads "Loss $150" and over equal figures "Sold at
+  cost" (mutation: the outcome gated on `> 0` only → "Sold at cost" for a
+  loss → red); `apply` clears the narrowing on `.sold` (a view-model-level
+  test through the router request, since `apply` is view code: pin the
+  request's *effect* on `viewModel.side` by scanning the `.sold` case body
+  for the four writes).
+  Files: `Trove/Views/Items/SideSwitch.swift` (new), `SoldItemRow.swift` (new),
+  `ItemListView.swift`, `TroveTests/ItemListSidesWiringTests.swift` (new),
+  `SoldItemRowTests.swift` (new).
+  **Verify:** `scripts/verify.sh` green; mutations recorded; both sides seen
+  by eye against the artboards.
+
+- [ ] **T016 — The Dashboard's Sold card.**
+  Per plan §6 and T008's artboard. New `Trove/Views/Dashboard/SoldCard.swift`
+  (header, `soldLine`, `soldDeltaLine` in the Q11 colour, `dashboard.soldCard`,
+  combined a11y + hint); placed in `DashboardView` after the callout, before
+  the breakdown, iff `hasSales`, action `router.showSoldItems()`. Pattern:
+  `unvaluedCallout` (a card that is a `Button` through the router). Tests
+  (`DashboardWiringTests`, scan): `SoldCard(` once, inside an
+  `if viewModel.hasSales` span, its closure calling `router.showSoldItems()`
+  (mutation: render it unconditionally → red); the card's strings come from
+  the view model's two lines, not literals.
+  Files: `Trove/Views/Dashboard/SoldCard.swift` (new), `DashboardView.swift`,
+  `TroveTests/DashboardWiringTests.swift` (new or extended).
+  **Verify:** `scripts/verify.sh` green; mutation recorded; the card seen by
+  eye at the root and drilled into a category.
+
+- [ ] **T017 — The Sell Plan: the row action, the third figure, the Sold section.**
+  Per plan §3 and T008's artboard. `SellPlanRow` gains the bespoke **Mark as
+  sold…** control (`sellPlan.row.markAsSold`; the toggle's hit area and the
+  control's separated per the artboard); `SellPlanView` hosts
+  `.sheet(item: $viewModel.saleCandidate)` → `SaleFormView` → `markSold`; the
+  figures row grows the **Sold** cell (`sellPlan.soldFigure`, "N items") iff
+  `hasSales`; the Sold section under the candidates. Pattern: `figures(for:)`
+  and `candidateList`. Tests: `SellPlanFramingTests`' literal scan over the
+  new copy (already in place — confirm by adding "remaining" to a caption →
+  red → remove); `SellPlanWiringTests` (scan): the third cell is inside an
+  `if viewModel.hasSales` span; the row control calls into `saleCandidate`;
+  the sheet composes `SaleFormView` (one component, not a second form).
+  Files: `Trove/Views/Wishlist/SellPlanView.swift`, `TroveTests/SellPlanWiringTests.swift` (new).
+  **Verify:** `scripts/verify.sh` green; mutations recorded; the header at
+  two and three figures seen by eye against the artboard.
+
+- [ ] **T018 — The `-seedSold` seed, and the UI tests, run twice.**
+  Per plan §8 and Q10. `UITestSeed.soldArgument`, `shouldSeedSold(mode:arguments:)`,
+  `sold(into:now:)` (through `ItemSaleStore.markSold`); the second guard in
+  `TroveApp.init`. `UITestSeedTests` mirrored (the gate's four refusals; the
+  seed called once under its own guard; the argument spelled only in
+  `UITestSeed`; the seeded figures — 2 sold, $1,800, +$200, the plan's one
+  sale — read back on a second context through `TroveStore.make(isUITesting:
+  true)`); the existing `theAppCallsTheSeedOnceUnderTheGuardAndReadsTheFlagOnce`
+  stays green. The three UI tests in plan §8, then `scripts/verify.sh ui`
+  **twice back to back**. Pattern: `UITestSeed.sellPlan` and
+  `testTheSeededSellPlanRanksRisingFirstAndSaysWhy`. Mutations (each
+  reverted, recorded): reverse the sold comparator → the order assertion
+  red; `returnToCollection` keeping `soldDate` → the return test red;
+  `SellPlanViewModel.markSold` passing `toward: nil` → the figure test red.
+  Files: `Trove/App/UITestSeed.swift`, `Trove/App/TroveApp.swift`,
+  `TroveTests/UITestSeedTests.swift`, `TroveUITests/TroveUITests.swift`.
+  **Verify:** `scripts/verify.sh` green; `scripts/verify.sh ui` green twice;
+  mutations recorded. **Phase 5 closes here — pause for the person** (what
+  can be tried: mark an item sold from its page and from a sell plan, the
+  Sold side, the card, edit and return, export and re-import).
+
+## Phase 6 — Verification and close-out
+
+- [ ] **T019 — Device pass. [general-purpose agent with simulator tools; person: sync + VoiceOver]**
+  Per every criterion, on the iPhone simulator with the `-uiTesting` store
+  (and `-seedSold` where a history helps). Walk: Mark as sold… from the
+  detail (price prefilled from the value; a future date refused **on the
+  picker itself** — instrument with a screenshot of the disabled days, and
+  confirm the view model refuses a typed-past-midnight edge by the unit
+  suite, not by eye); the Sold mark, the outcome words at a gain, a loss and
+  at cost; the Owned side empty and the Sold side listing it; the card at the
+  root and inside a category (hidden where nothing in scope sold); the jump
+  landing on Sold; Sort By hidden there, "…" present, CSV from the Sold side
+  including both sides, PDF owned-only; Edit sale…; Return to collection… →
+  back at its Custom slot, on no plan; Delete on a sold row with the shorter
+  message; a plan row's Mark as sold… → the third figure, the Sold section,
+  the row gone; deleting that wishlist item → the sale stands, no plan;
+  Delete All items (Settings) removes sold too; a matched item marked sold
+  → Settings' matched count drops, Refresh skips it, its Market section is
+  gone, Return brings the match back as never-refreshed-here. **Instrument
+  the sheet, don't eyeball it**: a temporary file probe in
+  `ItemSaleStore.markSold` confirms exactly one write per confirm and none
+  on Cancel, swipe-down or a re-render of the `.sheet(item:)` — removed
+  before the suites run. Both suites twice. Findings fixed in place if
+  routine and inside the footprint, else returned as a diagnosis for a
+  decision review; each fix a sub-lettered task.
+  **[person]** Sync (criterion 15): a sale appearing on a second device, or
+  recorded as an honest partial as `005` did. VoiceOver (criterion 16):
+  Accessibility Inspector over the menu rows, the switch, the card, a Sold
+  row, the Sold mark, the plan's Sold figure.
+  **Verify:** the record in the Done note with what was seen and the probe's
+  count per action; `scripts/verify.sh all` green twice.
+
+- [ ] **T020 — Close-out.**
+  Criteria 1–16 ticked in `spec.md` with citations, honest partials named;
+  the Copy section gains the strings settled at T002/T008 (P8); `plan.md`
+  gains "As built" (deviations, the readings R1–R3 as confirmed or
+  overturned at sign-off, Q-items as shipped); this file's status flipped;
+  `specs/ROADMAP.md`'s 006 entry and status row, README's Status/tree,
+  `DECISIONS.md` (the sale as fields on the item and why; the side as
+  view-model state; the pair rule; the second seed) — on this branch, the
+  `005` precedent; the pre-merge `skeptical-reviewer` sweep over
+  `git diff main...HEAD` (bundle cut after `git add -A`); the notes carried
+  from `005`'s sweep re-review that touch files this spec edits (the
+  `README` placeholder, the cadence sentence) closed here; PR marked ready
+  for review.
+  **Verify:** everything above committed and pushed; `scripts/verify.sh all`
+  green with the final counts recorded here.
+
+## Tier log
+
+Experiment 1 (`CLAUDE.md`'s model policy, adopted 2026-09-11): the
+`sdd-planner` and the plan/tasks sign-off at **`fable`** (the top tier, with
+an explicit per-call override); the `skeptical-reviewer` on each phase and
+marked-task review, the pre-merge sweep, and the `sdd-implementer` at
+**`opus`**; the device pass in a `general-purpose` agent at `opus`; the
+orchestrating session at `fable` medium. Every Tier entry below is the
+resolved name, never "default." Token usage from each subagent return is
+filled in as the spec runs; escape-hatch misses (a task the orchestrator had
+to redo, and why) are recorded here too. The allowance reading at the start
+row and at the merge is recorded for the experiment's coordinator, not
+interpreted here.
+
+| Task / invocation | Tier | Tokens | Outcome / miss reason |
+|---|---|---|---|
+| Plan + tasks draft | fable (`sdd-planner`, high effort) | 354,690 (measured from the dispatch return; 62 tool uses, 14 min) | this document; no product question surfaced; three spec readings (R1–R3) flagged for sign-off |
+| _rows added per dispatch as the spec runs_ | | | |

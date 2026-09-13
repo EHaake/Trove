@@ -2,8 +2,8 @@
 
 **Status**: **Approved** (2026-09-13) — written with the person in this spec
 session; amended the same day at the person's reading of the Draft (Decision
-9, the two-sided Items view; Decision 10, gain or loss stated in words with
-the amount) and approved with that last note.
+9, the two-sided Items view; Decision 10, gain or loss unmistakable with the
+amount, its form left to the design pass) and approved with that last note.
 
 Authored in a Claude Code spec session of its own, per `CLAUDE.md`'s model
 policy (Fable 5.1, the session raised to high effort for the spec
@@ -115,7 +115,7 @@ A sold item **leaves the collection and stays in the app** (Decision 1):
 
 - Tapping a row on the Sold side opens the item's own detail screen in a
   **sold state** (P4): a **Sold** mark at the top with the sale — price, date,
-  place, note — and, stated the same way as on the row, **whether it sold at
+  place, note — and, shown the same way as on the row, **whether it sold at
   a gain or at a loss and by how much** against what was paid (Decision 10),
   then the item's ordinary content below it, read-only. Its photos, notes and details remain
   visible; a stock photo keeps its badge and credit.
@@ -139,11 +139,13 @@ A sold item **leaves the collection and stays in the app** (Decision 1):
   launch (P16); the Dashboard's Sold card jumps straight to the Sold side
   (Decision 6).
 - **The Sold side**: rows show the item's thumbnail, name, sold date, sale
-  price, and **whether it sold at a gain or at a loss, in words, with the
-  amount** (Decision 10) — "Gain $350" or "Loss $150" against what was paid,
-  "Sold at cost" when the two are equal — in the same quiet moss/rust tone
-  the Sell Plan and the detail screen already use for value-versus-cost. The
-  word carries the meaning; the colour only echoes it. Above the rows, a short summary line — how many sold,
+  price, and — **unmistakably — whether it sold at a gain or at a loss, and
+  by how much** against what was paid (Decision 10). The form is the design
+  pass's call: the placeholder strings are "Gain $350", "Loss $150" and
+  "Sold at cost" when the two are equal, in the same quiet moss/rust tone
+  the Sell Plan and the detail screen already use for value-versus-cost; what
+  is fixed is that the outcome and the amount are clear at a glance and that
+  colour alone never carries the meaning. Above the rows, a short summary line — how many sold,
   total proceeds, and the realised gain or loss — the same figures the
   Dashboard card shows.
 - Ordered **most recent sale first** (P3); the **Sort By** control is hidden on
@@ -246,10 +248,11 @@ section on plan approval (P8).
   **Cancel** and **Mark as sold**. Reopened for editing, the title is **Edit
   sale** and the confirm button **Save**.
 - The sold mark on the item's page: **Sold** with the sale in one line, "Sold
-  12 Sep 2026 · $1,200 · eBay", and beneath it the outcome in words, "Sold at
-  a gain of $350" or "Sold at a loss of $150" ("Sold at cost" when equal),
-  with what was paid beside it.
-- A Sold-side row's outcome: "Gain $350" or "Loss $150" ("Sold at cost").
+  12 Sep 2026 · $1,200 · eBay" (the date in the device's own format), and
+  beneath it the outcome — placeholder "Sold at a gain of $350" or "Sold at a
+  loss of $150" ("Sold at cost" when equal) — with what was paid beside it.
+- A Sold-side row's outcome: placeholder "Gain $350" or "Loss $150" ("Sold at
+  cost"). Both outcome forms are settled at the design pass (Decision 10).
 - The page's actions: **Edit sale…**, **Return to collection…**, **Delete**.
 - The return confirmation: "Return {name} to your collection? Its sale details
   will be removed." with **Return** and **Keep as sold**.
@@ -312,16 +315,16 @@ section on plan approval (P8).
 7. [ ] The Items tab switches between **Owned** and **Sold** in one tap and
    opens on Owned at launch. The Sold side shows every sold item, most recent
    sale first, each row with name, sold date, sale price and gain or loss;
-   each row stating in words whether it sold at a gain or at a loss and by
-   how much; its summary line matches the card; Sort By is hidden there; swipe-to-delete
+   each row making unmistakable whether it sold at a gain or at a loss and
+   by how much; its summary line matches the card; Sort By is hidden there; swipe-to-delete
    works with the usual confirmation; the empty state shows when nothing is
    sold or the last sale is removed.
 7a. [ ] From either side, the "…" menu's CSV export includes both owned and
    sold items and its PDF export includes owned items only; Import and
    Settings behave as before.
-8. [ ] A sold item's page shows the Sold mark, the sale details and, in
-   words, whether it sold at a gain or at a loss and by how much against what
-   was paid, with the item's content read-only beneath; it offers exactly **Edit sale…**, **Return to collection…** and
+8. [ ] A sold item's page shows the Sold mark, the sale details and,
+   unmistakably, whether it sold at a gain or at a loss and by how much
+   against what was paid, with the item's content read-only beneath; it offers exactly **Edit sale…**, **Return to collection…** and
    **Delete**.
 9. [ ] **Edit sale…** changes the sale details in place; **Return to
    collection…** asks first, then restores the item to the collection with no
@@ -399,11 +402,14 @@ Added 2026-09-13, at the person's reading of the Draft:
    and jumps to the Sold side. Consequences settled with it: Sort By hides on
    the Sold side (P16), the "…" menu's CSV export covers both sides and the
    PDF stays owned-only (P17).
-10. **Gain or loss is stated in words, with the amount, on the Sold side's
-    rows and on the sold item's page.** Not only a signed figure in a colour:
-    each row and the page say whether the item sold at a gain or at a loss
-    and by how much against what was paid ("Sold at cost" when equal). The
-    person's note at approval.
+10. **Gain or loss, and by how much, is unmistakable on the Sold side's rows
+    and on the sold item's page.** Not only a signed figure in a colour: each
+    row and the page make clear that the item sold at a gain or at a loss and
+    by how much against what was paid ("at cost" when equal). The person's
+    note at approval — and their clarification the same day that the literal
+    wording ("Sold at a gain…") is *not* required: the strings in Copy are
+    placeholders, and the design pass settles the form (words, a labelled
+    figure, a mark) as long as colour alone never carries the meaning.
 
 Proposed at drafting, 2026-09-13, by Claude Code (these become decisions on
 plan approval):
