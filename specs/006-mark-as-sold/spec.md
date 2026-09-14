@@ -410,6 +410,17 @@ Added 2026-09-13, at the person's reading of the Draft:
     wording ("Sold at a gain…") is *not* required: the strings in Copy are
     placeholders, and the design pass settles the form (words, a labelled
     figure, a mark) as long as colour alone never carries the meaning.
+11. **The design pass's form and copy, settled by the person at the pass
+    (2026-09-13).** The outcome reads words first, then the amount, then
+    the basis, the same on a row and on the page: "Gain $350 vs paid" /
+    "Loss $150 vs paid" / "At cost" — the colour only repeats the word.
+    The Sold side's summary line is hidden when nothing is sold. The sold
+    page's sale line drops the word "Sold" (the tag above it says it):
+    "Sep 12, 2026 · $1,200 · eBay". The sale's note shows as a quiet line
+    under the sale line when there is one. The Note field's placeholder is
+    "Anything worth remembering". The Dashboard card carries only its
+    arrow, no word beside it. The desire card on a sold page shows no hint
+    line. These replace the Copy section's placeholders at close-out (P8).
 
 Proposed at drafting, 2026-09-13, by Claude Code (these become decisions on
 plan approval):

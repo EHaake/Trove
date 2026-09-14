@@ -396,7 +396,7 @@ because the person will feel it before they read it.
 
 ## Phase 3 — Design
 
-- [ ] **T008 — The Design pass. [person: invokes `/design`, approves]**
+- [x] **T008 — The Design pass. [person: invokes `/design`, approves]**
   Per spec's Design requirements (the `002`/`005` pattern). Claude Code writes
   the `/design` brief: the six surfaces — the **Owned / Sold switch** at the
   top of the Items page (bespoke, in the Sort By family; "two sides of the
@@ -420,6 +420,31 @@ because the person will feel it before they read it.
   escalate, don't absorb.**
   **Verify:** artboards and PNGs committed; the tokens section written; the
   person's approval recorded in the Done note. **Phase 3 closes here.**
+  **Done (2026-09-13):** the brief written by the session
+  (`design/elements/006-mark-as-sold/brief.md`); the person ran `/design`;
+  twelve artboards + PNGs, `canvas.json` and `design-notes.md` committed;
+  `design/tokens.md` gains "Mark as sold (`006`)" transcribed from the
+  notes. **Approved by the person**, with Decision 10's form settled as
+  words-first ("Gain $350 vs paid" / "Loss $150 vs paid" / "At cost", same
+  strings on row and page) and the pass's six copy questions decided —
+  recorded as spec Decision 11: summary line hidden at zero sales; the
+  page's sale line drops "Sold"; the note as a quiet line under the sale
+  line; Note placeholder "Anything worth remembering"; card arrow only; no
+  desire hint on a sold page. The four drawing deviations (one example set,
+  the summary in the meta slot, Selected at 26 in the three-figure layout,
+  the desire hint dropped) accepted. The copy changes land as T008a.
+
+- [ ] **T008a — The settled strings in `SaleCopy` (Decision 11).**
+  `rowOutcome` and `pageOutcome` become one form — "Gain $350 vs paid" /
+  "Loss $150 vs paid" / "At cost" (`atCost` → "At cost"; keep both function
+  names so the views' call sites in later tasks read as planned, or fold to
+  one and keep the other as an alias — implementer's call, stated);
+  `saleLine` drops the "Sold " prefix; new `notePlaceholder = "Anything
+  worth remembering"`. `SaleCopyTests` updated whole; the S1 boundary test
+  stays. Consumers for T009/T014 (not here): `soldSummaryLine` nil at zero
+  sales; the note line on the page.
+  Files: `Trove/Models/SaleCopy.swift`, `TroveTests/SaleCopyTests.swift`.
+  **Verify:** `scripts/verify.sh` green.
 
 ## Phase 4 — View models
 
@@ -740,4 +765,5 @@ interpreted here.
 | T007a fix (B1, S1, S3) | opus (`sdd-implementer`, resumed) | 107,802 cumulative (~12k this round; 9 tool uses) | done; mutation red as reported |
 | Phase 2 re-review | opus (`skeptical-reviewer`, resumed) | 98,879 cumulative (~3.5k this round; 1 tool use) | **signed off**, no new blocking |
 | T008 brief | fable, medium (the session — transcription from spec, plan, `SaleCopy`, tokens) | — | `design/elements/006-mark-as-sold/brief.md` written; awaits the person's `/design` run |
+| T008 design pass | — (person + `/design`) | — | brief written (session); 12 artboards approved + saved; tokens section written (session, transcription); six copy questions decided by the person → spec Decision 11; no allowance draw |
 | _rows added per dispatch as the spec runs_ | | | |
