@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    helmet{display:none!important;}
+    x-dc{display:block;}
+    body{background:#17181A;font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif;color:#F2EDE4;-webkit-font-smoothing:antialiased;}
+    a{color:#C79A56;text-decoration:none;}
+    a:hover{color:#DDB877;}
+    .frame{width:390px;background:#17181A;position:relative;overflow:hidden;}
+    .mono{font-family:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;}
+    .disp{font-family:'Archivo',system-ui,sans-serif;font-weight:600;}
+    .lbl{font-family:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;font-weight:500;font-size:10.5px;line-height:14px;letter-spacing:1.2px;text-transform:uppercase;color:rgba(242,237,228,0.6);white-space:nowrap;}
+    .meta{font-family:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;font-size:11.5px;line-height:16px;white-space:nowrap;}
+    .plate{background:#201F1D;border-radius:3px;box-shadow:inset 0 1px 0 rgba(242,237,228,0.055),inset 0 -1px 0 rgba(0,0,0,0.4),0 2px 6px rgba(0,0,0,0.25);}
+    .tag{font-family:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;font-weight:500;font-size:10.5px;line-height:14px;letter-spacing:1.2px;text-transform:uppercase;padding:3px 6px 3px 7px;border-radius:2px;background:#F2EDE4;color:#17181A;white-space:nowrap;}
+    .hero{position:relative;height:240px;border-radius:3px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(242,237,228,0.055),inset 0 -1px 0 rgba(0,0,0,0.4),0 2px 6px rgba(0,0,0,0.25);}
+    .statpair{display:flex;border-radius:3px;box-shadow:0 2px 6px rgba(0,0,0,0.25);overflow:hidden;background:#3A3B3E;gap:1px;}
+    .sc{flex:1;background:#201F1D;padding:15px 16px;display:flex;flex-direction:column;gap:7px;box-shadow:inset 0 1px 0 rgba(242,237,228,0.055),inset 0 -1px 0 rgba(0,0,0,0.4);}
+    .drow{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:12px 0;border-bottom:1px solid #26272A;}
+    .drow .k{font-size:12.5px;color:rgba(242,237,228,0.55);}
+    .drow .v{font-size:13px;text-align:right;}
+  </style>
+</helmet>
+
+<div class="frame" style="height:1160px;">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="amp" viewBox="0 0 120 120"><rect x="14" y="26" width="92" height="70" rx="4" fill="#3a2e22"/><rect x="14" y="26" width="92" height="16" rx="3" fill="#2a221a"/><rect x="20" y="46" width="80" height="44" rx="2" fill="#1c1a17"/><path d="M20 52h80M20 58h80M20 64h80M20 70h80M20 76h80M20 82h80" stroke="#2e2a24" stroke-width="1.4"/><circle cx="30" cy="34" r="3" fill="#b58a4a"/><circle cx="42" cy="34" r="3" fill="#b58a4a"/><circle cx="54" cy="34" r="3" fill="#b58a4a"/><circle cx="66" cy="34" r="3" fill="#b58a4a"/><rect x="48" y="20" width="24" height="6" rx="2" fill="#26221e"/></symbol>
+  </defs></svg>
+
+  <div style="height:44px;"></div>
+  <div style="height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;">
+    <div style="display:flex;align-items:center;gap:6px;color:#C79A56;font-size:17px;">
+      <svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#C79A56" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2 2 10l8 8"/></svg><span>Items</span>
+    </div>
+    <svg width="22" height="6" viewBox="0 0 22 6" fill="#C79A56"><circle cx="3" cy="3" r="2.2"/><circle cx="11" cy="3" r="2.2"/><circle cx="19" cy="3" r="2.2"/></svg>
+  </div>
+
+  <div style="padding:18px 24px 48px;display:flex;flex-direction:column;gap:24px;">
+
+    <!-- the Sold mark at a loss; no place recorded, so the sale line ends at the price -->
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="tag">Sold</span>
+        <span class="mono" style="font-size:15px;line-height:20px;font-weight:500;color:#B8674F;white-space:nowrap;">Loss $150 vs paid</span>
+      </div>
+      <div class="meta" style="color:rgba(242,237,228,0.75);">Sold Aug 30, 2026 · <span style="font-weight:500;color:#F2EDE4;">$540</span></div>
+    </div>
+
+    <!-- the person's own photos: no badge, no credit, pager dots -->
+    <div class="hero" style="background:#1d1a16;">
+      <svg viewBox="8 16 104 88" width="100%" height="100%" preserveAspectRatio="xMidYMid slice"><use href="#amp" width="120" height="120"/></svg>
+      <div style="position:absolute;right:14px;bottom:12px;display:flex;gap:6px;">
+        <span style="width:6px;height:6px;border-radius:50%;background:#C79A56;"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:rgba(242,237,228,0.45);"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:rgba(242,237,228,0.45);"></span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:7px;">
+      <div class="lbl">Music · Amps</div>
+      <div class="disp" style="font-size:26px;line-height:1.15;">Fender Blues Junior IV</div>
+    </div>
+
+    <div class="statpair">
+      <div class="sc">
+        <div class="lbl">Worth now</div>
+        <div class="disp" style="font-size:26px;line-height:31px;color:#C79A56;">$540</div>
+      </div>
+      <div class="sc">
+        <div class="lbl">Paid</div>
+        <div class="mono" style="font-size:15px;line-height:20px;font-weight:500;">$690</div>
+        <div class="meta" style="color:#B8674F;">−$150 · −22%</div>
+      </div>
+    </div>
+
+    <div class="plate" style="padding:20px 18px;display:flex;flex-direction:column;gap:16px;">
+      <div class="lbl">Desire to keep</div>
+      <div style="display:flex;align-items:center;gap:20px;">
+        <div style="position:relative;width:116px;height:116px;flex:none;">
+          <svg width="116" height="116" viewBox="0 0 116 116">
+            <path d="M24.06 91.94 A48 48 0 1 1 91.94 91.94" fill="none" stroke="rgba(242,237,228,0.12)" stroke-width="3" stroke-linecap="round"/>
+            <g stroke="rgba(242,237,228,0.25)" stroke-width="1.2" stroke-linecap="round"><path d="M31.13 84.87 28.3 87.7"/><path d="M22.89 43.46 19.2 41.93"/><path d="M58 20V16"/><path d="M93.11 43.46 96.8 41.93"/><path d="M84.87 84.87 87.7 87.7"/></g>
+            <circle cx="24.06" cy="91.94" r="5.5" fill="#9C4A34"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+            <span class="disp" style="font-size:35px;line-height:1;color:#B8674F;">1</span>
+            <span class="lbl" style="font-size:9.5px;color:rgba(242,237,228,0.4);">of 5</span>
+          </div>
+        </div>
+        <div style="font-size:15px;font-weight:500;line-height:19px;">Ready to sell</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="lbl">Details</div>
+      <div>
+        <div class="drow"><span class="k">Condition</span><span class="v">Good</span></div>
+        <div class="drow"><span class="k">Bought</span><span class="v mono">Jun 2, 2022</span></div>
+        <div class="drow"><span class="k">Serial number</span><span class="v mono">B-423817</span></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="lbl">Notes</div>
+      <div style="font-size:13px;line-height:1.6;color:rgba(242,237,228,0.75);">Too loud for the flat. Kept the footswitch.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
