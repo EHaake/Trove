@@ -1766,13 +1766,22 @@ struct ItemListViewModelSoldSideTests {
     /// drift into two sums that agree today. `DashboardViewModel` joins this
     /// scan at T010, which is what wires it to the same function.
     @Test func theSoldTotalsComeFromSaleOutcomeAndNotFromArithmeticHere() throws {
-        let code = try SourceScan.production("Trove/ViewModels/ItemListViewModel.swift")
-        try #require(
-            code.contains("private(set) var soldTotals"),
-            "the scan didn't find the Sold side it guards — wrong file?"
-        )
-        #expect(code.contains("SaleOutcome.totals("), "the sold totals must come from SaleOutcome")
-        #expect(!code.contains("salePriceCents -"), "this file must not compute a gain or loss itself")
+        // Both readers of the sum, not just this one: AC7's "the summary
+        // matches the card" holds because the Sold side and the Dashboard
+        // card run the same arithmetic, and a hand-rolled sum in either of
+        // them is the way that stops being true (G32).
+        for path in [
+            "Trove/ViewModels/ItemListViewModel.swift",
+            "Trove/ViewModels/DashboardViewModel.swift",
+        ] {
+            let code = try SourceScan.production(path)
+            try #require(
+                code.contains("private(set) var soldTotals"),
+                "the scan didn't find the sold totals it guards in \(path) — wrong file?"
+            )
+            #expect(code.contains("SaleOutcome.totals("), "\(path): the sold totals must come from SaleOutcome")
+            #expect(!code.contains("salePriceCents -"), "\(path) must not compute a gain or loss itself")
+        }
     }
 
     /// Plan Q9: the Sold side's emptiness has one cause, and mid-import it

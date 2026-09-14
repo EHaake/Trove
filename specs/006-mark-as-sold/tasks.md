@@ -511,7 +511,7 @@ because the person will feel it before they read it.
   all-sold collection has CSV but no PDF), and the column list is short by
   four.
 
-- [ ] **T010 — `DashboardViewModel`: the sold figures.**
+- [x] **T010 — `DashboardViewModel`: the sold figures.**
   Per plan §6. `load()` splits `scoped` into owned and sold; `apply` unchanged
   in body; `soldTotals` through `SaleOutcome.totals` (no arithmetic here —
   G32's scan from T009 covers this file too), `hasSales`, `soldLine`,
@@ -525,6 +525,20 @@ because the person will feel it before they read it.
   equal `SaleCopy` over the same numbers.
   Files: `Trove/ViewModels/DashboardViewModel.swift`, `TroveTests/DashboardViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-09-13):** `load()` splits `scoped` and hands `apply` the
+  owned half (body untouched); market summaries asked for owned ids;
+  `soldTotals`/`hasSales`/`soldLine`/`soldDeltaLine` beside the market
+  gating. Five tests. Mutations, each red then reverted: G22 (`apply` over
+  the whole scope → 13 issues, `DashboardViewModelTests:820/828/837`); G23
+  (scope skipped for sold → :893/906); G32 (hand-sum → the scan's
+  `SaleOutcome.totals(` half `ItemListViewModelTests:1782`; arithmetic
+  alongside → the `salePriceCents -` half :1783); the gating and both
+  lines swapped → :921/864/867. G32's scan now covers both view models.
+  Verify (implementer's verbatim output): 1417 tests in 195 suites passed.
+  Noted for the sweep: the scan's `salePriceCents -` clause is a literal —
+  `($0.salePriceCents ?? 0) - x` would slip past it (the `totals(` clause
+  still catches the realistic hand-sum). For T016: the root breakdown
+  collapses to top-level categories.
 
 - [ ] **T011 — `SellPlanViewModel`: the Sold figure, the cue, `markSold`, the framing guard.**
   Per plan §3 and Q14. `soldItems`, `soldCount`, `soldValueCents`, `hasSales`
@@ -794,4 +808,5 @@ interpreted here.
 | T008 design pass | — (person + `/design`) | — | brief written (session); 12 artboards approved + saved; tokens section written (session, transcription); six copy questions decided by the person → spec Decision 11; no allowance draw |
 | T008a implement | opus (`sdd-implementer`, high effort) | 46,454 (10 tool uses, 4 min) | done first pass; one design-free choice (alias) stated |
 | T009 implement | opus (`sdd-implementer`, high effort) | 169,080 (70 tool uses, 25 min) | done first pass; twenty-two mutations red; one wording gap resolved by a declared default (narrowed `canExportCSV`) — to the Phase 4 review |
+| T010 implement | opus (`sdd-implementer`, high effort) | 72,844 (27 tool uses, 11 min) | done first pass; five mutation runs red |
 | _rows added per dispatch as the spec runs_ | | | |

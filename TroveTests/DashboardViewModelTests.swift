@@ -703,3 +703,222 @@ struct DashboardMarketTests {
         #expect(viewModel.marketTotalCents == 0)
     }
 }
+
+// MARK: - 006/T010: the sold figures
+
+/// A sold item, on the `ItemSaleStoreTests` pattern: an ordinary `Item` with
+/// `sale` set, which is the only writer of the four columns.
+@discardableResult
+private func insertSoldItem(
+    _ name: String,
+    category: String = "Music/Guitars",
+    paidCents: Int = 10_000,
+    valueCents: Int? = nil,
+    soldAt seconds: TimeInterval,
+    forCents salePriceCents: Int,
+    into context: ModelContext
+) -> Item {
+    let item = Item(
+        name: name,
+        categoryPath: category,
+        purchasePriceCents: paidCents,
+        currentValueCents: valueCents
+    )
+    item.createdAt = Date(timeIntervalSince1970: 0)
+    item.sale = Sale(
+        date: Date(timeIntervalSince1970: seconds),
+        priceCents: salePriceCents,
+        location: nil,
+        note: nil
+    )
+    context.insert(item)
+    return item
+}
+
+/// AC4 and AC6: the Dashboard has two halves now. Everything the screen said
+/// before covers the owned half only, and the Sold card is the one place a
+/// sold item shows up at all.
+@Suite("DashboardViewModel — the sold figures")
+struct DashboardSoldFiguresTests {
+    private let clock = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private func viewModel(over context: ModelContext, scope: String = "") -> DashboardViewModel {
+        DashboardViewModel(modelContext: context, scope: scope, now: { self.clock })
+    }
+
+    /// One recorded median, through the app's own writer — so the market
+    /// count this test pins is the count a real refresh would produce.
+    private func recordMedian(_ medianCents: Int, for id: UUID, in context: ModelContext) throws {
+        try MarketLocalStore.record(
+            .figure(MarketFigure(
+                medianCents: medianCents,
+                lowCents: medianCents - 10_000,
+                highCents: medianCents + 10_000,
+                count: 12,
+                fetchedAt: clock,
+                isTruncated: false,
+                yearScope: .any
+            )),
+            product: MarketProduct(
+                id: 126_161,
+                slug: "fender-american-professional-ii-telecaster",
+                title: "Fender American Professional II Telecaster",
+                usedLowCents: 100_000,
+                usedTotal: 108,
+                listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
+            ),
+            for: MarketSubjectKey(subjectID: id, kind: .owned),
+            in: context
+        )
+    }
+
+    /// Two owned items, both valued, and two sold ones — one valued, one not,
+    /// so counting the sold half would move the un-valued figures as well as
+    /// the money ones.
+    private func makeCollection() throws -> (context: ModelContext, sold: Item, owned: Item) {
+        let context = try makeInMemoryContext()
+        let leica = Item(
+            name: "Leica",
+            categoryPath: "Photography/Cameras",
+            purchasePriceCents: 290_000,
+            currentValueCents: 345_000
+        )
+        leica.createdAt = Date(timeIntervalSince1970: 0)
+        context.insert(leica)
+        insertItem("Nikon", category: "Photography/Lenses", paidCents: 24_000, valueCents: 31_000, into: context)
+        let soldBody = insertSoldItem(
+            "Sold body", category: "Photography/Cameras",
+            paidCents: 100_000, valueCents: 120_000,
+            soldAt: 1_000, forCents: 150_000, into: context
+        )
+        insertSoldItem(
+            "Sold strap", category: "Photography/Lenses",
+            paidCents: 5_000, valueCents: nil,
+            soldAt: 2_000, forCents: 4_000, into: context
+        )
+        try context.save()
+        return (context, soldBody, leica)
+    }
+
+    /// G22. The three headline figures still reconcile with a sale in the
+    /// collection, and the sold items are in none of value, paid, the counts,
+    /// the breakdown, `unvaluedDestination` or the market count.
+    ///
+    /// Mutation: hand `apply` the whole scope rather than the owned half
+    /// (`apply(scoped, marketSummaries:)`) → every expectation below moves.
+    @Test func theCollectionFiguresExcludeSoldItemsAndStillReconcile() throws {
+        let (context, sold, owned) = try makeCollection()
+        // The sold item's market row: cleared on a real sale (T007), seeded
+        // here so the exclusion is the split's doing and not an absent row.
+        try recordMedian(400_000, for: owned.id, in: context)
+        try recordMedian(900_000, for: sold.id, in: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(viewModel.totalCurrentValueCents == 376_000)
+        #expect(viewModel.totalSpentCents == 314_000)
+        #expect(viewModel.valueDeltaCents == 62_000)
+        #expect(viewModel.totalCurrentValueCents - viewModel.totalSpentCents == viewModel.valueDeltaCents)
+
+        #expect(viewModel.totalItemCount == 2)
+        #expect(viewModel.valuedCount == 2)
+        #expect(viewModel.unvaluedCount == 0)
+        #expect(viewModel.unvaluedDestination == .none, "the un-valued item in this fixture is a sold one")
+
+        // One top-level row at the root scope, over the owned half only.
+        #expect(viewModel.breakdown.map(\.path) == ["Photography"])
+        #expect(viewModel.breakdown.map(\.itemCount) == [2])
+        #expect(viewModel.breakdown.map(\.unvaluedCount) == [0])
+        #expect(viewModel.breakdown.map(\.currentValueCents) == [376_000])
+        #expect(viewModel.breakdown.map(\.spentCents) == [314_000])
+
+        #expect(viewModel.marketFigureCount == 1)
+        #expect(viewModel.marketTotalCents == 400_000)
+
+        // And the sale really was in the fetch the whole time.
+        #expect(viewModel.soldTotals.count == 2)
+    }
+
+    /// The card's own arithmetic, straight off `SaleOutcome.totals`: two
+    /// sales at $1,500 and $40 against $1,000 and $50 paid.
+    @Test func theSoldTotalsSumTheSalesInScope() throws {
+        let (context, _, _) = try makeCollection()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(viewModel.soldTotals == SaleTotals(count: 2, proceedsCents: 154_000, realisedDeltaCents: 49_000))
+        #expect(viewModel.hasSales)
+    }
+
+    /// The two lines are `SaleCopy` over those same numbers — composed there
+    /// so the card and the Sold side's summary cannot word one sum two ways.
+    @Test func theCardsLinesAreSaleCopyOverTheSameNumbers() throws {
+        let (context, _, _) = try makeCollection()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(viewModel.soldLine == SaleCopy.dashboardSummary(
+            SaleTotals(count: 2, proceedsCents: 154_000, realisedDeltaCents: 49_000)
+        ))
+        #expect(viewModel.soldDeltaLine == SaleCopy.realised(deltaCents: 49_000))
+    }
+
+    /// G23. The card follows the scope like every other figure on the screen:
+    /// a sale in another category is absent from a scoped copy, and a scope
+    /// with no sales in it has no card at all rather than a card of zeroes.
+    ///
+    /// Mutation: split the unfiltered fetch rather than `scoped`
+    /// (`all.filter(\.isSold)`) → the Music copy sees the Photography sale
+    /// and `hasSales` goes true in `Audio` → red.
+    @Test func theSoldFiguresFollowTheScope() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Amp", category: "Music/Amps", paidCents: 69_000, valueCents: 54_000, into: context)
+        insertItem("Headphones", category: "Audio/Headphones", paidCents: 20_000, valueCents: 22_000, into: context)
+        insertSoldItem(
+            "Guitar", category: "Music/Guitars",
+            paidCents: 60_000, soldAt: 1_000, forCents: 70_000, into: context
+        )
+        insertSoldItem(
+            "Leica", category: "Photography/Cameras",
+            paidCents: 100_000, soldAt: 2_000, forCents: 150_000, into: context
+        )
+        try context.save()
+
+        let music = viewModel(over: context, scope: "Music")
+        music.load()
+        #expect(music.soldTotals == SaleTotals(count: 1, proceedsCents: 70_000, realisedDeltaCents: 10_000))
+        #expect(music.hasSales)
+
+        let photography = viewModel(over: context, scope: "Photography")
+        photography.load()
+        #expect(photography.soldTotals == SaleTotals(count: 1, proceedsCents: 150_000, realisedDeltaCents: 50_000))
+
+        let whole = viewModel(over: context)
+        whole.load()
+        #expect(whole.soldTotals == SaleTotals(count: 2, proceedsCents: 220_000, realisedDeltaCents: 60_000))
+
+        let audio = viewModel(over: context, scope: "Audio")
+        audio.load()
+        #expect(!audio.hasSales, "a scope nothing was sold in shows no card, not a card of zeroes")
+        #expect(audio.soldTotals == SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0))
+        #expect(audio.totalItemCount == 1, "and the scope really did hold something")
+    }
+
+    /// Nothing sold at all: the card is hidden rather than reading "0 items ·
+    /// $0", the same gating `hasMarketFigures` applies one line above it.
+    @Test func hasSalesIsFalseWithNothingSold() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Amp", paidCents: 69_000, valueCents: 54_000, into: context)
+        try context.save()
+
+        let viewModel = viewModel(over: context)
+        viewModel.load()
+
+        #expect(!viewModel.hasSales)
+        #expect(viewModel.soldTotals == SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0))
+    }
+}
