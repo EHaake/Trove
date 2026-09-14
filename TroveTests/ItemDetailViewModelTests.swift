@@ -1606,15 +1606,28 @@ struct ItemDetailSoldTests {
     /// half-written change, the `load()` that re-reads what is actually
     /// there, and `false` as the answer, all of them inside the catch and the
     /// rollback nowhere else.
+    ///
+    /// The Sell Plan's own `markSold(_:sale:)` is the fourth intent on the
+    /// same path and is scanned here beside the three, so one host can't drift
+    /// from the other. It carries one extra anchor: plan §3 has it report the
+    /// refusal in `saveFailureMessage`, which the detail screen surfaces its
+    /// own way.
     @Test func aRefusedSaveRollsBackAndReReadsWhatIsStored() throws {
-        let code = try SourceScan.production("Trove/ViewModels/ItemDetailViewModel.swift")
-        for signature in [
-            "func markSold(_ sale: Sale) -> Bool",
-            "func editSale(_ sale: Sale) -> Bool",
-            "func returnToCollection() -> Bool",
-        ] {
+        // (file, signature, the failure message the host must also set)
+        let intents: [(String, String, String?)] = [
+            ("Trove/ViewModels/ItemDetailViewModel.swift", "func markSold(_ sale: Sale) -> Bool", nil),
+            ("Trove/ViewModels/ItemDetailViewModel.swift", "func editSale(_ sale: Sale) -> Bool", nil),
+            ("Trove/ViewModels/ItemDetailViewModel.swift", "func returnToCollection() -> Bool", nil),
+            ("Trove/ViewModels/SellPlanViewModel.swift", "func markSold(_ item: Item, sale: Sale) -> Bool", "saveFailureMessage ="),
+        ]
+        var sources: [String: String] = [:]
+        for path in Set(intents.map(\.0)) {
+            sources[path] = try SourceScan.production(path)
+        }
+        for (path, signature, failureMessage) in intents {
+            let code = try #require(sources[path])
             let bodies = SourceScan.closureBodies(after: signature, in: code)
-            try #require(bodies.count == 1, "expected exactly one \(signature)")
+            try #require(bodies.count == 1, "expected exactly one \(signature) in \(path)")
             let body = bodies[0]
             #expect(body.ranges(of: "modelContext.save()").count == 1, "\(signature) must save exactly once")
 
@@ -1623,6 +1636,9 @@ struct ItemDetailSoldTests {
             #expect(catches[0].contains("modelContext.rollback()"), "\(signature): the refused save must roll the context back")
             #expect(catches[0].contains("load()"), "\(signature): the refused save must re-read what is stored")
             #expect(catches[0].contains("return false"), "\(signature): the refused save must answer false")
+            if let failureMessage {
+                #expect(catches[0].contains(failureMessage), "\(signature): the refused save must report itself (plan §3)")
+            }
 
             let outsideCatch = body.replacingOccurrences(of: catches[0], with: "")
             #expect(!outsideCatch.contains("rollback()"), "\(signature): rollback belongs to the failure path only")
@@ -1708,29 +1724,52 @@ struct ItemDetailSoldTests {
     /// clock, the detail page's Mark as sold… sheet and a Sell Plan row's
     /// seed the same sheet. Deferred here from T011, which had only one half
     /// of the comparison to make.
+    ///
+    /// Both an item that has a current value and one that hasn't: agreeing on
+    /// the valued item alone would leave the plan host free to seed a $0 price
+    /// where the detail host leaves the field blank — the one distinction P1
+    /// rests on, and the one a `?? 0` slipped into either host would break.
     @Test func bothHostsSeedTheMarkSheetIdentically() throws {
         let context = try makeInMemoryContext()
         let item = Item(name: "Telecaster", purchasePriceCents: 100_000, currentValueCents: 130_000, desireToKeep: 1)
         context.insert(item)
+        let unvalued = Item(name: "Blues Junior", purchasePriceCents: 60_000, currentValueCents: nil, desireToKeep: 1)
+        context.insert(unvalued)
         let plan = WishlistItem(name: "Rickenbacker 330", estimatedCostCents: 240_000)
         context.insert(plan)
         try context.save()
 
-        let detail = loaded(item, in: context)
-        detail.saleSheet = .mark
-        let fromDetail = detail.makeSaleFormViewModel()
-
         let sellPlan = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
         sellPlan.load()
-        let candidate = try #require(sellPlan.candidates.first { $0.id == item.id }, "the item must be a candidate for the comparison to mean anything")
-        let fromPlan = sellPlan.makeSaleFormViewModel(for: candidate)
+        // An un-valued item isn't a candidate on its own (`qualifies` wants a
+        // value), but a selected one stays on the plan after its value is
+        // cleared — which is how a row with no price to seed from gets here.
+        sellPlan.toggle(unvalued)
+        sellPlan.load()
 
-        #expect(fromDetail.title == fromPlan.title)
-        #expect(fromDetail.confirmLabel == fromPlan.confirmLabel)
-        #expect(fromDetail.price == fromPlan.price)
-        #expect(fromDetail.date == fromPlan.date)
-        #expect(fromDetail.location == fromPlan.location)
-        #expect(fromDetail.note == fromPlan.note)
+        for subject in [item, unvalued] {
+            let detail = loaded(subject, in: context)
+            detail.saleSheet = .mark
+            let fromDetail = detail.makeSaleFormViewModel()
+
+            let candidate = try #require(
+                sellPlan.candidates.first { $0.id == subject.id },
+                "\(subject.name) must be a candidate for the comparison to mean anything"
+            )
+            let fromPlan = sellPlan.makeSaleFormViewModel(for: candidate)
+
+            #expect(fromDetail.title == fromPlan.title)
+            #expect(fromDetail.confirmLabel == fromPlan.confirmLabel)
+            #expect(fromDetail.price == fromPlan.price, "\(subject.name): both hosts seed the same price")
+            #expect(fromDetail.date == fromPlan.date, "\(subject.name): both hosts seed the same date")
+            #expect(fromDetail.location == fromPlan.location)
+            #expect(fromDetail.note == fromPlan.note)
+        }
+
+        // Pinned, so the pair agreeing on the wrong thing still fails.
+        let unvaluedCandidate = try #require(sellPlan.candidates.first { $0.id == unvalued.id })
+        #expect(sellPlan.makeSaleFormViewModel(for: unvaluedCandidate).price == nil, "no value entered means a blank field, never $0")
+        #expect(sellPlan.makeSaleFormViewModel(for: unvaluedCandidate).date == now)
     }
 
     // MARK: - Delete

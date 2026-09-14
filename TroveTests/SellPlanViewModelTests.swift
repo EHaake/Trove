@@ -572,9 +572,15 @@ struct SellPlanFramingTests {
     ///
     /// A sale is the one thing that could plausibly be netted off — "you've
     /// already raised $950, so you need $1,450" is exactly the shortfall the
-    /// spec forbids, arriving from a new direction. So: the sold figure is the
-    /// sale's own price, the cost is untouched by it, and no member of the
-    /// type reads as the difference between the three.
+    /// spec forbids, arriving from a new direction. So, each pinned to a
+    /// literal read off the fixture: the sold figure is the sale's own price,
+    /// the cost is untouched by it, and the selected total is unmoved.
+    ///
+    /// That no *member* of the type reads as the difference between the three
+    /// is a separate claim, guarded separately by the term scan in
+    /// `theViewModelOffersNoSurplusOrShortfallFigure`. Asserting it here, over
+    /// three figures already pinned by literal, could only restate arithmetic
+    /// these expectations have already fixed — a tautology, not a check.
     @Test func theSoldFigureIsAThirdIndependentFigureAndTheCostIsUntouched() throws {
         let context = try makeInMemoryContext()
         let plan = wanted(costCents: 240_000, into: context)
@@ -590,13 +596,6 @@ struct SellPlanFramingTests {
         #expect(viewModel.soldValueCents == 95_000)
         #expect(viewModel.selectedValueCents == 90_000)
         #expect(viewModel.estimatedCostCents == 240_000, "a sale must not be netted off the cost")
-
-        // 240_000 − 90_000 − 95_000. Nothing on the type is allowed to be it.
-        let difference = viewModel.estimatedCostCents - viewModel.selectedValueCents - viewModel.soldValueCents
-        #expect(difference == 55_000, "the arithmetic this test forbids, computed here so the check below means something")
-        for figure in [viewModel.estimatedCostCents, viewModel.selectedValueCents, viewModel.soldValueCents] {
-            #expect(figure != difference, "no figure on the Sell Plan is the gap between the other two")
-        }
     }
 }
 

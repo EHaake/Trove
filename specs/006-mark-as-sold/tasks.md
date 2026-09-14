@@ -609,6 +609,24 @@ because the person will feel it before they read it.
   197 suites passed. Mechanical note for the log: reverting a mutation
   with `git checkout <file>` destroys uncommitted work — snapshot first.
 
+- [x] **T012a — Phase 4 review notes S3–S5 (test-only).** S3: the G10
+  framing test's `difference` assertions were tautologies over the three
+  pinned literals — dropped, the docstring now points at the term scan; the
+  Dashboard's `value − spent == delta` line dropped too, since
+  `valueDeltaCents` is *defined* as that difference (unfalsifiable by
+  construction — the 002/T013 finding, met again). S4: the structural
+  catch-block scan now covers `SellPlanViewModel.markSold` (mutation:
+  `rollback()` removed → `ItemDetailViewModelTests:1636` red). S5: the
+  cross-host seeding equality covers a value-less item (mutation: `?? 0`
+  → :1763/1771 red). Verify (implementer's verbatim output): 1439 tests in
+  197 suites passed. Plan §4's `soldSummaryLine` signature corrected to
+  `String?` (S1). Carried: S2 Q5's "either side non-empty" reads as raw
+  where the code narrows (close-out); **S6 an all-sold collection lands the
+  Owned side on "Nothing added yet" — a product question, put to the
+  person at the Phase 4 pause, and T015's bundle carries the answer**; S7
+  `SellPlanViewModel.soldValueCents` sums prices itself by plan §3 (G32's
+  name overstates its reach; sweep).
+
 ## Phase 5 — Screens
 
 - [ ] **T013 — The sale sheet (shared).**
@@ -841,4 +859,6 @@ interpreted here.
 | T010 implement | opus (`sdd-implementer`, high effort) | 72,844 (27 tool uses, 11 min) | done first pass; five mutation runs red |
 | T011 implement | opus (`sdd-implementer`, high effort) | 102,615 (40 tool uses, 11 min) | done first pass; seven mutations red (two beyond the task's list, stated) |
 | T012 implement | opus (`sdd-implementer`, high effort) | 120,241 (34 tool uses, 12 min) | done first pass; eleven mutation runs red; one self-inflicted revert recovered from a snapshot |
+| Phase 4 review | opus (`skeptical-reviewer`) | 136,144 (8 tool uses — two targeted looks, stated) | **signed off, nothing blocking**; S1–S7 |
+| T012a fix (S3–S5) | opus (`sdd-implementer`, high effort) | 60,317 (29 tool uses, 6 min) | done; both mutations red |
 | _rows added per dispatch as the spec runs_ | | | |

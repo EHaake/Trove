@@ -819,8 +819,12 @@ struct DashboardSoldFiguresTests {
 
         #expect(viewModel.totalCurrentValueCents == 376_000)
         #expect(viewModel.totalSpentCents == 314_000)
+        // No `total - spent == delta` line here: `valueDeltaCents` *is* that
+        // subtraction, so it can't fail — the same tautology
+        // `theThreeHeadlineFiguresAlwaysReconcile` records finding at 002/T013.
+        // The three literals above, read off `makeCollection`'s fixture by
+        // hand, are what makes the figures reconcile falsifiably.
         #expect(viewModel.valueDeltaCents == 62_000)
-        #expect(viewModel.totalCurrentValueCents - viewModel.totalSpentCents == viewModel.valueDeltaCents)
 
         #expect(viewModel.totalItemCount == 2)
         #expect(viewModel.valuedCount == 2)
