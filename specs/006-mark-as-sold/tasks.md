@@ -455,7 +455,7 @@ because the person will feel it before they read it.
 
 ## Phase 4 — View models
 
-- [ ] **T009 — `ItemListViewModel`: two sides, `show(_:)`, both exports.**
+- [x] **T009 — `ItemListViewModel`: two sides, `show(_:)`, both exports.**
   Per plan §4, Q5 and Q15. `Side`, `private(set) side`, **`show(_ side:)`**
   (sets the side and clears `searchText`/`categoryFilter`/`showsOnlyUnvalued`
   whenever it changes, both directions, then `load()`), `soldItems`,
@@ -491,6 +491,25 @@ because the person will feel it before they read it.
   `ExportWiringTests.swift`, `OverflowDropdownRenderTests.swift`,
   `SettingsViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-09-13):** three new suites; twenty-two mutations, each red
+  then reverted (G13 `ItemListViewModelTests:1707`; G14 date and name
+  reversals :1733; G15 :1990; G33 both directions :1893 and the
+  same-side case :1946; G32 :1774/1775; G16 entries :2039 and cover
+  :2043; G28 three ways `SettingsViewModelTests:458/462`; delete :1854;
+  `canReorder` :1829; `emptyReason` :1788/1792; the two gates :2061/2062;
+  G29 by scan `ExportWiringTests:115/61` and by pixels
+  `OverflowDropdownRenderTests:103`; Decision 11's hidden summary :1747).
+  Declared readings: `canExportCSV` counts the *narrowed* halves (a chip
+  matching nothing on either side disables the row rather than staging a
+  header-only file — 011's criterion 2); `show(_:)` always reloads, clears
+  only on a change; G32's scan asserts this file only, T010 extends it.
+  Verify (implementer's verbatim output): 1412 tests in 194 suites passed.
+  For T015: branch the empty state on `emptyReason`, not `isEmpty`
+  (owned-only); `soldSummaryLine` is `String?`. For close-out: README's
+  Export bullet now gets three things wrong — "filters and sort respected"
+  (the sold half rides along in Sold order), one gate for two formats (an
+  all-sold collection has CSV but no PDF), and the column list is short by
+  four.
 
 - [ ] **T010 — `DashboardViewModel`: the sold figures.**
   Per plan §6. `load()` splits `scoped` into owned and sold; `apply` unchanged
@@ -774,4 +793,5 @@ interpreted here.
 | T008 brief | fable, medium (the session — transcription from spec, plan, `SaleCopy`, tokens) | — | `design/elements/006-mark-as-sold/brief.md` written; awaits the person's `/design` run |
 | T008 design pass | — (person + `/design`) | — | brief written (session); 12 artboards approved + saved; tokens section written (session, transcription); six copy questions decided by the person → spec Decision 11; no allowance draw |
 | T008a implement | opus (`sdd-implementer`, high effort) | 46,454 (10 tool uses, 4 min) | done first pass; one design-free choice (alias) stated |
+| T009 implement | opus (`sdd-implementer`, high effort) | 169,080 (70 tool uses, 25 min) | done first pass; twenty-two mutations red; one wording gap resolved by a declared default (narrowed `canExportCSV`) — to the Phase 4 review |
 | _rows added per dispatch as the spec runs_ | | | |

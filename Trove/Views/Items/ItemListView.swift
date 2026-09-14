@@ -310,7 +310,8 @@ struct ItemListView: View {
                 }
             case .overflow:
                 OverflowDropdown(
-                    canExport: viewModel.canExport,
+                    canExportCSV: viewModel.canExportCSV,
+                    canExportPDF: viewModel.canExportPDF,
                     exportCSV: { Task { await viewModel.exportCSV() } },
                     exportPDF: { Task { await viewModel.exportPDF() } },
                     importCSV: { isPickingImportFile = true },

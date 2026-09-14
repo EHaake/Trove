@@ -422,6 +422,46 @@ struct SettingsViewModelExportTests {
         #expect(spy.tables[1].rows.map { $0[0] } == ["alpha", "Bravo", "Charlie", "Zed"])
     }
 
+    /// 006/G28's other half, completed now the list has two sides: with a
+    /// sale present, Settings' items CSV is byte-identical to what the Items
+    /// list exports unfiltered in Custom order — owned rows in Custom order,
+    /// then sold rows in Sold-side order, on both paths. 013's criterion 5
+    /// survives a sale being in the collection.
+    ///
+    /// Mutation: drop the sold half from `ItemListViewModel.exportCSV`, or
+    /// sort it by anything but `areInSoldOrder`, and the two files diverge →
+    /// red. The sold rows' `sortOrder` disagrees with their sale dates on
+    /// purpose, so a single Custom sort over everything fails it too.
+    @Test func theListsUnfilteredCSVStillMatchesSettingsByteForByteWithASalePresent() async throws {
+        let context = try makeInMemoryContext()
+        try seedTieFixture(into: context)
+        let zebra = insertItem("Zebra", order: 9, into: context)
+        zebra.sale = Sale(date: try day(2026, 6, 1), priceCents: 90_000, location: "Reverb", note: "clean")
+        let beta = insertItem("beta", order: 1, into: context)
+        beta.sale = Sale(date: try day(2026, 3, 1), priceCents: 20_000, location: nil, note: nil)
+        let alpha = insertItem("Alpha", order: 2, into: context)
+        alpha.sale = Sale(date: try day(2026, 3, 1), priceCents: 30_000, location: nil, note: nil)
+        try context.save()
+
+        let settingsSpy = ExportServiceSpy()
+        let settings = SettingsViewModel(modelContext: context, exportService: settingsSpy)
+        settings.load()
+        await settings.exportEverythingAsCSV()
+
+        let listSpy = ExportServiceSpy()
+        let list = ItemListViewModel(modelContext: context, exportService: listSpy)
+        list.sortOrder = .custom
+        list.load()
+        await list.exportCSV()
+
+        let listTable = try #require(listSpy.tables.first)
+        try #require(
+            listTable.rows.map { $0[0] } == ["Charlie", "Bravo", "alpha", "Zulu", "Zebra", "Alpha", "beta"],
+            "the list's own order changed — the equality below would be two wrongs agreeing"
+        )
+        #expect(CSVWriter.write(settingsSpy.tables[0]) == CSVWriter.write(listTable))
+    }
+
     /// 006/G16: the everything-PDF is the owned collection only — its
     /// entries, its `itemCount` and its cover totals — so the figures on the
     /// cover are the Dashboard's collection figures rather than a mix of

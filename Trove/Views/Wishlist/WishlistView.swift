@@ -253,7 +253,10 @@ struct WishlistView: View {
                 }
             case .overflow:
                 OverflowDropdown(
-                    canExport: viewModel.canExport,
+                    // One flag into both gates: a wishlist has no sold half,
+                    // so its CSV and its PDF cover exactly the same rows.
+                    canExportCSV: viewModel.canExport,
+                    canExportPDF: viewModel.canExport,
                     exportCSV: { Task { await viewModel.exportCSV() } },
                     exportPDF: { Task { await viewModel.exportPDF() } },
                     importCSV: { isPickingImportFile = true },
