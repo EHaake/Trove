@@ -540,7 +540,7 @@ because the person will feel it before they read it.
   still catches the realistic hand-sum). For T016: the root breakdown
   collapses to top-level categories.
 
-- [ ] **T011 — `SellPlanViewModel`: the Sold figure, the cue, `markSold`, the framing guard.**
+- [x] **T011 — `SellPlanViewModel`: the Sold figure, the cue, `markSold`, the framing guard.**
   Per plan §3 and Q14. `soldItems`, `soldCount`, `soldValueCents`, `hasSales`
   read off `itemsSoldToward`; `selectedValueMeetsCost` reads Selected plus
   Sold; `load()` drops sold items from `owned`; `markSold(_:sale:)`
@@ -561,6 +561,20 @@ because the person will feel it before they read it.
   → red → remove.
   Files: `Trove/ViewModels/SellPlanViewModel.swift`, `TroveTests/SellPlanViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-09-13):** the Sold figure off `itemsSoldToward` in
+  `areInSoldOrder`; the cue reads Selected + Sold (Q14); `load()` drops
+  sold items; `markSold` saves, rolls back and reloads on refusal;
+  `saleCandidate`; `makeSaleFormViewModel(for:)`. Eleven tests. Mutations,
+  each red then reverted: G12 (`SellPlanViewModelTests:908`), G10 (:592),
+  G11 (:970), the term scan against `remainingCents` (:543), G6
+  (`toward: nil` → :885), sold order reversed (:952), the relationship
+  read replaced by a fetch (:926). Cross-host seed equality deferred to
+  T012 by the bundle's instruction. The refused-save rollback is
+  implemented but unguarded — an in-memory container can't make `save()`
+  throw and the only throw in `markSold` is the market clear; the existing
+  precedent is `ItemDetailViewModelTests`' structural scan of the `catch`
+  block (T012 uses the same shape; sweep). Verify (implementer's verbatim
+  output): 1428 tests in 196 suites passed.
 
 - [ ] **T012 — `ItemDetailViewModel`: mark, edit, return.**
   Per plan §5. `isSold`, `sale`, `saleOutcome`, `saleSheet: SaleSheet?`,
@@ -809,4 +823,5 @@ interpreted here.
 | T008a implement | opus (`sdd-implementer`, high effort) | 46,454 (10 tool uses, 4 min) | done first pass; one design-free choice (alias) stated |
 | T009 implement | opus (`sdd-implementer`, high effort) | 169,080 (70 tool uses, 25 min) | done first pass; twenty-two mutations red; one wording gap resolved by a declared default (narrowed `canExportCSV`) — to the Phase 4 review |
 | T010 implement | opus (`sdd-implementer`, high effort) | 72,844 (27 tool uses, 11 min) | done first pass; five mutation runs red |
+| T011 implement | opus (`sdd-implementer`, high effort) | 102,615 (40 tool uses, 11 min) | done first pass; seven mutations red (two beyond the task's list, stated) |
 | _rows added per dispatch as the spec runs_ | | | |
