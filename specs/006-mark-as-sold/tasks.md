@@ -576,7 +576,7 @@ because the person will feel it before they read it.
   block (T012 uses the same shape; sweep). Verify (implementer's verbatim
   output): 1428 tests in 196 suites passed.
 
-- [ ] **T012 — `ItemDetailViewModel`: mark, edit, return.**
+- [x] **T012 — `ItemDetailViewModel`: mark, edit, return.**
   Per plan §5. `isSold`, `sale`, `saleOutcome`, `saleSheet: SaleSheet?`,
   `makeSaleFormViewModel()`, `markSold(_:)`, `editSale(_:)`,
   `returnToCollection()` — each through `ItemSaleStore`, one save, rollback
@@ -592,6 +592,22 @@ because the person will feel it before they read it.
   Files: `Trove/ViewModels/ItemDetailViewModel.swift`, `TroveTests/ItemDetailViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded. **Phase 4 closes
   here — pause for the person** (nothing new to see; the review gate).
+  **Done (2026-09-13):** `SaleSheet` (top-level, the `PhotoSheetStep`
+  placement), the three intents through `ItemSaleStore` in the `store(_:)`
+  shape, `makeSaleFormViewModel()`; eleven tests on a second context.
+  Mutations, each red then reverted: G6 detail half (a plan passed →
+  `ItemDetailViewModelTests:1466/1514`), G21 (:1542), return never saving
+  (:1580–1592), G19 both modes (:1664/1701) and the cross-host equality
+  (:1730/1731), the accessors hard-coded (:1459–1461), the catch losing
+  `rollback()` (:1623 — the structural scan, since no in-memory save can
+  throw), G5/G20 through the detail (:1485–1490), selections kept (:1513),
+  G7 renumbering (:1586/1592), delete refusing a sold item (:1756–1761).
+  Declared: no `isConfirmingReturn` on the view model (the task line omits
+  it; the alert flag is view `@State`, T014); the intents don't clear
+  `saleSheet` — the view does, as T011's `saleCandidate` — T013/T014's
+  bundles say so. Verify (implementer's verbatim output): 1439 tests in
+  197 suites passed. Mechanical note for the log: reverting a mutation
+  with `git checkout <file>` destroys uncommitted work — snapshot first.
 
 ## Phase 5 — Screens
 
@@ -824,4 +840,5 @@ interpreted here.
 | T009 implement | opus (`sdd-implementer`, high effort) | 169,080 (70 tool uses, 25 min) | done first pass; twenty-two mutations red; one wording gap resolved by a declared default (narrowed `canExportCSV`) — to the Phase 4 review |
 | T010 implement | opus (`sdd-implementer`, high effort) | 72,844 (27 tool uses, 11 min) | done first pass; five mutation runs red |
 | T011 implement | opus (`sdd-implementer`, high effort) | 102,615 (40 tool uses, 11 min) | done first pass; seven mutations red (two beyond the task's list, stated) |
+| T012 implement | opus (`sdd-implementer`, high effort) | 120,241 (34 tool uses, 12 min) | done first pass; eleven mutation runs red; one self-inflicted revert recovered from a snapshot |
 | _rows added per dispatch as the spec runs_ | | | |
