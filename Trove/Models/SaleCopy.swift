@@ -11,12 +11,11 @@ import Foundation
 /// `SaleOutcome.isLoss`, and each view maps that to `accentRustText` /
 /// `accentMossText` itself.
 ///
-/// The two outcome lines (`rowOutcome`, `pageOutcome`) are placeholders per
-/// spec Decision 10 as clarified: what is fixed is that a row and the page
-/// make the gain or loss and its amount unmistakable without colour carrying
-/// it. The Design pass (T008) may settle a different form, in which case this
-/// file and `SaleCopyTests` change with it — a copy change inside the spec,
-/// not new copy.
+/// The outcome line is one form on a row and on the page alike, settled by
+/// the Design pass (spec Decision 11): "Gain $350 vs paid" / "Loss $150 vs
+/// paid" / "At cost". The words, not the colour, carry which one it is — the
+/// page only sets the same string larger, so `pageOutcome` forwards to
+/// `rowOutcome` rather than composing its own.
 nonisolated enum SaleCopy {
     // MARK: - Actions
 
@@ -44,6 +43,7 @@ nonisolated enum SaleCopy {
     static let soldAtLabel = "Sold at"
     static let soldAtPlaceholder = "eBay, Reverb, a friend\u{2026}"
     static let noteLabel = "Note"
+    static let notePlaceholder = "Anything worth remembering"
 
     // MARK: - Return to collection (the alert)
 
@@ -95,7 +95,7 @@ nonisolated enum SaleCopy {
     /// The realised gain or loss beneath the card's figures — "+$350 vs
     /// paid". Zero reads "+$0 vs paid" through the Dashboard's own signed
     /// formatter, exactly as its Gain figure already does (plan Q11); the
-    /// rows and the page say "Sold at cost" in words instead.
+    /// rows and the page say "At cost" in words instead.
     static func realised(deltaCents: Int) -> String {
         "\(deltaCents.formattedAsSignedWholeCurrency(currencyCode: currencyCode)) vs paid"
     }
@@ -112,35 +112,38 @@ nonisolated enum SaleCopy {
     }
 
     /// What a sale at exactly what was paid says, on a row and on the page
-    /// alike — the one outcome with no figure in it.
-    static let atCost = "Sold at cost"
+    /// alike — the one outcome with no figure in it. It drops the word
+    /// "Sold" because the row's date line and the page's tag already say it
+    /// (Decision 11).
+    static let atCost = "At cost"
 
-    /// A Sold-side row's outcome — "Gain $350" / "Loss $150" / "Sold at
-    /// cost". The words, not the colour, carry which one it is.
+    /// A sold item's outcome — "Gain $350 vs paid" / "Loss $150 vs paid" /
+    /// "At cost". Words first, then the amount, then the basis: "vs paid" is
+    /// the app's existing phrase, and it names what the figure is measured
+    /// against on a page where WORTH NOW sits just below (Decision 11).
     static func rowOutcome(deltaCents: Int) -> String {
         guard deltaCents != 0 else { return atCost }
         let magnitude = abs(deltaCents).formattedAsWholeCurrency(currencyCode: currencyCode)
-        return deltaCents < 0 ? "Loss \(magnitude)" : "Gain \(magnitude)"
+        return "\(deltaCents < 0 ? "Loss" : "Gain") \(magnitude) vs paid"
     }
 
-    /// The sold page's outcome — "Sold at a gain of $350" / "Sold at a loss
-    /// of $150" / "Sold at cost".
+    /// The sold page's outcome — the same string the row shows, which the
+    /// page sets larger. An alias rather than a second body, so the two
+    /// surfaces cannot drift apart; the name stays so each call site reads
+    /// for the surface it is on.
     static func pageOutcome(deltaCents: Int) -> String {
-        guard deltaCents != 0 else { return atCost }
-        let magnitude = abs(deltaCents).formattedAsWholeCurrency(currencyCode: currencyCode)
-        return deltaCents < 0
-            ? "Sold at a loss of \(magnitude)"
-            : "Sold at a gain of \(magnitude)"
+        rowOutcome(deltaCents: deltaCents)
     }
 
-    /// The sale in one line — "Sold 12 Sep 2026 · $1,200 · eBay", the place
-    /// omitted when there isn't one. The date goes through the same
-    /// `formatted(date: .abbreviated, time: .omitted)` the detail's "Bought"
-    /// row uses, so it follows the device's own format (plan Q11) — "Sep 12,
-    /// 2026" on a US device; the spec's example is the same date written in a
-    /// day-first locale, not a fixed order.
+    /// The sale in one line — "Sep 12, 2026 · $1,200 · eBay", the place
+    /// omitted when there isn't one. It drops the word "Sold": the tag above
+    /// it on the sold page already says so (Decision 11). The date goes
+    /// through the same `formatted(date: .abbreviated, time: .omitted)` the
+    /// detail's "Bought" row uses, so it follows the device's own format
+    /// (plan Q11) — "Sep 12, 2026" on a US device; the spec's example is the
+    /// same date written in a day-first locale, not a fixed order.
     static func saleLine(_ sale: Sale) -> String {
-        var parts = ["Sold \(sale.date.formatted(date: .abbreviated, time: .omitted))"]
+        var parts = [sale.date.formatted(date: .abbreviated, time: .omitted)]
         parts.append(sale.priceCents.formattedAsWholeCurrency(currencyCode: currencyCode))
         if let location = sale.location, !location.isEmpty {
             parts.append(location)

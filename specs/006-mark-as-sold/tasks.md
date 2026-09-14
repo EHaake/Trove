@@ -434,7 +434,7 @@ because the person will feel it before they read it.
   the summary in the meta slot, Selected at 26 in the three-figure layout,
   the desire hint dropped) accepted. The copy changes land as T008a.
 
-- [ ] **T008a — The settled strings in `SaleCopy` (Decision 11).**
+- [x] **T008a — The settled strings in `SaleCopy` (Decision 11).**
   `rowOutcome` and `pageOutcome` become one form — "Gain $350 vs paid" /
   "Loss $150 vs paid" / "At cost" (`atCost` → "At cost"; keep both function
   names so the views' call sites in later tasks read as planned, or fold to
@@ -445,6 +445,13 @@ because the person will feel it before they read it.
   sales; the note line on the page.
   Files: `Trove/Models/SaleCopy.swift`, `TroveTests/SaleCopyTests.swift`.
   **Verify:** `scripts/verify.sh` green.
+  **Done (2026-09-13):** one body in `rowOutcome`, `pageOutcome` a forward
+  to it (drift structurally impossible; the page test pins the three
+  literals so a body of its own would go red); `saleLine` opens on the
+  date; `notePlaceholder` added. Falsifiability: `atCost` → "At cost." →
+  three failures in "Sale copy", reverted. Verify (implementer's verbatim
+  output): 1393 tests in 191 suites passed. Reviewed with Phase 4 (a
+  two-file copy change; no phase review of its own). **Phase 3 closes.**
 
 ## Phase 4 — View models
 
@@ -766,4 +773,5 @@ interpreted here.
 | Phase 2 re-review | opus (`skeptical-reviewer`, resumed) | 98,879 cumulative (~3.5k this round; 1 tool use) | **signed off**, no new blocking |
 | T008 brief | fable, medium (the session — transcription from spec, plan, `SaleCopy`, tokens) | — | `design/elements/006-mark-as-sold/brief.md` written; awaits the person's `/design` run |
 | T008 design pass | — (person + `/design`) | — | brief written (session); 12 artboards approved + saved; tokens section written (session, transcription); six copy questions decided by the person → spec Decision 11; no allowance draw |
+| T008a implement | opus (`sdd-implementer`, high effort) | 46,454 (10 tool uses, 4 min) | done first pass; one design-free choice (alias) stated |
 | _rows added per dispatch as the spec runs_ | | | |

@@ -5,7 +5,8 @@ import Testing
 /// Spec 006's copy, pinned whole (the `StockPhotoCopyTests` model): every
 /// string in the spec's Copy section, and each composed line at a gain, a
 /// loss and zero — the three readings that must stay distinguishable without
-/// colour (Decision 10) — plus the sale line with and without a place.
+/// colour (Decision 11's settled form) — plus the sale line with and without
+/// a place.
 @Suite("Sale copy")
 struct SaleCopyTests {
     // MARK: - The fixed strings
@@ -30,6 +31,7 @@ struct SaleCopyTests {
         #expect(SaleCopy.soldAtLabel == "Sold at")
         #expect(SaleCopy.soldAtPlaceholder == "eBay, Reverb, a friend…")
         #expect(SaleCopy.noteLabel == "Note")
+        #expect(SaleCopy.notePlaceholder == "Anything worth remembering")
     }
 
     @Test func theReturnAlert() {
@@ -75,8 +77,8 @@ struct SaleCopyTests {
 
     /// Zero reads "+$0 vs paid" on the card and the summary, deliberately —
     /// the Dashboard's Gain figure already prints "+$0", and only the rows
-    /// and the page say "Sold at cost" in words (plan Q11). The loss carries
-    /// a real minus sign, not a hyphen, like every other signed figure.
+    /// and the page say "At cost" in words (plan Q11). The loss carries a
+    /// real minus sign, not a hyphen, like every other signed figure.
     @Test func theRealisedLineAtAGainALossAndZero() {
         #expect(SaleCopy.realised(deltaCents: 35_000) == "+$350 vs paid")
         #expect(SaleCopy.realised(deltaCents: -15_000) == "−$150 vs paid")
@@ -92,24 +94,29 @@ struct SaleCopyTests {
             == "3 sold · $2,400 · +$0 vs paid")
     }
 
-    /// Decision 10, on a row: gain, loss and at-cost each say in words which
-    /// one it is, so nothing is left to the colour.
+    /// Decision 11's settled form, on a row: the word first, then the
+    /// amount, then the basis — so nothing is left to the colour, and the
+    /// figure says what it is measured against.
     @Test func theRowOutcomeAtAGainALossAndZero() {
-        #expect(SaleCopy.rowOutcome(deltaCents: 35_000) == "Gain $350")
-        #expect(SaleCopy.rowOutcome(deltaCents: -15_000) == "Loss $150")
-        #expect(SaleCopy.rowOutcome(deltaCents: 0) == "Sold at cost")
+        #expect(SaleCopy.rowOutcome(deltaCents: 35_000) == "Gain $350 vs paid")
+        #expect(SaleCopy.rowOutcome(deltaCents: -15_000) == "Loss $150 vs paid")
+        #expect(SaleCopy.rowOutcome(deltaCents: 0) == "At cost")
+        #expect(SaleCopy.atCost == "At cost")
     }
 
-    /// Decision 10, on the page.
-    @Test func thePageOutcomeAtAGainALossAndZero() {
-        #expect(SaleCopy.pageOutcome(deltaCents: 35_000) == "Sold at a gain of $350")
-        #expect(SaleCopy.pageOutcome(deltaCents: -15_000) == "Sold at a loss of $150")
-        #expect(SaleCopy.pageOutcome(deltaCents: 0) == "Sold at cost")
+    /// The page says exactly what the row says (Decision 11) — it only sets
+    /// it larger. Pinned as its own strings rather than as
+    /// `pageOutcome == rowOutcome`, which today's forwarding body could not
+    /// make false: give `pageOutcome` a body of its own and this goes red.
+    @Test func thePageOutcomeReadsTheSameAsTheRow() {
+        #expect(SaleCopy.pageOutcome(deltaCents: 35_000) == "Gain $350 vs paid")
+        #expect(SaleCopy.pageOutcome(deltaCents: -15_000) == "Loss $150 vs paid")
+        #expect(SaleCopy.pageOutcome(deltaCents: 0) == "At cost")
     }
 
-    /// A loss must never read as a gain with a stray sign: the two outcome
-    /// forms carry the direction in a word, and the at-cost reading carries
-    /// no figure at all.
+    /// A loss must never read as a gain with a stray sign: the outcome form
+    /// carries the direction in a word, and the at-cost reading carries no
+    /// figure at all.
     @Test func aLossNeverReadsAsAGain() {
         #expect(!SaleCopy.rowOutcome(deltaCents: -15_000).localizedCaseInsensitiveContains("gain"))
         #expect(!SaleCopy.pageOutcome(deltaCents: -15_000).localizedCaseInsensitiveContains("gain"))
@@ -132,20 +139,21 @@ struct SaleCopyTests {
             )
 
             #expect(SaleCopy.rowOutcome(deltaCents: delta).hasPrefix("Loss") == outcome.isLoss)
-            #expect(SaleCopy.pageOutcome(deltaCents: delta).contains("at a loss") == outcome.isLoss)
+            #expect(SaleCopy.pageOutcome(deltaCents: delta).hasPrefix("Loss") == outcome.isLoss)
         }
     }
 
     /// The date is the device's own abbreviated form — the detail's "Bought"
     /// row's formatter — so the expectation composes it the same way rather
     /// than pinning one locale's order. Changing the style in `SaleCopy`
-    /// turns this red; changing the device's locale does not.
+    /// turns this red; changing the device's locale does not. The line opens
+    /// on the date: the word "Sold" is gone (Decision 11).
     @Test func theSaleLineWithAPlace() {
         let date = Date(timeIntervalSince1970: 1_789_000_000)
         let sale = Sale(date: date, priceCents: 120_000, location: "eBay", note: nil)
         let day = date.formatted(date: .abbreviated, time: .omitted)
 
-        #expect(SaleCopy.saleLine(sale) == "Sold \(day) · $1,200 · eBay")
+        #expect(SaleCopy.saleLine(sale) == "\(day) · $1,200 · eBay")
     }
 
     /// No place, no trailing separator — and the note never appears in the
@@ -155,7 +163,8 @@ struct SaleCopyTests {
         let sale = Sale(date: date, priceCents: 120_000, location: nil, note: "Paid in cash")
         let day = date.formatted(date: .abbreviated, time: .omitted)
 
-        #expect(SaleCopy.saleLine(sale) == "Sold \(day) · $1,200")
+        #expect(SaleCopy.saleLine(sale) == "\(day) · $1,200")
+        #expect(!SaleCopy.saleLine(sale).contains("Sold"))
         #expect(!SaleCopy.saleLine(sale).contains("Paid in cash"))
     }
 
@@ -166,7 +175,7 @@ struct SaleCopyTests {
         let sale = Sale(date: date, priceCents: 120_000, location: "", note: nil)
         let day = date.formatted(date: .abbreviated, time: .omitted)
 
-        #expect(SaleCopy.saleLine(sale) == "Sold \(day) · $1,200")
+        #expect(SaleCopy.saleLine(sale) == "\(day) · $1,200")
     }
 
     // MARK: - Helpers
