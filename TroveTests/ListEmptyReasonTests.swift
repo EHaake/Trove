@@ -128,6 +128,9 @@ struct ListEmptyReasonTests {
 
         #expect(reason == .nothingAdded)
         #expect(reason != .nothingSold)
+        // Decision 12's case is mapped on top of this answer, never returned
+        // in place of it: this rule can't see the sold half at all.
+        #expect(reason != .everythingSold)
     }
 
     // MARK: - The query it hands back

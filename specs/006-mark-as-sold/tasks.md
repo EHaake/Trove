@@ -757,7 +757,7 @@ because the person will feel it before they read it.
   run together with T015a's, since the emptied Owned side is the state
   both change.
 
-- [ ] **T015a — The emptied Owned side's empty state (spec Decision 12).**
+- [x] **T015a — The emptied Owned side's empty state (spec Decision 12).**
   Per plan §4's "The emptied Owned side" paragraph. `ListEmptyReason` gains
   `.everythingSold`; `SaleCopy` gains `everythingSoldHeadline` /
   `everythingSoldDetail`; `ItemListViewModel.emptyReason`'s `.owned` branch
@@ -776,6 +776,16 @@ because the person will feel it before they read it.
   `TroveTests/ItemListSidesWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded; the state seen
   by eye after selling the last owned item.
+  **Done (2026-09-14).** `.everythingSold` mapped from `reason(...)`'s
+  `.nothingAdded` in a private `ownedEmptyReason` iff `soldItems` is
+  non-empty; the state keeps the Items mark and the Add-an-item door;
+  `WishlistView` folds it. 1475 tests green (+2). Four mutations red; note
+  the task line's first prediction was off — dropping the `soldItems` check
+  over-maps, so the "neither → `.nothingAdded`" expectation and three
+  pre-existing suites catch it, and deleting the mapping is what the first
+  expectation alone catches (run and red). `theOwnedSideKeepsItsOwnEmptyReasons`
+  was replaced, since its single assertion was Decision 12's old answer;
+  its leak check survives in the new test. Eye check: with T015's, below.
 
 - [ ] **T016 — The Dashboard's Sold card.**
   Per plan §6 and T008's artboard. New `Trove/Views/Dashboard/SoldCard.swift`
@@ -934,4 +944,5 @@ interpreted here.
 | T014 implement | opus (`sdd-implementer`, high effort) | 159,039 (59 tool uses, 16 min) | done first pass; nine mutations red; one deviation stated (mark above the hero, per artboards) |
 | T013+T014 device pass | opus (`general-purpose`, simulator) | 185,523 (154 tool uses, 12 min) | all steps match the artboards; two observations to the phase review (border clears on confirm only; WORTH NOW unchanged on a sold page) |
 | T015 implement | opus (`sdd-implementer`, high effort) | 216,710 (72 tool uses, 22 min) | done first pass; twelve mutations red; two deviations stated (empty-side meta line per plan; no row cross-fade) |
+| T015a implement | opus (`sdd-implementer`, high effort) | 83,380 (25 tool uses, 7 min) | done first pass; four mutations red; the bundle's predicted failure point for one was off by an expectation (recorded) |
 | _rows added per dispatch as the spec runs_ | | | |

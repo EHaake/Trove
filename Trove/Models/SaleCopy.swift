@@ -74,6 +74,15 @@ nonisolated enum SaleCopy {
     static let nothingSoldHeadline = "Nothing sold yet."
     static let nothingSoldDetail = "Mark an item as sold from its page or from a sell plan."
 
+    // MARK: - The Owned side, emptied by selling
+
+    /// What the Owned side says once every item on it has been sold (spec
+    /// Decision 12) — not the first-launch "No gear yet", because this person
+    /// has been using the app. The detail is an invitation, and the state
+    /// keeps the first-launch state's Add button so the door is the same one.
+    static let everythingSoldHeadline = "Everything's sold."
+    static let everythingSoldDetail = "Add something new."
+
     // MARK: - Composed lines
 
     /// The middle dot every summary line in the app joins on

@@ -1808,17 +1808,57 @@ struct ItemListViewModelSoldSideTests {
         #expect(syncing.emptyReason == nil, "a side with rows on it is not an empty state")
     }
 
-    /// The Owned side keeps its own four reasons — the Sold side's case must
-    /// not leak across.
-    @Test func theOwnedSideKeepsItsOwnEmptyReasons() throws {
+    /// Spec Decision 12, and the Owned side's own precedence around it: an
+    /// Owned side emptied by *selling* says so, an app that has never held
+    /// anything still gets the first-launch case, and mid-import neither
+    /// claim is made at all.
+    ///
+    /// Mutations: drop the `!soldItems.isEmpty` check in `ownedEmptyReason`
+    /// → the first expectation reads `.nothingAdded` → red; map to
+    /// `.everythingSold` before `reason(...)` weighs `stillSyncing` → the
+    /// third reads `.everythingSold` → red.
+    @Test func theEmptiedOwnedSideSaysEverythingSold() throws {
         let context = try makeInMemoryContext()
         insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
         try context.save()
 
         let viewModel = ItemListViewModel(modelContext: context)
         viewModel.load()
+        #expect(
+            viewModel.emptyReason == .everythingSold,
+            "an Owned side emptied by selling still reads as a first launch"
+        )
+        #expect(viewModel.emptyReason != .nothingSold, "the Sold side's case leaked across")
 
-        #expect(viewModel.emptyReason == .nothingAdded, "an all-sold collection has nothing *owned* to show")
+        let empty = ItemListViewModel(modelContext: try makeInMemoryContext())
+        empty.load()
+        #expect(
+            empty.emptyReason == .nothingAdded,
+            "a collection that has never held anything is still a first launch"
+        )
+
+        let syncing = ItemListViewModel(modelContext: context, syncMonitor: importingMonitor())
+        syncing.load()
+        #expect(
+            syncing.emptyReason == .stillSyncing,
+            "the sold half is here but the owned half may still be arriving — `stillSyncing` still wins"
+        )
+    }
+
+    /// The mapping is the `.nothingAdded` case's alone: a narrowed-to-nothing
+    /// Owned side keeps its filter copy even with sales on the other side
+    /// (plan §4).
+    @Test func aNarrowedOwnedSideKeepsItsFilterCopyWithSalesPresent() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Kept", category: "Music/Guitars", into: context)
+        insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.searchText = "hasselblad"
+        viewModel.load()
+
+        #expect(viewModel.emptyReason == .searchMatchedNothing(query: "hasselblad"))
     }
 
     /// Dragging is the Owned side's alone: the Sold side is ordered by the

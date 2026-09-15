@@ -833,6 +833,18 @@ struct ItemListView: View {
                 detail: SaleCopy.nothingSoldDetail
             )
 
+        // The Owned side emptied by selling (spec Decision 12). The Items
+        // mark and the Add button are the first-launch state's, deliberately:
+        // "Add something new." wants the same door, and this side is the half
+        // of the screen that is empty. Only the words change.
+        case .everythingSold:
+            EmptyStateView(
+                mark: .asset("TabItems"),
+                headline: SaleCopy.everythingSoldHeadline,
+                detail: SaleCopy.everythingSoldDetail,
+                action: .init(label: "Add an item", isProminent: true) { isAddingItem = true }
+            )
+
         case .everythingIsValued:
             EmptyStateView(
                 mark: .system("checkmark.circle"),

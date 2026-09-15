@@ -144,14 +144,7 @@ final class ItemListViewModel {
     var emptyReason: ListEmptyReason? {
         switch side {
         case .owned:
-            ListEmptyReason.reason(
-                totalCount: totalCount,
-                visibleCount: items.count,
-                searchText: searchText,
-                categoryFilter: categoryFilter,
-                showsOnlyUnvalued: showsOnlyUnvalued,
-                mayStillBeImporting: syncMonitor.mayStillBeImporting
-            )
+            ownedEmptyReason
         case .sold:
             if !soldItems.isEmpty {
                 nil
@@ -161,6 +154,28 @@ final class ItemListViewModel {
                 .nothingSold
             }
         }
+    }
+
+    /// The Owned side's reason, with spec Decision 12 layered on top of the
+    /// shared rule rather than inside it.
+    ///
+    /// `reason(...)` decides everything first — which is what keeps
+    /// `stillSyncing` winning while the collection may still be arriving, and
+    /// what leaves a narrowed-to-nothing side with its filter copy. Only the
+    /// `.nothingAdded` it hands back is reconsidered here, and only when
+    /// something has been sold: an Owned side emptied by selling is not a
+    /// first launch, so it says so (plan §4, "The emptied Owned side").
+    private var ownedEmptyReason: ListEmptyReason? {
+        let reason = ListEmptyReason.reason(
+            totalCount: totalCount,
+            visibleCount: items.count,
+            searchText: searchText,
+            categoryFilter: categoryFilter,
+            showsOnlyUnvalued: showsOnlyUnvalued,
+            mayStillBeImporting: syncMonitor.mayStillBeImporting
+        )
+        guard reason == .nothingAdded, !soldItems.isEmpty else { return reason }
+        return .everythingSold
     }
 
     /// Combined current value of the items on screen, so the header total

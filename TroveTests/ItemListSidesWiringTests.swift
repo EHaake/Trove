@@ -220,6 +220,22 @@ struct ItemListSidesWiringTests {
         #expect(!state.contains("action:"), "the nothing-sold state offers an action — there is nothing to do from here")
     }
 
+    /// Spec Decision 12's state on the screen: its own two words from
+    /// `SaleCopy`, and the first-launch state's mark and Add button — the
+    /// same door "Add something new." is inviting the person through.
+    @Test func theEverythingSoldStateReadsItsCopyAndKeepsTheAddItemDoor() throws {
+        let code = try code()
+
+        let states = SourceScan.argumentLists(of: "EmptyStateView", in: code)
+            .filter { $0.contains("SaleCopy.everythingSoldHeadline") }
+        try #require(states.count == 1, "\(states.count) empty states read the everything-sold headline, expected exactly 1")
+        let state = try #require(states.first)
+
+        #expect(state.contains("SaleCopy.everythingSoldDetail"), "the everything-sold state types its own detail line")
+        #expect(state.contains(".asset(\"TabItems\")"), "the everything-sold state doesn't carry the Items mark")
+        #expect(state.contains("isAddingItem = true"), "the everything-sold state offers no way to add something new")
+    }
+
     // MARK: - The control itself (criterion 16)
 
     /// What the switch says, and to whom: `SaleCopy`'s two words on screen,

@@ -51,6 +51,8 @@ struct SaleCopyTests {
         #expect(SaleCopy.nothingSoldHeadline == "Nothing sold yet.")
         #expect(SaleCopy.nothingSoldDetail
             == "Mark an item as sold from its page or from a sell plan.")
+        #expect(SaleCopy.everythingSoldHeadline == "Everything's sold.")
+        #expect(SaleCopy.everythingSoldDetail == "Add something new.")
     }
 
     @Test func theSellPlanCaptionCountsItems() {
