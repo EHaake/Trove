@@ -821,7 +821,11 @@ because the person will feel it before they read it.
   figures line's regular mono 15 through `ThemeTypography.font` as `SoldMark`
   does. For the phase review: `ItemListView`'s sold summary reads the sign
   directly where the three sold surfaces read `isLoss`, and T014's scan
-  doesn't see `ItemListView`. Eye check: with T017's, at the phase end.
+  doesn't see `ItemListView`. **Eye check (general-purpose agent,
+  simulator):** the card at the root (below the callout, above BY CATEGORY,
+  money lifted, moss delta, brass arrow), its tap landing on the Sold side
+  at the list root, and the scoped Dashboard with and without sales all
+  match `DashboardRoot`/`DashboardCategory`.
 
 - [x] **T017 — The Sell Plan: the row action, the third figure, the Sold section.**
   Per plan §3 and T008's artboard. `SellPlanRow` gains the bespoke **Mark as
@@ -858,7 +862,15 @@ because the person will feel it before they read it.
   instead of the list, so the Sold section is not drawn (the header's Sold
   figure is); plan §3 and both artboards place the section under the
   candidates, while spec P15 lists the sold items unconditionally. Left as
-  drawn. Eye check: with T016's, below.
+  drawn. **Eye check (general-purpose agent, simulator):** two-figure header
+  unchanged, the strip opens the sheet and the body only toggles (never
+  both), the sheet prefilled and Cancel inert, the three-figure header and
+  the Sold section at one and two sales all match `SellPlanTwo`/`SellPlanThree`/
+  `SheetFilled`. Observed: the strip's tap target spans the card's full
+  width, not just the label (behaviour unambiguous; a bottom-left tap opens
+  the sheet) — to the phase review. Confirmed the open question above on
+  the device: with every candidate sold, the empty state replaces the list
+  and the Sold section, while the header still reads SOLD / 4 ITEMS.
 
 - [ ] **T018 — The `-seedSold` seed, and the UI tests, run twice.**
   Per plan §8 and Q10. `UITestSeed.soldArgument`, `shouldSeedSold(mode:arguments:)`,
@@ -985,4 +997,5 @@ interpreted here.
 | T015+T015a device pass | opus (`general-purpose`, simulator) | 222,935 (165 tool uses, 11 min) | all steps match the artboards; the switch's slide unverified (screenshot latency) — to the person at the pause |
 | T016 implement | opus (`sdd-implementer`, high effort) | 117,877 (40 tool uses, 11 min) | done first pass; six mutations red; one style split noted for the phase review (sign test vs `isLoss` in `ItemListView`) |
 | T017 implement | opus (`sdd-implementer`, high effort) | 164,149 (73 tool uses, 56 min incl. one UI-suite run) | done first pass; eight mutations red, one after fixing a false-passing scan (stated); one product question returned (Sold section over an empty candidate pool) |
+| T016+T017 device pass | opus (`general-purpose`, simulator) | 161,678 (82 tool uses, 7 min) | all steps match the artboards; confirmed the all-sold plan hides the Sold section (the person's question); the strip's full-width target noted |
 | _rows added per dispatch as the spec runs_ | | | |
