@@ -421,6 +421,13 @@ Added 2026-09-13, at the person's reading of the Draft:
     "Anything worth remembering". The Dashboard card carries only its
     arrow, no word beside it. The desire card on a sold page shows no hint
     line. These replace the Copy section's placeholders at close-out (P8).
+12. **An Owned side emptied by selling gets its own empty state (2026-09-14,
+    at the Phase 5 start).** When everything the person owns has been marked
+    sold, the Owned side no longer shows the first-launch "No gear yet"
+    state — it says something like "Everything's sold. Add something new."
+    — because the person has been using the app, not just installed it.
+    Chosen over reusing the first-launch state (option 1). The Sold side's
+    own empty state is unchanged.
 
 Proposed at drafting, 2026-09-13, by Claude Code (these become decisions on
 plan approval):

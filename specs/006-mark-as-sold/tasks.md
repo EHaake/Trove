@@ -708,6 +708,26 @@ because the person will feel it before they read it.
   **Verify:** `scripts/verify.sh` green; mutations recorded; both sides seen
   by eye against the artboards.
 
+- [ ] **T015a — The emptied Owned side's empty state (spec Decision 12).**
+  Per plan §4's "The emptied Owned side" paragraph. `ListEmptyReason` gains
+  `.everythingSold`; `SaleCopy` gains `everythingSoldHeadline` /
+  `everythingSoldDetail`; `ItemListViewModel.emptyReason`'s `.owned` branch
+  maps `reason(...)`'s `.nothingAdded` to `.everythingSold` iff `soldItems`
+  is non-empty (`reason(...)` itself untouched); `ItemListView.emptyState`
+  and `WishlistView`'s reason switch handle the case. Pattern: the
+  `.nothingSold` case and its `nothingSold*` copy (T002/T005/T015). Tests:
+  `ItemListViewModelTests` — one sold, none owned → `.everythingSold`;
+  neither → `.nothingAdded`; one sold, none owned, import in flight →
+  `.stillSyncing` (mutation: drop the `soldItems` check → the first goes
+  red; map before `stillSyncing` → the third goes red); a scan that the
+  `.everythingSold` case of `emptyState` reads both `SaleCopy` members.
+  Files: `Trove/Models/ListEmptyReason.swift`, `Trove/Models/SaleCopy.swift`,
+  `Trove/ViewModels/ItemListViewModel.swift`, `Trove/Views/Items/ItemListView.swift`,
+  `Trove/Views/Wishlist/WishlistView.swift`, `TroveTests/ItemListViewModelTests.swift`,
+  `TroveTests/ItemListSidesWiringTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded; the state seen
+  by eye after selling the last owned item.
+
 - [ ] **T016 — The Dashboard's Sold card.**
   Per plan §6 and T008's artboard. New `Trove/Views/Dashboard/SoldCard.swift`
   (header, `soldLine`, `soldDeltaLine` in the Q11 colour, `dashboard.soldCard`,

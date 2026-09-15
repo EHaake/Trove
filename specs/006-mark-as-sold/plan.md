@@ -464,6 +464,22 @@ trailing swipe → `pendingDeletion` (the same staging), no leading swipe, no
 / `nothingSoldDetail`. The delete alert's message is
 `ItemDeleteCopy.message(isSold: item.isSold)` (§5).
 
+**The emptied Owned side (spec Decision 12, amended 2026-09-14).**
+`ListEmptyReason` gains `everythingSold` — the Owned side is empty because
+every item has been sold. Like `nothingSold` it is never returned by
+`reason(...)`: `ItemListViewModel.emptyReason`'s `.owned` branch maps the
+`.nothingAdded` that `reason(...)` returns to `.everythingSold` when
+`soldItems` is non-empty, and passes every other reason through unchanged.
+So `reason(...)`'s precedence and its tests stay as they are, `stillSyncing`
+still wins while the collection may be arriving, and a narrowed-to-nothing
+Owned side keeps its filter copy. `SaleCopy.everythingSoldHeadline` /
+`everythingSoldDetail` ("Everything's sold." / "Add something new.") — the
+person's wording, tunable at the phase pause. `ItemListView.emptyState` maps
+the case with the Items mark, and `WishlistView`'s reason switch folds it
+like `.nothingSold`. Guard: with one sold item and no owned, `emptyReason`
+is `.everythingSold`; with none of either it is `.nothingAdded`; with the
+sync monitor reporting an import in flight it is `.stillSyncing`.
+
 `SoldItemRow`: `RowThumbnail`, name, "Sold 12 Sep 2026" mono line, the price
 in `monoValue`, the outcome in words (`SaleCopy.rowOutcome`) in the Q11
 colour; `.accessibilityElement(children: .combine)` so VoiceOver reads name,
