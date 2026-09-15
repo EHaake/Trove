@@ -795,7 +795,7 @@ because the person will feel it before they read it.
   was replaced, since its single assertion was Decision 12's old answer;
   its leak check survives in the new test. Eye check: with T015's, below.
 
-- [ ] **T016 — The Dashboard's Sold card.**
+- [x] **T016 — The Dashboard's Sold card.**
   Per plan §6 and T008's artboard. New `Trove/Views/Dashboard/SoldCard.swift`
   (header, `soldLine`, `soldDeltaLine` in the Q11 colour, `dashboard.soldCard`,
   combined a11y + hint); placed in `DashboardView` after the callout, before
@@ -811,6 +811,17 @@ because the person will feel it before they read it.
   `TroveTests/DashboardWiringTests.swift` (new or extended).
   **Verify:** `scripts/verify.sh` green; mutation recorded; the card seen by
   eye at the root and drilled into a category.
+  **Done (2026-09-14).** `SoldCard(line:deltaLine:realisedDeltaCents:action:)`
+  in the `unvaluedCallout` shape, composed inline inside `if viewModel.hasSales`
+  between the callout and the breakdown; six scans in `DashboardWiringTests`.
+  1481 tests green (+6). Six mutations red, including T014's colour scan now
+  firing on `SoldCard.swift`. Design-free choices: the delta travels as a
+  number only for the colour, read through a `SaleOutcome` built over the
+  sum (no delta initializer on `SaleOutcome` — outside the files); the
+  figures line's regular mono 15 through `ThemeTypography.font` as `SoldMark`
+  does. For the phase review: `ItemListView`'s sold summary reads the sign
+  directly where the three sold surfaces read `isLoss`, and T014's scan
+  doesn't see `ItemListView`. Eye check: with T017's, at the phase end.
 
 - [ ] **T017 — The Sell Plan: the row action, the third figure, the Sold section.**
   Per plan §3 and T008's artboard. `SellPlanRow` gains the bespoke **Mark as
@@ -954,4 +965,5 @@ interpreted here.
 | T015 implement | opus (`sdd-implementer`, high effort) | 216,710 (72 tool uses, 22 min) | done first pass; twelve mutations red; two deviations stated (empty-side meta line per plan; no row cross-fade) |
 | T015a implement | opus (`sdd-implementer`, high effort) | 83,380 (25 tool uses, 7 min) | done first pass; four mutations red; the bundle's predicted failure point for one was off by an expectation (recorded) |
 | T015+T015a device pass | opus (`general-purpose`, simulator) | 222,935 (165 tool uses, 11 min) | all steps match the artboards; the switch's slide unverified (screenshot latency) — to the person at the pause |
+| T016 implement | opus (`sdd-implementer`, high effort) | 117,877 (40 tool uses, 11 min) | done first pass; six mutations red; one style split noted for the phase review (sign test vs `isLoss` in `ItemListView`) |
 | _rows added per dispatch as the spec runs_ | | | |
