@@ -823,7 +823,7 @@ because the person will feel it before they read it.
   directly where the three sold surfaces read `isLoss`, and T014's scan
   doesn't see `ItemListView`. Eye check: with T017's, at the phase end.
 
-- [ ] **T017 — The Sell Plan: the row action, the third figure, the Sold section.**
+- [x] **T017 — The Sell Plan: the row action, the third figure, the Sold section.**
   Per plan §3 and T008's artboard. `SellPlanRow` gains the bespoke **Mark as
   sold…** control (`sellPlan.row.markAsSold`; the toggle's hit area and the
   control's separated per the artboard); `SellPlanView` hosts
@@ -841,6 +841,24 @@ because the person will feel it before they read it.
   Files: `Trove/Views/Wishlist/SellPlanView.swift`, `TroveTests/SellPlanWiringTests.swift` (new).
   **Verify:** `scripts/verify.sh` green; mutations recorded; the header at
   two and three figures seen by eye against the artboard.
+  **Done (2026-09-14).** `SellPlanRow` split into the toggle body and a
+  footer strip (`sellPlan.row.markAsSold`, 44 pt hit area) reaching
+  `saleCandidate`; `figures(for:)` branches on `hasSales` into the three-cell
+  card, the two-figure card moved verbatim into `twoFigures(for:)`; the Sold
+  section under the candidates; the sheet hosted in T014's shape over
+  `makeSaleFormViewModel(for:)`. Seven scans in `SellPlanWiringTests`. 1488
+  unit tests green (+7); the UI suite run once, 17 green, since each card
+  gained a target. Eight mutations red — one only after a fix: the "drawn
+  nowhere else" half of the Sold-cell scan was scoped to `figures(for:)`'s
+  body and could not see a cell added to `twoFigures(for:)` (the CLAUDE.md
+  shape); it now counts over the whole file and goes red. Two
+  `SellPlanRow(...)` call sites in `SellPlanMarketLinesTests` gained the new
+  parameter (no default on purpose). **Open question for the person at the
+  pause:** with no candidates left, `content(for:)` shows the empty state
+  instead of the list, so the Sold section is not drawn (the header's Sold
+  figure is); plan §3 and both artboards place the section under the
+  candidates, while spec P15 lists the sold items unconditionally. Left as
+  drawn. Eye check: with T016's, below.
 
 - [ ] **T018 — The `-seedSold` seed, and the UI tests, run twice.**
   Per plan §8 and Q10. `UITestSeed.soldArgument`, `shouldSeedSold(mode:arguments:)`,
@@ -966,4 +984,5 @@ interpreted here.
 | T015a implement | opus (`sdd-implementer`, high effort) | 83,380 (25 tool uses, 7 min) | done first pass; four mutations red; the bundle's predicted failure point for one was off by an expectation (recorded) |
 | T015+T015a device pass | opus (`general-purpose`, simulator) | 222,935 (165 tool uses, 11 min) | all steps match the artboards; the switch's slide unverified (screenshot latency) — to the person at the pause |
 | T016 implement | opus (`sdd-implementer`, high effort) | 117,877 (40 tool uses, 11 min) | done first pass; six mutations red; one style split noted for the phase review (sign test vs `isLoss` in `ItemListView`) |
+| T017 implement | opus (`sdd-implementer`, high effort) | 164,149 (73 tool uses, 56 min incl. one UI-suite run) | done first pass; eight mutations red, one after fixing a false-passing scan (stated); one product question returned (Sold section over an empty candidate pool) |
 | _rows added per dispatch as the spec runs_ | | | |

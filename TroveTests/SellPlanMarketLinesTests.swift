@@ -208,6 +208,7 @@ struct SellPlanMarketLinesRenderTests {
             item: item,
             isSelected: true,
             toggle: {},
+            markAsSold: {},
             summary: MarketSummary(snapshot: MarketSnapshotValue(record: record), now: now),
             rise: nil,
             now: now
@@ -246,7 +247,7 @@ struct SellPlanMarketLinesRenderTests {
     }
 
     private func row(summary: MarketSummary?, rise: MarketRise?) -> some View {
-        SellPlanRow(item: item, isSelected: true, toggle: {}, summary: summary, rise: rise, now: now)
+        SellPlanRow(item: item, isSelected: true, toggle: {}, markAsSold: {}, summary: summary, rise: rise, now: now)
     }
 
     // MARK: - Instruments
