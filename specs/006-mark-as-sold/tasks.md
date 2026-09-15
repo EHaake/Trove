@@ -755,7 +755,15 @@ because the person will feel it before they read it.
   "0 SOLD · $0"; the rows' cross-fade on a side change (design notes' Motion
   row) is not implemented — to the phase review. **Eye check pending** —
   run together with T015a's, since the emptied Owned side is the state
-  both change.
+  both change. **Eye check (general-purpose agent, simulator):** the switch
+  over the empty and the filled Owned side, the Sold empty state, the Sold
+  side with three rows ("3 SOLD · $2,500 · +$200 VS PAID", gain/loss/at
+  cost, most recent first), the read-only page from a row, the trailing
+  swipe delete and the re-count, and T015a's "Everything's sold." state
+  all match `SwitchOwned`/`SwitchSold`/`Main`/`SoldEmpty`. The sold row's
+  delete alert reads `ItemDeleteCopy.message(isSold: true)` as wired. Not
+  verified: the switch's slide (screenshot latency exceeds the 0.25 s
+  animation — needs the person's eye on the live panel at the phase pause).
 
 - [x] **T015a — The emptied Owned side's empty state (spec Decision 12).**
   Per plan §4's "The emptied Owned side" paragraph. `ListEmptyReason` gains
@@ -945,4 +953,5 @@ interpreted here.
 | T013+T014 device pass | opus (`general-purpose`, simulator) | 185,523 (154 tool uses, 12 min) | all steps match the artboards; two observations to the phase review (border clears on confirm only; WORTH NOW unchanged on a sold page) |
 | T015 implement | opus (`sdd-implementer`, high effort) | 216,710 (72 tool uses, 22 min) | done first pass; twelve mutations red; two deviations stated (empty-side meta line per plan; no row cross-fade) |
 | T015a implement | opus (`sdd-implementer`, high effort) | 83,380 (25 tool uses, 7 min) | done first pass; four mutations red; the bundle's predicted failure point for one was off by an expectation (recorded) |
+| T015+T015a device pass | opus (`general-purpose`, simulator) | 222,935 (165 tool uses, 11 min) | all steps match the artboards; the switch's slide unverified (screenshot latency) — to the person at the pause |
 | _rows added per dispatch as the spec runs_ | | | |
