@@ -872,7 +872,7 @@ because the person will feel it before they read it.
   the device: with every candidate sold, the empty state replaces the list
   and the Sold section, while the header still reads SOLD / 4 ITEMS.
 
-- [ ] **T018 — The `-seedSold` seed, and the UI tests, run twice.**
+- [x] **T018 — The `-seedSold` seed, and the UI tests, run twice.**
   Per plan §8 and Q10. `UITestSeed.soldArgument`, `shouldSeedSold(mode:arguments:)`,
   `sold(into:now:)` (through `ItemSaleStore.markSold`); the second guard in
   `TroveApp.init`. `UITestSeedTests` mirrored (the gate's four refusals; the
@@ -893,6 +893,23 @@ because the person will feel it before they read it.
   mutations recorded. **Phase 5 closes here — pause for the person** (what
   can be tried: mark an item sold from its page and from a sell plan, the
   Sold side, the card, edit and return, export and re-import).
+  **Done (2026-09-14).** `-seedSold` gated on `store.mode == .ephemeral`
+  (never a second flag read): a Leica M6 owned, a Telecaster sold toward
+  the Summicron and a Blues Junior sold toward nothing, through
+  `ItemSaleStore.markSold`. Three unit tests (the four refusals both ways
+  against `-seedSellPlan`; the app calls the seed once under its own guard;
+  the figures read back on a second context against `SaleOutcome.totals`);
+  three UI tests. Unit 1491 green; UI 20 green twice back to back (369.9 s,
+  365.9 s). Four mutations red, including an extra one deleting the seed's
+  `save()` — the second-context `#require` fails, so the unit test reads
+  the store. Deviations: `sellPlan.soldFigure` was never added by T017, so
+  the UI test reads "Sold"/"$640"/"1 item" above the Sell candidates header
+  (the plan's mutation still turns it red) — a one-line follow-up if the
+  identifier is wanted; the emptied Owned side asserts "Everything's sold."
+  (Decision 12), not §8's pre-T015a "No gear yet". Findings: the a11y tree
+  is the guide — `monoLabel`'s case is unstable in labels, an empty
+  `TextField` reports its placeholder as its value, combined rows expose
+  both the element and its children.
 
 ## Phase 6 — Verification and close-out
 
@@ -998,4 +1015,5 @@ interpreted here.
 | T016 implement | opus (`sdd-implementer`, high effort) | 117,877 (40 tool uses, 11 min) | done first pass; six mutations red; one style split noted for the phase review (sign test vs `isLoss` in `ItemListView`) |
 | T017 implement | opus (`sdd-implementer`, high effort) | 164,149 (73 tool uses, 56 min incl. one UI-suite run) | done first pass; eight mutations red, one after fixing a false-passing scan (stated); one product question returned (Sold section over an empty candidate pool) |
 | T016+T017 device pass | opus (`general-purpose`, simulator) | 161,678 (82 tool uses, 7 min) | all steps match the artboards; confirmed the all-sold plan hides the Sold section (the person's question); the strip's full-width target noted |
+| T018 implement | opus (`sdd-implementer`, high effort) | 181,429 (95 tool uses, 75 min — two double UI-suite passes) | done first pass; four mutations red; two deviations stated (no `sellPlan.soldFigure` identifier from T017; Decision 12 wording) |
 | _rows added per dispatch as the spec runs_ | | | |
