@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Edit and Delete on a detail screen, behind one circular "..." button.
+/// Edit and Delete on a detail screen, behind one circular "..." button —
+/// with an optional row between them (`006` plan §5).
 ///
 /// Replaces the permanent `Edit` `Delete` pair both detail screens carried
 /// through Phase 7. Two always-visible words in the nav bar — one of them a
@@ -23,18 +24,56 @@ import SwiftUI
 /// screen still owns its own edit sheet and its own delete confirmation —
 /// including `WishlistDetailView`'s alert about the cascade/nullify asymmetry,
 /// which says something this component has no way to know.
+///
+/// `006` gave the first row a title of its own and added the middle one, so
+/// one item's page can offer Edit / **Mark as sold…** / Delete while it is
+/// owned and **Edit sale…** / **Return to collection…** / Delete once it is
+/// sold. The original `(noun:edit:delete:)` initializer is kept and still
+/// means "Edit"/pencil with nothing between, which is what the wishlist's
+/// page asks for — it is untouched by this spec.
 struct DetailOverflowMenu: View {
+    /// One row of the menu: what it says, the SF Symbol beside it, and what
+    /// it does. Delete is not a `Row` — its `.destructive` role and its word
+    /// are the component's own, not a caller's choice.
+    struct Row {
+        let title: String
+        let systemImage: String
+        let action: () -> Void
+    }
+
     /// What the menu acts on, for VoiceOver — "item", "wanted item". Reads as
     /// "More actions for this item".
     let noun: String
-    let edit: () -> Void
+    let edit: Row
+    /// The row between Edit and Delete, or nothing.
+    var middle: Row?
     let delete: () -> Void
+
+    /// The shape both detail screens used through `005`: Edit, then Delete.
+    init(noun: String, edit: @escaping () -> Void, delete: @escaping () -> Void) {
+        self.init(
+            noun: noun,
+            edit: Row(title: "Edit", systemImage: "pencil", action: edit),
+            middle: nil,
+            delete: delete
+        )
+    }
+
+    init(noun: String, edit: Row, middle: Row?, delete: @escaping () -> Void) {
+        self.noun = noun
+        self.edit = edit
+        self.middle = middle
+        self.delete = delete
+    }
 
     @Environment(\.theme) private var theme
 
     var body: some View {
         Menu {
-            Button("Edit", systemImage: "pencil", action: edit)
+            Button(edit.title, systemImage: edit.systemImage, action: edit.action)
+            if let middle {
+                Button(middle.title, systemImage: middle.systemImage, action: middle.action)
+            }
             Button("Delete", systemImage: "trash", role: .destructive, action: delete)
         } label: {
             Image(systemName: "ellipsis")

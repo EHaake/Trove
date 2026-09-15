@@ -659,7 +659,7 @@ because the person will feel it before they read it.
   and HEAD did not build under it; three one-line fixes outside the
   footprint went in as their own commit ahead of this one.
 
-- [ ] **T014 — The item detail: menu rows, the sold state, edit, return, delete.**
+- [x] **T014 — The item detail: menu rows, the sold state, edit, return, delete.**
   Per plan §5 and Q8. `DetailOverflowMenu` gains `Row`, `middle`, the second
   initializer (the first kept; `WishlistDetailView` untouched;
   `MenuPolicyTests` green). `ItemDetailView`: the owned menu (Edit, Mark as
@@ -684,6 +684,27 @@ because the person will feel it before they read it.
   `SoldMark.swift` (new), `TroveTests/SoldStateWiringTests.swift` (new).
   **Verify:** `scripts/verify.sh` green; mutations recorded; both menus and
   the sold state seen by eye against the artboards.
+  **Done (2026-09-14).** `DetailOverflowMenu.Row`/`middle` and the second
+  initializer (the first forwards to it; `WishlistDetailView` untouched);
+  `SoldMark`; `ItemDetailView`'s two menus off `isSold`, the sale sheet
+  hosted through `.sheet(item:)` routing `.mark`/`.edit`, the return alert,
+  `content(for:)` split into sold and owned branches, the sold dial handed a
+  constant binding so VoiceOver's adjustable action can't write either.
+  1455 tests green (+11 in `SoldStateWiringTests`). Nine mutations red as
+  listed by the implementer. Deviation: the mark sits above the photo hero
+  per the approved artboards, not "above the category/name" as the task line
+  (pre-design wording) says. The colour scan lists `SoldItemRow`/`SoldCard`
+  as skip-if-absent with `SoldMark` `#require`d, so it covers T015/T016's
+  surfaces when they land without passing over nothing today. **Eye check
+  (general-purpose agent, simulator):** owned menu, sheet (filled, invalid,
+  bounded date), sold page at gain/loss/at-cost, sold menu and return all
+  match `SheetFilled`/`SheetInvalid`/`DetailSoldGain`/`DetailSoldLoss`;
+  T013's deferred check is closed here. Measured: tag centred within 1pt,
+  8pt gap, note in `textQuiet`. Two observations for the phase review: the
+  price field's rust border clears only on the next confirm (same as
+  `ItemFormViewModel`, not new); WORTH NOW / PAID keeps the current value on
+  a sold page (plan §5 says unchanged), so a loss sale can sit above a moss
+  "+20%" card. Screenshots in the session scratchpad.
 
 - [ ] **T015 — The Items tab: the switch, the Sold side, its row, its delete.**
   Per plan §4 and T008's artboards. New `Trove/Views/Items/SideSwitch.swift`
@@ -895,4 +916,6 @@ interpreted here.
 | Phase 4 review | opus (`skeptical-reviewer`) | 136,144 (8 tool uses — two targeted looks, stated) | **signed off, nothing blocking**; S1–S7 |
 | T012a fix (S3–S5) | opus (`sdd-implementer`, high effort) | 60,317 (29 tool uses, 6 min) | done; both mutations red |
 | T013 implement | opus (`sdd-implementer`, high effort) | 133,052 (43 tool uses, 12 min) | done first pass; both mutation runs red; eye check deferred to T014 (no host yet); found HEAD broken under Xcode 27 — three toolchain fixes committed separately ahead of the task |
+| T014 implement | opus (`sdd-implementer`, high effort) | 159,039 (59 tool uses, 16 min) | done first pass; nine mutations red; one deviation stated (mark above the hero, per artboards) |
+| T013+T014 device pass | opus (`general-purpose`, simulator) | 185,523 (154 tool uses, 12 min) | all steps match the artboards; two observations to the phase review (border clears on confirm only; WORTH NOW unchanged on a sold page) |
 | _rows added per dispatch as the spec runs_ | | | |
