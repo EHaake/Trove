@@ -629,7 +629,7 @@ because the person will feel it before they read it.
 
 ## Phase 5 — Screens
 
-- [ ] **T013 — The sale sheet (shared).**
+- [x] **T013 — The sale sheet (shared).**
   Per plan §5 (`SaleFormView`) and T008's artboard. New
   `Trove/Views/Items/SaleFormView.swift`: `NavigationStack`, the money field,
   the bounded date popover (`in: ...viewModel.latestDate`), Sold at, Note,
@@ -645,6 +645,19 @@ because the person will feel it before they read it.
   Files: `Trove/Views/Items/SaleFormView.swift` (new), `TroveTests/SaleFormWiringTests.swift` (new).
   **Verify:** `scripts/verify.sh` green; mutation recorded; the sheet seen by
   eye on the simulator against the artboard (named in the Done note).
+  **Done (2026-09-14).** `SaleFormView` in `PhotoPickerSheetView`'s
+  host-closure shape over `ItemFormView`'s field chrome; five scans in
+  `SaleFormWiringTests`. 1444 tests green. Mutations red as named: the
+  bound dropped → `theDatePickerIsBoundedAtLatestDate` red; a placeholder
+  typed inline and the sale swallowed → three issues in the owning tests.
+  Design-free choices: the Note placeholder from `SaleCopy` (Decision 11
+  pins it); no rust border on the date field (`.dateInFuture` is unreachable
+  once bounded); `.scrollBounceBehavior(.basedOnSize)`. **The eye check is
+  deferred to T014** — the sheet had no host yet, so it could not be reached
+  in the running app; T014's device pass compares it to `SheetFilled.png` /
+  `SheetInvalid.png`. Also found: the machine moved to Xcode 27 mid-spec
+  and HEAD did not build under it; three one-line fixes outside the
+  footprint went in as their own commit ahead of this one.
 
 - [ ] **T014 — The item detail: menu rows, the sold state, edit, return, delete.**
   Per plan §5 and Q8. `DetailOverflowMenu` gains `Row`, `middle`, the second
@@ -881,4 +894,5 @@ interpreted here.
 | T012 implement | opus (`sdd-implementer`, high effort) | 120,241 (34 tool uses, 12 min) | done first pass; eleven mutation runs red; one self-inflicted revert recovered from a snapshot |
 | Phase 4 review | opus (`skeptical-reviewer`) | 136,144 (8 tool uses — two targeted looks, stated) | **signed off, nothing blocking**; S1–S7 |
 | T012a fix (S3–S5) | opus (`sdd-implementer`, high effort) | 60,317 (29 tool uses, 6 min) | done; both mutations red |
+| T013 implement | opus (`sdd-implementer`, high effort) | 133,052 (43 tool uses, 12 min) | done first pass; both mutation runs red; eye check deferred to T014 (no host yet); found HEAD broken under Xcode 27 — three toolchain fixes committed separately ahead of the task |
 | _rows added per dispatch as the spec runs_ | | | |
