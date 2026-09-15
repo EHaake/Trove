@@ -1056,4 +1056,5 @@ interpreted here.
 | T018 implement | opus (`sdd-implementer`, high effort) | 181,429 (95 tool uses, 75 min — two double UI-suite passes) | done first pass; four mutations red; two deviations stated (no `sellPlan.soldFigure` identifier from T017; Decision 12 wording) |
 | Phase 5 review | opus (`skeptical-reviewer`) | 180,682 (9 tool uses — bundle only, no targeted look) | **two blocking** (B1: `sellPlan.soldFigure` never shipped, the UI test rewritten around it; B2: the colour scan's skip-if-absent arms can pass over files that now exist) + S3–S8 |
 | T017a fix (B1, B2, S3, S5) | opus (`sdd-implementer`, high effort) | 101,230 (54 tool uses, 42 min — two full rebuilds) | done; five mutations red; one unreachable-when-false require stated for the re-review |
+| Phase 5 re-review | opus (`skeptical-reviewer`, resumed) | 197,167 cumulative (~16.5k this round; 1 tool use) | **signed off**, no new blocking; the unreachable require kept as a lock (stated why); design notes' strip height corrected to 44 |
 | _rows added per dispatch as the spec runs_ | | | |
