@@ -911,6 +911,32 @@ because the person will feel it before they read it.
   `TextField` reports its placeholder as its value, combined rows expose
   both the element and its children.
 
+- [ ] **T017a — Phase 5 review fixes (B1, B2, S3, S5).**
+  B1: the Sold `figureCell` in `SellPlanView` gets
+  `.accessibilityElement(children: .combine)` and
+  `.accessibilityIdentifier("sellPlan.soldFigure")` (plan §3, §8; criterion
+  16), and `testASellPlanRowSoldFromThePlanShowsTheSoldFigure` reads that
+  one element's label instead of three positional static texts (the
+  `toward: nil` mutation must still turn it red). B2:
+  `everySoldSurfaceMapsIsLossToTheRustAndMossTokens` drops its
+  skip-if-absent arms — every listed surface must be present
+  (`#require(scanned == surfaces)`), since all three now exist. S3: one
+  home for the loss rule over a sum — `SaleTotals.isLoss`
+  (`realisedDeltaCents < 0`) in `Sale.swift`, read by `SoldCard` (in place
+  of the `SaleOutcome` built over the delta) and by `ItemListView`'s
+  `soldMeta`, with `ItemListView.swift` added to the scan's surface list
+  (mutation: `isLoss` → `<= 0` in `SaleTotals` → the SaleTotals unit test
+  red; a sign test back in `soldMeta` → the scan red). S5: the strip's hit
+  area grows downward only (`minHeight: 44` or bottom padding), never over
+  the toggle above it.
+  Files: `Trove/Views/Wishlist/SellPlanView.swift`, `TroveUITests/TroveUITests.swift`,
+  `TroveTests/SoldStateWiringTests.swift`, `Trove/Models/Sale.swift`,
+  `Trove/Views/Dashboard/SoldCard.swift`, `Trove/Views/Items/ItemListView.swift`,
+  `TroveTests/DashboardWiringTests.swift`, a `SaleTotals` test file.
+  **Verify:** `scripts/verify.sh` green; the one UI test green
+  (`-only-testing:TroveUITests/TroveUITests/testASellPlanRowSoldFromThePlanShowsTheSoldFigure`);
+  mutations recorded.
+
 ## Phase 6 — Verification and close-out
 
 - [ ] **T019 — Device pass. [general-purpose agent with simulator tools; person: sync + VoiceOver]**
@@ -1016,4 +1042,5 @@ interpreted here.
 | T017 implement | opus (`sdd-implementer`, high effort) | 164,149 (73 tool uses, 56 min incl. one UI-suite run) | done first pass; eight mutations red, one after fixing a false-passing scan (stated); one product question returned (Sold section over an empty candidate pool) |
 | T016+T017 device pass | opus (`general-purpose`, simulator) | 161,678 (82 tool uses, 7 min) | all steps match the artboards; confirmed the all-sold plan hides the Sold section (the person's question); the strip's full-width target noted |
 | T018 implement | opus (`sdd-implementer`, high effort) | 181,429 (95 tool uses, 75 min — two double UI-suite passes) | done first pass; four mutations red; two deviations stated (no `sellPlan.soldFigure` identifier from T017; Decision 12 wording) |
+| Phase 5 review | opus (`skeptical-reviewer`) | 180,682 (9 tool uses — bundle only, no targeted look) | **two blocking** (B1: `sellPlan.soldFigure` never shipped, the UI test rewritten around it; B2: the colour scan's skip-if-absent arms can pass over files that now exist) + S3–S8 |
 | _rows added per dispatch as the spec runs_ | | | |

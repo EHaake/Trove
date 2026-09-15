@@ -571,7 +571,7 @@ struct DetailOverflowMenu: View {
 It stays the app's one system `Menu` (`MenuPolicyTests` unchanged). Owned
 item: Edit, **Mark as sold…**, Delete. Sold item: **Edit sale…**, **Return to
 collection…**, Delete (P4). `ItemDetailView` renders the sold state when
-`viewModel.isSold`: a `SoldMark` block above the category/name — the word
+`viewModel.isSold`: a `SoldMark` block first in the scroll content, above the photo hero (per the approved artboard; amended 2026-09-14 at the Phase 5 review — the earlier "above the category/name" predated the design pass) — the word
 **Sold**, the sale line, the outcome in words with what was paid beside it
 (`sold.mark`) — then the ordinary content with the Q8 omissions; the return
 confirmation is a standard `.alert` with `SaleCopy.returnTitle(name)`,
@@ -736,7 +736,7 @@ UI tests (`TroveUITests`, all offline):
   open it, the menu's **Mark as sold…**, the sheet with the price blank
   (no value), type 500, confirm → `sold.mark` visible, the menu offers **Edit
   sale…** and **Return to collection…** and not **Edit**; back → Owned side
-  empty ("No gear yet"); Sold side → the row; open it, **Return to
+  empty ("Everything's sold." — spec Decision 12, amended 2026-09-14; §8 was written before T015a); Sold side → the row; open it, **Return to
   collection…** → the alert → **Return** → the Owned side lists it again and
   the Sold side shows "Nothing sold yet". Mutation: `returnToCollection`
   keeping `soldDate` → red.

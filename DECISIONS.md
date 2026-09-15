@@ -423,3 +423,17 @@ spec.
   a spec. The `skeptical-reviewer` vetted the T009 mechanism as a decision
   before implementation (Fallback clause: at `opus`), which is why the
   reversal is recorded here rather than discovered later.
+
+## 2026-09-14 — Xcode 27 arrived mid-spec (`006`)
+
+The Mac moved to Xcode 27.0 between `006`'s Phase 4 and Phase 5. HEAD did
+not build under it: two `Shape` conformances on `MainActor`-isolated
+structs needed `nonisolated` under `InferIsolatedConformances`, and one
+chained `#expect` timed out the type-checker. The three one-line fixes
+went in as their own commit ahead of T013, outside any task's file list,
+disclosed in T013's Done note and the tier log. Two operational facts for
+the next upgrade: the license must be accepted by the person
+(`sudo xcodebuild -license accept`) before git or xcodebuild run at all,
+and `xcrun simctl list devices` must run once so CoreSimulator restarts
+before `scripts/verify.sh` can find a destination.
+
