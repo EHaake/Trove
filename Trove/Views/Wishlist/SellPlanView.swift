@@ -135,12 +135,19 @@ struct SellPlanView: View {
 
                 figureDivider
 
+                // One stop for VoiceOver rather than three (criterion 16),
+                // and the identifier plan §3 and §8 name — the header, the
+                // figure and the count are one announcement, and T018's UI
+                // test reads this one label instead of hunting three loose
+                // texts above the candidates header.
                 figureCell(
                     header: SaleCopy.sellPlanFigureHeader,
                     figure: viewModel.soldValueCents.formattedAsWholeCurrency(currencyCode: wanted.currencyCode),
                     color: theme.colors.textPrimary,
                     caption: SaleCopy.sellPlanSoldCaption(count: viewModel.soldCount)
                 )
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("sellPlan.soldFigure")
 
                 figureDivider
 
@@ -539,10 +546,13 @@ struct SellPlanRow: View {
                 .foregroundStyle(theme.colors.accentBrass)
                 .frame(maxWidth: .infinity, minHeight: 40, alignment: .trailing)
                 .padding(.horizontal, theme.metrics.cardPadding)
-                // 40 pt of strip, 44 pt of hit: the two points either side come
-                // out of the card's own padding, so the target clears Apple's
-                // minimum without the strip growing to meet it.
-                .contentShape(Rectangle().inset(by: -2))
+                // 40 pt of strip, 44 pt of hit, and the four extra points go
+                // downward only — below the strip, into the gap under the
+                // card. An inset on every side reached two points back over
+                // the toggle above, and the strip is the later sibling, so it
+                // won those taps from the half they belonged to.
+                .padding(.bottom, 4)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("sellPlan.row.markAsSold")

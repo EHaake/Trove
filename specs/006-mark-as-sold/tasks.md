@@ -911,7 +911,7 @@ because the person will feel it before they read it.
   `TextField` reports its placeholder as its value, combined rows expose
   both the element and its children.
 
-- [ ] **T017a — Phase 5 review fixes (B1, B2, S3, S5).**
+- [x] **T017a — Phase 5 review fixes (B1, B2, S3, S5).**
   B1: the Sold `figureCell` in `SellPlanView` gets
   `.accessibilityElement(children: .combine)` and
   `.accessibilityIdentifier("sellPlan.soldFigure")` (plan §3, §8; criterion
@@ -936,6 +936,18 @@ because the person will feel it before they read it.
   **Verify:** `scripts/verify.sh` green; the one UI test green
   (`-only-testing:TroveUITests/TroveUITests/testASellPlanRowSoldFromThePlanShowsTheSoldFigure`);
   mutations recorded.
+  **Done (2026-09-14).** `sellPlan.soldFigure` combined and identified, the
+  UI test reading that one label; the colour scan with no skip arms and
+  `ItemListView.swift` added; `SaleTotals.isLoss` (instance + static
+  delegating form) read by `SoldCard` and `soldMeta`, the Dashboard colour
+  test now forbidding a `SaleOutcome(` stand-in; the strip's extra hit
+  area taken as 4 pt bottom padding (the card grows 4 pt — for the next
+  eye check). 1492 unit tests green; the one UI test green. Five mutations
+  red. Stated, not settled: with `try?` dropped, a missing surface throws
+  before `#require(scanned == surfaces)`, so that require is reachable
+  only when true — the reviewer's own wording, kept as a lock against a
+  skip arm returning; the scan itself fails at the throw. Two production
+  rebuilds exceeded 10 minutes each.
 
 ## Phase 6 — Verification and close-out
 
@@ -1043,4 +1055,5 @@ interpreted here.
 | T016+T017 device pass | opus (`general-purpose`, simulator) | 161,678 (82 tool uses, 7 min) | all steps match the artboards; confirmed the all-sold plan hides the Sold section (the person's question); the strip's full-width target noted |
 | T018 implement | opus (`sdd-implementer`, high effort) | 181,429 (95 tool uses, 75 min — two double UI-suite passes) | done first pass; four mutations red; two deviations stated (no `sellPlan.soldFigure` identifier from T017; Decision 12 wording) |
 | Phase 5 review | opus (`skeptical-reviewer`) | 180,682 (9 tool uses — bundle only, no targeted look) | **two blocking** (B1: `sellPlan.soldFigure` never shipped, the UI test rewritten around it; B2: the colour scan's skip-if-absent arms can pass over files that now exist) + S3–S8 |
+| T017a fix (B1, B2, S3, S5) | opus (`sdd-implementer`, high effort) | 101,230 (54 tool uses, 42 min — two full rebuilds) | done; five mutations red; one unreachable-when-false require stated for the re-review |
 | _rows added per dispatch as the spec runs_ | | | |

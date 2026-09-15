@@ -560,14 +560,15 @@ struct ItemListView: View {
     /// component, rather than by formatting a second copy of the figure here
     /// where it could drift from the one the Dashboard card shows.
     ///
-    /// The sign is read off the totals, as `ItemRow` reads its own delta —
-    /// there is no single `SaleOutcome` behind a sum of sales.
+    /// The sign is read off the totals through `SaleTotals.isLoss` — the one
+    /// home for the rule over a sum of sales, which the Dashboard's card
+    /// reads too, rather than a `< 0` spelled out again in a view.
     private func soldMeta(_ line: String) -> AttributedString {
         var attributed = AttributedString(line)
         let parts = line.components(separatedBy: SaleCopy.separator)
             .map { $0.trimmingCharacters(in: .whitespaces) }
         guard parts.count > 2, let realised = attributed.range(of: parts[2]) else { return attributed }
-        attributed[realised].foregroundColor = viewModel.soldTotals.realisedDeltaCents < 0
+        attributed[realised].foregroundColor = viewModel.soldTotals.isLoss
             ? theme.colors.accentRustText
             : theme.colors.accentMossText
         return attributed

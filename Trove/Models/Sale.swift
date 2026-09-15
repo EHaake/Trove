@@ -34,6 +34,23 @@ nonisolated struct SaleTotals: Sendable, Equatable {
     let count: Int
     let proceedsCents: Int
     let realisedDeltaCents: Int
+
+    /// The colour rule over a *sum* of sales, as `SaleOutcome.isLoss` is the
+    /// rule over one (plan Q11) — and on the same boundary, so a ledger that
+    /// broke even is moss the way a zero Gain already is. One home for both
+    /// surfaces that colour a realised figure: the Sold side's summary line
+    /// and the Dashboard's card. Neither re-derives the sign in a view, and
+    /// neither stands a `SaleOutcome` up over a delta to borrow its rule.
+    var isLoss: Bool { realisedDeltaCents < 0 }
+
+    /// The same rule for a surface handed the realised sum alone rather than
+    /// the whole ledger — `SoldCard` takes the delta for its colour and never
+    /// the count or the proceeds, which is what keeps the figures in one
+    /// place. Asking here is what keeps the card from testing the sign
+    /// itself; the rule is still spelled out once, above.
+    static func isLoss(realisedDeltaCents: Int) -> Bool {
+        SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: realisedDeltaCents).isLoss
+    }
 }
 
 extension SaleOutcome {

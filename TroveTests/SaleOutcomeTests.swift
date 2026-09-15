@@ -26,6 +26,30 @@ struct SaleOutcomeTests {
         #expect(!over.isLoss)
     }
 
+    /// The same boundary for the rule over a *sum* of sales (T017a/S3), which
+    /// the Sold side's summary line and the Dashboard's card both colour off.
+    /// The static form is that rule for a surface handed the realised sum
+    /// alone — `SoldCard` — so it has to turn at the same point.
+    ///
+    /// Mutation: `SaleTotals.isLoss` → `realisedDeltaCents <= 0` turns both
+    /// halves of this red on the ledger that broke even.
+    @Test func totalsIsLossTurnsAtZeroToo() {
+        let loss = SaleTotals(count: 2, proceedsCents: 100_000, realisedDeltaCents: -1)
+        let even = SaleTotals(count: 2, proceedsCents: 100_000, realisedDeltaCents: 0)
+        let gain = SaleTotals(count: 2, proceedsCents: 100_000, realisedDeltaCents: 1)
+
+        #expect(loss.isLoss)
+        #expect(!even.isLoss, "a ledger that broke even is not a loss")
+        #expect(!gain.isLoss)
+
+        #expect(SaleTotals.isLoss(realisedDeltaCents: loss.realisedDeltaCents))
+        #expect(
+            !SaleTotals.isLoss(realisedDeltaCents: even.realisedDeltaCents),
+            "the delta-only form has to break even where the ledger does"
+        )
+        #expect(!SaleTotals.isLoss(realisedDeltaCents: gain.realisedDeltaCents))
+    }
+
     private func makeSold(
         in context: ModelContext,
         name: String,

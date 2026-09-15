@@ -137,14 +137,23 @@ struct DashboardWiringTests {
     /// re-derived in the view (plan Q11). The rust/moss tokens themselves are
     /// checked across all three sold surfaces by `SoldStateWiringTests`;
     /// what's pinned here is that this one reads `isLoss` to choose between
-    /// them. Mutation: swap `isLoss` for `realisedDeltaCents < 0` → red.
+    /// them — and reads it from `SaleTotals`, the rule over a sum, rather
+    /// than standing a single sale's `SaleOutcome` up over the delta to
+    /// borrow its rule, which is how the card satisfied the scan until
+    /// T017a/S3. Mutation: swap `SaleTotals.isLoss` for
+    /// `realisedDeltaCents < 0`, or for a `SaleOutcome` built over the
+    /// delta → red.
     @Test func theRealisedLinesColourComesFromTheModelsLossRule() throws {
         let card = try SourceScan.production(Self.card)
 
-        #expect(card.contains("isLoss"), "the card picks its colour without reading SaleOutcome.isLoss")
+        #expect(card.contains("SaleTotals.isLoss"), "the card picks its colour without reading the sum's loss rule")
         #expect(
             card.contains("realisedDeltaCents < 0") == false,
             "the card tests the sign of the delta itself instead of asking the model"
+        )
+        #expect(
+            card.contains("SaleOutcome(") == false,
+            "the card builds a single sale's outcome over a sum to borrow its rule"
         )
         #expect(
             card.contains("deltaColor"),

@@ -228,23 +228,27 @@ struct SoldStateWiringTests {
     /// theme's rust/moss text tokens, and none of them re-derives the rule
     /// from the sign of a figure of its own or names a colour literal.
     ///
-    /// The list grows as the surfaces land (the Sold-side row at T015, the
-    /// Dashboard card at T016); a file that isn't there yet is skipped by
-    /// name, and `SoldMark` is `#require`d, so the scan can never run over
-    /// nothing.
+    /// Every surface on the list now exists — the Sold mark, the Sold side's
+    /// row, the Dashboard's card and the Sold side's summary line — so none
+    /// of them is skipped by name any more (T017a/B2). A path that can't be
+    /// read throws out of `SourceScan.production` instead of being passed
+    /// over, and the `#require` below is the second lock: it records what was
+    /// actually scanned, so a skip arm put back here fails rather than
+    /// quietly covering nothing.
     @Test func everySoldSurfaceMapsIsLossToTheRustAndMossTokens() throws {
         let surfaces = [
             "Trove/Views/Items/SoldMark.swift",
             "Trove/Views/Items/SoldItemRow.swift",
             "Trove/Views/Dashboard/SoldCard.swift",
+            "Trove/Views/Items/ItemListView.swift",
         ]
         var scanned: [String] = []
 
         for path in surfaces {
-            guard let code = try? SourceScan.production(path) else { continue }
+            let code = try SourceScan.production(path)
             scanned.append(path)
 
-            #expect(code.contains("isLoss"), "\(path) shows an outcome without reading SaleOutcome.isLoss")
+            #expect(code.contains("isLoss"), "\(path) shows an outcome without reading the model's isLoss rule")
             #expect(
                 code.contains("theme.colors.accentRustText"),
                 "\(path) doesn't paint a loss with the rust text token"
@@ -260,8 +264,8 @@ struct SoldStateWiringTests {
         }
 
         try #require(
-            scanned.contains("Trove/Views/Items/SoldMark.swift"),
-            "SoldMark wasn't scanned — the sold page's outcome is unguarded"
+            scanned == surfaces,
+            "the scan covered \(scanned) rather than every sold surface — the rest are unguarded"
         )
     }
 

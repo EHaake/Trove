@@ -18,7 +18,7 @@ import SwiftUI
 /// `DashboardViewModel` out of `SaleCopy`, which is the same table the Sold
 /// side's summary reads, so the card and the summary cannot drift (AC7). The
 /// *colour* is not `SaleCopy`'s business (plan Q11): the rule is
-/// `SaleOutcome.isLoss`, which this view maps to `accentRustText` /
+/// `SaleTotals.isLoss`, which this view maps to `accentRustText` /
 /// `accentMossText` exactly as `SoldMark` and `SoldItemRow` do — so a ledger
 /// that broke even is moss, the way a zero Gain already is.
 ///
@@ -98,17 +98,15 @@ struct SoldCard: View {
         return attributed
     }
 
-    /// The moss/rust rule from the model's `isLoss`, not from a sign test
-    /// repeated in a view. A sum of sales has no single `SaleOutcome` behind
-    /// it, so the ledger stands in as one: what every sale brought in against
-    /// what those items cost, which is exactly the subtraction
-    /// `realisedDeltaCents` already carries.
-    private var outcome: SaleOutcome {
-        SaleOutcome(salePriceCents: realisedDeltaCents, purchasePriceCents: 0)
-    }
-
+    /// The moss/rust rule from the model, not from a sign test repeated in a
+    /// view — and from the rule over a *sum* of sales, `SaleTotals.isLoss`,
+    /// which the Sold side's summary line reads too. Until T017a this stood a
+    /// `SaleOutcome` up over the delta to borrow the single sale's rule,
+    /// which agreed with it by arithmetic accident rather than by design.
     private var deltaColor: Color {
-        outcome.isLoss ? theme.colors.accentRustText : theme.colors.accentMossText
+        SaleTotals.isLoss(realisedDeltaCents: realisedDeltaCents)
+            ? theme.colors.accentRustText
+            : theme.colors.accentMossText
     }
 }
 

@@ -1162,13 +1162,12 @@ final class TroveUITests: XCTestCase {
     /// beneath it, the item gone from the candidates, and the sale listed in
     /// the Sold section below them.
     ///
-    /// The figure is read by its words and its position rather than by an
-    /// accessibility identifier: `sellPlan.soldFigure` is named in `plan.md`
-    /// §8 but was never shipped — `T017` built the three-figure card out of
-    /// plain `Text`s — and adding one would mean editing a view outside this
-    /// task's files. "Sold", "$640" and "1 item" sitting above the Sell
-    /// candidates header is the same claim, and the header band is what
-    /// tells them from the Sold *section*'s identical words below.
+    /// The figure is read by `sellPlan.soldFigure`, the identifier `plan.md`
+    /// §3 and §8 name, which `T017a` shipped: the cell is one `.combine`d
+    /// element now, so its label carries the header, the money and the count
+    /// in one string — "Sold", "$640" and "1 item" are no longer three loose
+    /// static texts to hunt above the candidates header, and no position is
+    /// needed to tell them from the Sold *section*'s identical words below.
     ///
     /// Its mutation: `SellPlanViewModel.markSold` passing `toward: nil` must
     /// turn this red — a sale that points at no plan leaves `hasSales` false,
@@ -1226,10 +1225,19 @@ final class TroveUITests: XCTestCase {
             .firstMatch
         XCTAssertTrue(candidatesHeader.waitForExistence(timeout: 5))
         let headerBand = candidatesHeader.frame.minY
-        for text in ["Sold", "$640", "1 item"] {
+        let soldFigure = element(in: app, identifiedBy: "sellPlan.soldFigure")
+        XCTAssertTrue(
+            soldFigure.waitForExistence(timeout: 5),
+            "the plan's header should carry a Sold figure once something has been sold toward it"
+        )
+        // One element, one label: the header, the money and the count in the
+        // order the cell stacks them. Matched case-insensitively, as every
+        // `monoLabel` line here is.
+        let announced = soldFigure.label.lowercased()
+        for text in ["sold", "$640", "1 item"] {
             XCTAssertTrue(
-                staticText(in: app, labelled: text, above: headerBand),
-                "the plan's header should read a Sold figure of $640 for 1 item — \"\(text)\" isn't in it"
+                announced.contains(text),
+                "the Sold figure should read $640 for 1 item — its label is \"\(soldFigure.label)\""
             )
         }
 
