@@ -98,15 +98,30 @@ struct ItemListView: View {
                 VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
                     header
                         .padding(.horizontal, theme.metrics.screenGutter)
-                        .padding(.bottom, theme.metrics.sectionGap - theme.metrics.controlRowGap)
+
+                    // The switch sits here, in the standing header, rather than
+                    // beside the rows — so it is there over an empty Owned side
+                    // (a person whose only item is now sold) exactly as it is
+                    // over a full one (plan §4). Never bound to `side`: a tap
+                    // asks `show(_:)`, which is what clears the narrowing on a
+                    // change (plan Q15).
+                    SideSwitch(side: viewModel.side, select: { viewModel.show($0) })
+                        .padding(.horizontal, theme.metrics.screenGutter)
 
                     // Controls for narrowing a list need a list to narrow. On a
                     // first run they were a search field over nothing and a
                     // lone "All" chip, both of which made the screen look like
-                    // it had lost something rather than not started yet.
-                    if viewModel.totalCount > 0 {
+                    // it had lost something rather than not started yet. And
+                    // the Sold side has no narrowing at all (P16, plan Q15),
+                    // so the same gate carries the side.
+                    if viewModel.totalCount > 0, viewModel.side == .owned {
                         SearchField(placeholder: "Search name or serial", text: $viewModel.searchText)
                             .padding(.horizontal, theme.metrics.screenGutter)
+                            // The Design pass's `sectionGap` under the switch,
+                            // on top of this stack's own `controlRowGap`. On
+                            // the Sold side, where nothing follows the switch,
+                            // the stack's bottom padding is the whole gap.
+                            .padding(.top, theme.metrics.sectionGap - theme.metrics.controlRowGap)
 
                         // Full-bleed so chips scroll off the edge rather than
                         // stopping at the gutter; the gutter moves inside.
@@ -323,12 +338,25 @@ struct ItemListView: View {
 
     // MARK: - Rows
 
+    /// Whichever side is showing. The two branches are separate properties
+    /// rather than one list with conditionals inside it: what an Owned row
+    /// offers (Edit, Copy, a drag, a trend) and what a sold one offers (a tap
+    /// and a delete, P16) have almost nothing in common, and a row built from
+    /// both sets of `if`s is how one side quietly acquires the other's gesture.
+    @ViewBuilder
+    private var rows: some View {
+        switch viewModel.side {
+        case .owned: ownedRows
+        case .sold: soldRows
+        }
+    }
+
     /// A `List` for the same reasons the wishlist's is one — swipe actions
     /// now, drag reordering at T027 — with everything visible overridden so it
     /// reads as the same card stack the `LazyVStack` used to draw. The styling
     /// mirrors `WishlistView.rows` line for line, deliberately: the two list
     /// screens are one pattern, not two (T012).
-    private var rows: some View {
+    private var ownedRows: some View {
         List {
             ForEach(viewModel.items, id: \.id) { item in
                 ItemRow(item: item, trend: viewModel.trend(for: item.id))
@@ -438,6 +466,45 @@ struct ItemListView: View {
         // VoiceOver reorders through the rows' named actions instead.
     }
 
+    /// The Sold side's rows: the same `List` chrome and the same delete
+    /// staging, and nothing else (plan §4, P16). No leading swipe — there is
+    /// no Edit or Copy for a sale on this screen, both of which live on the
+    /// item's own page — and no `onMove`, because Sold-side order is the sale
+    /// dates', not the person's.
+    private var soldRows: some View {
+        List {
+            ForEach(viewModel.soldItems, id: \.id) { item in
+                SoldItemRow(item: item)
+                    .listRowBackground(theme.colors.background)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(
+                        top: theme.metrics.listRowGap / 2,
+                        leading: theme.metrics.listRowInset,
+                        bottom: theme.metrics.listRowGap / 2,
+                        trailing: theme.metrics.listRowInset
+                    ))
+                    .contentShape(Rectangle())
+                    // The sold item's page is the same page, read-only (T014),
+                    // and it is reached the same way — through the router's
+                    // bound path, so a cross-tab pop can clear it.
+                    .onTapGesture { router.itemsPath.append(item.id) }
+                    // Stages into the same alert the Owned side stages into,
+                    // which says what a sold item's deletion costs through
+                    // `ItemDeleteCopy.message(isSold:)`.
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            pendingDeletion = item
+                        } label: {
+                            Label { Text(ItemDeleteCopy.confirm) } icon: { Image("ActionDelete") }
+                        }
+                        .tint(theme.colors.accentRust)
+                    }
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+    }
+
     // MARK: - Header
 
     private var header: some View {
@@ -446,7 +513,7 @@ struct ItemListView: View {
                 Text("Items")
                     .font(theme.typography.screenTitle)
                     .foregroundStyle(theme.colors.textPrimary)
-                Text(summaryLine).monoLabel()
+                metaLine
             }
 
             Spacer()
@@ -459,13 +526,51 @@ struct ItemListView: View {
             // is exactly who they serve. Guarded from both directions —
             // ImportWiringTests' brace-span scan and the empty-collection
             // UI test.
+            // Sort By hides on the Sold side (criterion 7, P16) under the same
+            // gate the search field and the chips use — one spelling, in both
+            // places, so a side can't end up with one narrowing control and
+            // not the others.
             HStack(spacing: 8) {
-                if viewModel.totalCount > 0 {
+                if viewModel.totalCount > 0, viewModel.side == .owned {
                     sortControl
                 }
                 overflowControl
             }
         }
+    }
+
+    /// The line under the title: the Owned side's running total, or the Sold
+    /// side's summary — which is `nil` until something has been sold, and
+    /// shows nothing rather than "0 sold · $0" (spec Decision 11).
+    @ViewBuilder
+    private var metaLine: some View {
+        switch viewModel.side {
+        case .owned:
+            Text(summaryLine).monoLabel()
+        case .sold:
+            if let line = viewModel.soldSummaryLine {
+                Text(soldMeta(line)).monoLabel()
+            }
+        }
+    }
+
+    /// The sold summary with its realised part in moss or rust — the Design
+    /// pass's one emphasis in this line, applied the way `SoldMark` lifts the
+    /// price inside `SaleCopy.saleLine`: to the composed string's third
+    /// component, rather than by formatting a second copy of the figure here
+    /// where it could drift from the one the Dashboard card shows.
+    ///
+    /// The sign is read off the totals, as `ItemRow` reads its own delta —
+    /// there is no single `SaleOutcome` behind a sum of sales.
+    private func soldMeta(_ line: String) -> AttributedString {
+        var attributed = AttributedString(line)
+        let parts = line.components(separatedBy: SaleCopy.separator)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        guard parts.count > 2, let realised = attributed.range(of: parts[2]) else { return attributed }
+        attributed[realised].foregroundColor = viewModel.soldTotals.realisedDeltaCents < 0
+            ? theme.colors.accentRustText
+            : theme.colors.accentMossText
+        return attributed
     }
 
     /// 011's export menu grown into 012's overflow, with 013's Settings at
@@ -521,21 +626,28 @@ struct ItemListView: View {
         // stacking on top of whatever happened to be set — arriving from the
         // dashboard should show what the dashboard pointed at, not that
         // intersected with a filter left over from last time.
+        // Both narrowing requests name the Owned side first: a request that
+        // arrived while the Sold side was showing has to land on the side that
+        // can show it, and `show(.owned)` is what clears the narrowing on the
+        // way across (plan Q15) — so the writes below have to follow it, never
+        // precede it.
         viewModel.searchText = ""
         switch request {
         case .category(let path):
+            viewModel.show(.owned)
             viewModel.categoryFilter = path
             viewModel.showsOnlyUnvalued = false
             chipToReveal = path
         case .unvalued:
+            viewModel.show(.owned)
             viewModel.categoryFilter = ""
             viewModel.showsOnlyUnvalued = true
             chipToReveal = Self.unvaluedChipID
+        // The Dashboard's Sold card, and the whole of what it asks for: the
+        // side carries no narrowing to set, so `show(.sold)` is the message.
+        // Written last so nothing follows it inside the case.
         case .sold:
-            // Becomes the single `viewModel.show(.sold)` call once the side
-            // exists (T009/T015). Unreachable until then — nothing calls
-            // `router.showSoldItems()` yet.
-            break
+            viewModel.show(.sold)
         }
         router.clearItemsRequest()
     }
@@ -708,12 +820,15 @@ struct ItemListView: View {
                 }
             )
 
-        // Placeholder until the Sold side itself lands (T015), which owns how
-        // this state reads. Unreachable before then: only the Sold side's
-        // `emptyReason` produces `.nothingSold`, and there is no Sold side yet.
+        // The Sold side with nothing on it. No action, unlike every other
+        // state here: marking something sold happens on an item's own page or
+        // on a sell plan, and a button that could only send you elsewhere to
+        // start would be an invitation to leave. The tag is the Design pass's
+        // mark for this side — the tab's own icon would say "Items", which is
+        // the half of the screen that isn't empty.
         case .nothingSold:
             EmptyStateView(
-                mark: .asset("TabItems"),
+                mark: .system("tag"),
                 headline: SaleCopy.nothingSoldHeadline,
                 detail: SaleCopy.nothingSoldDetail
             )

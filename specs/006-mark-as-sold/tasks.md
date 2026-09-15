@@ -706,7 +706,7 @@ because the person will feel it before they read it.
   a sold page (plan §5 says unchanged), so a loss sale can sit above a moss
   "+20%" card. Screenshots in the session scratchpad.
 
-- [ ] **T015 — The Items tab: the switch, the Sold side, its row, its delete.**
+- [x] **T015 — The Items tab: the switch, the Sold side, its row, its delete.**
   Per plan §4 and T008's artboards. New `Trove/Views/Items/SideSwitch.swift`
   (bespoke, `items.sideSwitch`, label "Owned or sold", value = the side,
   `.isSelected` on the active half) and `SoldItemRow.swift` (thumbnail, name,
@@ -741,6 +741,21 @@ because the person will feel it before they read it.
   `SoldItemRowTests.swift` (new).
   **Verify:** `scripts/verify.sh` green; mutations recorded; both sides seen
   by eye against the artboards.
+  **Done (2026-09-14).** `SideSwitch` (reports through `select:`, no
+  binding — `side` is `private(set)`, so binding it does not compile),
+  `SoldItemRow`, `ItemListView`'s `ownedRows`/`soldRows` split, the sold
+  meta line, `apply`'s `.sold` as one `show(.sold)`, the `.nothingSold`
+  state with the `tag` mark. 1473 tests green (+18). Twelve mutations red
+  (one structural). Design-free choices: the row's "Sold" word from
+  `SaleCopy.soldMark` (no new copy member — `SaleCopy` was outside the
+  files); the narrowing gate spelled inline twice, pinned by scan, because
+  `ImportWiringTests` anchors on the literal; the sold meta line's colour off
+  the sign of `realisedDeltaCents`. Deviations: the empty Sold side hides
+  the meta line per plan §4 / Decision 11 where `SoldEmpty.png` draws
+  "0 SOLD · $0"; the rows' cross-fade on a side change (design notes' Motion
+  row) is not implemented — to the phase review. **Eye check pending** —
+  run together with T015a's, since the emptied Owned side is the state
+  both change.
 
 - [ ] **T015a — The emptied Owned side's empty state (spec Decision 12).**
   Per plan §4's "The emptied Owned side" paragraph. `ListEmptyReason` gains
@@ -918,4 +933,5 @@ interpreted here.
 | T013 implement | opus (`sdd-implementer`, high effort) | 133,052 (43 tool uses, 12 min) | done first pass; both mutation runs red; eye check deferred to T014 (no host yet); found HEAD broken under Xcode 27 — three toolchain fixes committed separately ahead of the task |
 | T014 implement | opus (`sdd-implementer`, high effort) | 159,039 (59 tool uses, 16 min) | done first pass; nine mutations red; one deviation stated (mark above the hero, per artboards) |
 | T013+T014 device pass | opus (`general-purpose`, simulator) | 185,523 (154 tool uses, 12 min) | all steps match the artboards; two observations to the phase review (border clears on confirm only; WORTH NOW unchanged on a sold page) |
+| T015 implement | opus (`sdd-implementer`, high effort) | 216,710 (72 tool uses, 22 min) | done first pass; twelve mutations red; two deviations stated (empty-side meta line per plan; no row cross-fade) |
 | _rows added per dispatch as the spec runs_ | | | |
