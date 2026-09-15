@@ -60,7 +60,7 @@ page use the same strings. The page just sets them larger.
 | Figures | three cells when `hasSales`: Selected · Sold · Estimated cost; cells hug their content, `space-between` around the `1px` dividers with `6` minimum either side; plate padding `12` all round in this mode (16 → 12 horizontally); figures `lineLimit(1)` + `minimumScaleFactor(0.6)` |
 | Figure sizes (three) | all `heroFigureSecondary` (Archivo 26); Selected drops from 34 |
 | Sold figure | `textPrimary`; caption `monoLabel` `textQuiet` "2 ITEMS" |
-| Row control | footer strip inside the candidate card: `1px surfaceInset` top hairline, `40` tall (`44` hit), `cardPadding` sides, "Mark as sold…" `buttonCompact` (Plex Sans 500 13) `accentBrass`, right-aligned; the body above stays the toggle |
+| Row control | footer strip inside the candidate card: `1px surfaceInset` top hairline, `44` tall (the label's `40` band plus `4` below it, so the hit area never reaches the toggle above; amended 2026-09-14 at the Phase 5 review), `cardPadding` sides, "Mark as sold…" `buttonCompact` (Plex Sans 500 13) `accentBrass`, right-aligned; the body above stays the toggle |
 | Sold section | unplated, after the candidates, `sectionGap` above; `monoLabel` "SOLD", `10` gap; rows `12 / 0` padding, `1px surfaceInset` bottom; name `body` 13 `textPrimary` (truncates), date `monoMeta` `textMonoMeta`, price IBM Plex Mono 500 13 `textPrimary`, `12` gaps |
 | **Sale sheet** | |
 | Size | `.medium` detent (content ≈ 340pt); `.large` when the keyboard rises |
