@@ -540,17 +540,20 @@ struct ItemListView: View {
     }
 
     /// The line under the title: the Owned side's running total, or the Sold
-    /// side's summary — which is `nil` until something has been sold, and
-    /// shows nothing rather than "0 sold · $0" (spec Decision 11).
+    /// side's summary — which reads "0 sold · $0" until something has been
+    /// sold rather than vanishing (spec Decision 13, replacing Decision 11).
+    ///
+    /// Both branches are one `.monoLabel()` line and neither is conditional,
+    /// so the slot is the same height on either side and the `SideSwitch`
+    /// below never moves. That is the whole of Decision 13's fix: the
+    /// person saw the switch jump up when the Sold side had nothing on it.
     @ViewBuilder
     private var metaLine: some View {
         switch viewModel.side {
         case .owned:
             Text(summaryLine).monoLabel()
         case .sold:
-            if let line = viewModel.soldSummaryLine {
-                Text(soldMeta(line)).monoLabel()
-            }
+            Text(soldMeta(viewModel.soldSummaryLine)).monoLabel()
         }
     }
 

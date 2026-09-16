@@ -96,6 +96,28 @@ struct SaleCopyTests {
             == "3 sold · $2,400 · +$0 vs paid")
     }
 
+    /// Spec Decision 13's zero form, pinned here because this is where it is
+    /// decided: two parts, not three. The realised part is dropped at zero
+    /// sales — "+$0 vs paid" over nothing sold would state a measurement
+    /// where none was made — and the line still exists, which is what keeps
+    /// the Sold side's header slot the same height as the Owned side's and
+    /// the `SideSwitch` above it from moving.
+    ///
+    /// Mutation: append `realised(deltaCents:)` unconditionally → this reads
+    /// "0 sold · $0 · +$0 vs paid" and fails.
+    @Test func theSoldSideSummaryAtZeroSalesIsALineWithNoRealisedPart() {
+        let atZero = SaleCopy.soldSideSummary(totals(count: 0, proceeds: 0, delta: 0))
+
+        #expect(atZero == "0 sold · $0")
+        #expect(!atZero.contains("vs paid"))
+        #expect(!atZero.isEmpty)
+
+        // One sale brings the third part back, so the drop is the zero case
+        // and not the whole line losing its realised figure.
+        #expect(SaleCopy.soldSideSummary(totals(count: 1, proceeds: 0, delta: 0))
+            == "1 sold · $0 · +$0 vs paid")
+    }
+
     /// Decision 11's settled form, on a row: the word first, then the
     /// amount, then the basis — so nothing is left to the colour, and the
     /// figure says what it is measured against.

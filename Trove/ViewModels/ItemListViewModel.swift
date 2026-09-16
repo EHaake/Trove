@@ -126,11 +126,18 @@ final class ItemListViewModel {
     /// sum instead of two that agree (plan §4).
     private(set) var soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)
 
-    /// The line above the Sold rows — "3 sold · $2,400 · +$350 vs paid" — or
-    /// nil when nothing has been sold, which is the whole of what the side
-    /// shows then (spec Decision 11: the summary is hidden at zero sales).
-    var soldSummaryLine: String? {
-        soldItems.isEmpty ? nil : SaleCopy.soldSideSummary(soldTotals)
+    /// The line above the Sold rows — "3 sold · $2,400 · +$350 vs paid", and
+    /// "0 sold · $0" when nothing has been sold (spec Decision 13, replacing
+    /// Decision 11's hide-at-zero).
+    ///
+    /// Non-optional on purpose: the header renders this in the same slot the
+    /// Owned side's item stats occupy, and the reason Decision 13 exists is
+    /// that an absent line let the `SideSwitch` above it jump as the sides
+    /// changed. A `String?` here would put that jump one `if let` away; the
+    /// type is what rules it out. The zero wording itself lives in
+    /// `SaleCopy`, not here.
+    var soldSummaryLine: String {
+        SaleCopy.soldSideSummary(soldTotals)
     }
 
     var isEmpty: Bool { items.isEmpty }

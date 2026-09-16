@@ -112,12 +112,25 @@ nonisolated enum SaleCopy {
     /// The Sold side's summary — "3 sold · $2,400 · +$350 vs paid". Reads the
     /// same `SaleTotals` the card reads, so AC7's "the summary matches the
     /// card" is one sum, not two.
+    ///
+    /// It is always a line, never nothing (spec Decision 13, replacing
+    /// Decision 11's hide-at-zero): the Sold side's header keeps the same
+    /// slot the Owned side's item stats occupy, so the switch above it
+    /// cannot jump as the sides change. At zero sales it reads "0 sold ·
+    /// $0" — the realised part is dropped rather than set to "+$0 vs paid",
+    /// because a gain measured over no sales states a measurement where
+    /// there is none. That is the one shape difference, and it lives here
+    /// so the two readers of this line can't spell the zero case
+    /// differently.
     static func soldSideSummary(_ totals: SaleTotals) -> String {
-        [
+        var parts = [
             "\(totals.count) sold",
             totals.proceedsCents.formattedAsWholeCurrency(currencyCode: currencyCode),
-            realised(deltaCents: totals.realisedDeltaCents),
-        ].joined(separator: " \(separator) ")
+        ]
+        if totals.count > 0 {
+            parts.append(realised(deltaCents: totals.realisedDeltaCents))
+        }
+        return parts.joined(separator: " \(separator) ")
     }
 
     /// What a sale at exactly what was paid says, on a row and on the page

@@ -30,19 +30,33 @@ struct SideSwitch: View {
     @Environment(\.theme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// The brass fill's identity, so it slides between the halves instead of
-    /// one disappearing as the other appears.
-    @Namespace private var fill
-
     /// The Design pass's measurements: two 62 pt halves, no seam between
     /// them, at the badges' own 32 pt height.
     private static let halfWidth: CGFloat = 62
     private static let height: CGFloat = 32
 
+    /// How long the fill takes to cross, in seconds — spec Decision 13's
+    /// "fast and smooth", and the rate every other in-page control in the
+    /// app already moves at (`DesireDial`, `DesireGauge` and `PhotoCarousel`
+    /// are all `.snappy(duration: 0.2)`; 0.25 s is the floating dropdown's,
+    /// which travels much further). Named rather than typed twice so the
+    /// Reduce Motion arm can't drift from the travelling one, and pinned by
+    /// `ItemListSidesWiringTests`.
+    static let slideDuration: TimeInterval = 0.2
+
     var body: some View {
         HStack(spacing: 0) {
             half(.owned, label: SaleCopy.owned)
             half(.sold, label: SaleCopy.sold)
+        }
+        // One rectangle that moves, rather than one per half appearing and
+        // disappearing — see the note on the animation below for why the
+        // second shape never actually slid.
+        .background(alignment: .leading) {
+            Rectangle()
+                .fill(theme.colors.accentBrass)
+                .frame(width: Self.halfWidth, height: Self.height)
+                .offset(x: side == .owned ? 0 : Self.halfWidth)
         }
         .clipShape(RoundedRectangle(cornerRadius: theme.metrics.buttonRadius))
         .overlay(
@@ -54,7 +68,34 @@ struct SideSwitch: View {
         // the same instant, and tweening those is the `DropdownHost` lesson
         // (T029c) from the other direction. Reduce Motion keeps the change,
         // drops the travel.
-        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25), value: side)
+        //
+        // T018b measured this rather than reasoned about it (the T056 rule):
+        // `simctl io recordVideo` through a tap, brass-masked column profile
+        // per frame. Two things came out of it, and neither was the `List`
+        // swapping its whole row set on the same update — that costs the
+        // slide nothing.
+        //
+        // One: the fill used to be a `Rectangle` in each half's `.background`
+        // paired by `matchedGeometryEffect`, and it never slid. Inserting one
+        // view and removing another is a *structural* change, which this
+        // modifier does not cover — it animates the animatable data of the
+        // subtree it is on. So the two halves cross-faded, the whole control
+        // dimming to 22 % of its brightness halfway across, which is what
+        // "stutters at a low frame rate" looks like from the outside. A
+        // literal `.easeInOut(duration: 2.0)` here changed the timing not at
+        // all, which is how the inertness was proved rather than argued. One
+        // rectangle with an animatable `.offset` is covered, and measures as
+        // a real slide.
+        //
+        // Two: the control itself used to travel 19.7 pt upward at the same
+        // time, because the Sold side's header line vanished at zero sales.
+        // Spec Decision 13 fixed that by keeping the line, not here.
+        .animation(
+            reduceMotion
+                ? .easeInOut(duration: Self.slideDuration)
+                : .snappy(duration: Self.slideDuration),
+            value: side
+        )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Owned or sold")
         .accessibilityValue(side == .owned ? SaleCopy.owned : SaleCopy.sold)
@@ -74,13 +115,6 @@ struct SideSwitch: View {
                 .font(ThemeTypography.font(.mono, size: 11, weight: isActive ? .medium : .regular))
                 .foregroundStyle(isActive ? theme.colors.background : theme.colors.accentBrass)
                 .frame(width: Self.halfWidth, height: Self.height)
-                .background {
-                    if isActive {
-                        Rectangle()
-                            .fill(theme.colors.accentBrass)
-                            .matchedGeometryEffect(id: "sideSwitch.fill", in: fill)
-                    }
-                }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

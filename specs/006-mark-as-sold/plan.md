@@ -432,7 +432,7 @@ private(set) var side: Side = .owned
 func show(_ side: Side)
 private(set) var soldItems: [Item] = []       // Sold-side order
 private(set) var soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)   // SaleOutcome.totals(over: sold)
-var soldSummaryLine: String?   // nil when nothing is sold (spec Decision 11; corrected at the Phase 4 review)                   // SaleCopy.soldSideSummary(soldTotals)
+var soldSummaryLine: String   // never nil — "0 sold · $0" at zero sales (Decision 13, amended 2026-09-15; was String? / nil)   // nil when nothing is sold (spec Decision 11; corrected at the Phase 4 review)                   // SaleCopy.soldSideSummary(soldTotals)
 static func areInSoldOrder(_ lhs: Item, _ rhs: Item) -> Bool   // date desc, name, id
 ```
 

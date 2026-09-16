@@ -641,7 +641,7 @@ the Sold side summary) keep the signed `+$200 vs paid` form.
 | Inactive half | no fill, `accentBrass` text, weight 400 | |
 | Placement | its own row under the title block, left-aligned; `controlRowGap` (16) below the meta line; `sectionGap` (24) above the search field on Owned; `15` above the first row on Sold | |
 | Header on Sold | Sort By and search hidden, "…" stays; the meta line is the sold summary, realised part in moss/rust | |
-| Motion | the fill slides to the tapped half, `.snappy(duration: 0.25)`, rows cross-fade; fade only under Reduce Motion | |
+| Motion | the fill slides to the tapped half, `.snappy(duration: 0.2)`, rows cross-fade; fade only under Reduce Motion (0.25 s at the Design pass, shortened at T018b under spec Decision 13's "fast and smooth") | |
 | **Sold row** | | |
 | Shape | the Owned row (`List` chrome, plate, `52` thumbnail, `13` padding and gap) with no dial and no trend arrow | |
 | Lines | name `rowTitle`; date `monoLabel` "SOLD SEP 12, 2026"; value line `monoValue` price + outcome `monoMeta`, `8` apart | |

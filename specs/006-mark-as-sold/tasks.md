@@ -978,7 +978,7 @@ because the person will feel it before they read it.
   metadata, no repo path). Findings: an incremental build hides warnings
   from unchanged files — count after `clean`.
 
-- [ ] **T018b — Phase 5 pause finding: the switch's stats line and its slide (Decision 13).**
+- [x] **T018b — Phase 5 pause finding: the switch's stats line and its slide (Decision 13).**
   (1) `soldSummaryLine` is never nil: `SaleCopy.soldSideSummary` over zero
   totals reads "0 sold · $0" (no realised part at zero sales — decide the
   exact zero form inside `SaleCopy`, pinned in `SaleCopyTests`), so the
@@ -1001,6 +1001,23 @@ because the person will feel it before they read it.
   `TroveTests/ItemListViewModelTests.swift`, `TroveTests/ItemListSidesWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutation recorded; the video
   measurement recorded (device agent).
+  **Done (2026-09-15).** `soldSummaryLine` is a non-optional `String`
+  ("0 sold · $0" at zero, no realised part — pinned); both meta lines
+  unconditional, one `monoLabel` line each; the switch's fill is one
+  `Rectangle` with an animatable `.offset`, 0.2 s. 1496 unit / 20 UI green.
+  Six mutations red (one a compile error — the optional cannot return).
+  **Measured, not reasoned:** the jump was 19.7 pt and only with an empty
+  collection (with sales seeded neither symptom appears — `-seedSold`
+  alone could not reproduce the person's report); the row swap was *not*
+  the cause of the stutter — the `matchedGeometryEffect` pair across an
+  `if isActive` insert/remove is a structural change `.animation(_:value:)`
+  never covered, so the fill crossfaded with a 22 % brightness dip while
+  the 19.7 pt travel stepped at ~20 Hz. After: the edge moves monotonically
+  over 9–11 distinct frames at 60 Hz, 164 ms, flat brightness, 0 pt travel.
+  Design docs' Motion row 0.25 → 0.2 s (outside the files, declared).
+  The frame-analysis scripts are kept under `scripts/motion-probe/`.
+  Finding for the sweep: any other `matchedGeometryEffect` across an
+  insert/remove in the app is a silent crossfade.
 
 - [ ] **T018c — Phase 5 pause finding: the Sell Plan's sold items stay listed (Decision 14).**
   `SellPlanView.content(for:)` composes `soldSection` under the empty
@@ -1124,4 +1141,5 @@ interpreted here.
 | T017a fix (B1, B2, S3, S5) | opus (`sdd-implementer`, high effort) | 101,230 (54 tool uses, 42 min — two full rebuilds) | done; five mutations red; one unreachable-when-false require stated for the re-review |
 | Phase 5 re-review | opus (`skeptical-reviewer`, resumed) | 197,167 cumulative (~16.5k this round; 1 tool use) | **signed off**, no new blocking; the unreachable require kept as a lock (stated why); design notes' strip height corrected to 44 |
 | T018a implement | opus (`sdd-implementer`, high effort) | 72,064 (25 tool uses, 22 min — three clean builds, two `all` runs) | done; 11 → 0 repo warnings; bundle miss (orchestrator): the simulator id named was iOS 26.5, not 27.0 — settled by running both |
+| T018b implement | opus (`sdd-implementer`, high effort) | 176,094 (96 tool uses, 46 min) | done; six mutations red; the bundle's suspected cause refuted by measurement and the real one found (structural matchedGeometryEffect) |
 | _rows added per dispatch as the spec runs_ | | | |

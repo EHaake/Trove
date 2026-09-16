@@ -206,6 +206,29 @@ struct ItemListSidesWiringTests {
         )
     }
 
+    /// Spec Decision 13, as the view can express it: neither side's meta line
+    /// is conditional, so the slot under the title is there on both sides and
+    /// the `SideSwitch` beneath it cannot jump as the sides change. The
+    /// person saw exactly that jump at the Phase 5 pause.
+    ///
+    /// The type carries most of the guarantee — `soldSummaryLine` is a
+    /// `String`, so there is nothing to unwrap — and this catches the other
+    /// way back to a vanishing line: an `if` around the line itself.
+    /// Mutation: wrap the Sold branch in `if !viewModel.soldItems.isEmpty`
+    /// → red.
+    @Test func neitherSidesMetaLineIsConditional() throws {
+        let meta = try body(of: "private var metaLine: some View")
+
+        #expect(
+            !meta.contains("if "),
+            "a branch of the meta line is conditional, so one side's header can lose its slot and move the switch: \(meta)"
+        )
+        #expect(
+            meta.ranges(of: ".monoLabel()").count == 2,
+            "the meta line draws \(meta.ranges(of: ".monoLabel()").count) mono lines, expected one per side — the two slots have to be the same height"
+        )
+    }
+
     /// The Sold side's empty state says the Sold side's words and offers no
     /// action (Design pass) — and reads both of them from `SaleCopy`.
     @Test func theNothingSoldStateReadsTheSoldCopyAndOffersNoAction() throws {
@@ -254,5 +277,52 @@ struct ItemListSidesWiringTests {
         // It reports; it never writes. A `@Binding` here would be a second
         // way to change sides, and the one that skips Q15's clearing.
         #expect(!code.contains("@Binding"), "the switch binds the side instead of reporting a tap (plan Q15)")
+    }
+
+    /// Spec Decision 13's other half: the slide is fast. T018b measured the
+    /// travel on the simulator frame by frame — at 0.25 s it took 198–222 ms
+    /// of visible travel, and the bound Decision 13 is held to is 0.2 s, the
+    /// rate every other in-page control in the app already moves at.
+    ///
+    /// One constant, both arms: the value is asserted rather than the source
+    /// scanned, so a literal typed back into either arm of the `.animation`
+    /// leaves the constant unused and the travelling arm un-pinned — which
+    /// is what the second half of this test checks.
+    ///
+    /// Mutation: `slideDuration = 0.25` → red.
+    @Test func theSwitchesSlideIsAtOrUnderTwoTenthsOfASecond() throws {
+        #expect(SideSwitch.slideDuration <= 0.2)
+
+        let code = try SourceScan.production(Self.control)
+        #expect(
+            code.ranges(of: "Self.slideDuration").count == 2,
+            "the switch names `Self.slideDuration` \(code.ranges(of: "Self.slideDuration").count) times, expected 2 — one arm of the animation types its own duration"
+        )
+    }
+
+    /// The fill is **one** rectangle that moves, not one per half appearing
+    /// as the other disappears. T018b measured the difference on the device:
+    /// the paired form is a structural insert-and-remove, which
+    /// `.animation(_:value:)` does not cover, so it cross-faded — the control
+    /// dimming to 22 % halfway across — and ignored its own duration
+    /// entirely (a literal 2 s ease changed nothing). An animatable
+    /// `.offset` is covered, and measures as a real slide: the fill's edge
+    /// crosses in 9 to 11 distinct frames at 60 Hz with the control's
+    /// brightness flat throughout.
+    ///
+    /// Mutation: put the `matchedGeometryEffect` pair back → both
+    /// expectations fail.
+    @Test func theSwitchesFillIsOneMovingRectangle() throws {
+        let code = try SourceScan.production(Self.control)
+
+        #expect(
+            !code.contains("matchedGeometryEffect"),
+            "the fill is paired across the halves again — that form cross-fades rather than sliding, and ignores the animation"
+        )
+        #expect(
+            code.ranges(of: "Rectangle()\n                .fill(theme.colors.accentBrass)").count == 1,
+            "the switch draws \(code.ranges(of: "Rectangle()\n                .fill(theme.colors.accentBrass)").count) brass fills, expected exactly 1 — the one that slides"
+        )
+        #expect(code.contains(".offset(x: side =="), "the fill doesn't move with the side, so nothing about it is animatable")
     }
 }

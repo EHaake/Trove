@@ -1738,13 +1738,21 @@ struct ItemListViewModelSoldSideTests {
     }
 
     /// The summary line is `SaleCopy`'s, over the totals `SaleOutcome` summed
-    /// — and nil with nothing sold, which is spec Decision 11: the Sold
-    /// side's summary is hidden at zero sales rather than reading "0 sold".
+    /// — including at zero sales, which is spec Decision 13 replacing
+    /// Decision 11: the line is always there, reading `SaleCopy`'s zero form,
+    /// so the Sold side's header keeps the slot the Owned side's stats
+    /// occupy and the switch above it never jumps.
+    ///
+    /// Mutation: hide it again (`soldItems.isEmpty ? "" : …`, the nearest
+    /// compiling form of the old `isEmpty ? nil`) → the first expectation
+    /// fails. Restoring the optional itself no longer compiles, which is the
+    /// stronger half of the guarantee.
     @Test func theSummaryLineIsTheSharedCopyOverTheSharedTotals() throws {
         let context = try makeInMemoryContext()
         let viewModel = ItemListViewModel(modelContext: context)
         viewModel.load()
-        #expect(viewModel.soldSummaryLine == nil)
+        #expect(viewModel.soldSummaryLine == SaleCopy.soldSideSummary(viewModel.soldTotals))
+        #expect(viewModel.soldSummaryLine == "0 sold · $0")
         #expect(viewModel.soldTotals == SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0))
 
         insertSold("Gone", priceCents: 500_00, soldAt: 1_000, forCents: 800_00, into: context)
