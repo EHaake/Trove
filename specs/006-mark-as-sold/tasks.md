@@ -1141,13 +1141,18 @@ because the person will feel it before they read it.
   orchestrator (criterion 7a's test-file prefix, criterion 7's root-scope
   clause, 011's boundaries pointer, tokens.md's As-implemented cell for the
   absent row cross-fade, this file's status). Left open for the sweep's
-  record: spoken strings outside the copy table ('s hint,
-  's label), the pluralisation rule spelled twice in
-  , "Edit" typed in two menus untested, two guards weaker than
-  they read (G32's literal; the whole-file  contains), nothing
-  reading . **Final counts (orchestrator run,
-  iPhone 18 Pro / iOS 27.0):** ; UI: Executed 20 tests, with 0
-  failures. Allowance: not read (the usage page is the person's).
+  record: spoken strings outside the copy table (`SoldCard`'s hint,
+  `SideSwitch`'s label), the pluralisation rule spelled twice in
+  `SaleCopy`, "Edit" typed in two menus untested, two guards weaker than
+  they read (G32's literal; the whole-file `isLoss` contains), nothing
+  reading `docs/csv-reference.md`. **Final counts (orchestrator run,
+  iPhone 18 Pro / iOS 27.0):** UI: Executed 20 tests, with 0 failures,
+  `** TEST SUCCEEDED **`; the unit line was cut from this run's captured
+  tail (orchestrator miss — `tail -30` on an `all` run), so the unit count
+  stands on the two runs on identical code the same day: 1498 tests in
+  203 suites, 0 failures (T018d's double run and T020's docs run). No
+  Swift changed after T018d. Allowance: not read (the usage page is the
+  person's).
   Criteria 15 and 16 pending the person's steps.
 
 ## Tier log
@@ -1218,5 +1223,5 @@ interpreted here.
 | T018d fix (F1) | opus (`sdd-implementer`, high effort) | 40,693 (20 tool uses, 29 min — four simulator runs) | done; mutation red; `all` green twice |
 | T020 docs | opus (`sdd-implementer`, high effort) | 195,757 (68 tool uses, 11 min) | done; three declared in-file corrections beyond the instruction; 005's cadence note out of scope |
 | Pre-merge sweep | opus (`skeptical-reviewer`) | 422,427 (25 tool uses — three targeted looks, stated) | **signed off, nothing blocking**; twelve second looks, five applied as document fixes by the orchestrator |
-| Final verify | fable, medium (the session) | — | `verify.sh all` green: ; UI 20/0 |
+| Final verify | fable, medium (the session) | — | `verify.sh all` green; UI 20/0; unit line cut from the captured tail (miss) — 1498/203 on identical code earlier the same day |
 | _rows added per dispatch as the spec runs_ | | | |
