@@ -1019,7 +1019,7 @@ because the person will feel it before they read it.
   Finding for the sweep: any other `matchedGeometryEffect` across an
   insert/remove in the app is a silent crossfade.
 
-- [ ] **T018c — Phase 5 pause finding: the Sell Plan's sold items stay listed (Decision 14).**
+- [x] **T018c — Phase 5 pause finding: the Sell Plan's sold items stay listed (Decision 14).**
   `SellPlanView.content(for:)` composes `soldSection` under the empty
   state as well as under the candidates (one `soldSection`, hosted in both
   branches, gated on `hasSales`); each sold row carries a compact Sold mark
@@ -1031,6 +1031,14 @@ because the person will feel it before they read it.
   `TroveTests/SellPlanWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded; seen by eye
   with the candidate pool empty (device agent).
+  **Done (2026-09-15).** `emptyPlan(_:)` hosts the one `soldSection` under
+  the empty state when `hasSales`; each sold row opens with a compact SOLD
+  tag (`SaleCopy.soldMark`, `SoldMark`'s drawing at row scale) before the
+  name. 1498 unit tests green (+2). Four mutations red. Deviation: the rows
+  now differ from `SellPlanThree.png` by the tag (Decision 14 asks for it).
+  Finding: inside the `ScrollView` the empty state sits above the section
+  rather than centring — for the eye check. The inline-copy scan skips
+  one-word literals; the new row test covers `soldRow` only.
 
 ## Phase 6 — Verification and close-out
 
@@ -1142,4 +1150,5 @@ interpreted here.
 | Phase 5 re-review | opus (`skeptical-reviewer`, resumed) | 197,167 cumulative (~16.5k this round; 1 tool use) | **signed off**, no new blocking; the unreachable require kept as a lock (stated why); design notes' strip height corrected to 44 |
 | T018a implement | opus (`sdd-implementer`, high effort) | 72,064 (25 tool uses, 22 min — three clean builds, two `all` runs) | done; 11 → 0 repo warnings; bundle miss (orchestrator): the simulator id named was iOS 26.5, not 27.0 — settled by running both |
 | T018b implement | opus (`sdd-implementer`, high effort) | 176,094 (96 tool uses, 46 min) | done; six mutations red; the bundle's suspected cause refuted by measurement and the real one found (structural matchedGeometryEffect) |
+| T018c implement | opus (`sdd-implementer`, high effort) | 83,074 (36 tool uses, 18 min) | done; four mutations red; one artboard divergence stated (the row tag Decision 14 asks for) |
 | _rows added per dispatch as the spec runs_ | | | |

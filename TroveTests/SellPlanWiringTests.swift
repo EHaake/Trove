@@ -113,6 +113,54 @@ struct SellPlanWiringTests {
         )
     }
 
+    /// The same section under the other half of `content(for:)`: selling the
+    /// last candidate empties the pool, and the plan still lists what was sold
+    /// toward it (spec Decision 14). One `soldSection`, hosted once per
+    /// branch, gated on `hasSales` in both — three mentions in the file, a
+    /// declaration and a host each side.
+    ///
+    /// Mutation: drop `soldSection` from the empty branch, or send
+    /// `content(for:)` straight back to `emptyState(reason)` → red.
+    @Test func theSoldSectionIsHostedUnderTheEmptyStateToo() throws {
+        let code = try SourceScan.production(Self.screen)
+
+        let contents = SourceScan.closureBodies(
+            after: "private func content(for wanted: WishlistItem) -> some View",
+            in: code
+        )
+        try #require(contents.count == 1, "the screen declares \(contents.count) content(for:) bodies, expected exactly 1")
+        let content = try #require(contents.first)
+
+        #expect(content.contains("candidateList"), "the screen no longer lists the candidates — wrong target?")
+        #expect(
+            content.contains("emptyPlan(reason)"),
+            "an emptied plan is composed as the bare empty state, which can host nothing under it (Decision 14)"
+        )
+
+        let empties = SourceScan.closureBodies(
+            after: "private func emptyPlan(_ reason: SellPlanViewModel.EmptyReason) -> some View",
+            in: code
+        )
+        try #require(empties.count == 1, "the screen declares \(empties.count) emptyPlan(_:) bodies, expected exactly 1")
+        let empty = try #require(empties.first)
+
+        #expect(empty.contains("emptyState(reason)"), "the empty branch stopped saying why the pool is empty — wrong target?")
+
+        let branch = try hasSalesBranch(in: empty, describing: "emptyPlan(_:)")
+        #expect(
+            branch.contains("soldSection"),
+            "an emptied plan drops the sales already made toward it — they stay listed (Decision 14)"
+        )
+
+        // One section, two hosts: its own declaration plus one mention in
+        // each branch. A second copy of the rows, or a host that quietly
+        // stopped composing it, moves this count.
+        #expect(
+            code.ranges(of: "soldSection").count == 3,
+            "soldSection is named \(code.ranges(of: "soldSection").count) times — expected one declaration and one host per branch"
+        )
+    }
+
     /// What the section says, and what it doesn't: the sales themselves, the
     /// title from `SaleCopy`, and no total — the figure lives in the header,
     /// beside the cost rather than against it.
@@ -149,6 +197,39 @@ struct SellPlanWiringTests {
         #expect(
             row.contains(".accessibilityElement(children: .combine)"),
             "a sold row isn't announced as one element (criterion 16)"
+        )
+    }
+
+    /// Every row in the section carries the mark, so it reads as sold on its
+    /// own rather than by the header above it — which is the whole of what an
+    /// emptied plan shows (spec Decision 14). The mark is composed before the
+    /// name, so the row's one combined announcement opens with the word
+    /// (criterion 16), and it is `SaleCopy`'s word: the file's inline-copy
+    /// scan next door only filters literals with a space in them, so a bare
+    /// `"Sold"` typed here would walk straight past it.
+    ///
+    /// Mutation: drop the mark, type the word inline, or compose it after the
+    /// name → red.
+    @Test func eachSoldRowCarriesTheSoldMark() throws {
+        let code = try SourceScan.production(Self.screen)
+        let rows = SourceScan.closureBodies(after: "private func soldRow(_ item: Item) -> some View", in: code)
+        try #require(rows.count == 1, "the screen declares \(rows.count) soldRow(_:) bodies, expected exactly 1")
+        let row = try #require(rows.first)
+
+        let mark = try #require(
+            row.range(of: "SaleCopy.soldMark"),
+            "a sold row doesn't say it is sold — only the section's header does, and an emptied plan is nothing but rows"
+        )
+        let name = try #require(row.range(of: "item.name"), "a sold row doesn't name the item — wrong target?")
+        #expect(
+            mark.upperBound < name.lowerBound,
+            "the mark is composed after the name, so the row's combined label doesn't open with it (criterion 16)"
+        )
+
+        let typed = SourceScan.stringLiterals(in: row).filter { $0.localizedCaseInsensitiveContains("sold") }
+        #expect(
+            typed.isEmpty,
+            "the row types a sale's word inline instead of reading SaleCopy: \(typed.joined(separator: " | "))"
         )
     }
 

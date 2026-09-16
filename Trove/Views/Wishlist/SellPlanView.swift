@@ -91,7 +91,7 @@ struct SellPlanView: View {
             .background(theme.colors.background)
 
             if let reason = viewModel.emptyReason {
-                emptyState(reason)
+                emptyPlan(reason)
             } else {
                 candidateList
             }
@@ -292,13 +292,48 @@ struct SellPlanView: View {
         }
     }
 
+    /// The other host for the Sold section. Selling the last candidate empties
+    /// the pool, and a plan whose pool has run dry still lists what was sold
+    /// toward it (spec Decision 14) — the empty state says why there is
+    /// nothing left to pick, the section under it says what was already done.
+    ///
+    /// One `soldSection`, composed here as well as under the candidates and
+    /// gated the same way: a plan that has sold nothing is the bare empty
+    /// state it has always been, unscrolled and centred.
+    ///
+    /// In a `ScrollView` for the same reason the candidates are — the sales
+    /// outlive the pool, so there can be more of them than a screen holds.
+    /// Inside one, `EmptyStateView`'s `maxHeight: .infinity` resolves to its
+    /// own height rather than the screen's, so the state sits above the
+    /// section instead of centring over it, which is what puts the record in
+    /// view without a scroll.
+    @ViewBuilder
+    private func emptyPlan(_ reason: SellPlanViewModel.EmptyReason) -> some View {
+        if viewModel.hasSales {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    emptyState(reason)
+
+                    soldSection
+                }
+                .padding(.bottom, theme.metrics.sectionGap)
+            }
+        } else {
+            emptyState(reason)
+        }
+    }
+
     // MARK: - What was actually sold toward this plan
 
-    /// Under the candidates, and quieter than them: unplated rows of name,
-    /// date and price, so the plan reads as a record of what was done as well
-    /// as a list of what might be (spec P15). Nothing here is added up on
-    /// screen — the total is the header's Sold figure, and it is still beside
-    /// the cost rather than against it.
+    /// Under the candidates, and quieter than them: unplated rows of a mark, a
+    /// name, a date and a price, so the plan reads as a record of what was
+    /// done as well as a list of what might be (spec P15). Nothing here is
+    /// added up on screen — the total is the header's Sold figure, and it is
+    /// still beside the cost rather than against it.
+    ///
+    /// Composed by both halves of `content(for:)` — the candidate list and
+    /// `emptyPlan(_:)` — because selling the last candidate must not take the
+    /// record with it (spec Decision 14).
     private var soldSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(SaleCopy.sellPlanSectionTitle).monoLabel()
@@ -318,7 +353,31 @@ struct SellPlanView: View {
     /// no longer has an opinion about — and the row is one VoiceOver stop
     /// (criterion 16).
     private func soldRow(_ item: Item) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
+            // `SoldMark`'s tag at row scale, and the same drawing: the word
+            // inverted — the page's ink behind the page's background colour —
+            // at `thumbnailRadius`, the smallest corner the app draws, with
+            // the page's padding brought in and its asymmetry kept (the mono
+            // label's tracking hangs a gap off the last letter).
+            //
+            // Inline rather than a property of its own: one row draws it, and
+            // the scan next door reads the row for `SaleCopy.soldMark`.
+            //
+            // First in the row, so the combined announcement opens with the
+            // word and the marks line up down the section's left edge. The
+            // section header says SOLD once; a plan whose candidates have all
+            // been sold is nothing *but* this section, and each row has to
+            // carry it on its own (spec Decision 14).
+            Text(SaleCopy.soldMark)
+                .monoLabel(color: theme.colors.background)
+                .padding(.leading, 5)
+                .padding(.trailing, 4)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: theme.metrics.thumbnailRadius)
+                        .fill(theme.colors.textPrimary)
+                )
+
             Text(item.name)
                 .font(theme.typography.body)
                 .foregroundStyle(theme.colors.textPrimary)
