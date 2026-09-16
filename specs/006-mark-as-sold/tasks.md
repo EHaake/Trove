@@ -949,6 +949,59 @@ because the person will feel it before they read it.
   skip arm returning; the scan itself fails at the throw. Two production
   rebuilds exceeded 10 minutes each.
 
+- [ ] **T018a — Phase 5 pause finding: iOS 27, and a clean build.**
+  The Mac moved to macOS 27 / Xcode 27 with an iOS 27.0 runtime; the
+  iPhone 17 Pro simulator `scripts/verify.sh` names (`FE0861F8…`, iOS 26.0)
+  no longer exists (now `327655AC-B108-4140-AEF8-F5A0248BBA3E`, iOS 27.0).
+  Point `DESTINATION` at the iOS 27.0 device (by id, with a comment saying
+  how to re-list). Build the app and both test targets with the raw log
+  kept and every `warning:` and `error:` in the project's own sources
+  (`Trove/`, `TroveTests/`, `TroveUITests/`) listed and fixed — no
+  suppressions, no `@available` shims (CLAUDE.md: iOS 26.0+ only, nothing
+  older); system/SDK warnings outside the repo are reported, not chased.
+  Then `scripts/verify.sh all` green on iOS 27.0. Files: `scripts/verify.sh`
+  plus whatever the warnings touch (each declared).
+  **Verify:** `scripts/verify.sh all` green on the iOS 27.0 device; the
+  warning count in the project's sources reported before and after (after
+  must be 0).
+
+- [ ] **T018b — Phase 5 pause finding: the switch's stats line and its slide (Decision 13).**
+  (1) `soldSummaryLine` is never nil: `SaleCopy.soldSideSummary` over zero
+  totals reads "0 sold · $0" (no realised part at zero sales — decide the
+  exact zero form inside `SaleCopy`, pinned in `SaleCopyTests`), so the
+  Sold side's `metaLine` occupies the same slot and height as the Owned
+  side's and the `SideSwitch` never moves; T009's nil-at-zero unit test and
+  T015's scans updated to the new rule (mutation: the old `isEmpty ? nil`
+  back → red). (2) The slide: diagnose why it stutters — suspect the
+  `matchedGeometryEffect` fill animating while the `List` swaps its whole
+  row set on the same transaction (the header is inside the `List`), so
+  every frame re-lays the list; fix so the fill's animation is isolated
+  from the row swap (e.g. the side change applied outside the animated
+  transaction, the switch's own `withAnimation` scoped to the fill only, or
+  a plain fast crossfade if a slide cannot be made smooth), at or under
+  0.2 s. The check is on the device: `xcrun simctl io <udid> recordVideo`
+  during a toggle and per-frame timing/`CIAreaAverage` over the fill's
+  region, showing a monotonic ramp across ≥ 6 frames at 60 Hz (the T056
+  rule — a screenshot cannot show this). Files: `Trove/Models/SaleCopy.swift`,
+  `Trove/ViewModels/ItemListViewModel.swift`, `Trove/Views/Items/ItemListView.swift`,
+  `Trove/Views/Items/SideSwitch.swift`, `TroveTests/SaleCopyTests.swift`,
+  `TroveTests/ItemListViewModelTests.swift`, `TroveTests/ItemListSidesWiringTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutation recorded; the video
+  measurement recorded (device agent).
+
+- [ ] **T018c — Phase 5 pause finding: the Sell Plan's sold items stay listed (Decision 14).**
+  `SellPlanView.content(for:)` composes `soldSection` under the empty
+  state as well as under the candidates (one `soldSection`, hosted in both
+  branches, gated on `hasSales`); each sold row carries a compact Sold mark
+  (the `SoldMark` tag's drawing at row scale, or `SaleCopy.soldMark` in
+  `monoLabel` on `textPrimary`) so the row reads as sold at a glance and to
+  VoiceOver. `SellPlanWiringTests` updated: the section appears in both
+  branches (mutation: drop it from the empty branch → red); the row names
+  `SaleCopy.soldMark`. Files: `Trove/Views/Wishlist/SellPlanView.swift`,
+  `TroveTests/SellPlanWiringTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded; seen by eye
+  with the candidate pool empty (device agent).
+
 ## Phase 6 — Verification and close-out
 
 - [ ] **T019 — Device pass. [general-purpose agent with simulator tools; person: sync + VoiceOver]**

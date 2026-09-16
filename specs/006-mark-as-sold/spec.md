@@ -429,6 +429,21 @@ Added 2026-09-13, at the person's reading of the Draft:
     Chosen over reusing the first-launch state (option 1). The Sold side's
     own empty state is unchanged.
 
+13. **The Sold side keeps a stats line under the header at all times, and
+    the switch never moves (2026-09-15, at the Phase 5 pause).** The person
+    saw the Owned/Sold switch jump up on the Sold side. The Sold side shows
+    its summary line in the same place as the Owned side's item stats even
+    when nothing is sold ("0 sold · $0"), replacing Decision 11's "hidden
+    when nothing is sold". The switch's slide must be fast and smooth; the
+    person saw it stutter at a low frame rate.
+14. **A Sell Plan keeps listing its sold items even when no candidates
+    remain, each clearly marked sold (2026-09-15, at the Phase 5 pause).**
+    The person's answer to the Phase 5 question: the sold items remain on
+    the plan under the empty state too, and each row makes it clear the
+    item has been sold. (Read as: the Sold section stays with the empty
+    state, and its rows carry a Sold mark — not sold rows mixed into the
+    candidate list.)
+
 Proposed at drafting, 2026-09-13, by Claude Code (these become decisions on
 plan approval):
 
