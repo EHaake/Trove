@@ -9,6 +9,9 @@ struct ItemDetailView: View {
     @State private var selectedPhotoIndex = 0
     @State private var isEditing = false
     @State private var isConfirmingDelete = false
+    /// Return to collection…'s confirmation. View state, since it is nothing
+    /// but whether an alert is up; the intent behind it is the view model's.
+    @State private var isConfirmingReturn = false
     /// The match sheet's detent, driven by which phase it is showing.
     @State private var matchDetent: PresentationDetent = .medium
 
@@ -33,11 +36,7 @@ struct ItemDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                DetailOverflowMenu(
-                    noun: "item",
-                    edit: { isEditing = true },
-                    delete: { isConfirmingDelete = true }
-                )
+                overflowMenu
             }
         }
         .sheet(isPresented: $isEditing, onDismiss: viewModel.load) {
@@ -62,6 +61,30 @@ struct ItemDetailView: View {
         .sheet(isPresented: $viewModel.isFindingPhoto, onDismiss: viewModel.load) {
             photoSheet
         }
+        // 006 (plan §5): the shared sale sheet, in whichever mode the menu
+        // asked for. `.sheet(item:)` over the optional rather than a flag and
+        // a mode, so Mark as sold… and Edit sale… can never both be up; the
+        // sheet writes nothing itself, so what a confirmed sale *means* is
+        // decided here.
+        .sheet(item: $viewModel.saleSheet, onDismiss: viewModel.load) { sheet in
+            SaleFormView(
+                viewModel: viewModel.makeSaleFormViewModel(),
+                confirm: { sale in record(sale, from: sheet) },
+                cancel: { viewModel.saleSheet = nil }
+            )
+        }
+        // The one action on this page that asks first without being a
+        // deletion (criterion 9): returning drops the sale details, which is
+        // not guessable from the words "Return to collection".
+        .alert(
+            SaleCopy.returnTitle(viewModel.item?.name ?? "this item"),
+            isPresented: $isConfirmingReturn
+        ) {
+            Button(SaleCopy.returnConfirm) { viewModel.returnToCollection() }
+            Button(SaleCopy.returnCancel, role: .cancel) {}
+        } message: {
+            Text(SaleCopy.returnMessage)
+        }
         // An alert rather than a confirmation dialog: presented from a toolbar
         // button, the dialog renders as an anchored popover that drops the
         // cancel button entirely, leaving "Delete" as the only thing to press
@@ -78,9 +101,70 @@ struct ItemDetailView: View {
             // Shared with the list's swipe path (T017) — one source, so the
             // two entry points can't drift, and the sell-plan consequence
             // T002 found missing here arrives with it.
-            Text(ItemDeleteCopy.message)
+            Text(ItemDeleteCopy.message(isSold: viewModel.item?.isSold ?? false))
         }
         .onAppear(perform: viewModel.load)
+    }
+
+    // MARK: - The overflow menu (006)
+
+    /// One menu, two sets of rows (criteria 1 and 8): Edit / Mark as sold… /
+    /// Delete while the item is owned, Edit sale… / Return to collection… /
+    /// Delete once it is sold. Composed once with the rows swapped rather
+    /// than branched into two menus, so the app's one system `Menu` stays
+    /// one (`MenuPolicyTests`).
+    private var overflowMenu: some View {
+        DetailOverflowMenu(
+            noun: "item",
+            edit: viewModel.isSold ? editSaleRow : editItemRow,
+            middle: viewModel.isSold ? returnRow : markAsSoldRow,
+            delete: { isConfirmingDelete = true }
+        )
+    }
+
+    private var editItemRow: DetailOverflowMenu.Row {
+        DetailOverflowMenu.Row(
+            title: "Edit",
+            systemImage: "pencil",
+            action: { isEditing = true }
+        )
+    }
+
+    private var editSaleRow: DetailOverflowMenu.Row {
+        DetailOverflowMenu.Row(
+            title: SaleCopy.editSale,
+            systemImage: "pencil",
+            action: { viewModel.saleSheet = .edit }
+        )
+    }
+
+    private var markAsSoldRow: DetailOverflowMenu.Row {
+        DetailOverflowMenu.Row(
+            title: SaleCopy.markAsSold,
+            systemImage: "tag",
+            action: { viewModel.saleSheet = .mark }
+        )
+    }
+
+    private var returnRow: DetailOverflowMenu.Row {
+        DetailOverflowMenu.Row(
+            title: SaleCopy.returnToCollection,
+            systemImage: "arrow.uturn.backward",
+            action: { isConfirmingReturn = true }
+        )
+    }
+
+    /// What a confirmed sheet means, by the mode it was opened in: a first
+    /// sale, or a correction to the one already recorded. Edit never routes
+    /// through `markSold`, which would unfund the plan the sale was recorded
+    /// toward (plan §5, G21). The sheet is dismissed here, by the host that
+    /// presented it.
+    private func record(_ sale: Sale, from sheet: SaleSheet) {
+        switch sheet {
+        case .mark: viewModel.markSold(sale)
+        case .edit: viewModel.editSale(sale)
+        }
+        viewModel.saleSheet = nil
     }
 
     /// The notice first, once per device, then the picker (spec Decision
@@ -175,29 +259,41 @@ struct ItemDetailView: View {
         .accessibilityIdentifier("stockphoto.find")
     }
 
+    /// The page, in its two states (006 plan §5, Q8). The sold one is the
+    /// same page with the Sold mark stamped above it and everything that
+    /// would *act* left out: no Find a photo…, no Market section — a sold
+    /// item has no market value to track — and the dial along for the read
+    /// only.
+    ///
+    /// The two are spelled out as two branches rather than one flow with
+    /// gates sprinkled through it, so "what a sold page shows" is a span
+    /// something can be scanned against (`SoldStateWiringTests`) instead of
+    /// a rule assembled from four places.
     private func content(for item: Item) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
-                PhotoCarousel(
-                    photos: viewModel.photos,
-                    selectedIndex: $selectedPhotoIndex
-                )
+                if viewModel.isSold {
+                    if let sale = viewModel.sale, let outcome = viewModel.saleOutcome {
+                        SoldMark(sale: sale, outcome: outcome)
+                    }
+                    photoHero
+                    titleBlock(for: item)
+                    statPair(for: item)
+                    desireCard(for: item, isInteractive: false)
+                    details(for: item)
+                } else {
+                    photoHero
 
-                if viewModel.canFindPhoto {
-                    findPhotoAction
+                    if viewModel.canFindPhoto {
+                        findPhotoAction
+                    }
+
+                    titleBlock(for: item)
+                    statPair(for: item)
+                    desireCard(for: item, isInteractive: true)
+                    details(for: item)
+                    marketSection(for: item)
                 }
-
-                VStack(alignment: .leading, spacing: 7) {
-                    Text(item.categorySegments.joined(separator: " · ")).monoLabel()
-                    Text(item.name)
-                        .font(theme.typography.heroFigureSecondary)
-                        .foregroundStyle(theme.colors.textPrimary)
-                }
-
-                statPair(for: item)
-                desireCard(for: item)
-                details(for: item)
-                marketSection(for: item)
 
                 if let notes = item.notes, !notes.isEmpty {
                     DetailSection(title: "Notes") { DetailProse(text: notes) }
@@ -205,6 +301,22 @@ struct ItemDetailView: View {
             }
             .padding(.horizontal, theme.metrics.screenGutter)
             .padding(.bottom, theme.metrics.sectionGap)
+        }
+    }
+
+    private var photoHero: some View {
+        PhotoCarousel(
+            photos: viewModel.photos,
+            selectedIndex: $selectedPhotoIndex
+        )
+    }
+
+    private func titleBlock(for item: Item) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(item.categorySegments.joined(separator: " · ")).monoLabel()
+            Text(item.name)
+                .font(theme.typography.heroFigureSecondary)
+                .foregroundStyle(theme.colors.textPrimary)
         }
     }
 
@@ -270,19 +382,27 @@ struct ItemDetailView: View {
 
     // MARK: - Desire
 
-    private func desireCard(for item: Item) -> some View {
+    /// - Parameter isInteractive: false on a sold page (plan Q8). The card
+    ///   then drops both of its instructions as well as the gesture: "Tap or
+    ///   drag" would be a lie, and the level's hint line talks about whether
+    ///   to sell the thing, which is settled (Design pass, Decision 11). The
+    ///   dial is handed a constant binding rather than the item's, so not
+    ///   even VoiceOver's adjustable action can write to a sold item.
+    private func desireCard(for item: Item, isInteractive: Bool) -> some View {
         VStack(alignment: .leading, spacing: theme.metrics.cardPadding) {
             HStack {
                 Text("Desire to keep").monoLabel()
-                Spacer()
-                Text("Tap or drag").monoLabel(color: theme.colors.textQuiet)
+                if isInteractive {
+                    Spacer()
+                    Text("Tap or drag").monoLabel(color: theme.colors.textQuiet)
+                }
             }
 
             HStack(spacing: 20) {
                 DesireDial(
-                    value: desireBinding(for: item),
+                    value: isInteractive ? desireBinding(for: item) : .constant(item.desireToKeep),
                     diameter: 116,
-                    isInteractive: true,
+                    isInteractive: isInteractive,
                     showsScale: true
                 )
                 .padding(.bottom, -DesireDial.emptyBottomInset(diameter: 116))
@@ -294,14 +414,18 @@ struct ItemDetailView: View {
                         .foregroundStyle(theme.colors.textPrimary)
                     // What the rating actually does today — see
                     // `DesireLevel.detail(isValued:)` for why the mock's
-                    // richer copy was reworded, and when to restore it.
-                    Text(
-                        DesireLevel(clamping: item.desireToKeep)
-                            .detail(isValued: item.currentValueCents != nil)
-                    )
-                    .font(theme.typography.secondary)
-                    .foregroundStyle(theme.colors.textLabelSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    // richer copy was reworded, and when to restore it. It
+                    // goes with the gesture on a sold page: every one of
+                    // these lines is about whether to sell the thing.
+                    if isInteractive {
+                        Text(
+                            DesireLevel(clamping: item.desireToKeep)
+                                .detail(isValued: item.currentValueCents != nil)
+                        )
+                        .font(theme.typography.secondary)
+                        .foregroundStyle(theme.colors.textLabelSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
         }

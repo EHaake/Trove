@@ -17,7 +17,12 @@
 
 set -o pipefail
 
-DESTINATION='platform=iOS Simulator,id=FE0861F8-C0B3-4DD1-83BC-F52AF5C5110C'
+# Simulator device id. Re-list with:
+#   xcrun simctl list devices available
+# and pick the newest iOS runtime's iPhone Pro (ids change when a runtime
+# is replaced). The person asked for iOS 27 (2026-09-15); the iPhone 17 Pro
+# on iOS 26.5 (327655AC-B108-4140-AEF8-F5A0248BBA3E) also passes both suites.
+DESTINATION='platform=iOS Simulator,id=C5329D37-9D5E-4306-8D42-011498B1D97E'  # iPhone 18 Pro, iOS 27.0
 case "${1:-unit}" in
   unit) SELECTOR=(-only-testing:TroveTests) ;;
   ui)   SELECTOR=(-only-testing:TroveUITests) ;;

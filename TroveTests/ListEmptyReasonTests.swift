@@ -113,6 +113,26 @@ struct ListEmptyReasonTests {
         )
     }
 
+    /// `.nothingSold` is not `reason(...)`'s to hand back. An empty Owned side
+    /// with nothing narrowing it is `nothingAdded`, exactly as before the Sold
+    /// side existed — the Sold side's case is chosen by
+    /// `ItemListViewModel.emptyReason` alone, so a bug there can't be masked by
+    /// this rule quietly agreeing.
+    @Test func anEmptyUnnarrowedListIsNothingAddedNotNothingSold() {
+        let reason = ListEmptyReason.reason(
+            totalCount: 0,
+            visibleCount: 0,
+            searchText: "",
+            categoryFilter: ""
+        )
+
+        #expect(reason == .nothingAdded)
+        #expect(reason != .nothingSold)
+        // Decision 12's case is mapped on top of this answer, never returned
+        // in place of it: this rule can't see the sold half at all.
+        #expect(reason != .everythingSold)
+    }
+
     // MARK: - The query it hands back
 
     /// The headline quotes it back, so it has to be what was typed, not the

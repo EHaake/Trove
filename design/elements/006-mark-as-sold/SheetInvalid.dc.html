@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    helmet{display:none!important;}
+    x-dc{display:block;}
+    body{background:#17181A;font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif;color:#F2EDE4;-webkit-font-smoothing:antialiased;}
+    a{color:#C79A56;text-decoration:none;}
+    a:hover{color:#DDB877;}
+    .frame{width:390px;background:#17181A;position:relative;overflow:hidden;}
+    .mono{font-family:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;}
+    .disp{font-family:'Archivo',system-ui,sans-serif;font-weight:600;}
+    .lbl{font-family:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;font-weight:500;font-size:10.5px;line-height:14px;letter-spacing:1.2px;text-transform:uppercase;color:rgba(242,237,228,0.6);white-space:nowrap;}
+    .money{font-family:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;font-size:15px;line-height:20px;font-weight:500;white-space:nowrap;}
+    .plate{background:#201F1D;border-radius:3px;box-shadow:inset 0 1px 0 rgba(242,237,228,0.055),inset 0 -1px 0 rgba(0,0,0,0.4),0 2px 6px rgba(0,0,0,0.25);}
+    .fgroup{display:flex;flex-direction:column;gap:8px;}
+    .field{display:flex;align-items:center;gap:6px;padding:14px;min-height:48px;}
+    .text{font-size:13.5px;line-height:20px;}
+  </style>
+</helmet>
+
+<div class="frame" style="height:844px;">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="tt" viewBox="0 0 120 120"><rect x="12" y="18" width="96" height="84" rx="4" fill="#2a2722"/><circle cx="54" cy="60" r="34" fill="#18171b"/><circle cx="54" cy="60" r="34" fill="none" stroke="#3a3a3c" stroke-width="1.5"/><circle cx="54" cy="60" r="12" fill="#b58a4a"/><circle cx="96" cy="30" r="6" fill="#3a3940"/><path d="M96 30 L64 66" stroke="#8a8a90" stroke-width="3" stroke-linecap="round"/></symbol>
+  </defs></svg>
+
+  <div style="height:44px;"></div>
+  <div style="height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;">
+    <div style="display:flex;align-items:center;gap:6px;color:#C79A56;font-size:17px;"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#C79A56" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2 2 10l8 8"/></svg><span>Items</span></div>
+    <svg width="22" height="6" viewBox="0 0 22 6" fill="#C79A56"><circle cx="3" cy="3" r="2.2"/><circle cx="11" cy="3" r="2.2"/><circle cx="19" cy="3" r="2.2"/></svg>
+  </div>
+  <div style="padding:18px 24px 0;display:flex;flex-direction:column;gap:24px;">
+    <div style="height:240px;border-radius:3px;overflow:hidden;background:#17130f;"><svg viewBox="6 20 108 80" width="100%" height="100%" preserveAspectRatio="xMidYMid slice"><use href="#tt" width="120" height="120"/></svg></div>
+    <div style="display:flex;flex-direction:column;gap:7px;"><div class="lbl">Audio · Turntables</div><div class="disp" style="font-size:26px;line-height:1.15;">Technics SL-1200</div></div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);"></div>
+
+  <div style="position:absolute;left:0;right:0;bottom:0;top:422px;background:#17181A;border-radius:12px 12px 0 0;">
+    <div style="width:36px;height:5px;border-radius:3px;background:rgba(242,237,228,0.3);margin:5px auto 0;"></div>
+    <div style="height:52px;margin-top:4px;position:relative;display:flex;align-items:center;justify-content:space-between;padding:0 20px;">
+      <span style="font-size:17px;color:rgba(242,237,228,0.75);">Cancel</span>
+      <span class="disp" style="position:absolute;left:0;right:0;text-align:center;font-size:17px;">Mark as sold</span>
+      <span style="font-size:17px;font-weight:600;color:#C79A56;position:relative;">Mark as sold</span>
+    </div>
+
+    <div style="padding:12px 24px 0;display:flex;flex-direction:column;gap:24px;">
+      <div style="display:flex;gap:10px;">
+        <div class="fgroup" style="flex:1;min-width:0;">
+          <div class="lbl">Sale price</div>
+          <!-- invalid: blank after confirming — the 1px rust border, nothing else -->
+          <div class="plate field" style="border:1px solid #9C4A34;padding:13px;"><span class="money" style="color:rgba(242,237,228,0.4);">$</span><span class="money" style="color:rgba(242,237,228,0.3);">0</span></div>
+        </div>
+        <div class="fgroup" style="flex:1;min-width:0;">
+          <div class="lbl">Sold on</div>
+          <div class="plate field" style="justify-content:space-between;gap:8px;"><span class="money">09/13/26</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="rgba(242,237,228,0.6)" stroke-width="1.2" stroke-linecap="round"><rect x="1.5" y="2.8" width="13" height="11.7" rx="2"/><path d="M1.5 6.2h13M5 1.2v3M11 1.2v3"/></svg></div>
+        </div>
+      </div>
+      <div class="fgroup">
+        <div class="lbl">Sold at</div>
+        <div class="plate field"><span class="text">Reverb</span></div>
+      </div>
+      <div class="fgroup">
+        <div class="lbl">Note</div>
+        <div class="plate field"><span class="text">Buyer collected in person.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -341,6 +341,10 @@ nonisolated enum ImportSchema {
         let notesColumn = column("Notes")
         let reverbColumn = column("Reverb Product ID")
         let yearColumn = column("Year")
+        let soldDateColumn = column("Sold Date")
+        let salePriceColumn = column("Sale Price")
+        let soldAtColumn = column("Sold At")
+        let saleNoteColumn = column("Sale Note")
 
         var validated: [ValidatedRow<ItemExportRecord>] = []
         var skipped: [SkippedRow] = []
@@ -452,6 +456,41 @@ nonisolated enum ImportSchema {
                 defaulted += 1
             }
 
+            // 006, the pair rule (Q6/R3): a row is a sold item iff **both**
+            // `Sold Date` and `Sale Price` parse, through the schema's own
+            // date and money parsers. Otherwise the item imports unsold and
+            // the whole sale is dropped — counted **once** if any of the four
+            // sale cells carried anything, however many did, because one
+            // dropped sale is one thing lost, not four.
+            //
+            // Two rules the sheet enforces and this deliberately does not
+            // (Q6): a **negative** `Sale Price` is unreadable to
+            // `cents(from:)` already — it rejects any sign — so it lands here
+            // as the price-unreadable case; a **future** `Sold Date` imports
+            // as written, because `day(from:)` has no clock and
+            // `Purchase Date` is accepted unbounded the same way.
+            let saleCells = [soldDateColumn, salePriceColumn, soldAtColumn, saleNoteColumn]
+                .map { FieldNormalization.trimmed(cells[$0]) }
+            let soldDate: Date?
+            let salePriceCents: Int?
+            let saleLocation: String?
+            let saleNote: String?
+            if let parsedDate = day(from: saleCells[0], timeZone: timeZone),
+               let parsedPrice = cents(from: saleCells[1]) {
+                soldDate = parsedDate
+                salePriceCents = parsedPrice
+                saleLocation = FieldNormalization.nilIfBlank(cells[soldAtColumn])
+                saleNote = FieldNormalization.nilIfBlank(cells[saleNoteColumn])
+            } else {
+                soldDate = nil
+                salePriceCents = nil
+                saleLocation = nil
+                saleNote = nil
+                if saleCells.contains(where: { !$0.isEmpty }) {
+                    defaulted += 1
+                }
+            }
+
             let record = ItemExportRecord(
                 name: name,
                 categoryPath: FieldNormalization.trimmed(cells[categoryColumn]),
@@ -467,6 +506,10 @@ nonisolated enum ImportSchema {
                 notes: FieldNormalization.nilIfBlank(cells[notesColumn]),
                 reverbProductID: productID,
                 year: itemYear,
+                soldDate: soldDate,
+                salePriceCents: salePriceCents,
+                saleLocation: saleLocation,
+                saleNote: saleNote,
                 firstPhotoID: nil,
                 firstPhotoAttribution: nil
             )

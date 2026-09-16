@@ -2,6 +2,20 @@ import Foundation
 import Observation
 import SwiftData
 
+/// Which sale sheet the item detail is showing (006 plan §5): Mark as sold…
+/// on an owned item, Edit sale… on a sold one. One optional rather than two
+/// flags, so the two sheets can never both be up, and `Identifiable` because
+/// the view presents it through `.sheet(item:)` — the shape
+/// `SellPlanViewModel.saleCandidate` uses for the same sheet on the other
+/// host. Mirrors `PhotoSheetStep`'s place: a small view-facing enum beside
+/// the view model that owns it.
+enum SaleSheet: String, Identifiable, Equatable, Sendable {
+    case mark
+    case edit
+
+    var id: String { rawValue }
+}
+
 /// A single owned item, and deleting it.
 ///
 /// Holds the item's `id` rather than the `Item` itself and re-fetches on
@@ -497,6 +511,111 @@ final class ItemDetailViewModel {
             return false
         }
         closePhotoSheet()
+        load()
+        return true
+    }
+
+    // MARK: - Sold (006)
+
+    /// Whether the loaded item has been sold — the page's whole shape turns
+    /// on it (spec criterion 8). Read from the item rather than held, so it
+    /// can't disagree with what the last `load()` fetched.
+    var isSold: Bool { item?.isSold ?? false }
+
+    /// The four sale fields as one value, or nil while the item is owned.
+    var sale: Sale? { item?.sale }
+
+    /// Gain or loss against what was paid, or nil while the item is owned.
+    var saleOutcome: SaleOutcome? { item?.saleOutcome }
+
+    /// Which sale sheet is up, or nil. Settable by the view both ways, the
+    /// way `SellPlanViewModel.saleCandidate` is: `.sheet(item:)` writes nil
+    /// back on dismissal, and the host clears it when a sale is recorded —
+    /// the intents below leave it alone so both hosts of the one sheet
+    /// behave the same way.
+    var saleSheet: SaleSheet?
+
+    /// The sheet's view model, seeded per spec P1. `.edit` pre-fills from the
+    /// sale that is already recorded; `.mark` pre-fills the price from the
+    /// item's own current value when it has one and leaves it blank when it
+    /// doesn't, with today's date by this screen's injected clock — the same
+    /// seed `SellPlanViewModel.makeSaleFormViewModel(for:)` makes, which is a
+    /// tested equality rather than two factories agreeing by inspection.
+    ///
+    /// With no sheet up the mode is `.mark`: the factory is called from the
+    /// sheet's content, so the nil case is unreachable from the screen, and
+    /// falling back to the entry mode invents nothing.
+    func makeSaleFormViewModel() -> SaleFormViewModel {
+        let mode: SaleFormViewModel.Mode = saleSheet == .edit ? .edit : .mark
+        return SaleFormViewModel(
+            mode: mode,
+            prefill: mode == .edit ? item?.sale : nil,
+            currentValueCents: item?.currentValueCents,
+            now: now
+        )
+    }
+
+    /// Mark as sold… from the item's own page: the sale is toward **no plan**
+    /// (spec criterion 11) — `ItemSaleStore` is the one writer, and this host
+    /// is the one that always passes `nil`.
+    ///
+    /// The `store(_:)` shape: one save covering the item's write and the
+    /// device's market rows, and a refused save rolls the context back and
+    /// re-reads, so the page shows what is actually stored — the item still
+    /// owned.
+    @discardableResult
+    func markSold(_ sale: Sale) -> Bool {
+        guard let item else { return false }
+        do {
+            try ItemSaleStore.markSold(item, sale: sale, toward: nil, at: now(), in: modelContext)
+            try modelContext.save()
+        } catch {
+            // `rollback()` discards every pending change on the shared
+            // context, not only this intent's — the same recovery
+            // `store(_:)` and the market intents use; `load()` then shows
+            // what is stored, which is the item as it was, unsold.
+            modelContext.rollback()
+            load()
+            return false
+        }
+        load()
+        return true
+    }
+
+    /// Edit sale…: the four fields only. It routes through
+    /// `ItemSaleStore.editSale`, never through `markSold(toward: nil)`, so a
+    /// correction can't quietly unfund the plan the sale was recorded toward
+    /// (G21).
+    @discardableResult
+    func editSale(_ sale: Sale) -> Bool {
+        guard let item else { return false }
+        ItemSaleStore.editSale(item, sale: sale, at: now())
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            load()
+            return false
+        }
+        load()
+        return true
+    }
+
+    /// Return to collection…: the sale and the funding link go together
+    /// (spec P12), `sortOrder` is untouched, and the market section
+    /// re-derives on the `load()` below — the match was kept, so it comes
+    /// back as never-refreshed-here and Refresh resumes (plan Q8).
+    @discardableResult
+    func returnToCollection() -> Bool {
+        guard let item else { return false }
+        ItemSaleStore.returnToCollection(item, at: now())
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            load()
+            return false
+        }
         load()
         return true
     }

@@ -32,7 +32,7 @@ struct OverflowDropdownRenderTests {
     /// separator — drawn in `divider`, not `surfaceInset` — by the Oklab
     /// floor, not by arithmetic.
     @Test func theTwoGroupBreaksReadStrongerThanTheRowSeparator() throws {
-        let bitmap = try render(canExport: true)
+        let bitmap = try render(canExportCSV: true, canExportPDF: true)
         let hairlines = try hairlineRows(in: bitmap)
         try #require(hairlines.count == 3, "expected the separator and two breaks, found hairlines at \(hairlines.map(\.y))")
 
@@ -69,10 +69,8 @@ struct OverflowDropdownRenderTests {
     /// token (a title dimmed by the button alone, at twice the ink) fails,
     /// where "closer to the disabled token than the body one" did not.
     @Test func theExportRowsDimWhenThereIsNothingToExport() throws {
-        let disabled = inkFraction(try brightestTitlePixel(in: try render(canExport: false)))
-        let enabled = inkFraction(try brightestTitlePixel(in: try render(canExport: true)))
-        let bodyAlpha = Double(colors.textBody.resolve(in: EnvironmentValues()).opacity)
-        let disabledAlpha = Double(colors.textDisabled.resolve(in: EnvironmentValues()).opacity)
+        let disabled = inkFraction(try brightestTitlePixel(inRow: 0, of: try render(canExportCSV: false, canExportPDF: false)))
+        let enabled = inkFraction(try brightestTitlePixel(inRow: 0, of: try render(canExportCSV: true, canExportPDF: true)))
 
         #expect(abs(enabled - bodyAlpha) < 0.03, "an enabled title is textBody (\(bodyAlpha)) — measured \(enabled)")
         #expect(
@@ -80,6 +78,36 @@ struct OverflowDropdownRenderTests {
             "a disabled title is textDisabled (\(disabledAlpha)) under the button's \(buttonDimming) dimming — measured \(disabled)"
         )
     }
+
+    /// 006: the two export rows carry *separate* gates (plan Q5) — an
+    /// all-sold collection has a CSV to write and no PDF — so each row must
+    /// dim on its own flag. Measured in pixels rather than at the call site
+    /// for this file's founding reason: a second row wired to the first
+    /// row's flag leaves every source scan green, because the argument
+    /// `canExportPDF:` would still be there.
+    ///
+    /// Both directions, so neither row can be the one that happens to be
+    /// right. Mutation: gate the PDF row on `canExportCSV` → red.
+    @Test(arguments: [true, false])
+    func eachExportRowDimsOnItsOwnGate(csvEnabled: Bool) throws {
+        let bitmap = try render(canExportCSV: csvEnabled, canExportPDF: !csvEnabled)
+        let csv = inkFraction(try brightestTitlePixel(inRow: 0, of: bitmap))
+        let pdf = inkFraction(try brightestTitlePixel(inRow: 1, of: bitmap))
+
+        let expectedCSV = csvEnabled ? bodyAlpha : disabledAlpha * buttonDimming
+        let expectedPDF = csvEnabled ? disabledAlpha * buttonDimming : bodyAlpha
+        #expect(
+            abs(csv - expectedCSV) < 0.03,
+            "the CSV row follows canExportCSV (\(csvEnabled)): expected \(expectedCSV), measured \(csv)"
+        )
+        #expect(
+            abs(pdf - expectedPDF) < 0.03,
+            "the PDF row follows canExportPDF (\(!csvEnabled)): expected \(expectedPDF), measured \(pdf)"
+        )
+    }
+
+    private var bodyAlpha: Double { Double(colors.textBody.resolve(in: EnvironmentValues()).opacity) }
+    private var disabledAlpha: Double { Double(colors.textDisabled.resolve(in: EnvironmentValues()).opacity) }
 
     // MARK: - Helpers
 
@@ -100,9 +128,16 @@ struct OverflowDropdownRenderTests {
         ) / 3
     }
 
-    private func render(canExport: Bool) throws -> Bitmap {
-        let view = OverflowDropdown(canExport: canExport, exportCSV: {}, exportPDF: {}, importCSV: {}, openSettings: {})
-            .environment(\.dropdownFocusesFirstRow, false)
+    private func render(canExportCSV: Bool, canExportPDF: Bool) throws -> Bitmap {
+        let view = OverflowDropdown(
+            canExportCSV: canExportCSV,
+            canExportPDF: canExportPDF,
+            exportCSV: {},
+            exportPDF: {},
+            importCSV: {},
+            openSettings: {}
+        )
+        .environment(\.dropdownFocusesFirstRow, false)
         let image = try #require(renderBitmap(view), "ImageRenderer produced nothing to sample.")
         return try #require(Bitmap(image), "Couldn't read the rendered pixels.")
     }
@@ -127,10 +162,19 @@ struct OverflowDropdownRenderTests {
         return found
     }
 
-    /// The brightest pixel in the first row's title area.
-    private func brightestTitlePixel(in bitmap: Bitmap) throws -> RGB8 {
+    /// The brightest pixel in a row's title area, the row's band found from
+    /// the hairlines rather than hard-coded, so row 1 is measured the same
+    /// way row 0 always was and neither goes stale if a metric moves.
+    private func brightestTitlePixel(inRow index: Int, of bitmap: Bitmap) throws -> RGB8 {
+        let hairlines = try hairlineRows(in: bitmap)
+        try #require(hairlines.count == 3, "expected the separator and two breaks, found \(hairlines.count)")
+        let tops = [8, hairlines[0].y + 5]
+        let bottoms = [hairlines[0].y - 4, hairlines[1].y - 4]
+        let band = tops[index]..<bottoms[index]
+        try #require(band.count > 10, "row \(index)'s title band came out as \(band)")
+
         var brightest = RGB8(red: 0, green: 0, blue: 0)
-        for y in 8..<34 {
+        for y in band {
             for x in 14..<120 {
                 let pixel = try #require(bitmap.pixel(at: CGPoint(x: x, y: y)))
                 if pixel.red + pixel.green + pixel.blue > brightest.red + brightest.green + brightest.blue {

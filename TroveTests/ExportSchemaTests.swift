@@ -18,7 +18,7 @@ struct ExportSchemaTests {
             "Name", "Category", "Purchase Price", "Currency", "Purchase Date",
             "Purchase Location", "Current Value", "Desire to Keep", "Condition",
             "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
-            "Year",
+            "Year", "Sold Date", "Sale Price", "Sold At", "Sale Note",
         ])
         #expect(ExportSchema.wishlistHeaders == [
             "Name", "Category", "Estimated Cost", "Currency", "Desire to Own",
@@ -42,8 +42,18 @@ struct ExportSchemaTests {
             "Name", "Category", "Estimated Cost", "Currency", "Desire to Own",
             "Added", "Notes",
         ])
-        // The boundaries name those widths, oldest first.
-        #expect(ExportSchema.itemSchemaBoundaries == [12])
+        // 006's own boundary: the fourteen names 002 through 005 shipped,
+        // typed out here for the same reason — the gate now accepts this
+        // prefix too, so these names are no longer free to change either.
+        #expect(Array(ExportSchema.itemHeaders.prefix(14)) == [
+            "Name", "Category", "Purchase Price", "Currency", "Purchase Date",
+            "Purchase Location", "Current Value", "Desire to Keep", "Condition",
+            "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
+            "Year",
+        ])
+        // The boundaries name those widths, oldest first — and only widths a
+        // release actually ended at, so a speculative entry turns this red.
+        #expect(ExportSchema.itemSchemaBoundaries == [12, 14])
         #expect(ExportSchema.wishlistSchemaBoundaries == [7])
         // Append-only: a boundary is always shorter than the live layout.
         #expect(ExportSchema.itemSchemaBoundaries.allSatisfy { $0 < ExportSchema.itemHeaders.count })
@@ -140,6 +150,7 @@ struct ExportSchemaTests {
             notes: "Body only",
             reverbProductID: 160_322,
             year: 1984,
+            soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
             firstPhotoID: nil,
             firstPhotoAttribution: nil
         )
@@ -148,7 +159,7 @@ struct ExportSchemaTests {
         #expect(row == [
             "Leica M6", "Photography/Cameras", "2900.00", "USD", "2026-03-09",
             "KEH", "3450.50", "5", "excellent", "New seals", "2244668", "Body only",
-            "160322", "1984",
+            "160322", "1984", "", "", "", "",
         ])
         #expect(row.count == ExportSchema.itemHeaders.count)
     }
@@ -169,6 +180,7 @@ struct ExportSchemaTests {
             notes: nil,
             reverbProductID: nil,
             year: nil,
+            soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
             firstPhotoID: nil,
             firstPhotoAttribution: nil
         )
@@ -184,7 +196,81 @@ struct ExportSchemaTests {
         // Unmatched is not product 0, and no year is not year 0 (002).
         #expect(try cell(row, "Reverb Product ID", of: headers) == "")
         #expect(try cell(row, "Year", of: headers) == "")
+        // Still owned is not sold for nothing: all four sale cells empty.
+        #expect(try cell(row, "Sold Date", of: headers) == "")
+        #expect(try cell(row, "Sale Price", of: headers) == "")
+        #expect(try cell(row, "Sold At", of: headers) == "")
+        #expect(try cell(row, "Sale Note", of: headers) == "")
         #expect(row.count == ExportSchema.itemHeaders.count)
+    }
+
+    /// 006/G25: the four appended cells are blank for an item still owned
+    /// and carry the sale for a sold one — the `Current Value` rule again,
+    /// where an empty cell is a fact rather than a zero. Mutation: write the
+    /// price unconditionally (`money(cents: record.salePriceCents ?? 0)`)
+    /// and the owned row reads "0.00" here → red.
+    @Test func theSaleCellsAreBlankWhenOwnedAndFilledWhenSold() throws {
+        let headers = ExportSchema.itemHeaders
+        let newYork = zone("America/New_York")
+        let soldOn = try #require(
+            gregorian(in: "America/New_York").date(from: DateComponents(year: 2026, month: 7, day: 4))
+        )
+
+        let owned = ExportSchema.row(from: saleFixture(), timeZone: newYork)
+        #expect(try cell(owned, "Sold Date", of: headers) == "")
+        #expect(try cell(owned, "Sale Price", of: headers) == "")
+        #expect(try cell(owned, "Sold At", of: headers) == "")
+        #expect(try cell(owned, "Sale Note", of: headers) == "")
+
+        let sold = ExportSchema.row(
+            from: saleFixture(
+                soldDate: soldOn,
+                salePriceCents: 320_050,
+                saleLocation: "Reverb",
+                saleNote: "Shipped to Ohio"
+            ),
+            timeZone: newYork
+        )
+        #expect(try cell(sold, "Sold Date", of: headers) == "2026-07-04")
+        #expect(try cell(sold, "Sale Price", of: headers) == "3200.50")
+        #expect(try cell(sold, "Sold At", of: headers) == "Reverb")
+        #expect(try cell(sold, "Sale Note", of: headers) == "Shipped to Ohio")
+        #expect(sold.count == headers.count)
+        // The four are genuinely appended: everything before them is the
+        // owned row's own bytes, unmoved.
+        #expect(Array(sold.prefix(14)) == Array(owned.prefix(14)))
+    }
+
+    /// One record differing only in its sale, so the test above compares
+    /// two rows that can differ in nothing else.
+    private func saleFixture(
+        soldDate: Date? = nil,
+        salePriceCents: Int? = nil,
+        saleLocation: String? = nil,
+        saleNote: String? = nil
+    ) -> ItemExportRecord {
+        ItemExportRecord(
+            name: "Leica M6",
+            categoryPath: "Photography/Cameras",
+            purchasePriceCents: 290_000,
+            currencyCode: "USD",
+            purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+            purchaseLocation: "KEH",
+            currentValueCents: 345_050,
+            desireToKeep: 5,
+            conditionRawValue: "excellent",
+            conditionNotes: nil,
+            serialNumber: "2244668",
+            notes: nil,
+            reverbProductID: nil,
+            year: nil,
+            soldDate: soldDate,
+            salePriceCents: salePriceCents,
+            saleLocation: saleLocation,
+            saleNote: saleNote,
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
+        )
     }
 
     @Test func wishlistRowCarriesEveryColumnInHeaderOrder() throws {
@@ -243,6 +329,7 @@ struct ExportSchemaTests {
             notes: nil,
             reverbProductID: nil,
             year: nil,
+            soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
             firstPhotoID: nil,
             firstPhotoAttribution: nil
         )
@@ -322,6 +409,33 @@ struct ExportSchemaTests {
         #expect(record.serialNumber == "2244668")
         #expect(record.notes == "Body only")
         #expect(record.firstPhotoID == nil)
+    }
+
+    /// 006: the snapshot reads the sale through `Item.sale`, the one place
+    /// the pair is assembled — an owned item's four fields stay nil, and a
+    /// sold one's arrive together. Mutation: read `item.soldDate` alone and
+    /// the owned half still passes while the sold one loses its price.
+    @Test func itemRecordCarriesTheSaleFromTheModel() throws {
+        let context = try makeInMemoryContext()
+        let owned = Item(name: "Squier", categoryPath: "Music/Guitars", purchasePriceCents: 38_000)
+        let sold = Item(name: "M6", categoryPath: "Photography", purchasePriceCents: 290_000)
+        let soldOn = Date(timeIntervalSince1970: 1_760_000_000)
+        sold.sale = Sale(date: soldOn, priceCents: 320_050, location: "Reverb", note: "Shipped")
+        context.insert(owned)
+        context.insert(sold)
+        try context.save()
+
+        let ownedRecord = ItemExportRecord(item: owned)
+        #expect(ownedRecord.soldDate == nil)
+        #expect(ownedRecord.salePriceCents == nil)
+        #expect(ownedRecord.saleLocation == nil)
+        #expect(ownedRecord.saleNote == nil)
+
+        let soldRecord = ItemExportRecord(item: sold)
+        #expect(soldRecord.soldDate == soldOn)
+        #expect(soldRecord.salePriceCents == 320_050)
+        #expect(soldRecord.saleLocation == "Reverb")
+        #expect(soldRecord.saleNote == "Shipped")
     }
 
     @Test func itemRecordKeepsNilsNil() throws {

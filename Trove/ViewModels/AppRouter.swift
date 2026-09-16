@@ -29,6 +29,10 @@ final class AppRouter {
     enum ItemsRequest: Hashable {
         case category(String)
         case unvalued
+        /// Show the Items tab's Sold side. Carries nothing: the Sold side has
+        /// no narrowing to ask for (`show(.sold)` clears all of it), so the
+        /// request is the whole message.
+        case sold
     }
 
     var selectedTab: Tab = .overview
@@ -59,6 +63,16 @@ final class AppRouter {
     /// Show the Items tab narrowed to what hasn't been valued yet.
     func showUnvaluedItems() {
         itemsRequest = .unvalued
+        popToItemsRoot()
+    }
+
+    /// Show the Items tab's Sold side.
+    ///
+    /// The Dashboard's Sold card is the caller. Pops the same way the
+    /// narrowing requests do — arriving at an item screen when you asked for
+    /// a list is the same wrong place whichever side the list is on.
+    func showSoldItems() {
+        itemsRequest = .sold
         popToItemsRoot()
     }
 

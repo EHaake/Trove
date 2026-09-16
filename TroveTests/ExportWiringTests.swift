@@ -13,15 +13,39 @@ struct ExportWiringTests {
         "Trove/Views/Wishlist/WishlistView.swift",
     ]
 
+    /// A list screen and the two gate expressions its dropdown must be fed
+    /// (006, plan Q5). Separate arguments rather than one, because the Items
+    /// list feeds two different flags and the Wishlist feeds one flag twice —
+    /// a scan for a single `canExport:` can no longer say which.
+    nonisolated struct DropdownGates: Sendable {
+        let path: String
+        let csv: String
+        let pdf: String
+    }
+
+    private nonisolated static let gates = [
+        DropdownGates(
+            path: "Trove/Views/Items/ItemListView.swift",
+            csv: "canExportCSV: viewModel.canExportCSV",
+            pdf: "canExportPDF: viewModel.canExportPDF"
+        ),
+        DropdownGates(
+            path: "Trove/Views/Wishlist/WishlistView.swift",
+            csv: "canExportCSV: viewModel.canExport",
+            pdf: "canExportPDF: viewModel.canExport"
+        ),
+    ]
+
     /// Each list screen builds exactly one `OverflowBadge` (012's rename of
     /// `ExportBadge`; since 013 Amendment A the pill alone), fed the view
     /// model's busy state and opening the overflow on the screen's host —
-    /// and exactly one `OverflowDropdown`, fed `canExport` and firing the
+    /// and exactly one `OverflowDropdown`, fed both export gates (006) and firing the
     /// three list intents and Settings: 011's criterion-1/2 wiring, 012's
     /// criterion 1, and 013's criterion 1, which took the template intent
     /// out of this menu.
-    @Test(arguments: lists)
-    func theBadgeOpensTheDropdownWhichFiresEveryIntentAndOpensSettings(path: String) throws {
+    @Test(arguments: gates)
+    func theBadgeOpensTheDropdownWhichFiresEveryIntentAndOpensSettings(gates: DropdownGates) throws {
+        let path = gates.path
         let code = try SourceScan.production(path)
 
         let badges = SourceScan.argumentLists(of: "OverflowBadge", in: code)
@@ -33,7 +57,8 @@ struct ExportWiringTests {
         let dropdowns = SourceScan.argumentLists(of: "OverflowDropdown", in: code)
         #expect(dropdowns.count == 1, "\(path) builds \(dropdowns.count) OverflowDropdowns, expected exactly 1")
         for call in dropdowns {
-            #expect(call.contains("canExport: viewModel.canExport"), "\(path) dropdown not fed canExport")
+            #expect(call.contains(gates.csv), "\(path) dropdown not fed \(gates.csv)")
+            #expect(call.contains(gates.pdf), "\(path) dropdown not fed \(gates.pdf)")
             #expect(call.contains("viewModel.exportCSV()"), "\(path) dropdown doesn't fire exportCSV")
             #expect(call.contains("viewModel.exportPDF()"), "\(path) dropdown doesn't fire exportPDF")
             #expect(call.contains("isPickingImportFile = true"), "\(path) dropdown doesn't open the picker")
@@ -59,7 +84,7 @@ struct ExportWiringTests {
     /// The menu's contract after 013 (criterion 1), on the surface Amendment
     /// A moved it to: five items in three groups — the two exports, Import,
     /// Settings — with the template gone to Settings; the two *export* rows
-    /// individually gated on `canExport` and, the count being exactly 2,
+    /// each gated on its own flag (006/G29) and, the count being exactly 2,
     /// Import and Settings provably ungated, since an empty collection is
     /// exactly who they serve; the two group breaks on exactly the Import
     /// and Settings rows (`startsGroup`, which replaced the system menu's
@@ -75,13 +100,25 @@ struct ExportWiringTests {
 
         let rows = SourceScan.argumentLists(of: "DropdownRow", in: code)
         try #require(rows.count == 4, "four rows, found \(rows.count)")
-        #expect(rows[0].contains("Export as CSV…") && rows[0].contains("isEnabled: canExport"))
-        #expect(rows[1].contains("Export as PDF…") && rows[1].contains("isEnabled: canExport"))
+        #expect(rows[0].contains("Export as CSV…") && rows[0].contains("isEnabled: canExportCSV"))
+        #expect(rows[1].contains("Export as PDF…") && rows[1].contains("isEnabled: canExportPDF"))
         #expect(rows[2].contains("Import from CSV…") && rows[2].contains("startsGroup: true"))
         #expect(rows[3].contains("Settings") && rows[3].contains("startsGroup: true"))
+        // 006/G29 broadened, not weakened: one gate each, on its own flag —
+        // the two rows sharing one flag was the whole of the old contract and
+        // is now the failure — and still exactly two gates in the file, which
+        // is what proves Import and Settings ungated.
         #expect(
-            code.ranges(of: "isEnabled: canExport").count == 2,
-            "exactly the two export rows gate on canExport — Import and Settings must stay ungated"
+            code.ranges(of: "isEnabled: canExportCSV").count == 1,
+            "the CSV row must gate on canExportCSV, once"
+        )
+        #expect(
+            code.ranges(of: "isEnabled: canExportPDF").count == 1,
+            "the PDF row must gate on canExportPDF, once"
+        )
+        #expect(
+            code.ranges(of: "isEnabled:").count == 2,
+            "exactly the two export rows are gated — Import and Settings must stay ungated"
         )
         #expect(code.ranges(of: "startsGroup: true").count == 2, "three groups need two breaks")
     }

@@ -199,6 +199,26 @@ struct MarketRefresherTests {
         #expect(targets[2].subject == .wanted)
         #expect(targets[2].year == 1999)
     }
+
+    /// G8 (006, criterion 5, Decision 7). A sold item has no market value to
+    /// track, so it is no refresh target — even though its match is kept, so
+    /// that returning it to the collection resumes refreshing.
+    @Test func aSoldMatchedItemIsNoTarget() throws {
+        let context = try makeInMemoryContext()
+        let owned = Item(name: "A", sortOrder: 0, reverbProductID: 1)
+        let sold = Item(name: "B", sortOrder: 1, reverbProductID: 2)
+        for model in [owned, sold] { context.insert(model) }
+        try context.save()
+
+        #expect(try MarketRefresher.targets(in: context).map(\.productID) == [1, 2], "both are targets while both are owned")
+
+        sold.sale = Sale(date: Date(timeIntervalSince1970: 1_770_000_000), priceCents: 130_000, location: nil, note: nil)
+        try context.save()
+
+        let targets = try MarketRefresher.targets(in: context)
+        #expect(targets.map(\.productID) == [1], "the sold item must drop out of the walk")
+        #expect(sold.reverbProductID == 2, "its match is kept — only the refresh stops")
+    }
 }
 
 private struct TestFailure: Error, CustomStringConvertible {

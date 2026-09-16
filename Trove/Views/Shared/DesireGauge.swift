@@ -223,7 +223,7 @@ struct DesireGauge: View {
 /// bar. Hard corners and a flat fill, per the brief's no-rendered-materials
 /// constraint. Insettable so an unfilled segment can carry tokens.md's
 /// border-box hairline via `strokeBorder`.
-struct Parallelogram: InsettableShape {
+nonisolated struct Parallelogram: InsettableShape {
     let shear: CGFloat
     var insetAmount: CGFloat = 0
 

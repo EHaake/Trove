@@ -253,7 +253,10 @@ struct WishlistView: View {
                 }
             case .overflow:
                 OverflowDropdown(
-                    canExport: viewModel.canExport,
+                    // One flag into both gates: a wishlist has no sold half,
+                    // so its CSV and its PDF cover exactly the same rows.
+                    canExportCSV: viewModel.canExport,
+                    canExportPDF: viewModel.canExport,
                     exportCSV: { Task { await viewModel.exportCSV() } },
                     exportPDF: { Task { await viewModel.exportPDF() } },
                     importCSV: { isPickingImportFile = true },
@@ -471,9 +474,12 @@ struct WishlistView: View {
         ListEmptyReason.detail(base, mayStillBeImporting: viewModel.mayStillBeImporting)
     }
 
-    /// Every case the item list has except the un-valued one, which can't
-    /// arise here — nothing on a wishlist is owned yet, so nothing on it has a
-    /// value to be missing. The shared `ListEmptyReason` is still what decides
+    /// Every case the item list has except the un-valued one and the two sold
+    /// ones, none of which can arise here — nothing on a wishlist is owned yet,
+    /// so nothing on it has a value to be missing or a sale to have happened.
+    /// They fold into the first-launch invitation anyway, so an unreachable
+    /// case can never leave this screen blank. The
+    /// shared `ListEmptyReason` is still what decides
     /// which, so the two screens can't end up disagreeing about what "empty"
     /// means.
     ///
@@ -490,7 +496,7 @@ struct WishlistView: View {
                 detail: "Your list is on its way to this device. It'll appear here as it arrives."
             )
 
-        case .nothingAdded, .everythingIsValued:
+        case .nothingAdded, .everythingIsValued, .nothingSold, .everythingSold:
             EmptyStateView(
                 mark: .asset("TabWishlist"),
                 headline: "Nothing on the list yet",

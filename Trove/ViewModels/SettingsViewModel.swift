@@ -175,12 +175,22 @@ final class SettingsViewModel {
     /// and the one import appends to (spec P3) — through the very function
     /// the lists sort "Custom" with, so the files are what the lists would
     /// export unfiltered (criterion 5).
-    private func everythingInCustomOrder() throws -> (items: [Item], wanted: [WishlistItem]) {
+    ///
+    /// 006 (plan Q5): the owned and the sold arrive apart, because they are
+    /// ordered by different rules — owned in Custom order, sold in the Sold
+    /// side's own order — and the two documents use them differently: the
+    /// CSV writes owned then sold, the PDF owned only.
+    private func everythingInCustomOrder() throws -> (owned: [Item], sold: [Item], wanted: [WishlistItem]) {
         let items = try modelContext.fetch(FetchDescriptor<Item>())
+        let owned = items
+            .filter { !$0.isSold }
             .sorted(by: ManualOrderHelper.areInCustomOrder)
+        let sold = items
+            .filter(\.isSold)
+            .sorted(by: ItemListViewModel.areInSoldOrder)
         let wanted = try modelContext.fetch(FetchDescriptor<WishlistItem>())
             .sorted(by: ManualOrderHelper.areInCustomOrder)
-        return (items, wanted)
+        return (owned, sold, wanted)
     }
 
     func exportEverythingAsCSV() async {
@@ -189,10 +199,13 @@ final class SettingsViewModel {
         defer { activity = nil }
 
         do {
-            let (items, wanted) = try everythingInCustomOrder()
+            let (owned, sold, wanted) = try everythingInCustomOrder()
+            // Owned first, in Custom order, then the sold in Sold-side order
+            // — the same two comparators the list itself sorts with, so
+            // 013's byte-identity survives a sale being present (Q5).
             try await stage([
                 .csv(
-                    ExportSchema.itemsTable(items.map { ItemExportRecord(item: $0) }),
+                    ExportSchema.itemsTable((owned + sold).map { ItemExportRecord(item: $0) }),
                     filename: ExportFilename.items(fileExtension: "csv")
                 ),
                 .csv(
@@ -208,13 +221,18 @@ final class SettingsViewModel {
     /// The covers use the lists' own titles, unfiltered labels, and the
     /// same total reductions, so each document is the one its list would
     /// produce with no filter (criterion 6).
+    ///
+    /// 006: the items document is the **owned** collection only, on this
+    /// path as on the list's (Q5), so its cover figures are the Dashboard's
+    /// collection figures rather than a mix of what is owned and what was
+    /// sold.
     func exportEverythingAsPDF() async {
         guard canExportEverything, !isBusy else { return }
         activity = .exportPDF
         defer { activity = nil }
 
         do {
-            let (items, wanted) = try everythingInCustomOrder()
+            let (items, _, wanted) = try everythingInCustomOrder()
             let itemsDocument = PDFDocumentModel(
                 cover: CoverSummary(
                     title: ItemListViewModel.documentTitle,

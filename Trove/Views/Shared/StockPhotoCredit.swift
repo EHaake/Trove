@@ -51,9 +51,17 @@ struct StockPhotoCredit: View {
     /// The hero credit: one paragraph that wraps whole, with the "leaves the
     /// app" glyph after the link run. The glyph is safe to append here because
     /// the accessibility representation replaces the spoken content entirely.
+    ///
+    /// The two runs are joined by interpolating one `Text` into another, which
+    /// is what `Text.+` was deprecated in favour of in iOS 26. It is the same
+    /// paragraph either way: interpolating a `Text` keeps that `Text`'s own
+    /// font and foreground, which is the whole point of `sourceGlyph` carrying
+    /// them (T015c).
     private var full: some View {
-        (Text(Self.attributedCredit(attribution, theme: theme))
-            + Self.sourceGlyph(theme: theme))
+        let credit = Text(Self.attributedCredit(attribution, theme: theme))
+        let glyph = Self.sourceGlyph(theme: theme)
+
+        return Text("\(credit)\(glyph)")
             .tint(theme.colors.accentBrass)
             .accessibilityRepresentation {
                 Link(destination: attribution.sourceURL) {

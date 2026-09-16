@@ -294,3 +294,95 @@ struct MarketFieldsTests {
         #expect(wantedRecord.year == 1975)
     }
 }
+
+/// 006/T001: the sale on `Item` — four optional fields and the link, read and
+/// written as one `Sale` (plan Q1/§1). Optional-with-no-default keeps the
+/// schema CloudKit-additive, which `CloudKitSchemaTests` covers (its red run
+/// for this task: declare `soldDate` as a non-optional `Date` with no default
+/// and the validator names it).
+@Suite("The sale on Item")
+struct ItemSaleFieldsTests {
+    @Test func anOwnedItemHasNoSale() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Telecaster")
+        context.insert(item)
+
+        #expect(item.sale == nil)
+        #expect(item.saleOutcome == nil)
+        #expect(!item.isSold)
+        #expect(item.soldDate == nil)
+        #expect(item.salePriceCents == nil)
+        #expect(item.saleLocation == nil)
+        #expect(item.saleNote == nil)
+        #expect(item.soldTowardWishlistItem == nil)
+    }
+
+    /// A second context, so this is about what reached the store rather than
+    /// what the writing context still holds unsaved.
+    @Test func aSaleRoundTripsAllFourFields() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let soldOn = Date(timeIntervalSince1970: 1_770_000_000)
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000)
+        context.insert(item)
+        item.sale = Sale(date: soldOn, priceCents: 130_000, location: "Reverb", note: "Shipped Tuesday")
+        try context.save()
+
+        let elsewhere = ModelContext(container)
+        let fetched = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first)
+        #expect(fetched.isSold)
+        #expect(fetched.sale == Sale(date: soldOn, priceCents: 130_000, location: "Reverb", note: "Shipped Tuesday"))
+        #expect(fetched.soldDate == soldOn)
+        #expect(fetched.salePriceCents == 130_000)
+        #expect(fetched.saleLocation == "Reverb")
+        #expect(fetched.saleNote == "Shipped Tuesday")
+        #expect(fetched.saleOutcome?.deltaCents == 30_000)
+    }
+
+    /// G2 — Return to collection (P12): clearing the sale clears all four
+    /// fields *and* the plan link, checked on a second context so a setter
+    /// that only looked right in memory would still fail here.
+    @Test func clearingTheSaleClearsTheFourFieldsAndTheLink() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let wanted = WishlistItem(name: "Rickenbacker 330")
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000)
+        context.insert(wanted)
+        context.insert(item)
+        item.sale = Sale(date: .now, priceCents: 130_000, location: "Reverb", note: "Shipped Tuesday")
+        item.soldTowardWishlistItem = wanted
+        try context.save()
+
+        item.sale = nil
+        try context.save()
+
+        let elsewhere = ModelContext(container)
+        let fetched = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first)
+        #expect(fetched.sale == nil)
+        #expect(!fetched.isSold)
+        #expect(fetched.soldDate == nil)
+        #expect(fetched.salePriceCents == nil)
+        #expect(fetched.saleLocation == nil)
+        #expect(fetched.saleNote == nil)
+        #expect(fetched.soldTowardWishlistItem == nil, "clearing the sale must drop the plan link too")
+
+        let stillWanted = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(stillWanted.itemsSoldToward?.isEmpty == true)
+    }
+
+    /// The defensive branch, recorded rather than relied on: no writer in this
+    /// app sets a date without a price (they always go together), so a row
+    /// like this can only come from a future version or a bug. It reads as a
+    /// sale priced 0 rather than disappearing from the Sold side entirely.
+    @Test func aDateWithoutAPriceReadsAsZero() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000)
+        context.insert(item)
+
+        item.soldDate = Date(timeIntervalSince1970: 1_770_000_000)
+
+        #expect(item.isSold)
+        #expect(item.sale?.priceCents == 0)
+        #expect(item.saleOutcome?.deltaCents == -100_000)
+    }
+}

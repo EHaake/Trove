@@ -636,6 +636,7 @@ struct ImportSchemaTests {
                 purchaseLocation: "Sweetwater", currentValueCents: 35_000, desireToKeep: 5,
                 conditionRawValue: "new", conditionNotes: "still sealed",
                 serialNumber: "SN=1+2", notes: nil, reverbProductID: 160_322, year: 1984,
+                soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
                 firstPhotoID: nil,
                 firstPhotoAttribution: nil
             ),
@@ -681,6 +682,200 @@ struct ImportSchemaTests {
         #expect(row.record.currentValueCents == nil)
         #expect(row.record.reverbProductID == 160_322)
         #expect(row.record.year == 2023)
+    }
+
+    // MARK: - The sale columns and the pair rule (006/T006)
+
+    /// G26: the widths the gate accepts are exactly the shipped ones — 18
+    /// (006's layout), 14 (002–005's) and 12 (011/012's) — and the two
+    /// widths *between* them are not. 13 and 17 are each one column short of
+    /// a shipped boundary, which is what a truncated file looks like;
+    /// accepting them would silently blank whatever the file lost.
+    /// Mutation: widen the gate to any prefix and the second half goes red.
+    @Test func theTwoLegacyItemWidthsPassAndTheWidthsBetweenThemDoNot() throws {
+        #expect(
+            try ImportSchema.requireItemsHeader(CSVRow(number: 1, cells: ExportSchema.itemHeaders))
+                == 18
+        )
+        #expect(
+            try ImportSchema.requireItemsHeader(
+                CSVRow(number: 1, cells: Array(ExportSchema.itemHeaders.prefix(14)))
+            ) == 14
+        )
+        #expect(
+            try ImportSchema.requireItemsHeader(
+                CSVRow(number: 1, cells: Array(ExportSchema.itemHeaders.prefix(12)))
+            ) == 12
+        )
+        for width in [13, 17] {
+            #expect(throws: ImportSchema.HeaderError.mismatch) {
+                try ImportSchema.requireItemsHeader(
+                    CSVRow(number: 1, cells: Array(ExportSchema.itemHeaders.prefix(width)))
+                )
+            }
+        }
+    }
+
+    /// And a 14-column file — everything 002 through 005 wrote — imports
+    /// with the four sale cells arriving blank: an owned item, not a
+    /// defaulted one.
+    @Test func aFourteenColumnFileImportsAsOwnedWithNothingCounted() throws {
+        let file = [
+            CSVRow(number: 1, cells: Array(ExportSchema.itemHeaders.prefix(14))),
+            CSVRow(number: 2, cells: Array(cells().prefix(14))),
+        ]
+        let preview = try ImportSchema.itemsPreview(from: file, timeZone: utc())
+        let row = try #require(preview.validated.first)
+        #expect(preview.skipped.isEmpty)
+        #expect(preview.defaultedFieldCount == 0)
+        #expect(row.record.year == 1984)
+        #expect(row.record.soldDate == nil)
+        #expect(row.record.salePriceCents == nil)
+        #expect(row.record.saleLocation == nil)
+        #expect(row.record.saleNote == nil)
+    }
+
+    /// G27, the pair rule (plan Q6/R3): a row is a sold item iff **both**
+    /// `Sold Date` and `Sale Price` parse. Either half alone drops the whole
+    /// sale, the item imports unsold, and the drop counts **one** default
+    /// however many of the four cells were filled — one sale lost is one
+    /// thing lost. All four blank is the ordinary owned row: silent.
+    ///
+    /// Two mutations: count per cell instead of per sale and the
+    /// unreadable-date-with-a-price row reads 2 → red; accept a lone half
+    /// and the date-only row's `soldDate == nil` goes red.
+    @Test func theSalePairRuleCountsOneDefaultPerDroppedSale() throws {
+        let cases: [(String, [String: String], Int, Bool)] = [
+            ("both halves", ["Sold Date": "2026-07-04", "Sale Price": "1200.00"], 0, true),
+            ("date only", ["Sold Date": "2026-07-04"], 1, false),
+            ("price only", ["Sale Price": "1200.00"], 1, false),
+            ("all four blank", [:], 0, false),
+            ("place only", ["Sold At": "Reverb"], 1, false),
+            (
+                "an unreadable date beside a good price",
+                ["Sold Date": "07/04/2026", "Sale Price": "1200.00"],
+                1,
+                false
+            ),
+        ]
+
+        for (label, changes, expectedDefaults, isSold) in cases {
+            let preview = try ImportSchema.itemsPreview(
+                from: itemsFile([cells(changes)]), timeZone: utc()
+            )
+            let row = try #require(preview.validated.first, "\(label)")
+            #expect(preview.defaultedFieldCount == expectedDefaults, "\(label)")
+            #expect((row.record.soldDate != nil) == isSold, "\(label)")
+            #expect((row.record.salePriceCents != nil) == isSold, "\(label)")
+        }
+    }
+
+    /// The pair rule's zero: `0.00` is a price, not a missing one — an item
+    /// given away is still sold, and `docs/csv-reference.md` documents it
+    /// ("`0` allowed (given away)") beside the negative amount, which is the
+    /// one figure that is unreadable. Mutation: reject zero in the pair rule
+    /// or in `cents(from:)` and all three expectations go red.
+    @Test func aZeroSalePriceImportsAsAnItemGivenAway() throws {
+        let preview = try ImportSchema.itemsPreview(
+            from: itemsFile([cells(["Sold Date": "2026-07-04", "Sale Price": "0.00"])]),
+            timeZone: utc()
+        )
+        let row = try #require(preview.validated.first)
+        #expect(preview.defaultedFieldCount == 0)
+        #expect(row.record.soldDate == ImportSchema.day(from: "2026-07-04", timeZone: utc()))
+        #expect(row.record.salePriceCents == 0)
+    }
+
+    /// The sold row in full: both halves parse, so the other two cells come
+    /// with them — and they come only with them. A dropped sale takes `Sold
+    /// At` and `Sale Note` down with it rather than leaving an orphaned
+    /// place on an owned item.
+    @Test func aSoldRowCarriesAllFourCellsAndADroppedOneCarriesNone() throws {
+        let sold = try ImportSchema.itemsPreview(
+            from: itemsFile([cells([
+                "Sold Date": "2026-07-04",
+                "Sale Price": "1200.00",
+                "Sold At": "Reverb",
+                "Sale Note": "Shipped to Ohio",
+            ])]),
+            timeZone: utc()
+        )
+        let soldRow = try #require(sold.validated.first)
+        #expect(sold.defaultedFieldCount == 0)
+        #expect(soldRow.record.soldDate == ImportSchema.day(from: "2026-07-04", timeZone: utc()))
+        #expect(soldRow.record.salePriceCents == 120_000)
+        #expect(soldRow.record.saleLocation == "Reverb")
+        #expect(soldRow.record.saleNote == "Shipped to Ohio")
+
+        let dropped = try ImportSchema.itemsPreview(
+            from: itemsFile([cells([
+                "Sold Date": "2026-07-04",
+                "Sold At": "Reverb",
+                "Sale Note": "Shipped to Ohio",
+            ])]),
+            timeZone: utc()
+        )
+        let droppedRow = try #require(dropped.validated.first)
+        #expect(dropped.defaultedFieldCount == 1)
+        #expect(droppedRow.record.soldDate == nil)
+        #expect(droppedRow.record.saleLocation == nil)
+        #expect(droppedRow.record.saleNote == nil)
+    }
+
+    /// Plan Q6's two stated asymmetries with the sheet, which import
+    /// deliberately does not repeat. A **negative** price is unreadable to
+    /// `cents(from:)` already — it rejects any sign — so the sale drops and
+    /// counts, exactly like a garbled one. A **future** sold date imports as
+    /// written, because `day(from:)` has no clock and `Purchase Date` is
+    /// accepted unbounded the same way: the sheet's bound is a data-entry
+    /// courtesy, and import trusts the file.
+    @Test func aNegativePriceDropsTheSaleAndAFutureDateImportsAsWritten() throws {
+        let negative = try ImportSchema.itemsPreview(
+            from: itemsFile([cells(["Sold Date": "2026-07-04", "Sale Price": "-1200.00"])]),
+            timeZone: utc()
+        )
+        let negativeRow = try #require(negative.validated.first)
+        #expect(negative.defaultedFieldCount == 1)
+        #expect(negativeRow.record.soldDate == nil)
+        #expect(negativeRow.record.salePriceCents == nil)
+
+        let future = try ImportSchema.itemsPreview(
+            from: itemsFile([cells(["Sold Date": "2099-12-31", "Sale Price": "1200.00"])]),
+            timeZone: utc()
+        )
+        let futureRow = try #require(future.validated.first)
+        #expect(future.defaultedFieldCount == 0)
+        #expect(futureRow.record.soldDate == ImportSchema.day(from: "2099-12-31", timeZone: utc()))
+        #expect(futureRow.record.salePriceCents == 120_000)
+    }
+
+    /// The sale survives the whole loop by value, not just by serialization:
+    /// a sold record, written as CSV and read back through the production
+    /// pipeline, comes back with the same four values and no counted
+    /// defaults.
+    @Test func aSoldRecordRoundTripsThroughTheCSV() throws {
+        let zone = utc()
+        let soldOn = instant(year: 2026, month: 7, day: 4, hour: 0)
+        let original = ItemExportRecord(
+            name: "Blues Junior", categoryPath: "Music/Amps", purchasePriceCents: 69_000,
+            currencyCode: "USD", purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+            purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
+            conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
+            notes: nil, reverbProductID: nil, year: nil,
+            soldDate: soldOn, salePriceCents: 55_000, saleLocation: "Reverb",
+            saleNote: "Shipped, \"as described\"",
+            firstPhotoID: nil, firstPhotoAttribution: nil
+        )
+        let text = CSVWriter.write(ExportSchema.itemsTable([original], timeZone: zone))
+        let preview = try ImportSchema.itemsPreview(from: try CSVParser.parse(text), timeZone: zone)
+
+        #expect(preview.skipped.isEmpty)
+        #expect(preview.defaultedFieldCount == 0)
+        let record = try #require(preview.validated.first).record
+        #expect(record.soldDate == soldOn)
+        #expect(record.salePriceCents == 55_000)
+        #expect(record.saleLocation == "Reverb")
+        #expect(record.saleNote == "Shipped, \"as described\"")
     }
 
     // MARK: - Wishlist row validation (T006)
@@ -863,6 +1058,12 @@ struct ImportSchemaTests {
             "Notes": "body only",
             "Reverb Product ID": "160322",
             "Year": "1984",
+            // 006: still owned unless a test says otherwise — the blank
+            // pair is what "not sold" looks like in the file.
+            "Sold Date": "",
+            "Sale Price": "",
+            "Sold At": "",
+            "Sale Note": "",
         ]
         for (header, value) in changes { byHeader[header] = value }
         return ExportSchema.itemHeaders.map { byHeader[$0]! }
@@ -884,6 +1085,7 @@ struct ImportSchemaTests {
             notes: notes.isEmpty ? nil : notes,
             reverbProductID: nil,
             year: nil,
+            soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
             firstPhotoID: nil,
             firstPhotoAttribution: nil
         )

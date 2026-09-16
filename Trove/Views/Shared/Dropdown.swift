@@ -181,7 +181,7 @@ private struct FirstRowFocus: ViewModifier {
 
 /// tokens.md's 12×12 checkmark at 1.6 stroke, drawn rather than borrowed so
 /// the stroke weight is exact.
-private struct CheckmarkGlyph: Shape {
+private nonisolated struct CheckmarkGlyph: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         path.move(to: CGPoint(x: rect.minX + rect.width * 0.15, y: rect.minY + rect.height * 0.55))

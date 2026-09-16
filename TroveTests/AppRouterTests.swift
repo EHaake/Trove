@@ -28,6 +28,42 @@ struct AppRouterTests {
         #expect(router.itemsRequest == .unvalued)
     }
 
+    /// The Dashboard's Sold card lands here: the Items tab, at its root, with
+    /// the Sold side asked for.
+    @Test func showingTheSoldSideSwitchesTabsAndAsksForIt() {
+        let router = AppRouter()
+        router.showItem(UUID())
+
+        router.showSoldItems()
+
+        #expect(router.selectedTab == .items)
+        #expect(router.itemsRequest == .sold)
+        #expect(router.itemsPath.isEmpty)
+    }
+
+    /// Same contract as the narrowing requests: the list clears it once
+    /// applied, so returning to the tab later doesn't flip the side back under
+    /// someone who has since switched to Owned.
+    @Test func theSoldRequestIsClearedOnceApplied() {
+        let router = AppRouter()
+        router.showSoldItems()
+        router.clearItemsRequest()
+
+        #expect(router.itemsRequest == nil)
+        #expect(router.selectedTab == .items)
+    }
+
+    /// Opening an item must not leave the Sold side queued behind it, for the
+    /// reason a pending filter can't be left: backing out would land on a side
+    /// the user never asked for.
+    @Test func openingAnItemClearsAPendingSoldRequest() {
+        let router = AppRouter()
+        router.showSoldItems()
+        router.showItem(UUID())
+
+        #expect(router.itemsRequest == nil)
+    }
+
     @Test func showingOneItemPushesItOntoTheItemsStack() {
         let router = AppRouter()
         let id = UUID()

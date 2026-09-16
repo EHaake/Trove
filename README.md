@@ -29,6 +29,12 @@ purchases.
   ledger. Within a desire level it lists what Reverb's asking prices say
   is rising first and falling last, with the median beside each matched
   item and one dated sentence on a rising row saying by how much.
+- **Marking something sold** — the Items tab has an Owned side and a
+  Sold side: record what it sold for, when, where and any note, and the
+  item moves across to the Sold side, which says in words whether each
+  sale was a gain or a loss and by how much — and it can be returned to
+  the collection, its sale details removed, after a confirmation, if it
+  comes home.
 - **Low-friction item management** — swipe to delete, edit, or copy on
   both lists; press-and-hold drag reordering under a "Custom" sort,
   with an accessible Move up/Move down path for VoiceOver; and value
