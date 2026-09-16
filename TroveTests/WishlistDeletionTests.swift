@@ -40,7 +40,7 @@ struct WishlistDeletionTests {
     @Test func deleteLeavesOtherItemsAlone() throws {
         let context = try makeInMemoryContext()
         let doomed = makeWanted(in: context, name: "Vox AC15", sortOrder: 0)
-        makeWanted(in: context, name: "Summicron 35mm f/2", sortOrder: 1)
+        _ = makeWanted(in: context, name: "Summicron 35mm f/2", sortOrder: 1)
         try context.save()
 
         let viewModel = WishlistViewModel(modelContext: context)
@@ -52,7 +52,7 @@ struct WishlistDeletionTests {
 
     @Test func deleteWithAnUnknownIDDoesNothing() throws {
         let context = try makeInMemoryContext()
-        makeWanted(in: context, name: "Vox AC15")
+        _ = makeWanted(in: context, name: "Vox AC15")
         try context.save()
 
         let viewModel = WishlistViewModel(modelContext: context)

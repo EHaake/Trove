@@ -40,7 +40,7 @@ struct ItemDeletionTests {
     @Test func deleteLeavesOtherItemsAlone() throws {
         let context = try makeInMemoryContext()
         let doomed = makeItem(in: context, name: "Blues Junior")
-        makeItem(in: context, name: "Leica M6")
+        _ = makeItem(in: context, name: "Leica M6")
         try context.save()
 
         let viewModel = ItemListViewModel(modelContext: context)
@@ -52,7 +52,7 @@ struct ItemDeletionTests {
 
     @Test func deleteWithAnUnknownIDDoesNothing() throws {
         let context = try makeInMemoryContext()
-        makeItem(in: context, name: "Blues Junior")
+        _ = makeItem(in: context, name: "Blues Junior")
         try context.save()
 
         let viewModel = ItemListViewModel(modelContext: context)

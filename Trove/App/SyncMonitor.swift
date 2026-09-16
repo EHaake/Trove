@@ -63,7 +63,15 @@ final class SyncMonitor {
     /// `nonisolated(unsafe)` because `deinit` isn't `MainActor`-isolated and
     /// this is the only thing it touches. Written once during `init`, read
     /// once during `deinit`, never concurrently.
-    private nonisolated(unsafe) var observer: (any NSObjectProtocol)?
+    ///
+    /// `@ObservationIgnored` is load-bearing, not decoration: without it the
+    /// `@Observable` macro rewrites this into a computed property, where
+    /// `nonisolated(unsafe)` means nothing — which is what the Xcode 27
+    /// compiler warns about, and its fixit (plain `nonisolated`) doesn't
+    /// compile on a mutable stored property. A notification token is not
+    /// state any view should re-render on, so keeping it out of observation
+    /// is what was meant all along.
+    @ObservationIgnored private nonisolated(unsafe) var observer: (any NSObjectProtocol)?
 
     /// - Parameter mode: anything but `.cloudKit` starts (and stays)
     ///   `.unavailable` — there's no mirror, so nothing is in flight and an

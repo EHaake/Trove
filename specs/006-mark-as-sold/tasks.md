@@ -949,7 +949,7 @@ because the person will feel it before they read it.
   skip arm returning; the scan itself fails at the throw. Two production
   rebuilds exceeded 10 minutes each.
 
-- [ ] **T018a — Phase 5 pause finding: iOS 27, and a clean build.**
+- [x] **T018a — Phase 5 pause finding: iOS 27, and a clean build.**
   The Mac moved to macOS 27 / Xcode 27 with an iOS 27.0 runtime; the
   iPhone 17 Pro simulator `scripts/verify.sh` names (`FE0861F8…`, iOS 26.0)
   no longer exists (now `327655AC-B108-4140-AEF8-F5A0248BBA3E`, iOS 27.0).
@@ -964,6 +964,19 @@ because the person will feel it before they read it.
   **Verify:** `scripts/verify.sh all` green on the iOS 27.0 device; the
   warning count in the project's sources reported before and after (after
   must be 0).
+  **Done (2026-09-15).** Bundle miss (orchestrator): the id named was the
+  iPhone 17 Pro on iOS **26.5**, and no 17 Pro exists on 27.0; the
+  implementer ran `verify.sh all` on both and both were green (1492 unit,
+  20 UI). The orchestrator then pointed `DESTINATION` at the iPhone 18 Pro
+  on iOS 27.0 (`C5329D37…`), the runtime the person asked for. Warnings in
+  the repo's sources, clean build: 11 sites before, 0 after —
+  `SyncMonitor.observer` gets `@ObservationIgnored` (the compiler's own
+  fixit does not compile on an `@Observable` stored property);
+  `StockPhotoCredit`'s deprecated `Text + Text` becomes interpolation; six
+  discarded fixtures in four test files get `_ =`; `launchApp()` in the UI
+  target gains `@MainActor`. One SDK-side warning remains (AppIntents
+  metadata, no repo path). Findings: an incremental build hides warnings
+  from unchanged files — count after `clean`.
 
 - [ ] **T018b — Phase 5 pause finding: the switch's stats line and its slide (Decision 13).**
   (1) `soldSummaryLine` is never nil: `SaleCopy.soldSideSummary` over zero
@@ -1110,4 +1123,5 @@ interpreted here.
 | Phase 5 review | opus (`skeptical-reviewer`) | 180,682 (9 tool uses — bundle only, no targeted look) | **two blocking** (B1: `sellPlan.soldFigure` never shipped, the UI test rewritten around it; B2: the colour scan's skip-if-absent arms can pass over files that now exist) + S3–S8 |
 | T017a fix (B1, B2, S3, S5) | opus (`sdd-implementer`, high effort) | 101,230 (54 tool uses, 42 min — two full rebuilds) | done; five mutations red; one unreachable-when-false require stated for the re-review |
 | Phase 5 re-review | opus (`skeptical-reviewer`, resumed) | 197,167 cumulative (~16.5k this round; 1 tool use) | **signed off**, no new blocking; the unreachable require kept as a lock (stated why); design notes' strip height corrected to 44 |
+| T018a implement | opus (`sdd-implementer`, high effort) | 72,064 (25 tool uses, 22 min — three clean builds, two `all` runs) | done; 11 → 0 repo warnings; bundle miss (orchestrator): the simulator id named was iOS 26.5, not 27.0 — settled by running both |
 | _rows added per dispatch as the spec runs_ | | | |

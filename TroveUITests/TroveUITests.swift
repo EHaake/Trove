@@ -18,6 +18,7 @@ import XCTest
 /// `XCTest` rather than Swift Testing because `XCUIApplication` requires it —
 /// the one exception CLAUDE.md carves out.
 final class TroveUITests: XCTestCase {
+    @MainActor
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTesting"]
