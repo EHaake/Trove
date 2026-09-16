@@ -1039,6 +1039,15 @@ because the person will feel it before they read it.
   Finding: inside the `ScrollView` the empty state sits above the section
   rather than centring — for the eye check. The inline-copy scan skips
   one-word literals; the new row test covers `soldRow` only.
+  **Eye check (general-purpose agent, iOS 27.0 simulator):** T018b — the
+  switch's top edge measured at 154.3 pt on both sides, with zero and with
+  one sale, to the pixel; the fill's end states correct (its motion cannot
+  be seen at the screenshot rate — the recording measurement in T018b's
+  Done note is the evidence). T018c — the all-sold plan keeps three
+  figures, shows the empty state with the SOLD section beneath it, every
+  row opening with the tag; the tag also present while candidates remain.
+  Observed for the person: the empty state's copy ("Nothing to sell yet —
+  Add the gear you own…") reads oddly right above four sold rows.
 
 ## Phase 6 — Verification and close-out
 
@@ -1151,4 +1160,5 @@ interpreted here.
 | T018a implement | opus (`sdd-implementer`, high effort) | 72,064 (25 tool uses, 22 min — three clean builds, two `all` runs) | done; 11 → 0 repo warnings; bundle miss (orchestrator): the simulator id named was iOS 26.5, not 27.0 — settled by running both |
 | T018b implement | opus (`sdd-implementer`, high effort) | 176,094 (96 tool uses, 46 min) | done; six mutations red; the bundle's suspected cause refuted by measurement and the real one found (structural matchedGeometryEffect) |
 | T018c implement | opus (`sdd-implementer`, high effort) | 83,074 (36 tool uses, 18 min) | done; four mutations red; one artboard divergence stated (the row tag Decision 14 asks for) |
+| T018b+T018c device pass | opus (`general-purpose`, simulator) | 189,824 (111 tool uses, 9 min) | as expected; switch position identical to the pixel; one copy observation for the person (the all-sold plan's empty-state wording) |
 | _rows added per dispatch as the spec runs_ | | | |
