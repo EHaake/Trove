@@ -1,6 +1,6 @@
 # 006 — Mark as Sold: Tasks
 
-**Status**: **Signed off** (2026-09-13) — skeptical-reviewer at `fable` (experiment
+**Status**: **Shipped** (2026-09-15; criteria 15 and 16 pending the person's steps) — was Signed off (2026-09-13) — skeptical-reviewer at `fable` (experiment
 1's top tier); one blocking finding at the first review (B1, the Sold side's
 CSV export inheriting the Owned side's narrowing — fixed as Q15/G33) and
 eleven second-look notes, all folded in; the re-review signed off with
@@ -1118,7 +1118,7 @@ because the person will feel it before they read it.
   a11y label). Mutation `toward: nil` → red at the `sellPlan.soldFigure`
   assertion. `verify.sh all` green twice: 1498 unit / 20 UI, 0 failures.
 
-- [ ] **T020 — Close-out.**
+- [x] **T020 — Close-out.**
   Criteria 1–16 ticked in `spec.md` with citations, honest partials named;
   the Copy section gains the strings settled at T002/T008 (P8); `plan.md`
   gains "As built" (deviations, the readings R1–R3 as confirmed or
@@ -1133,6 +1133,22 @@ because the person will feel it before they read it.
   for review.
   **Verify:** everything above committed and pushed; `scripts/verify.sh all`
   green with the final counts recorded here.
+  **Done (2026-09-15).** Documents by the implementer (spec ticks and Copy,
+  plan "As built", ROADMAP, README, DECISIONS; 005's README placeholder
+  note closed, its cadence note out of scope — it lives in 005's own
+  tasks.md); the sweep signed off with no blocking findings and twelve
+  second looks, five of them document corrections applied by the
+  orchestrator (criterion 7a's test-file prefix, criterion 7's root-scope
+  clause, 011's boundaries pointer, tokens.md's As-implemented cell for the
+  absent row cross-fade, this file's status). Left open for the sweep's
+  record: spoken strings outside the copy table ('s hint,
+  's label), the pluralisation rule spelled twice in
+  , "Edit" typed in two menus untested, two guards weaker than
+  they read (G32's literal; the whole-file  contains), nothing
+  reading . **Final counts (orchestrator run,
+  iPhone 18 Pro / iOS 27.0):** ; UI: Executed 20 tests, with 0
+  failures. Allowance: not read (the usage page is the person's).
+  Criteria 15 and 16 pending the person's steps.
 
 ## Tier log
 
@@ -1200,4 +1216,7 @@ interpreted here.
 | T018b+T018c device pass | opus (`general-purpose`, simulator) | 189,824 (111 tool uses, 9 min) | as expected; switch position identical to the pixel; one copy observation for the person (the all-sold plan's empty-state wording) |
 | T019 device pass | opus (`general-purpose`, simulator) | 317,911 (225 tool uses, 36 min agent time; ~80 min wall) | every step as expected; probe counts recorded; one finding (F1: a UI test broken by T018c's tag order) → T018d |
 | T018d fix (F1) | opus (`sdd-implementer`, high effort) | 40,693 (20 tool uses, 29 min — four simulator runs) | done; mutation red; `all` green twice |
+| T020 docs | opus (`sdd-implementer`, high effort) | 195,757 (68 tool uses, 11 min) | done; three declared in-file corrections beyond the instruction; 005's cadence note out of scope |
+| Pre-merge sweep | opus (`skeptical-reviewer`) | 422,427 (25 tool uses — three targeted looks, stated) | **signed off, nothing blocking**; twelve second looks, five applied as document fixes by the orchestrator |
+| Final verify | fable, medium (the session) | — | `verify.sh all` green: ; UI 20/0 |
 | _rows added per dispatch as the spec runs_ | | | |

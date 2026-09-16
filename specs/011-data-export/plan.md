@@ -68,7 +68,7 @@ shipped — 12 items columns, 7 wishlist columns. `002` appended
 `Reverb Product ID` and `Year` to both, and `006` appended `Sold Date`,
 `Sale Price`, `Sold At` and `Sale Note` to the items list alone — 18
 items columns, 9 wishlist columns as of `006` (`ExportSchema` is always
-current); the boundaries entry under "Recorded schema decisions" says
+current); the boundaries entries under "Recorded schema decisions" — `[12]` as first recorded, `[12, 14]` since `006` appended the sale columns — say
 how every shipped width keeps importing.*
 
 ### Items — `Trove-Items-YYYY-MM-DD.csv`, 12 columns, this order

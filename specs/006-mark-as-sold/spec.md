@@ -425,7 +425,7 @@ has made yet.
     `theRowNamesTheSaleDateAndNotThePurchaseDate`,
     `theRowShowsTheSalePriceAndNotTheValueOrTheCost`, plus the rendered
     `aLossPaintsRustAndAGainPaintsMoss` / `anAtCostRowPaintsNeitherTone` — the
-    words carry it, the colour repeats it). "Its summary line matches the card"
+    words carry it, the colour repeats it). "Its summary line matches the card" — at the Dashboard root; a category-scoped card shows that scope's figures and lands on the unscoped Sold side (R1) —
     is one sum, not two: both read `SaleOutcome.totals` through `SaleCopy`
     (`SaleCopyTests.theSoldSideSummaryAtAGainALossAndZero`, G32's scan that
     neither view model does arithmetic of its own). On screen: the UI test
@@ -442,7 +442,7 @@ has made yet.
 7a. [x] From either side, the "…" menu's CSV export includes both owned and
    sold items and its PDF export includes owned items only; Import and
    Settings behave as before.
-    *Verified by*: `ItemListViewModelTests.theItemsCSVIsOwnedInCustomOrderThenSoldInSoldSideOrder`,
+    *Verified by*: `SettingsViewModelTests.theItemsCSVIsOwnedInCustomOrderThenSoldInSoldSideOrder` (Settings' export-everything path),
     `aVisibleFilterNarrowsTheSoldHalfOfTheCSVToo` (G15),
     `switchingToSoldClearsEveryNarrowing` (so a CSV from the Sold side is the
     complete record — G33, the sign-off's blocking finding),
