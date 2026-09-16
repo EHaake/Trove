@@ -1051,7 +1051,7 @@ because the person will feel it before they read it.
 
 ## Phase 6 — Verification and close-out
 
-- [ ] **T019 — Device pass. [general-purpose agent with simulator tools; person: sync + VoiceOver]**
+- [x] **T019 — Device pass. [general-purpose agent with simulator tools; person: sync + VoiceOver]**
   Per every criterion, on the iPhone simulator with the `-uiTesting` store
   (and `-seedSold` where a history helps). Walk: Mark as sold… from the
   detail (price prefilled from the value; a future date refused **on the
@@ -1080,6 +1080,38 @@ because the person will feel it before they read it.
   row, the Sold mark, the plan's Sold figure.
   **Verify:** the record in the Done note with what was seen and the probe's
   count per action; `scripts/verify.sh all` green twice.
+  **Done (2026-09-15, agent's walk; the person's two steps pending).**
+  iPhone 18 Pro, iOS 27.0. Every listed step as expected: the picker's
+  disabled days (screenshot in the session scratchpad; the past-midnight
+  edge is `refusesADateOneSecondInTheFuture`), the three outcomes, the
+  card at root/scope/zero, the jump, Sort By hidden, CSV with both sides
+  and the four columns read from the container, PDF owned-only, edit,
+  return to the Custom slot with the match back as never-refreshed-here,
+  the shorter delete message, the plan's third figure and section, the
+  wishlist deletion leaving the sale, Delete All removing sold too, the
+  market line dropping and Refresh skipping the sold item. Not observable:
+  Settings' matched count is never rendered as a number (it gates the
+  Refresh row) — seen through the market line instead. **Probe** on
+  `markSold`: Cancel 0, swipe-down 0, host re-render (background/
+  foreground + appearance change) 0, confirm 1 from the page and 1 from
+  the plan; rotation unavailable headless. **Finding F1:**
+  `testASellPlanRowSoldFromThePlanShowsTheSoldFigure` fails at HEAD, both
+  runs — T018c put the SOLD tag first in the plan's combined row label, and
+  the UI helper matches `BEGINSWITH "<name>,"`; the behaviour on the device
+  is right. Orchestrator miss: T018c's Verify named the unit suite only
+  after a view change that alters an a11y label. Fixed as T018d. Unit 1498
+  green twice; UI 20 with that one test red twice. **[person, pending]**
+  criterion 15 (second device) and criterion 16 (Accessibility Inspector
+  over the menu rows, the switch, the card, a Sold row, the Sold mark, the
+  plan's Sold figure — note the plan's sold row now announces "Sold" first).
+
+- [ ] **T018d — T019 finding F1: the plan's sold-row UI helper.**
+  `TroveUITests.soldRow(in:named:)` (or a plan-specific variant) matches
+  the plan's sold row whose combined label opens with `SaleCopy.soldMark`
+  ("Sold, <name>, …") while the Items tab's rows still open with the name;
+  `testASellPlanRowSoldFromThePlanShowsTheSoldFigure` green; the existing
+  `toward: nil` mutation still red. Files: `TroveUITests/TroveUITests.swift`.
+  **Verify:** the one test green; then `scripts/verify.sh all` green twice.
 
 - [ ] **T020 — Close-out.**
   Criteria 1–16 ticked in `spec.md` with citations, honest partials named;
@@ -1161,4 +1193,5 @@ interpreted here.
 | T018b implement | opus (`sdd-implementer`, high effort) | 176,094 (96 tool uses, 46 min) | done; six mutations red; the bundle's suspected cause refuted by measurement and the real one found (structural matchedGeometryEffect) |
 | T018c implement | opus (`sdd-implementer`, high effort) | 83,074 (36 tool uses, 18 min) | done; four mutations red; one artboard divergence stated (the row tag Decision 14 asks for) |
 | T018b+T018c device pass | opus (`general-purpose`, simulator) | 189,824 (111 tool uses, 9 min) | as expected; switch position identical to the pixel; one copy observation for the person (the all-sold plan's empty-state wording) |
+| T019 device pass | opus (`general-purpose`, simulator) | 317,911 (225 tool uses, 36 min agent time; ~80 min wall) | every step as expected; probe counts recorded; one finding (F1: a UI test broken by T018c's tag order) → T018d |
 | _rows added per dispatch as the spec runs_ | | | |
