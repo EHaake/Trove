@@ -32,6 +32,7 @@ own.
 | `003-trend-aware-sell-plan` | **Shipped** — merged to `main` 2026-09-07 via [PR #15](https://github.com/EHaake/Trove/pull/15); seven tasks (T001–T007 with T004a added at the Phase 2 pause for Decision 14, the person's layout call from the seeded simulator), twelve criteria verified with per-criterion records in `spec.md`; the second spec under the model policy — its tier log in `tasks.md` came in under 002's per-task cost with the review-loop cap holding throughout; two layout facts settled by measurement rather than argument before merge |
 | `004-themes` | **Shipped** — merged to `main` 2026-09-09 via [PR #20](https://github.com/EHaake/Trove/pull/20); seven tasks (T001–T007), ten criteria verified with per-criterion citations in `spec.md`; **light mode of the existing brass/moss/rust identity** plus a System/Light/Dark choice in Settings — alternate-hue palettes stay deferred to their own Design pass (spec Decision 1). The third spec under the model policy, its tier log in `tasks.md` — **every invocation ran at `opus` under the Fallback clause** (`fable`'s budget spent for the whole spec); the T006 device pass signed off the light palette on-brand across every screen, and a one-time, non-reproducible title-refresh transient was recorded and dispositioned "note, don't fix" by the person |
 | `005-stock-photos` | **Shipped** — merged to `main` 2026-09-13 via [PR #21](https://github.com/EHaake/Trove/pull/21); sixteen tasks with four sub-lettered additions (T012a, the taken-with relevance filter the person's Phase 3 device testing asked for; T015a–c, from the device pass), eleven criteria verified with per-criterion records in `spec.md` and **two honest partials named** (no second device for the sync check; no dual-licensed GFDL + CC-BY-SA file in any live search). The app's **second network dependency** — Wikimedia Commons, the one source whose terms let a fetched photo be stored, synced and shown offline. Two review findings were caught as false coverage rather than by failing (a ported-licence acceptance, a bare-number relevance drop), a render test was probed, found false-passing and deleted, and the picker's `.task` firing count was settled by a probe inside the service rather than by inference. The first spec measured under the model policy's **experiment 1** — the orchestrating session moved to Fable at Phase 4, its tier log in `tasks.md`. |
+| `006-mark-as-sold` | **Shipped** — merged to `main` 2026-09-15 via [PR #23](https://github.com/EHaake/Trove/pull/23); twenty tasks (T001–T020) with ten sub-lettered additions — three of them from the person's walkthrough at the Phase 5 pause (T018a–T018c) and one from the device pass (T018d) — seventeen criteria (1–16, with 7a) verified with per-criterion records in `spec.md` and **two honest partials named** (no second device for the sync check; the VoiceOver reading is the person's step). The app's **first record of a real transaction** — a sale is four fields and a link on the item itself, so it syncs as one record and "Return to collection" is nil-ing them; the Items tab grows a Sold side beside Owned, the Dashboard a Sold card, and the Sell Plan a third figure that still subtracts nothing. Three things were settled by measurement rather than argument: a 19.7 pt jump in the Owned/Sold switch, the stutter beneath it (a `matchedGeometryEffect` across an insert/remove crossfades instead of moving), and the sale sheet presenting exactly once per confirm (a probe inside the writer, not a screenshot). Xcode 27 arrived mid-spec and the branch carries the toolchain fixes and a warning-free build. The second spec measured under the model policy's **experiment 1**, its tier log in `tasks.md`. |
 
 ## Future specs
 
@@ -56,8 +57,10 @@ actually useful once the app is in daily use.
   always stated with its coverage. Figures and their history stay on
   the device that fetched them (a second, unsynced SwiftData store);
   only the match and the year sync. No source offers sold prices to a
-  non-partner, so no "sold" figure exists anywhere in the app, and a
-  crawler was declined on terms and privacy grounds (spec Decision 1).
+  non-partner, so no *market* "sold" figure exists anywhere in the app,
+  and a crawler was declined on terms and privacy grounds (spec Decision
+  1). `006` added the only sold price Trove will ever hold: the one the
+  person types in for their own sale.
   `PRIVACY.md` and the one-time notice came with it.
 - **eBay asking prices** — the follow-up `002`'s Decision 1 deferred.
   Two prerequisites before it can be scoped: a **hosted proxy service**
@@ -163,11 +166,45 @@ actually useful once the app is in daily use.
     synced and never exported: a different feature from this one, with a
     different privacy and offline story, and it would only ever cover
     items that already have a Reverb match.
-- **`006-mark-as-sold`** — Real transaction tracking for the Sell Plan:
-  marking a planned item as actually sold, removing it from inventory,
-  a sale history. Deliberately excluded from `001` to keep the Sell Plan
-  a decision-support tool rather than a ledger — worth revisiting once
-  it's clear the decision-support version is actually useful day to day.
+- **`006-mark-as-sold`** (**Shipped 2026-09-15** via
+  [PR #23](https://github.com/EHaake/Trove/pull/23) — see
+  `specs/006-mark-as-sold/` for the full record) — the entry read: "Real
+  transaction tracking for the Sell Plan: marking a planned item as actually
+  sold, removing it from inventory, a sale history. Deliberately excluded from
+  `001` to keep the Sell Plan a decision-support tool rather than a ledger —
+  worth revisiting once it's clear the decision-support version is actually
+  useful day to day." It was. What shipped: **Mark as sold…** from an item's
+  page and from a Sell Plan row, asking for a price, a date, a place and a
+  note; the sold
+  item leaves the collection, every Dashboard figure and every plan's
+  candidates, and lands on a **Sold side of the Items tab** one tap from Owned,
+  where each row says in words whether it sold at a gain or at a loss and by
+  how much. A **Sold card** on the Dashboard jumps there; the Sell Plan gains a
+  third **Sold** figure and lists what was actually sold toward it, still
+  subtracting nothing from the cost; the items CSV grows four appended columns
+  and imports them back as a pair; the PDF stays a document of what you own.
+  A sale can be undone — Return to collection restores the item at its old
+  place in the custom order with no sale. What it recorded on the way out:
+  - **The sale lives on the item, not in a `Sale` model** (plan Q1). The
+    deciding reason was sync: fields travel as one CloudKit record, where a
+    relationship is a second record that can arrive before or after its item,
+    so a second device could briefly show a sold item as owned.
+  - **"Sold" is still only the person's number.** `002`'s rule — no market
+    sold price anywhere in the app, because no source offers one to a
+    non-partner — is untouched. The only sold figure in Trove is the one that
+    was typed in.
+  - **What the person's walkthrough found was layout, motion and wording —
+    and the two motion findings only yielded to measurement** (spec Decisions
+    12–14): an Owned side emptied by selling needed its own empty state, the
+    Sold side's stats line had to stay at zero sales (the switch was jumping
+    19.7 pt), and the stutter beneath it turned out to be a
+    `matchedGeometryEffect` crossfading across an insert/remove rather than
+    sliding — visible only in a screen recording, per frame. **Two questions
+    are left open for the person, both copy or placement, neither a defect**: a
+    sell plan whose candidates have all sold still shows the "Nothing to sell
+    yet" empty state above its sold rows, and the person did not find **Mark as
+    sold…** in the item page's "…" menu, where Decision 4 put it — whether a
+    visible control is wanted is theirs to say.
 - **`007-auto-categorization`** — Suggest a category path from a photo
   instead of typing it. The category field being a plain string path
   (not a fixed enum) since `001` is what keeps this a pure addition.

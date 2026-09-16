@@ -75,8 +75,8 @@ struct PhotoOwnershipTests {
         #expect(item.photos?.count == 1)
         #expect(wanted.photos?.count == 2)
         #expect(item.photos?.first?.imageData == Data([0x01]))
-        #expect(wanted.photos?.map(\.imageData).sorted { $0.first! < $1.first! }
-            == [Data([0x02]), Data([0x03])])
+        let wantedData: [Data] = (wanted.photos ?? []).map(\.imageData).sorted { $0.first! < $1.first! }
+        #expect(wantedData == [Data([0x02]), Data([0x03])])
     }
 }
 

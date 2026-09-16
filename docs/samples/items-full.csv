@@ -1,14 +1,14 @@
-﻿Name,Category,Purchase Price,Currency,Purchase Date,Purchase Location,Current Value,Desire to Keep,Condition,Condition Notes,Serial Number,Notes,Reverb Product ID,Year
-Leica M6 TTL 0.72,Photography/Cameras/Film,2650.00,USD,2019-04-18,KEH Camera,3400.00,5,excellent,"meter accurate, slight brassing",2468731,"Black chrome, CLA'd 2023",,
-Summicron-M 35mm f/2 v4,Photography/Lenses,1900.00,USD,2020-09-02,eBay,2900.00,5,good,faint cleaning marks,3391062,"""King of bokeh"" — stays with the M6",,
-Fujifilm X100V,Photography/Cameras/Digital,1399.00,USD,2021-02-14,B&H Photo,1550.00,3,excellent,boxed with all caps,91A05877,Silver,,
+﻿Name,Category,Purchase Price,Currency,Purchase Date,Purchase Location,Current Value,Desire to Keep,Condition,Condition Notes,Serial Number,Notes,Reverb Product ID,Year,Sold Date,Sale Price,Sold At,Sale Note
+Leica M6 TTL 0.72,Photography/Cameras/Film,2650.00,USD,2019-04-18,KEH Camera,3400.00,5,excellent,"meter accurate, slight brassing",2468731,"Black chrome, CLA'd 2023",,,,,,
+Summicron-M 35mm f/2 v4,Photography/Lenses,1900.00,USD,2020-09-02,eBay,2900.00,5,good,faint cleaning marks,3391062,"""King of bokeh"" — stays with the M6",,,,,,
+Fujifilm X100V,Photography/Cameras/Digital,1399.00,USD,2021-02-14,B&H Photo,1550.00,3,excellent,boxed with all caps,91A05877,Silver,,,,,,
 Fender AV II '61 Stratocaster,Music/Guitars/Electric,2249.99,USD,2023-11-24,Sweetwater,2100.00,4,excellent,case candy complete,V2318554,"Olympic white, rosewood board.
-Black Friday purchase.",160322,2023
-Martin D-18,Music/Guitars/Acoustic,2299.00,USD,2018-06-30,Local shop (trade-in),2600.00,5,good,pick wear below the guard,2214782,The keeper,182769,2018
-Fender Blues Junior IV,Music/Amps,649.99,USD,2022-01-15,Guitar Center,500.00,2,good,tolex scuff on left corner,B-582411,Grab-and-go amp,80684,2021
-Strymon Timeline,Music/Pedals,449.00,USD,2021-08-21,Reverb,375.00,3,excellent,velcro on base,ST-84120,Full MIDI setup,17,2015
-Shure SM7B,Audio/Microphones,399.00,USD,2021-10-05,Sweetwater,350.00,4,excellent,windscreen replaced,88M2231,Podcast rig,,
-UA Apollo Twin X,Audio/Interfaces,899.00,USD,2022-03-12,Sweetwater,700.00,4,excellent,"runs hot, normal",APX4-22-58817,Duo core,,
-Sennheiser HD 650,Audio/Headphones,329.95,USD,2017-12-25,Amazon,220.00,3,fair,headband foam compressed,HD650-49221,Christmas gift,,
-Technics SL-1200MK2,Audio/Vinyl,450.00,USD,2016-08-13,Craigslist,700.00,4,good,"strobe works, arm bearing tight",AB63K11229,"Ex wedding-DJ deck, extra headshells",,
-Nintendo Game Boy DMG-01,Collectibles/Consoles,40.00,USD,2015-07-04,Yard sale,120.00,3,broken,"dead screen lines, needs caps",GM10462155,"Restoration project, minty shell",,
+Black Friday purchase.",160322,2023,,,,
+Martin D-18,Music/Guitars/Acoustic,2299.00,USD,2018-06-30,Local shop (trade-in),2600.00,5,good,pick wear below the guard,2214782,The keeper,182769,2018,,,,
+Fender Blues Junior IV,Music/Amps,649.99,USD,2022-01-15,Guitar Center,500.00,2,good,tolex scuff on left corner,B-582411,Grab-and-go amp,80684,2021,,,,
+Strymon Timeline,Music/Pedals,449.00,USD,2021-08-21,Reverb,375.00,3,excellent,velcro on base,ST-84120,Full MIDI setup,17,2015,,,,
+Shure SM7B,Audio/Microphones,399.00,USD,2021-10-05,Sweetwater,350.00,4,excellent,windscreen replaced,88M2231,Podcast rig,,,,,,
+UA Apollo Twin X,Audio/Interfaces,899.00,USD,2022-03-12,Sweetwater,700.00,4,excellent,"runs hot, normal",APX4-22-58817,Duo core,,,,,,
+Sennheiser HD 650,Audio/Headphones,329.95,USD,2017-12-25,Amazon,220.00,3,fair,headband foam compressed,HD650-49221,Christmas gift,,,2026-06-02,180.00,Craigslist,Sold at a loss — the headband foam never recovered
+Technics SL-1200MK2,Audio/Vinyl,450.00,USD,2016-08-13,Craigslist,700.00,4,good,"strobe works, arm bearing tight",AB63K11229,"Ex wedding-DJ deck, extra headshells",,,2026-05-18,700.00,Reverb,Sold at a gain — more than the 450 it cost
+Nintendo Game Boy DMG-01,Collectibles/Consoles,40.00,USD,2015-07-04,Yard sale,120.00,3,broken,"dead screen lines, needs caps",GM10462155,"Restoration project, minty shell",,,,,,

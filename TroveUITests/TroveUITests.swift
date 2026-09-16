@@ -18,6 +18,7 @@ import XCTest
 /// `XCTest` rather than Swift Testing because `XCUIApplication` requires it —
 /// the one exception CLAUDE.md carves out.
 final class TroveUITests: XCTestCase {
+    @MainActor
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTesting"]
@@ -965,5 +966,327 @@ final class TroveUITests: XCTestCase {
         for _ in 0..<attempts where !element.exists {
             app.swipeUp()
         }
+    }
+
+    // MARK: - 006 Mark as sold
+
+    /// `006` criteria 6 and 7 on the seeded sold collection (`-seedSold`):
+    /// the Dashboard's Sold card says what it says, it lands on the Items
+    /// tab's Sold side, the sales are listed most recent first with each
+    /// row's gain or loss in the label VoiceOver actually reads, the summary
+    /// under the title matches the card, Sort By is gone from that side and
+    /// the "…" is not, and the switch goes back to Owned in one tap.
+    ///
+    /// **The only test in this target that launches with `-seedSold`.** Like
+    /// `-seedSellPlan`, the argument is its own: every other test here keeps
+    /// `launchApp()` and its empty collection, which is what makes
+    /// `testEmptyCollectionOffersImportAndSettingsButNotExport` the mutation
+    /// for "`-uiTesting` alone seeds nothing".
+    ///
+    /// The rows are `.combine`d, so each is read as one label — which is what
+    /// turns criterion 7's "unmistakable whether it sold at a gain or at a
+    /// loss" into an automated check rather than a look at the colour.
+    ///
+    /// Its mutation: reversing `ItemListViewModel.areInSoldOrder`'s date
+    /// comparison must turn the order assertion red — the seed's two sales
+    /// are nine days apart.
+    @MainActor
+    func testTheSoldCardLandsOnTheSoldSideWhichListsSalesMostRecentFirst() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSold"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        // The card, composed by `DashboardViewModel` out of `SaleCopy` — the
+        // count and the proceeds, then the realised line. Read off the
+        // combined label, which is the announcement as well as the plate.
+        let card = app.buttons["dashboard.soldCard"]
+        XCTAssertTrue(card.waitForExistence(timeout: 5), "the seeded collection has two sales, so the Sold card must show")
+        XCTAssertTrue(card.label.contains("2 items \u{00B7} $1,800"), "the Sold card reads \"\(card.label)\"")
+        XCTAssertTrue(card.label.contains("+$200 vs paid"), "the Sold card reads \"\(card.label)\"")
+
+        card.tap()
+
+        // Criterion 6's last clause: the card is a way through to the Sold
+        // side, not just a figure.
+        let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
+        XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the card should land on the Items tab")
+        XCTAssertEqual(switchControl.value as? String, "Sold", "the card should land on the Sold side, not on Owned")
+
+        let telecaster = soldRow(in: app, named: "Telecaster")
+        let bluesJunior = soldRow(in: app, named: "Blues Junior")
+        XCTAssertTrue(telecaster.waitForExistence(timeout: 5), "no Sold-side row for the Telecaster")
+        XCTAssertTrue(bluesJunior.exists, "no Sold-side row for the Blues Junior")
+
+        // Most recent first, read off the screen: the Telecaster sold three
+        // days ago, the Blues Junior twelve.
+        XCTAssertLessThan(
+            telecaster.frame.minY,
+            bluesJunior.frame.minY,
+            "the Sold side must list the most recent sale first"
+        )
+
+        // Criterion 7's "unmistakable ... and by how much", in words, in the
+        // label. The copy is repeated here because a UI-test target can't
+        // import the app; `SaleCopyTests` pins the source of the sentence.
+        XCTAssertTrue(telecaster.label.contains("Gain $350"), "the Telecaster's row reads \"\(telecaster.label)\"")
+        XCTAssertTrue(bluesJunior.label.contains("Loss $150"), "the Blues Junior's row reads \"\(bluesJunior.label)\"")
+
+        // The summary under the title, which is the card's own sum — matched
+        // case-insensitively because `monoLabel` raises this line on screen.
+        let summary = app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS[c] %@", "2 sold \u{00B7} $1,800 \u{00B7} +$200 vs paid"))
+            .firstMatch
+        XCTAssertTrue(summary.exists, "the Sold side's summary must match the card")
+
+        // Criterion 7: Sort By is hidden on this side and the "…" is not.
+        XCTAssertFalse(app.buttons["sortOptions.items"].exists, "Sort By must not show on the Sold side")
+        XCTAssertTrue(app.buttons["moreActions.items"].exists, "the overflow badge stays on the Sold side (criterion 7a)")
+
+        // One tap back to Owned, which is a different list and gets its
+        // narrowing controls back.
+        switchControl.buttons["Owned"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Leica M6"].waitForExistence(timeout: 5),
+            "the Owned side should list the item that wasn't sold"
+        )
+        XCTAssertFalse(soldRow(in: app, named: "Telecaster").exists, "a sold item must not appear on the Owned side")
+        XCTAssertTrue(app.buttons["sortOptions.items"].waitForExistence(timeout: 5), "Sort By returns on the Owned side")
+    }
+
+    /// Criteria 1, 2, 3, 8 and 9 end to end on an item this test adds itself
+    /// (`-uiTesting`, so the collection starts empty): the menu's **Mark as
+    /// sold…**, the sheet with the price blank because the item has no
+    /// current value, the sold page's mark and its three actions, the item
+    /// gone from the Owned side and present on the Sold one, and **Return to
+    /// collection…** putting it back.
+    ///
+    /// The Owned side it leaves behind says "Everything's sold." rather than
+    /// the first-launch "No gear yet" — spec Decision 12 and `T015a`, which
+    /// shipped after `plan.md` §8 was written.
+    ///
+    /// Its mutation: `ItemSaleStore.returnToCollection` keeping `soldDate`
+    /// (setting the four fields back by hand instead of `sale = nil`) must
+    /// turn the last half red.
+    @MainActor
+    func testMarkingAnItemSoldMovesItToTheSoldSideAndReturnRestoresIt() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        let name = "Rolleiflex \(UUID().uuidString.prefix(6))"
+        addItem(to: app, named: name)
+        openDetail(in: app, named: name)
+
+        let menu = app.buttons["More actions for this item"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5), "the item page must offer its overflow menu")
+        menu.tap()
+        XCTAssertTrue(app.buttons["Edit"].waitForExistence(timeout: 5), "an owned item's menu still offers Edit")
+        let markAsSold = app.buttons["Mark as sold\u{2026}"]
+        XCTAssertTrue(markAsSold.exists, "criterion 1: an owned item's menu offers Mark as sold…")
+        markAsSold.tap()
+
+        // Criterion 2: pre-filled with the current value *when the item has
+        // one*. This one was added through the form with a price paid and no
+        // value, so the field is empty and the sale price is typed.
+        let price = app.textFields["sale.sheet.price"]
+        XCTAssertTrue(price.waitForExistence(timeout: 5), "the sale sheet didn't present")
+        // An empty `TextField` reports its *placeholder* as its value, and
+        // this field's placeholder is "0" — so a blank price reads as "0"
+        // here. What must not appear is a figure: the item's paid price is
+        // 1,850, and a sheet seeded from the wrong source would show it
+        // (G19, unit-tested; this is the same claim on screen).
+        XCTAssertEqual(price.value as? String, "0", "an item with no current value must open the sheet with the price blank")
+        price.tap()
+        price.typeText("500")
+        app.buttons["sale.sheet.confirm"].tap()
+
+        // Criterion 8: the page says sold, and offers exactly the three
+        // actions a sold item has.
+        XCTAssertTrue(
+            element(in: app, identifiedBy: "sold.mark").waitForExistence(timeout: 5),
+            "the sold item's page must carry the Sold mark"
+        )
+        app.buttons["Back"].tap()
+
+        // Criterion 4: gone from the Owned side, which this person has just
+        // emptied by selling — Decision 12's state, not the first-launch one.
+        XCTAssertTrue(
+            app.staticTexts["Everything's sold."].waitForExistence(timeout: 5),
+            "the Owned side should be empty, and say so in Decision 12's words"
+        )
+
+        let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
+        switchControl.buttons["Sold"].tap()
+        let row = soldRow(in: app, named: name)
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "the sold item must be on the Sold side")
+        XCTAssertTrue(row.label.contains("$500"), "the row reads \"\(row.label)\"")
+
+        app.staticTexts[name].tap()
+
+        // Criterion 8: the sold page's menu offers exactly these three, and
+        // not the owned page's Edit — checked from the open menu that
+        // criterion 9's Return is then taken from, so nothing has to dismiss
+        // a system menu without choosing anything.
+        menu.tap()
+        XCTAssertTrue(app.buttons["Edit sale\u{2026}"].waitForExistence(timeout: 5), "criterion 8: a sold item offers Edit sale…")
+        XCTAssertTrue(app.buttons["Delete"].exists, "criterion 8: a sold item still offers Delete")
+        XCTAssertFalse(app.buttons["Edit"].exists, "a sold item's content is read-only — Edit belongs to the owned page")
+
+        // Criterion 9: Return asks first, then restores it.
+        let returnRow = app.buttons["Return to collection\u{2026}"]
+        XCTAssertTrue(returnRow.exists, "criterion 8: a sold item offers Return to collection…")
+        returnRow.tap()
+        let confirm = app.buttons["Return"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Return to collection… must ask first")
+        confirm.tap()
+
+        XCTAssertTrue(
+            element(in: app, identifiedBy: "sold.mark").waitForNonExistence(timeout: 5),
+            "the Sold mark should go with the sale"
+        )
+        app.buttons["Back"].tap()
+
+        XCTAssertTrue(
+            app.staticTexts["Nothing sold yet."].waitForExistence(timeout: 5),
+            "the last sale was returned, so the Sold side is empty again"
+        )
+        switchControl.buttons["Owned"].tap()
+        XCTAssertTrue(
+            app.staticTexts[name].waitForExistence(timeout: 5),
+            "the returned item should be back in the collection"
+        )
+    }
+
+    /// Criterion 10 on the seeded Sell Plan (`-seedSellPlan`): a row's **Mark
+    /// as sold…**, the price already filled in with that item's current
+    /// value, and afterwards a **Sold** figure in the header with the count
+    /// beneath it, the item gone from the candidates, and the sale listed in
+    /// the Sold section below them.
+    ///
+    /// The figure is read by `sellPlan.soldFigure`, the identifier `plan.md`
+    /// §3 and §8 name, which `T017a` shipped: the cell is one `.combine`d
+    /// element now, so its label carries the header, the money and the count
+    /// in one string — "Sold", "$640" and "1 item" are no longer three loose
+    /// static texts to hunt above the candidates header, and no position is
+    /// needed to tell them from the Sold *section*'s identical words below.
+    ///
+    /// Its mutation: `SellPlanViewModel.markSold` passing `toward: nil` must
+    /// turn this red — a sale that points at no plan leaves `hasSales` false,
+    /// and the header goes back to two figures with no Sold section under
+    /// them.
+    @MainActor
+    func testASellPlanRowSoldFromThePlanShowsTheSoldFigure() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSellPlan"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Wishlist"].tap()
+        openDetail(in: app, named: "Summicron 35mm f/2")
+        let findItemsToSell = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Find items to sell"))
+            .firstMatch
+        XCTAssertTrue(findItemsToSell.waitForExistence(timeout: 5), "the wishlist detail must offer a way into the Sell Plan")
+        scrollUntilHittable(findItemsToSell, in: app)
+        findItemsToSell.tap()
+
+        // The strip belongs to the card above it: each row draws its own, so
+        // the one to tap is the first that starts below the Blues Junior's
+        // card.
+        let card = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Blues Junior"))
+            .firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 5), "the seeded plan must offer the Blues Junior as a candidate")
+        let strip = app.buttons
+            .matching(identifier: "sellPlan.row.markAsSold")
+            .allElementsBoundByIndex
+            .filter { $0.frame.minY > card.frame.minY }
+            .min { $0.frame.minY < $1.frame.minY }
+        guard let markAsSold = strip else {
+            return XCTFail("the Blues Junior's row must offer Mark as sold…")
+        }
+        scrollUntilHittable(markAsSold, in: app)
+        markAsSold.tap()
+
+        // Criterion 2's pre-fill, from the plan: the Blues Junior is valued
+        // at $640, so the sheet opens on it and this test confirms it
+        // unchanged.
+        let price = app.textFields["sale.sheet.price"]
+        XCTAssertTrue(price.waitForExistence(timeout: 5), "the sale sheet didn't present")
+        XCTAssertEqual(price.value as? String, "640", "the sheet must pre-fill with the item's current value")
+        app.buttons["sale.sheet.confirm"].tap()
+
+        // Everything above the candidates header is the figures card.
+        // Matched case-insensitively, as every `monoLabel` line here is: the
+        // accessibility label comes back raised on some snapshots and in the
+        // source's own case on others, and which one is nothing this test is
+        // about.
+        let candidatesHeader = app.staticTexts
+            .matching(NSPredicate(format: "label ==[c] %@", "Sell candidates"))
+            .firstMatch
+        XCTAssertTrue(candidatesHeader.waitForExistence(timeout: 5))
+        let headerBand = candidatesHeader.frame.minY
+        let soldFigure = element(in: app, identifiedBy: "sellPlan.soldFigure")
+        XCTAssertTrue(
+            soldFigure.waitForExistence(timeout: 5),
+            "the plan's header should carry a Sold figure once something has been sold toward it"
+        )
+        // One element, one label: the header, the money and the count in the
+        // order the cell stacks them. Matched case-insensitively, as every
+        // `monoLabel` line here is.
+        let announced = soldFigure.label.lowercased()
+        for text in ["sold", "$640", "1 item"] {
+            XCTAssertTrue(
+                announced.contains(text),
+                "the Sold figure should read $640 for 1 item — its label is \"\(soldFigure.label)\""
+            )
+        }
+
+        // Nothing is subtracted from the cost: it still reads the estimate.
+        XCTAssertTrue(
+            staticText(in: app, labelled: "$2,400", above: headerBand),
+            "the estimated cost must be untouched by the sale"
+        )
+
+        // Criterion 4: a sold item is no candidate. The card is a button; the
+        // Sold section's row below is not, so this can't match it.
+        XCTAssertFalse(
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Blues Junior")).firstMatch.exists,
+            "a sold item must leave the candidate list"
+        )
+
+        // And the Sold section under the candidates lists the sale.
+        let soldEntry = soldRow(in: app, named: "Blues Junior", precededBy: "Sold")
+        XCTAssertTrue(soldEntry.waitForExistence(timeout: 5), "the plan's Sold section should list the sale")
+        XCTAssertGreaterThan(soldEntry.frame.minY, headerBand, "the Sold section sits under the candidates")
+        XCTAssertTrue(soldEntry.label.contains("$640"), "the Sold section's row reads \"\(soldEntry.label)\"")
+    }
+
+    /// The Sold side's row for one item — the `.combine`d element whose label
+    /// is the whole announcement ("Telecaster, Sold Sep 11, 2026, $1,250,
+    /// Gain $350 vs paid"), not the plain name inside it. The comma is what
+    /// tells the two apart.
+    ///
+    /// `precededBy` is for the Sell Plan's own Sold section, whose row draws
+    /// the mark *before* the name (spec Decision 14), so its combined label
+    /// opens "Sold, Blues Junior, …" where the Items tab's opens with the
+    /// name. Matched case-insensitively because that mark is a `monoLabel`,
+    /// which comes back raised on some snapshots and in the source's own case
+    /// on others — the same reason every other `monoLabel` line here is.
+    @MainActor
+    private func soldRow(in app: XCUIApplication, named name: String, precededBy mark: String? = nil) -> XCUIElement {
+        let opening = mark.map { "\($0), \(name)," } ?? "\(name),"
+        return app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH[c] %@", opening)).firstMatch
+    }
+
+    /// Whether some text with exactly this label sits above `y` on screen —
+    /// the way the Sell Plan's header is told from the list beneath it, since
+    /// the same words appear in both.
+    @MainActor
+    private func staticText(in app: XCUIApplication, labelled label: String, above y: CGFloat) -> Bool {
+        app.staticTexts
+            .matching(NSPredicate(format: "label ==[c] %@", label))
+            .allElementsBoundByIndex
+            .contains { $0.frame.minY < y }
     }
 }

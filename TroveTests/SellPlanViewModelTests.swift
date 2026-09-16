@@ -478,6 +478,8 @@ struct SellPlanFiguresTests {
 struct SellPlanFramingTests {
     /// Words that would each be a figure or caption framing the comparison as a
     /// gap to close.
+    private let soldOn = Date(timeIntervalSince1970: 1_770_000_000)
+
     private static let framingTerms = [
         "surplus", "shortfall", "shortFall", "deficit", "remaining", "toGo",
         "stillNeed", "covers", "coverage", "gap", "progress", "percentFunded",
@@ -564,6 +566,36 @@ struct SellPlanFramingTests {
         #expect(viewModel.estimatedCostCents != viewModel.selectedValueCents)
         #expect(viewModel.estimatedCostCents == 240_000)
         #expect(viewModel.selectedValueCents == 90_000)
+    }
+
+    /// 006, G10: the third figure joins the other two on the same terms.
+    ///
+    /// A sale is the one thing that could plausibly be netted off — "you've
+    /// already raised $950, so you need $1,450" is exactly the shortfall the
+    /// spec forbids, arriving from a new direction. So, each pinned to a
+    /// literal read off the fixture: the sold figure is the sale's own price,
+    /// the cost is untouched by it, and the selected total is unmoved.
+    ///
+    /// That no *member* of the type reads as the difference between the three
+    /// is a separate claim, guarded separately by the term scan in
+    /// `theViewModelOffersNoSurplusOrShortfallFigure`. Asserting it here, over
+    /// three figures already pinned by literal, could only restate arithmetic
+    /// these expectations have already fixed — a tautology, not a check.
+    @Test func theSoldFigureIsAThirdIndependentFigureAndTheCostIsUntouched() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(costCents: 240_000, into: context)
+        let selected = owned("Ready to sell", desire: 1, valueCents: 90_000, into: context)
+        let toSell = owned("Already gone", desire: 1, valueCents: 100_000, into: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id)
+        viewModel.load()
+        viewModel.toggle(selected)
+        #expect(viewModel.markSold(toSell, sale: Sale(date: soldOn, priceCents: 95_000, location: nil, note: nil)))
+
+        #expect(viewModel.soldValueCents == 95_000)
+        #expect(viewModel.selectedValueCents == 90_000)
+        #expect(viewModel.estimatedCostCents == 240_000, "a sale must not be netted off the cost")
     }
 }
 
@@ -800,4 +832,236 @@ struct SellPlanMarketReaderTests {
 private struct TestFailure: Error, CustomStringConvertible {
     let description: String
     init(_ description: String) { self.description = description }
+}
+
+/// 006/T011. Sales recorded against this wishlist item (spec criteria 10 and
+/// 11, plan §3 and Q14).
+///
+/// The Sold figure is read off `wishlistItem.itemsSoldToward`, so the claim
+/// under test throughout is that the *link* decides: a sale recorded from this
+/// plan is on it, one recorded anywhere else is not, and either way the item
+/// leaves the pool of things still to offer.
+@Suite("SellPlanViewModel — sales toward the plan")
+struct SellPlanSalesTests {
+    private let soldOn = Date(timeIntervalSince1970: 1_770_000_000)
+    private let now = Date(timeIntervalSince1970: 1_780_000_000)
+
+    private func sale(_ priceCents: Int, on date: Date? = nil) -> Sale {
+        Sale(date: date ?? soldOn, priceCents: priceCents, location: "Reverb", note: nil)
+    }
+
+    /// G6 and G12 together, which is how the person meets them: Mark as sold…
+    /// from a row records a sale pointing at *this* plan, and the row is gone
+    /// from the candidates it was tapped in.
+    ///
+    /// The link assertion refetches on a second `ModelContext` — the T003
+    /// rule: a same-context refetch hands back the object carrying unsaved
+    /// changes and would pass whether or not `markSold` saved.
+    @Test func aSaleFromThePlanPointsAtItAndTheRowLeavesTheCandidates() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let plan = wanted(costCents: 240_000, into: context)
+        let item = owned("Ready to sell", desire: 1, valueCents: 90_000, into: context)
+        _ = owned("Would let it go", desire: 2, valueCents: 40_000, into: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+        #expect(viewModel.candidates.map(\.name) == ["Ready to sell", "Would let it go"])
+
+        let recorded = viewModel.markSold(item, sale: sale(95_000))
+
+        #expect(recorded)
+        #expect(viewModel.saveFailureMessage == nil)
+        #expect(viewModel.candidates.map(\.name) == ["Would let it go"], "the sold row leaves the candidates")
+        #expect(viewModel.soldItems.map(\.name) == ["Ready to sell"])
+        #expect(viewModel.soldCount == 1)
+        #expect(viewModel.soldValueCents == 95_000)
+        #expect(viewModel.hasSales)
+
+        let elsewhere = ModelContext(container)
+        let stored = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first { $0.name == "Ready to sell" })
+        #expect(stored.soldTowardWishlistItem?.id == plan.id, "the sale points at the plan it was recorded from")
+        #expect(stored.sale?.priceCents == 95_000)
+        #expect(stored.sale?.date == soldOn)
+        let storedPlan = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(storedPlan.itemsSoldToward?.map(\.name) == ["Ready to sell"])
+    }
+
+    /// G12 on its own, and the half `markSold` can't show: an item sold before
+    /// this screen was ever opened is not a candidate either — not at desire 1
+    /// with a value, the most qualifying row there is. It reaches neither
+    /// count behind the empty reasons, so a collection of nothing but sold
+    /// gear reads as owning nothing rather than as a pool of keepers.
+    @Test func aSoldItemIsNeverACandidateEvenAtTheLowestDesire() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(into: context)
+        let gone = owned("Already gone", desire: 1, valueCents: 90_000, into: context)
+        _ = owned("Still here", desire: 2, valueCents: 40_000, into: context)
+        try ItemSaleStore.markSold(gone, sale: sale(95_000), toward: nil, at: now, in: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+
+        #expect(viewModel.candidates.map(\.name) == ["Still here"])
+        #expect(viewModel.ownedCount == 1, "a sold item is not owned gear this screen counts")
+        #expect(viewModel.lowDesireCount == 1)
+    }
+
+    /// Criterion 11 from this side: sold from the detail page, the sale points
+    /// at no plan, so no plan lists it. The item is still gone from the pool —
+    /// the two facts are independent, and only the link decides the first.
+    @Test func aSaleRecordedFromTheDetailIsOnNoPlan() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(into: context)
+        let gone = owned("Sold from its page", desire: 1, valueCents: 90_000, into: context)
+        try ItemSaleStore.markSold(gone, sale: sale(95_000), toward: nil, at: now, in: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+
+        #expect(viewModel.soldItems.isEmpty)
+        #expect(viewModel.soldCount == 0)
+        #expect(viewModel.soldValueCents == 0)
+        #expect(viewModel.hasSales == false)
+        #expect(viewModel.candidates.isEmpty)
+    }
+
+    /// Most recent sale first — `ItemListViewModel.areInSoldOrder`, the Sold
+    /// side's comparator, not a second one written here.
+    @Test func soldItemsReadMostRecentSaleFirst() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(into: context)
+        let dates: [(String, Date)] = [
+            ("Middle", soldOn.addingTimeInterval(-86_400)),
+            ("Oldest", soldOn.addingTimeInterval(-864_000)),
+            ("Newest", soldOn),
+        ]
+        for (name, date) in dates {
+            let item = owned(name, desire: 1, valueCents: 90_000, into: context)
+            try ItemSaleStore.markSold(item, sale: sale(10_000, on: date), toward: plan, at: now, in: context)
+        }
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+
+        #expect(viewModel.soldItems.map(\.name) == ["Newest", "Middle", "Oldest"])
+        #expect(viewModel.soldValueCents == 30_000)
+    }
+
+    /// G11. Money already raised counts on the same side as money a selection
+    /// would raise, so sales alone can turn the cue over with nothing ticked.
+    @Test func salesAloneCanMeetTheCost() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(costCents: 240_000, into: context)
+        let item = owned("Ready to sell", desire: 1, valueCents: 90_000, into: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+        #expect(viewModel.markSold(item, sale: sale(250_000)))
+
+        #expect(viewModel.selectedCount == 0)
+        #expect(viewModel.selectedValueCents == 0)
+        #expect(viewModel.selectedValueMeetsCost, "sales alone reaching the estimate reads as met")
+    }
+
+    /// The other side of G11: a sale that doesn't reach the estimate doesn't
+    /// turn the cue over, so "met" still means something.
+    @Test func salesShortOfTheCostDoNotMeetIt() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(costCents: 240_000, into: context)
+        let item = owned("Ready to sell", desire: 1, valueCents: 90_000, into: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+        #expect(viewModel.markSold(item, sale: sale(100_000)))
+
+        #expect(viewModel.soldValueCents == 100_000)
+        #expect(viewModel.selectedValueMeetsCost == false)
+    }
+
+    /// Selected plus Sold, neither alone: 150,000 sold and 90,000 selected is
+    /// exactly the 240,000 estimate.
+    @Test func theCueReadsTheSelectionAndTheSalesTogether() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(costCents: 240_000, into: context)
+        let toSell = owned("Already gone", desire: 1, valueCents: 160_000, into: context)
+        let toSelect = owned("Ready to sell", desire: 1, valueCents: 90_000, into: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+        #expect(viewModel.markSold(toSell, sale: sale(150_000)))
+        #expect(viewModel.selectedValueMeetsCost == false, "the sale alone is short")
+
+        viewModel.toggle(toSelect)
+
+        #expect(viewModel.selectedValueCents == 90_000)
+        #expect(viewModel.soldValueCents == 150_000)
+        #expect(viewModel.selectedValueMeetsCost, "together they reach the estimate")
+    }
+
+    /// A plan with no sales and nothing selected has made no claim either way,
+    /// even for a free wishlist item — the empty-plan rule, still true now
+    /// that two things can turn the cue over.
+    @Test func anEmptyPlanWithNoSalesNeverReadsAsMeetingTheCost() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(costCents: 0, into: context)
+        _ = owned("Ready to sell", desire: 1, valueCents: 50_000, into: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+
+        #expect(viewModel.hasSales == false)
+        #expect(viewModel.selectedValueMeetsCost == false)
+    }
+
+    /// P1's seeding, from this host: `.mark`, the price from the item's own
+    /// current value, today's date by this screen's injected clock, nothing
+    /// else pre-filled.
+    ///
+    /// The detail screen's factory lands in T012; its tests assert the two
+    /// hosts seed a given item identically, which is the claim this half
+    /// makes measurable.
+    @Test func theSheetIsSeededFromTheItemsCurrentValueAndTodaysDate() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(into: context)
+        let item = owned("Ready to sell", desire: 1, valueCents: 130_000, into: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+        let form = viewModel.makeSaleFormViewModel(for: item)
+
+        #expect(form.title == SaleCopy.sheetTitleMark)
+        #expect(form.confirmLabel == SaleCopy.confirmMark)
+        #expect(form.price == Decimal(string: "1300"))
+        #expect(form.date == now)
+        #expect(form.location.isEmpty)
+        #expect(form.note.isEmpty)
+    }
+
+    /// The sheet's state is the row it was opened from, and the view sets it
+    /// both ways — `.sheet(item:)` needs a settable optional, not a flag.
+    @Test func theSheetsRowIsViewSettableBothWays() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(into: context)
+        let item = owned("Ready to sell", desire: 1, valueCents: 130_000, into: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+
+        #expect(viewModel.saleCandidate == nil)
+        viewModel.saleCandidate = item
+        #expect(viewModel.saleCandidate?.id == item.id)
+        viewModel.saleCandidate = nil
+        #expect(viewModel.saleCandidate == nil)
+    }
 }

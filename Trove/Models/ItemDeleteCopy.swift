@@ -17,11 +17,20 @@ enum ItemDeleteCopy {
         "Delete \(name)?"
     }
 
-    /// All three consequences, deliberately: photos cascade, sell plans drop
-    /// it (the nullify direction — the *plan* loses the item, the item never
-    /// takes the plan down), and there's no undo. `ItemDeleteCopyTests` pins
-    /// each one.
-    static let message = "Its photos go too. Any sell plan it's on drops it. This can't be undone."
+    /// All three consequences of deleting an *owned* item, deliberately:
+    /// photos cascade, sell plans drop it (the nullify direction — the *plan*
+    /// loses the item, the item never takes the plan down), and there's no
+    /// undo. `ItemDeleteCopyTests` pins each one.
+    ///
+    /// A sold item is on no plan (006, P13), so its message drops the
+    /// sell-plan sentence and keeps the rest. Both entry points — the list's
+    /// swipe and the detail's menu — pass the item's own `isSold`, so neither
+    /// side can promise the wrong thing.
+    static func message(isSold: Bool) -> String {
+        isSold
+            ? "Its photos go too. This can't be undone."
+            : "Its photos go too. Any sell plan it's on drops it. This can't be undone."
+    }
 
     static let confirm = "Delete"
     static let cancel = "Keep"

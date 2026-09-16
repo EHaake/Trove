@@ -17,7 +17,9 @@ struct ImportServiceTests {
                 purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
                 purchaseLocation: "KEH", currentValueCents: 345_000, desireToKeep: 5,
                 conditionRawValue: "excellent", conditionNotes: nil,
-                serialNumber: nil, notes: "body, cap", reverbProductID: nil, year: nil, firstPhotoID: nil,
+                serialNumber: nil, notes: "body, cap", reverbProductID: nil, year: nil,
+                soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
+                firstPhotoID: nil,
                 firstPhotoAttribution: nil
             ),
         ], timeZone: zone)
@@ -29,6 +31,50 @@ struct ImportServiceTests {
         #expect(preview.skipped.isEmpty)
         #expect(preview.defaultedFieldCount == 0)
         #expect(preview.validated.first?.record.name == "Leica M6")
+    }
+
+    /// 006: a file carrying the four sale columns parses through the live
+    /// service the same way — the sold row arrives sold, the owned row
+    /// beside it owned, and nothing is counted as a default.
+    @Test func aSoldRowParsesThroughTheServiceAsASale() async throws {
+        let zone = TimeZone(identifier: "UTC")!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let soldOn = try #require(calendar.date(from: DateComponents(year: 2026, month: 7, day: 4)))
+        let table = ExportSchema.itemsTable([
+            ItemExportRecord(
+                name: "Blues Junior", categoryPath: "Music/Amps",
+                purchasePriceCents: 69_000, currencyCode: "USD",
+                purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+                purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
+                conditionRawValue: "good", conditionNotes: nil,
+                serialNumber: nil, notes: nil, reverbProductID: nil, year: nil,
+                soldDate: soldOn, salePriceCents: 55_000, saleLocation: "Reverb",
+                saleNote: "Shipped", firstPhotoID: nil, firstPhotoAttribution: nil
+            ),
+            ItemExportRecord(
+                name: "Strat", categoryPath: "Music/Guitars",
+                purchasePriceCents: 120_000, currencyCode: "USD",
+                purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+                purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
+                conditionRawValue: "good", conditionNotes: nil,
+                serialNumber: nil, notes: nil, reverbProductID: nil, year: nil,
+                soldDate: nil, salePriceCents: nil, saleLocation: nil,
+                saleNote: nil, firstPhotoID: nil, firstPhotoAttribution: nil
+            ),
+        ], timeZone: zone)
+        let url = try write(CSVWriter.write(table))
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let preview = try await service().parseItems(at: url, timeZone: zone)
+        #expect(preview.validated.count == 2)
+        #expect(preview.defaultedFieldCount == 0)
+        #expect(preview.validated[0].record.soldDate == soldOn)
+        #expect(preview.validated[0].record.salePriceCents == 55_000)
+        #expect(preview.validated[0].record.saleLocation == "Reverb")
+        #expect(preview.validated[0].record.saleNote == "Shipped")
+        #expect(preview.validated[1].record.soldDate == nil)
+        #expect(preview.validated[1].record.salePriceCents == nil)
     }
 
     @Test func aCanonicalWishlistFileParsesThroughTheWishlistMethod() async throws {

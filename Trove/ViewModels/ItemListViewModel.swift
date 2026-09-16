@@ -9,6 +9,11 @@ import SwiftData
 /// is called.
 /// That keeps the reload point explicit and the type trivially testable,
 /// rather than hiding fetches inside property observers.
+///
+/// Since 006 it owns both halves of the Items tab: one fetch per `load()`,
+/// split into the owned rows every existing member derives from and the sold
+/// rows the Sold side shows (plan §4). `show(_:)` is the only way the side
+/// changes, and changing it clears every narrowing (plan Q15).
 @Observable
 final class ItemListViewModel {
     /// Most orders have one sensible direction — keepers and most recent
@@ -53,6 +58,20 @@ final class ItemListViewModel {
         }
     }
 
+    /// Which half of the Items tab is on screen (006, plan Q4). Plain
+    /// `@Observable` state with no store behind it, so the tab opens on Owned
+    /// at every launch by construction and keeps its side across tab switches
+    /// within one.
+    enum Side: Hashable {
+        case owned
+        case sold
+    }
+
+    /// Read-only from outside: `show(_:)` is the only way it changes, because
+    /// changing side also clears every narrowing (plan Q15) and a plain
+    /// setter would let a binding skip that.
+    private(set) var side: Side = .owned
+
     var categoryFilter: String = ""
 
     /// Free text over name and serial number. Narrows the same set the
@@ -96,11 +115,65 @@ final class ItemListViewModel {
     /// need opposite invitations.
     private(set) var totalCount = 0
 
+    /// The Sold side's rows, in the Sold side's own order (plan Q9). Never
+    /// narrowed: `show(.sold)` cleared the three filters on the way in, so
+    /// what this holds is every sale.
+    private(set) var soldItems: [Item] = []
+
+    /// Count, proceeds and realised gain over `soldItems`, summed by
+    /// `SaleOutcome.totals` rather than here — the Dashboard card reads the
+    /// same function, which is what makes "the summary matches the card" one
+    /// sum instead of two that agree (plan §4).
+    private(set) var soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)
+
+    /// The line above the Sold rows — "3 sold · $2,400 · +$350 vs paid", and
+    /// "0 sold · $0" when nothing has been sold (spec Decision 13, replacing
+    /// Decision 11's hide-at-zero).
+    ///
+    /// Non-optional on purpose: the header renders this in the same slot the
+    /// Owned side's item stats occupy, and the reason Decision 13 exists is
+    /// that an absent line let the `SideSwitch` above it jump as the sides
+    /// changed. A `String?` here would put that jump one `if let` away; the
+    /// type is what rules it out. The zero wording itself lives in
+    /// `SaleCopy`, not here.
+    var soldSummaryLine: String {
+        SaleCopy.soldSideSummary(soldTotals)
+    }
+
     var isEmpty: Bool { items.isEmpty }
 
     /// Which empty state applies, or `nil` when there's something to show.
+    ///
+    /// The Sold side doesn't go through `ListEmptyReason.reason` at all (plan
+    /// Q9): it carries no narrowing to weigh — `show(.sold)` cleared all three
+    /// — so its emptiness has exactly one cause, and the only precedence left
+    /// is whether the collection might still be arriving.
     var emptyReason: ListEmptyReason? {
-        ListEmptyReason.reason(
+        switch side {
+        case .owned:
+            ownedEmptyReason
+        case .sold:
+            if !soldItems.isEmpty {
+                nil
+            } else if syncMonitor.mayStillBeImporting {
+                .stillSyncing
+            } else {
+                .nothingSold
+            }
+        }
+    }
+
+    /// The Owned side's reason, with spec Decision 12 layered on top of the
+    /// shared rule rather than inside it.
+    ///
+    /// `reason(...)` decides everything first — which is what keeps
+    /// `stillSyncing` winning while the collection may still be arriving, and
+    /// what leaves a narrowed-to-nothing side with its filter copy. Only the
+    /// `.nothingAdded` it hands back is reconsidered here, and only when
+    /// something has been sold: an Owned side emptied by selling is not a
+    /// first launch, so it says so (plan §4, "The emptied Owned side").
+    private var ownedEmptyReason: ListEmptyReason? {
+        let reason = ListEmptyReason.reason(
             totalCount: totalCount,
             visibleCount: items.count,
             searchText: searchText,
@@ -108,6 +181,8 @@ final class ItemListViewModel {
             showsOnlyUnvalued: showsOnlyUnvalued,
             mayStillBeImporting: syncMonitor.mayStillBeImporting
         )
+        guard reason == .nothingAdded, !soldItems.isEmpty else { return reason }
+        return .everythingSold
     }
 
     /// Combined current value of the items on screen, so the header total
@@ -163,7 +238,8 @@ final class ItemListViewModel {
     /// exactly the way a category or query does, so it blocks reordering
     /// for the same reason.
     var canReorder: Bool {
-        sortOrder == .custom
+        side == .owned
+            && sortOrder == .custom
             && categoryFilter.isEmpty
             && SearchMatching.normalized(searchText).isEmpty
             && !showsOnlyUnvalued
@@ -178,30 +254,53 @@ final class ItemListViewModel {
     /// `SyncMonitor.completedImports`.
     var completedImports: Int { syncMonitor.completedImports }
 
+    /// The one way the side changes (plan Q15): it sets `side` and, whenever
+    /// that is an actual change, clears every narrowing before reloading.
+    ///
+    /// Both directions, deliberately. Owned is "today's Items list", never
+    /// today's list under a filter left behind by a visit to Sold; and the
+    /// Sold side can never carry a narrowing it doesn't render a control for
+    /// — which is what lets a CSV exported from there be the complete record,
+    /// and what lets `emptyReason` skip the precedence rules on that side.
+    /// Asking for the side already on screen leaves the narrowing alone: it
+    /// is not a change, and the router's `.category`/`.unvalued` requests call
+    /// this before writing the narrowing they came to set.
+    func show(_ side: Side) {
+        if side != self.side {
+            self.side = side
+            categoryFilter = ""
+            searchText = ""
+            showsOnlyUnvalued = false
+        }
+        load()
+    }
+
     func load() {
         loadFailureMessage = nil
         do {
+            // One fetch, split once (plan §4): every Owned-side figure below
+            // derives from `owned`, so a sold item can't reach `items`,
+            // `totalCount`, the chips, the header totals or the market
+            // summaries by being missed at one of six call sites.
             let all = try modelContext.fetch(FetchDescriptor<Item>())
-            totalCount = all.count
+            let owned = all.filter { !$0.isSold }
+            let sold = all.filter(\.isSold)
+
+            totalCount = owned.count
             // Before the sort, not after: the Market orders read these.
-            marketSummaries = Self.summaries(for: all, in: modelContext, now: now())
-            items = all
-                // `isWithin`, not `matchesPrefix`: a chip is a category that
-                // exists, so "Music/Amps" must not also match
-                // "Music/Amplifiers". The typing rule stays in the picker.
-                .filter { CategoryPathHelper.path($0.categoryPath, isWithin: categoryFilter) }
-                // Design's field says "name, brand, serial"; there is no brand
-                // in the schema, same gap `ItemRow`'s meta line works around.
-                .filter { SearchMatching.matches(query: searchText, in: [$0.name, $0.serialNumber]) }
-                .filter { !showsOnlyUnvalued || $0.currentValueCents == nil }
-                .sorted(by: isOrderedBefore)
+            marketSummaries = Self.summaries(for: owned, in: modelContext, now: now())
+            items = narrowed(owned).sorted(by: isOrderedBefore)
             // Built from the unfiltered fetch, so the chips stay put as the
             // filter changes — and from owned items only, so the row doesn't
-            // offer categories that only wishlist entries sit in.
+            // offer categories that only wishlist entries sit in, or ones
+            // nothing on this side is left in.
             categoryOptions = CategoryPathHelper.sortedDistinctPaths(
-                all.map { (path: $0.categoryPath, createdAt: $0.createdAt) }
+                owned.map { (path: $0.categoryPath, createdAt: $0.createdAt) }
             )
             categoryLabels = CategoryPathHelper.displayLabels(for: categoryOptions)
+
+            soldItems = sold.sorted(by: Self.areInSoldOrder)
+            soldTotals = SaleOutcome.totals(over: soldItems)
         } catch {
             loadFailureMessage = error.localizedDescription
             totalCount = 0
@@ -209,7 +308,26 @@ final class ItemListViewModel {
             categoryOptions = []
             categoryLabels = [:]
             marketSummaries = [:]
+            soldItems = []
+            soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)
         }
+    }
+
+    /// The three narrowings, in one place so the two sides can't drift: a
+    /// narrowing is about *which gear*, and sold gear still has a category, a
+    /// name and a value field (plan Q5). `items` is this over the owned half;
+    /// the CSV's sold rows are this over the sold half. On the Sold side it is
+    /// the identity, because `show(.sold)` cleared all three fields.
+    private func narrowed(_ candidates: [Item]) -> [Item] {
+        candidates
+            // `isWithin`, not `matchesPrefix`: a chip is a category that
+            // exists, so "Music/Amps" must not also match
+            // "Music/Amplifiers". The typing rule stays in the picker.
+            .filter { CategoryPathHelper.path($0.categoryPath, isWithin: categoryFilter) }
+            // Design's field says "name, brand, serial"; there is no brand
+            // in the schema, same gap `ItemRow`'s meta line works around.
+            .filter { SearchMatching.matches(query: searchText, in: [$0.name, $0.serialNumber]) }
+            .filter { !showsOnlyUnvalued || $0.currentValueCents == nil }
     }
 
     /// One fetch of the figure rows, narrowed to the items just fetched.
@@ -245,7 +363,11 @@ final class ItemListViewModel {
     /// wishlist entries themselves untouched — the same consequences
     /// `ItemDeleteCopy.message` promises before this runs.
     func delete(id: UUID) {
-        guard let item = items.first(where: { $0.id == id }) else { return }
+        // Both arrays: the Sold side has the same trailing swipe the Owned
+        // side does (P16), and it deletes through this one path.
+        guard let item = items.first(where: { $0.id == id })
+            ?? soldItems.first(where: { $0.id == id })
+        else { return }
 
         modelContext.delete(item)
         do {
@@ -367,9 +489,22 @@ final class ItemListViewModel {
     /// and disables (criterion 11's progress affordance).
     private(set) var isExporting = false
 
-    /// Whether the current view has anything to export (criterion 2): an
-    /// empty file is never produced.
-    var canExport: Bool { !items.isEmpty }
+    /// Whether the current view has anything to put in a CSV (criterion 2:
+    /// an empty file is never produced). Either side counts, because the CSV
+    /// carries both (plan Q5) — with only sold items in the collection, the
+    /// Owned side is empty and the file is still worth writing. The sold half
+    /// is counted *narrowed*, so a chip that excludes everything on both sides
+    /// still disables the row rather than producing a header-only file.
+    var canExportCSV: Bool { !items.isEmpty || !exportableSoldItems.isEmpty }
+
+    /// The PDF is the owned collection only, on this path as on Settings'
+    /// (plan Q5), so it gates on the owned half alone.
+    var canExportPDF: Bool { !items.isEmpty }
+
+    /// The sold rows a CSV exported from here would carry: the Sold side's
+    /// order, under the Owned side's *visible* narrowing, so the coverage
+    /// label stays true of both halves.
+    private var exportableSoldItems: [Item] { narrowed(soldItems) }
 
     /// Combined purchase price of the items on screen — the cover's "total
     /// paid", tracking the filter like `totalCurrentValueCents` does.
@@ -397,6 +532,30 @@ final class ItemListViewModel {
     static let documentTitle = "Owned Items"
     static let wholeCoverageLabel = "All items"
 
+    /// The Sold side's order (plan Q9): most recent sale first, then name
+    /// case-insensitively, then id — fully determined by the data, the
+    /// `SellPlanRanking` tie-break rule, so two sales on the same day can't
+    /// reshuffle between visits. Static for `documentTitle`'s reason:
+    /// Settings' export-everything sorts its sold rows with this very
+    /// function (Q5), so the CSV it writes and the Sold side the person
+    /// reads are one order, not two that happen to agree.
+    ///
+    /// An item with no sale sorts last rather than crashing or landing
+    /// somewhere plausible — it has no place on this side at all, and the
+    /// callers filter before sorting.
+    static func areInSoldOrder(_ lhs: Item, _ rhs: Item) -> Bool {
+        if lhs.soldDate != rhs.soldDate {
+            guard let left = lhs.soldDate else { return false }
+            guard let right = rhs.soldDate else { return true }
+            return left > right
+        }
+        let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+        if byName != .orderedSame {
+            return byName == .orderedAscending
+        }
+        return lhs.id.uuidString < rhs.id.uuidString
+    }
+
     /// Exports the visible items, in visible order, as the canonical CSV.
     /// Records are built from `items` as-is — never a refetch: visible order
     /// comes from `isOrderedBefore` over live filter/sort state and is not
@@ -404,11 +563,17 @@ final class ItemListViewModel {
     /// `!isBusy` since 012: one operation at a time across export *and*
     /// import, so their presentations can't race.
     func exportCSV() async {
-        guard canExport, !isBusy else { return }
+        guard canExportCSV, !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
-        let table = ExportSchema.itemsTable(items.map { ItemExportRecord(item: $0) })
+        // Owned first in visible order, then the sold rows in Sold-side order
+        // (plan Q5) — the same two orderings Settings' export-everything
+        // writes, which is what keeps 013's byte-identity true with a sale
+        // present.
+        let table = ExportSchema.itemsTable(
+            (items + exportableSoldItems).map { ItemExportRecord(item: $0) }
+        )
         let filename = ExportFilename.items(fileExtension: "csv")
         do {
             let url = try await exportService.exportCSV(table, filename: filename)
@@ -422,7 +587,7 @@ final class ItemListViewModel {
     /// snapshot rule as `exportCSV`; the cover's figures are this view
     /// model's own arithmetic, which is what criterion 8 measures.
     func exportPDF() async {
-        guard canExport, !isBusy else { return }
+        guard canExportPDF, !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
@@ -584,7 +749,7 @@ final class ItemListViewModel {
                    !knownPaths.contains(where: { $0.caseInsensitiveCompare(path) == .orderedSame }) {
                     knownPaths.append(path)
                 }
-                modelContext.insert(Item(
+                let item = Item(
                     name: record.name,
                     categoryPath: path,
                     purchasePriceCents: record.purchasePriceCents,
@@ -603,7 +768,21 @@ final class ItemListViewModel {
                     // the same question of the market as before it left.
                     reverbProductID: record.reverbProductID,
                     year: record.year
-                ))
+                )
+                modelContext.insert(item)
+                // 006 (plan §7, Q6): a row carrying both halves of the pair
+                // arrives sold. It points at no plan — an imported sale has
+                // no wishlist item on this device it could have funded
+                // (P11) — and `Item.sale` writes the four fields, so the
+                // date-without-price shape never reaches the store.
+                if let soldDate = record.soldDate, let salePriceCents = record.salePriceCents {
+                    item.sale = Sale(
+                        date: soldDate,
+                        priceCents: salePriceCents,
+                        location: record.saleLocation,
+                        note: record.saleNote
+                    )
+                }
             }
 
             do {

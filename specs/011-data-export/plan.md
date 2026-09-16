@@ -65,9 +65,11 @@ notes. Photos are the one exception (PDF only, per spec).
 
 *The two tables below are the historical record of the layout `011`
 shipped — 12 items columns, 7 wishlist columns. `002` appended
-`Reverb Product ID` and `Year` to both (`ExportSchema` is always
-current); the boundaries entry under "Recorded schema decisions" says
-how both widths keep importing.*
+`Reverb Product ID` and `Year` to both, and `006` appended `Sold Date`,
+`Sale Price`, `Sold At` and `Sale Note` to the items list alone — 18
+items columns, 9 wishlist columns as of `006` (`ExportSchema` is always
+current); the boundaries entries under "Recorded schema decisions" — `[12]` as first recorded, `[12, 14]` since `006` appended the sale columns — say
+how every shipped width keeps importing.*
 
 ### Items — `Trove-Items-YYYY-MM-DD.csv`, 12 columns, this order
 
@@ -171,6 +173,26 @@ how both widths keep importing.*
   rather than creates; normalizing storage (e.g. noon UTC) would be a
   data migration and was explicitly deferred. `012` inherits this
   caveat knowingly via this section.
+- **The sale is four appended columns, read as a pair** *(recorded
+  2026-09-13 at `006`/T007)*: `Sold Date`, `Sale Price`, `Sold At` and
+  `Sale Note` follow `Year` in the items list — 18 columns — and the
+  wishlist is untouched at 9. All four are blank on an owned item. On
+  the way back in they are **a pair, not four independent fields**:
+  the row is a sold item only when `Sold Date` and `Sale Price` both
+  parse; if either half is missing or unreadable, all four are dropped,
+  the item imports still owned, and the row counts *one* defaulted
+  field iff any of the four cells was non-blank — one per row, never
+  one per cell, because the four describe a single fact. The append-only
+  rule therefore grows the boundaries array to
+  `ExportSchema.itemSchemaBoundaries = [12, 14]`: 14 is the layout `002`
+  through `005` shipped, and `docs/samples/items-resaved.csv` is pinned
+  at that width as its fixture the way `items-partial.csv` is pinned at
+  12. One consequence of "visible order is positional" meets this
+  schema: a Settings export writes the owned rows first and the sold
+  rows after them, so an item sold, exported, re-imported and then
+  returned to the collection lands at the *end* of Custom order rather
+  than at its former place — inherent to there being no `sortOrder`
+  column, recorded here rather than fixed, and outside `006`'s scope.
 
 ### Money and date serialization
 

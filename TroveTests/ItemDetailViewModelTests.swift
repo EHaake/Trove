@@ -1367,3 +1367,436 @@ private struct TestFailure: Error, CustomStringConvertible {
     let description: String
     init(_ description: String) { self.description = description }
 }
+
+// MARK: - 006/T012: mark, edit, return
+
+/// The item's own page as the second host of a sale (006 plan §5): Mark as
+/// sold…, Edit sale… and Return to collection…, each through `ItemSaleStore`
+/// with one save.
+///
+/// Every persistence claim refetches on a **second `ModelContext`** (the T003
+/// rule): a same-context refetch hands back objects carrying unsaved changes
+/// and would pass whether or not the intent saved.
+@Suite("ItemDetailViewModel — sold")
+struct ItemDetailSoldTests {
+    private let soldOn = Date(timeIntervalSince1970: 1_770_000_000)
+    private let now = Date(timeIntervalSince1970: 1_780_000_000)
+
+    private func sale(_ priceCents: Int = 130_000, on date: Date? = nil) -> Sale {
+        Sale(date: date ?? soldOn, priceCents: priceCents, location: "Reverb", note: "Shipped Tuesday")
+    }
+
+    private let product = MarketProduct(
+        id: 126_161, slug: "fender-american-professional-ii-telecaster", title: "Fender American Professional II Telecaster",
+        usedLowCents: 100_000, usedTotal: 108, listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
+    )
+
+    /// One refresh's worth of local rows — figure, history point and match
+    /// snapshot — recorded exactly as a real refresh records them
+    /// (`ItemSaleStoreTests`' helper).
+    private func seedMarketRows(for subjectID: UUID, in context: ModelContext) throws {
+        let reading = MarketReading.figure(MarketFigure(
+            medianCents: 140_000, lowCents: 130_000, highCents: 150_000,
+            p10Cents: 132_000, p90Cents: 148_000,
+            count: 12, fetchedAt: soldOn, isTruncated: false, yearScope: .any
+        ))
+        try MarketLocalStore.record(reading, product: product, for: MarketSubjectKey(subjectID: subjectID, kind: .owned), in: context)
+    }
+
+    private func loaded(_ item: Item, in context: ModelContext) -> ItemDetailViewModel {
+        let viewModel = ItemDetailViewModel(modelContext: context, itemID: item.id, now: { self.now })
+        viewModel.load()
+        return viewModel
+    }
+
+    // MARK: - Mark as sold
+
+    /// G20, G5 and G6's detail half, together, because they are one action:
+    /// marking sold from the item's own page records the four fields and
+    /// nothing else — the item's own fields, its photos and its Reverb match
+    /// are as they were (Decision 1), the device's rows for *this* item are
+    /// gone and another item's are not (Decision 7), and the sale points at
+    /// no plan even though one exists to point at (criterion 11).
+    @Test func markSoldRecordsTheSaleOnNoPlanAndLeavesTheItemItselfAlone() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let purchasedOn = Date(timeIntervalSince1970: 1_000_000)
+        let item = Item(
+            name: "Telecaster",
+            categoryPath: "Music/Guitars",
+            purchasePriceCents: 100_000,
+            purchaseDate: purchasedOn,
+            serialNumber: "TL-1138",
+            purchaseLocation: "Guitar Center",
+            currentValueCents: 120_000,
+            desireToKeep: 2,
+            condition: .good,
+            conditionNotes: "Buckle rash",
+            notes: "Ash body",
+            sortOrder: 4,
+            photos: [Photo(imageData: Data([0xAB, 0xCD]), source: .device)],
+            reverbProductID: 126_161,
+            year: 1975
+        )
+        let other = Item(name: "Blues Junior", purchasePriceCents: 60_000, reverbProductID: 222)
+        // Present precisely so a detail-screen sale that reached for a plan
+        // would find one: with no wishlist item in the store, `toward:`
+        // could be anything at all and this test would still pass (G6).
+        let plan = WishlistItem(name: "Rickenbacker 330")
+        for model in [item, other] { context.insert(model) }
+        context.insert(plan)
+        try seedMarketRows(for: item.id, in: context)
+        try seedMarketRows(for: other.id, in: context)
+        try context.save()
+
+        let viewModel = loaded(item, in: context)
+        #expect(!viewModel.isSold)
+        #expect(viewModel.sale == nil)
+        #expect(viewModel.saleOutcome == nil)
+
+        #expect(viewModel.markSold(sale()))
+
+        #expect(viewModel.isSold)
+        #expect(viewModel.sale == sale())
+        #expect(viewModel.saleOutcome?.deltaCents == 30_000, "$1,300 against $1,000 paid is a $300 gain")
+
+        let elsewhere = ModelContext(container)
+        let stored = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first { $0.name == "Telecaster" })
+        #expect(stored.sale == sale())
+        #expect(stored.soldTowardWishlistItem == nil, "a sale from the item's own page is toward no plan (G6)")
+        #expect(stored.plannedForWishlistItems?.isEmpty == true)
+        #expect(stored.updatedAt == now, "the mark is an edit to the row (Q13)")
+
+        // G20: the sale is a state change, not an edit.
+        #expect(stored.categoryPath == "Music/Guitars")
+        #expect(stored.purchasePriceCents == 100_000)
+        #expect(stored.purchaseDate == purchasedOn)
+        #expect(stored.serialNumber == "TL-1138")
+        #expect(stored.purchaseLocation == "Guitar Center")
+        #expect(stored.currentValueCents == 120_000)
+        #expect(stored.desireToKeep == 2)
+        #expect(stored.condition == .good)
+        #expect(stored.conditionNotes == "Buckle rash")
+        #expect(stored.notes == "Ash body")
+        #expect(stored.sortOrder == 4, "the sale never touches the manual position")
+        #expect(stored.year == 1975)
+        #expect(stored.photos?.count == 1)
+        #expect(stored.photos?.first?.imageData == Data([0xAB, 0xCD]))
+        #expect(stored.reverbProductID == 126_161, "the match is kept (Decision 1) — only the local rows go")
+
+        // G5: this item's device rows, and only this item's.
+        #expect(try MarketLocalStore.figure(for: item.id, in: elsewhere) == nil, "the sold item's figure must be gone")
+        #expect(try MarketLocalStore.history(for: item.id, in: elsewhere).isEmpty, "its history must be gone")
+        #expect(try MarketLocalStore.snapshot(for: item.id, in: elsewhere) == nil, "its snapshot must be gone")
+        #expect(try MarketLocalStore.figure(for: other.id, in: elsewhere) != nil, "another item's figure must be untouched")
+        #expect(try MarketLocalStore.history(for: other.id, in: elsewhere).count == 1)
+        #expect(try MarketLocalStore.snapshot(for: other.id, in: elsewhere) != nil)
+    }
+
+    /// The sale drops every plan *selection* the item was on, through the
+    /// detail path as much as the plan's own (spec P6): the item survives its
+    /// sale, so nothing else drops them for it.
+    @Test func markSoldFromTheDetailLeavesTheItemOnNoSellPlan() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000)
+        let plan = WishlistItem(name: "Rickenbacker 330")
+        context.insert(item)
+        context.insert(plan)
+        plan.plannedSaleItems = [item]
+        try context.save()
+
+        #expect(loaded(item, in: context).markSold(sale()))
+
+        let elsewhere = ModelContext(container)
+        let storedPlan = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(storedPlan.plannedSaleItems?.isEmpty == true, "the sold item leaves every selection it was on")
+        #expect(storedPlan.itemsSoldToward?.isEmpty == true, "and it funds nothing, having been sold from its own page")
+    }
+
+    // MARK: - Edit sale
+
+    /// G21 through the detail path: an item sold *from a plan* and then
+    /// corrected on its own page keeps the funding link. Red if `editSale`
+    /// routes through `markSold(toward: nil)`, which would silently unfund
+    /// the plan the money was raised for.
+    @Test func editSaleKeepsAnEarlierPlanLink() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000)
+        let plan = WishlistItem(name: "Rickenbacker 330")
+        context.insert(item)
+        context.insert(plan)
+        try ItemSaleStore.markSold(item, sale: sale(), toward: plan, at: now, in: context)
+        try context.save()
+
+        let viewModel = loaded(item, in: context)
+        let corrected = Sale(date: soldOn.addingTimeInterval(3_600), priceCents: 125_000, location: "eBay", note: nil)
+        #expect(viewModel.editSale(corrected))
+        #expect(viewModel.sale == corrected)
+        #expect(viewModel.saleOutcome?.deltaCents == 25_000)
+
+        let elsewhere = ModelContext(container)
+        let stored = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first)
+        #expect(stored.sale == corrected, "the four fields are the edit's")
+        #expect(stored.soldTowardWishlistItem?.name == "Rickenbacker 330", "the edit must leave the funding link alone (G21)")
+        #expect(stored.updatedAt == now, "the edit bumps the row (Q13)")
+    }
+
+    // MARK: - Return to collection
+
+    /// G7 through the detail path: Return clears all five — the four sale
+    /// fields and the funding link (P12) — and the item is back in
+    /// `ItemListViewModel.items` **at its slot**, not appended, because
+    /// `sortOrder` was never touched. The list is built on a second context,
+    /// so it reads what was actually saved.
+    @Test func returnToCollectionClearsAllFiveAndRestoresTheItemsSlot() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        var created = Date(timeIntervalSince1970: 900_000)
+        var items: [Item] = []
+        for (position, name) in ["Alpha", "Bravo", "Charlie", "Delta"].enumerated() {
+            let item = Item(name: name, purchasePriceCents: 10_000, sortOrder: position)
+            item.createdAt = created
+            created = created.addingTimeInterval(60)
+            context.insert(item)
+            items.append(item)
+        }
+        let plan = WishlistItem(name: "Rickenbacker 330")
+        context.insert(plan)
+        let charlie = items[2]
+        try ItemSaleStore.markSold(charlie, sale: sale(), toward: plan, at: now, in: context)
+        try context.save()
+
+        let viewModel = loaded(charlie, in: context)
+        #expect(viewModel.isSold)
+        #expect(viewModel.returnToCollection())
+        #expect(!viewModel.isSold)
+        #expect(viewModel.sale == nil)
+        #expect(viewModel.saleOutcome == nil)
+
+        let elsewhere = ModelContext(container)
+        let returned = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first { $0.name == "Charlie" })
+        #expect(returned.soldDate == nil)
+        #expect(returned.salePriceCents == nil)
+        #expect(returned.saleLocation == nil)
+        #expect(returned.saleNote == nil)
+        #expect(returned.soldTowardWishlistItem == nil, "the returned item funds nothing (P12)")
+        #expect(returned.plannedForWishlistItems?.isEmpty == true, "it rejoins no plan")
+        #expect(returned.sortOrder == 2, "the return must not renumber the item")
+        #expect(returned.updatedAt == now, "the return bumps the row (Q13)")
+
+        let list = ItemListViewModel(modelContext: elsewhere)
+        list.sortOrder = .custom
+        list.load()
+        #expect(list.items.map(\.name) == ["Alpha", "Bravo", "Charlie", "Delta"], "the returned item is back in its own Custom-order slot")
+        #expect(list.soldItems.isEmpty, "and it is gone from the Sold side")
+    }
+
+    // MARK: - A refused save
+
+    /// The three intents' failure path, structurally — the shape
+    /// `aRefusedAdoptSaveReportsAndCloses` uses, and for the same reason: an
+    /// in-memory `save()` can't be made to throw on demand, and no
+    /// `SaveFailingContext` exists in this tree.
+    ///
+    /// What it guards is that a refused save leaves the item exactly as it is
+    /// stored — still owned after a refused mark, still sold after a refused
+    /// return: one save per intent, the rollback that discards the
+    /// half-written change, the `load()` that re-reads what is actually
+    /// there, and `false` as the answer, all of them inside the catch and the
+    /// rollback nowhere else.
+    ///
+    /// The Sell Plan's own `markSold(_:sale:)` is the fourth intent on the
+    /// same path and is scanned here beside the three, so one host can't drift
+    /// from the other. It carries one extra anchor: plan §3 has it report the
+    /// refusal in `saveFailureMessage`, which the detail screen surfaces its
+    /// own way.
+    @Test func aRefusedSaveRollsBackAndReReadsWhatIsStored() throws {
+        // (file, signature, the failure message the host must also set)
+        let intents: [(String, String, String?)] = [
+            ("Trove/ViewModels/ItemDetailViewModel.swift", "func markSold(_ sale: Sale) -> Bool", nil),
+            ("Trove/ViewModels/ItemDetailViewModel.swift", "func editSale(_ sale: Sale) -> Bool", nil),
+            ("Trove/ViewModels/ItemDetailViewModel.swift", "func returnToCollection() -> Bool", nil),
+            ("Trove/ViewModels/SellPlanViewModel.swift", "func markSold(_ item: Item, sale: Sale) -> Bool", "saveFailureMessage ="),
+        ]
+        var sources: [String: String] = [:]
+        for path in Set(intents.map(\.0)) {
+            sources[path] = try SourceScan.production(path)
+        }
+        for (path, signature, failureMessage) in intents {
+            let code = try #require(sources[path])
+            let bodies = SourceScan.closureBodies(after: signature, in: code)
+            try #require(bodies.count == 1, "expected exactly one \(signature) in \(path)")
+            let body = bodies[0]
+            #expect(body.ranges(of: "modelContext.save()").count == 1, "\(signature) must save exactly once")
+
+            let catches = SourceScan.closureBodies(after: "} catch", in: body)
+            try #require(catches.count == 1, "expected exactly one catch block in \(signature)")
+            #expect(catches[0].contains("modelContext.rollback()"), "\(signature): the refused save must roll the context back")
+            #expect(catches[0].contains("load()"), "\(signature): the refused save must re-read what is stored")
+            #expect(catches[0].contains("return false"), "\(signature): the refused save must answer false")
+            if let failureMessage {
+                #expect(catches[0].contains(failureMessage), "\(signature): the refused save must report itself (plan §3)")
+            }
+
+            let outsideCatch = body.replacingOccurrences(of: catches[0], with: "")
+            #expect(!outsideCatch.contains("rollback()"), "\(signature): rollback belongs to the failure path only")
+        }
+    }
+
+    // MARK: - Seeding the sheet (P1, G19)
+
+    /// The sheet is `.sheet(item:)` state the view writes both ways, the way
+    /// the plan row's `saleCandidate` is.
+    @Test func theSaleSheetIsViewSettableBothWays() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000)
+        context.insert(item)
+        try context.save()
+
+        let viewModel = loaded(item, in: context)
+        #expect(viewModel.saleSheet == nil)
+        viewModel.saleSheet = .mark
+        #expect(viewModel.saleSheet == .mark)
+        viewModel.saleSheet = nil
+        #expect(viewModel.saleSheet == nil)
+    }
+
+    /// G19, `.mark`: the price comes from the item's own current value and the
+    /// date from this screen's injected clock, with nothing else pre-filled.
+    @Test func theMarkSheetIsSeededFromTheCurrentValueAndTodaysDate() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000, currentValueCents: 130_000)
+        context.insert(item)
+        try context.save()
+
+        let viewModel = loaded(item, in: context)
+        viewModel.saleSheet = .mark
+        let form = viewModel.makeSaleFormViewModel()
+
+        #expect(form.title == SaleCopy.sheetTitleMark)
+        #expect(form.confirmLabel == SaleCopy.confirmMark)
+        #expect(form.price == Decimal(string: "1300"))
+        #expect(form.date == now)
+        #expect(form.location.isEmpty)
+        #expect(form.note.isEmpty)
+    }
+
+    /// G19, `.mark` with nothing to go on: a blank price, not a zero — the
+    /// distinction P1 rests on.
+    @Test func theMarkSheetIsBlankWhenTheItemHasNoValue() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000, currentValueCents: nil)
+        context.insert(item)
+        try context.save()
+
+        let viewModel = loaded(item, in: context)
+        viewModel.saleSheet = .mark
+        let form = viewModel.makeSaleFormViewModel()
+
+        #expect(form.price == nil, "no value entered means a blank field, never $0")
+        #expect(form.date == now)
+    }
+
+    /// G19, `.edit`: the sale that is recorded, not the item's current value
+    /// and not today — all four fields.
+    @Test func theEditSheetIsSeededFromTheRecordedSale() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000, currentValueCents: 130_000)
+        context.insert(item)
+        try ItemSaleStore.markSold(item, sale: sale(95_000), toward: nil, at: now, in: context)
+        try context.save()
+
+        let viewModel = loaded(item, in: context)
+        viewModel.saleSheet = .edit
+        let form = viewModel.makeSaleFormViewModel()
+
+        #expect(form.title == SaleCopy.sheetTitleEdit)
+        #expect(form.confirmLabel == SaleCopy.confirmEdit)
+        #expect(form.price == Decimal(string: "950"), "the sale's price, not the item's current value")
+        #expect(form.date == soldOn, "the sale's date, not today")
+        #expect(form.location == "Reverb")
+        #expect(form.note == "Shipped Tuesday")
+    }
+
+    /// One seeding rule, two hosts (P1): for the same item and the same
+    /// clock, the detail page's Mark as sold… sheet and a Sell Plan row's
+    /// seed the same sheet. Deferred here from T011, which had only one half
+    /// of the comparison to make.
+    ///
+    /// Both an item that has a current value and one that hasn't: agreeing on
+    /// the valued item alone would leave the plan host free to seed a $0 price
+    /// where the detail host leaves the field blank — the one distinction P1
+    /// rests on, and the one a `?? 0` slipped into either host would break.
+    @Test func bothHostsSeedTheMarkSheetIdentically() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000, currentValueCents: 130_000, desireToKeep: 1)
+        context.insert(item)
+        let unvalued = Item(name: "Blues Junior", purchasePriceCents: 60_000, currentValueCents: nil, desireToKeep: 1)
+        context.insert(unvalued)
+        let plan = WishlistItem(name: "Rickenbacker 330", estimatedCostCents: 240_000)
+        context.insert(plan)
+        try context.save()
+
+        let sellPlan = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        sellPlan.load()
+        // An un-valued item isn't a candidate on its own (`qualifies` wants a
+        // value), but a selected one stays on the plan after its value is
+        // cleared — which is how a row with no price to seed from gets here.
+        sellPlan.toggle(unvalued)
+        sellPlan.load()
+
+        for subject in [item, unvalued] {
+            let detail = loaded(subject, in: context)
+            detail.saleSheet = .mark
+            let fromDetail = detail.makeSaleFormViewModel()
+
+            let candidate = try #require(
+                sellPlan.candidates.first { $0.id == subject.id },
+                "\(subject.name) must be a candidate for the comparison to mean anything"
+            )
+            let fromPlan = sellPlan.makeSaleFormViewModel(for: candidate)
+
+            #expect(fromDetail.title == fromPlan.title)
+            #expect(fromDetail.confirmLabel == fromPlan.confirmLabel)
+            #expect(fromDetail.price == fromPlan.price, "\(subject.name): both hosts seed the same price")
+            #expect(fromDetail.date == fromPlan.date, "\(subject.name): both hosts seed the same date")
+            #expect(fromDetail.location == fromPlan.location)
+            #expect(fromDetail.note == fromPlan.note)
+        }
+
+        // Pinned, so the pair agreeing on the wrong thing still fails.
+        let unvaluedCandidate = try #require(sellPlan.candidates.first { $0.id == unvalued.id })
+        #expect(sellPlan.makeSaleFormViewModel(for: unvaluedCandidate).price == nil, "no value entered means a blank field, never $0")
+        #expect(sellPlan.makeSaleFormViewModel(for: unvaluedCandidate).date == now)
+    }
+
+    // MARK: - Delete
+
+    /// Criterion 9's third row: Delete on a sold item is the same permanent
+    /// delete as on an owned one — the item and its photos go, and the sale
+    /// goes with the item.
+    @Test func deletingASoldItemRemovesItAndItsPhotos() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let item = Item(
+            name: "Telecaster",
+            purchasePriceCents: 100_000,
+            photos: [Photo(imageData: Data([0xAB]), source: .device), Photo(imageData: Data([0xCD]), source: .device, sortOrder: 1)]
+        )
+        let kept = Item(name: "Blues Junior", purchasePriceCents: 60_000, photos: [Photo(imageData: Data([0xEF]), source: .device)])
+        for model in [item, kept] { context.insert(model) }
+        try ItemSaleStore.markSold(item, sale: sale(), toward: nil, at: now, in: context)
+        try context.save()
+
+        let viewModel = loaded(item, in: context)
+        #expect(viewModel.isSold)
+        #expect(viewModel.delete())
+        #expect(viewModel.item == nil)
+
+        let elsewhere = ModelContext(container)
+        #expect(try elsewhere.fetch(FetchDescriptor<Item>()).map(\.name) == ["Blues Junior"], "the sold item is gone")
+        #expect(try elsewhere.fetch(FetchDescriptor<Photo>()).map(\.imageData) == [Data([0xEF])], "its photos go with it, and only its own")
+    }
+}

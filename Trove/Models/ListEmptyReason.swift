@@ -25,6 +25,30 @@ enum ListEmptyReason: Equatable {
     /// value the last item and this is what you land on.
     case everythingIsValued
 
+    /// The Items tab's Sold side is empty — nothing has been sold yet.
+    ///
+    /// Never returned by `reason(...)`: the Sold side has no narrowing to
+    /// weigh (`ItemListViewModel.show(.sold)` clears all three filters), so
+    /// its emptiness has exactly one cause and no precedence to settle.
+    /// `ItemListViewModel.emptyReason` picks this case directly when the side
+    /// is `.sold`, and `reason(...)` stays the rule for the narrowed sides.
+    case nothingSold
+
+    /// The Items tab's Owned side is empty because everything on it has been
+    /// sold (spec Decision 12).
+    ///
+    /// Never returned by `reason(...)` either, and for the same kind of
+    /// reason: this case is about the *other* side's contents, which the
+    /// narrowing rule below knows nothing about.
+    /// `ItemListViewModel.emptyReason` maps the `.nothingAdded` that
+    /// `reason(...)` hands back to this when its sold half is non-empty, so
+    /// the precedence here — `stillSyncing` while the collection may still be
+    /// arriving, the filter cases on a narrowed-to-nothing side — stays
+    /// exactly as it was. A person whose Owned side emptied this way has been
+    /// using the app, not just installed it, and the first-launch invitation
+    /// reads as if the app lost their collection.
+    case everythingSold
+
     /// The collection may not all be here yet: CloudKit hasn't finished its
     /// first import on this device, so what's on screen is what has arrived
     /// rather than what exists. T048 measured that window at several minutes.

@@ -76,6 +76,17 @@ final class DashboardViewModel {
     private(set) var marketTotalCents = 0
     private(set) var marketFigureCount = 0
 
+    /// What the scoped part of the collection has been sold for (006, plan
+    /// §6): how many, what they brought in, and the gain or loss against
+    /// what they cost. Summed by `SaleOutcome.totals` rather than here — the
+    /// Sold side reads the very same sum, so AC7's "the summary matches the
+    /// card" is one arithmetic, not two agreeing (G32).
+    ///
+    /// Sold items reach this and nothing else: every other figure on this
+    /// screen is computed from the owned half of the fetch, which is what
+    /// AC4's exclusion is built out of.
+    private(set) var soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)
+
     /// The only un-valued item, when there is exactly one.
     ///
     /// Held so `unvaluedDestination` can name it. Not exposed directly: the
@@ -166,6 +177,20 @@ final class DashboardViewModel {
     /// mistake `hasAnyValues` exists to prevent one line above.
     var hasMarketFigures: Bool { marketFigureCount > 0 }
 
+    /// Whether the Sold card has anything to say — the same gating as
+    /// `hasMarketFigures` one line above, for the same reason: a card
+    /// reading "0 items · $0" claims the person has sold nothing *at a
+    /// loss of nothing*, where the honest answer is to say nothing at all.
+    /// It follows the scope, so drilling into a category with no sales in
+    /// it hides the card rather than showing the collection's total.
+    var hasSales: Bool { soldTotals.count > 0 }
+
+    /// The card's figures — "3 items · $2,400".
+    var soldLine: String { SaleCopy.dashboardSummary(soldTotals) }
+
+    /// The realised gain or loss beneath them — "+$350 vs paid".
+    var soldDeltaLine: String { SaleCopy.realised(deltaCents: soldTotals.realisedDeltaCents) }
+
     /// Decision 22's whole line — "Market · $18,400 · 12 of 34 items".
     ///
     /// One string, composed here rather than in the view: the amount and
@@ -213,11 +238,22 @@ final class DashboardViewModel {
         do {
             let all = try modelContext.fetch(FetchDescriptor<Item>())
             let scoped = all.filter { CategoryPathHelper.path($0.categoryPath, isWithin: scope) }
+            // One fetch, split once (plan §6), the shape `ItemListViewModel`
+            // uses: `apply` is handed the owned half and its body is
+            // unchanged, so value, paid, delta, the counts, the ruler, the
+            // breakdown, `unvaluedDestination` and the market line exclude
+            // sold items by construction rather than by six remembered
+            // filters.
+            let owned = scoped.filter { !$0.isSold }
+            let sold = scoped.filter(\.isSold)
             // Built before `apply`, never inside it: the figures are read
             // while the totals are computed, and a market read that arrives
-            // after its readers is the T012 defect (plan §6).
-            let summaries = MarketSummary.summaries(forSubjects: scoped.map(\.id), in: modelContext, now: now())
-            apply(scoped, marketSummaries: summaries)
+            // after its readers is the T012 defect (plan §6). Asked for owned
+            // ids only, so a sold item's rows — already cleared on the sale —
+            // could not count even if they were still there.
+            let summaries = MarketSummary.summaries(forSubjects: owned.map(\.id), in: modelContext, now: now())
+            apply(owned, marketSummaries: summaries)
+            soldTotals = SaleOutcome.totals(over: sold)
         } catch {
             loadFailureMessage = error.localizedDescription
             valuedCount = 0
@@ -228,6 +264,7 @@ final class DashboardViewModel {
             marketFigureCount = 0
             breakdown = []
             soleUnvaluedItemID = nil
+            soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)
         }
     }
 

@@ -46,6 +46,37 @@ struct DocsSampleTests {
         let unmatched = preview.validated.filter { $0.record.reverbProductID == nil }
         #expect(unmatched.count == 8)
         #expect(unmatched.allSatisfy { $0.record.year == nil })
+        // 006: two of the twelve are sold — the headphones at a loss and the
+        // turntable at a gain, exactly as the README says — and the sale is
+        // the pair, so each carries a date *and* a price, with its place and
+        // note along for the ride. Blanking either half of a pair drops all
+        // four cells and adds a counted default, which the count above
+        // catches from the other side.
+        let sold = preview.validated.filter { $0.record.soldDate != nil }
+        #expect(sold.map(\.record.name) == ["Sennheiser HD 650", "Technics SL-1200MK2"])
+        #expect(
+            sold.map(\.record.soldDate) == [
+                ImportSchema.day(from: "2026-06-02"), ImportSchema.day(from: "2026-05-18"),
+            ]
+        )
+        #expect(sold.map(\.record.salePriceCents) == [18_000, 70_000])
+        #expect(sold.map(\.record.saleLocation) == ["Craigslist", "Reverb"])
+        #expect(sold.allSatisfy { $0.record.saleNote != nil })
+        // One of each outcome, measured against what the same row paid —
+        // the file's claim is "one at a gain, one at a loss", not two sales.
+        #expect(
+            sold.map { $0.record.salePriceCents! < $0.record.purchasePriceCents } == [true, false]
+        )
+        // Every other row is still owned, all four cells blank.
+        let owned = preview.validated.filter { $0.record.soldDate == nil }
+        #expect(owned.count == 10)
+        #expect(
+            owned.allSatisfy {
+                $0.record.salePriceCents == nil
+                    && $0.record.saleLocation == nil
+                    && $0.record.saleNote == nil
+            }
+        )
     }
 
     @Test func itemsPartialSkipsAndDefaultsExactlyAsDocumented() async throws {
@@ -79,6 +110,24 @@ struct DocsSampleTests {
         #expect(preview.skipped.isEmpty)
         #expect(preview.defaultedFieldCount == 0)
         #expect(preview.validated.first?.record.name == "Leica M6 TTL 0.72")
+        // The 14-column boundary fixture (006), the counterpart to
+        // items-partial.csv's 12: this file stays at the width 002 through
+        // 005 shipped, so every row arrives with no sale at all — still
+        // owned, silently, adding nothing to the count above. Regenerating
+        // the sample at the current 18 columns turns the width pin red.
+        for row in preview.validated {
+            #expect(row.record.soldDate == nil)
+            #expect(row.record.salePriceCents == nil)
+            #expect(row.record.saleLocation == nil)
+            #expect(row.record.saleNote == nil)
+        }
+        // Read off the file itself, through the same trailing-empty strip
+        // the importer applies — the re-save left commas past the header's
+        // last name, and it is the names that pin the width.
+        let parsed = try #require(CSVParser.parse(try text("items-resaved.csv")).first)
+        let header = try #require(ImportSchema.shaped([parsed]).first)
+        #expect(header.cells.count == 14)
+        #expect(header.cells == Array(ExportSchema.itemHeaders.prefix(14)))
     }
 
     @Test func wishlistImportsThereAndIsCaughtOnTheItemsScreen() async throws {

@@ -32,6 +32,16 @@ nonisolated struct ItemExportRecord: Sendable {
     /// columns existed. Not presented by the PDF.
     let reverbProductID: Int?
     let year: Int?
+    /// 006: the sale, as the four appended columns carry it (plan §7) — all
+    /// four `nil` on an owned item, all four filled on a sold one. The pair
+    /// is the sale: `Item.sale` assembles it on the way out and the import
+    /// pair rule (Q6) refuses a date without a price on the way back, so a
+    /// record carrying one half and not the other is not a state this app's
+    /// writers produce.
+    let soldDate: Date?
+    let salePriceCents: Int?
+    let saleLocation: String?
+    let saleNote: String?
 
     /// The display-order first photo, chosen at snapshot time on the main
     /// actor (plan.md: `PhotoSelection.inDisplayOrder` is the one definition
@@ -144,6 +154,9 @@ extension ItemExportRecord {
         // One read of the display order, so the identifier and the credit
         // can never describe two different photos.
         let leadingPhoto = PhotoSelection.inDisplayOrder(item.photos ?? []).first
+        // One read of the pair, for the same reason: the four cells must
+        // describe one sale or none.
+        let sale = item.sale
         self.init(
             name: item.name,
             categoryPath: item.categoryPath,
@@ -159,6 +172,10 @@ extension ItemExportRecord {
             notes: item.notes,
             reverbProductID: item.reverbProductID,
             year: item.year,
+            soldDate: sale?.date,
+            salePriceCents: sale?.priceCents,
+            saleLocation: sale?.location,
+            saleNote: sale?.note,
             firstPhotoID: leadingPhoto?.persistentModelID,
             firstPhotoAttribution: leadingPhoto?.attribution
         )
@@ -284,12 +301,13 @@ nonisolated enum ExportSchema {
     /// **Append-only** (002, Q16): a column may be added at the end and
     /// never renamed, reordered or removed, which is what lets the import
     /// gate accept a file written by an older Trove. `Reverb Product ID`
-    /// and `Year` are 002's two appended columns.
+    /// and `Year` are 002's two appended columns; `Sold Date`, `Sale Price`,
+    /// `Sold At` and `Sale Note` are 006's four, appended the same way.
     static let itemHeaders = [
         "Name", "Category", "Purchase Price", "Currency", "Purchase Date",
         "Purchase Location", "Current Value", "Desire to Keep", "Condition",
         "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
-        "Year",
+        "Year", "Sold Date", "Sale Price", "Sold At", "Sale Note",
     ]
 
     static let wishlistHeaders = [
@@ -302,8 +320,10 @@ nonisolated enum ExportSchema {
     /// headers (002, plan §7). 12 is the layout `011`/`012` shipped, before
     /// `Reverb Product ID` and `Year` were appended. A width is added here
     /// only when a *released* layout ends, never speculatively: an entry
-    /// that never shipped would accept a file Trove never wrote.
-    static let itemSchemaBoundaries = [12]
+    /// that never shipped would accept a file Trove never wrote. 14 is the
+    /// layout 002 through 005 shipped, before 006 appended the four sale
+    /// columns.
+    static let itemSchemaBoundaries = [12, 14]
 
     /// See `itemSchemaBoundaries` — 7 is the shipped wishlist layout.
     static let wishlistSchemaBoundaries = [7]
@@ -359,6 +379,13 @@ nonisolated enum ExportSchema {
             record.notes ?? "",
             record.reverbProductID.map(String.init) ?? "",
             record.year.map(String.init) ?? "",
+            // 006: blank on an owned item, the sale's four values on a sold
+            // one — a blank Sold Date means "still owned", the same way a
+            // blank Current Value means "unvalued" rather than worthless.
+            record.soldDate.map { day(from: $0, timeZone: timeZone) } ?? "",
+            record.salePriceCents.map { money(cents: $0) } ?? "",
+            record.saleLocation ?? "",
+            record.saleNote ?? "",
         ]
     }
 

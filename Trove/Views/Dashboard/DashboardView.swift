@@ -87,6 +87,21 @@ struct DashboardView: View {
                         if viewModel.unvaluedCount > 0 {
                             unvaluedCallout
                         }
+                        // 006 §6: a ledger of its own, below the collection's
+                        // figures and above the breakdown — never inside
+                        // `spentAndGain` or the headline, which is what "sits
+                        // apart" means structurally. It follows the scope,
+                        // like every other figure here, and is simply absent
+                        // when nothing in scope has been sold.
+                        if viewModel.hasSales {
+                            SoldCard(
+                                line: viewModel.soldLine,
+                                deltaLine: viewModel.soldDeltaLine,
+                                realisedDeltaCents: viewModel.soldTotals.realisedDeltaCents
+                            ) {
+                                router.showSoldItems()
+                            }
+                        }
                         breakdown
                     }
                     .padding(.horizontal, theme.metrics.screenGutter)

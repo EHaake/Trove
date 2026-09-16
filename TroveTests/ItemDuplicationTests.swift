@@ -134,7 +134,7 @@ struct ItemDuplicationTests {
 
     @Test func duplicateWithAnUnknownIDDoesNothing() throws {
         let context = try makeInMemoryContext()
-        makeOriginal(in: context)
+        _ = makeOriginal(in: context)
         try context.save()
 
         let viewModel = ItemListViewModel(modelContext: context)

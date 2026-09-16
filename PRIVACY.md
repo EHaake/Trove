@@ -20,7 +20,7 @@ yours it is stored and synced exactly like a photo you took yourself.
 
 | What | Where | Syncs? |
 |---|---|---|
-| Your owned items and wishlist items — names, categories, prices, dates, conditions, notes, ratings | on your device | yes, to your private iCloud database |
+| Your owned items and wishlist items — names, categories, prices, dates, conditions, notes, ratings, and, once you mark something sold, what it sold for, when, where and any note | on your device | yes, to your private iCloud database |
 | Your photos of your items | on your device | yes, to your private iCloud database |
 | A stock photo you picked from Wikimedia Commons, with its credit — the photographer, the licence and the link back | on your device | yes, to your private iCloud database |
 | Your own value for an item, adopted or typed | on your device | yes, to your private iCloud database |

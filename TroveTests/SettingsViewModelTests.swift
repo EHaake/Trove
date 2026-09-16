@@ -377,6 +377,120 @@ struct SettingsViewModelExportTests {
         ])
     }
 
+    /// A day in UTC, for the sale fixtures below — built here rather than
+    /// read from a clock so the expected order is a fact about the data.
+    private func day(_ year: Int, _ month: Int, _ day: Int) throws -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return try #require(calendar.date(from: DateComponents(year: year, month: month, day: day)))
+    }
+
+    /// 006/G28, the Settings half: with a sale present the items CSV is the
+    /// owned rows in Custom order, then the sold rows in Sold-side order —
+    /// most recent sale first, name case-insensitively on a tie. The sold
+    /// rows' own `sortOrder` runs against that order on purpose, so a single
+    /// Custom sort over everything, or a fetch-order pass-through, fails
+    /// this. (The other half — byte-identity with the list's own unfiltered
+    /// CSV — completes at T009, when the list gains its sides.)
+    @Test func theItemsCSVIsOwnedInCustomOrderThenSoldInSoldSideOrder() async throws {
+        let context = try makeInMemoryContext()
+        try seedTieFixture(into: context)
+        // Sale dates and manual positions deliberately disagree.
+        let zebra = insertItem("Zebra", order: 9, into: context)
+        zebra.sale = Sale(date: try day(2026, 6, 1), priceCents: 90_000, location: "Reverb", note: nil)
+        let beta = insertItem("beta", order: 1, into: context)
+        beta.sale = Sale(date: try day(2026, 3, 1), priceCents: 20_000, location: nil, note: nil)
+        let alpha = insertItem("Alpha", order: 2, into: context)
+        alpha.sale = Sale(date: try day(2026, 3, 1), priceCents: 30_000, location: nil, note: nil)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+        await viewModel.exportEverythingAsCSV()
+
+        let items = try #require(spy.tables.first)
+        #expect(items.rows.map { $0[0] } == [
+            "Charlie", "Bravo", "alpha", "Zulu", "Zebra", "Alpha", "beta",
+        ])
+        // And the sold rows carry the sale the owned ones leave blank.
+        let priceColumn = try #require(ExportSchema.itemHeaders.firstIndex(of: "Sale Price"))
+        #expect(items.rows.map { $0[priceColumn] } == [
+            "", "", "", "", "900.00", "300.00", "200.00",
+        ])
+        // The wishlist file is untouched by any of this (criterion 12).
+        #expect(spy.tables[1].rows.map { $0[0] } == ["alpha", "Bravo", "Charlie", "Zed"])
+    }
+
+    /// 006/G28's other half, completed now the list has two sides: with a
+    /// sale present, Settings' items CSV is byte-identical to what the Items
+    /// list exports unfiltered in Custom order — owned rows in Custom order,
+    /// then sold rows in Sold-side order, on both paths. 013's criterion 5
+    /// survives a sale being in the collection.
+    ///
+    /// Mutation: drop the sold half from `ItemListViewModel.exportCSV`, or
+    /// sort it by anything but `areInSoldOrder`, and the two files diverge →
+    /// red. The sold rows' `sortOrder` disagrees with their sale dates on
+    /// purpose, so a single Custom sort over everything fails it too.
+    @Test func theListsUnfilteredCSVStillMatchesSettingsByteForByteWithASalePresent() async throws {
+        let context = try makeInMemoryContext()
+        try seedTieFixture(into: context)
+        let zebra = insertItem("Zebra", order: 9, into: context)
+        zebra.sale = Sale(date: try day(2026, 6, 1), priceCents: 90_000, location: "Reverb", note: "clean")
+        let beta = insertItem("beta", order: 1, into: context)
+        beta.sale = Sale(date: try day(2026, 3, 1), priceCents: 20_000, location: nil, note: nil)
+        let alpha = insertItem("Alpha", order: 2, into: context)
+        alpha.sale = Sale(date: try day(2026, 3, 1), priceCents: 30_000, location: nil, note: nil)
+        try context.save()
+
+        let settingsSpy = ExportServiceSpy()
+        let settings = SettingsViewModel(modelContext: context, exportService: settingsSpy)
+        settings.load()
+        await settings.exportEverythingAsCSV()
+
+        let listSpy = ExportServiceSpy()
+        let list = ItemListViewModel(modelContext: context, exportService: listSpy)
+        list.sortOrder = .custom
+        list.load()
+        await list.exportCSV()
+
+        let listTable = try #require(listSpy.tables.first)
+        try #require(
+            listTable.rows.map { $0[0] } == ["Charlie", "Bravo", "alpha", "Zulu", "Zebra", "Alpha", "beta"],
+            "the list's own order changed — the equality below would be two wrongs agreeing"
+        )
+        #expect(CSVWriter.write(settingsSpy.tables[0]) == CSVWriter.write(listTable))
+    }
+
+    /// 006/G16: the everything-PDF is the owned collection only — its
+    /// entries, its `itemCount` and its cover totals — so the figures on the
+    /// cover are the Dashboard's collection figures rather than a mix of
+    /// what is owned and what was sold (criterion 14). Mutation: hand the
+    /// document all the items and the count reads 2 → red.
+    @Test func theEverythingPDFLeavesSoldItemsOut() async throws {
+        let context = try makeInMemoryContext()
+        _ = insertItem("Kept", priceCents: 100_00, valueCents: 150_00, order: 0, into: context)
+        let gone = insertItem("Gone", priceCents: 50_00, valueCents: 200_00, order: 1, into: context)
+        gone.sale = Sale(date: try day(2026, 6, 1), priceCents: 75_00, location: nil, note: nil)
+        insertWanted("Pedal", costCents: 20_00, order: 0, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+        await viewModel.exportEverythingAsPDF()
+
+        let document = try #require(spy.documents.first)
+        #expect(document.entries.map(\.name) == ["Kept"])
+        #expect(document.cover.itemCount == 1)
+        switch document.cover.totals {
+        case let .items(value, paid, unvalued):
+            #expect((value, paid, unvalued) == (150_00, 100_00, 0))
+        case .wishlist:
+            Issue.record("the items document carries wishlist totals")
+        }
+    }
+
     @Test func nothingIsExportedWhenBothCollectionsAreEmpty() async throws {
         let spy = ExportServiceSpy()
         let viewModel = SettingsViewModel(modelContext: try makeInMemoryContext(), exportService: spy)
@@ -966,12 +1080,17 @@ struct SettingsViewModelMarketRefreshTests {
         context.insert(Item(name: "Telecaster", sortOrder: 0, reverbProductID: 111))
         context.insert(Item(name: "Amp", sortOrder: 1, reverbProductID: 222))
         context.insert(Item(name: "Pedal", sortOrder: 2))
+        // 006/G8: matched but sold — no market value to track, so the count
+        // and the walk both pass it by, through the one definition.
+        let sold = Item(name: "Jazzmaster", sortOrder: 3, reverbProductID: 333)
+        sold.sale = Sale(date: Date(timeIntervalSince1970: 1_770_000_000), priceCents: 130_000, location: nil, note: nil)
+        context.insert(sold)
         context.insert(WishlistItem(name: "D-18", sortOrder: 0, reverbProductID: 444))
         context.insert(WishlistItem(name: "Pedal Steel", sortOrder: 1))
         try context.save()
         viewModel.load()
 
-        #expect(viewModel.matchedCount == 3, "the count misses one of the two lists")
+        #expect(viewModel.matchedCount == 3, "the count misses one of the two lists, or counts a sold item")
         #expect(viewModel.canRefreshMarketValues)
     }
 }

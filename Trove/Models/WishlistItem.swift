@@ -62,6 +62,16 @@ final class WishlistItem {
     @Relationship(deleteRule: .nullify)
     var plannedSaleItems: [Item]? = []
 
+    /// 006 (spec P5): items that were sold *toward* this purchase — the
+    /// history, not the plan. Distinct from `plannedSaleItems`, which is the
+    /// current selection and is emptied at the sale (P6).
+    ///
+    /// `.nullify` here as well: deleting this wishlist item leaves those sales
+    /// standing with no plan attached (P10). `Item` owns the
+    /// `@Relationship(inverse:)` declaration for this pair, as it does above.
+    @Relationship(deleteRule: .nullify)
+    var itemsSoldToward: [Item]? = []
+
     init(
         name: String = "",
         categoryPath: String = "",

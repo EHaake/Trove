@@ -81,6 +81,19 @@ struct TroveApp: App {
                     fatalError("Could not seed the UI test's collection: \(error)")
                 }
             }
+            // 006: the sold collection, for the UI test that reads the
+            // Dashboard's Sold card and the Items tab's Sold side. Its own
+            // argument and its own guard, gated the same structural way on
+            // the store that was actually built — so `-uiTesting` alone, and
+            // `-seedSellPlan`, keep the starting states every UI test before
+            // this one was written against (plan Q10).
+            if UITestSeed.shouldSeedSold(mode: store.mode, arguments: ProcessInfo.processInfo.arguments) {
+                do {
+                    try UITestSeed.sold(into: store.container.mainContext, now: .now)
+                } catch {
+                    fatalError("Could not seed the UI test's sold collection: \(error)")
+                }
+            }
         } catch {
             // Reachable only once the CloudKit configuration has already
             // failed and been retried without it, so the remaining causes are

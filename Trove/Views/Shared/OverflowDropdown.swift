@@ -17,7 +17,12 @@ import SwiftUI
 /// Every row closes the dropdown before its action runs — `DropdownRow`'s
 /// doing, so the intents here are the intents alone.
 struct OverflowDropdown: View {
-    let canExport: Bool
+    /// One gate per export row (006, plan Q5): the Items list can have a CSV
+    /// to write with nothing to put in a PDF — an all-sold collection — so a
+    /// single `canExport` would have to be wrong about one of them. The
+    /// Wishlist, which has no sold half, passes its one flag to both.
+    let canExportCSV: Bool
+    let canExportPDF: Bool
     let exportCSV: () -> Void
     let exportPDF: () -> Void
     let importCSV: () -> Void
@@ -25,8 +30,8 @@ struct OverflowDropdown: View {
 
     var body: some View {
         DropdownSurface {
-            DropdownRow(title: "Export as CSV…", isEnabled: canExport, action: exportCSV)
-            DropdownRow(title: "Export as PDF…", isEnabled: canExport, action: exportPDF)
+            DropdownRow(title: "Export as CSV…", isEnabled: canExportCSV, action: exportCSV)
+            DropdownRow(title: "Export as PDF…", isEnabled: canExportPDF, action: exportPDF)
             DropdownRow(title: "Import from CSV…", startsGroup: true, action: importCSV)
             DropdownRow(title: "Settings", startsGroup: true, action: openSettings)
         }
@@ -36,7 +41,7 @@ struct OverflowDropdown: View {
 #Preview("With something to export") {
     ZStack {
         Theme.dark.colors.background.ignoresSafeArea()
-        OverflowDropdown(canExport: true, exportCSV: {}, exportPDF: {}, importCSV: {}, openSettings: {})
+        OverflowDropdown(canExportCSV: true, canExportPDF: true, exportCSV: {}, exportPDF: {}, importCSV: {}, openSettings: {})
             .environment(\.dismissDropdown, DismissDropdownAction {})
     }
     .environment(\.theme, .dark)
@@ -45,7 +50,7 @@ struct OverflowDropdown: View {
 #Preview("Empty collection") {
     ZStack {
         Theme.dark.colors.background.ignoresSafeArea()
-        OverflowDropdown(canExport: false, exportCSV: {}, exportPDF: {}, importCSV: {}, openSettings: {})
+        OverflowDropdown(canExportCSV: false, canExportPDF: false, exportCSV: {}, exportPDF: {}, importCSV: {}, openSettings: {})
             .environment(\.dismissDropdown, DismissDropdownAction {})
     }
     .environment(\.theme, .dark)

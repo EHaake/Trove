@@ -11,7 +11,7 @@ struct ItemDeleteCopyTests {
     /// All three promises: the cascade, the sell-plan drop spec.md requires,
     /// and the permanence sentence carried over from the shipped alert.
     @Test func theMessageKeepsAllThreePromises() {
-        let message = ItemDeleteCopy.message
+        let message = ItemDeleteCopy.message(isSold: false)
 
         #expect(message.localizedCaseInsensitiveContains("photos"), "\(message)")
         #expect(message.localizedCaseInsensitiveContains("sell plan"), "\(message)")
@@ -25,11 +25,24 @@ struct ItemDeleteCopyTests {
     /// wishlist's line in here would tell the user the exact opposite of
     /// the truth while every contains-check stays green.
     @Test func theSellPlanLineStatesTheDropNotTheSpare() {
-        let message = ItemDeleteCopy.message
+        let message = ItemDeleteCopy.message(isSold: false)
 
         #expect(message.localizedCaseInsensitiveContains("drops"), "\(message)")
         #expect(!message.localizedCaseInsensitiveContains("stays where it is"), "\(message)")
         #expect(message != WishlistDeleteCopy.message)
+    }
+
+    /// 006, P13: a sold item is on no plan, so its message drops the
+    /// sell-plan sentence and keeps the other two promises. Reusing the owned
+    /// message here — the tempting shortcut, since every other promise is the
+    /// same — turns this red (G17).
+    @Test func theSoldMessageDropsTheSellPlanLineAndKeepsTheRest() {
+        let message = ItemDeleteCopy.message(isSold: true)
+
+        #expect(message.localizedCaseInsensitiveContains("photos"), "\(message)")
+        #expect(message.localizedCaseInsensitiveContains("undone"), "\(message)")
+        #expect(!message.localizedCaseInsensitiveContains("sell plan"), "\(message)")
+        #expect(message != ItemDeleteCopy.message(isSold: false), "\(message)")
     }
 
     @Test func theConfirmButtonAndTitleSayDelete() {

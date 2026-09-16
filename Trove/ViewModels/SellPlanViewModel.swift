@@ -110,9 +110,46 @@ final class SellPlanViewModel {
     /// while forbidding copy that urges the user to close the gap; a tone needs
     /// a side, not a distance. Naming it for what's true rather than for what's
     /// left to do keeps it from growing a caption.
+    ///
+    /// Sales sit on the same side as the selection (006 plan Q14): money
+    /// already raised toward this wishlist item is no less real than money a
+    /// selection would raise, and a cue that ignored it would read as unmet on
+    /// a plan the person has already funded by selling. Still one boolean and
+    /// still no third figure — the name is kept so the framing guard keeps its
+    /// target.
     var selectedValueMeetsCost: Bool {
-        selectedCount > 0 && selectedValueCents >= estimatedCostCents
+        (selectedCount + soldCount) > 0
+            && selectedValueCents + soldValueCents >= estimatedCostCents
     }
+
+    // MARK: - The Sold figure
+
+    /// What has already been sold toward this wishlist item, most recent sale
+    /// first.
+    ///
+    /// Read off `wishlistItem.itemsSoldToward` rather than fetched over every
+    /// sold item (006 plan Q14): the link is the fact (spec P5), and reading
+    /// the relationship is how this type already reads `plannedSaleItems`, so
+    /// the two halves of the plan have one shape. The order is
+    /// `ItemListViewModel.areInSoldOrder` — the Sold side's own comparator, so
+    /// this section and the item list can't disagree about which sale is the
+    /// most recent, and two sales on one day can't reshuffle between visits.
+    var soldItems: [Item] {
+        (wishlistItem?.itemsSoldToward ?? []).sorted(by: ItemListViewModel.areInSoldOrder)
+    }
+
+    var soldCount: Int { soldItems.count }
+
+    /// What those sales actually brought in: `salePriceCents`, the figure the
+    /// person recorded, never a current value — the sale is settled and the
+    /// market has nothing left to say about it.
+    var soldValueCents: Int {
+        soldItems.compactMap { $0.sale?.priceCents }.reduce(0, +)
+    }
+
+    /// Whether the screen carries the third figure and the Sold section at
+    /// all. A plan with no sales stays the two-figure screen it was.
+    var hasSales: Bool { soldCount > 0 }
 
     var isEmpty: Bool { candidates.isEmpty }
 
@@ -190,7 +227,12 @@ final class SellPlanViewModel {
             let planned = wanted?.plannedSaleItems ?? []
             selectedIDs = Set(planned.map(\.id))
 
-            let owned = try modelContext.fetch(FetchDescriptor<Item>())
+            // Sold gear leaves this screen before anything is counted (006
+            // plan §3): a sold item is never a candidate, and it reaches
+            // neither `ownedCount` nor `lowDesireCount`, so the empty reasons
+            // describe the collection the person could actually offer rather
+            // than one padded with gear that is already gone.
+            let owned = try modelContext.fetch(FetchDescriptor<Item>()).filter { !$0.isSold }
             ownedCount = owned.count
             lowDesireCount = owned.count { DesireLevel(clamping: $0.desireToKeep).isSellCandidate }
 
@@ -316,6 +358,52 @@ final class SellPlanViewModel {
     /// The selected rows, in the order they appear on screen.
     private var selectedItems: [Item] {
         candidates.filter { selectedIDs.contains($0.id) }
+    }
+
+    // MARK: - Marking a candidate sold
+
+    /// The row whose sale sheet is up — `.sheet(item:)` state, which the view
+    /// sets both ways.
+    var saleCandidate: Item?
+
+    /// Mark as sold… from a row: the sale points at this plan (spec P5), the
+    /// item leaves the candidates, and the figures re-derive.
+    ///
+    /// `ItemSaleStore` is the one writer (006 plan Q3) and callers save — the
+    /// `toggle(_:)` shape, one intent, one immediate save, no separate step.
+    /// The store drops every plan selection itself, so the item is on no
+    /// selection by the time `load()` re-reads them; `load()` also drops it
+    /// from the pool, since it is sold now.
+    ///
+    /// Returns false on a refused save, which rolls back.
+    @discardableResult
+    func markSold(_ item: Item, sale: Sale) -> Bool {
+        saveFailureMessage = nil
+        do {
+            try ItemSaleStore.markSold(item, sale: sale, toward: wishlistItem, at: now(), in: modelContext)
+            try modelContext.save()
+        } catch {
+            // `rollback()` discards every pending change on the shared
+            // context, not only this intent's — the same recovery
+            // `ItemDetailViewModel` uses. The reload below then shows what is
+            // actually stored, which is the screen as it was: the row is still
+            // a candidate and no sale is listed.
+            modelContext.rollback()
+            saveFailureMessage = error.localizedDescription
+            load()
+            return false
+        }
+        load()
+        return true
+    }
+
+    /// The sheet's view model for a row, seeded exactly as the detail screen
+    /// seeds its own Mark as sold sheet (spec P1): mode `.mark`, nothing to
+    /// pre-fill, the price from the item's current value when it has one and
+    /// blank when it doesn't, today's date. One seeding rule for both hosts —
+    /// the clock is this screen's injected one, so a test can pin the date.
+    func makeSaleFormViewModel(for item: Item) -> SaleFormViewModel {
+        SaleFormViewModel(mode: .mark, prefill: nil, currentValueCents: item.currentValueCents, now: now)
     }
 }
 
