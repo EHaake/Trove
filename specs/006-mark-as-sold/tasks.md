@@ -1105,13 +1105,18 @@ because the person will feel it before they read it.
   over the menu rows, the switch, the card, a Sold row, the Sold mark, the
   plan's Sold figure — note the plan's sold row now announces "Sold" first).
 
-- [ ] **T018d — T019 finding F1: the plan's sold-row UI helper.**
+- [x] **T018d — T019 finding F1: the plan's sold-row UI helper.**
   `TroveUITests.soldRow(in:named:)` (or a plan-specific variant) matches
   the plan's sold row whose combined label opens with `SaleCopy.soldMark`
   ("Sold, <name>, …") while the Items tab's rows still open with the name;
   `testASellPlanRowSoldFromThePlanShowsTheSoldFigure` green; the existing
   `toward: nil` mutation still red. Files: `TroveUITests/TroveUITests.swift`.
   **Verify:** the one test green; then `scripts/verify.sh all` green twice.
+  **Done (2026-09-15).** `soldRow(in:named:precededBy:)` — the plan's call
+  passes `precededBy: "Sold"`, the Items-tab calls keep the name-first
+  default; predicate case-insensitive (`monoLabel` case is unstable in the
+  a11y label). Mutation `toward: nil` → red at the `sellPlan.soldFigure`
+  assertion. `verify.sh all` green twice: 1498 unit / 20 UI, 0 failures.
 
 - [ ] **T020 — Close-out.**
   Criteria 1–16 ticked in `spec.md` with citations, honest partials named;
@@ -1194,4 +1199,5 @@ interpreted here.
 | T018c implement | opus (`sdd-implementer`, high effort) | 83,074 (36 tool uses, 18 min) | done; four mutations red; one artboard divergence stated (the row tag Decision 14 asks for) |
 | T018b+T018c device pass | opus (`general-purpose`, simulator) | 189,824 (111 tool uses, 9 min) | as expected; switch position identical to the pixel; one copy observation for the person (the all-sold plan's empty-state wording) |
 | T019 device pass | opus (`general-purpose`, simulator) | 317,911 (225 tool uses, 36 min agent time; ~80 min wall) | every step as expected; probe counts recorded; one finding (F1: a UI test broken by T018c's tag order) → T018d |
+| T018d fix (F1) | opus (`sdd-implementer`, high effort) | 40,693 (20 tool uses, 29 min — four simulator runs) | done; mutation red; `all` green twice |
 | _rows added per dispatch as the spec runs_ | | | |

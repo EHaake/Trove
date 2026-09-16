@@ -1256,7 +1256,7 @@ final class TroveUITests: XCTestCase {
         )
 
         // And the Sold section under the candidates lists the sale.
-        let soldEntry = soldRow(in: app, named: "Blues Junior")
+        let soldEntry = soldRow(in: app, named: "Blues Junior", precededBy: "Sold")
         XCTAssertTrue(soldEntry.waitForExistence(timeout: 5), "the plan's Sold section should list the sale")
         XCTAssertGreaterThan(soldEntry.frame.minY, headerBand, "the Sold section sits under the candidates")
         XCTAssertTrue(soldEntry.label.contains("$640"), "the Sold section's row reads \"\(soldEntry.label)\"")
@@ -1266,9 +1266,17 @@ final class TroveUITests: XCTestCase {
     /// is the whole announcement ("Telecaster, Sold Sep 11, 2026, $1,250,
     /// Gain $350 vs paid"), not the plain name inside it. The comma is what
     /// tells the two apart.
+    ///
+    /// `precededBy` is for the Sell Plan's own Sold section, whose row draws
+    /// the mark *before* the name (spec Decision 14), so its combined label
+    /// opens "Sold, Blues Junior, …" where the Items tab's opens with the
+    /// name. Matched case-insensitively because that mark is a `monoLabel`,
+    /// which comes back raised on some snapshots and in the source's own case
+    /// on others — the same reason every other `monoLabel` line here is.
     @MainActor
-    private func soldRow(in app: XCUIApplication, named name: String) -> XCUIElement {
-        app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "\(name),")).firstMatch
+    private func soldRow(in app: XCUIApplication, named name: String, precededBy mark: String? = nil) -> XCUIElement {
+        let opening = mark.map { "\($0), \(name)," } ?? "\(name),"
+        return app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH[c] %@", opening)).firstMatch
     }
 
     /// Whether some text with exactly this label sits above `y` on screen —
