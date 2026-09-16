@@ -432,7 +432,7 @@ private(set) var side: Side = .owned
 func show(_ side: Side)
 private(set) var soldItems: [Item] = []       // Sold-side order
 private(set) var soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)   // SaleOutcome.totals(over: sold)
-var soldSummaryLine: String   // never nil — "0 sold · $0" at zero sales (Decision 13, amended 2026-09-15; was String? / nil)   // nil when nothing is sold (spec Decision 11; corrected at the Phase 4 review)                   // SaleCopy.soldSideSummary(soldTotals)
+var soldSummaryLine: String   // never nil — "0 sold · $0" at zero sales (Decision 13, amended 2026-09-15; was String?, nil when nothing was sold, per Decision 11)   // SaleCopy.soldSideSummary(soldTotals)
 static func areInSoldOrder(_ lhs: Item, _ rhs: Item) -> Bool   // date desc, name, id
 ```
 
@@ -809,3 +809,171 @@ sale sheet's `DatePicker` really refuses a future day on screen, and that a
 `.sheet(item:)` over a row's `Item` presents once per tap (the `002`/`005`
 `.task`-in-a-sheet lesson — a probe in `ItemSaleStore.markSold`, removed
 before the suites run).
+
+---
+
+## As built (2026-09-15, at T020's close-out)
+
+Where the shipped code differs from the sections above, how the three readings
+stand, and what became of each Q-item. Twenty tasks with ten sub-lettered
+additions; nothing here re-opens a decision.
+
+**The readings, R1–R3.** All three were confirmed at the sign-off and none was
+overturned in implementation.
+
+- **R1 — a scoped Sold card lands on the whole Sold side** — confirmed twice:
+  at the sign-off, and by the person, who was told at the Phase 5 pause that
+  this is how it behaves (the tasks' own handoff note said they would feel it
+  before they read it) and accepted it. Q15 made it structural rather than
+  conventional: `show(_ side:)` clears every narrowing, so the Sold side can
+  never carry a category it does not show.
+- **R2 — Delete All removes sold items too** — confirmed and untouched;
+  `SettingsViewModel.itemCount` still counts every `Item`
+  (`confirmDeletesEveryItemAndOnlyItems`), and the device pass watched an
+  all-items delete take the sold ones with it.
+- **R3 — one counted default per dropped sale** — confirmed and pinned;
+  `ImportSchemaTests.theSalePairRuleCountsOneDefaultPerDroppedSale` counts one
+  however many of the four sale cells were non-blank, and the per-cell mutation
+  goes red at 2 ≠ 1.
+
+**Deviations and additions, in the order they happened.**
+
+- **The Sold mark sits above the photo hero**, not "above the category/name"
+  as §5 and T014's (pre-design) task line say. The approved artboards place it
+  there; T014 shipped to the artboards and declared it.
+- **`SaleCopy` is a plain string table, so the sheet's titles are four
+  constants**, not the `sheetTitle(mode:)` function §5 sketched (T004): the
+  mode is a view-model type and `Trove/Models/` names none. §5's line was
+  corrected in place at the Phase 1 review.
+- **The Sold side's empty state is two strings, not one** —
+  `nothingSoldHeadline` / `nothingSoldDetail` (T002a, the Phase 1 review's one
+  blocking finding: the plan asked for headline + detail, T002 shipped one
+  `emptyState`).
+- **`ItemDeleteCopy.message(isSold:)` had three readers, not two** (T002);
+  `DeleteAllCopyTests` pins the owned message word for word.
+- **`ItemSaleStore.markSold` runs the throwing market clear first** (T003), so
+  a refused clear leaves the item unwritten rather than half-sold.
+- **The emptied Owned side got its own state mid-spec** — `ListEmptyReason
+  .everythingSold` and "Everything's sold." / "Add something new." (T015a),
+  spec Decision 12, taken by the person at the Phase 4 pause. §4's paragraph
+  was written then, not at planning.
+- **`sellPlan.soldFigure` did not ship with T017.** T018's UI test read three
+  positional static texts instead; the Phase 5 review blocked on it and T017a
+  gave the Sold cell `.accessibilityElement(children: .combine)` and the
+  identifier §3/§8 always named, with the UI test reading that one label (the
+  `toward: nil` mutation still turns it red).
+- **`SaleTotals.isLoss` was added at T017a.** The loss rule over a *sum* had
+  grown two homes — `SoldCard` built a `SaleOutcome` over the delta and
+  `ItemListView.soldMeta` read the sign directly — so it now lives once in
+  `Sale.swift` beside `SaleOutcome.isLoss`, read by both, with
+  `ItemListView.swift` added to the colour scan's surface list and the scan's
+  skip-if-absent arms dropped now that every listed surface exists.
+- **The Sell Plan row's Mark as sold… is a footer strip with a 44 pt hit
+  area** (T017, corrected at the Phase 5 re-review from the design notes' first
+  figure), taken as 4 pt of bottom padding so the area grows downward only and
+  never over the toggle above it; the card is 4 pt taller than before. The
+  strip's tap target spans the card's width — observed on the device, accepted
+  as unambiguous.
+- **`soldSummaryLine` is a non-optional `String`, and the Sold side's line is
+  always shown** (T018b, spec Decision 13, which replaces Decision 11's
+  hide-at-zero). At zero sales it reads "0 sold · $0" — the realised part
+  dropped rather than set to "+$0 vs paid", because a gain measured over no
+  sales states a measurement where there is none. The reason is a measurement,
+  not a preference: with an empty collection the Owned/Sold switch jumped
+  **19.7 pt** between sides, and only then (with sales seeded, neither symptom
+  appears — `-seedSold` alone could not reproduce the person's report).
+- **The switch's slide was fixed structurally, and the plan's suspected cause
+  was wrong** (T018b). The row swap was not to blame: a `matchedGeometryEffect`
+  pair across an `if isActive` insert/remove is a *structural* change that
+  `.animation(_:value:)` never covered, so the fill crossfaded — a 22 %
+  brightness dip while the 19.7 pt travel stepped at about 20 Hz. It ships as
+  one `Rectangle` with an animatable `.offset` at 0.2 s; measured from a screen
+  recording afterwards, the edge moves monotonically over 9–11 distinct frames
+  at 60 Hz in 164 ms, flat brightness, 0 pt of travel for the switch itself.
+  The design notes' Motion row went 0.25 → 0.2 s. **Worth carrying forward**:
+  any other `matchedGeometryEffect` across an insert/remove in this app is a
+  silent crossfade, not the motion it looks like in the source.
+- **A Sell Plan keeps its Sold section under the empty state, and each sold row
+  opens with a compact SOLD tag** (T018c, spec Decision 14). §3 and both
+  artboards put the section under the candidates only; spec P15 lists the sold
+  items unconditionally; with every candidate sold the section vanished while
+  the header still showed the Sold figure. The person settled it at the Phase 5
+  pause. Two consequences: those rows now differ from `SellPlanThree.png` by
+  the tag, and the plan's sold row's combined accessibility label opens with
+  "Sold" rather than the name — which broke a UI helper matching
+  `BEGINSWITH "<name>,"` (T019's finding F1, fixed at T018d by
+  `soldRow(in:named:precededBy:)`; the Items tab's rows keep the name-first
+  default). **Left open, deliberately**: inside the `ScrollView` the empty state
+  sits above the section rather than centring, and its copy ("Nothing to sell
+  yet — Add the gear you own…") reads oddly directly above a list of sold rows.
+  That is a copy question for the person, not a defect — as is the other item
+  their walkthrough left open: they did not find **Mark as sold…** in the item
+  page's "…" menu, which is where spec Decision 4 places it, and whether a
+  visible control is wanted has not been answered.
+- **Xcode 27 arrived between Phase 4 and Phase 5**, and HEAD did not build
+  under it. Three one-line fixes went in ahead of T013, outside any task's file
+  list (two `Shape` conformances needing `nonisolated` under
+  `InferIsolatedConformances`; one chained `#expect` that timed out the
+  type-checker). T018a then repointed `scripts/verify.sh`'s `DESTINATION` at an
+  iPhone 18 Pro on iOS 27.0 and took the repo's own sources from 11 warnings to
+  0 — `SyncMonitor.observer` gains `@ObservationIgnored` (the compiler's own
+  fixit does not compile on an `@Observable` stored property),
+  `StockPhotoCredit`'s deprecated `Text + Text` becomes interpolation, six
+  discarded fixtures in four test files get `_ =`, and `launchApp()` in the UI
+  target gains `@MainActor`. One SDK-side warning (AppIntents metadata, no repo
+  path) remains. `DECISIONS.md` carries the operational facts for the next
+  upgrade; the lesson for the log is that an incremental build hides warnings
+  from unchanged files, so the count must be taken after a `clean`.
+
+**Q1–Q15 as shipped.**
+
+- **Q1 — the sale as four fields and a relationship on `Item`, not a `Sale`
+  model**: shipped as written. One CloudKit record, one stored-property
+  predicate, and Return is nil-ing five fields with no orphan to leak.
+- **Q2 — the names and the one sold predicate**: shipped as written
+  (`soldDate`, `salePriceCents`, `saleLocation`, `saleNote`,
+  `soldTowardWishlistItem`; sold iff `soldDate != nil`).
+- **Q3 — one writer, `ItemSaleStore`**: shipped; every entry point and both
+  later actions go through its three statics, callers save.
+- **Q4 — the side on the list view model, the router carrying a request**:
+  shipped; Owned at every launch is true by construction, not by a reset.
+- **Q5 — the exports**: shipped; `canExportCSV` counts the *narrowed* halves
+  (declared at T009, so a chip matching nothing on either side disables the row
+  rather than staging a header-only file — `011`'s criterion 2), which is the
+  one place Q5's "either side non-empty" reads looser than the code.
+- **Q6 — the import pair rule**: shipped, both stated asymmetries included (a
+  negative price is unreadable to `012`'s parser, so the sale drops and counts;
+  a future sold date imports as written, since the parser has no clock).
+- **Q7 — Delete All includes sold items**: shipped, unchanged.
+- **Q8 — the sold detail state hides what would act**: shipped; the match is
+  kept and only the device-local rows are cleared, so Return resumes refreshing.
+- **Q9 — Sold-side order and empty reason**: shipped; `.nothingSold`, plus
+  `.everythingSold` which Decision 12 added later.
+- **Q10 — the second UI-test seed `-seedSold`**: shipped, gated on the store
+  the app actually built being `.ephemeral` and never on a second flag read;
+  `-seedSellPlan` and `-uiTesting` alone keep the starting states every
+  existing UI test was written against.
+- **Q11 — copy and colour in one place**: shipped, with the Design pass's form
+  (T008a, Decision 11) replacing the placeholder outcome strings: one body in
+  `rowOutcome`, `pageOutcome` forwarding to it. The colour rule stays on the
+  model, now in two shapes — `SaleOutcome.isLoss` for one sale and
+  `SaleTotals.isLoss` for a sum (T017a).
+- **Q12 — the sale price rules mirror the form's purchase price**: shipped;
+  both the picker's bound and the view model's check, as planned.
+- **Q13 — `updatedAt` bumps on all three writes**: shipped and guarded.
+- **Q14 — the Sell Plan reads its sales off the relationship**: shipped;
+  `selectedValueMeetsCost` keeps its name and reads Selected plus Sold.
+- **Q15 — changing side clears every narrowing** (the sign-off's blocking
+  finding): shipped as `show(_ side:)` with `side` `private(set)`, so binding a
+  control to it does not compile.
+
+**What was verified by hand rather than by a test**, and what is still
+outstanding: the sale sheet's presentation count (a file probe inside
+`ItemSaleStore.markSold` — Cancel 0, swipe-down 0, a host re-render 0, confirm
+1 from each host — removed before the suites ran); the date picker's disabled
+future days (a screenshot, the unit suite holding the past-midnight edge); the
+switch's motion (a screen recording with per-frame timing, since a screenshot
+cannot show it); and every surface against its artboard, by a simulator agent
+at each screen task. **Still the person's**: a sale arriving on a second device
+(criterion 15) and the VoiceOver reading of the new surfaces (criterion 16),
+including the plan's sold row now announcing "Sold" first.

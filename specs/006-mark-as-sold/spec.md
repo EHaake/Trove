@@ -237,32 +237,47 @@ proposal, for reaction at the draft (P7, P8):
 
 ## Copy
 
-Proposed wording; the exact strings are settled at the copy task and join this
-section on plan approval (P8).
+The strings as shipped. Every one of them lives in `Trove/Models/SaleCopy.swift`
+(T002, with the Design pass's changes at T008a) and is pinned whole by
+`SaleCopyTests`; the wording below is the settled form, replacing the draft's
+placeholders per P8 and Decisions 11–14.
 
-- The action: **Mark as sold…** — in the detail's top-right menu (with a
-  "tag"-style symbol beside Edit's pencil and Delete's trash) and on each Sell
-  Plan row.
+- The action: **Mark as sold…** — in the detail's top-right menu (a "tag"
+  symbol beside Edit's pencil and Delete's trash) and on each Sell Plan row.
 - The sale sheet: title **Mark as sold**; fields **Sale price**, **Sold on**,
-  **Sold at** (placeholder "eBay, Reverb, a friend…"), **Note**; buttons
-  **Cancel** and **Mark as sold**. Reopened for editing, the title is **Edit
-  sale** and the confirm button **Save**.
-- The sold mark on the item's page: **Sold** with the sale in one line, "Sold
-  12 Sep 2026 · $1,200 · eBay" (the date in the device's own format), and
-  beneath it the outcome — placeholder "Sold at a gain of $350" or "Sold at a
-  loss of $150" ("Sold at cost" when equal) — with what was paid beside it.
-- A Sold-side row's outcome: placeholder "Gain $350" or "Loss $150" ("Sold at
-  cost"). Both outcome forms are settled at the design pass (Decision 10).
+  **Sold at** (placeholder "eBay, Reverb, a friend…"), **Note** (placeholder
+  "Anything worth remembering" — Decision 11); buttons **Cancel** and **Mark
+  as sold**. Reopened for editing, the title is **Edit sale** and the confirm
+  button **Save**.
+- The sold mark on the item's page: the tag **Sold**, the sale in one line —
+  "Sep 12, 2026 · $1,200 · eBay", the date in the device's own format and the
+  place dropped when there isn't one, the word "Sold" dropped because the tag
+  above it says so (Decision 11) — the sale's note as a quiet line beneath
+  when there is one, and the outcome **"Gain $350 vs paid"** / **"Loss $150 vs
+  paid"** / **"At cost"**.
+- A Sold-side row's outcome: the same three strings. Decision 11 settled one
+  form for the row and the page; the page only sets it larger, so
+  `pageOutcome` forwards to `rowOutcome` and the two cannot drift.
 - The page's actions: **Edit sale…**, **Return to collection…**, **Delete**.
-- The return confirmation: "Return {name} to your collection? Its sale details
-  will be removed." with **Return** and **Keep as sold**.
-- The Dashboard card: header **Sold**; "3 items · $2,400"; "+$350 vs paid".
+- The return confirmation: "Return {name} to your collection?" / "Its sale
+  details will be removed." with **Return** and **Keep as sold**.
+- The Dashboard card: header **Sold**; "3 items · $2,400"; "+$350 vs paid" (a
+  realised delta of zero reads "+$0 vs paid", as the Dashboard's Gain figure
+  already does). The card carries its arrow and no word beside it (Decision 11).
 - The Items tab's switch: **Owned** and **Sold**.
-- The Sold side: summary "3 sold · $2,400 · +$350 vs paid"; empty state
-  "Nothing sold yet. Mark an item as sold from its page or from a sell plan."
+- The Sold side: summary "3 sold · $2,400 · +$350 vs paid", shown at all times
+  — "0 sold · $0" when nothing is sold, the realised part dropped rather than
+  set to "+$0", so the switch above it never moves (Decision 13, replacing
+  Decision 11's hide-at-zero). Empty state "Nothing sold yet." / "Mark an item
+  as sold from its page or from a sell plan."
+- The Owned side emptied by selling: "Everything's sold." / "Add something
+  new." (Decision 12) — not the first-launch state.
 - The Sell Plan: the third figure's header **Sold**, captioned "2 items"; the
-  section beneath the candidates titled **Sold**.
+  section beneath the candidates titled **Sold**, kept under the empty state
+  too, each of its rows opening with a compact **SOLD** tag (Decision 14).
 - Sell Plan row action: **Mark as sold…**.
+- **Delete** keeps `ItemDeleteCopy`'s existing word and confirmation; a sold
+  item's message drops the sell-plan sentence and keeps the rest (P13).
 
 ## Design requirements
 
@@ -294,66 +309,306 @@ section on plan approval (P8).
 
 ## Acceptance criteria
 
-1. [ ] An owned item's detail screen offers **Mark as sold…** in its top-right
+Fifteen of the seventeen were verified at T020's close-out (2026-09-15) — by
+the unit suites, the UI suite, and the T019 device pass on an iPhone 18 Pro
+(iOS 27.0) with the in-memory store. **Two are the person's own steps and stay
+unticked**: criterion 15 (a second device signed into the same iCloud account)
+and criterion 16 (Accessibility Inspector over the new surfaces). Each names
+what the agent *did* verify, so what is left is exactly the observation nobody
+has made yet.
+
+1. [x] An owned item's detail screen offers **Mark as sold…** in its top-right
    menu beside Edit and Delete; the Items list's swipe does not offer it.
-2. [ ] The sale sheet requires a sale price (pre-filled with the current value
+    *Verified by*: `SoldStateWiringTests.bothMenuRowsAndTheSoldEditLabelReadSaleCopy`
+    and `theMenuIsComposedOnceWithItsRowsSwappedByTheSoldFlag` (one `Menu`, its
+    rows chosen by `isSold`), `theOverflowMenuHostsExactlyOneSystemMenu`
+    (`013`'s rule, re-confirmed by adding a second `Menu` → red); the swipe half
+    by `ItemListSidesWiringTests.theOwnedRowsSwipesDoNotOfferMarkAsSold`
+    (brace-span scan over the Owned rows' `.swipeActions`, `#require`ing its
+    anchor). On the device (T019): the menu row present on an owned page and
+    used from there; the swipe's contents are the scan's, not an observation.
+2. [x] The sale sheet requires a sale price (pre-filled with the current value
    when the item has one), defaults the date to today and refuses a future
    date, and takes an optional place and note. Cancel records nothing.
-3. [ ] Confirming the sheet marks the item sold with those details; the item's
+    *Verified by*: `SaleFormViewModelTests` — `refusesABlankPrice`,
+    `refusesANegativePrice`, `acceptsAZeroPrice` (given away is a sale of $0),
+    `refusesADateOneSecondInTheFuture`, `acceptsASaleDatedExactlyNow`,
+    `acceptsADateYearsBeforeThePurchase` (P2), `markPrefillsTheCurrentValueAndToday`,
+    `markLeavesThePriceBlankWithoutACurrentValue`,
+    `trimsAndNilsTheBlankPlaceAndNote` (plan G18, G19); the picker's own bound
+    by `SaleFormWiringTests.theDatePickerIsBoundedAtLatestDate` (mutation: drop
+    the `in:` bound → red) and Cancel by `confirmingHandsTheSaleOutAndWritesNothing`
+    (nothing in the view writes to a `modelContext`). On the device (T019): the
+    picker's future days visibly disabled (screenshot), and a **probe inside
+    `ItemSaleStore.markSold`** counted Cancel 0, swipe-down 0, a host re-render
+    0, confirm 1 — the `.sheet(item:)` lesson from `002`/`005`, instrumented
+    rather than eyeballed.
+3. [x] Confirming the sheet marks the item sold with those details; the item's
    own fields and photos are unchanged.
-4. [ ] A sold item no longer appears in the Items list, in any Dashboard
+    *Verified by*: `ItemSaleStoreTests.markingSoldLeavesTheItemsOwnFieldsPhotosAndMatchUntouched`
+    (name, category, paid, value, desire, condition, photos, notes *and*
+    `reverbProductID` — mutation: clear the match → red, G20) and
+    `everyStoredSaleHasBothADateAndAPrice` (G9); the round trip by
+    `ModelTests.aSaleRoundTripsAllFourFields` on a second `ModelContext`; the
+    detail path by `ItemDetailViewModelTests.markSoldRecordsTheSaleOnNoPlanAndLeavesTheItemItselfAlone`.
+4. [x] A sold item no longer appears in the Items list, in any Dashboard
    figure (value, paid, delta, counts, ruler, category breakdown, market
    line), or among any Sell Plan's candidates, and is removed from every plan
    it was selected on.
-5. [ ] A sold item's device-local market figures are cleared on the sale and
+    *Verified by*: `ItemListViewModelTests.aSoldItemLeavesEveryOwnedFigureAndAppearsOnTheSoldSide`
+    (mutation: drop `load()`'s split → red, G13);
+    `DashboardViewModelTests.theCollectionFiguresExcludeSoldItemsAndStillReconcile`
+    (value, spent, delta, counts, ruler, breakdown, `unvaluedDestination` and
+    the market count, all over one sold item — mutation: count sold in `apply`
+    → 13 issues, G22); `SellPlanViewModelTests.aSoldItemIsNeverACandidateEvenAtTheLowestDesire`
+    (G12); the selections by `ItemSaleStoreTests.aSaleEmptiesEveryPlanSelectionAndLeavesTheWishlistEntriesStanding`
+    (G4). On the device (T019): the row gone from the Items list, the Dashboard
+    card appearing while the collection figures dropped the item, and the
+    plan's candidate row gone.
+5. [x] A sold item's device-local market figures are cleared on the sale and
    it is not refreshed afterwards.
-6. [ ] The Dashboard shows a **Sold** card — count, total proceeds, realised
+    *Verified by*: `ItemSaleStoreTests.theSaleClearsThisItemsMarketRowsAndLeavesAnothersStanding`
+    (mutation: drop the clear → red, G5) and
+    `MarketRefresherTests.aSoldMatchedItemIsNoTarget` with
+    `SettingsViewModelTests`' matched count following (mutation: drop the
+    `soldDate == nil` clause → both red, G8). The match itself is kept
+    (Decision 1, plan Q8), so Return resumes refreshing. On the device (T019):
+    the Market section gone from the sold page, the market line dropping,
+    Refresh skipping it, and the match back as never-refreshed-here after
+    Return.
+6. [x] The Dashboard shows a **Sold** card — count, total proceeds, realised
    gain or loss against what was paid — only when something in scope has been
    sold; it follows the category scope; tapping it lands on the Items tab's
    Sold side. The collection figures exclude sold items and still reconcile
    (value − paid = delta over valued items).
-7. [ ] The Items tab switches between **Owned** and **Sold** in one tap and
+    *Verified by*: `DashboardViewModelTests.theSoldTotalsSumTheSalesInScope`,
+    `theSoldFiguresFollowTheScope`, `hasSalesIsFalseWithNothingSold` (mutation:
+    skip the scope filter for sold → red, G23), `theCardsLinesAreSaleCopyOverTheSameNumbers`
+    and `theCollectionFiguresExcludeSoldItemsAndStillReconcile` (G22);
+    `DashboardWiringTests.theCardIsComposedOnlyBehindTheSalesGate`,
+    `theCardSitsBetweenTheCalloutAndTheBreakdownAndInsideNoFigure`,
+    `tappingTheCardAsksTheRouterForTheSoldSide`,
+    `theCardShowsTheViewModelsTwoLinesRatherThanWordsOfItsOwn` (each
+    `#require`ing the `if viewModel.hasSales` anchor); the router by
+    `AppRouterTests.showingTheSoldSideSwitchesTabsAndAsksForIt` and
+    `theSoldRequestIsClearedOnceApplied`; end to end by the UI test
+    `testTheSoldCardLandsOnTheSoldSideWhichListsSalesMostRecentFirst`. On the
+    device (T019): the card at the root, inside a category, and hidden where
+    nothing in scope sold. Recorded as designed (plan R1): a **category-scoped
+    card lands on the whole Sold side**, which has no narrowing of its own —
+    the person saw it at the Phase 5 pause and accepted it.
+7. [x] The Items tab switches between **Owned** and **Sold** in one tap and
    opens on Owned at launch. The Sold side shows every sold item, most recent
    sale first, each row with name, sold date, sale price and gain or loss;
    each row making unmistakable whether it sold at a gain or at a loss and
    by how much; its summary line matches the card; Sort By is hidden there; swipe-to-delete
    works with the usual confirmation; the empty state shows when nothing is
    sold or the last sale is removed.
-7a. [ ] From either side, the "…" menu's CSV export includes both owned and
+    *Verified by*: the side as plain view-model state, so Owned at every launch
+    is true by construction (plan Q4) — `ItemListViewModelTests.switchingToSoldClearsEveryNarrowing`
+    and `askingForTheSideAlreadyOnScreenLeavesTheFilterAlone` (G33),
+    `theSoldSideLeadsWithTheMostRecentSaleThenNameThenID` (G14),
+    `reorderingIsRefusedOnTheSoldSide`, `deletingWorksOnASoldItemToo`,
+    `theSoldSidesEmptyStateIsNothingSoldOrStillSyncing`,
+    `theEmptiedOwnedSideSaysEverythingSold` (Decision 12);
+    `ItemListSidesWiringTests` for the screen —
+    `theSoldSideRendersNoSortControlAndNoSearchField`,
+    `theSoldRowsCarryOnlyTheTrailingDelete`,
+    `theRowsFollowTheSideAndTheSoldBranchDrawsTheSoldRow`,
+    `theSwitchReportsThroughShowAndBindsToNothing`,
+    `theSwitchStandsOutsideTheEmptyState`,
+    `theSoldSideReadsTheViewModelsSummaryLine`,
+    `neitherSidesMetaLineIsConditional` (Decision 13),
+    `theSwitchIsLabelledAndMarksItsActiveHalfSelected`; the row's words by
+    `SoldItemRowTests` (`aRowOverALossReadsTheLossAndItsAmount`,
+    `aRowOverAGainReadsTheGainAndItsAmount`, `aRowOverEqualFiguresReadsAtCost`,
+    `theRowNamesTheSaleDateAndNotThePurchaseDate`,
+    `theRowShowsTheSalePriceAndNotTheValueOrTheCost`, plus the rendered
+    `aLossPaintsRustAndAGainPaintsMoss` / `anAtCostRowPaintsNeitherTone` — the
+    words carry it, the colour repeats it). "Its summary line matches the card"
+    is one sum, not two: both read `SaleOutcome.totals` through `SaleCopy`
+    (`SaleCopyTests.theSoldSideSummaryAtAGainALossAndZero`, G32's scan that
+    neither view model does arithmetic of its own). On screen: the UI test
+    above and `testMarkingAnItemSoldMovesItToTheSoldSideAndReturnRestoresIt`;
+    on the device (T019, and the T018b/T018c checks) the switch, the three
+    outcomes, Sort By hidden, the swipe delete with its confirmation and the
+    re-count afterwards — the empty state *after the last sale is removed* is
+    the UI test's assertion, which walks mark → Sold side → Return → "Nothing
+    sold yet". **Measured, not eyeballed**
+    (T018b, Decision 13): the switch's top edge sits at 154.3 pt on both sides
+    with zero and with one sale, and the fill's travel is 9–11 distinct frames
+    at 60 Hz over 164 ms, flat brightness — from a screen recording, since a
+    screenshot cannot show motion.
+7a. [x] From either side, the "…" menu's CSV export includes both owned and
    sold items and its PDF export includes owned items only; Import and
    Settings behave as before.
-8. [ ] A sold item's page shows the Sold mark, the sale details and,
+    *Verified by*: `ItemListViewModelTests.theItemsCSVIsOwnedInCustomOrderThenSoldInSoldSideOrder`,
+    `aVisibleFilterNarrowsTheSoldHalfOfTheCSVToo` (G15),
+    `switchingToSoldClearsEveryNarrowing` (so a CSV from the Sold side is the
+    complete record — G33, the sign-off's blocking finding),
+    `anAllSoldCollectionCanExportACSVButNotAPDF`,
+    `aFilterThatExcludesBothHalvesDisablesTheCSVToo`, and
+    `thePDFLeavesSoldItemsOutOfItsEntriesAndItsCover` (G16);
+    `ExportWiringTests.eachExportRowDimsOnItsOwnGate` with
+    `OverflowDropdownRenderTests` (G29 — two rows, one gate each, Import and
+    Settings still ungated: broadened, not weakened). On the device (T019): a
+    CSV taken from the Sold side read back from the container with both sides
+    and the four new columns; the PDF owned-only.
+8. [x] A sold item's page shows the Sold mark, the sale details and,
    unmistakably, whether it sold at a gain or at a loss and by how much
    against what was paid, with the item's content read-only beneath; it offers exactly **Edit sale…**, **Return to collection…** and
    **Delete**.
-9. [ ] **Edit sale…** changes the sale details in place; **Return to
+    *Verified by*: `SoldStateWiringTests.theSoldBranchStampsTheMark`,
+    `theMarkReadsSaleCopyAndAnnouncesItselfAsOneElement`,
+    `theSoldBranchOmitsTheMarketSectionAndFindAPhoto` (a brace-span scan that
+    first `#require`s the `if viewModel.isSold` anchor found exactly once),
+    `theSoldPagesDialIsNotInteractive` (the dial is handed a constant binding,
+    so VoiceOver's adjustable action cannot write either),
+    `theSaleSheetAndReturnAlertAreHostedHere` and the menu tests of criterion
+    1; the words themselves by `SaleCopyTests.thePageOutcomeReadsTheSameAsTheRow`
+    and `aLossNeverReadsAsAGain`. On the device (T019 and T014's check): the
+    page at a gain, a loss and at cost against the approved artboards.
+9. [x] **Edit sale…** changes the sale details in place; **Return to
    collection…** asks first, then restores the item to the collection with no
    sale and at its former order position, on no Sell Plan; **Delete** confirms
    and deletes permanently, photos included.
-10. [ ] A Sell Plan row offers **Mark as sold…**; sold from there, the sale
+    *Verified by*: `ItemSaleStoreTests.editSaleKeepsThePlanLink` (G21),
+    `markThenReturnLeavesSortOrderAndTheCustomSlotUnchanged` (the item back in
+    its slot among three others — mutation: reset `sortOrder` on return → red,
+    G7), `allThreeWritersBumpUpdatedAt` (Q13);
+    `ItemDetailViewModelTests.returnToCollectionClearsAllFiveAndRestoresTheItemsSlot`,
+    `editSaleKeepsAnEarlierPlanLink`, `theEditSheetIsSeededFromTheRecordedSale`
+    and `deletingASoldItemRemovesItAndItsPhotos`; the alerts by
+    `SoldStateWiringTests.theSaleSheetAndReturnAlertAreHostedHere` and
+    `theDeleteAlertAsksTheItemWhichSideItIsOn` over
+    `ItemDeleteCopyTests.theSoldMessageDropsTheSellPlanLineAndKeepsTheRest`
+    (G17). On screen: `testMarkingAnItemSoldMovesItToTheSoldSideAndReturnRestoresIt`.
+    On the device (T019): edit in place, Return landing back at its Custom
+    slot on no plan, and the shorter delete message on a sold row.
+10. [x] A Sell Plan row offers **Mark as sold…**; sold from there, the sale
     points at that wishlist item, and the plan shows a **Sold** figure beside
     Selected and Estimated cost with the count, plus a Sold section listing
     the sale — with nothing subtracted from the cost anywhere on the screen.
     The colour cue reads Selected plus Sold against the cost.
-11. [ ] Sold from the detail screen, a sale points at no plan; deleting a
+    *Verified by*: `SellPlanViewModelTests.aSaleFromThePlanPointsAtItAndTheRowLeavesTheCandidates`
+    (G6/G12), `theSoldFigureIsAThirdIndependentFigureAndTheCostIsUntouched`
+    (mutation: subtract sold from the cost → red, G10),
+    `theCueReadsTheSelectionAndTheSalesTogether`, `salesAloneCanMeetTheCost`,
+    `salesShortOfTheCostDoNotMeetIt`, `anEmptyPlanWithNoSalesNeverReadsAsMeetingTheCost`
+    (G11, P14), `soldItemsReadMostRecentSaleFirst`; the screen by
+    `SellPlanWiringTests.theSoldCellIsInsideTheHasSalesBranchAndNowhereElse`,
+    `theHeaderSubtractsTheSaleFromNothing`,
+    `theSoldSectionFollowsTheCandidatesAndOnlyWhenThereAreSales`,
+    `theSoldSectionIsHostedUnderTheEmptyStateToo` and
+    `eachSoldRowCarriesTheSoldMark` (Decision 14 — mutation: drop the section
+    from the empty branch → red),
+    `theSoldSectionListsTheSalesAndAddsNothingUp`,
+    `theRowsControlIsASecondTapTargetThatSetsTheSaleCandidate`,
+    `theSheetIsTheOneSaleFormOverTheOneSeedingRule` (one component, one
+    seeding rule, not a second form) and `theNewCopyIsNeverTypedInline`, with
+    `SellPlanFramingTests`' term scan still refusing any "remaining"/"gap"
+    wording (`001`'s framing rule, re-confirmed by adding the word → red). On
+    screen: `testASellPlanRowSoldFromThePlanShowsTheSoldFigure` reading the
+    combined `sellPlan.soldFigure` element (mutation: `markSold(toward: nil)`
+    → red). On the device (T017/T018c checks): the two- and three-figure
+    headers, the section at one and two sales, and — per Decision 14 — the
+    section still listed under the empty state once every candidate is sold,
+    each row opening with a SOLD tag.
+11. [x] Sold from the detail screen, a sale points at no plan; deleting a
     wishlist item leaves its sales standing.
-12. [ ] The items CSV export carries four appended columns — Sold Date, Sale
+    *Verified by*: `ItemSaleStoreTests.theSaleLinksToAPlanOnlyWhenOneIsPassed`
+    (G6) and `ItemDetailViewModelTests.markSoldFromTheDetailLeavesTheItemOnNoSellPlan`
+    (mutation: the detail passing a plan → red);
+    `WishlistDeletionTests.deleteLeavesSalesRecordedTowardItStandingWithNoPlan`
+    (mutation: the relationship's `.nullify` → `.cascade` → red, G3) and
+    `SellPlanViewModelTests.aSaleRecordedFromTheDetailIsOnNoPlan`. On the
+    device (T019): deleting the wanted item left its sale standing.
+12. [x] The items CSV export carries four appended columns — Sold Date, Sale
     Price, Sold At, Sale Note — blank for unsold items and filled for sold
     ones, so sold items are included; the wishlist CSV is unchanged; an
     export from before this spec still imports as a prefix.
-13. [ ] Import creates a sold item from a row with both a sold date and a sale
+    *Verified by*: `ExportSchemaTests.headerListsMatchThePinnedSchema` and
+    `theLegacyLayoutsArePinnedByLiteralName` (the boundaries `[12, 14]` by
+    literal — mutation: add a speculative `13` → red, G24),
+    `itemRecordCarriesTheSaleFromTheModel`, `theSaleCellsAreBlankWhenOwnedAndFilledWhenSold`
+    (mutation: write the price for an owned row → red, G25) and
+    `itemRowCarriesEveryColumnInHeaderOrder`; the prefix rule by
+    `ImportSchemaTests.theTwoLegacyItemWidthsPassAndTheWidthsBetweenThemDoNot`
+    (18/14/12 accepted, 13 and 17 refused — mutation: accept any prefix → red,
+    G26), `aLegacyFileImportsWithNoMatchAndNoYear` and
+    `DocsSampleTests.itemsResavedToleratesTransportDamage` over the
+    14-column fixture kept deliberately (G30). The wishlist CSV is untouched
+    (`wishlistRowCarriesEveryColumnInHeaderOrder`). Documented in
+    `docs/csv-reference.md` and `docs/samples/items-full.csv` (T007). On the
+    device (T019): a real export read back with the four columns.
+13. [x] Import creates a sold item from a row with both a sold date and a sale
     price, an unsold item from a row with neither, and an unsold item with a
     counted default from a row with only one; an imported sale points at no
     plan.
-14. [ ] The PDF export leaves sold items out and its cover totals match the
+    *Verified by*: `ImportSchemaTests.aSoldRowCarriesAllFourCellsAndADroppedOneCarriesNone`,
+    `theSalePairRuleCountsOneDefaultPerDroppedSale` (five cases, counts
+    0/1/1/0/1 — mutations: one default per *cell* → 2 ≠ 1 red; a lone half
+    accepted → the unsold assertion red; G27, plan R3),
+    `aSoldRecordRoundTripsThroughTheCSV`, `aZeroSalePriceImportsAsAnItemGivenAway`
+    and `aNegativePriceDropsTheSaleAndAFutureDateImportsAsWritten` (plan Q6's
+    two stated asymmetries: the parser rejects a signed price, and it has no
+    clock, so a future sold date imports as written exactly as `Purchase Date`
+    does); the commit by `ItemListViewModelTests.commitRestoresTheSaleAndPointsAtNoPlan`
+    (mutations: drop `sale`, or set a plan link → red) and
+    `DocsSampleTests.itemsFullImportsCleanly` over the two sold sample rows.
+14. [x] The PDF export leaves sold items out and its cover totals match the
     Dashboard's collection figures.
-15. [ ] Sale details sync with the item to a second device signed into the
-    same iCloud account (attested by the person, or recorded as an honest
-    partial as `005` did).
-16. [ ] VoiceOver: **Mark as sold…**, the Owned / Sold switch and which side
-    is showing, the Sold card, each Sold-side row, the sold mark and the sale
-    line, and the Sell Plan's Sold figure are labelled; a sold item is
-    announced as sold with its price and date.
+    *Verified by*: `ItemListViewModelTests.thePDFLeavesSoldItemsOutOfItsEntriesAndItsCover`
+    and `SettingsViewModelTests.theEverythingPDFLeavesSoldItemsOut` (both
+    paths — mutation: hand the composer every item → red, G16). The cover
+    totals are the list view model's owned-only arithmetic, the same figures
+    the Dashboard computes, so they match by construction (plan Q5) and
+    criterion 6's reconciliation test covers the other half; byte identity
+    with Settings survives a sale
+    (`SettingsViewModelTests.theListsUnfilteredCSVStillMatchesSettingsByteForByteWithASalePresent`,
+    G28). On the device (T019): the PDF owned-only from both paths.
+15. [ ] **Pending — the person's step.** Sale details sync with the item to a
+    second device signed into the same iCloud account (attested by the person,
+    or recorded as an honest partial as `005` did).
+    *What was verified*: `CloudKitSchemaTests.schemaMeetsCloudKitRequirements`
+    builds a real `ModelContainer` against a CloudKit `ModelConfiguration` with
+    the five additions and validates — the **red run is recorded** (T001:
+    `soldDate` declared non-optional without a default → "CloudKit integration
+    requires that all attributes be optional, or have a default value set",
+    naming `Item: soldDate`, G1), which is what makes the fields syncable at
+    all; and `ModelTests.aSaleRoundTripsAllFourFields` for the four fields and
+    the link travelling with the item on a second context. The sale is stored
+    *on* the item (plan Q1), so it is one CloudKit record on the path `001`'s
+    item fields already take — there is no second record that could arrive
+    out of order. **Nobody has watched a sale arrive on a second device**: no
+    second device was available, exactly as `005`'s criterion 4 recorded.
+16. [ ] **Pending — the person's step.** VoiceOver: **Mark as sold…**, the
+    Owned / Sold switch and which side is showing, the Sold card, each
+    Sold-side row, the sold mark and the sale line, and the Sell Plan's Sold
+    figure are labelled; a sold item is announced as sold with its price and
+    date.
+    *What was verified*: every one of those surfaces is a combined element
+    with a label the tests read — `SoldStateWiringTests.theMarkReadsSaleCopyAndAnnouncesItselfAsOneElement`
+    (the mark reads "Sold", the sale line and the outcome as one element),
+    `DashboardWiringTests.theCardIsOneElementWithAHintAndAnIdentifier`,
+    `ItemListSidesWiringTests.theSwitchIsLabelledAndMarksItsActiveHalfSelected`
+    (label "Owned or sold", the value the current side, `.isSelected` on the
+    active half), `SellPlanWiringTests.eachSoldRowCarriesTheSoldMark`, and the
+    `sellPlan.soldFigure` cell combined and identified at T017a. The Sold-side
+    row combines its children too (`SoldItemRow`'s
+    `.accessibilityElement(children: .combine)` with the stock-photo value),
+    and `SoldItemRowTests` pins the words that combination is made of, though
+    no unit test asserts the combining itself — the UI test below is what reads
+    the resulting label. The UI suite
+    reads these labels for real rather than by inspection —
+    `testTheSoldCardLandsOnTheSoldSideWhichListsSalesMostRecentFirst` matches
+    on the rows' combined labels ("Gain $350", "Loss $150") and
+    `testASellPlanRowSoldFromThePlanShowsTheSoldFigure` on the Sold figure's
+    one label. **What is left is the reading itself**: Accessibility Inspector
+    (or VoiceOver on a device) over the menu rows, the switch, the card, a
+    Sold row, the sold mark and the plan's Sold figure. Note for that pass:
+    the plan's sold row announces "Sold" *first*, before the name (Decision
+    14's tag), which is what T019's finding F1 turned up.
 
 ## Decisions record
 

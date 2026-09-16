@@ -213,6 +213,102 @@ spec.
   similar) is **deferred** to whichever spec next touches all its call
   sites.
 
+## Marking something sold (`006`, shipped 2026-09-15)
+
+The product decisions are numbered 1–14 (plus the P-items) in
+`specs/006-mark-as-sold/spec.md`; this records what reaches beyond that spec.
+
+- **The sale is four fields and a link on `Item`, not a `Sale` model** (plan
+  Q1). The deciding reason is sync, not tidiness: stored properties travel as
+  one CloudKit record, while a relationship is a second record that can arrive
+  before or after its item — so a second device could briefly show a sold item
+  as owned, or a sale pointing at nothing. Three consequences fell out of the
+  same choice: every reader tells the two sides apart with one stored-property
+  predicate (`soldDate == nil`), usable inside a `#Predicate` and in memory
+  alike; "Return to collection" is nil-ing five fields, with no row to delete
+  and no orphan to leak (the `PhotoSelection.orphaned` class of bug cannot
+  arise); and `TroveSchema.models` is unchanged, so `002`'s store-disjointness
+  pin needed no edit. The cost is four nil columns on every unsold item, paid
+  knowingly. The general rule worth keeping: **when a fact belongs to a record
+  and arrives with it, make it a field; reach for a relationship when the fact
+  has its own identity or repeats.** An item is sold once, whole, so it has
+  neither.
+- **The Owned / Sold side is plain view-model state, with one intent that
+  changes it** (plan Q4, Q15). Nothing persists the side, so "the tab opens on
+  Owned at every launch" is true by construction rather than by a reset
+  somewhere — there is no stored value that could be wrong. And because the
+  sign-off found that a CSV exported from the Sold side would otherwise inherit
+  the Owned side's category and search narrowing with no chip on screen to say
+  so, `show(_ side:)` is the only way the side changes and it clears every
+  narrowing in both directions; `side` is `private(set)`, so binding a control
+  straight to it does not compile. The rule this is an instance of: **when two
+  views share one view model, make the switch between them an intent, not a
+  setter** — the state that must be reset lives in the same function as the
+  change that invalidates it.
+- **Copy and colour have one home each, and they are different homes.** Every
+  string `006` fixes lives in `SaleCopy` (a `Trove/Models/` file: Foundation
+  only, no SwiftUI, no colour), pinned whole by its tests and read by the views
+  — the `MarketCopy` / `StockPhotoCopy` pattern, for the same reason, that two
+  surfaces saying the same thing must not drift apart. The *colour* rule lives
+  on the model as a boolean — `SaleOutcome.isLoss` for one sale and, after the
+  Phase 5 review, `SaleTotals.isLoss` for a sum — and each view maps that to
+  `accentRustText` / `accentMossText` itself. The review finding is the part
+  worth remembering: the loss-over-a-sum rule had quietly grown two spellings
+  (a card building a `SaleOutcome` over a delta, a list reading the sign
+  directly), which a scan could not see until the rule had a name. **A
+  predicate that decides an appearance belongs on the model with a name, not
+  inline at each surface**; the scan that pins the surfaces to it is only as
+  good as that name existing. Related and separate: the word carries the
+  meaning and the colour only repeats it — "Gain $350 vs paid" / "Loss $150 vs
+  paid" / "At cost" (spec Decision 11), so nothing is lost to a colour-blind
+  reader or a greyscale print.
+- **Import treats a sale as a pair, and counts the drop once** (plan Q6, R3). A
+  row is a sold item only if both `Sold Date` and `Sale Price` parse; either
+  half alone imports the item unsold and reports **one** counted default, not
+  one per non-blank cell — an import report that overstates the damage is as
+  misleading as one that hides it. Two asymmetries are recorded rather than
+  smoothed over: a negative price is already unreadable to `012`'s parser, so
+  it drops as "price unreadable", while a future sold date imports as written,
+  because the parser has no clock and `Purchase Date` has always been accepted
+  unbounded. The sheet's future-date bound is a data-entry courtesy; import
+  trusts the file.
+- **A second UI-test seed, and the conditions under which a seed may add
+  rows.** `-seedSold` is the first use of `CLAUDE.md`'s amended `-uiTesting`
+  rule — a test-only branch that *adds* data for one launch rather than only
+  losing it — and it holds to both conditions the amendment set: it is gated on
+  the store the app actually built being in-memory (never on a second read of a
+  launch argument), so the bound is structural and a test can watch it refuse a
+  persistent store; and it takes its own argument, so `-uiTesting` and
+  `-seedSellPlan` alone keep the starting states every existing UI test was
+  written against. It writes through `ItemSaleStore.markSold` rather than
+  setting fields directly, so the seed cannot produce a shape the app itself
+  could not, and its test reads the seeded totals back through
+  `SaleOutcome.totals` rather than a third hand-written sum.
+- **What the person's walkthrough changed, and why it took measurement**
+  (spec Decisions 12–14, at the Phase 4 and Phase 5 pauses). Three of the four
+  findings were about how the app *moved* or what it *said*, not what it
+  computed. An Owned side emptied by selling now has its own empty state
+  ("Everything's sold. Add something new.") instead of the first-launch "No
+  gear yet", because the person has been using the app rather than just
+  installing it. The Sold side keeps its stats line at zero sales ("0 sold ·
+  $0") so the switch above it never moves — the jump the person saw measured
+  19.7 pt, and only with an empty collection, which is why the seeded
+  simulator had not shown it. And the stutter under that switch was not the
+  cause anyone reasoned their way to: a `matchedGeometryEffect` pair across an
+  `if isActive` insert/remove is a *structural* change that `.animation(_:
+  value:)` never covered, so the fill crossfaded — a 22 % brightness dip while
+  the travel stepped at about 20 Hz — and it took a screen recording with
+  per-frame timing to see that, since a screenshot cannot show motion at all.
+  It ships as one rectangle with an animatable offset. **Two general notes**:
+  any other `matchedGeometryEffect` across an insert/remove in this app is a
+  silent crossfade wearing the source code of a slide; and a layout finding a
+  person reports should be reproduced with *their* data shape before it is
+  diagnosed. The fourth, Decision 14 — a sell plan keeps listing its sold items
+  under the empty state, each row marked sold — changed an accessibility label
+  (the row now announces "Sold" first) and broke a UI-test helper that matched
+  name-first. The miss is recorded in `tasks.md`: **a view change that alters
+  an accessibility label must verify the UI suite, not just the unit suite.**
+
 ## Process and tooling notes
 
 - **Git routing**: edits to `CLAUDE.md`, `specs/ROADMAP.md`, and this

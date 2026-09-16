@@ -34,19 +34,28 @@ purchases.
   item moves across to the Sold side, which says in words whether each
   sale was a gain or a loss and by how much — and it can be returned to
   the collection, its sale details removed, after a confirmation, if it
-  comes home.
+  comes home. A sold item leaves your collection totals and every sell
+  plan's candidates but keeps its photos and history; the dashboard
+  gains a Sold card — how many, for how much, and how that compares to
+  what you paid — and a sell plan keeps listing what was sold toward
+  it, each row marked sold, even once every candidate has gone.
 - **Low-friction item management** — swipe to delete, edit, or copy on
   both lists; press-and-hold drag reordering under a "Custom" sort,
   with an accessible Move up/Move down path for VoiceOver; and value
   and cost sorts in both directions, with ties resolving by your own
   manual order, and a Market sort on both lists.
-- **Export** — the exact view you're looking at (filters and sort
-  respected), as a data-grade CSV with a canonical, re-importable
-  schema, or as a print-first PDF collection document — cover summary,
-  then one photo-and-fields entry per item — delivered through the
-  share sheet. The CSV carries an item's Reverb match and the year it
-  was made, so a round trip restores them; it never carries the fetched
-  figures, which belong to the device that fetched them.
+- **Export** — the exact view you're looking at, as a data-grade CSV
+  with a canonical, re-importable schema, or as a print-first PDF
+  collection document — cover summary, then one photo-and-fields entry
+  per item — delivered through the share sheet. On the Items tab the CSV
+  is the whole record: the owned rows as you filtered and sorted them,
+  then the sold ones, most recent sale first, each with what it sold
+  for, when and where. The PDF stays a document of what you own, so the
+  two formats are offered independently — a collection you have sold
+  entirely still exports a CSV, and no PDF. The CSV carries an item's
+  Reverb match and the year it was made, so a round trip restores them;
+  it never carries the fetched figures, which belong to the device that
+  fetched them.
 - **Import** — CSV import of an externally-tracked collection on both
   lists, parsing the same canonical schema export writes: grab a blank
   template from Settings (or start from a real export), fill it in
@@ -96,7 +105,7 @@ purchases.
 
 ## Status
 
-Nine specs shipped: `001-core-inventory` (v1 — item tracking, the
+Ten specs shipped: `001-core-inventory` (v1 — item tracking, the
 dashboard, the wishlist, the Sell Plan, CloudKit sync),
 `010-item-management-enhancements` (merged 2026-08-30 — swipe actions,
 drag-to-reorder, duplication, expanded sorting, and a design-depth
@@ -119,9 +128,13 @@ one-time notice came with it), `003-trend-aware-sell-plan` (merged
 within a desire level, with the median on each matched row and one
 dated sentence saying why), `004-themes` (merged 2026-09-09 — light
 mode of the brass/moss/rust identity, with a System/Light/Dark choice
-in Settings), and `005-stock-photos` (merged 2026-09-13 — an item with
+in Settings), `005-stock-photos` (merged 2026-09-13 — an item with
 no photo of its own can borrow a credited one from Wikimedia Commons,
-in the app and in the PDF export).
+in the app and in the PDF export), and `006-mark-as-sold` (merged
+2026-09-15 — mark an item sold from its page or from a sell plan and
+it moves to a Sold side of the Items tab with what it sold for, when
+and where; a Sold card on the dashboard, a Sold figure on each sell
+plan, four new CSV columns, and a sale that can be undone).
 See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.
@@ -188,7 +201,7 @@ TroveTests/             Swift Testing, one file per view model
 TroveUITests/           XCTest smoke tests
 specs/
   001-core-inventory/    Shipped v1 — spec, plan, tasks
-  010-.../               Shipped — item management + design refresh
+  010-item-management-enhancements/  Shipped — item management + design refresh
   011-data-export/       Shipped — CSV + PDF export, canonical schema
   012-data-import/       Shipped — CSV import against that schema
   013-settings-menu/     Shipped — Settings, and the bespoke in-page menus
@@ -196,12 +209,13 @@ specs/
   003-trend-aware-sell-plan/ Shipped — the trend-aware Sell Plan
   004-themes/            Shipped — light mode and the appearance choice
   005-stock-photos/      Shipped — credited stock photos from Wikimedia Commons
+  006-mark-as-sold/      Shipped — the sale, the Sold side, the Sold card
   ROADMAP.md             Backlog of future specs
 design/
   brief.md               Visual/interaction direction
   tokens.md               Colors, type, spacing as implemented
   screens/                Design references
-  elements/               Design-pass artboards per spec (002's market surfaces, 005's photo surfaces)
+  elements/               Design-pass artboards per spec (002's market surfaces, 005's photo surfaces, 006's sale surfaces)
 docs/
   csv-reference.md       The CSV columns, formats, and Excel caveats
   samples/                Tested sample CSVs for every import state
