@@ -24,6 +24,20 @@ struct SellPlanEmptyReasonTests {
         return item
     }
 
+    private let soldOn = Date(timeIntervalSince1970: 1_770_000_000)
+
+    private func sale() -> Sale {
+        Sale(date: soldOn, priceCents: 42_000, location: "Reverb", note: nil)
+    }
+
+    /// A monitor mid-first-import, built the way `StillSyncingTests` builds
+    /// one — from a real event, not from a stubbed flag.
+    private func importing() -> SyncMonitor {
+        let monitor = SyncMonitor(mode: .cloudKit)
+        monitor.record(SyncEvent(kind: .importChanges, isFinished: false, succeeded: false))
+        return monitor
+    }
+
     // MARK: - The overlap
 
     /// Both true at once: nothing is rated low enough to sell, *and* nothing
@@ -87,6 +101,66 @@ struct SellPlanEmptyReasonTests {
         viewModel.load()
 
         #expect(viewModel.emptyReason == nil)
+    }
+
+    // MARK: - The plan emptied by selling (spec Decision 15)
+
+    /// Every candidate sold, nothing owned left: the plan says so rather than
+    /// opening with the first-launch invitation above a list of the sales
+    /// that emptied it.
+    @Test func aPlanWhoseEveryCandidateSoldSaysSo() throws {
+        let context = try makeContext()
+        let wishlistItem = wanted(in: context)
+        let item = Item(name: "Squier CV50s", categoryPath: "Music/Guitars",
+                        currentValueCents: 38_000, desireToKeep: 1)
+        context.insert(item)
+        try ItemSaleStore.markSold(item, sale: sale(), toward: wishlistItem, at: soldOn, in: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: wishlistItem.id)
+        viewModel.load()
+
+        #expect(viewModel.hasSales)
+        #expect(viewModel.emptyReason == .everythingSold)
+    }
+
+    /// The boundary the mapping sits behind: an empty collection with no sale
+    /// on this plan is still a first launch, and still gets the first-launch
+    /// words. Nothing sold, nothing to say sold.
+    @Test func aPlanWithNoSalesKeepsTheFirstLaunchReason() throws {
+        let context = try makeContext()
+        let wishlistItem = wanted(in: context)
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: wishlistItem.id)
+        viewModel.load()
+
+        #expect(!viewModel.hasSales)
+        #expect(viewModel.emptyReason == .nothingOwned)
+    }
+
+    /// `stillSyncing` keeps outranking the new case as it outranks the other
+    /// three: an owned side that looks empty mid-import may just be gear that
+    /// hasn't arrived, and "everything on this plan has sold" is exactly as
+    /// wrong there as "nothing to sell yet". The sale is real either way — the
+    /// claim about what is *left* is the one that can't be made yet.
+    @Test func anImportInFlightOutranksTheSoldOutPlan() throws {
+        let context = try makeContext()
+        let wishlistItem = wanted(in: context)
+        let item = Item(name: "Squier CV50s", categoryPath: "Music/Guitars",
+                        currentValueCents: 38_000, desireToKeep: 1)
+        context.insert(item)
+        try ItemSaleStore.markSold(item, sale: sale(), toward: wishlistItem, at: soldOn, in: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(
+            modelContext: context,
+            wishlistItemID: wishlistItem.id,
+            syncMonitor: importing()
+        )
+        viewModel.load()
+
+        #expect(viewModel.hasSales)
+        #expect(viewModel.emptyReason == .stillSyncing)
     }
 
     /// The threshold itself comes from `DesireLevel`, not from a number

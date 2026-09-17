@@ -431,6 +431,18 @@ struct SellPlanView: View {
                 detail: "Add the gear you own and anything you'd part with turns up here."
             )
 
+        // The plan emptied by selling (spec Decision 15). It keeps the Items
+        // mark the first-launch state above carries — the gear is still what
+        // this screen is about — and, like every other case here, offers no
+        // action: the sales are already on screen beneath it, and there is
+        // nothing to send the person off to do.
+        case .everythingSold:
+            EmptyStateView(
+                mark: .asset("TabItems"),
+                headline: SaleCopy.planEverythingSoldHeadline,
+                detail: SaleCopy.planEverythingSoldDetail
+            )
+
         case .everythingIsAKeeper:
             EmptyStateView(
                 mark: .system("lock"),
