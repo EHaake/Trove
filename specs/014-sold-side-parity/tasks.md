@@ -1,6 +1,6 @@
 # 014 — Sold-Side Parity and Mark as Sold on the Swipe: Tasks
 
-**Status**: Draft — pending sign-off
+**Status**: **Signed off** (2026-09-16) — drafted by the `sdd-planner` at the top tier, reviewed by the `skeptical-reviewer` at the top tier: three blocking findings (a hidden-narrowing leak into the Owned empty state, by-eye simulator steps in three tasks, a tie-break guard that could not reliably go red) fixed and re-reviewed in one round, verdict sign off. Awaiting the person's approval of the spec-conformance summary.
 
 Drafted against the approved `spec.md` (Approved 2026-09-16) and the draft
 `plan.md` in this directory, for branch `014-sold-side-parity` off `main`
@@ -72,9 +72,12 @@ back; open a sold item's page) and says three things the person will feel
 before they read them: the swipe's button reads **"Sell"** while VoiceOver
 calls it "Mark as sold…" (the fuller name does not fit the button); a CSV
 exported from a Sold side narrowed by a chip **also narrows the owned rows**
-to that category (the file follows whatever is on screen, plan R2/P11); and
-the Sold side's summary line **counts only the rows on screen** while the
-Dashboard's card keeps counting everything sold.
+to that category (the spec's own rule, P11 — the file follows whatever is on
+screen); and the Sold side's summary line **counts only the rows on screen**
+while the Dashboard's card keeps counting everything sold. **One thing the
+spec did not say, which the person decides at that pause**: the PDF exported
+from a narrowed Sold side follows that narrowing too, owned items only, with
+the same label (plan R2) — the report puts it as a question, not a fact.
 
 ## Phase 1 — Foundations, view model only (**foundational**)
 
@@ -93,27 +96,36 @@ Dashboard's card keeps counting everything sold.
   Decision 16 already records the deferral and stays. Pattern: the italic
   pointer `006`'s T007 appended to `specs/011-data-export/plan.md`.
   Files: `specs/006-mark-as-sold/spec.md`, `specs/006-mark-as-sold/plan.md`.
-  **Verify:** `grep -c "014-sold-side-parity" specs/006-mark-as-sold/spec.md`
-  prints at least 5 (the four pointers plus Decision 16's mention) and the
-  same over `plan.md` prints at least 4; `git diff --stat` touches only those
+  **Verify:** `grep -c "Superseded by \`014-sold-side-parity\`" specs/006-mark-as-sold/spec.md`
+  prints 4 and the same over `plan.md` prints 4 — the pointer's own phrase,
+  so Decision 16's existing mention (which cites `NEXT-sold-side-parity.md`,
+  not this directory) is not counted; `git diff --stat` touches only those
   two files.
 
 - [ ] **T002 — `SoldSortOrder` and its comparators.**
   Per plan §2 and Q4. `ItemListViewModel.SoldSortOrder` (eight cases in menu
-  order, `label`, `id`), `soldSortOrder: SoldSortOrder = .soldDate`, private
-  `isInSoldOrder(_:_:)` = `soldAttributeOrder(_:_:) ?? Self.areInSoldOrder`,
-  the attribute comparators nil-on-tie and nil-last for the two optionals;
-  `load()` sorts `soldItems` with `isInSoldOrder` (the rest of `load()` is
-  T003's). `areInSoldOrder` untouched. Pattern: `SortOrder` and
-  `attributeOrder(_:_:)` in the same file; `WishlistViewModel.SortOrder` for
-  the labelled-pair convention. Tests: new `TroveTests/SoldSortOrderTests.swift`
+  order, `label`, `id`), `soldSortOrder: SoldSortOrder = .soldDate`, the
+  **static** `areInSoldOrder(_:_:under:)` = `soldAttributeOrder(_:_:under:)
+  ?? areInSoldOrder(_:_:)` with the private instance `isInSoldOrder(_:_:)`
+  calling it under `soldSortOrder`; the attribute comparators nil-on-tie and
+  nil-last for the two optionals; `load()` sorts `soldItems` with
+  `isInSoldOrder` (the rest of `load()` is T003's). The two-argument
+  `areInSoldOrder` untouched. Pattern: `SortOrder` and `attributeOrder(_:_:)`
+  in the same file; `WishlistViewModel.SortOrder` for the labelled-pair
+  convention. Tests: new `TroveTests/SoldSortOrderTests.swift` — it joins the
+  target through the synchronized `TroveTests` folder as every new test file
+  since `010` has; **stop and flag if the suite is not in the run's count**
   — G1 (labels, case order, default by literal), G2 (plan §2's four-row
   fixture, one `@Test(arguments:)` over the eight cases with the expected
-  name order per case — mutations: delete the price comparator (fall to
-  standing) → the Price cases red; reverse it → red; read `purchasePriceCents`
-  in the gain case → the Gain cases red), G3 (Drum before Bass on Price ↓ —
-  mutation: tie-break by name → red); the nil-last arm recorded as
-  defensive. `insertSold`'s existing helper takes paid, sale price and date.
+  name order per case, through `load()` — mutations: delete the price
+  comparator (fall to standing) → the Price cases red; reverse it → red;
+  read `purchasePriceCents` in the gain case → the Gain cases red), G3
+  (**the static comparator asked about Drum and Bass directly, in both
+  argument orders**, under `.salePriceDescending` — `true` then `false` —
+  never through a fetch, whose order the test does not control; mutations:
+  `?? false` in place of the standing order → red; tie-break by name → red);
+  the nil-last arm recorded as defensive. `insertSold`'s existing helper
+  takes paid, sale price and date.
   Files: `Trove/ViewModels/ItemListViewModel.swift`,
   `TroveTests/SoldSortOrderTests.swift` (new).
   **Verify:** `scripts/verify.sh` green; the G2 and G3 mutations recorded.
@@ -129,8 +141,12 @@ Dashboard's card keeps counting everything sold.
   `offersNarrowingControls`; `visibleSortLabel`; `narrowed(_:by:)` taking
   the narrowing; `items` under `ownedNarrowing`, `soldItems` under
   `soldNarrowing`, `soldTotals` over the narrowed `soldItems` (P4);
-  `ownedEmptyReason` reading `ownedNarrowing` by name; `soldEmptyReason`
-  through `reason(...)` with `.nothingAdded` → `.nothingSold`;
+  `ownedEmptyReason` reading `ownedNarrowing` by name **and its
+  Everything-sold guard reading `soldTotalCount > 0`, not
+  `!soldItems.isEmpty`** (plan §1 — `soldItems` is narrowed now, and a
+  no-match query left on Sold must not turn an emptied Owned side into a
+  first launch); `soldEmptyReason` through `reason(...)` with
+  `.nothingAdded` → `.nothingSold`;
   `ListEmptyReason.nothingSold`'s comment corrected (the case *is* chosen
   after `reason(...)` now). Doc comments on the class and on `show` updated
   — they describe Q15. Pattern: `ownedEmptyReason` (the mapping shape);
@@ -147,9 +163,12 @@ Dashboard's card keeps counting everything sold.
   with the query, chip, importing-with-query and stale-query cases —
   mutation: pick the case without `reason(...)` → red); G10 (the summary
   over a narrowing matching one, then none → "0 sold · $0" — mutation: sum
-  over `sold` → red). `askingForTheSideAlreadyOnScreenLeavesTheFilterAlone`,
-  `reorderingIsRefusedOnTheSoldSide` and G13/G14 stay green as written —
-  confirm, don't edit.
+  over `sold` → red); **G25** (one sold, none owned: `show(.sold)`,
+  `searchText = "zzz"`, `show(.owned)` → `.everythingSold`; a never-sold
+  collection → `.nothingAdded` — mutation: the guard reading
+  `soldItems.isEmpty` → red). `askingForTheSideAlreadyOnScreenLeavesTheFilterAlone`,
+  `reorderingIsRefusedOnTheSoldSide` and `006`'s G13/G14 tests (the split
+  and the standing order) stay green as written — confirm, don't edit.
   Files: `Trove/ViewModels/ItemListViewModel.swift`,
   `Trove/Models/ListEmptyReason.swift` (comment), `TroveTests/ItemListViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every
@@ -158,8 +177,10 @@ Dashboard's card keeps counting everything sold.
 
 - [ ] **T004 — Exports from either side: `exportableOwnedItems`, `exportableSoldItems`, the two gates, the PDF. `review: per-task`.**
   Per plan §4, Q8 and R1/R2. The two exportable sets under the on-screen
-  narrowing (owned in visible order on Owned, Custom order from Sold; sold
-  always `areInSoldOrder`); `canExportCSV`/`canExportPDF` over them;
+  narrowing (owned: `items` itself on Owned — one computation, `exportCSV`'s
+  "built from `items` as-is" stays literally true — and the Custom-sorted
+  narrowed owned half from Sold; sold always `areInSoldOrder`);
+  `canExportCSV`/`canExportPDF` over them;
   `exportCSV` writes the first then the second; `exportPDF` builds entries
   and cover over `exportableOwnedItems` through one private `figures(over:)`
   the header's three figures also read; `exportCoverageLabel` unchanged in
@@ -189,7 +210,13 @@ Dashboard's card keeps counting everything sold.
   refusal, `load()` on success, returns the outcome). `SaleCopy.swipeSell =
   "Sell"` with a doc line naming `markAsSold` as the spoken label. Pattern:
   `SellPlanViewModel.markSold(_:sale:)` and `makeSaleFormViewModel(for:)`;
-  `ItemDetailViewModel.store(_:)` for the refusal shape. Tests:
+  `ItemDetailViewModel.store(_:)` for the refusal shape. No structural test
+  allow-lists `ItemSaleStore.markSold`'s callers (checked at planning:
+  `ItemSaleStoreTests` documents the "callers save" contract, and the only
+  scans naming the store are `SaleFormWiringTests` and `SellPlanWiringTests`
+  asserting a *view file* never names it) — this task adds a view-model
+  caller, so both scans stay true; T007 must keep `ItemListView` free of the
+  word `ItemSaleStore` for the same reason. Tests:
   `ItemListViewModelTests` G17 (the seed equals the detail's and the plan's
   for the same item, with and without a value — extend the existing
   cross-host equality test — mutation: `?? 0` → red), G18 (second context:
@@ -233,15 +260,20 @@ Dashboard's card keeps counting everything sold.
   stays green — confirm.
   Files: `Trove/Views/Items/ItemListView.swift`, `TroveTests/ItemListSidesWiringTests.swift`,
   `TroveTests/ImportWiringTests.swift`.
-  **Verify:** `scripts/verify.sh` green; mutations recorded; both sides seen
-  by eye on the simulator with `-seedSold` (the field, chips and badge in the
-  same slots; a chip and a query on Sold narrowing the rows; the badge
-  reading "Date sold" then "Price ↑"), noted in the Done note.
+  **Verify:** `scripts/verify.sh` green; mutations recorded. No simulator
+  check here — the implementer has none; T010's device pass covers both
+  sides' header (the field, chips and badge in the same slots; a chip and a
+  query on Sold narrowing the rows; the badge reading "Date sold" then
+  "Price ↑").
 
 - [ ] **T007 — The leading swipe's Sell, the sheet on the list, the `ActionSell` icon.**
   Per plan §5 and Q9. `@State private var itemBeingSold: Item?`; the leading
   swipe Edit / **Sell** (`Image("ActionSell")`, `.tint(theme.colors.accentBrassMid)`,
-  `.accessibilityLabel(SaleCopy.markAsSold)`) / Copy; `.sheet(item:
+  `.accessibilityLabel(SaleCopy.markAsSold)` — whether a swipe-action
+  `Button` honours the modifier is T010's to read from the accessibility
+  tree; if it does not, "Sell" is the spoken name, which criterion 12
+  accepts, and T011's `DECISIONS.md` entry says which shipped — **do not
+  stop on it**) / Copy; `.sheet(item:
   $itemBeingSold, onDismiss: viewModel.load)` composing `SaleFormView` over
   `viewModel.makeSaleFormViewModel(for:)`, confirm → `viewModel.markSold`,
   both closures nil-ing `itemBeingSold`; trailing swipe and `soldRows`
@@ -267,10 +299,11 @@ Dashboard's card keeps counting everything sold.
   Files: `Trove/Views/Items/ItemListView.swift`, `design/icons/action-sell.svg` (new),
   `Trove/Assets.xcassets/ActionSell.imageset/Contents.json` + `action-sell.svg` (new),
   `TroveTests/ItemListSidesWiringTests.swift`, `TroveTests/TabIconTests.swift`.
-  **Verify:** `scripts/verify.sh` green; mutations recorded; the swipe seen by
-  eye on the simulator on both appearances (three buttons, Edit at the edge,
-  the sheet prefilled from the Leica's value, Cancel inert), noted in the
-  Done note.
+  **Verify:** `scripts/verify.sh` green; mutations recorded; `ItemListView`
+  still never names `ItemSaleStore` (T005's note). No simulator check here —
+  T010's device pass covers the swipe on both appearances (three buttons,
+  Edit at the edge, the sheet prefilled from the Leica's value, Cancel
+  inert, the spoken name).
 
 - [ ] **T008 — The sold page's mark under the name.**
   Per plan §7, Q11 and spec Decision 6. In `ItemDetailView.content(for:)`'s
@@ -283,9 +316,9 @@ Dashboard's card keeps counting everything sold.
   hero → red); every other scan in the file stays green — confirm.
   Files: `Trove/Views/Items/ItemDetailView.swift`, `Trove/Views/Items/SoldMark.swift`
   (comment), `TroveTests/SoldStateWiringTests.swift`.
-  **Verify:** `scripts/verify.sh` green; mutation recorded; a sold page seen
-  by eye (`-seedSold`, the Telecaster) with the mark between the name and the
-  stats.
+  **Verify:** `scripts/verify.sh` green; mutation recorded. No simulator
+  check here — T010's device pass measures the mark's place and gaps on the
+  Telecaster's page.
 
 - [ ] **T009 — The UI tests, run twice.**
   Per plan §8 and Q13 (no seed change). Rewrite the Sort By assertion in
@@ -326,8 +359,10 @@ Dashboard's card keeps counting everything sold.
   0, a list re-render (background/foreground, appearance change) 0, confirm
   1 — removed before the suites run. Walk: the three swipe buttons on both
   appearances (the white label on brass legible — if not, that is a finding
-  for a decision review, plan Q9 names `surfaceInset` as the neutral
-  fallback); Edit still on a full swipe; the sheet prefilled from the value;
+  for a decision review, plan Q9); the swipe action's spoken name read from
+  the accessibility tree ("Mark as sold…" if the modifier took, else "Sell"
+  — record which, for T011); Edit still on a full swipe; the sheet prefilled
+  from the value;
   a narrowing on each side surviving a round trip in both directions; the
   Sold side's no-matches state and its Clear search; Sort By's eight rows on
   Sold and the Owned side's unchanged; the Dashboard's Sold card landing on
@@ -348,8 +383,13 @@ Dashboard's card keeps counting everything sold.
   twice.
 
 - [ ] **T011 — Close-out.**
-  Per plan §9. Criteria 1–13 ticked in `spec.md` with citations (criterion 12
-  an honest partial until the person's step); the Copy section gains "Sell"
+  Per plan §9. Criteria 1–13 ticked in `spec.md` with citations — criterion
+  2's evidence is the existing `SoldStateWiringTests` (both menus, rows
+  swapped by `isSold`) and `MenuPolicyTests` staying green with no edit, not
+  the diff's silence; criterion 10 ticked as "from the Sold side — the Owned
+  side's own export is `011`'s, unchanged, and its byte identity holds under
+  Custom as before"; criterion 12 an honest partial until the person's step,
+  naming the spoken name T010 read; the Copy section gains "Sell"
   and the eight sort labels (P-items → decisions); `plan.md` gains "As
   built" (deviations, R1/R2 as confirmed or overturned at sign-off, Q1–Q13 as
   shipped); this file's status flipped; `design/tokens.md`'s `006` rows
@@ -381,4 +421,7 @@ interpreted here.
 
 | Task / invocation | Tier | Tokens | Outcome / miss reason |
 |---|---|---|---|
+| Spec session (this spec's `spec.md`, drafting and revision) | `fable` medium (raised to high for the spec conversation) | orchestrating seat, not measured separately | Draft, revised at the person's reading, approved 2026-09-16 |
+| `sdd-planner` — plan.md and tasks.md, plus the fix round | `fable` | ~314k (≈290k first draft, ≈20k fixes) | Drafted; three blocking findings fixed in place |
+| `skeptical-reviewer` — plan/tasks sign-off and re-review | `fable` | ~170k (≈156k review, ≈14k re-review) | Three blocking, nine second-look findings; re-review: all resolved, sign off |
 | _rows added per dispatch as the spec runs_ | | | |

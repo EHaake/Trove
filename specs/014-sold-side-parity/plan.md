@@ -1,6 +1,6 @@
 # 014 — Sold-Side Parity and Mark as Sold on the Swipe — Technical Plan
 
-**Status**: Draft — pending sign-off
+**Status**: **Signed off** (2026-09-16) — drafted by the `sdd-planner` at the top tier, reviewed by the `skeptical-reviewer` at the top tier: three blocking findings (a hidden-narrowing leak into the Owned empty state, by-eye simulator steps in three tasks, a tie-break guard that could not reliably go red) fixed and re-reviewed in one round, verdict sign off. Awaiting the person's approval of the spec-conformance summary.
 
 Drafted by the `sdd-planner` (Fable 5.1, high effort — experiment 1's top
 tier) against the approved `spec.md` (Approved 2026-09-16) and the code as it
@@ -48,6 +48,9 @@ pinned the old rule is **rewritten to pin the new one**, never loosened (Q12).
   alternative (the whole owned collection under a "Cameras" label, or a
   label the spec doesn't have) would make the cover lie. On the Owned side
   nothing changes: the rows and the cover are exactly today's. Guard G15.
+  **This one the spec did not say**, so the person hears it in plain words
+  at the Phase 2 pause (the tasks' handoff note carries the sentence) and
+  can overturn it there.
 
 ## Proposed at planning (Q1–Q13) — approved on plan approval unless overturned
 
@@ -88,7 +91,10 @@ pinned the old rule is **rewritten to pin the new one**, never loosened (Q12).
   `Name` rather than the wishlist's `Alphabetical` for the badge's width and
   the spec's word. Comparators in the `attributeOrder ?? standing` shape the
   Owned side uses, the standing order being `areInSoldOrder` (P7); nil-safe
-  in the Value pair's nil-last block (§2).
+  in the Value pair's nil-last block. The whole comparator is a **static**
+  `areInSoldOrder(_:_:under:)` that the instance sort calls, so a test can
+  hand it two items directly — the tie-break's guard cannot run through a
+  fetch, whose order is indeterminate (the `CLAUDE.md` tie-break lesson) (§2).
 - **Q5. Chips per side, under the existing names.** `categoryOptions` and
   `categoryLabels` become computed over the side on screen from two stored
   pairs built in `load()` — Owned's from the owned half as today, Sold's from
@@ -121,11 +127,18 @@ pinned the old rule is **rewritten to pin the new one**, never loosened (Q12).
   beside a glyph at the swipe's label size — and the button's
   `.accessibilityLabel` is `SaleCopy.markAsSold`, the menu row's own name, so
   the same action is announced the same way from both places (criterion 12).
-  Tint `accentBrassMid`: the one brass that is mid-tone in *both* palettes
+  **That a modifier on a swipe-action `Button` overrides its `Label`'s text
+  is a platform claim the suites cannot check**; the device pass reads the
+  accessibility tree (§8). If the modifier is ignored, the spoken name is the
+  `Label`'s "Sell" — criterion 12 asks for *a name*, and "Sell" is one — so
+  the implementer keeps the modifier, does not stop, and the `DECISIONS.md`
+  entry records which name shipped. Tint `accentBrassMid`: the one brass that is mid-tone in *both* palettes
   (named in `010` for exactly this between-case), so the white label reads
   the same on either appearance; brass, not rust, because the action is not
   consequential (a sheet follows), and not a third neutral because three
-  grey buttons in a row would be one gesture with no legible middle. Glyph:
+  grey buttons in a row would be one gesture with no legible middle. If the
+  device pass finds the white label illegible on it in either appearance,
+  that is a decision review, not a swap the implementer makes. Glyph:
   `ActionSell`, a price-tag outline in `action-edit.svg`'s house style
   (24 viewBox, 1.5 stroke, `#000`, template, vector preserved) — the menu row
   already wears SF `tag`, so the swipe wears the same sign. The sheet is
@@ -239,8 +252,13 @@ soldNarrowing).sorted(by: isInSoldOrder)`; `soldTotals =
 SaleOutcome.totals(over: soldItems)` (narrowed, P4); the two category pairs
 from their halves; `soldTotalCount = sold.count`. `narrowed(_:by:)` takes the
 narrowing explicitly so no call can read the wrong side's. `ownedEmptyReason`
-reads `ownedNarrowing`'s fields by name, not the computed properties;
-`soldEmptyReason` (Q7) reads `soldNarrowing`'s. `canReorder` is unchanged in
+reads `ownedNarrowing`'s fields by name, not the computed properties, and
+**its Everything-sold guard reads `soldTotalCount > 0`, never
+`!soldItems.isEmpty`** — `soldItems` is now the *narrowed* sold half, and a
+query left on the Sold side that matches nothing would otherwise turn an
+emptied Owned side back into a first launch ("No gear yet"), which is the
+hidden side leaking into the visible one that Decision 4 forbids and `006`
+Decision 12 answered. `soldEmptyReason` (Q7) reads `soldNarrowing`'s. `canReorder` is unchanged in
 spelling (its `side == .owned` leads, so the computed properties it reads are
 Owned's). `@Observable` tracks the computed properties through the stored
 ones they read, so `$viewModel.searchText` and `.onChange(of:
@@ -261,7 +279,11 @@ is unchanged (mutation: drop the guard → red, G6). Sold chips are the sold
 half's categories only, Owned's unchanged, and `categoryOptions` follows the
 side (mutation: build both from `all` → red, G7). `offersNarrowingControls`:
 Owned with 0 owned/1 sold → false; Sold with 1 sold → true; Sold with 0
-sold/1 owned → false (G8).
+sold/1 owned → false (G8). An Owned side emptied by selling still reads
+`.everythingSold` after the Sold side was left with a query matching nothing
+(`show(.sold)`, `searchText = "zzz"`, `show(.owned)`), and `.nothingAdded`
+only when nothing was ever sold (mutation: the guard reading
+`soldItems.isEmpty` → the first expectation reads `.nothingAdded` → red, G25).
 
 ## 2. The Sold side's sort
 
@@ -278,11 +300,18 @@ Case order is the menu order (Decision 3, P6); no Custom, Market or Desire.
 Comparators, the Owned side's shape:
 
 ```swift
-private func isInSoldOrder(_ lhs: Item, _ rhs: Item) -> Bool {
-    soldAttributeOrder(lhs, rhs) ?? Self.areInSoldOrder(lhs, rhs)     // ties → the standing order (P7)
+/// The Sold side's sort under one option: the option's own comparison, and
+/// the standing order on any tie (P7). Static, with the option as an
+/// argument, so a test can ask it about two items directly — the tie-break
+/// is only falsifiable when the pair's order is the test's to choose.
+static func areInSoldOrder(_ lhs: Item, _ rhs: Item, under order: SoldSortOrder) -> Bool {
+    soldAttributeOrder(lhs, rhs, under: order) ?? areInSoldOrder(lhs, rhs)
 }
-private func soldAttributeOrder(_ lhs: Item, _ rhs: Item) -> Bool? {
-    switch soldSortOrder {
+private func isInSoldOrder(_ lhs: Item, _ rhs: Item) -> Bool {   // what load() sorts with
+    Self.areInSoldOrder(lhs, rhs, under: soldSortOrder)
+}
+private static func soldAttributeOrder(_ lhs: Item, _ rhs: Item, under order: SoldSortOrder) -> Bool? {
+    switch order {
     case .soldDate: return nil                                       // the standing order *is* the sort
     case .salePriceDescending, .salePriceAscending:                 // nil-last, the Value pair's block
         (lhs.salePriceCents, rhs.salePriceCents) … guard != else nil; guard let left else false; guard let right else true; desc ? > : <
@@ -318,9 +347,16 @@ Amp, Bass · **Name** Amp, Bass, Cello, Drum. Deleting any one comparator
 (falling to the standing order) or reversing it changes that case's
 expectation, and reading price for paid or price for gain does too (G2). The
 tie: Drum and Bass share $1,250 and sit Drum-then-Bass on Price ↓ because the
-standing order's *date* decides, where name order would put Bass first
-(mutation: tie-break by name → red, G3). Labels, case order and the `.soldDate`
-default pinned by literal (G1).
+standing order's *date* decides, where name order would put Bass first. G3
+asks the **static comparator about the pair directly, in both argument
+orders** — `areInSoldOrder(drum, bass, under: .salePriceDescending) == true`
+and `areInSoldOrder(bass, drum, under: .salePriceDescending) == false` —
+never through `load()`, whose fetch hands the pair back in an order the test
+does not control (mutation: `?? false` in place of the standing order → the
+first reads false → red; tie-break by name → the first reads false → red).
+G2's eight orders may run through `load()` because none of them has a tie
+the attribute leaves open except this pair, which G3 owns. Labels, case
+order and the `.soldDate` default pinned by literal (G1).
 
 ## 3. Chips, summary, empty state, the controls gate
 
@@ -355,8 +391,10 @@ matching nothing → `.searchMatchedNothing` (mutation: pick the case without
 /// over the owned half (P11); in visible order on Owned, in Custom order
 /// from Sold, where no owned row is visible (plan R1).
 private var exportableOwnedItems: [Item] {
-    let rows = narrowed(owned, by: narrowing)
-    return side == .owned ? rows.sorted(by: isOrderedBefore) : rows.sorted(by: ManualOrderHelper.areInCustomOrder)
+    switch side {
+    case .owned: items                                   // the rows on screen, as-is — one computation, never a second sort
+    case .sold: narrowed(owned, by: narrowing).sorted(by: ManualOrderHelper.areInCustomOrder)
+    }
 }
 /// The sold rows: the same narrowing, always the standing order (P10) —
 /// never `soldItems`, whose order is the view's reading aid.
@@ -371,7 +409,9 @@ builds entries and the cover (`itemCount`, value, paid, un-valued) over
 header's `totalCurrentValueCents` / `unvaluedCount` / `totalPaidCents` also
 read, so the arithmetic has one home. `exportCoverageLabel` is unchanged in
 spelling — under Q1/Q5 it names the on-screen chip and query. On the Owned
-side every one of these equals today's value, row for row.
+side `exportableOwnedItems` *is* `items`, so `exportCSV`'s standing claim —
+records built from `items` as-is, never a refetch or a second sort — stays
+literally true there, and every figure equals today's, row for row.
 
 **Testable claims** (`ItemListViewModelTests` "the CSV's two halves" extended;
 `SettingsViewModelTests`): from the Sold side narrowed to a category, the CSV
@@ -518,7 +558,9 @@ the switch's top edge on both sides at zero sales and with `-seedSold`
 the Sold side with the field, chips and badge in the Owned side's slots; a
 narrowing on each side surviving a round trip; the no-matches state on Sold;
 the swipe's three buttons on both appearances (the white label on
-`accentBrassMid` legible, Q9), the sheet prefilled, Cancel inert; **a file
+`accentBrassMid` legible, Q9) and the middle one's name read from the
+accessibility tree ("Mark as sold…" if the modifier took, else "Sell" —
+recorded for `DECISIONS.md`, Q9), the sheet prefilled, Cancel inert; **a file
 probe in `ItemSaleStore.markSold`** through the swipe's sheet — Cancel 0,
 swipe-down 0, a re-render of the list 0, confirm 1 — removed before the
 suites run; the sold page's mark under the name with `sectionGap` above and
@@ -554,7 +596,7 @@ button and "Mark as sold…" to VoiceOver).
 |---|---|---|
 | G1 | `SoldSortOrderTests`: eight labels, case order, `.soldDate` default by literal | a label, the order or the default changes |
 | G2 | the eight orders over the four-row fixture | any comparator is deleted, reversed, or reads the wrong field |
-| G3 | Price ↓ tie: Drum before Bass (the standing order's date) | the tie falls to name, or to nothing |
+| G3 | Price ↓ tie, asked of the static comparator in both argument orders: Drum before Bass (the standing order's date) | `?? false` in place of the standing order, or the tie falls to name |
 | G4 | `ItemListViewModelTests`: each side keeps chip, query, un-valued, sort across a switch, both directions, no leak | a clear on switch, or one shared narrowing |
 | G5 | a fresh view model: both sides clean, Owned on screen, `Date` / `Date sold` | anything stored or defaulted otherwise |
 | G6 | `showsOnlyUnvalued` refused on Sold; Owned's copy untouched | the setter's guard is dropped |
@@ -576,6 +618,7 @@ button and "Mark as sold…" to VoiceOver).
 | G22 | `ActionSell` loads as a template image | the imageset is missing or not template |
 | G23 | `SaleCopyTests`: `swipeSell == "Sell"`; the swipe's `.accessibilityLabel` is `SaleCopy.markAsSold` (scan) | either spelling drifts |
 | G24 | UI: per-side state, the swipe's sheet, the Sold controls and no-matches; twice back to back | see §8's mutations |
+| G25 | an emptied Owned side reads `.everythingSold` with a no-match query left on Sold | `ownedEmptyReason`'s guard reads `soldItems.isEmpty` instead of `soldTotalCount > 0` |
 
 Every guard is mutation-verified before it lands (`CLAUDE.md` Testing); the
 task's Done note records what was broken and what went red. Every source scan
