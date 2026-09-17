@@ -205,6 +205,12 @@ actually useful once the app is in daily use.
     yet" empty state above its sold rows, and the person did not find **Mark as
     sold…** in the item page's "…" menu, where Decision 4 put it — whether a
     visible control is wanted is theirs to say.
+- **Considered, not planned — a visible Mark as sold button on the item
+  page.** Proposed in `014-sold-side-parity`'s first Draft (2026-09-16) and
+  withdrawn by the person at their reading: the page's bottom is not to
+  become a shelf that more and more actions get added to. The "…" menu row
+  and the Items list's leading swipe are the ways in. Revisit only if the
+  menu row keeps going unfound in daily use.
 - **`007-auto-categorization`** — Suggest a category path from a photo
   instead of typing it. The category field being a plain string path
   (not a fixed enum) since `001` is what keeps this a pure addition.
