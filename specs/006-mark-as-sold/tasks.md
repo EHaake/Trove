@@ -1155,6 +1155,27 @@ because the person will feel it before they read it.
   person's).
   Criteria 15 and 16 pending the person's steps.
 
+## Post-merge fixes (`fix/006-post-merge`, 2026-09-16)
+
+- [ ] **T020a — The all-sold plan's empty state says so (spec Decision 15).**
+  `SellPlanViewModel.EmptyReason` gains `.everythingSold`, chosen when the
+  reason would otherwise be `.nothingOwned` (or the candidate pool is empty
+  for want of owned items) and `hasSales`; `stillSyncing` still wins.
+  `SaleCopy` gains `planEverythingSoldHeadline` / `planEverythingSoldDetail`
+  ("Everything on this plan has sold." / a one-line detail), pinned in
+  `SaleCopyTests`; `SellPlanView.emptyState` maps the case with the Items
+  mark and no action. Tests in `SellPlanEmptyReasonTests`: one sale, no
+  owned → `.everythingSold`; none of either → `.nothingOwned`; one sale, no
+  owned, import in flight → `.stillSyncing` (mutations: drop the `hasSales`
+  check → red; map before `stillSyncing` → red); a scan that the case reads
+  both copy members. Pattern: T015a. Files: `Trove/ViewModels/SellPlanViewModel.swift`,
+  `Trove/Models/SaleCopy.swift`, `Trove/Views/Wishlist/SellPlanView.swift`,
+  `TroveTests/SellPlanViewModelTests.swift` (or the file holding
+  `SellPlanEmptyReasonTests`), `TroveTests/SaleCopyTests.swift`,
+  `TroveTests/SellPlanWiringTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded; seen by eye on
+  an all-sold plan (device agent).
+
 ## Tier log
 
 Experiment 1 (`CLAUDE.md`'s model policy, adopted 2026-09-11): the

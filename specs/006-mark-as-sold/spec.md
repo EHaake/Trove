@@ -567,7 +567,7 @@ has made yet.
     with Settings survives a sale
     (`SettingsViewModelTests.theListsUnfilteredCSVStillMatchesSettingsByteForByteWithASalePresent`,
     G28). On the device (T019): the PDF owned-only from both paths.
-15. [ ] **Pending — the person's step.** Sale details sync with the item to a
+15. [x] **Attested by the person, 2026-09-16** — marking as sold and returning to the collection both synced across two iCloud devices. (Was pending at the merge.) Sale details sync with the item to a
     second device signed into the same iCloud account (attested by the person,
     or recorded as an honest partial as `005` did).
     *What was verified*: `CloudKitSchemaTests.schemaMeetsCloudKitRequirements`
@@ -582,7 +582,7 @@ has made yet.
     item fields already take — there is no second record that could arrive
     out of order. **Nobody has watched a sale arrive on a second device**: no
     second device was available, exactly as `005`'s criterion 4 recorded.
-16. [ ] **Pending — the person's step.** VoiceOver: **Mark as sold…**, the
+16. [x] **Attested by the person, 2026-09-16** — every listed element passed Xcode's Accessibility Inspector. (Was pending at the merge.) VoiceOver: **Mark as sold…**, the
     Owned / Sold switch and which side is showing, the Sold card, each
     Sold-side row, the sold mark and the sale line, and the Sell Plan's Sold
     figure are labelled; a sold item is announced as sold with its price and
@@ -698,6 +698,18 @@ Added 2026-09-13, at the person's reading of the Draft:
     item has been sold. (Read as: the Sold section stays with the empty
     state, and its rows carry a Sold mark — not sold rows mixed into the
     candidate list.)
+
+15. **A Sell Plan whose every item has sold says so (2026-09-16, after the
+    merge).** The empty state above the plan's sold list no longer reads
+    "Nothing to sell yet — Add the gear you own…"; it reads along the lines
+    of "Everything on this plan has sold." Fixed on `fix/006-post-merge`.
+16. **Deferred to a new spec (2026-09-16):** a visible Mark as sold button
+    on the item page and a leading-swipe action on Items rows (reverses
+    Decision 4 and criterion 1), and the Sold side gaining search, category
+    chips and Sort By with "Date sold" and context-fitting options (reverses
+    P16's "no filtering or sorting on the Sold side" and Q15's clearing
+    rule). Both are design changes to shipped behaviour, so they get a spec
+    of their own rather than a fix branch.
 
 Proposed at drafting, 2026-09-13, by Claude Code (these become decisions on
 plan approval):
