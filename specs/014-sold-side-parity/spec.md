@@ -1,9 +1,9 @@
 # 014 — Sold-Side Parity and Mark as Sold on the Swipe
 
-**Status**: **Draft** (2026-09-16) — written with the person in this spec
+**Status**: **Approved** (2026-09-16) — written with the person in this spec
 session from the requests carried out of `006` (`specs/NEXT-sold-side-parity.md`,
 `006` Decision 16), and revised the same day at the person's reading of the
-first Draft (Decisions 1–6). Every product decision below was made by the
+first Draft (Decisions 1–6) and approved the same day with P9 and P11 confirmed. Every product decision below was made by the
 person and is listed in the Decisions record; the P-items are Claude Code's
 proposals and become decisions on plan approval, as `006`'s did.
 
