@@ -1155,6 +1155,34 @@ because the person will feel it before they read it.
   person's).
   Criteria 15 and 16 pending the person's steps.
 
+## Post-merge fixes (`fix/006-post-merge`, 2026-09-16)
+
+- [x] **T020a — The all-sold plan's empty state says so (spec Decision 15).**
+  `SellPlanViewModel.EmptyReason` gains `.everythingSold`, chosen when the
+  reason would otherwise be `.nothingOwned` (or the candidate pool is empty
+  for want of owned items) and `hasSales`; `stillSyncing` still wins.
+  `SaleCopy` gains `planEverythingSoldHeadline` / `planEverythingSoldDetail`
+  ("Everything on this plan has sold." / a one-line detail), pinned in
+  `SaleCopyTests`; `SellPlanView.emptyState` maps the case with the Items
+  mark and no action. Tests in `SellPlanEmptyReasonTests`: one sale, no
+  owned → `.everythingSold`; none of either → `.nothingOwned`; one sale, no
+  owned, import in flight → `.stillSyncing` (mutations: drop the `hasSales`
+  check → red; map before `stillSyncing` → red); a scan that the case reads
+  both copy members. Pattern: T015a. Files: `Trove/ViewModels/SellPlanViewModel.swift`,
+  `Trove/Models/SaleCopy.swift`, `Trove/Views/Wishlist/SellPlanView.swift`,
+  `TroveTests/SellPlanViewModelTests.swift` (or the file holding
+  `SellPlanEmptyReasonTests`), `TroveTests/SaleCopyTests.swift`,
+  `TroveTests/SellPlanWiringTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded; seen by eye on
+  an all-sold plan (device agent).
+  **Done (2026-09-16).** `.everythingSold` mapped from `.nothingOwned` iff
+  `hasSales` in a layer over the extracted `poolEmptyReason` (T015a's
+  shape); copy "Everything on this plan has sold." / "The sales are listed
+  below." (the implementer's detail wording — it points at the record
+  rather than inviting an add). 1502 unit tests green (+4); UI 20 green
+  once. Four mutations red. Not eye-checked by an agent: a copy change
+  pinned by scan, reviewed by the person on the device (they asked for it).
+
 ## Tier log
 
 Experiment 1 (`CLAUDE.md`'s model policy, adopted 2026-09-11): the
@@ -1224,4 +1252,5 @@ interpreted here.
 | T020 docs | opus (`sdd-implementer`, high effort) | 195,757 (68 tool uses, 11 min) | done; three declared in-file corrections beyond the instruction; 005's cadence note out of scope |
 | Pre-merge sweep | opus (`skeptical-reviewer`) | 422,427 (25 tool uses — three targeted looks, stated) | **signed off, nothing blocking**; twelve second looks, five applied as document fixes by the orchestrator |
 | Final verify | fable, medium (the session) | — | `verify.sh all` green; UI 20/0; unit line cut from the captured tail (miss) — 1498/203 on identical code earlier the same day |
+| T020a (post-merge fix) | opus (`sdd-implementer`, high effort) | 88,549 (43 tool uses, 44 min) | done; four mutations red; no reviewer dispatched for a copy change pinned by tests (orchestrator's call, recorded) |
 | _rows added per dispatch as the spec runs_ | | | |

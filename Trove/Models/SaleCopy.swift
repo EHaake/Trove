@@ -83,6 +83,21 @@ nonisolated enum SaleCopy {
     static let everythingSoldHeadline = "Everything's sold."
     static let everythingSoldDetail = "Add something new."
 
+    // MARK: - A sell plan whose every candidate has sold
+
+    /// What a sell plan says once nothing is left to offer toward it (spec
+    /// Decision 15) — not "Nothing to sell yet", which is the first-launch
+    /// line and reads as though the sales listed directly beneath it never
+    /// happened. Its own two constants rather than the Owned side's: the two
+    /// states are emptied by the same act but sit under different figures,
+    /// and either should be rewordable alone.
+    ///
+    /// No invitation in the detail, unlike the Owned side's: this state is
+    /// only ever drawn above the plan's Sold section, so the useful thing to
+    /// say is where the record went.
+    static let planEverythingSoldHeadline = "Everything on this plan has sold."
+    static let planEverythingSoldDetail = "The sales are listed below."
+
     // MARK: - Composed lines
 
     /// The middle dot every summary line in the app joins on

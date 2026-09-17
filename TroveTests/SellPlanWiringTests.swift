@@ -233,6 +233,28 @@ struct SellPlanWiringTests {
         )
     }
 
+    // MARK: - The plan emptied by selling (spec Decision 15)
+
+    /// T020a's state on the screen: its own two lines from `SaleCopy`, the
+    /// Items mark the other collection-level state carries, and no action —
+    /// what it describes is already on screen beneath it. Mutation: point
+    /// either line at the Owned side's `everythingSold*` copy → red.
+    @Test func thePlanEverythingSoldStateReadsItsCopyAndOffersNoAction() throws {
+        let code = try SourceScan.production(Self.screen)
+
+        let states = SourceScan.argumentLists(of: "EmptyStateView", in: code)
+            .filter { $0.contains("SaleCopy.planEverythingSoldHeadline") }
+        try #require(
+            states.count == 1,
+            "\(states.count) empty states read the plan's everything-sold headline, expected exactly 1"
+        )
+        let state = try #require(states.first)
+
+        #expect(state.contains("SaleCopy.planEverythingSoldDetail"), "the state types its own detail line")
+        #expect(state.contains(".asset(\"TabItems\")"), "the state doesn't carry the Items mark")
+        #expect(!state.contains("action:"), "the state offers an action — the sales are already below it")
+    }
+
     // MARK: - The row's control and the sheet it opens (criterion 10, Decision 4)
 
     /// Two tap targets, not one: the card toggles, the strip beneath it opens

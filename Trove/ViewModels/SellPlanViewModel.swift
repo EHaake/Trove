@@ -172,6 +172,20 @@ final class SellPlanViewModel {
         /// The owned items this screen reasons over may not all have arrived
         /// yet — see `ListEmptyReason.stillSyncing`.
         case stillSyncing
+
+        /// The pool is empty because every item on this plan has been sold
+        /// (spec Decision 15) — the Items-tab `ListEmptyReason.everythingSold`
+        /// one screen over, and the same misreading it exists to prevent.
+        ///
+        /// Never returned by the precedence chain in `poolEmptyReason`: that
+        /// rule reasons over owned gear alone and knows nothing about the
+        /// sales beneath it. `emptyReason` maps the `nothingOwned` it hands
+        /// back to this when the plan has sales, so the order there — the
+        /// import outranking every diagnosis, desire outranking value — stays
+        /// exactly as it was. Someone whose plan emptied by selling has been
+        /// doing the thing the screen asks for, and "Add the gear you own"
+        /// reads as though none of it happened.
+        case everythingSold
     }
 
     private(set) var ownedCount = 0
@@ -195,7 +209,22 @@ final class SellPlanViewModel {
     /// `SellPlanEmptyReasonTests` pins this the way `ListEmptyReasonTests`
     /// pins the list screens' precedence, rather than leaving it implicit in
     /// the order of two `guard`s.
+    ///
+    /// Spec Decision 15 sits on top of that rule rather than inside it, the
+    /// way `ItemListViewModel.ownedEmptyReason` layers Decision 12 over the
+    /// shared `ListEmptyReason.reason`. The chain decides everything first —
+    /// which is what keeps `stillSyncing` winning while the collection may
+    /// still be arriving — and only the `nothingOwned` it hands back is
+    /// reconsidered, and only when this plan has sales beneath it.
     var emptyReason: EmptyReason? {
+        let reason = poolEmptyReason
+        guard reason == .nothingOwned, hasSales else { return reason }
+        return .everythingSold
+    }
+
+    /// The pool's own reason, over owned gear only — Decision 15's mapping is
+    /// `emptyReason`'s, above.
+    private var poolEmptyReason: EmptyReason? {
         guard candidates.isEmpty else { return nil }
         // Outranks all three, unlike the list screens where the filtered cases
         // win: none of these is feedback on something the user just typed —
