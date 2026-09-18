@@ -525,7 +525,7 @@ review. Pause at the end of this phase — there is something to try.
   UI tests that failed at `cf3e1ee` are the acceptance evidence, not the one
   chooser test option A was checked against; mutations recorded.
 
-- [ ] **T009h — `MenuPolicyTests` names `confirmationDialog`.**
+- [x] **T009h — `MenuPolicyTests` names `confirmationDialog`.**
   Added 2026-09-18 (decision review): `013` Decision 17's "no
   `confirmationDialog`" half was unguarded — T009e's mutation stayed green.
   In `TroveTests/MenuPolicyTests.swift` add `|| code.contains(".confirmationDialog(")`
@@ -675,4 +675,5 @@ interpreted here.
 | Phase 2b decision review (anchors, menu scan, reentry) — `skeptical-reviewer` | `fable` (explicit override) | ~77k | Option D (the shared helper becomes a `transformAnchorPreference`) with a render guard `DropdownAnchorTests` (T009g, per-task); broaden `MenuPolicyTests` now (T009h); the gated spy gates once across methods so the reentry probe can go red (T009i). Plan Q17 corrected |
 | T009g — `sdd-implementer` | `opus` | ~50k | Done; `scripts/verify.sh all`: unit 1538 tests in 207 suites, UI 23 tests 0 failures (orchestrator re-ran: same — that run is also T009f's second UI pass). `dropdownAnchor` is a `transformAnchorPreference`; new `DropdownAnchorTests` (three stacked tags → three keys; a sibling → four). Mutations: helper back to `anchorPreference` → both cases red; `reduce` → `value = nextValue()` → sibling case red only. The reader runs under `ImageRenderer` (`#require(probe.runs > 0)`) |
 | T009g (+T009f test) — `skeptical-reviewer` per-task review | `opus` | ~43k | Sign off, no blocking. Second-look: (2) the transform also lets a descendant's tag propagate through a tagged ancestor (no such nesting known; sweep to confirm, Q17 clause if intentional); (3) the anchor tests use string ids, not `HeaderDropdown` cases (the UI test covers the real ids); (4) the UI test's last assertion (chooser gone after picking a scope) can be satisfied by the share sheet covering it — message softened at close-out or left to T010; (5) the header literal duplicates `ExportCopy` plus `DropdownSurface`'s casing; (6) three taps without an existence check (fail loudly, not vacuously) |
+| T009h — `sdd-implementer` | `opus` | ~34k | Done; 1538 unit tests green. Mutation: a `.confirmationDialog` on `AddButton` → `MenuPolicyTests` red naming the file; restored byte-for-byte. Note: the summary truncates `#expect` messages — the offender list is only in the raw log |
 | _rows added per dispatch as the spec runs_ | | | |
