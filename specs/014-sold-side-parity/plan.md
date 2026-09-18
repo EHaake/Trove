@@ -492,7 +492,15 @@ plan file the person approved and in the tier log.
   pdf }`, private to `ItemListView.swift`), `dismissLabel` "Dismiss export
   options". `DropdownHost` draws a dropdown only for an identifier that has an
   anchor, so `overflowControl` carries three `.dropdownAnchor`s — `.overflow`,
-  `.exportScope(.csv)`, `.exportScope(.pdf)` (the key's `reduce` merges). The
+  `.exportScope(.csv)`, `.exportScope(.pdf)`. **Corrected 2026-09-18 at T009f (decision review):**
+  `dropdownAnchor` is a `transformAnchorPreference`, not an
+  `anchorPreference` — a set-modifier stacked on one view replaces the key's
+  value, so only the last tag survives (T009f found the "…" badge opening
+  nothing at `cf3e1ee`; six UI tests red); a transform adds its entry to
+  what the view already publishes, and the key's `reduce` then merges across
+  siblings as before. Guarded by `DropdownAnchorTests` (T009g): three tags on
+  one view reach a reader as three keys, and the helper reverted to
+  `anchorPreference` leaves one. The
   Items list's `OverflowDropdown` closures set `openDropdown =
   .exportScope(.csv / .pdf)`; the host's `case .exportScope(let format):`
   composes `DropdownSurface(title: ExportCopy.scopeTitleCSV / scopeTitlePDF)
@@ -507,7 +515,12 @@ plan file the person approved and in the tier log.
   the sold document is the same rule applied to the sold half.
 
 **Testable claims** are guards G26–G37 in §10; the Phase 2b task lines carry
-each mutation.
+each mutation. Two testing notes from the Phase 2b decision review
+(2026-09-18): `GatedExportServiceSpy` gates only the first call across
+`exportCSV` and `exportFiles`, so the Items and Settings reentry tests share
+one rule and a leaked reentrant call fails a count instead of hanging
+(T009i); and `MenuPolicyTests` names `.confirmationDialog(` beside `Menu`,
+closing the half of `013` Decision 17 the scan had left unguarded (T009h).
 
 ## 5. The swipe's Mark as sold, and the sheet on the list
 

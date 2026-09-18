@@ -495,6 +495,67 @@ review. Pause at the end of this phase — there is something to try.
   sides, narrowed and not; open the sold PDF; the "Owned and sold" PDF share
   sheet showing two files).
 
+- [ ] **T009g — Fix the stacked dropdown anchors (the shared helper becomes a transform). `review: per-task`.**
+  Added 2026-09-18 after T009f found the Items "…" badge opening nothing at
+  `cf3e1ee` (plan Q17 as corrected; decision review at the top tier — option
+  D over the three the implementer named). In `Trove/Views/Shared/DropdownHost.swift`
+  make `dropdownAnchor(_:)` a `transformAnchorPreference` that inserts its id
+  into the current dictionary, and rewrite its doc comment and
+  `DropdownAnchorKey`'s to say why (a stacked set-modifier keeps only the
+  last tag; the transform adds; `reduce` still merges across siblings). In
+  `Trove/Views/Items/ItemListView.swift` correct the `overflowControl`
+  comment — "merged by the anchor key's `reduce`" is the false sentence. No
+  other call site changes; G37's three `.dropdownAnchor(` literals and
+  `DropdownWiringTests` stay as written. New `TroveTests/DropdownAnchorTests.swift`
+  (joins the target through the synchronized folder): render, via
+  `renderBitmap` (the `DropdownPlacementTests` shape), a small fixed-size view
+  carrying `.dropdownAnchor("a").dropdownAnchor("b").dropdownAnchor("c")`
+  inside `.overlayPreferenceValue(DropdownAnchorKey.self)` whose closure
+  records `anchors.keys` into a main-actor probe box and returns
+  `Color.clear`; assert the keys equal {"a","b","c"}; a second case with a
+  one-tag sibling beside the three-tag view records four keys (the `reduce`
+  half). Mutations: the helper reverted to `anchorPreference` → the first
+  case records one key → red; `reduce` changed to `value = nextValue()` →
+  the sibling case drops a key → red; both restored. If the reader closure
+  does not run under `ImageRenderer`, stop and report — do not weaken to a
+  source scan. Pattern: `TroveTests/DropdownPlacementTests.swift`.
+  Files: `Trove/Views/Shared/DropdownHost.swift`, `Trove/Views/Items/ItemListView.swift`
+  (comment), `TroveTests/DropdownAnchorTests.swift` (new).
+  **Verify:** `scripts/verify.sh all` green (orchestrator re-runs) — the six
+  UI tests that failed at `cf3e1ee` are the acceptance evidence, not the one
+  chooser test option A was checked against; mutations recorded.
+
+- [ ] **T009h — `MenuPolicyTests` names `confirmationDialog`.**
+  Added 2026-09-18 (decision review): `013` Decision 17's "no
+  `confirmationDialog`" half was unguarded — T009e's mutation stayed green.
+  In `TroveTests/MenuPolicyTests.swift` add `|| code.contains(".confirmationDialog(")`
+  to `hostsOne` and extend the header comment's last sentence to name it,
+  citing `013` Decision 17; `.alert(` stays allowed; add nothing else.
+  Mutation: a `.confirmationDialog("x", isPresented: .constant(false)) {}` on
+  any view in `Trove/Views` → red naming that file; restored. Pattern: the
+  file itself. Files: `TroveTests/MenuPolicyTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutation recorded.
+
+- [ ] **T009i — The gated export spy gates once across methods; the Items reentry probe goes falsifiable.**
+  Added 2026-09-18 (decision review; T009d's returned item). In
+  `TroveTests/TestSupport.swift`, `GatedExportServiceSpy` gates only the
+  first call across `exportCSV` and `exportFiles` (one `gateTaken` flag in
+  its state; counters stay per method; `exportPDF` stays ungated and counted
+  — `WishlistViewModel` still calls it); rewrite its two comments to state
+  the cross-method rule and why (a reentrant call of either kind that leaks
+  must fail a count, not hang). In `TroveTests/ItemListViewModelTests.swift`
+  `isExportingIsObservableMidFlightAndBlocksReentry`: replace
+  `#expect(spy.pdfCalls == 0)` with `#expect(spy.fileSetCalls == 0, "a
+  reentrant PDF reached the service")`. Mutations: `!isBusy` dropped from
+  `ItemListViewModel.exportPDF(scope:)` → red in normal run time, no hang;
+  `!isBusy` dropped from `exportCSV(scope:)` → `csvCalls == 1` red; both
+  restored. Confirm the Settings and Wishlist reentry tests are in the count
+  and green. Pattern: `SettingsViewModelTests.activityIsObservableMidFlightAndBlocksReentry`.
+  Files: `TroveTests/TestSupport.swift`, `TroveTests/ItemListViewModelTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded. T009f's two
+  back-to-back UI runs then complete on top of T009g–T009i, and Phase 2b
+  closes.
+
 ## Phase 3 — Verification and close-out
 
 - [ ] **T010 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver]**
@@ -611,4 +672,5 @@ interpreted here.
 | T009c — `sdd-implementer` | `opus` | ~86k | Done; 1531 unit tests green. G30 (`soldCoverCarriesTheSaleTotalsAndNoFloorNote`, `soldCoverCountLineIsSingularForOneSale`), G31 (`soldEntryLeadsWithTheSaleThenTheOwnedGrid`, `ownedEntryCarriesNoSaleFields`); G32 already pinned by T009b's `filenamesCarryTheLocalDay`. Six mutations red and reverted. Outside the footprint, mechanical: three exhaustive `switch cover.totals` in two view-model test files gained `.sold` in their non-items arm. Judgment call resolved as routine and noted in plan Q15: the sale block unwraps `soldDate` and `salePriceCents` as a pair |
 | T009d — `sdd-implementer` | `opus` | ~121k | Done; 1534 unit tests green. Rewrites: `anAllSoldCollectionCanExportACSVButNotAPDF` → `anAllSoldCollectionOffersBothFormatsWithTheOwnedScopeDisabled` (carries G36); `aSoldChipNoOwnedRowIsInKeepsTheCSVAndDisablesThePDF` → `aSoldChipNoOwnedRowIsInDisablesTheOwnedScopeAlone`. New G33 `theSoldPDFCoversTheSoldRowsThatPassTheChipInDateSoldOrder`, G34 `theSoldCoverIsTheSoldSidesOwnTotals`, G35 `theBothPDFStagesOwnedThenSoldInOneFileSet`; `ExportWiringTests` gains a per-screen `pdfAction`. Ten mutations red and reverted. Returned, not decided: `isExportingIsObservableMidFlightAndBlocksReentry`'s `pdfCalls == 0` is now vacuous for the Items list (the PDF stages a set through `exportFiles`), and the obvious `fileSetCalls == 0` cannot go red — the gated spy deadlocks on a reentrant first `exportFiles` call (mutation hung 20 min). Needs a cross-method gate rule in `TestSupport.swift`, outside the footprint — to the Phase 2b review |
 | T009e — `sdd-implementer` | `opus` | ~85k | Done; 1536 unit tests green. G37 `theItemsListComposesTheScopeChooserOverEveryScope` + `theScopeChooserHeadersReadAsTheSpecWritesThem`; Items `csvAction`/`pdfAction` re-pointed at the chooser-open intents. Mutations: row gated on `canExportCSV` → red; action passing `.both` → red; an anchor dropped → red; a `confirmationDialog` in the host → `MenuPolicyTests` **stayed green** — the scan matches `Menu(`/`.pickerStyle(.menu)`/`.contextMenu` only, so 013 Decision 17's "no confirmationDialog" half is unguarded anywhere (no file uses one today). To the Phase 2b review: broaden the regex (`.confirmationDialog(`) as a sub-lettered task? Also: verify.sh's no-count guard fires on a passing one-test Swift Testing suite — read `## failures`, not the exit code |
+| Phase 2b decision review (anchors, menu scan, reentry) — `skeptical-reviewer` | `fable` (explicit override) | ~77k | Option D (the shared helper becomes a `transformAnchorPreference`) with a render guard `DropdownAnchorTests` (T009g, per-task); broaden `MenuPolicyTests` now (T009h); the gated spy gates once across methods so the reentry probe can go red (T009i). Plan Q17 corrected |
 | _rows added per dispatch as the spec runs_ | | | |
