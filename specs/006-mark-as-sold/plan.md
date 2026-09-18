@@ -109,6 +109,7 @@ types (spec "What and why"). So there is no Phase 0.
   (either side non-empty) and `canExportPDF` (owned non-empty); the
   `OverflowDropdown` takes both and `ExportWiringTests` is **broadened**, not
   weakened: two rows, one gate each, Import and Settings still ungated (§7).
+  *Superseded by `014-sold-side-parity` (its plan, P11): the CSV is narrowed by the on-screen side only, so the Sold side's narrowing is no longer the identity and the "Because changing side clears every narrowing (Q15)" clause above no longer holds.*
 - **Q6. Import pair rule.** A row is a sold item iff **both** `Sold Date` and
   `Sale Price` parse (the schema's own date and money parsers). Otherwise the
   item imports unsold, and — if *any* of the four sale cells was non-blank —
@@ -200,6 +201,7 @@ types (spec "What and why"). So there is no Phase 0.
   design cleared the narrowing only on the router path, so tapping the
   switch after filtering Owned to "Cameras" would have exported a Cameras-only
   CSV from a Sold side that showed every sale.
+  *Superseded by `014-sold-side-parity` (its spec, Decision 4): a side change clears nothing — each side keeps its own search, chip and sort across a switch, held as two values behind one set of names.*
 
 ---
 
@@ -447,6 +449,7 @@ unchanged in body (it reads `items`). The narrowing applied to sold rows is
 the same three filters, extracted into one `narrowed(_:)` so the two sides
 can't drift — and on the Sold side `narrowed` is the identity, because
 `show(.sold)` cleared the three fields (Q15).
+*Superseded by `014-sold-side-parity` (its spec, Decision 4, and its plan P11): each side keeps its own narrowing, so `narrowed` is not the identity on the Sold side; the CSV is narrowed by the on-screen side only (P11).*
 
 `AppRouter`: `ItemsRequest.sold`, `func showSoldItems()` (sets the request,
 `popToItemsRoot()`). `ItemListView.apply`: `.sold` → `viewModel.show(.sold)`;
@@ -796,7 +799,7 @@ close-out (§"Docs on the spec branch", the `005` split).
 | G30 | `DocsSampleTests`: `items-full.csv` sold rows; `items-resaved.csv` width 14 | a sample is regenerated at the wrong width |
 | G31 | `PrivacyPolicyTests`: the storage row names the sale details | the phrase is removed |
 | G32 | `SaleOutcomeTests` + scan: `totals` sums count/proceeds/delta; both view models read it | a view model sums `salePriceCents` itself |
-| G33 | `ItemListViewModelTests`: `show(_:)` clears every narrowing on a side change | the filter survives the switch |
+| G33 | `ItemListViewModelTests`: `show(_:)` clears every narrowing on a side change | the filter survives the switch — *Superseded by `014-sold-side-parity` (its spec, Decision 4): the narrowing now survives the switch by design, and `014`'s guards assert per-side state instead.* |
 
 Every guard is mutation-verified before it lands (`CLAUDE.md` Testing); the
 task's Done note records what was broken and what went red. Every source scan

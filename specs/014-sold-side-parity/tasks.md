@@ -81,7 +81,7 @@ the same label (plan R2) — the report puts it as a question, not a fact.
 
 ## Phase 1 — Foundations, view model only (**foundational**)
 
-- [ ] **T001 — The `006` pointers (docs only).**
+- [x] **T001 — The `006` pointers (docs only).**
   Per plan §9 and the spec's Inherited caveats. In
   `specs/006-mark-as-sold/spec.md`, append a one-line pointer — *"Superseded
   by `014-sold-side-parity` (its spec, Decision N / P-item): …"* — at
@@ -424,4 +424,5 @@ interpreted here.
 | Spec session (this spec's `spec.md`, drafting and revision) | `fable` medium (raised to high for the spec conversation) | orchestrating seat, not measured separately | Draft, revised at the person's reading, approved 2026-09-16 |
 | `sdd-planner` — plan.md and tasks.md, plus the fix round | `fable` | ~314k (≈290k first draft, ≈20k fixes) | Drafted; three blocking findings fixed in place |
 | `skeptical-reviewer` — plan/tasks sign-off and re-review | `fable` | ~170k (≈156k review, ≈14k re-review) | Three blocking, nine second-look findings; re-review: all resolved, sign off |
+| T001 — `sdd-implementer` | `opus` | ~39k | Done; 4+4 pointers, counts verified by the orchestrator. Note for T011: `006` spec line 69 ("from two places") left as is, not in T001's scope |
 | _rows added per dispatch as the spec runs_ | | | |
