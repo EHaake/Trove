@@ -235,7 +235,7 @@ the same label (plan R2) — the report puts it as a question, not a fact.
 
 ## Phase 2 — Screens
 
-- [ ] **T006 — The header on both sides: one gate, the side-aware sort badge, two dropdowns, `apply`.**
+- [x] **T006 — The header on both sides: one gate, the side-aware sort badge, two dropdowns, `apply`.**
   Per plan §6, Q3 and Q10. Both gated spans open on
   `viewModel.offersNarrowingControls`; `sortControl` reads
   `viewModel.visibleSortLabel` for the badge and its accessibility label;
@@ -436,4 +436,5 @@ interpreted here.
 | T005 — `sdd-implementer` | `opus` | ~75k | Done; 1519 unit tests in 205 suites green. New suite `ItemListViewModelSwipeSaleTests` (G18 on a second context); the refusal scan gains the list's `markSold`; `bothHostsSeedTheMarkSheetIdentically` → `everyHostSeedsTheMarkSheetIdentically` (three hosts). Mutations: `?? 0` in the seed → G17 red; `rollback()` dropped → scan red; `toward:` a fetched plan → G18 red; `swipeSell` → "Sold" → G23 red. Deviation: `loadFailureMessage` set after `load()` in the catch, since `load()` clears it first. Finding (pre-existing, out of scope): `duplicate(id:)`'s catch sets the message then `load()` clears it — a refused duplicate reports nothing; flagged for a `fix/` branch |
 | T001 fix — `sdd-implementer` (phase-review round) | `opus` | ~44k | P16 pointer rewritten with the eight labels and glyphs; both plan.md pointers cite "its spec" for P11 |
 | Phase 1 — `skeptical-reviewer` review + re-review | `opus` | ~130k + ~2k | Two blocking: the P16 pointer named five options (fixed), and the UI suite not run at the phase end (run: 20 tests, 0 failures; cadence written into T005/T009 Verify lines). Re-review: sign off. Second-look kept open: S1 `markSold`'s message-after-`load()` ordering has no red mutation (the scan is order-blind); S3 G11/G12 don't `#require` their hidden-side premise (would go vacuous, not red, if per-side keeping regressed — G4 is the backstop); S4 T009's round-trip test must type into the field, not drive state (view-side @State mirror would be invisible to unit guards) — carried to T009's bundle; S5 `SortDropdown` genericity — void, it is generic; S6 a CSV from Owned with the Un-valued chip on also drops sold rows carrying a value (006's inherited behaviour, label stays true) — a sentence for T011's "As built" |
+| T006 — `sdd-implementer` | `opus` | ~80k | Done; 1519 unit tests green. `theSoldSideRendersNoSortControlAndNoSearchField` → `oneNarrowingGateCoversBothSidesAndEachSideBringsItsOwnSort` (G20, plus the badge reading `visibleSortLabel`). Mutations: `side == .owned` back on the gate → red; the search clear above `switch` → red; Sold dropdown arm removed → red; `overflowControl` inside the Items gate → `ImportWiringTests` red (Items case only). Note: the two list screens no longer share a gate literal |
 | _rows added per dispatch as the spec runs_ | | | |

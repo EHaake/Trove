@@ -48,24 +48,33 @@ struct ItemListSidesWiringTests {
         #expect(sold.contains("router.itemsPath.append"), "a sold row doesn't open its item's page")
     }
 
-    /// Criterion 7 and P16: no Sort By and no search field on the Sold side.
-    /// Both halves of the claim — the branch carries neither, and the file
-    /// composes each exactly once, inside the one gate that names the side.
-    @Test func theSoldSideRendersNoSortControlAndNoSearchField() throws {
+    /// G20, the header as one control set over two sides (criteria 3 and 7):
+    /// the narrowing gate is spelled once, in two places, and reads the view
+    /// model's rule rather than the side; the search field and the sort badge
+    /// are each composed once and both sit inside it; the host carries one
+    /// menu per side, each writing its own selection; and `apply` writes
+    /// nothing before it has crossed to the side it is narrowing.
+    ///
+    /// Mutations: put a `viewModel.side == .owned` clause back on either gate
+    /// → red (the gate count and the no-side-in-the-header expectation);
+    /// move `viewModel.searchText = ""` back above `switch request` → red
+    /// (the pre-switch span); delete either arm of the host's `case .sort:`
+    /// → red (the dropdown count).
+    @Test func oneNarrowingGateCoversBothSidesAndEachSideBringsItsOwnSort() throws {
         let code = try code()
-        let sold = try body(of: "private var soldRows: some View")
 
-        #expect(!sold.contains("SearchField("), "the Sold side renders a search field")
-        #expect(!sold.contains("sortControl"), "the Sold side renders the sort control")
-
-        // The gate itself, which is what actually keeps them off that side —
-        // one spelling in both places (the sort badge, and the search field
-        // with the chips). Mutation: drop the `viewModel.side == .owned`
-        // clause from either → the count falls to 1 and this fails.
-        let gate = "if viewModel.totalCount > 0, viewModel.side == .owned"
+        // The gate itself — one spelling in both places (the sort badge, and
+        // the search field with the chips), and the rule behind it lives in
+        // the view model, so neither place can drift from the other or from
+        // what the rows are actually showing (plan Q10).
+        let gate = "if viewModel.offersNarrowingControls"
         #expect(
             code.ranges(of: gate).count == 2,
-            "the screen spells the narrowing gate \(code.ranges(of: gate).count) times, expected 2 — one of them no longer names the side"
+            "the screen spells the narrowing gate \(code.ranges(of: gate).count) times, expected 2 — the sort badge and the search field with the chips"
+        )
+        #expect(
+            !code.contains("viewModel.side == .owned"),
+            "the header gates a narrowing control on the side again — since 014 both sides narrow (criterion 3)"
         )
 
         let gated = SourceScan.closureBodies(after: gate, in: code)
@@ -76,9 +85,10 @@ struct ItemListSidesWiringTests {
         #expect(inside.contains("categoryChips"), "the chip row sits outside the gate")
 
         // Each appears once in the whole screen, so the gated copy above is
-        // the only copy. Two uses of `sortControl` — its declaration and the
-        // gated use — and one `SearchField(`, which `categoryChips` renders
-        // none of.
+        // the only copy — one control set, shared, rather than a second copy
+        // grown on the Sold side. Two uses of `sortControl` — its declaration
+        // and the gated use — and one `SearchField(`, which `categoryChips`
+        // renders none of.
         #expect(
             code.ranges(of: "SearchField(").count == 1,
             "the screen composes \(code.ranges(of: "SearchField(").count) search fields — one of them is outside the gate"
@@ -86,6 +96,54 @@ struct ItemListSidesWiringTests {
         #expect(
             code.ranges(of: "sortControl").count == 2,
             "the screen names `sortControl` \(code.ranges(of: "sortControl").count) times — its declaration plus one gated use is two"
+        )
+
+        // The one badge names whichever side's order is showing, rather than
+        // the Owned side's through both (plan §6).
+        let badge = try body(of: "private var sortControl: some View")
+        #expect(
+            badge.contains("viewModel.visibleSortLabel") && !badge.contains("viewModel.sortOrder"),
+            "the sort badge reads a side's order directly instead of the visible label: \(badge)"
+        )
+
+        // The host's sort case: one menu per side, over that side's own
+        // options, writing that side's own selection.
+        let sortCase = SourceScan.closureBodies(after: "case .sort:", in: code)
+        try #require(sortCase.count == 1, "the host opens \(sortCase.count) spans for `case .sort:`, expected exactly 1")
+        let sorts = try #require(sortCase.first)
+        #expect(
+            sorts.ranges(of: "SortDropdown(").count == 2,
+            "`case .sort:` composes \(sorts.ranges(of: "SortDropdown(").count) sort menus, expected 2 — one per side"
+        )
+        let owned = try #require(
+            SourceScan.argumentLists(of: "SortDropdown", in: sorts).first { $0.contains("SortOrder.allCases") && !$0.contains("SoldSortOrder.allCases") },
+            "no menu over the Owned side's orders: \(sorts)"
+        )
+        #expect(owned.contains("selection: viewModel.sortOrder"), "the Owned menu doesn't show the Owned side's selection: \(owned)")
+        let sold = try #require(
+            SourceScan.argumentLists(of: "SortDropdown", in: sorts).first { $0.contains("SoldSortOrder.allCases") },
+            "no menu over the Sold side's orders: \(sorts)"
+        )
+        #expect(sold.contains("selection: viewModel.soldSortOrder"), "the Sold menu doesn't show the Sold side's selection: \(sold)")
+        #expect(sold.contains("isManualOrder: { _ in false }"), "the Sold menu tags an option REORDER — there is no manual order on that side (P16)")
+        let soldSelection = try #require(
+            SourceScan.closureBodies(after: sold, in: sorts).first,
+            "the Sold menu selects nothing"
+        )
+        #expect(
+            soldSelection.contains("viewModel.soldSortOrder = option"),
+            "the Sold menu writes something other than the Sold side's order: \(soldSelection)"
+        )
+
+        // Nothing in `apply` runs before the switch: a clear up here would
+        // reach the Sold side's query on the way to an Owned request (Q3).
+        let apply = try body(of: "private func apply(_ request: AppRouter.ItemsRequest?)")
+        let guardEnd = try #require(apply.range(of: "guard let request"), "`apply` no longer guards its request — wrong span?")
+        let switchStart = try #require(apply.range(of: "switch request"), "`apply` no longer switches on the request — wrong span?")
+        let before = apply[guardEnd.upperBound..<switchStart.lowerBound]
+        #expect(
+            !before.contains("viewModel."),
+            "`apply` writes to the view model before it knows which side the request is for: \(before)"
         )
     }
 

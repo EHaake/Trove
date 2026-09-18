@@ -102,25 +102,29 @@ struct ItemListView: View {
                     // The switch sits here, in the standing header, rather than
                     // beside the rows — so it is there over an empty Owned side
                     // (a person whose only item is now sold) exactly as it is
-                    // over a full one (plan §4). Never bound to `side`: a tap
-                    // asks `show(_:)`, which is what clears the narrowing on a
-                    // change (plan Q15).
+                    // over a full one (006 plan §4). Never bound to `side`: a
+                    // tap asks `show(_:)`, which sets the side and reloads —
+                    // and since 014 that is the whole of it, because each side
+                    // now keeps its own search, chip and sort while the other
+                    // is visited (014 plan Q3, replacing 006 Q15).
                     SideSwitch(side: viewModel.side, select: { viewModel.show($0) })
                         .padding(.horizontal, theme.metrics.screenGutter)
 
                     // Controls for narrowing a list need a list to narrow. On a
                     // first run they were a search field over nothing and a
                     // lone "All" chip, both of which made the screen look like
-                    // it had lost something rather than not started yet. And
-                    // the Sold side has no narrowing at all (P16, plan Q15),
-                    // so the same gate carries the side.
-                    if viewModel.totalCount > 0, viewModel.side == .owned {
+                    // it had lost something rather than not started yet. Since
+                    // 014 the Sold side narrows too, so the rule is the same on
+                    // both sides and the view model owns the reading of it: the
+                    // side on screen has something to narrow (014 plan Q10).
+                    if viewModel.offersNarrowingControls {
                         SearchField(placeholder: "Search name or serial", text: $viewModel.searchText)
                             .padding(.horizontal, theme.metrics.screenGutter)
                             // The Design pass's `sectionGap` under the switch,
-                            // on top of this stack's own `controlRowGap`. On
-                            // the Sold side, where nothing follows the switch,
-                            // the stack's bottom padding is the whole gap.
+                            // on top of this stack's own `controlRowGap`. On a
+                            // side with nothing to narrow, where nothing follows
+                            // the switch, the stack's bottom padding is the
+                            // whole gap.
                             .padding(.top, theme.metrics.sectionGap - theme.metrics.controlRowGap)
 
                         // Full-bleed so chips scroll off the edge rather than
@@ -313,15 +317,34 @@ struct ItemListView: View {
         .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
             switch dropdown {
             case .sort:
-                SortDropdown(
-                    options: ItemListViewModel.SortOrder.allCases,
-                    selection: viewModel.sortOrder,
-                    label: \.label,
-                    isManualOrder: { $0 == .custom }
-                ) { option in
-                    // The row has already closed the dropdown.
-                    viewModel.sortOrder = option
-                    viewModel.load()
+                // One badge, one host, two menus — the side on screen picks
+                // which orders it offers, and each writes its own selection
+                // (014 plan §6). Nothing is shared between them but the
+                // drawing.
+                switch viewModel.side {
+                case .owned:
+                    SortDropdown(
+                        options: ItemListViewModel.SortOrder.allCases,
+                        selection: viewModel.sortOrder,
+                        label: \.label,
+                        isManualOrder: { $0 == .custom }
+                    ) { option in
+                        // The row has already closed the dropdown.
+                        viewModel.sortOrder = option
+                        viewModel.load()
+                    }
+                case .sold:
+                    // No REORDER tag: the Sold side has no manual order to
+                    // drag into (P16), so no option is the manual one.
+                    SortDropdown(
+                        options: ItemListViewModel.SoldSortOrder.allCases,
+                        selection: viewModel.soldSortOrder,
+                        label: \.label,
+                        isManualOrder: { _ in false }
+                    ) { option in
+                        viewModel.soldSortOrder = option
+                        viewModel.load()
+                    }
                 }
             case .overflow:
                 OverflowDropdown(
@@ -526,12 +549,12 @@ struct ItemListView: View {
             // is exactly who they serve. Guarded from both directions —
             // ImportWiringTests' brace-span scan and the empty-collection
             // UI test.
-            // Sort By hides on the Sold side (criterion 7, P16) under the same
-            // gate the search field and the chips use — one spelling, in both
-            // places, so a side can't end up with one narrowing control and
-            // not the others.
+            // Sort By stands on both sides since 014 (criterion 3), under the
+            // same gate the search field and the chips use — one spelling, in
+            // both places, so a side can't end up with one narrowing control
+            // and not the others.
             HStack(spacing: 8) {
-                if viewModel.totalCount > 0, viewModel.side == .owned {
+                if viewModel.offersNarrowingControls {
                     sortControl
                 }
                 overflowControl
@@ -608,12 +631,15 @@ struct ItemListView: View {
     /// `Menu` (the T029c saga in one sentence: UIKit animated the Menu
     /// label's bounds beyond SwiftUI's reach; a custom control has no such
     /// machinery, so the badge simply hugs its label again).
+    /// Since 014 the badge reads `visibleSortLabel` rather than either side's
+    /// order directly: one control over two selections, so the side on screen
+    /// is the one it names — and the one it names aloud (014 plan §6).
     private var sortControl: some View {
-        SortBadge(label: viewModel.sortOrder.label) {
+        SortBadge(label: viewModel.visibleSortLabel) {
             openDropdown = .sort
         }
         .dropdownAnchor(HeaderDropdown.sort)
-        .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+        .accessibilityLabel("Sort by \(viewModel.visibleSortLabel)")
         .accessibilityHint("Opens sort options")
         .accessibilityIdentifier("sortOptions.items")
     }
@@ -632,18 +658,21 @@ struct ItemListView: View {
         // intersected with a filter left over from last time.
         // Both narrowing requests name the Owned side first: a request that
         // arrived while the Sold side was showing has to land on the side that
-        // can show it, and `show(.owned)` is what clears the narrowing on the
-        // way across (plan Q15) — so the writes below have to follow it, never
-        // precede it.
-        viewModel.searchText = ""
+        // can show it, and since 014 `show(_:)` clears nothing, so each case
+        // clears what it is replacing itself — inside the case, after the
+        // crossing, so a request for the Owned side can't reach across and
+        // wipe the query the Sold side is holding (014 plan Q3, replacing
+        // 006 Q15). Nothing runs before the switch for the same reason.
         switch request {
         case .category(let path):
             viewModel.show(.owned)
+            viewModel.searchText = ""
             viewModel.categoryFilter = path
             viewModel.showsOnlyUnvalued = false
             chipToReveal = path
         case .unvalued:
             viewModel.show(.owned)
+            viewModel.searchText = ""
             viewModel.categoryFilter = ""
             viewModel.showsOnlyUnvalued = true
             chipToReveal = Self.unvaluedChipID
