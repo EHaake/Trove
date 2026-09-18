@@ -349,6 +349,151 @@ the same label (plan R2) — the report puts it as a question, not a fact.
   other and come back; export a CSV from a narrowed Sold side; open a sold
   item's page and see the Sold mark under its name).
 
+## Phase 2b — Export scope (spec Decision 7, added 2026-09-18 at the Phase 2 pause)
+
+Added after the person's Phase 2 walkthrough: exports from the Items list
+choose owned, sold or both, for the CSV and the PDF (spec Decision 7, P12–P15,
+criterion 14; plan §4a Q14–Q17). Shaped by a decision review at the top tier
+and approved by the person the same day. **T009b is marked `review:
+per-task`** (the bytes of a file the person keeps); the rest get the Phase 2b
+review. Pause at the end of this phase — there is something to try.
+
+- [ ] **T009a — The `006` and `011` pointers for Decision 7 (docs only).**
+  Per spec Inherited caveats and T001's pattern. `specs/006-mark-as-sold/spec.md`:
+  *"Superseded by `014-sold-side-parity` (its spec, Decision 7): …"* at
+  Decision 7's PDF sentence ("the PDF stays a document of what you own"), at
+  P17, and at the non-goal "A sold-items PDF"; `specs/006-mark-as-sold/plan.md`
+  at Q5's "`canExportPDF` (owned non-empty)" clause. `specs/011-data-export/spec.md`:
+  a pointer under "## The PDF" (a sold document since `014`) and at the PDF
+  filename line (`Trove-Sold-Items-YYYY-MM-DD.pdf` joins it). Appended,
+  nothing above edited.
+  Files: `specs/006-mark-as-sold/spec.md`, `specs/006-mark-as-sold/plan.md`,
+  `specs/011-data-export/spec.md`.
+  **Verify:** `grep -c "Superseded by \`014-sold-side-parity\`"` prints 7 over
+  `006` spec (4 + 3), 5 over `006` plan (4 + 1), 2 over `011` spec; `git diff
+  --stat` touches only those three files.
+
+- [ ] **T009b — `ExportScope`, `canExport(_:)`, `exportCSV(scope:)`, `ExportFilename.soldItems`. `review: per-task`.**
+  Per plan §4a Q14 and Q15's filename. `canExportPDF` **unchanged in this
+  task** (owned-only until T009d, so no empty owned PDF is ever offered
+  between commits). Every caller of `exportCSV()` in tests → `exportCSV(scope:
+  .both)`. Pattern: `SoldSortOrder` (enum + literal-pinned labels), today's
+  `exportCSV`, `ExportFilename.items` and its test. Tests
+  (`ItemListViewModelSoldExportTests`): **G26** labels/order by literal;
+  **G27** from a Sold side under a chip (G11's fixture): `.owned` rows == the
+  owned rows in it in Custom order, `.sold` rows == the sold rows in it
+  date-desc under `soldSortOrder = .salePriceAscending`, `.both` == `.owned` +
+  `.sold` (mutations: `.owned` reading `items` from Sold → red; `.sold` reading
+  `soldItems` → red; `.both` sold-first → red); **G28** `canExport` per scope:
+  all-sold (false, true, true), all-owned (true, false, true), a Sold chip
+  matching neither (false, false, false) and `canExportCSV` false, and
+  `exportCSV(scope: .owned)` on an all-sold collection stages nothing (extend
+  `aSoldChipMatchingNeitherHalfDisablesTheCSVFromTheSoldSide`; mutations:
+  `canExport(.owned)` reading `items` from Sold → red; `canExportCSV` reading
+  `items` → red); **G29** filenames via the spy: `.sold` ==
+  `ExportFilename.soldItems(fileExtension: "csv")` == `"Trove-Sold-Items-<day>.csv"`,
+  `.owned` and `.both` == `items` (mutation: swap → red). `ExportTempFileTests`
+  / `ExportSchemaTests`: `soldItems` day-serialised like `items`.
+  `SettingsViewModelTests` G14 and `theListsUnfilteredCSVStillMatchesSettingsByteForByteWithASalePresent`
+  re-pointed at `.both` — confirm green with no other edit.
+  Files: `Trove/ViewModels/ItemListViewModel.swift`, `Trove/Export/ExportService.swift`,
+  `TroveTests/ItemListViewModelTests.swift`, `TroveTests/SettingsViewModelTests.swift`,
+  any test calling `exportCSV()` on the items list.
+  **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every mutation
+  recorded.
+
+- [ ] **T009c — The sold document in the export layer.**
+  Per plan §4a Q15. `CoverSummary.Totals.sold`, the `drawCover` / `countLine`
+  arms, the text-taking `drawTotal` sibling, `PDFEntry.init(record:)`'s five
+  prepended fields. Pattern: the `.wishlist` arm and `countLine`; the entry
+  init's optional-field skips. Tests: `PDFComposerTests` **G30** a rendered
+  sold cover's page-0 text contains "Sold Items", "2 sold" (and "1 sold"
+  singular), "TOTAL SOLD FOR", "TOTAL PAID", "REALISED", "+$350 vs paid", and
+  not "not yet valued" (mutations: the `.sold` arm drawing the `.items` labels
+  → red; the floor note drawn → red; count line "items" → red);
+  `ExportSchemaTests` **G31** a sold record's entry fields begin `Sold`, `Sold
+  for`, `Sold at`, `Outcome`, `Sale note` with the expected values, `Sold at` /
+  `Sale note` absent when nil or empty, then `Paid` first of the owned grid; an
+  owned record's entry carries none of the five (mutations: fields appended
+  instead of prepended → red; outcome from `currentValueCents` → red; an empty
+  `Sold at` emitted → red); **G32** `ExportFilename.soldItems` ==
+  `"Trove-Sold-Items-YYYY-MM-DD.pdf"` under a fixed date and zone (the `items`
+  test's shape).
+  Files: `Trove/Export/ExportSchema.swift`, `Trove/Export/PDFComposer.swift`,
+  `TroveTests/PDFComposerTests.swift`, `TroveTests/ExportSchemaTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded.
+
+- [ ] **T009d — `exportPDF(scope:)` and the PDF gate.**
+  Per plan §4a Q16. `soldDocumentTitle`; the set through one `exportFiles`;
+  `canExportPDF = canExport(.both)`; every caller of `exportPDF()` in tests →
+  `exportPDF(scope: .owned)`. **Rewrite** `anAllSoldCollectionCanExportACSVButNotAPDF`
+  → `anAllSoldCollectionOffersBothFormatsWithTheOwnedScopeDisabled` and
+  `aSoldChipNoOwnedRowIsInKeepsTheCSVAndDisablesThePDF` → `…DisablesTheOwnedScopeAlone`
+  (Q12). Pattern: `SettingsViewModel.exportEverythingAsPDF` and `stage(_:)`;
+  G15's test. Tests: **G33** `.sold` from a Sold side under a chip with
+  `soldSortOrder = .salePriceAscending`: entries the sold rows in it date-desc,
+  title "Sold Items", label "Category: …", `itemCount == entries.count`, totals
+  `.sold` == `SaleOutcome.totals(over:)` of those rows and their paid sum
+  (mutations: entries from `soldItems` → order red; cover over `sold` → red;
+  paid from `salePriceCents` → red); **G34** unnarrowed Sold side: the sold
+  cover's (count, proceeds, realised) == `viewModel.soldTotals` (mutation:
+  proceeds over `purchasePriceCents` → red); **G35** `.both`:
+  `spy.fileSets.count == 1`, `documents` owned-then-sold, `filenames ==
+  [items(pdf), soldItems(pdf)]`, `stagedExport?.filenames` the same; nothing
+  sold → one document, the owned; nothing owned → one, the sold (mutations:
+  two single calls → red; the empty half staged → red; order swapped → red);
+  **G36** all-sold: `canExportPDF` true, `canExport(.owned)` false (mutation:
+  `canExportPDF` reading the owned half → red). G15,
+  `pdfCoverFiguresAreTheViewModelsOwnArithmetic`, `thePDFLeavesSoldItemsOutOfItsEntriesAndItsCover`
+  and Settings' `thePDFPairMatchesTheListsUnfilteredDocuments` re-pointed at
+  `.owned` — confirm green with no other edit.
+  Files: `Trove/ViewModels/ItemListViewModel.swift`, `TroveTests/ItemListViewModelTests.swift`,
+  `TroveTests/SettingsViewModelTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded.
+
+- [ ] **T009e — The chooser on the Items list.**
+  Per plan §4a Q17. `ExportCopy.scopeTitleCSV = "EXPORT AS CSV"`,
+  `scopeTitlePDF = "EXPORT AS PDF"`; `HeaderDropdown.exportScope(ExportFormat)`
+  with `dismissLabel` "Dismiss export options"; the three `.dropdownAnchor`s on
+  `overflowControl`; the host's case; `OverflowDropdown.swift` comment only.
+  Pattern: `SortDropdown`'s body and the Dashboard's `case .order:` (a titled
+  surface over `ForEach(allCases)`); `overflowControl`. Tests
+  (`ExportWiringTests`) **G37** — `DropdownGates` gains per-screen `csvAction`
+  / `pdfAction` (Items: `openDropdown = .exportScope(.csv)` / `.pdf`;
+  Wishlist: `viewModel.exportCSV()` / `exportPDF()`, unchanged); the Items
+  host's `case .exportScope` composes exactly one `DropdownSurface(title:`,
+  one `ForEach(ItemListViewModel.ExportScope.allCases`, a row gated
+  `isEnabled: viewModel.canExport(scope)`, an action naming both
+  `exportCSV(scope: scope)` and `exportPDF(scope: scope)` and no literal
+  `.both` / `.owned` / `.sold`; `overflowControl` carries the three
+  `.dropdownAnchor(` literals (`#require` each) (mutations: the row gated on
+  `canExportCSV` → red; the action passing `.both` → red; an anchor dropped →
+  red); `ExportCopy` titles pinned by literal; `theMenuCarriesFiveItemsInThreeGroups`,
+  `OverflowDropdownRenderTests`, `DropdownWiringTests`, `MenuPolicyTests`
+  green with no edit — confirm (a `confirmationDialog` in the host →
+  `MenuPolicyTests` red, reverted).
+  Files: `Trove/Views/Items/ItemListView.swift`, `Trove/Export/ExportService.swift`,
+  `Trove/Views/Shared/OverflowDropdown.swift` (comment), `TroveTests/ExportWiringTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded. No simulator check
+  here — T010 covers the menu-to-chooser swap.
+
+- [ ] **T009f — The UI test for the chooser, run twice.**
+  `-seedSold`: Items → `moreActions.items` → "Export as PDF…" → buttons "Owned
+  items", "Sold items", "Owned and sold" exist and are enabled, "Import from
+  CSV…" gone; "Dismiss export options" closes it; switch to Sold, tap chip
+  "Guitars", "…" → "Export as CSV…" → "Owned items" **not** enabled (no owned
+  guitar in the seed), the other two enabled; tap "Sold items" → the chooser
+  gone (the share sheet itself is the device pass's — no existing UI test
+  asserts one). `testEmptyCollectionOffersImportAndSettingsButNotExport`
+  unchanged. Mutations: rows gated on `canExportCSV` → "Owned items" enabled →
+  red; the menu row firing the export directly → the rows never appear → red.
+  Files: `TroveUITests/TroveUITests.swift`.
+  **Verify:** `scripts/verify.sh` green; `scripts/verify.sh ui` green twice,
+  both counts in the Done note; mutations recorded. **Phase 2b closes here —
+  pause for the person** (what to try: each of the six choices from both
+  sides, narrowed and not; open the sold PDF; the "Owned and sold" PDF share
+  sheet showing two files).
+
 ## Phase 3 — Verification and close-out
 
 - [ ] **T010 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver]**
@@ -378,9 +523,16 @@ the same label (plan R2) — the report puts it as a question, not a fact.
   and no controls (criterion 9). Both suites twice. Findings fixed in place
   if routine and inside the footprint, else returned as a diagnosis for a
   decision review; each fix a sub-lettered task.
+  **Added for Decision 7 (Phase 2b):** the menu-to-chooser swap (a recording
+  if it steps — the plate re-sizes in place, anchored at the badge); the
+  chooser drawn at all (the anchor claim, plan Q17); the six files read from
+  the container — the `.sold` PDF opened (cover words and three figures
+  against the Sold summary), the `.both` share sheet showing two files, the
+  three CSVs' sale columns marking the side.
   **[person]** Accessibility Inspector (criterion 12): the swipe action
   announces "Mark as sold…"; the Sold side's field, chips and sort badge
-  have labels.
+  have labels; the chooser's first row takes focus and the catcher reads
+  "Dismiss export options".
   **Verify:** the record in the Done note with both measurements, the probe's
   count per action and the byte comparison; `scripts/verify.sh all` green
   twice.
@@ -403,7 +555,17 @@ the same label (plan R2) — the report puts it as a question, not a fact.
   names; the file's order rule from the hidden side; "Sell" on the button and
   "Mark as sold…" to VoiceOver) — on this branch, the `006` precedent; the
   pre-merge `skeptical-reviewer` sweep over `git diff main...HEAD` (bundle
-  cut after `git add -A`); PR marked ready for review.
+  cut after `git add -A`); PR marked ready for review. **Added for Decision
+  7:** criterion 14 ticked; criterion 10's corrected wording noted as the
+  person's; `README.md`'s sold bullet ("The PDF stays a document of what you
+  own … and no PDF") rewritten; `design/tokens.md`'s "Export badge and menu"
+  row and its print section gain a sentence each; `docs/csv-reference.md` a
+  line on the three files; `ROADMAP.md`'s 014 entry; `DECISIONS.md` (a chooser,
+  not six rows; two documents for "both"; `Trove-Sold-Items`; Settings' PDF
+  pair no longer "the complete record"); plan "As built": the Context's "no
+  export format" corrected, R2 confirmed-and-extended, Q14–Q17 as shipped;
+  "As built" sentences for `ActionIconTests`' three extra icons and the
+  Un-valued chip narrowing the sold half of a CSV (Phase 1 S6).
   **Verify:** everything above committed and pushed; `scripts/verify.sh all`
   green with the final counts recorded here (unit and UI lines both captured
   — `006`'s T020 lost the unit line to a short `tail`).
@@ -441,4 +603,5 @@ interpreted here.
 | T008 — `sdd-implementer` | `opus` | ~47k | Done; 1523 unit tests green. `theSoldBranchStampsTheMark` extended with G21; mutation: mark back above the hero → red on `title < mark` only (the other two legs are structural controls). Note for T011: `design/tokens.md`:657's Position row describes the pre-014 placement — correct the row, not just the cell |
 | T009 — `sdd-implementer` | `opus` | ~105k | Done; unit 1523 green; UI twice back to back: 22 tests, 0 failures / 22 tests, 0 failures. Mutations: the 006 clearing back in `show` → the round-trip test red (3 failures at the round-trip assertions); the middle swipe button → `itemBeingEdited` → the sheet test red. The leading actions open with a partial press-drag (0.1 s, 40 % of the width); XCUITest reports the middle button as "Mark as sold…" (the accessibility label took — for `DECISIONS.md`, T011). Notes: per-side *sort* keeping has no UI mutation of its own (the old clearing never touched sorts); XCTest per-function selectors do work through verify.sh (Swift Testing's don't); the un-valued chip's accessibility label is "Clear the not-yet-valued filter" |
 | Phase 2 — `skeptical-reviewer` review + re-review | `opus` | ~87k + ~1k | One blocking: the sheet-hosting guard and G20's badge leg landed with no recorded red — four mutations run (all red, no code or test change), recorded on T006/T007's rows; re-review: sign off. S4 (the `show(.owned)`-before-write assertion) and S6 (`lists` still used) checked by the orchestrator, both present. Open second-look for the sweep/T010/T011: S1 the no-matches "Clear search" UI assertion can pass on the field's X alone (assert two buttons or give the empty-state action an identifier); S2 the swipe test matches "Sell" or "Mark as sold…" — after T010 reads the tree, pin the one that shipped; S3 `!code.contains("viewModel.side == .owned")` is file-wide where the plan scoped it to the header; S5 the three-`Button` count is comment-sensitive (spurious red, not false green); S7 `ActionIconTests` covers three icons beyond the task line — a sentence for "As built"; S8 T010: type into the price field, background/foreground, confirm the typed value survives (the closure re-seeds on every body evaluation) |
+| Phase 2 pause — decision review (export scope, Decision 7) — `skeptical-reviewer` | `fable` (explicit override) | ~226k | Recommended option B (a second dropdown surface under the two export rows), the sold PDF as its own document, "both" as two PDFs in one share sheet, all inside 014 as Phase 2b; approved by the person 2026-09-18. Second-look for the record: Settings' PDF pair is no longer the complete record; `.owned` and `.both` CSVs share `Trove-Items`; the Un-valued chip reaches the sold cover label (S6); `SaleOutcome` lives in `Sale.swift` |
 | _rows added per dispatch as the spec runs_ | | | |

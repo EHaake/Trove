@@ -16,8 +16,9 @@ the sold page's Sold mark this spec moves), `010-item-management-enhancements`
 (the Items list's search, category chips, Sort By and leading swipe, which the
 Sold side now shares), `011-data-export` (the CSV's narrowing rule, which the
 Sold side's narrowing now feeds), `013-settings-menu` (the "…" menu stays
-the one system `Menu`). It touches no network code, no schema and no export
-format.
+the one system `Menu`). It touches no network code and no schema; the CSV
+schema is unchanged, and the PDF gains a sold document (Decision 7, amended
+2026-09-18 at the Phase 2 pause).
 
 ## Summary
 
@@ -165,7 +166,19 @@ to point here (Inherited caveats).
   file's sold rows are always in Date-sold order (P10), the way Settings'
   export-everything CSV writes them, so `013`'s byte-identity between the
   two paths still holds.
-- The PDF stays owned-only. Import is untouched.
+- From the Items list, each export row asks which items — **Owned items**,
+  **Sold items**, or **Owned and sold** — before the share sheet (Decision 7,
+  P12; amended 2026-09-18 at the Phase 2 pause, replacing "The PDF stays
+  owned-only"). Every choice follows the side on screen's narrowing (P11).
+  The owned file is today's; the sold CSV is the sold rows that pass, in
+  Date-sold order (P10); the sold PDF is a document titled "Sold Items" whose
+  cover totals what those items sold for, what was paid and the realised gain
+  or loss, and whose entries show the sale under the name (P14). "Owned and
+  sold" is one CSV — the complete record, byte-identical to Settings' when
+  unnarrowed — and, as a PDF, the two documents in one share sheet (P13). A
+  choice with no rows is disabled. Sold-only files are named
+  `Trove-Sold-Items-<date>` (P15). Settings' Export All is unchanged. The
+  Wishlist's exports are unchanged. Import is untouched.
 
 ### The sold page's mark
 
@@ -236,11 +249,14 @@ to point here (Inherited caveats).
 9. [ ] A Sold side narrowed to nothing shows the no-matches state with its
    filter copy, not "Nothing sold yet"; with nothing sold at all it still
    shows "Nothing sold yet" and no controls.
-10. [ ] A CSV exported from a narrowed Sold side holds the owned and sold
-    rows that pass that narrowing, with a true coverage label, and the
-    hidden side's own narrowing has no effect on it; exported with no
+10. [ ] An Owned-and-sold CSV exported from a narrowed Sold side holds the
+    owned and sold rows that pass that narrowing, with a true coverage label,
+    and the hidden side's own narrowing has no effect on it; exported with no
     narrowing on the side on screen it is byte-identical to Settings'
-    export-everything CSV, whatever sort either side is showing.
+    export-everything CSV whatever sort the Sold side is showing, and from
+    the Owned side under the Custom sort as `013` established (corrected
+    2026-09-18 at the person's reading: from Owned the file is the rows in
+    visible order, so the identity holds under Custom, plan R1).
 11. [ ] On a sold item's page the Sold mark sits directly under the item's
     name, below the photo and above the stats, with its words and colours
     unchanged.
@@ -248,6 +264,15 @@ to point here (Inherited caveats).
     swipe action, a name — the person's step with Accessibility Inspector.
 13. [ ] The existing UI suite still starts from the state each test was
     written against; the suite passes twice back to back.
+14. [ ] From the Items list, Export as CSV… and Export as PDF… each offer
+    Owned items, Sold items and Owned and sold, each enabled only when it has
+    rows under the on-screen narrowing; the sold CSV holds exactly the sold
+    rows that pass, in Date-sold order; the sold PDF's cover reads "Sold
+    Items" with the count, total sold for, total paid and the realised gain
+    or loss over exactly its entries, each entry carrying the sale under the
+    name; Owned and sold gives criterion 10's CSV and, as a PDF, the two
+    documents in one share sheet; the "…" menu's rows, the Wishlist's
+    exports and Settings' exports are unchanged.
 
 ## Decisions record
 
@@ -271,6 +296,17 @@ Made by the person, 2026-09-16, at their reading of the first Draft:
    from the existing tokens.
 6. **The sold page's Sold mark moves from above the photo to directly under
    the item's name.**
+
+Made by the person, 2026-09-18, at the Phase 2 pause:
+
+7. **Exports from the Items list choose their scope — owned, sold, or both
+   — for the CSV and the PDF; Settings' export-everything is unchanged.**
+   Answering plan R2's question; the person chose both formats over the
+   orchestrator's CSV-only recommendation, and the Items list over Settings
+   as the only place the choice lives. Reverses `006` Decision 7, P17 and
+   its non-goal "a sold-items PDF". The how was settled by a decision review
+   at the top tier (plan §4a, Q14–Q17) and approved by the person the same
+   day.
 
 Proposed at drafting, 2026-09-16, by Claude Code (these become decisions on
 plan approval):
@@ -297,6 +333,23 @@ plan approval):
 - **P11. The CSV is narrowed by the on-screen side's narrowing only**, over
   both halves; the hidden side's state never touches the file.
 
+Proposed at the Phase 2 pause, 2026-09-18, by the decision review (approved
+by the person the same day):
+
+- **P12. The scope is chosen on a second dropdown surface** that the existing
+  "Export as CSV…" / "Export as PDF…" rows open, headed EXPORT AS CSV / EXPORT
+  AS PDF, with Owned items · Sold items · Owned and sold — never six menu rows,
+  never "this side".
+- **P13. "Owned and sold" as a PDF is two documents in one share sheet**,
+  owned then sold; a half with no rows is left out, so with nothing sold it
+  is today's single owned document.
+- **P14. The sold document**: title "Sold Items"; cover with the count, TOTAL
+  SOLD FOR, TOTAL PAID and REALISED (the Dashboard card's words for a sum);
+  each entry the owned layout with Sold, Sold for, Sold at, Outcome and Sale
+  note directly under the name.
+- **P15. Filenames**: sold-only files are `Trove-Sold-Items-<date>`; owned
+  and owned-and-sold keep `Trove-Items-<date>`.
+
 ## Non-goals (explicit)
 
 - **A visible Mark as sold button on the item page** (Decision 1) — a
@@ -314,6 +367,10 @@ plan approval):
 - **Any change to the sale sheet** or to the sold page beyond the mark's
   place.
 - **Any change to the sale's fields, the CSV columns, import, or sync.**
+- **Remembering the last export scope** (P8's rule — nothing is remembered
+  across launches).
+- **A sold document from Settings** — Settings' Export All stays owned +
+  wishlist as a PDF pair and the complete record as a CSV pair (Decision 7).
 
 ## Inherited caveats
 
@@ -321,5 +378,9 @@ plan approval):
   superseded here; `006`'s `spec.md` and `plan.md` get a one-line pointer
   at each on this spec's plan approval.
 - `001`'s fixed type sizes and USD-only rule apply.
+- `006` Decision 7, P17 and its non-goal "A sold-items PDF" are superseded
+  by Decision 7 here; `006`'s `spec.md` and `plan.md` get a pointer at each.
+  `011`'s filename rule gains a second items name (`Trove-Sold-Items-<date>`)
+  and its "The PDF" section a pointer.
 - `013`'s rule stands: the "…" menu stays the one system `Menu`; the sort
   dropdown and the swipe are Trove's own.

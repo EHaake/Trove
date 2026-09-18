@@ -41,6 +41,8 @@ pinned the old rule is **rewritten to pin the new one**, never loosened (Q12).
   ("the view's sort is a reading aid, the file's order is the record's") and
   the file is Settings' bytes whatever either side's sort shows. Guard G14.
 - **R2 — The PDF follows the on-screen side's narrowing too**, owned half
+  (confirmed and extended 2026-09-18: it now names the Owned scope; the sold
+  document applies the same rule to the sold half — §4a, R3),
   only, same coverage label, Custom order from the Sold side (R1). The spec
   says only "the PDF stays owned-only"; P11's principle — a file is never
   narrowed by something not on screen, and `011`'s rule that the document
@@ -429,6 +431,82 @@ them, label "Category: …" (mutation: read `items` → red, G15); a Sold-side
 chip that excludes every owned row leaves `canExportCSV` true and
 `canExportPDF` false (G16).
 
+## 4a. Export scope (Decision 7 — added 2026-09-18 at the Phase 2 pause)
+
+Decided by the person at the Phase 2 pause (spec Decision 7) and shaped by a
+decision review at the top tier (`skeptical-reviewer`, `fable`, ~226k tokens),
+approved by the person the same day. Q14–Q17 and R3 below are that review's
+recommendation transcribed; the reasoning it gave in plain words is in the
+plan file the person approved and in the tier log.
+
+- **Q14. One enum, one gate, every caller says what it exports.**
+  `ItemListViewModel.ExportScope: CaseIterable { owned, sold, both }` in menu
+  order, `label` = "Owned items" / "Sold items" / "Owned and sold".
+  `private func rows(for scope:) -> [Item]` = `exportableOwnedItems` /
+  `exportableSoldItems` / the first then the second. `func canExport(_ scope:)
+  -> Bool { !rows(for: scope).isEmpty }`; `canExportCSV` and `canExportPDF`
+  both read `canExport(.both)` — the menu row is enabled when any chooser row
+  is; `OverflowDropdown`'s two flags stay for the Wishlist's reason and its
+  comment says the Items list feeds them equal. `exportCSV(scope:)` and
+  `exportPDF(scope:)` take the scope with **no default** — every existing
+  call site names `.both` (CSV) or `.owned` (PDF), so today's tests pin
+  today's files under their new names. The `.both` CSV path is byte-for-byte
+  the current `exportCSV` body. Why not six menu rows: `013` criterion 1's
+  fixed row order, the four-row `#require`s, and the menu being shared with
+  the Wishlist (no sold half). Why not "this side": scope must be chosen
+  independently of side, because changing side changes which narrowing is in
+  force (Decision 4).
+- **Q15. The sold document.** `CoverSummary.Totals.sold(proceedsCents:
+  paidCents:realisedDeltaCents:)`; `drawCover`'s arm draws TOTAL SOLD FOR
+  (print brass, the headline slot), TOTAL PAID (ink), REALISED (ink,
+  `SaleCopy.realised(deltaCents:)` — sign carried by the words, no colour:
+  `PrintPalette` has no moss/rust and gains none) through `drawTotal` and a
+  text-taking sibling; `countLine` → "N sold"; no floor note. `PDFEntry.init(
+  record:)` **prepends** `Sold` (`ExportSchema.day`), `Sold for` (money),
+  `Sold at` (if non-empty), `Outcome` (`SaleCopy.rowOutcome(deltaCents:)` from
+  `SaleOutcome(salePriceCents:purchasePriceCents:)`), `Sale note` (if
+  non-empty) when `record.soldDate != nil`, then the owned grid unchanged —
+  prepended because Decision 6 put the mark directly under the name; the
+  composer is untouched. `ExportFilename.soldItems(fileExtension:on:timeZone:)`
+  = `Trove-Sold-Items-<day>`; `ItemListViewModel.soldDocumentTitle = "Sold
+  Items"`. The sold PDF must have its own name — `exportFiles` writes one
+  directory by filename, so two documents in one set with one name would
+  overwrite; `.owned` keeps `Trove-Items` because it is the very document
+  Settings ships under that name. Genuinely new drawing: none — new words on
+  existing shapes, inside "no design pass".
+- **Q16. The scoped PDF stages a set.** `exportPDF(scope:)` builds the owned
+  document (as today, over `exportableOwnedItems`) and/or the sold one (title
+  `soldDocumentTitle`, `exportCoverageLabel`, `itemCount = rows.count`, totals
+  from `SaleOutcome.totals(over: rows)` and `figures(over: rows).paidCents`,
+  entries over `exportableSoldItems`), drops a document with no entries (`011`
+  criterion 2: an empty file is never produced), and stages through **one**
+  `exportFiles` call — a set of one or two — so the two-file case cannot purge
+  itself and the one-file cases share the path. A single combined cover was
+  rejected: it would set TOTAL VALUE beside TOTAL SOLD FOR under one count,
+  the mixed figures `006` Decision 7 refused, or need a section page, which
+  is new drawing.
+- **Q17. The chooser is a `HeaderDropdown` case anchored at the overflow
+  badge.** `HeaderDropdown.exportScope(ExportFormat)` (`ExportFormat { csv,
+  pdf }`, private to `ItemListView.swift`), `dismissLabel` "Dismiss export
+  options". `DropdownHost` draws a dropdown only for an identifier that has an
+  anchor, so `overflowControl` carries three `.dropdownAnchor`s — `.overflow`,
+  `.exportScope(.csv)`, `.exportScope(.pdf)` (the key's `reduce` merges). The
+  Items list's `OverflowDropdown` closures set `openDropdown =
+  .exportScope(.csv / .pdf)`; the host's `case .exportScope(let format):`
+  composes `DropdownSurface(title: ExportCopy.scopeTitleCSV / scopeTitlePDF)
+  { ForEach(ItemListViewModel.ExportScope.allCases) { scope in
+  DropdownRow(title: scope.label, isEnabled: viewModel.canExport(scope)) {
+  … exportCSV(scope: scope) / exportPDF(scope: scope) } } }`. The row's
+  `dismiss()` then the action's `openDropdown = .exportScope(…)` net to one
+  `.overflow → .exportScope` change in one transaction, so the plate stays
+  and its rows swap (the device pass looks at that once). No `Menu`, no
+  `confirmationDialog` (`013` Decision 17). The Wishlist's call is unchanged.
+- **R3 — reading for the record:** R2 stands and now names the Owned scope;
+  the sold document is the same rule applied to the sold half.
+
+**Testable claims** are guards G26–G37 in §10; the Phase 2b task lines carry
+each mutation.
+
 ## 5. The swipe's Mark as sold, and the sheet on the list
 
 `SaleCopy` gains `static let swipeSell = "Sell"` (pinned; the spoken name is
@@ -619,6 +697,18 @@ button and "Mark as sold…" to VoiceOver).
 | G23 | `SaleCopyTests`: `swipeSell == "Sell"`; the swipe's `.accessibilityLabel` is `SaleCopy.markAsSold` (scan) | either spelling drifts |
 | G24 | UI: per-side state, the swipe's sheet, the Sold controls and no-matches; twice back to back | see §8's mutations |
 | G25 | an emptied Owned side reads `.everythingSold` with a no-match query left on Sold | `ownedEmptyReason`'s guard reads `soldItems.isEmpty` instead of `soldTotalCount > 0` |
+| G26 | `ItemListViewModelSoldExportTests`: `ExportScope` labels and case order by literal | a label or the order changes |
+| G27 | the three scopes partition the record from a narrowed Sold side: owned in Custom order, sold date-desc whatever `soldSortOrder`, both = owned + sold | `.owned` reads `items` from Sold; `.sold` reads `soldItems`; `.both` sold-first |
+| G28 | `canExport(_:)` per scope on all-sold / all-owned / a chip matching neither; `exportCSV(scope: .owned)` on an all-sold collection stages nothing | a gate reads `items`/`soldItems` |
+| G29 | CSV filenames: `.sold` → `Trove-Sold-Items-<day>.csv`; `.owned`/`.both` → `Trove-Items-<day>.csv` | the names swap |
+| G30 | `PDFComposerTests`: the sold cover's page text — "Sold Items", "N sold", TOTAL SOLD FOR / TOTAL PAID / REALISED, "+$350 vs paid", no floor note | the `.sold` arm draws the `.items` labels; the floor note drawn; "items" in the count line |
+| G31 | `ExportSchemaTests`: a sold record's entry begins Sold, Sold for, Sold at, Outcome, Sale note (optionals skipped when empty), then Paid; an owned record carries none | fields appended not prepended; outcome from `currentValueCents`; an empty `Sold at` emitted |
+| G32 | `ExportFilename.soldItems` == `Trove-Sold-Items-YYYY-MM-DD.pdf` under a fixed date and zone | the name drifts |
+| G33 | the sold PDF from a narrowed Sold side under `Price ↑`: entries date-desc, title, label, `itemCount == entries.count`, totals over exactly those rows | entries from `soldItems`; cover over `sold`; paid from `salePriceCents` |
+| G34 | unnarrowed Sold side: the sold cover's (count, proceeds, realised) == `soldTotals` | proceeds over `purchasePriceCents` |
+| G35 | `.both` PDF: one `exportFiles` call, documents owned-then-sold, filenames `[items, soldItems]`, `stagedExport` the same; an empty half left out | two single calls; the empty half staged; order swapped |
+| G36 | all-sold: `canExportPDF` true, `canExport(.owned)` false | `canExportPDF` reads the owned half |
+| G37 | `ExportWiringTests`: the Items rows open `.exportScope(.csv/.pdf)`, the Wishlist's still export directly; the host's case composes one titled surface over `ExportScope.allCases`, rows gated `canExport(scope)`, actions passing `scope` (no literal case); three `.dropdownAnchor(` on `overflowControl` | a row gated on `canExportCSV`; the action passing `.both`; an anchor dropped |
 
 Every guard is mutation-verified before it lands (`CLAUDE.md` Testing); the
 task's Done note records what was broken and what went red. Every source scan
