@@ -34,6 +34,12 @@ struct ItemListView: View {
     /// a shortcut into that flow, not a new one (spec.md).
     @State private var itemBeingEdited: Item?
 
+    /// The row whose Sell swipe action is open in the sale sheet (014 plan §5).
+    /// The same optional-item staging the Edit sheet above uses, and the same
+    /// sheet the item's own page presents — the swipe is a shortcut into that
+    /// flow, never a second way to record a sale.
+    @State private var itemBeingSold: Item?
+
     /// The chip the next layout pass should bring into view.
     ///
     /// Set only when a filter arrives from another tab, never when the user
@@ -183,6 +189,22 @@ struct ItemListView: View {
             NavigationStack {
                 ItemFormView(modelContext: modelContext, editing: item)
             }
+        }
+        // The Sell swipe's sheet (014 T007, plan §5): the shared sale form,
+        // seeded by the view model exactly as the item page's and the Sell
+        // Plan's are. `.sheet(item:)` over the row's item rather than a flag,
+        // so two rows can never both be selling; the sheet writes nothing
+        // itself, so what a confirmed sale means is decided here — through
+        // `markSold`, which points the sale at no plan (006 P5).
+        .sheet(item: $itemBeingSold, onDismiss: viewModel.load) { item in
+            SaleFormView(
+                viewModel: viewModel.makeSaleFormViewModel(for: item),
+                confirm: { sale in
+                    viewModel.markSold(item, sale: sale)
+                    itemBeingSold = nil
+                },
+                cancel: { itemBeingSold = nil }
+            )
         }
         // 013's Settings sheet. Owned here like the form sheets, for the
         // same reason: a Delete All behind it has to show on this list the
@@ -438,6 +460,25 @@ struct ItemListView: View {
                             Label { Text("Edit") } icon: { Image("ActionEdit") }
                         }
                         .tint(theme.colors.divider)
+                        // 014 criterion 1: Mark as sold… between Edit and
+                        // Copy, so Edit stays nearest the edge and a full
+                        // swipe still edits (spec Decision 2). "Sell" is the
+                        // visible word — "Mark as sold" doesn't fit the 76 pt
+                        // action beside a glyph — and `markAsSold`, the menu
+                        // row's own name, is what VoiceOver says, so the same
+                        // action is announced the same way from both places
+                        // (criterion 12). Brass mid-tone, the one brass that
+                        // reads mid in both appearances: not rust, which stays
+                        // the only consequential colour on a swiped-open row,
+                        // and not a third neutral, which would leave three grey
+                        // buttons with no legible middle.
+                        Button {
+                            itemBeingSold = item
+                        } label: {
+                            Label { Text(SaleCopy.swipeSell) } icon: { Image("ActionSell") }
+                        }
+                        .tint(theme.colors.accentBrassMid)
+                        .accessibilityLabel(SaleCopy.markAsSold)
                         // "Copy" on screen, "Duplicate" in code — Design's
                         // chosen string, per plan.md's Resolved decisions
                         // (the refreshed export's DUPLICATE is outdated

@@ -268,7 +268,7 @@ the same label (plan R2) — the report puts it as a question, not a fact.
   query on Sold narrowing the rows; the badge reading "Date sold" then
   "Price ↑").
 
-- [ ] **T007 — The leading swipe's Sell, the sheet on the list, the `ActionSell` icon.**
+- [x] **T007 — The leading swipe's Sell, the sheet on the list, the `ActionSell` icon.**
   Per plan §5 and Q9. `@State private var itemBeingSold: Item?`; the leading
   swipe Edit / **Sell** (`Image("ActionSell")`, `.tint(theme.colors.accentBrassMid)`,
   `.accessibilityLabel(SaleCopy.markAsSold)` — whether a swipe-action
@@ -437,4 +437,5 @@ interpreted here.
 | T001 fix — `sdd-implementer` (phase-review round) | `opus` | ~44k | P16 pointer rewritten with the eight labels and glyphs; both plan.md pointers cite "its spec" for P11 |
 | Phase 1 — `skeptical-reviewer` review + re-review | `opus` | ~130k + ~2k | Two blocking: the P16 pointer named five options (fixed), and the UI suite not run at the phase end (run: 20 tests, 0 failures; cadence written into T005/T009 Verify lines). Re-review: sign off. Second-look kept open: S1 `markSold`'s message-after-`load()` ordering has no red mutation (the scan is order-blind); S3 G11/G12 don't `#require` their hidden-side premise (would go vacuous, not red, if per-side keeping regressed — G4 is the backstop); S4 T009's round-trip test must type into the field, not drive state (view-side @State mirror would be invisible to unit guards) — carried to T009's bundle; S5 `SortDropdown` genericity — void, it is generic; S6 a CSV from Owned with the Un-valued chip on also drops sold rows carrying a value (006's inherited behaviour, label stays true) — a sentence for T011's "As built" |
 | T006 — `sdd-implementer` | `opus` | ~80k | Done; 1519 unit tests green. `theSoldSideRendersNoSortControlAndNoSearchField` → `oneNarrowingGateCoversBothSidesAndEachSideBringsItsOwnSort` (G20, plus the badge reading `visibleSortLabel`). Mutations: `side == .owned` back on the gate → red; the search clear above `switch` → red; Sold dropdown arm removed → red; `overflowControl` inside the Items gate → `ImportWiringTests` red (Items case only). Note: the two list screens no longer share a gate literal |
+| T007 — `sdd-implementer` | `opus` | ~79k | Done; 1523 unit tests in 206 suites green; `ItemListView` names `ItemSaleStore` 0 times; the imageset resolved with no `.pbxproj` edit. `theOwnedRowsSwipesDoNotOfferMarkAsSold` → `theOwnedRowsLeadingSwipeOffersEditThenSellThenCopy` + `theSaleSheetIsHostedOnceOverTheStagedRow` (G19, incl. G23's label half); new `ActionIconTests` over the four action icons (G22). Mutations: Sell/Copy swapped → red; middle button → `itemBeingEdited` → red; template intent removed → red; second `Menu` → `MenuPolicyTests` red. Note: the glyph has had no visual inspection — T010 |
 | _rows added per dispatch as the spec runs_ | | | |

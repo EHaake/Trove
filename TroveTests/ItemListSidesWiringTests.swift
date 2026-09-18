@@ -147,21 +147,112 @@ struct ItemListSidesWiringTests {
         )
     }
 
-    /// Criterion 1, from the list's side: the swipe on an owned row offers
-    /// Edit, Copy and Delete, and nothing about selling — marking sold is an
-    /// action on the item's own page.
-    @Test func theOwnedRowsSwipesDoNotOfferMarkAsSold() throws {
+    /// G19, criterion 1 from the list's side: the Owned row's one leading
+    /// swipe is Edit, **Sell**, Copy in that order — Edit still nearest the
+    /// edge, so a full swipe still edits (spec Decision 2) — the middle
+    /// button stages the row for the sale sheet rather than the form sheet,
+    /// says `markAsSold` to VoiceOver while reading "Sell" on screen
+    /// (criterion 12), and wears the brass mid-tone and the tag glyph; the
+    /// trailing swipe is still the delete alone, naming nothing about selling.
+    ///
+    /// The three buttons are cut apart at their own `Button` keywords rather
+    /// than scanned over the whole block, so *which* button carries which
+    /// word, target and tint is what's pinned — a block containing all three
+    /// words in any arrangement would otherwise pass.
+    ///
+    /// Mutations: swap the Sell and Copy buttons → red; the middle button
+    /// writing `itemBeingEdited` → red.
+    @Test func theOwnedRowsLeadingSwipeOffersEditThenSellThenCopy() throws {
         let owned = try body(of: "private var ownedRows: some View")
 
         let trailing = SourceScan.closureBodies(after: ".swipeActions(edge: .trailing)", in: owned)
         try #require(trailing.count == 1, "the Owned rows carry \(trailing.count) trailing swipe blocks, expected exactly 1")
-        let leading = SourceScan.closureBodies(after: ".swipeActions(edge: .leading)", in: owned)
-        try #require(leading.count == 1, "the Owned rows carry \(leading.count) leading swipe blocks, expected exactly 1")
+        #expect(
+            !trailing[0].contains("SaleCopy"),
+            "the Owned rows' trailing swipe names SaleCopy — selling belongs on the leading swipe, the delete stays alone (criterion 1): \(trailing[0])"
+        )
 
-        for block in trailing + leading {
-            #expect(!block.contains("SaleCopy"), "an Owned row's swipe names SaleCopy (criterion 1): \(block)")
+        let blocks = SourceScan.closureBodies(after: ".swipeActions(edge: .leading)", in: owned)
+        try #require(blocks.count == 1, "the Owned rows carry \(blocks.count) leading swipe blocks, expected exactly 1")
+        let leading = try #require(blocks.first)
+
+        let starts = leading.ranges(of: "Button").map(\.lowerBound)
+        try #require(
+            starts.count == 3,
+            "the leading swipe carries \(starts.count) buttons, expected 3 — Edit, Sell, Copy"
+        )
+        let buttons = starts.indices.map { index -> String in
+            let end = index + 1 < starts.count ? starts[index + 1] : leading.endIndex
+            return String(leading[starts[index]..<end])
         }
-        #expect(!owned.contains("SaleCopy.markAsSold"), "the Items list's swipe offers Mark as sold… (criterion 1)")
+
+        #expect(buttons[0].contains("Text(\"Edit\")"), "the button nearest the edge isn't Edit — a full swipe would stop editing (Decision 2): \(buttons[0])")
+        #expect(buttons[0].contains("itemBeingEdited = item"), "the first button doesn't open the form sheet: \(buttons[0])")
+
+        #expect(buttons[1].contains("Text(SaleCopy.swipeSell)"), "the middle button doesn't read the swipe's own word: \(buttons[1])")
+        #expect(buttons[1].contains("itemBeingSold = item"), "the middle button doesn't stage the row for the sale sheet: \(buttons[1])")
+        #expect(
+            buttons[1].contains(".accessibilityLabel(SaleCopy.markAsSold)"),
+            "the Sell button doesn't say the menu row's own name to VoiceOver (criterion 12, G23): \(buttons[1])"
+        )
+        #expect(buttons[1].contains("Image(\"ActionSell\")"), "the Sell button wears no tag glyph: \(buttons[1])")
+        #expect(
+            buttons[1].contains(".tint(theme.colors.accentBrassMid)"),
+            "the Sell button isn't the brass mid-tone — the one brass that reads mid in both appearances (plan Q9): \(buttons[1])"
+        )
+        #expect(
+            !buttons[1].contains("accentRust"),
+            "the Sell button is rust, which stays the one consequential colour on a swiped-open row: \(buttons[1])"
+        )
+
+        #expect(buttons[2].contains("Text(\"Copy\")"), "the last button isn't Copy: \(buttons[2])")
+        #expect(buttons[2].contains("viewModel.duplicate"), "the last button doesn't duplicate: \(buttons[2])")
+    }
+
+    /// G19's other half: the sale sheet is hosted here, once, over the row's
+    /// own item — the `.sheet(item:)` shape the item page uses (006 plan §5),
+    /// so two rows can never both be selling — seeded by the view model's
+    /// factory rather than a `SaleFormViewModel` built in the view, confirming
+    /// through `markSold` and clearing the staging on both exits.
+    ///
+    /// Mutation: drop `itemBeingSold = nil` from the confirm closure → red
+    /// (the sheet would stay up over a sold row).
+    @Test func theSaleSheetIsHostedOnceOverTheStagedRow() throws {
+        let code = try code()
+
+        #expect(
+            code.ranges(of: ".sheet(item: $itemBeingSold").count == 1,
+            "the list presents \(code.ranges(of: ".sheet(item: $itemBeingSold").count) sale sheets, expected exactly 1"
+        )
+        #expect(
+            code.contains(".sheet(item: $itemBeingSold, onDismiss: viewModel.load)"),
+            "the sale sheet doesn't re-read the collection on dismiss, so a sold row would linger on the Owned side"
+        )
+
+        let bodies = SourceScan.closureBodies(after: ".sheet(item: $itemBeingSold", in: code)
+        try #require(bodies.count == 1, "the sale sheet opens \(bodies.count) spans, expected exactly 1")
+        let sheet = try #require(bodies.first)
+
+        #expect(sheet.contains("SaleFormView("), "the sale sheet composes something other than the shared sale form: \(sheet)")
+        #expect(
+            sheet.contains("viewModel.makeSaleFormViewModel(for: item)"),
+            "the sheet seeds its own form instead of the view model's, which is what keeps all three hosts' defaults equal (G17): \(sheet)"
+        )
+        #expect(
+            sheet.contains("viewModel.markSold(item, sale: sale)"),
+            "the sheet confirms into something other than `markSold`: \(sheet)"
+        )
+        #expect(
+            sheet.ranges(of: "itemBeingSold = nil").count == 2,
+            "the sheet clears its staging \(sheet.ranges(of: "itemBeingSold = nil").count) times, expected 2 — confirm and cancel both close it"
+        )
+
+        // The one writer stays the view model's: the screen never reaches the
+        // store itself (T005's note).
+        #expect(
+            !code.contains("ItemSaleStore"),
+            "the list names the sale store directly — the write belongs behind the view model"
+        )
     }
 
     /// The Sold row's gestures, exactly: a trailing delete that stages the
