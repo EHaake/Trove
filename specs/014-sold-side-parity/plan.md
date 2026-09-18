@@ -41,9 +41,9 @@ pinned the old rule is **rewritten to pin the new one**, never loosened (Q12).
   ("the view's sort is a reading aid, the file's order is the record's") and
   the file is Settings' bytes whatever either side's sort shows. Guard G14.
 - **R2 — The PDF follows the on-screen side's narrowing too**, owned half
-  (confirmed and extended 2026-09-18: it now names the Owned scope; the sold
-  document applies the same rule to the sold half — §4a, R3),
-  only, same coverage label, Custom order from the Sold side (R1). The spec
+  only, same coverage label, Custom order from the Sold side (R1). (Confirmed
+  and extended 2026-09-18: it now names the Owned scope; the sold document
+  applies the same rule to the sold half — §4a, R3.) The spec
   says only "the PDF stays owned-only"; P11's principle — a file is never
   narrowed by something not on screen, and `011`'s rule that the document
   never claims more than the screen showed — decides the rest. The
