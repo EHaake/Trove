@@ -347,14 +347,32 @@ final class ItemListViewModel {
     /// Combined current value of the items on screen, so the header total
     /// tracks the filter. Un-valued items contribute nothing rather than
     /// counting as zero — the same floor-not-total rule as the dashboard.
-    var totalCurrentValueCents: Int {
-        items.compactMap(\.currentValueCents).reduce(0, +)
-    }
+    var totalCurrentValueCents: Int { Self.figures(over: items).currentValueCents }
 
     /// How many of the items on screen have no value entered, so the header
     /// can be honest that the total above is a floor.
-    var unvaluedCount: Int {
-        items.count { $0.currentValueCents == nil }
+    var unvaluedCount: Int { Self.figures(over: items).unvaluedCount }
+
+    /// The three owned-side figures over one set of rows. The header reads
+    /// them over `items`; the PDF's cover reads them over
+    /// `exportableOwnedItems`, which from the Sold side is a different set
+    /// (014 plan §4). One home for the arithmetic, so a cover can't total
+    /// its rows by a rule the header doesn't use.
+    private static func figures(over items: [Item]) -> Figures {
+        Figures(
+            currentValueCents: items.compactMap(\.currentValueCents).reduce(0, +),
+            paidCents: items.reduce(0) { $0 + $1.purchasePriceCents },
+            unvaluedCount: items.count { $0.currentValueCents == nil }
+        )
+    }
+
+    /// What `figures(over:)` hands back: the header's two totals and the
+    /// cover's three, named rather than a tuple so a caller can't swap two
+    /// `Int`s silently.
+    private struct Figures {
+        var currentValueCents: Int
+        var paidCents: Int
+        var unvaluedCount: Int
     }
 
     private let modelContext: ModelContext
@@ -666,30 +684,51 @@ final class ItemListViewModel {
     /// Whether the current view has anything to put in a CSV (criterion 2:
     /// an empty file is never produced). Either side counts, because the CSV
     /// carries both (plan Q5) — with only sold items in the collection, the
-    /// Owned side is empty and the file is still worth writing. The sold half
-    /// is counted *narrowed*, so a chip that excludes everything on both sides
-    /// still disables the row rather than producing a header-only file.
-    var canExportCSV: Bool { !items.isEmpty || !exportableSoldItems.isEmpty }
+    /// Owned side is empty and the file is still worth writing. Both halves
+    /// are counted *narrowed*, so a chip that excludes everything on both
+    /// sides still disables the row rather than producing a header-only file.
+    var canExportCSV: Bool { !exportableOwnedItems.isEmpty || !exportableSoldItems.isEmpty }
 
     /// The PDF is the owned collection only, on this path as on Settings'
-    /// (plan Q5), so it gates on the owned half alone.
-    var canExportPDF: Bool { !items.isEmpty }
+    /// (plan Q5), so it gates on the owned half alone — the half the file
+    /// would actually carry, which from the Sold side is not `items`
+    /// (014 plan Q8): a Sold chip no owned row is in leaves a CSV worth
+    /// writing and no PDF at all.
+    var canExportPDF: Bool { !exportableOwnedItems.isEmpty }
 
-    /// The sold rows a CSV exported from here would carry: the Sold side's
-    /// order, under the Owned side's *visible* narrowing, so the coverage
-    /// label stays true of both halves.
+    /// The owned rows a file exported from here carries: the **side on
+    /// screen's** narrowing over the owned half (014 P11 — a file is never
+    /// narrowed by something not on screen), in visible order on the Owned
+    /// side and in Custom order from the Sold side, where no owned row is
+    /// visible and "visible order" names nothing (014 plan R1).
     ///
-    /// Reads the unnarrowed `sold` half, not `soldItems`, which since 014
-    /// carries the Sold side's own narrowing: this member is 011's behaviour
-    /// unchanged — the visible narrowing over every sale — and 014's T004 is
-    /// what revisits it.
-    private var exportableSoldItems: [Item] { narrowed(sold, by: narrowing).sorted(by: isInSoldOrder) }
+    /// On the Owned side this *is* `items` — the array as loaded, not a
+    /// second computation of it — so `exportCSV`'s standing claim about
+    /// records built from the rows on screen as-is stays literally true, and
+    /// `006`'s two-halves guards hold row for row.
+    private var exportableOwnedItems: [Item] {
+        switch side {
+        case .owned: items
+        case .sold: narrowed(owned, by: narrowing).sorted(by: ManualOrderHelper.areInCustomOrder)
+        }
+    }
+
+    /// The sold rows a CSV exported from here would carry: the side on
+    /// screen's narrowing over the sold half, **always** in the standing
+    /// Sold-side order (014 P10).
+    ///
+    /// Reads the unnarrowed `sold` half rather than `soldItems`, and sorts
+    /// with `areInSoldOrder` rather than the side's current selection: the
+    /// Sold sort is the view's reading aid, the file's order is the record's,
+    /// which is what keeps `013`'s byte-identity with Settings' CSV true
+    /// whatever sort either side happens to show.
+    private var exportableSoldItems: [Item] {
+        narrowed(sold, by: narrowing).sorted(by: Self.areInSoldOrder)
+    }
 
     /// Combined purchase price of the items on screen — the cover's "total
     /// paid", tracking the filter like `totalCurrentValueCents` does.
-    var totalPaidCents: Int {
-        items.reduce(0) { $0 + $1.purchasePriceCents }
-    }
+    var totalPaidCents: Int { Self.figures(over: items).paidCents }
 
     /// What the export covers, in the chips' own words — "All items",
     /// "Category: Guitars", with the un-valued filter and any search query
@@ -797,10 +836,12 @@ final class ItemListViewModel {
         }
     }
 
-    /// Exports the visible items, in visible order, as the canonical CSV.
-    /// Records are built from `items` as-is — never a refetch: visible order
-    /// comes from `isOrderedBefore` over live filter/sort state and is not
-    /// reproducible from any `FetchDescriptor` (criteria 3–4).
+    /// Exports what the side on screen covers, as the canonical CSV.
+    /// Records are built from `exportableOwnedItems` — on the Owned side
+    /// `items` as-is — never a refetch: visible order comes from
+    /// `isOrderedBefore` over live filter/sort state and is not reproducible
+    /// from any `FetchDescriptor` (criteria 3–4). From the Sold side that
+    /// half is the record's own Custom order instead (014 plan R1).
     /// `!isBusy` since 012: one operation at a time across export *and*
     /// import, so their presentations can't race.
     func exportCSV() async {
@@ -808,12 +849,12 @@ final class ItemListViewModel {
         isExporting = true
         defer { isExporting = false }
 
-        // Owned first in visible order, then the sold rows in Sold-side order
-        // (plan Q5) — the same two orderings Settings' export-everything
-        // writes, which is what keeps 013's byte-identity true with a sale
-        // present.
+        // Owned first, then the sold rows in Sold-side order (plan Q5) — the
+        // same two orderings Settings' export-everything writes, which is what
+        // keeps 013's byte-identity true with a sale present, and since 014
+        // whichever side is on screen (Q8).
         let table = ExportSchema.itemsTable(
-            (items + exportableSoldItems).map { ItemExportRecord(item: $0) }
+            (exportableOwnedItems + exportableSoldItems).map { ItemExportRecord(item: $0) }
         )
         let filename = ExportFilename.items(fileExtension: "csv")
         do {
@@ -832,17 +873,22 @@ final class ItemListViewModel {
         isExporting = true
         defer { isExporting = false }
 
-        let records = items.map { ItemExportRecord(item: $0) }
+        // The owned half under the on-screen side's narrowing (014 plan R2),
+        // entries and cover over the one set of rows, so the cover never
+        // claims more than the file lists.
+        let rows = exportableOwnedItems
+        let coverFigures = Self.figures(over: rows)
+        let records = rows.map { ItemExportRecord(item: $0) }
         let document = PDFDocumentModel(
             cover: CoverSummary(
                 title: Self.documentTitle,
                 coverageLabel: exportCoverageLabel,
                 generatedAt: .now,
-                itemCount: items.count,
+                itemCount: rows.count,
                 totals: .items(
-                    currentValueCents: totalCurrentValueCents,
-                    paidCents: totalPaidCents,
-                    unvaluedCount: unvaluedCount
+                    currentValueCents: coverFigures.currentValueCents,
+                    paidCents: coverFigures.paidCents,
+                    unvaluedCount: coverFigures.unvaluedCount
                 )
             ),
             entries: records.map { PDFEntry(record: $0) }

@@ -2373,4 +2373,210 @@ struct ItemListViewModelSoldExportTests {
         await viewModel.exportCSV()
         #expect(spy.tables.isEmpty)
     }
+
+    // MARK: - 014/T004: the file follows the side on screen
+
+    /// G11: a CSV exported from the Sold side carries the owned *and* the
+    /// sold rows that pass the **Sold** side's chip, and the Owned side's own
+    /// kept chip and query play no part (P11) — a file is never narrowed by
+    /// something not on screen. The owned half arrives in Custom order, where
+    /// no owned row is visible to have a visible order (plan R1).
+    ///
+    /// Mutation: narrow the owned half by `ownedNarrowing` (or hand the
+    /// export `items`, which is that same narrowing) → the file reads
+    /// ["Telecaster"] instead → red.
+    @Test func aCSVFromTheSoldSideFollowsTheSoldChipAndNotTheOwnedOne() async throws {
+        let context = try makeInMemoryContext()
+        // Manual positions run against the names and the purchase dates, so a
+        // name sort or the Owned side's Date sort fails the owned half.
+        insertItem("Leica M6", category: "Photography/Cameras", purchasedAt: 300, order: 1, into: context)
+        insertItem("Summilux", category: "Photography/Lenses", purchasedAt: 100, order: 0, into: context)
+        insertItem("Telecaster", category: "Music/Guitars", purchasedAt: 200, order: 2, into: context)
+        insertSold("Summicron 35", category: "Photography/Lenses", soldAt: 2_000, forCents: 100, into: context)
+        insertSold("Noctilux", category: "Photography/Lenses", soldAt: 3_000, forCents: 100, into: context)
+        insertSold("Jazzmaster", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        // The Owned side keeps a narrowing of its own while the Sold side is
+        // on screen (014 Decision 4) — this is the one the file must ignore.
+        viewModel.categoryFilter = "Music"
+        viewModel.searchText = "tele"
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Photography"
+        viewModel.load()
+        await viewModel.exportCSV()
+
+        let table = try #require(spy.tables.first)
+        #expect(table.headers == ExportSchema.itemHeaders)
+        #expect(table.rows.map { $0[0] } == ["Summilux", "Leica M6", "Noctilux", "Summicron 35"])
+        #expect(viewModel.exportCoverageLabel == "Category: Photography")
+    }
+
+    /// G12: the mirror image — from the Owned side, a query the Sold side is
+    /// still holding narrows nothing. `006`'s guards fix the Owned side's own
+    /// behaviour; this one fixes that 014's second narrowing didn't leak into
+    /// it.
+    ///
+    /// Mutation: narrow either half by `soldNarrowing` → the sold half loses
+    /// the Jazzmaster (and the owned half the Telecaster) → red.
+    @Test func aCSVFromTheOwnedSideIgnoresTheSoldSidesKeptQuery() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", purchasedAt: 200, into: context)
+        insertItem("Telecaster", purchasedAt: 100, into: context)
+        insertSold("Leica Summicron", soldAt: 2_000, forCents: 100, into: context)
+        insertSold("Jazzmaster", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.searchText = "leica"
+        viewModel.show(.owned)
+        viewModel.load()
+        await viewModel.exportCSV()
+
+        let table = try #require(spy.tables.first)
+        #expect(table.rows.map { $0[0] } == ["Leica M6", "Telecaster", "Leica Summicron", "Jazzmaster"])
+        #expect(viewModel.exportCoverageLabel == "All items")
+    }
+
+    /// G13: the Sold side's *sort* is a reading aid, not the record's order
+    /// (P10). Whatever the side is showing, the file's sold rows are in
+    /// Date-sold order — which is what keeps `013`'s byte-identity with
+    /// Settings' CSV true.
+    ///
+    /// Mutation: write `soldItems` into the file, or sort the sold half with
+    /// `isInSoldOrder` (the side's current selection) instead of
+    /// `areInSoldOrder` → the file reads price-ascending → red.
+    @Test func theCSVsSoldHalfIsDateSoldOrderWhateverTheSideIsShowing() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Kept", into: context)
+        insertSold("Amp", soldAt: 1_000, forCents: 900_00, into: context)
+        insertSold("Cab", soldAt: 2_000, forCents: 100_00, into: context)
+        insertSold("Pedal", soldAt: 3_000, forCents: 500_00, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.soldSortOrder = .salePriceAscending
+        viewModel.load()
+
+        // The side really is showing the other order — without this the
+        // equality below could be two orders that happen to agree.
+        try #require(viewModel.soldItems.map(\.name) == ["Cab", "Pedal", "Amp"])
+
+        await viewModel.exportCSV()
+        let table = try #require(spy.tables.first)
+        #expect(table.rows.map { $0[0] } == ["Kept", "Pedal", "Cab", "Amp"])
+    }
+
+    /// G15: the PDF follows the on-screen side's narrowing too (plan R2) —
+    /// the owned rows that pass the **Sold** side's chip, a cover counted and
+    /// totalled over those same rows, and a coverage label that names the chip
+    /// actually on screen. The alternative would be a cover that lies.
+    ///
+    /// Mutation: build the entries or the cover from `items` → the document
+    /// lists the Telecaster and counts 1 → red; read the label from the side
+    /// that isn't on screen → "Category: Music" → red.
+    @Test func thePDFFromANarrowedSoldSideCoversTheOwnedRowsThatPassIt() async throws {
+        let context = try makeInMemoryContext()
+        insertItem(
+            "Leica M6", category: "Photography/Cameras",
+            priceCents: 100_00, valueCents: 150_00, purchasedAt: 300, order: 1, into: context
+        )
+        insertItem(
+            "Summilux", category: "Photography/Lenses",
+            priceCents: 40_00, valueCents: nil, purchasedAt: 100, order: 0, into: context
+        )
+        insertItem(
+            "Telecaster", category: "Music/Guitars",
+            priceCents: 20_00, valueCents: 30_00, purchasedAt: 200, order: 2, into: context
+        )
+        insertSold("Jazzmaster", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.categoryFilter = "Music"
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Photography"
+        viewModel.load()
+        await viewModel.exportPDF()
+
+        let document = try #require(spy.documents.first)
+        #expect(document.entries.map(\.name) == ["Summilux", "Leica M6"])
+        #expect(document.cover.itemCount == 2)
+        #expect(document.cover.coverageLabel == "Category: Photography")
+        switch document.cover.totals {
+        case let .items(value, paid, unvalued):
+            #expect((value, paid, unvalued) == (150_00, 140_00, 1))
+        case .wishlist:
+            Issue.record("the items document carries wishlist totals")
+        }
+    }
+
+    /// G16: the gates read the rows the file would carry, not the rows on
+    /// screen. A Sold-side chip that no owned row is in still has a CSV worth
+    /// writing — the sold rows in it — and nothing at all to put in a PDF.
+    ///
+    /// Mutation: gate the PDF on `!items.isEmpty` → the owned half the screen
+    /// isn't showing enables a document with no rows in it → red.
+    @Test func aSoldChipNoOwnedRowIsInKeepsTheCSVAndDisablesThePDF() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", category: "Music/Guitars", into: context)
+        insertSold("Leica M6", category: "Photography/Cameras", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Photography"
+        viewModel.load()
+
+        #expect(viewModel.canExportCSV)
+        #expect(!viewModel.canExportPDF)
+
+        await viewModel.exportCSV()
+        await viewModel.exportPDF()
+
+        #expect(spy.tables.map { $0.rows.map { $0[0] } } == [["Leica M6"]])
+        #expect(spy.documents.isEmpty, "the PDF intent's own guard backs up the disabled row")
+    }
+
+    /// G16's other term: a Sold-side chip that matches nothing on *either*
+    /// half disables the CSV too — even though the hidden Owned side is
+    /// unnarrowed and has rows of its own. `006`'s
+    /// `aFilterThatExcludesBothHalvesDisablesTheCSVToo` only ever asked this
+    /// of the Owned side, where the gate's owned term and `items` are the
+    /// same thing; from the Sold side they are not, and an empty file would
+    /// be produced (criterion 2).
+    ///
+    /// Mutation: gate the CSV on `!items.isEmpty` → the Owned side's hidden
+    /// rows enable a file the chip excludes → red.
+    @Test func aSoldChipMatchingNeitherHalfDisablesTheCSVFromTheSoldSide() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", category: "Music/Guitars", into: context)
+        insertSold("Leica M6", category: "Photography/Cameras", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Audio"
+        viewModel.load()
+
+        // The Owned side really does have a row the gate must not count.
+        try #require(viewModel.items.map(\.name) == ["Telecaster"])
+
+        #expect(!viewModel.canExportCSV)
+        #expect(!viewModel.canExportPDF)
+
+        await viewModel.exportCSV()
+        await viewModel.exportPDF()
+        #expect(spy.tables.isEmpty)
+        #expect(spy.documents.isEmpty)
+    }
 }
