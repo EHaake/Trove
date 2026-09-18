@@ -102,7 +102,7 @@ the same label (plan R2) — the report puts it as a question, not a fact.
   not this directory) is not counted; `git diff --stat` touches only those
   two files.
 
-- [ ] **T002 — `SoldSortOrder` and its comparators.**
+- [x] **T002 — `SoldSortOrder` and its comparators.**
   Per plan §2 and Q4. `ItemListViewModel.SoldSortOrder` (eight cases in menu
   order, `label`, `id`), `soldSortOrder: SoldSortOrder = .soldDate`, the
   **static** `areInSoldOrder(_:_:under:)` = `soldAttributeOrder(_:_:under:)
@@ -425,4 +425,5 @@ interpreted here.
 | `sdd-planner` — plan.md and tasks.md, plus the fix round | `fable` | ~314k (≈290k first draft, ≈20k fixes) | Drafted; three blocking findings fixed in place |
 | `skeptical-reviewer` — plan/tasks sign-off and re-review | `fable` | ~170k (≈156k review, ≈14k re-review) | Three blocking, nine second-look findings; re-review: all resolved, sign off |
 | T001 — `sdd-implementer` | `opus` | ~39k | Done; 4+4 pointers, counts verified by the orchestrator. Note for T011: `006` spec line 69 ("from two places") left as is, not in T001's scope |
+| T002 — `sdd-implementer` | `opus` | ~76k | Done; 1506 unit tests green. Mutations: price comparator deleted → Price cases red; reversed → red; gain reading paid → Gain cases red; `?? false` → tie test red; tie by name → tie test red both orders. Note: parameterised `@Test` counts as one test in the count line |
 | _rows added per dispatch as the spec runs_ | | | |

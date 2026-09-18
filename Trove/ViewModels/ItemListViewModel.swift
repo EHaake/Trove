@@ -58,6 +58,45 @@ final class ItemListViewModel {
         }
     }
 
+    /// What the Sold side's Sort By offers (014, plan Q4). Eight cases in
+    /// menu order, and no Custom, Market or Desire: a sold item has no
+    /// manual order, its market figures are cleared on the device (006
+    /// Decision 7), and its desire rating no longer applies.
+    ///
+    /// The arrow convention is the Owned side's — `↓` is largest first, as
+    /// `Value ↓` already reads — which is what carries the spec's one fixed
+    /// rule for the Gain pair: `Gain ↓` puts the largest gain first and the
+    /// largest loss last, and `Gain ↑` the reverse, told by the glyph and
+    /// never by colour. "Name" rather than the wishlist's "Alphabetical",
+    /// for the badge's width and because it is the spec's word.
+    enum SoldSortOrder: String, CaseIterable, Identifiable {
+        case soldDate
+        case salePriceDescending
+        case salePriceAscending
+        case paidDescending
+        case paidAscending
+        case gainDescending
+        case gainAscending
+        case name
+
+        var id: String { rawValue }
+
+        /// What the sort control calls this — here rather than in the view,
+        /// the same rule as `SortOrder.label`.
+        var label: String {
+            switch self {
+            case .soldDate: "Date sold"
+            case .salePriceDescending: "Price ↓"
+            case .salePriceAscending: "Price ↑"
+            case .paidDescending: "Paid ↓"
+            case .paidAscending: "Paid ↑"
+            case .gainDescending: "Gain ↓"
+            case .gainAscending: "Gain ↑"
+            case .name: "Name"
+            }
+        }
+    }
+
     /// Which half of the Items tab is on screen (006, plan Q4). Plain
     /// `@Observable` state with no store behind it, so the tab opens on Owned
     /// at every launch by construction and keeps its side across tab switches
@@ -90,6 +129,11 @@ final class ItemListViewModel {
     var showsOnlyUnvalued: Bool = false
 
     var sortOrder: SortOrder = .purchaseDate
+
+    /// The Sold side's own sort selection, separate from `sortOrder` the way
+    /// each side keeps its own narrowing (014, plan Q4). Defaults to the
+    /// order the side has had since `006`: most recent sale first.
+    var soldSortOrder: SoldSortOrder = .soldDate
 
     private(set) var items: [Item] = []
     private(set) var loadFailureMessage: String?
@@ -299,7 +343,7 @@ final class ItemListViewModel {
             )
             categoryLabels = CategoryPathHelper.displayLabels(for: categoryOptions)
 
-            soldItems = sold.sorted(by: Self.areInSoldOrder)
+            soldItems = sold.sorted(by: isInSoldOrder)
             soldTotals = SaleOutcome.totals(over: soldItems)
         } catch {
             loadFailureMessage = error.localizedDescription
@@ -554,6 +598,68 @@ final class ItemListViewModel {
             return byName == .orderedAscending
         }
         return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    /// The Sold side's sort under one option (014, plan §2): the option's own
+    /// comparison, and the standing order above on any tie (P7), so every
+    /// order is total and the same two rows never swap between loads.
+    ///
+    /// Static, with the option as an argument, for a reason the `CLAUDE.md`
+    /// tie-break lesson names: a test can hand it two items directly and
+    /// choose their argument order, where a tie asked through a fetch is
+    /// asked in an order the test does not control.
+    static func areInSoldOrder(_ lhs: Item, _ rhs: Item, under order: SoldSortOrder) -> Bool {
+        soldAttributeOrder(lhs, rhs, under: order) ?? areInSoldOrder(lhs, rhs)
+    }
+
+    /// What `load()` sorts `soldItems` with — the static comparator under the
+    /// side's current selection.
+    private func isInSoldOrder(_ lhs: Item, _ rhs: Item) -> Bool {
+        Self.areInSoldOrder(lhs, rhs, under: soldSortOrder)
+    }
+
+    /// The chosen order's own comparison, `nil` on a tie — the shape
+    /// `attributeOrder` uses on the Owned side, so the standing order steps in
+    /// exactly where the attribute can't decide.
+    private static func soldAttributeOrder(
+        _ lhs: Item,
+        _ rhs: Item,
+        under order: SoldSortOrder
+    ) -> Bool? {
+        switch order {
+        case .soldDate:
+            // The standing order *is* this sort: date, then name, then id.
+            return nil
+        case .salePriceDescending, .salePriceAscending:
+            // The Value pair's nil-last block. `salePriceCents` is nil only
+            // for an unsold item, which every caller filters before sorting,
+            // so this arm is defensive — `SoldSortOrderTests` records it as
+            // such rather than pinning it.
+            guard lhs.salePriceCents != rhs.salePriceCents else { return nil }
+            guard let left = lhs.salePriceCents else { return false }
+            guard let right = rhs.salePriceCents else { return true }
+            return order == .salePriceDescending ? left > right : left < right
+        case .paidDescending, .paidAscending:
+            // What was paid is non-optional, so no nil arm here.
+            guard lhs.purchasePriceCents != rhs.purchasePriceCents else { return nil }
+            return order == .paidDescending
+                ? lhs.purchasePriceCents > rhs.purchasePriceCents
+                : lhs.purchasePriceCents < rhs.purchasePriceCents
+        case .gainDescending, .gainAscending:
+            // The sale's outcome against what was paid, signed: `Gain ↓` puts
+            // the largest gain first and the largest loss last. Same nil-last
+            // block, same defensive reason.
+            let leftDelta = lhs.saleOutcome?.deltaCents
+            let rightDelta = rhs.saleOutcome?.deltaCents
+            guard leftDelta != rightDelta else { return nil }
+            guard let left = leftDelta else { return false }
+            guard let right = rightDelta else { return true }
+            return order == .gainDescending ? left > right : left < right
+        case .name:
+            let byName = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+            guard byName != .orderedSame else { return nil }
+            return byName == .orderedAscending
+        }
     }
 
     /// Exports the visible items, in visible order, as the canonical CSV.
