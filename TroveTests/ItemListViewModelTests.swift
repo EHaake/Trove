@@ -1141,7 +1141,7 @@ struct ItemListViewModelExportTests {
         await viewModel.exportCSV(scope: .both)
         await viewModel.exportPDF(scope: .owned)
         #expect(spy.csvCalls == 1)
-        #expect(spy.pdfCalls == 0)
+        #expect(spy.fileSetCalls == 0, "a reentrant PDF reached the service")
 
         spy.release()
         await inFlight.value

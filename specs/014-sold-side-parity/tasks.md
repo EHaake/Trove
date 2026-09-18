@@ -478,7 +478,7 @@ review. Pause at the end of this phase — there is something to try.
   **Verify:** `scripts/verify.sh` green; mutations recorded. No simulator check
   here — T010 covers the menu-to-chooser swap.
 
-- [ ] **T009f — The UI test for the chooser, run twice.**
+- [x] **T009f — The UI test for the chooser, run twice.**
   `-seedSold`: Items → `moreActions.items` → "Export as PDF…" → buttons "Owned
   items", "Sold items", "Owned and sold" exist and are enabled, "Import from
   CSV…" gone; "Dismiss export options" closes it; switch to Sold, tap chip
@@ -536,7 +536,7 @@ review. Pause at the end of this phase — there is something to try.
   file itself. Files: `TroveTests/MenuPolicyTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutation recorded.
 
-- [ ] **T009i — The gated export spy gates once across methods; the Items reentry probe goes falsifiable.**
+- [x] **T009i — The gated export spy gates once across methods; the Items reentry probe goes falsifiable.**
   Added 2026-09-18 (decision review; T009d's returned item). In
   `TroveTests/TestSupport.swift`, `GatedExportServiceSpy` gates only the
   first call across `exportCSV` and `exportFiles` (one `gateTaken` flag in
@@ -676,4 +676,6 @@ interpreted here.
 | T009g — `sdd-implementer` | `opus` | ~50k | Done; `scripts/verify.sh all`: unit 1538 tests in 207 suites, UI 23 tests 0 failures (orchestrator re-ran: same — that run is also T009f's second UI pass). `dropdownAnchor` is a `transformAnchorPreference`; new `DropdownAnchorTests` (three stacked tags → three keys; a sibling → four). Mutations: helper back to `anchorPreference` → both cases red; `reduce` → `value = nextValue()` → sibling case red only. The reader runs under `ImageRenderer` (`#require(probe.runs > 0)`) |
 | T009g (+T009f test) — `skeptical-reviewer` per-task review | `opus` | ~43k | Sign off, no blocking. Second-look: (2) the transform also lets a descendant's tag propagate through a tagged ancestor (no such nesting known; sweep to confirm, Q17 clause if intentional); (3) the anchor tests use string ids, not `HeaderDropdown` cases (the UI test covers the real ids); (4) the UI test's last assertion (chooser gone after picking a scope) can be satisfied by the share sheet covering it — message softened at close-out or left to T010; (5) the header literal duplicates `ExportCopy` plus `DropdownSurface`'s casing; (6) three taps without an existence check (fail loudly, not vacuously) |
 | T009h — `sdd-implementer` | `opus` | ~34k | Done; 1538 unit tests green. Mutation: a `.confirmationDialog` on `AddButton` → `MenuPolicyTests` red naming the file; restored byte-for-byte. Note: the summary truncates `#expect` messages — the offender list is only in the raw log |
+| T009i — `sdd-implementer` | `opus` | ~48k | Done; 1538 unit tests green; the three reentry tests (Items, Wishlist, Settings) in the count and green. `GatedExportServiceSpy` gates once across `exportCSV`/`exportFiles`. Mutations: `!isBusy` dropped from `exportPDF(scope:)` → `fileSetCalls == 0` red in 0.13 s (was a 20-min hang); dropped from `exportCSV(scope:)` → `csvCalls == 1` red (plus `fileSetCalls`, since the ungated CSV's `defer` clears `isBusy` — expected collateral) |
+| T009f — `sdd-implementer` | `opus` | ~72k | Done (stopped on the anchor defect, resumed after T009g). `testTheExportRowsOpenAScopeChooserGatedByWhatIsOnScreen`. Mutations (on top of the fix): rows gated on `canExportCSV` → red at "Owned items must be disabled"; the menu row exporting directly → red at "must open the scope chooser". UI suite twice, consecutive full runs: 23 tests 0 failures (implementer, T009g's all) and 23 tests 0 failures (orchestrator's re-run). At `cf3e1ee` the same suite was 23 tests 12 failures — the finding that produced T009g |
 | _rows added per dispatch as the spec runs_ | | | |
