@@ -999,7 +999,7 @@ struct ItemListViewModelExportTests {
         viewModel.sortOrder = .currentValueAscending
         viewModel.load()
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         let table = try #require(spy.tables.first)
         #expect(table.headers == ExportSchema.itemHeaders)
@@ -1014,7 +1014,7 @@ struct ItemListViewModelExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: ExportServiceSpy())
         viewModel.load()
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         let staged = try #require(viewModel.stagedExport)
         #expect(staged.filenames == [ExportFilename.items(fileExtension: "csv")])
@@ -1051,7 +1051,7 @@ struct ItemListViewModelExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.load()
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         await viewModel.exportPDF()
 
         #expect(spy.tables.isEmpty)
@@ -1072,7 +1072,7 @@ struct ItemListViewModelExportTests {
         )
         viewModel.load()
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         #expect(viewModel.exportFailureMessage == ExportCopy.failureMessage)
         #expect(viewModel.stagedExport == nil)
@@ -1130,7 +1130,7 @@ struct ItemListViewModelExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.load()
 
-        let inFlight = Task { await viewModel.exportCSV() }
+        let inFlight = Task { await viewModel.exportCSV(scope: .both) }
         for _ in 0..<10_000 where spy.csvCalls == 0 { await Task.yield() }
         try #require(spy.csvCalls == 1, "gated export never started")
 
@@ -1138,7 +1138,7 @@ struct ItemListViewModelExportTests {
 
         // Reentrant attempts — same format and the other — bounce off the
         // guard without reaching the service.
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         await viewModel.exportPDF()
         #expect(spy.csvCalls == 1)
         #expect(spy.pdfCalls == 0)
@@ -1217,7 +1217,7 @@ struct ItemListViewModelImportTests {
 
         let importing = Task { await viewModel.importCSV(from: dummyURL) }
         for _ in 0..<10_000 where importSpy.itemCalls == 0 { await Task.yield() }
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         #expect(exportSpy.tables.isEmpty, "export must refuse while an import is in flight")
         importSpy.release()
         await importing.value
@@ -1229,7 +1229,7 @@ struct ItemListViewModelImportTests {
             modelContext: context, exportService: gatedExport, importService: secondImportSpy
         )
         second.load()
-        let exporting = Task { await second.exportCSV() }
+        let exporting = Task { await second.exportCSV(scope: .both) }
         for _ in 0..<10_000 where gatedExport.csvCalls == 0 { await Task.yield() }
         await second.importCSV(from: dummyURL)
         #expect(secondImportSpy.itemURLs.isEmpty, "import must refuse while an export is in flight")
@@ -2267,7 +2267,7 @@ struct ItemListViewModelSoldExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.categoryFilter = "Photography"
         viewModel.load()
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         let filtered = try #require(spy.tables.first)
         #expect(filtered.headers == ExportSchema.itemHeaders)
@@ -2277,7 +2277,7 @@ struct ItemListViewModelSoldExportTests {
         // Unfiltered: every owned row in visible order, then every sold row.
         viewModel.categoryFilter = ""
         viewModel.load()
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         let whole = try #require(spy.tables.last)
         #expect(whole.rows.map { $0[0] } == ["Leica M6", "Telecaster", "Summicron 35", "Jazzmaster"])
     }
@@ -2296,7 +2296,7 @@ struct ItemListViewModelSoldExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.searchText = "leica"
         viewModel.load()
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         let table = try #require(spy.tables.first)
         #expect(table.rows.map { $0[0] } == ["Leica M6", "Leica Summicron"])
@@ -2346,7 +2346,7 @@ struct ItemListViewModelSoldExportTests {
         #expect(viewModel.canExportCSV)
         #expect(!viewModel.canExportPDF)
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         await viewModel.exportPDF()
 
         #expect(spy.tables.map { $0.rows.map { $0[0] } } == [["Gone"]])
@@ -2370,7 +2370,7 @@ struct ItemListViewModelSoldExportTests {
         #expect(!viewModel.canExportCSV)
         #expect(!viewModel.canExportPDF)
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         #expect(spy.tables.isEmpty)
     }
 
@@ -2406,7 +2406,7 @@ struct ItemListViewModelSoldExportTests {
         viewModel.show(.sold)
         viewModel.categoryFilter = "Photography"
         viewModel.load()
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         let table = try #require(spy.tables.first)
         #expect(table.headers == ExportSchema.itemHeaders)
@@ -2435,7 +2435,7 @@ struct ItemListViewModelSoldExportTests {
         viewModel.searchText = "leica"
         viewModel.show(.owned)
         viewModel.load()
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         let table = try #require(spy.tables.first)
         #expect(table.rows.map { $0[0] } == ["Leica M6", "Telecaster", "Leica Summicron", "Jazzmaster"])
@@ -2468,7 +2468,7 @@ struct ItemListViewModelSoldExportTests {
         // equality below could be two orders that happen to agree.
         try #require(viewModel.soldItems.map(\.name) == ["Cab", "Pedal", "Amp"])
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         let table = try #require(spy.tables.first)
         #expect(table.rows.map { $0[0] } == ["Kept", "Pedal", "Cab", "Amp"])
     }
@@ -2539,7 +2539,7 @@ struct ItemListViewModelSoldExportTests {
         #expect(viewModel.canExportCSV)
         #expect(!viewModel.canExportPDF)
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         await viewModel.exportPDF()
 
         #expect(spy.tables.map { $0.rows.map { $0[0] } } == [["Leica M6"]])
@@ -2573,11 +2573,158 @@ struct ItemListViewModelSoldExportTests {
 
         #expect(!viewModel.canExportCSV)
         #expect(!viewModel.canExportPDF)
+        // G28: and no scope under the chooser has rows either — the menu row
+        // that opens it is disabled precisely because all three are. The
+        // Owned scope is the one `items` would get wrong here.
+        #expect(!viewModel.canExport(.owned))
+        #expect(!viewModel.canExport(.sold))
+        #expect(!viewModel.canExport(.both))
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         await viewModel.exportPDF()
         #expect(spy.tables.isEmpty)
         #expect(spy.documents.isEmpty)
+    }
+
+    // MARK: - 014/T009b: the export scope (Decision 7)
+
+    /// G26: the chooser's three scopes and the words on them, pinned by
+    /// literal and in menu order (014 P12, plan Q14) — `allCases` *is* the
+    /// menu, so a reordered enum is a reordered surface and a reworded label
+    /// is a reworded row.
+    @Test func theExportScopesReadOwnedSoldBothInMenuOrder() {
+        #expect(ItemListViewModel.ExportScope.allCases == [.owned, .sold, .both])
+        #expect(
+            ItemListViewModel.ExportScope.allCases.map(\.label)
+                == ["Owned items", "Sold items", "Owned and sold"]
+        )
+    }
+
+    /// G27: the three scopes partition the record the side on screen covers.
+    /// From a Sold side under a chip: `.owned` is the owned rows that pass, in
+    /// Custom order (plan R1); `.sold` is the sold rows that pass, in
+    /// Date-sold order whatever the side is sorted by (P10); `.both` is the
+    /// first then the second, which is the file 011 and 013 already pinned.
+    ///
+    /// The fixture makes each wrong answer visibly wrong: the Owned side
+    /// holds a chip and query of its own (so `items` is one different row),
+    /// and the Sold side is showing `Price ↑` (so `soldItems` is the other
+    /// order).
+    ///
+    /// Mutations, all three run: `.owned` reading `items` → the file reads
+    /// ["Telecaster"] → red; `.sold` reading `soldItems` → price-ascending →
+    /// red; `.both` sold-first → red.
+    @Test func theThreeScopesPartitionTheRecordFromANarrowedSoldSide() async throws {
+        let context = try makeInMemoryContext()
+        // Manual positions run against the names and the purchase dates, so a
+        // name sort or the Owned side's Date sort fails the owned half.
+        insertItem("Leica M6", category: "Photography/Cameras", purchasedAt: 300, order: 1, into: context)
+        insertItem("Summilux", category: "Photography/Lenses", purchasedAt: 100, order: 0, into: context)
+        insertItem("Telecaster", category: "Music/Guitars", purchasedAt: 200, order: 2, into: context)
+        insertSold(
+            "Summicron 35", category: "Photography/Lenses",
+            soldAt: 2_000, forCents: 100_00, into: context
+        )
+        insertSold(
+            "Noctilux", category: "Photography/Lenses",
+            soldAt: 3_000, forCents: 900_00, into: context
+        )
+        insertSold("Jazzmaster", category: "Music/Guitars", soldAt: 1_000, forCents: 500_00, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        // The Owned side keeps a narrowing of its own while the Sold side is
+        // on screen (014 Decision 4) — the one no scope may follow.
+        viewModel.categoryFilter = "Music"
+        viewModel.searchText = "tele"
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Photography"
+        viewModel.soldSortOrder = .salePriceAscending
+        viewModel.load()
+
+        // Both wrong sources really are on screen holding something else —
+        // without these the equalities below could be orders that agree.
+        try #require(viewModel.items.map(\.name) == ["Telecaster"])
+        try #require(viewModel.soldItems.map(\.name) == ["Summicron 35", "Noctilux"])
+
+        await viewModel.exportCSV(scope: .owned)
+        await viewModel.exportCSV(scope: .sold)
+        await viewModel.exportCSV(scope: .both)
+
+        let owned = ["Summilux", "Leica M6"]
+        let sold = ["Noctilux", "Summicron 35"]
+        #expect(spy.tables.map { $0.rows.map { $0[0] } } == [owned, sold, owned + sold])
+        for table in spy.tables {
+            #expect(table.headers == ExportSchema.itemHeaders)
+        }
+        #expect(viewModel.exportCoverageLabel == "Category: Photography")
+    }
+
+    /// G28: each scope is gated on the rows it would actually carry, so a
+    /// chooser row is offered only when there is a file behind it (criterion
+    /// 2: an empty file is never produced) — and the intent behind a
+    /// disabled row guards itself, the way `exportPDF` always has.
+    @Test func eachScopeIsGatedOnTheRowsItWouldCarry() async throws {
+        let soldOnly = try makeInMemoryContext()
+        insertSold("Gone", soldAt: 1_000, forCents: 100, into: soldOnly)
+        try soldOnly.save()
+
+        let soldSpy = ExportServiceSpy()
+        let allSold = ItemListViewModel(modelContext: soldOnly, exportService: soldSpy)
+        allSold.load()
+        #expect(!allSold.canExport(.owned), "nothing is owned")
+        #expect(allSold.canExport(.sold))
+        #expect(allSold.canExport(.both))
+        #expect(allSold.canExportCSV, "the menu row opens a chooser two of whose rows have files")
+
+        await allSold.exportCSV(scope: .owned)
+        #expect(soldSpy.tables.isEmpty, "the disabled scope's intent stages nothing")
+        #expect(allSold.stagedExport == nil)
+
+        let ownedOnly = try makeInMemoryContext()
+        insertItem("Kept", into: ownedOnly)
+        try ownedOnly.save()
+
+        let ownedSpy = ExportServiceSpy()
+        let allOwned = ItemListViewModel(modelContext: ownedOnly, exportService: ownedSpy)
+        allOwned.load()
+        #expect(allOwned.canExport(.owned))
+        #expect(!allOwned.canExport(.sold), "nothing has been sold")
+        #expect(allOwned.canExport(.both))
+
+        await allOwned.exportCSV(scope: .sold)
+        #expect(ownedSpy.tables.isEmpty)
+        #expect(allOwned.stagedExport == nil)
+    }
+
+    /// G29: a sold-only file carries its own name (014 P15) — `exportFiles`
+    /// writes one directory keyed by filename, so the sold document and the
+    /// owned one cannot share `Trove-Items` — while `.owned` and `.both` keep
+    /// the name Settings ships the very same document under.
+    ///
+    /// Mutation: swap the two arms of the filename choice → red on both ends.
+    @Test func onlyTheSoldOnlyCSVTakesTheSoldFilename() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Kept", into: context)
+        insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportCSV(scope: .sold)
+        let soldName = ExportFilename.soldItems(fileExtension: "csv")
+        #expect(spy.filenames == [soldName])
+        #expect(soldName == "Trove-Sold-Items-\(ExportSchema.day(from: .now)).csv")
+        #expect(viewModel.stagedExport?.filenames == [soldName])
+
+        await viewModel.exportCSV(scope: .owned)
+        await viewModel.exportCSV(scope: .both)
+        let itemsName = ExportFilename.items(fileExtension: "csv")
+        #expect(Array(spy.filenames.dropFirst()) == [itemsName, itemsName])
+        #expect(itemsName != soldName)
     }
 }
 

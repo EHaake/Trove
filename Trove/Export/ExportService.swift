@@ -79,6 +79,18 @@ nonisolated enum ExportFilename {
         "Trove-Items-\(ExportSchema.day(from: date, timeZone: timeZone)).\(fileExtension)"
     }
 
+    /// The sold-only files (014 P15). Their own name because `exportFiles`
+    /// writes one directory keyed by filename: an owned and a sold document
+    /// staged under one name in a single set would overwrite each other
+    /// (014 plan Q15). Owned and owned-and-sold keep `items` above.
+    static func soldItems(
+        fileExtension: String,
+        on date: Date = .now,
+        timeZone: TimeZone = .current
+    ) -> String {
+        "Trove-Sold-Items-\(ExportSchema.day(from: date, timeZone: timeZone)).\(fileExtension)"
+    }
+
     static func wishlist(
         fileExtension: String,
         on date: Date = .now,

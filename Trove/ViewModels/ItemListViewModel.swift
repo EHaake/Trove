@@ -724,13 +724,52 @@ final class ItemListViewModel {
     /// and disables (criterion 11's progress affordance).
     private(set) var isExporting = false
 
-    /// Whether the current view has anything to put in a CSV (criterion 2:
-    /// an empty file is never produced). Either side counts, because the CSV
-    /// carries both (plan Q5) — with only sold items in the collection, the
-    /// Owned side is empty and the file is still worth writing. Both halves
-    /// are counted *narrowed*, so a chip that excludes everything on both
-    /// sides still disables the row rather than producing a header-only file.
-    var canExportCSV: Bool { !exportableOwnedItems.isEmpty || !exportableSoldItems.isEmpty }
+    /// Which items a file from this list carries (014 Decision 7, plan Q14),
+    /// in the order the chooser lists them. Chosen independently of the side
+    /// on screen — the side decides which *narrowing* is in force (Decision
+    /// 4), never which half the file holds.
+    enum ExportScope: String, CaseIterable, Identifiable {
+        case owned
+        case sold
+        case both
+
+        var id: String { rawValue }
+
+        /// What the chooser's row calls this — here rather than in the view,
+        /// the `SoldSortOrder.label` rule.
+        var label: String {
+            switch self {
+            case .owned: "Owned items"
+            case .sold: "Sold items"
+            case .both: "Owned and sold"
+            }
+        }
+    }
+
+    /// The rows one scope would carry, under the side on screen's narrowing
+    /// (P11). One place the scopes are defined, so a gate can never disagree
+    /// with the file it gates — `canExport(_:)` and `exportCSV(scope:)` both
+    /// read this and nothing else.
+    private func rows(for scope: ExportScope) -> [Item] {
+        switch scope {
+        case .owned: exportableOwnedItems
+        case .sold: exportableSoldItems
+        case .both: exportableOwnedItems + exportableSoldItems
+        }
+    }
+
+    /// Whether a scope has anything to put in a file (criterion 2: an empty
+    /// file is never produced) — the chooser's per-row gate.
+    func canExport(_ scope: ExportScope) -> Bool { !rows(for: scope).isEmpty }
+
+    /// Whether the menu's CSV row is enabled: it opens the chooser, so it is
+    /// enabled when *any* chooser row is (plan Q14). Either side counts,
+    /// because the widest scope carries both (plan Q5) — with only sold items
+    /// in the collection, the Owned side is empty and the file is still worth
+    /// writing. Both halves are counted *narrowed*, so a chip that excludes
+    /// everything on both sides still disables the row rather than opening a
+    /// chooser with nothing in it.
+    var canExportCSV: Bool { canExport(.both) }
 
     /// The PDF is the owned collection only, on this path as on Settings'
     /// (plan Q5), so it gates on the owned half alone — the half the file
@@ -879,27 +918,35 @@ final class ItemListViewModel {
         }
     }
 
-    /// Exports what the side on screen covers, as the canonical CSV.
-    /// Records are built from `exportableOwnedItems` — on the Owned side
-    /// `items` as-is — never a refetch: visible order comes from
-    /// `isOrderedBefore` over live filter/sort state and is not reproducible
-    /// from any `FetchDescriptor` (criteria 3–4). From the Sold side that
-    /// half is the record's own Custom order instead (014 plan R1).
+    /// Exports the chosen scope's rows, under what the side on screen covers,
+    /// as the canonical CSV. Owned records are built from
+    /// `exportableOwnedItems` — on the Owned side `items` as-is — never a
+    /// refetch: visible order comes from `isOrderedBefore` over live
+    /// filter/sort state and is not reproducible from any `FetchDescriptor`
+    /// (criteria 3–4). From the Sold side that half is the record's own
+    /// Custom order instead (014 plan R1).
+    ///
+    /// The scope has **no default** (014 plan Q14): every call site says
+    /// which items it means, so `.both` — owned first, then the sold rows in
+    /// Sold-side order (plan Q5) — stays exactly the file 011 and 013 pinned,
+    /// the same two orderings Settings' export-everything writes, which is
+    /// what keeps 013's byte-identity true with a sale present, and since 014
+    /// whichever side is on screen (Q8).
+    ///
     /// `!isBusy` since 012: one operation at a time across export *and*
     /// import, so their presentations can't race.
-    func exportCSV() async {
-        guard canExportCSV, !isBusy else { return }
+    func exportCSV(scope: ExportScope) async {
+        guard canExport(scope), !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
-        // Owned first, then the sold rows in Sold-side order (plan Q5) — the
-        // same two orderings Settings' export-everything writes, which is what
-        // keeps 013's byte-identity true with a sale present, and since 014
-        // whichever side is on screen (Q8).
-        let table = ExportSchema.itemsTable(
-            (exportableOwnedItems + exportableSoldItems).map { ItemExportRecord(item: $0) }
-        )
-        let filename = ExportFilename.items(fileExtension: "csv")
+        let table = ExportSchema.itemsTable(rows(for: scope).map { ItemExportRecord(item: $0) })
+        // A sold-only file is named for what it holds (014 P15); owned and
+        // owned-and-sold keep `Trove-Items`, the name Settings ships the very
+        // same document under.
+        let filename = scope == .sold
+            ? ExportFilename.soldItems(fileExtension: "csv")
+            : ExportFilename.items(fileExtension: "csv")
         do {
             let url = try await exportService.exportCSV(table, filename: filename)
             stagedExport = StagedExport(url: url, filename: filename)

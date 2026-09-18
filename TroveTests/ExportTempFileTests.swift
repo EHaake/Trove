@@ -131,5 +131,11 @@ struct ExportTempFileTests {
             == "Trove-Items-2026-01-05.csv")
         #expect(ExportFilename.wishlist(fileExtension: "pdf", on: date, timeZone: zone)
             == "Trove-Wishlist-2026-01-05.pdf")
+        // 014/P15: the sold-only name is day-serialised by the same rule, so
+        // a file staged beside an owned one can't collide with it.
+        #expect(ExportFilename.soldItems(fileExtension: "csv", on: date, timeZone: zone)
+            == "Trove-Sold-Items-2026-01-05.csv")
+        #expect(ExportFilename.soldItems(fileExtension: "pdf", on: date, timeZone: zone)
+            == "Trove-Sold-Items-2026-01-05.pdf")
     }
 }

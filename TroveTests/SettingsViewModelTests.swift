@@ -311,7 +311,7 @@ struct SettingsViewModelExportTests {
         let itemsList = ItemListViewModel(modelContext: context, exportService: itemsSpy)
         itemsList.sortOrder = .custom
         itemsList.load()
-        await itemsList.exportCSV()
+        await itemsList.exportCSV(scope: .both)
 
         let wishlistSpy = ExportServiceSpy()
         let wishlist = WishlistViewModel(modelContext: context, exportService: wishlistSpy)
@@ -452,7 +452,7 @@ struct SettingsViewModelExportTests {
         let list = ItemListViewModel(modelContext: context, exportService: listSpy)
         list.sortOrder = .custom
         list.load()
-        await list.exportCSV()
+        await list.exportCSV(scope: .both)
 
         let listTable = try #require(listSpy.tables.first)
         try #require(
@@ -517,7 +517,7 @@ struct SettingsViewModelExportTests {
             fromSold.soldItems.map(\.name) == ["beta", "Alpha", "Zebra"],
             "the Sold side is showing an order the file must not use"
         )
-        await fromSold.exportCSV()
+        await fromSold.exportCSV(scope: .both)
         let fromSoldTable = try #require(soldSpy.tables.first)
         try #require(
             fromSoldTable.rows.map { $0[0] } == ["Charlie", "Bravo", "alpha", "Zulu", "Zebra", "Alpha", "beta"],
@@ -538,7 +538,7 @@ struct SettingsViewModelExportTests {
             fromOwned.soldItems.map(\.name) == ["Alpha", "beta", "Zebra"],
             "the hidden Sold side is holding an order the file must not use"
         )
-        await fromOwned.exportCSV()
+        await fromOwned.exportCSV(scope: .both)
         let fromOwnedTable = try #require(ownedSpy.tables.first)
         #expect(CSVWriter.write(fromOwnedTable) == expected)
     }

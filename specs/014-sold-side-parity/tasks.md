@@ -373,7 +373,7 @@ review. Pause at the end of this phase — there is something to try.
   `006` spec (4 + 3), 5 over `006` plan (4 + 1), 2 over `011` spec; `git diff
   --stat` touches only those three files.
 
-- [ ] **T009b — `ExportScope`, `canExport(_:)`, `exportCSV(scope:)`, `ExportFilename.soldItems`. `review: per-task`.**
+- [x] **T009b — `ExportScope`, `canExport(_:)`, `exportCSV(scope:)`, `ExportFilename.soldItems`. `review: per-task`.**
   Per plan §4a Q14 and Q15's filename. `canExportPDF` **unchanged in this
   task** (owned-only until T009d, so no empty owned PDF is ever offered
   between commits). Every caller of `exportCSV()` in tests → `exportCSV(scope:
@@ -425,7 +425,8 @@ review. Pause at the end of this phase — there is something to try.
 
 - [ ] **T009d — `exportPDF(scope:)` and the PDF gate.**
   Per plan §4a Q16. `soldDocumentTitle`; the set through one `exportFiles`;
-  `canExportPDF = canExport(.both)`; every caller of `exportPDF()` in tests →
+  `canExportPDF = canExport(.both)` (Q14's "both gates read `canExport(.both)`"
+  lands here — T009b left the PDF gate owned-only on purpose); every caller of `exportPDF()` in tests →
   `exportPDF(scope: .owned)`. **Rewrite** `anAllSoldCollectionCanExportACSVButNotAPDF`
   → `anAllSoldCollectionOffersBothFormatsWithTheOwnedScopeDisabled` and
   `aSoldChipNoOwnedRowIsInKeepsTheCSVAndDisablesThePDF` → `…DisablesTheOwnedScopeAlone`
@@ -605,4 +606,6 @@ interpreted here.
 | Phase 2 — `skeptical-reviewer` review + re-review | `opus` | ~87k + ~1k | One blocking: the sheet-hosting guard and G20's badge leg landed with no recorded red — four mutations run (all red, no code or test change), recorded on T006/T007's rows; re-review: sign off. S4 (the `show(.owned)`-before-write assertion) and S6 (`lists` still used) checked by the orchestrator, both present. Open second-look for the sweep/T010/T011: S1 the no-matches "Clear search" UI assertion can pass on the field's X alone (assert two buttons or give the empty-state action an identifier); S2 the swipe test matches "Sell" or "Mark as sold…" — after T010 reads the tree, pin the one that shipped; S3 `!code.contains("viewModel.side == .owned")` is file-wide where the plan scoped it to the header; S5 the three-`Button` count is comment-sensitive (spurious red, not false green); S7 `ActionIconTests` covers three icons beyond the task line — a sentence for "As built"; S8 T010: type into the price field, background/foreground, confirm the typed value survives (the closure re-seeds on every body evaluation) |
 | Phase 2 pause — decision review (export scope, Decision 7) — `skeptical-reviewer` | `fable` (explicit override) | ~226k | Recommended option B (a second dropdown surface under the two export rows), the sold PDF as its own document, "both" as two PDFs in one share sheet, all inside 014 as Phase 2b; approved by the person 2026-09-18. Second-look for the record: Settings' PDF pair is no longer the complete record; `.owned` and `.both` CSVs share `Trove-Items`; the Un-valued chip reaches the sold cover label (S6); `SaleOutcome` lives in `Sale.swift` |
 | T009a — `sdd-implementer` | `opus` | ~34k | Done; counts 7 / 5 / 2 verified by the orchestrator; six pointers, nothing above edited |
+| T009b — `sdd-implementer` | `opus` | ~94k | Done; 1527 unit tests green (orchestrator re-ran: same). G26–G29 plus `filenamesCarryTheLocalDay` extended; `ExportWiringTests` gains a per-screen `csvAction` literal. Mutations: `.owned` → `items` (one edit covers G27 and G28's `canExport(.owned)`); `.sold` → `soldItems` → G27 red; `.both` sold-first → G27 + G11–G13 red; `canExportCSV` → `items` → three red; filename arms swapped → G29 red; the view literal → `.owned` → wiring red. Deviation: `ExportScope: String, Identifiable` (Q17's `ForEach`) |
+| T009b — `skeptical-reviewer` per-task review | `opus` | ~50k | Sign off, no blocking. Second-look: (1) plan Q14 says both gates read `canExport(.both)` while the PDF gate waits for T009d — T009d's line now says so; (2) `ExportScope: String` adds unpinned raw values that look persistable (`id: Self` would do) — sweep; (3) T009e must re-point the Items `csvAction` literal at the chooser-open intent, not broaden it — its line names the literal; (4) `onlyTheSoldOnlyCSVTakesTheSoldFilename` builds two `.now`s (midnight flake window) — pass a fixed date at the sweep; (5) `eachScopeIsGatedOnTheRowsItWouldCarry` alone can't see narrowed vs unnarrowed; the sibling test carries that mutation |
 | _rows added per dispatch as the spec runs_ | | | |

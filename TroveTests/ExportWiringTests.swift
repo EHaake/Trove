@@ -21,18 +21,26 @@ struct ExportWiringTests {
         let path: String
         let csv: String
         let pdf: String
+        /// The exact CSV intent this screen's row must fire. Per screen since
+        /// 014/T009b: the Items list's `exportCSV` takes the scope with no
+        /// default, so its literal names one (`.both` until T009e hands the
+        /// chooser the scope), while the Wishlist's is unchanged — a scan for
+        /// one shared literal could no longer tell the two apart.
+        let csvAction: String
     }
 
     private nonisolated static let gates = [
         DropdownGates(
             path: "Trove/Views/Items/ItemListView.swift",
             csv: "canExportCSV: viewModel.canExportCSV",
-            pdf: "canExportPDF: viewModel.canExportPDF"
+            pdf: "canExportPDF: viewModel.canExportPDF",
+            csvAction: "viewModel.exportCSV(scope: .both)"
         ),
         DropdownGates(
             path: "Trove/Views/Wishlist/WishlistView.swift",
             csv: "canExportCSV: viewModel.canExport",
-            pdf: "canExportPDF: viewModel.canExport"
+            pdf: "canExportPDF: viewModel.canExport",
+            csvAction: "viewModel.exportCSV()"
         ),
     ]
 
@@ -59,7 +67,7 @@ struct ExportWiringTests {
         for call in dropdowns {
             #expect(call.contains(gates.csv), "\(path) dropdown not fed \(gates.csv)")
             #expect(call.contains(gates.pdf), "\(path) dropdown not fed \(gates.pdf)")
-            #expect(call.contains("viewModel.exportCSV()"), "\(path) dropdown doesn't fire exportCSV")
+            #expect(call.contains(gates.csvAction), "\(path) dropdown doesn't fire \(gates.csvAction)")
             #expect(call.contains("viewModel.exportPDF()"), "\(path) dropdown doesn't fire exportPDF")
             #expect(call.contains("isPickingImportFile = true"), "\(path) dropdown doesn't open the picker")
             #expect(call.contains("isShowingSettings = true"), "\(path) dropdown doesn't open Settings")
