@@ -27,11 +27,13 @@ enum ListEmptyReason: Equatable {
 
     /// The Items tab's Sold side is empty — nothing has been sold yet.
     ///
-    /// Never returned by `reason(...)`: the Sold side has no narrowing to
-    /// weigh (`ItemListViewModel.show(.sold)` clears all three filters), so
-    /// its emptiness has exactly one cause and no precedence to settle.
-    /// `ItemListViewModel.emptyReason` picks this case directly when the side
-    /// is `.sold`, and `reason(...)` stays the rule for the narrowed sides.
+    /// Never returned by `reason(...)`, but chosen *after* it since 014: the
+    /// Sold side carries a narrowing of its own now, so it runs the shared
+    /// rule with the sold half's counts and then maps the `.nothingAdded` it
+    /// hands back to this (`ItemListViewModel.soldEmptyReason`) — the same
+    /// shape `.everythingSold` below uses. Precedence is therefore the one
+    /// rule for both sides: a Sold side narrowed to nothing keeps its filter
+    /// copy, and `stillSyncing` still outranks an empty side.
     case nothingSold
 
     /// The Items tab's Owned side is empty because everything on it has been

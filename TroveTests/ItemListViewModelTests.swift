@@ -1792,9 +1792,107 @@ struct ItemListViewModelSoldSideTests {
         }
     }
 
-    /// Plan Q9: the Sold side's emptiness has one cause, and mid-import it
-    /// has the other. Neither goes through `ListEmptyReason.reason`, which
-    /// weighs narrowings this side doesn't have.
+    /// G7, plan Q5: the Sold side's chips are the categories of *sold* items
+    /// only — it never offers one nothing sold sits in — the Owned side's are
+    /// unchanged, and `categoryOptions` follows the side on screen under the
+    /// one name the chip row reads.
+    ///
+    /// Mutation: build both pairs from `all` → each side offers all four paths
+    /// → red. Make the getter ignore the side (always Owned's) → the Sold
+    /// expectation reads the owned pair → red.
+    @Test func theSoldSidesChipsAreTheSoldCategoriesOnly() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", category: "Music/Guitars", into: context)
+        insertItem("Leica M6", category: "Photography/Cameras", into: context)
+        insertSold("Jazzmaster", category: "Music/Amps", soldAt: 1_000, forCents: 100, into: context)
+        insertSold("Summicron 35", category: "Photography/Lenses", soldAt: 2_000, forCents: 100, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.load()
+        #expect(viewModel.categoryOptions == ["Music/Guitars", "Photography/Cameras"])
+        #expect(viewModel.categoryLabels["Music/Guitars"] == "Guitars")
+
+        viewModel.show(.sold)
+        #expect(viewModel.categoryOptions == ["Music/Amps", "Photography/Lenses"])
+        #expect(viewModel.categoryLabels["Music/Amps"] == "Amps")
+        #expect(viewModel.categoryLabels["Music/Guitars"] == nil, "an owned-only category has no chip here")
+
+        viewModel.show(.owned)
+        #expect(viewModel.categoryOptions == ["Music/Guitars", "Photography/Cameras"], "Owned's row is unchanged")
+    }
+
+    /// G8, plan Q6: one gate, both sides — "controls need a list to narrow."
+    /// The side on screen's own count decides, so an all-sold collection
+    /// offers the controls on Sold and not on Owned, and a never-sold one the
+    /// other way round.
+    ///
+    /// Mutation: have the gate read the other side's count → both pairs
+    /// invert → red.
+    @Test func theNarrowingControlsGateFollowsTheSideOnScreen() throws {
+        let allSold = try makeInMemoryContext()
+        insertSold("Gone", soldAt: 1_000, forCents: 100, into: allSold)
+        try allSold.save()
+
+        let seller = ItemListViewModel(modelContext: allSold)
+        seller.load()
+        #expect(!seller.offersNarrowingControls, "nothing owned is left to narrow")
+        seller.show(.sold)
+        #expect(seller.offersNarrowingControls, "one sale is a list to narrow")
+
+        let neverSold = try makeInMemoryContext()
+        insertItem("Kept", into: neverSold)
+        try neverSold.save()
+
+        let keeper = ItemListViewModel(modelContext: neverSold)
+        keeper.load()
+        #expect(keeper.offersNarrowingControls)
+        keeper.show(.sold)
+        #expect(!keeper.offersNarrowingControls, "nothing sold: no controls, the Owned side's rule at zero")
+    }
+
+    /// G10, plan Q6/P4: the Sold side's summary follows its narrowing the way
+    /// the Owned side's header total follows its filter — "1 sold · …" over a
+    /// query matching one sale, and `SaleCopy`'s zero form over one matching
+    /// none. The line is still always present, so the switch above it cannot
+    /// move.
+    ///
+    /// Mutation: sum the totals over the unnarrowed `sold` half → both
+    /// narrowed readings stay at the whole side's two sales → red.
+    @Test func theSoldSummaryFollowsTheSoldSidesNarrowing() throws {
+        let context = try makeInMemoryContext()
+        insertSold("Gone", priceCents: 500_00, soldAt: 1_000, forCents: 800_00, into: context)
+        insertSold("Also gone", priceCents: 300_00, soldAt: 2_000, forCents: 150_00, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.show(.sold)
+        try #require(viewModel.soldTotals == SaleTotals(count: 2, proceedsCents: 950_00, realisedDeltaCents: 150_00))
+
+        viewModel.searchText = "also"
+        viewModel.load()
+        #expect(viewModel.soldItems.map(\.name) == ["Also gone"])
+        #expect(viewModel.soldTotals == SaleTotals(count: 1, proceedsCents: 150_00, realisedDeltaCents: -150_00))
+        #expect(viewModel.soldSummaryLine == SaleCopy.soldSideSummary(viewModel.soldTotals))
+        #expect(viewModel.soldSummaryLine.hasPrefix("1 sold · "))
+
+        viewModel.searchText = "zzz"
+        viewModel.load()
+        #expect(viewModel.soldItems.isEmpty)
+        #expect(viewModel.soldTotals == SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0))
+        #expect(viewModel.soldSummaryLine == "0 sold · $0")
+    }
+
+    /// G9, plan Q7: the Sold side goes through `ListEmptyReason.reason` now
+    /// that it carries a narrowing of its own — the same five cases and the
+    /// same precedence the Owned side has always had, with the `.nothingAdded`
+    /// the shared rule hands back mapped to `.nothingSold` afterwards. A Sold
+    /// side narrowed to nothing says so rather than claiming nothing was ever
+    /// sold (P5).
+    ///
+    /// Mutation: pick the case directly again (the 006 shape —
+    /// `soldItems.isEmpty ? … : .nothingSold`, no `reason(...)`) → the query
+    /// and chip cases read `.nothingSold` → red.
     @Test func theSoldSidesEmptyStateIsNothingSoldOrStillSyncing() throws {
         let context = try makeInMemoryContext()
         insertItem("Kept", into: context)
@@ -1808,12 +1906,36 @@ struct ItemListViewModelSoldSideTests {
         syncing.show(.sold)
         #expect(syncing.emptyReason == .stillSyncing)
 
-        insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
+        // A stale query over a side with nothing sold at all is still
+        // `.nothingSold`: `reason(...)`'s `totalCount` guard outranks it, so
+        // "no matches for that" is never said of an empty side.
+        let stale = ItemListViewModel(modelContext: context)
+        stale.show(.sold)
+        stale.searchText = "zzz"
+        stale.load()
+        #expect(stale.emptyReason == .nothingSold)
+
+        insertSold("Gone", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
         try context.save()
         settled.load()
         syncing.load()
         #expect(settled.emptyReason == nil)
         #expect(syncing.emptyReason == nil, "a side with rows on it is not an empty state")
+
+        settled.searchText = "zzz"
+        settled.load()
+        #expect(settled.emptyReason == .searchMatchedNothing(query: "zzz"))
+
+        settled.searchText = ""
+        settled.categoryFilter = "Photography"
+        settled.load()
+        #expect(settled.emptyReason == .categoryMatchedNothing)
+
+        // The query the person typed a second ago keeps its answer mid-import,
+        // exactly as it does on the Owned side.
+        syncing.searchText = "zzz"
+        syncing.load()
+        #expect(syncing.emptyReason == .searchMatchedNothing(query: "zzz"))
     }
 
     /// Spec Decision 12, and the Owned side's own precedence around it: an
@@ -1851,6 +1973,36 @@ struct ItemListViewModelSoldSideTests {
             syncing.emptyReason == .stillSyncing,
             "the sold half is here but the owned half may still be arriving — `stillSyncing` still wins"
         )
+    }
+
+    /// G25: the Everything-sold guard weighs `soldTotalCount`, not
+    /// `soldItems.count` — which since 014 is the *narrowed* sold half. A
+    /// no-match query left behind on the Sold side must not turn an emptied
+    /// Owned side back into a first launch; that is the hidden side leaking
+    /// into the visible one that Decision 4 forbids.
+    ///
+    /// Mutation: have the guard read `!soldItems.isEmpty` again → the first
+    /// expectation reads `.nothingAdded` → red.
+    @Test func theEmptiedOwnedSideStillSaysEverythingSoldWithANoMatchQueryLeftOnSold() throws {
+        let context = try makeInMemoryContext()
+        insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.show(.sold)
+        viewModel.searchText = "zzz"
+        viewModel.load()
+        try #require(viewModel.soldItems.isEmpty, "the Sold side is narrowed to nothing")
+
+        viewModel.show(.owned)
+        #expect(
+            viewModel.emptyReason == .everythingSold,
+            "a query left on the hidden side changed what the visible one says"
+        )
+
+        let neverSold = ItemListViewModel(modelContext: try makeInMemoryContext())
+        neverSold.load()
+        #expect(neverSold.emptyReason == .nothingAdded, "and nothing ever sold is still a first launch")
     }
 
     /// The mapping is the `.nothingAdded` case's alone: a narrowed-to-nothing
@@ -1914,15 +2066,18 @@ struct ItemListViewModelSoldSideTests {
 
 @Suite("ItemListViewModel — changing side")
 struct ItemListViewModelShowSideTests {
-    /// G33, Owned → Sold: the switch is an intent that clears every
-    /// narrowing (plan Q15), so the Sold side can never carry a filter it
-    /// shows no control for — and the CSV exported from there is the
-    /// complete record rather than a Cameras-only file.
+    /// G4, Owned → Sold → Owned: the Owned side's four values — chip, query,
+    /// un-valued and a non-default sort — survive a visit to the Sold side and
+    /// are still in force on the rows when it comes back (014 Decision 4,
+    /// replacing 006 Q15's clearing). While Sold is up, none of them is
+    /// readable through the controls' own property names: the hidden side
+    /// never leaks into the visible one.
     ///
-    /// Mutation: keep the filter across the switch (drop the three clears in
-    /// `show(_:)`) → the three fields read set and the CSV loses three of
-    /// its four rows → red.
-    @Test func switchingToSoldClearsEveryNarrowing() async throws {
+    /// Mutations, both run: restore the three clears in `show(_:)` → the four
+    /// values read back empty → red; give both sides one shared `Narrowing`
+    /// → the Sold side opens under "Leica"/"Photography" and `soldItems`
+    /// empties → red.
+    @Test func theOwnedSideKeepsItsNarrowingWhileTheSoldSideIsVisited() throws {
         let context = try makeInMemoryContext()
         insertItem("Leica M6", category: "Photography/Cameras", valueCents: nil, purchasedAt: 200, into: context)
         insertItem("Telecaster", category: "Music/Guitars", valueCents: 120_00, purchasedAt: 100, into: context)
@@ -1930,57 +2085,108 @@ struct ItemListViewModelShowSideTests {
         insertSold("Jazzmaster", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
         try context.save()
 
-        let spy = ExportServiceSpy()
-        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        let viewModel = ItemListViewModel(modelContext: context)
         viewModel.categoryFilter = "Photography"
         viewModel.searchText = "Leica"
         viewModel.showsOnlyUnvalued = true
+        viewModel.sortOrder = .currentValueAscending
         viewModel.load()
         try #require(viewModel.items.map(\.name) == ["Leica M6"])
 
         viewModel.show(.sold)
 
         #expect(viewModel.side == .sold)
-        #expect(viewModel.categoryFilter.isEmpty)
-        #expect(viewModel.searchText.isEmpty)
+        #expect(viewModel.categoryFilter.isEmpty, "Owned's chip is visible on the Sold side")
+        #expect(viewModel.searchText.isEmpty, "Owned's query is visible on the Sold side")
         #expect(!viewModel.showsOnlyUnvalued)
+        #expect(viewModel.soldSortOrder == .soldDate, "the Sold side opens on its own default")
+        #expect(
+            viewModel.soldItems.map(\.name) == ["Summicron 35", "Jazzmaster"],
+            "the Sold side is narrowed by its own (clean) narrowing, not by Owned's"
+        )
 
-        await viewModel.exportCSV()
-        let table = try #require(spy.tables.first)
-        #expect(table.rows.map { $0[0] } == ["Leica M6", "Telecaster", "Summicron 35", "Jazzmaster"])
+        viewModel.show(.owned)
+
+        #expect(viewModel.categoryFilter == "Photography")
+        #expect(viewModel.searchText == "Leica")
+        #expect(viewModel.showsOnlyUnvalued)
+        #expect(viewModel.sortOrder == .currentValueAscending)
+        #expect(viewModel.items.map(\.name) == ["Leica M6"], "and the rows are narrowed by them again")
     }
 
-    /// G33, Sold → Owned: the same clearing in the other direction. Owned is
-    /// "today's Items list", never today's list under a filter left behind by
-    /// a visit to Sold.
-    @Test func switchingBackToOwnedClearsEveryNarrowingToo() async throws {
+    /// G4, the other direction: the Sold side's three values — chip, query and
+    /// its own sort — survive a visit to the Owned side, and while Owned is up
+    /// none of them narrows anything there.
+    ///
+    /// Mutations, both run: restore the three clears in `show(_:)` → the Sold
+    /// values read back empty → red; one shared `Narrowing` → the Owned side
+    /// opens under "Music"/"jazz" and `items` empties → red.
+    @Test func theSoldSideKeepsItsNarrowingWhileTheOwnedSideIsVisited() throws {
         let context = try makeInMemoryContext()
         insertItem("Leica M6", category: "Photography/Cameras", purchasedAt: 200, into: context)
         insertItem("Telecaster", category: "Music/Guitars", purchasedAt: 100, into: context)
         insertSold("Summicron 35", category: "Photography/Lenses", soldAt: 2_000, forCents: 100, into: context)
+        insertSold("Jazzmaster", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
         try context.save()
 
-        let spy = ExportServiceSpy()
-        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        let viewModel = ItemListViewModel(modelContext: context)
         viewModel.show(.sold)
-        // A narrowing set while the Sold side is up — only reachable from a
-        // router request or a stale write, and cleared on the way out either
-        // way.
-        viewModel.categoryFilter = "Photography"
-        viewModel.searchText = "Summicron"
-        viewModel.showsOnlyUnvalued = true
+        viewModel.categoryFilter = "Music"
+        viewModel.searchText = "jazz"
+        viewModel.soldSortOrder = .salePriceAscending
+        viewModel.load()
+        try #require(viewModel.soldItems.map(\.name) == ["Jazzmaster"])
 
         viewModel.show(.owned)
 
-        #expect(viewModel.side == .owned)
-        #expect(viewModel.categoryFilter.isEmpty)
-        #expect(viewModel.searchText.isEmpty)
-        #expect(!viewModel.showsOnlyUnvalued)
-        #expect(viewModel.items.map(\.name) == ["Leica M6", "Telecaster"])
+        #expect(viewModel.categoryFilter.isEmpty, "the Sold side's chip is visible on Owned")
+        #expect(viewModel.searchText.isEmpty, "the Sold side's query is visible on Owned")
+        #expect(viewModel.sortOrder == .purchaseDate, "Owned's own Sort By is untouched")
+        #expect(
+            viewModel.items.map(\.name) == ["Leica M6", "Telecaster"],
+            "the Owned rows are narrowed by Owned's (clean) narrowing"
+        )
 
-        await viewModel.exportCSV()
-        let table = try #require(spy.tables.first)
-        #expect(table.rows.map { $0[0] } == ["Leica M6", "Telecaster", "Summicron 35"])
+        viewModel.show(.sold)
+
+        #expect(viewModel.categoryFilter == "Music")
+        #expect(viewModel.searchText == "jazz")
+        #expect(viewModel.soldSortOrder == .salePriceAscending)
+        #expect(viewModel.soldItems.map(\.name) == ["Jazzmaster"], "and the sold rows are narrowed by them again")
+    }
+
+    /// G6, plan Q2: un-valued is Owned-only *structurally*. A write while the
+    /// Sold side is on screen is refused — the Sold copy can never hold
+    /// `true`, so the shared chip row never renders the chip there — and
+    /// Owned's own copy is untouched by the attempt.
+    ///
+    /// Mutations, both run: drop the guard so the setter writes through
+    /// `narrowing` → the read after the write on Sold is `true` → red; drop
+    /// the guard leaving the write on `ownedNarrowing` → the `false` written
+    /// on Sold lands on Owned and the last expectation → red.
+    @Test func theUnvaluedFilterIsRefusedWhileTheSoldSideIsOnScreen() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", valueCents: nil, into: context)
+        insertItem("Telecaster", valueCents: 120_00, into: context)
+        insertSold("Jazzmaster", valueCents: nil, soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.showsOnlyUnvalued = true
+        viewModel.load()
+        try #require(viewModel.items.map(\.name) == ["Leica M6"])
+
+        viewModel.show(.sold)
+        viewModel.showsOnlyUnvalued = true
+        #expect(!viewModel.showsOnlyUnvalued, "the Sold side has no un-valued filter to turn on")
+
+        viewModel.showsOnlyUnvalued = false
+        viewModel.load()
+        #expect(viewModel.soldItems.map(\.name) == ["Jazzmaster"], "neither write narrowed the sold rows")
+
+        viewModel.show(.owned)
+        #expect(viewModel.showsOnlyUnvalued, "Owned's own copy survived both attempts")
+        #expect(viewModel.items.map(\.name) == ["Leica M6"])
     }
 
     /// G33's third case: asking for the side already on screen is not a
@@ -2005,18 +2211,39 @@ struct ItemListViewModelShowSideTests {
         #expect(viewModel.items.map(\.name) == ["Leica M6"], "and it reloaded under that filter")
     }
 
-    /// The side is a plain launch-time default (plan Q4): the tab opens on
+    /// The side is a plain launch-time default (006 plan Q4): the tab opens on
     /// Owned however the last visit ended, because nothing stores it.
+    ///
+    /// G5 extends that to the per-side state 014 adds: nothing about either
+    /// side's narrowing or sort is stored either, so a fresh view model starts
+    /// clean on *both* sides — Owned on "Date", Sold on "Date sold" (P8).
     @Test func aFreshViewModelOpensOnOwned() throws {
         let context = try makeInMemoryContext()
-        insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
+        insertSold("Gone", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
         try context.save()
 
         let viewModel = ItemListViewModel(modelContext: context)
         viewModel.show(.sold)
+        viewModel.categoryFilter = "Music"
+        viewModel.searchText = "gone"
+        viewModel.soldSortOrder = .name
+        viewModel.sortOrder = .currentValue
         try #require(viewModel.side == .sold)
 
-        #expect(ItemListViewModel(modelContext: context).side == .owned)
+        let fresh = ItemListViewModel(modelContext: context)
+        #expect(fresh.side == .owned)
+        #expect(fresh.categoryFilter.isEmpty)
+        #expect(fresh.searchText.isEmpty)
+        #expect(!fresh.showsOnlyUnvalued)
+        #expect(fresh.sortOrder == .purchaseDate)
+        #expect(fresh.visibleSortLabel == "Date")
+
+        fresh.show(.sold)
+        #expect(fresh.categoryFilter.isEmpty, "the Sold side starts clean too")
+        #expect(fresh.searchText.isEmpty)
+        #expect(!fresh.showsOnlyUnvalued)
+        #expect(fresh.soldSortOrder == .soldDate)
+        #expect(fresh.visibleSortLabel == "Date sold")
     }
 }
 

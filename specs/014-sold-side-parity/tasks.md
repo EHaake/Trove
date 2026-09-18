@@ -130,7 +130,7 @@ the same label (plan R2) — the report puts it as a question, not a fact.
   `TroveTests/SoldSortOrderTests.swift` (new).
   **Verify:** `scripts/verify.sh` green; the G2 and G3 mutations recorded.
 
-- [ ] **T003 — Per-side state: `Narrowing` ×2, the computed narrowing properties, `show` without clearing, chips, summary, gate, empty reason. `review: per-task`.**
+- [x] **T003 — Per-side state: `Narrowing` ×2, the computed narrowing properties, `show` without clearing, chips, summary, gate, empty reason. `review: per-task`.**
   Per plan §1, §3 and Q1–Q3, Q5–Q7. `struct Narrowing`, private
   `ownedNarrowing`/`soldNarrowing`, the side-switched `narrowing`
   accessor; `categoryFilter`/`searchText`/`showsOnlyUnvalued` as computed
@@ -426,4 +426,6 @@ interpreted here.
 | `skeptical-reviewer` — plan/tasks sign-off and re-review | `fable` | ~170k (≈156k review, ≈14k re-review) | Three blocking, nine second-look findings; re-review: all resolved, sign off |
 | T001 — `sdd-implementer` | `opus` | ~39k | Done; 4+4 pointers, counts verified by the orchestrator. Note for T011: `006` spec line 69 ("from two places") left as is, not in T001's scope |
 | T002 — `sdd-implementer` | `opus` | ~76k | Done; 1506 unit tests green. Mutations: price comparator deleted → Price cases red; reversed → red; gain reading paid → Gain cases red; `?? false` → tie test red; tie by name → tie test red both orders. Note: parameterised `@Test` counts as one test in the count line |
+| T003 — `sdd-implementer` | `opus` | ~136k | Done; 1511 unit tests green (orchestrator re-ran: same count). Rewrites: `switchingToSoldClearsEveryNarrowing` → `theOwnedSideKeepsItsNarrowingWhileTheSoldSideIsVisited`; `switchingBackToOwnedClearsEveryNarrowingToo` → `theSoldSideKeepsItsNarrowingWhileTheOwnedSideIsVisited`. Ten mutations recorded (G4 ×2, G6 ×2, G7 ×2, G8, G9, G10, G25), each red then reverted. One forced edit in `exportableSoldItems` (`narrowed(sold, by: narrowing).sorted(by: isInSoldOrder)` — the textual rename would have made an Owned export follow a Sold query) |
+| T003 — `skeptical-reviewer` per-task review | `opus` | ~63k | Sign off, no blocking. Second-look: (1) Q3's view half (`apply` clear after `show`) not in this diff — owned by T006/G20; (2) export behaviour from the Sold side untested until T004 — G11/G12 cover both directions; (3) `exportableSoldItems`' first doc paragraph ("under the Owned side's visible narrowing") now false — carried to T004's bundle; (4) sort-after-filter tie stability — void, `areInSoldOrder` is total (date, name, id); (5) G4's sort assertions not mutation-covered (no mutation touches sorts); (6) one restating assertion in G10, the literals beside it carry the guard |
 | _rows added per dispatch as the spec runs_ | | | |

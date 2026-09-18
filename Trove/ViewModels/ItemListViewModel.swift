@@ -4,16 +4,21 @@ import SwiftData
 
 /// Browse, filter, search and sort owned items.
 ///
-/// `categoryFilter`, `searchText` and `sortOrder` are plain properties so the
-/// view can bind controls straight to them; nothing recomputes until `load()`
-/// is called.
+/// `categoryFilter`, `searchText` and `sortOrder` are settable properties the
+/// view binds controls straight to; nothing recomputes until `load()` is
+/// called.
 /// That keeps the reload point explicit and the type trivially testable,
 /// rather than hiding fetches inside property observers.
 ///
 /// Since 006 it owns both halves of the Items tab: one fetch per `load()`,
 /// split into the owned rows every existing member derives from and the sold
-/// rows the Sold side shows (plan §4). `show(_:)` is the only way the side
-/// changes, and changing it clears every narrowing (plan Q15).
+/// rows the Sold side shows (006 plan §4). `show(_:)` is still the only way
+/// the side changes, but since 014 it clears nothing: each side keeps its own
+/// narrowing and its own sort while the other is on screen (014 Decision 4,
+/// replacing 006 Q15's clearing rule). The three narrowing properties are
+/// computed over the side on screen's `Narrowing`, so nothing outside can
+/// read or write the hidden side's — "what the controls show is always the
+/// side on screen" is true by construction rather than by discipline.
 @Observable
 final class ItemListViewModel {
     /// Most orders have one sensible direction — keepers and most recent
@@ -107,16 +112,49 @@ final class ItemListViewModel {
     }
 
     /// Read-only from outside: `show(_:)` is the only way it changes, because
-    /// changing side also clears every narrowing (plan Q15) and a plain
-    /// setter would let a binding skip that.
+    /// changing side also reloads the rows under that side's own narrowing,
+    /// and a plain setter would let a binding skip that.
     private(set) var side: Side = .owned
 
-    var categoryFilter: String = ""
+    /// One side's narrowing, kept while the other side is on screen (014
+    /// Decision 4, replacing 006 Q15's clearing). Plain state, never stored:
+    /// both sides start clean at every launch (014 P8).
+    struct Narrowing: Equatable {
+        var categoryFilter = ""
+        var searchText = ""
+        /// Owned only — the Sold copy never holds `true` (014 plan Q2).
+        var showsOnlyUnvalued = false
+    }
+
+    private var ownedNarrowing = Narrowing()
+    private var soldNarrowing = Narrowing()
+
+    /// The side on screen's narrowing: what the controls show, and what a file
+    /// exported from here follows (014 P11). Private, so the hidden side's
+    /// copy is unreachable from outside this type.
+    private var narrowing: Narrowing {
+        get { side == .owned ? ownedNarrowing : soldNarrowing }
+        set {
+            if side == .owned {
+                ownedNarrowing = newValue
+            } else {
+                soldNarrowing = newValue
+            }
+        }
+    }
+
+    var categoryFilter: String {
+        get { narrowing.categoryFilter }
+        set { narrowing.categoryFilter = newValue }
+    }
 
     /// Free text over name and serial number. Narrows the same set the
     /// category filter narrows rather than replacing it — spec.md is explicit
     /// that the two combine, so a category chip stays in force while typing.
-    var searchText: String = ""
+    var searchText: String {
+        get { narrowing.searchText }
+        set { narrowing.searchText = newValue }
+    }
 
     /// Narrows to items with no value entered — the destination of the
     /// dashboard's "Value →" callout.
@@ -126,7 +164,23 @@ final class ItemListViewModel {
     /// from outside via `AppRouter`, and the only filter with no control of its
     /// own in the header, so the chip row grows a dismissible chip while it's on
     /// — a filter the user can't see or clear is worse than one they can't set.
-    var showsOnlyUnvalued: Bool = false
+    ///
+    /// Owned-only *structurally* since 014 (plan Q2): a write while the Sold
+    /// side is on screen is refused rather than trapped, so the Sold copy can
+    /// never hold `true`, the shared chip row never renders the chip there, and
+    /// `narrowed(_:by:)` needs no side check. A sold item's current value is no
+    /// longer something the app has an opinion about (006, `SoldItemRow`), so
+    /// "un-valued" is not a way to narrow that side — and no legitimate writer
+    /// exists on it: the chip renders only while the filter is on, and the
+    /// router's `.unvalued` request crosses to Owned first. A refusal, not a
+    /// trap, for exactly that reason.
+    var showsOnlyUnvalued: Bool {
+        get { narrowing.showsOnlyUnvalued }
+        set {
+            guard side == .owned else { return }
+            ownedNarrowing.showsOnlyUnvalued = newValue
+        }
+    }
 
     var sortOrder: SortOrder = .purchaseDate
 
@@ -144,35 +198,74 @@ final class ItemListViewModel {
     /// only place either of them gets a figure, so the two can't disagree.
     private(set) var marketSummaries: [UUID: MarketSummary] = [:]
 
-    /// Every category path in use, for the filter chips. Includes paths whose
-    /// items the current filter or search excludes — otherwise choosing one
-    /// filter would hide the means of choosing another, and typing a query
-    /// would dissolve the chip row underneath the field.
-    private(set) var categoryOptions: [String] = []
+    /// The last fetch's two halves, unnarrowed (006 plan §4). Held so the
+    /// chips, the counts and the exports read one split rather than deriving a
+    /// second one that has to agree with it.
+    private var owned: [Item] = []
+    private var sold: [Item] = []
+
+    /// Every category path in use on the side on screen, for the filter chips.
+    /// Includes paths whose items the current filter or search excludes —
+    /// otherwise choosing one filter would hide the means of choosing another,
+    /// and typing a query would dissolve the chip row underneath the field.
+    ///
+    /// Two stored pairs behind one name since 014 (plan Q5) — Owned's from the
+    /// owned half as before, Sold's from the sold half — so the Sold side never
+    /// offers a category nothing sold sits in, and `categoryChips` and
+    /// `exportCoverageLabel` change no spelling.
+    var categoryOptions: [String] { side == .owned ? ownedCategoryOptions : soldCategoryOptions }
 
     /// Short chip labels keyed by path — leaf-only where unambiguous. Computed
-    /// once per load rather than per render.
-    private(set) var categoryLabels: [String: String] = [:]
+    /// once per load rather than per render, per side.
+    var categoryLabels: [String: String] { side == .owned ? ownedCategoryLabels : soldCategoryLabels }
+
+    private var ownedCategoryOptions: [String] = []
+    private var ownedCategoryLabels: [String: String] = [:]
+    private var soldCategoryOptions: [String] = []
+    private var soldCategoryLabels: [String: String] = [:]
 
     /// Owned items before any narrowing. Held so an empty list can tell an
     /// empty collection apart from a filter that excluded everything — the two
     /// need opposite invitations.
     private(set) var totalCount = 0
 
-    /// The Sold side's rows, in the Sold side's own order (plan Q9). Never
-    /// narrowed: `show(.sold)` cleared the three filters on the way in, so
-    /// what this holds is every sale.
+    /// Sold items before any narrowing — the Sold side's `totalCount` (014 plan
+    /// Q6). Never `soldItems.count`: that is the *narrowed* sold half now, and
+    /// the two readers of this count — the controls gate and the Owned side's
+    /// Everything-sold guard — must not move because a query was left on the
+    /// other side.
+    private(set) var soldTotalCount = 0
+
+    /// "Controls need a list to narrow" — one gate, both sides (014 plan Q6),
+    /// so the search field, the chips and Sort By appear on the Sold side under
+    /// the same rule the Owned side has used since 001.
+    var offersNarrowingControls: Bool { side == .owned ? totalCount > 0 : soldTotalCount > 0 }
+
+    /// What the sort badge shows for the side on screen — each side carries its
+    /// own selection (014 plan Q4), and the badge reads whichever is visible.
+    var visibleSortLabel: String { side == .owned ? sortOrder.label : soldSortOrder.label }
+
+    /// The Sold side's rows: the sold half under the Sold side's *own*
+    /// narrowing (014 plan Q1), in the order its own Sort By selects (014 plan
+    /// §2). Since 014 this can be narrower than every sale — `soldTotalCount`
+    /// is the count before narrowing.
     private(set) var soldItems: [Item] = []
 
     /// Count, proceeds and realised gain over `soldItems`, summed by
     /// `SaleOutcome.totals` rather than here — the Dashboard card reads the
     /// same function, which is what makes "the summary matches the card" one
-    /// sum instead of two that agree (plan §4).
+    /// sum instead of two that agree (006 plan §4).
+    ///
+    /// Over the *narrowed* rows since 014 (P4): the summary line follows what
+    /// is on screen, the way the Owned side's header total does. The
+    /// Dashboard's Sold card keeps showing the whole side, through its own
+    /// load.
     private(set) var soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)
 
     /// The line above the Sold rows — "3 sold · $2,400 · +$350 vs paid", and
-    /// "0 sold · $0" when nothing has been sold (spec Decision 13, replacing
-    /// Decision 11's hide-at-zero).
+    /// "0 sold · $0" when nothing has been sold, or when the Sold side's
+    /// narrowing matches nothing (006 Decision 13, replacing Decision 11's
+    /// hide-at-zero; 014 P4 for the narrowed reading).
     ///
     /// Non-optional on purpose: the header renders this in the same slot the
     /// Owned side's item stats occupy, and the reason Decision 13 exists is
@@ -188,22 +281,16 @@ final class ItemListViewModel {
 
     /// Which empty state applies, or `nil` when there's something to show.
     ///
-    /// The Sold side doesn't go through `ListEmptyReason.reason` at all (plan
-    /// Q9): it carries no narrowing to weigh — `show(.sold)` cleared all three
-    /// — so its emptiness has exactly one cause, and the only precedence left
-    /// is whether the collection might still be arriving.
+    /// Both sides go through `ListEmptyReason.reason` since 014 (plan Q7): the
+    /// Sold side carries a narrowing of its own now, so it needs the same
+    /// precedence the Owned side has always had — a Sold side narrowed to
+    /// nothing says so rather than claiming nothing was ever sold (P5).
     var emptyReason: ListEmptyReason? {
         switch side {
         case .owned:
             ownedEmptyReason
         case .sold:
-            if !soldItems.isEmpty {
-                nil
-            } else if syncMonitor.mayStillBeImporting {
-                .stillSyncing
-            } else {
-                .nothingSold
-            }
+            soldEmptyReason
         }
     }
 
@@ -220,13 +307,41 @@ final class ItemListViewModel {
         let reason = ListEmptyReason.reason(
             totalCount: totalCount,
             visibleCount: items.count,
-            searchText: searchText,
-            categoryFilter: categoryFilter,
-            showsOnlyUnvalued: showsOnlyUnvalued,
+            // The Owned narrowing by name, not the computed properties: this
+            // is the Owned side's reason whichever side is on screen.
+            searchText: ownedNarrowing.searchText,
+            categoryFilter: ownedNarrowing.categoryFilter,
+            showsOnlyUnvalued: ownedNarrowing.showsOnlyUnvalued,
             mayStillBeImporting: syncMonitor.mayStillBeImporting
         )
-        guard reason == .nothingAdded, !soldItems.isEmpty else { return reason }
+        // `soldTotalCount`, never `!soldItems.isEmpty` (014 plan §1):
+        // `soldItems` is the narrowed sold half now, so a no-match query left
+        // on the Sold side would otherwise turn an emptied Owned side back into
+        // a first launch — the hidden side leaking into the visible one that
+        // Decision 4 forbids and 006 Decision 12 answered.
+        guard reason == .nothingAdded, soldTotalCount > 0 else { return reason }
         return .everythingSold
+    }
+
+    /// The Sold side's reason, through the shared rule with the Sold
+    /// narrowing's own fields (014 plan Q7).
+    ///
+    /// `.nothingAdded` is mapped to `.nothingSold` afterwards — the exact shape
+    /// `ownedEmptyReason` uses for `.everythingSold`, so `reason(...)`'s
+    /// precedence is untouched: `stillSyncing` still wins over an empty side
+    /// and still yields to a typed query (P5). `showsOnlyUnvalued` is `false`
+    /// by construction here (Q2), so it is passed as the literal rather than
+    /// read.
+    private var soldEmptyReason: ListEmptyReason? {
+        let reason = ListEmptyReason.reason(
+            totalCount: soldTotalCount,
+            visibleCount: soldItems.count,
+            searchText: soldNarrowing.searchText,
+            categoryFilter: soldNarrowing.categoryFilter,
+            showsOnlyUnvalued: false,
+            mayStillBeImporting: syncMonitor.mayStillBeImporting
+        )
+        return reason == .nothingAdded ? .nothingSold : reason
     }
 
     /// Combined current value of the items on screen, so the header total
@@ -298,24 +413,22 @@ final class ItemListViewModel {
     /// `SyncMonitor.completedImports`.
     var completedImports: Int { syncMonitor.completedImports }
 
-    /// The one way the side changes (plan Q15): it sets `side` and, whenever
-    /// that is an actual change, clears every narrowing before reloading.
+    /// The one way the side changes: it sets `side` and reloads. That is all
+    /// — it clears nothing (014 Decision 4, replacing 006 Q15).
     ///
-    /// Both directions, deliberately. Owned is "today's Items list", never
-    /// today's list under a filter left behind by a visit to Sold; and the
-    /// Sold side can never carry a narrowing it doesn't render a control for
-    /// — which is what lets a CSV exported from there be the complete record,
-    /// and what lets `emptyReason` skip the precedence rules on that side.
-    /// Asking for the side already on screen leaves the narrowing alone: it
-    /// is not a change, and the router's `.category`/`.unvalued` requests call
-    /// this before writing the narrowing they came to set.
+    /// Each side keeps its own search, chip and sort while the other is
+    /// visited, in both directions, so coming back finds the side exactly as it
+    /// was left; the controls always show the side on screen's, because the
+    /// three narrowing properties are computed over it. Asking for the side
+    /// already on screen is the same call: it reloads and leaves the narrowing
+    /// alone, which is what lets the router's `.category`/`.unvalued` requests
+    /// cross to Owned first and then write the narrowing they came to set.
+    ///
+    /// The visible query changes value on a side change, so a
+    /// `.onChange(of: viewModel.searchText)` in the view fires once here —
+    /// one extra `load()`, not a defect.
     func show(_ side: Side) {
-        if side != self.side {
-            self.side = side
-            categoryFilter = ""
-            searchText = ""
-            showsOnlyUnvalued = false
-        }
+        self.side = side
         load()
     }
 
@@ -327,30 +440,42 @@ final class ItemListViewModel {
             // `totalCount`, the chips, the header totals or the market
             // summaries by being missed at one of six call sites.
             let all = try modelContext.fetch(FetchDescriptor<Item>())
-            let owned = all.filter { !$0.isSold }
-            let sold = all.filter(\.isSold)
+            owned = all.filter { !$0.isSold }
+            sold = all.filter(\.isSold)
 
             totalCount = owned.count
+            soldTotalCount = sold.count
             // Before the sort, not after: the Market orders read these.
             marketSummaries = Self.summaries(for: owned, in: modelContext, now: now())
-            items = narrowed(owned).sorted(by: isOrderedBefore)
+            // Each side under its own narrowing, passed explicitly so no call
+            // can read the other side's (014 plan Q1).
+            items = narrowed(owned, by: ownedNarrowing).sorted(by: isOrderedBefore)
             // Built from the unfiltered fetch, so the chips stay put as the
-            // filter changes — and from owned items only, so the row doesn't
-            // offer categories that only wishlist entries sit in, or ones
-            // nothing on this side is left in.
-            categoryOptions = CategoryPathHelper.sortedDistinctPaths(
+            // filter changes — and each pair from its own half, so neither row
+            // offers categories that only wishlist entries sit in, ones nothing
+            // owned is left in, or ones nothing was sold from.
+            ownedCategoryOptions = CategoryPathHelper.sortedDistinctPaths(
                 owned.map { (path: $0.categoryPath, createdAt: $0.createdAt) }
             )
-            categoryLabels = CategoryPathHelper.displayLabels(for: categoryOptions)
+            ownedCategoryLabels = CategoryPathHelper.displayLabels(for: ownedCategoryOptions)
+            soldCategoryOptions = CategoryPathHelper.sortedDistinctPaths(
+                sold.map { (path: $0.categoryPath, createdAt: $0.createdAt) }
+            )
+            soldCategoryLabels = CategoryPathHelper.displayLabels(for: soldCategoryOptions)
 
-            soldItems = sold.sorted(by: isInSoldOrder)
+            soldItems = narrowed(sold, by: soldNarrowing).sorted(by: isInSoldOrder)
             soldTotals = SaleOutcome.totals(over: soldItems)
         } catch {
             loadFailureMessage = error.localizedDescription
+            owned = []
+            sold = []
             totalCount = 0
+            soldTotalCount = 0
             items = []
-            categoryOptions = []
-            categoryLabels = [:]
+            ownedCategoryOptions = []
+            ownedCategoryLabels = [:]
+            soldCategoryOptions = []
+            soldCategoryLabels = [:]
             marketSummaries = [:]
             soldItems = []
             soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)
@@ -359,19 +484,24 @@ final class ItemListViewModel {
 
     /// The three narrowings, in one place so the two sides can't drift: a
     /// narrowing is about *which gear*, and sold gear still has a category, a
-    /// name and a value field (plan Q5). `items` is this over the owned half;
-    /// the CSV's sold rows are this over the sold half. On the Sold side it is
-    /// the identity, because `show(.sold)` cleared all three fields.
-    private func narrowed(_ candidates: [Item]) -> [Item] {
+    /// name and a value field (006 plan Q5). `items` is this over the owned
+    /// half under `ownedNarrowing`, `soldItems` this over the sold half under
+    /// `soldNarrowing`.
+    ///
+    /// The narrowing is an argument rather than read from the properties (014
+    /// plan Q1) so no call site can reach the side that isn't on screen — the
+    /// leak Decision 4 forbids is a compile-time impossibility here, not a
+    /// convention.
+    private func narrowed(_ candidates: [Item], by narrowing: Narrowing) -> [Item] {
         candidates
             // `isWithin`, not `matchesPrefix`: a chip is a category that
             // exists, so "Music/Amps" must not also match
             // "Music/Amplifiers". The typing rule stays in the picker.
-            .filter { CategoryPathHelper.path($0.categoryPath, isWithin: categoryFilter) }
+            .filter { CategoryPathHelper.path($0.categoryPath, isWithin: narrowing.categoryFilter) }
             // Design's field says "name, brand, serial"; there is no brand
             // in the schema, same gap `ItemRow`'s meta line works around.
-            .filter { SearchMatching.matches(query: searchText, in: [$0.name, $0.serialNumber]) }
-            .filter { !showsOnlyUnvalued || $0.currentValueCents == nil }
+            .filter { SearchMatching.matches(query: narrowing.searchText, in: [$0.name, $0.serialNumber]) }
+            .filter { !narrowing.showsOnlyUnvalued || $0.currentValueCents == nil }
     }
 
     /// One fetch of the figure rows, narrowed to the items just fetched.
@@ -548,7 +678,12 @@ final class ItemListViewModel {
     /// The sold rows a CSV exported from here would carry: the Sold side's
     /// order, under the Owned side's *visible* narrowing, so the coverage
     /// label stays true of both halves.
-    private var exportableSoldItems: [Item] { narrowed(soldItems) }
+    ///
+    /// Reads the unnarrowed `sold` half, not `soldItems`, which since 014
+    /// carries the Sold side's own narrowing: this member is 011's behaviour
+    /// unchanged — the visible narrowing over every sale — and 014's T004 is
+    /// what revisits it.
+    private var exportableSoldItems: [Item] { narrowed(sold, by: narrowing).sorted(by: isInSoldOrder) }
 
     /// Combined purchase price of the items on screen — the cover's "total
     /// paid", tracking the filter like `totalCurrentValueCents` does.
