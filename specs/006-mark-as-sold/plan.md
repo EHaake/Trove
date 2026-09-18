@@ -109,7 +109,7 @@ types (spec "What and why"). So there is no Phase 0.
   (either side non-empty) and `canExportPDF` (owned non-empty); the
   `OverflowDropdown` takes both and `ExportWiringTests` is **broadened**, not
   weakened: two rows, one gate each, Import and Settings still ungated (§7).
-  *Superseded by `014-sold-side-parity` (its plan, P11): the CSV is narrowed by the on-screen side only, so the Sold side's narrowing is no longer the identity and the "Because changing side clears every narrowing (Q15)" clause above no longer holds.*
+  *Superseded by `014-sold-side-parity` (its spec, P11): the CSV is narrowed by the on-screen side only, so the Sold side's narrowing is no longer the identity and the "Because changing side clears every narrowing (Q15)" clause above no longer holds.*
 - **Q6. Import pair rule.** A row is a sold item iff **both** `Sold Date` and
   `Sale Price` parse (the schema's own date and money parsers). Otherwise the
   item imports unsold, and — if *any* of the four sale cells was non-blank —
@@ -449,7 +449,7 @@ unchanged in body (it reads `items`). The narrowing applied to sold rows is
 the same three filters, extracted into one `narrowed(_:)` so the two sides
 can't drift — and on the Sold side `narrowed` is the identity, because
 `show(.sold)` cleared the three fields (Q15).
-*Superseded by `014-sold-side-parity` (its spec, Decision 4, and its plan P11): each side keeps its own narrowing, so `narrowed` is not the identity on the Sold side; the CSV is narrowed by the on-screen side only (P11).*
+*Superseded by `014-sold-side-parity` (its spec, Decision 4 and P11): each side keeps its own narrowing, so `narrowed` is not the identity on the Sold side; the CSV is narrowed by the on-screen side only (P11).*
 
 `AppRouter`: `ItemsRequest.sold`, `func showSoldItems()` (sets the request,
 `popToItemsRoot()`). `ItemListView.apply`: `.sold` → `viewModel.show(.sold)`;

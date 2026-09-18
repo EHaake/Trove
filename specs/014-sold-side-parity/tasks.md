@@ -227,7 +227,9 @@ the same label (plan R2) — the report puts it as a question, not a fact.
   Files: `Trove/ViewModels/ItemListViewModel.swift`, `Trove/Models/SaleCopy.swift`,
   `TroveTests/ItemListViewModelTests.swift`, `TroveTests/ItemDetailViewModelTests.swift`,
   `TroveTests/SaleCopyTests.swift`.
-  **Verify:** `scripts/verify.sh` green; mutations recorded. **Phase 1
+  **Verify:** `scripts/verify.sh` green; mutations recorded; `scripts/verify.sh ui`
+  once at the phase end, count recorded (added at the Phase 1 review: 20 UI
+  tests, 0 failures at `41d6dd7`). **Phase 1
   closes here — pause for the person** (nothing to try yet; the pause is the
   review gate — the report may offer to run straight on).
 
@@ -339,7 +341,8 @@ the same label (plan R2) — the report puts it as a question, not a fact.
   — do not drop the assertion.
   Files: `TroveUITests/TroveUITests.swift`.
   **Verify:** `scripts/verify.sh` green; `scripts/verify.sh ui` green twice,
-  both counts in the Done note; mutations recorded. **Phase 2 closes here —
+  both counts in the Done note (the phase-end UI run, per the Phase 1 review);
+  mutations recorded. **Phase 2 closes here —
   pause for the person** (what can be tried: swipe an owned row right and
   tap Sell — the sheet opens, Cancel changes nothing; search, filter and
   sort the Sold side; leave a search or a filter on one side, visit the
@@ -431,4 +434,6 @@ interpreted here.
 | T004 — `sdd-implementer` (incl. one fix round) | `opus` | ~88k + ~98k | Done; 1518 unit tests green (orchestrator re-ran twice: 1517 before the fix, 1518 after). New tests G11–G16 in `ItemListViewModelTests`, G14 in `SettingsViewModelTests`, plus `aSoldChipMatchingNeitherHalfDisablesTheCSVFromTheSoldSide` from the review. Mutations: owned half by `ownedNarrowing` → G11/G15/G16 red; sold half by `soldNarrowing` → G12 + three `006` tests red; CSV writes `soldItems` → G13 red; owned-from-Sold in `isOrderedBefore` → G14 red; PDF from `items` → G15 red; `canExportPDF` reads `items` → G16 red; `canExportCSV` reads `items` → the new test red; coverage label from `ownedNarrowing` → G11/G15 red. Note: G14's fixture needs explicit purchase dates or Date and Custom order coincide |
 | T004 — `skeptical-reviewer` per-task review + re-review | `opus` | ~55k + ~57k | One blocking (the CSV gate's owned term had no red mutation) — fixed, re-review sign off. Second-look kept open by design: (2) criterion 10 read literally ("whatever sort either side is showing") is untrue from the Owned side under Date — plan R1's Owned-side exception; goes to the person at the Phase 2 pause with R2, and criterion 10's wording at close-out; (4) the two gates sort a full array to answer isEmpty, and the header's three figures each compute all three — negligible, no value changes; (5) G14's sold tie-break is covered by one tie shape only — the sweep confirms both paths share `areInSoldOrder` |
 | T005 — `sdd-implementer` | `opus` | ~75k | Done; 1519 unit tests in 205 suites green. New suite `ItemListViewModelSwipeSaleTests` (G18 on a second context); the refusal scan gains the list's `markSold`; `bothHostsSeedTheMarkSheetIdentically` → `everyHostSeedsTheMarkSheetIdentically` (three hosts). Mutations: `?? 0` in the seed → G17 red; `rollback()` dropped → scan red; `toward:` a fetched plan → G18 red; `swipeSell` → "Sold" → G23 red. Deviation: `loadFailureMessage` set after `load()` in the catch, since `load()` clears it first. Finding (pre-existing, out of scope): `duplicate(id:)`'s catch sets the message then `load()` clears it — a refused duplicate reports nothing; flagged for a `fix/` branch |
+| T001 fix — `sdd-implementer` (phase-review round) | `opus` | ~44k | P16 pointer rewritten with the eight labels and glyphs; both plan.md pointers cite "its spec" for P11 |
+| Phase 1 — `skeptical-reviewer` review + re-review | `opus` | ~130k + ~2k | Two blocking: the P16 pointer named five options (fixed), and the UI suite not run at the phase end (run: 20 tests, 0 failures; cadence written into T005/T009 Verify lines). Re-review: sign off. Second-look kept open: S1 `markSold`'s message-after-`load()` ordering has no red mutation (the scan is order-blind); S3 G11/G12 don't `#require` their hidden-side premise (would go vacuous, not red, if per-side keeping regressed — G4 is the backstop); S4 T009's round-trip test must type into the field, not drive state (view-side @State mirror would be invisible to unit guards) — carried to T009's bundle; S5 `SortDropdown` genericity — void, it is generic; S6 a CSV from Owned with the Un-valued chip on also drops sold rows carrying a value (006's inherited behaviour, label stays true) — a sentence for T011's "As built" |
 | _rows added per dispatch as the spec runs_ | | | |

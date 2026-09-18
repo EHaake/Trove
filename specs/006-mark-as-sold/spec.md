@@ -762,7 +762,7 @@ plan approval):
   Sort By is hidden on the Sold side, which is always most recent first;
   swipe-to-delete works on a sold row with the same confirmation as an owned
   one, since Delete is one of the sold page's three actions anyway.
-  *Superseded by `014-sold-side-parity` (its spec, Decision 3 and P6): Sort By is offered on the Sold side too, with its own five options — Date sold, Price, Paid, Gain, Name — defaulting to Date sold, newest first.*
+  *Superseded by `014-sold-side-parity` (its spec, Decision 3 and P6): Sort By is offered on the Sold side too, with its own eight options — Date sold, Price ↓, Price ↑, Paid ↓, Paid ↑, Gain ↓, Gain ↑ and Name — defaulting to Date sold, newest first.*
 - **P17. The "…" menu is the same on both sides.** Its CSV export covers
   both owned and sold items (the file is the complete record and the sale
   columns mark the side), its PDF export stays owned-only (the collection
