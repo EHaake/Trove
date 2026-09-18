@@ -666,6 +666,49 @@ final class ItemListViewModel {
         load()
     }
 
+    // MARK: - Mark as sold (014)
+
+    /// The swipe's sheet, seeded exactly as the detail screen's `.mark` sheet
+    /// and a Sell Plan row's are (006 plan P1): mode `.mark`, nothing
+    /// pre-filled, the price from the item's own current value when it has one
+    /// and blank when it doesn't, the date from this screen's injected clock.
+    /// One seeding rule for all three hosts — a tested equality (G17) rather
+    /// than three factories agreeing by inspection.
+    func makeSaleFormViewModel(for item: Item) -> SaleFormViewModel {
+        SaleFormViewModel(mode: .mark, prefill: nil, currentValueCents: item.currentValueCents, now: now)
+    }
+
+    /// Mark as sold… from the Owned side's swipe: the sale points at **no
+    /// plan** (006 plan P5) — the swipe is opened from the collection, not
+    /// from a plan, so there is nothing for it to be sold toward.
+    ///
+    /// `ItemSaleStore` is the one writer and callers save, so the item's write
+    /// and the device's market rows commit in one `save()`. The `store(_:)`
+    /// shape on refusal: roll back, report, re-read.
+    ///
+    /// Returns false on a refused save.
+    @discardableResult
+    func markSold(_ item: Item, sale: Sale) -> Bool {
+        do {
+            try ItemSaleStore.markSold(item, sale: sale, toward: nil, at: now(), in: modelContext)
+            try modelContext.save()
+        } catch {
+            // `rollback()` discards every pending change on the shared
+            // context, not only this intent's — the same recovery `duplicate`
+            // and the detail screen's intents use. The reload below then shows
+            // what is actually stored: the row still owned, on the Owned side.
+            modelContext.rollback()
+            load()
+            // After the reload, not before: `load()` clears
+            // `loadFailureMessage` on entry, so a message set ahead of it
+            // would never reach the screen.
+            loadFailureMessage = error.localizedDescription
+            return false
+        }
+        load()
+        return true
+    }
+
     // MARK: - Export (011)
 
     /// The staged file the view offers through the share sheet, or nil.

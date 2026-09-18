@@ -1609,9 +1609,10 @@ struct ItemDetailSoldTests {
     ///
     /// The Sell Plan's own `markSold(_:sale:)` is the fourth intent on the
     /// same path and is scanned here beside the three, so one host can't drift
-    /// from the other. It carries one extra anchor: plan §3 has it report the
-    /// refusal in `saveFailureMessage`, which the detail screen surfaces its
-    /// own way.
+    /// from the other. It carries one extra anchor: 006 plan §3 has it report
+    /// the refusal in `saveFailureMessage`, which the detail screen surfaces
+    /// its own way. The Items list's swipe (014 §5) is the fifth, reporting in
+    /// the message *it* has, `loadFailureMessage`.
     @Test func aRefusedSaveRollsBackAndReReadsWhatIsStored() throws {
         // (file, signature, the failure message the host must also set)
         let intents: [(String, String, String?)] = [
@@ -1619,6 +1620,7 @@ struct ItemDetailSoldTests {
             ("Trove/ViewModels/ItemDetailViewModel.swift", "func editSale(_ sale: Sale) -> Bool", nil),
             ("Trove/ViewModels/ItemDetailViewModel.swift", "func returnToCollection() -> Bool", nil),
             ("Trove/ViewModels/SellPlanViewModel.swift", "func markSold(_ item: Item, sale: Sale) -> Bool", "saveFailureMessage ="),
+            ("Trove/ViewModels/ItemListViewModel.swift", "func markSold(_ item: Item, sale: Sale) -> Bool", "loadFailureMessage ="),
         ]
         var sources: [String: String] = [:]
         for path in Set(intents.map(\.0)) {
@@ -1720,16 +1722,16 @@ struct ItemDetailSoldTests {
         #expect(form.note == "Shipped Tuesday")
     }
 
-    /// One seeding rule, two hosts (P1): for the same item and the same
-    /// clock, the detail page's Mark as sold… sheet and a Sell Plan row's
-    /// seed the same sheet. Deferred here from T011, which had only one half
-    /// of the comparison to make.
+    /// One seeding rule, every host (P1): for the same item and the same
+    /// clock, the detail page's Mark as sold… sheet, a Sell Plan row's, and —
+    /// since 014 G17 — the Items list swipe's seed the same sheet. Deferred
+    /// here from T011, which had only one half of the comparison to make.
     ///
     /// Both an item that has a current value and one that hasn't: agreeing on
-    /// the valued item alone would leave the plan host free to seed a $0 price
+    /// the valued item alone would leave another host free to seed a $0 price
     /// where the detail host leaves the field blank — the one distinction P1
-    /// rests on, and the one a `?? 0` slipped into either host would break.
-    @Test func bothHostsSeedTheMarkSheetIdentically() throws {
+    /// rests on, and the one a `?? 0` slipped into any host would break.
+    @Test func everyHostSeedsTheMarkSheetIdentically() throws {
         let context = try makeInMemoryContext()
         let item = Item(name: "Telecaster", purchasePriceCents: 100_000, currentValueCents: 130_000, desireToKeep: 1)
         context.insert(item)
@@ -1747,6 +1749,11 @@ struct ItemDetailSoldTests {
         sellPlan.toggle(unvalued)
         sellPlan.load()
 
+        // The third host: the Owned side's swipe, over the same context and
+        // the same clock (014 §5).
+        let list = ItemListViewModel(modelContext: context, now: { self.now })
+        list.load()
+
         for subject in [item, unvalued] {
             let detail = loaded(subject, in: context)
             detail.saleSheet = .mark
@@ -1758,18 +1765,29 @@ struct ItemDetailSoldTests {
             )
             let fromPlan = sellPlan.makeSaleFormViewModel(for: candidate)
 
-            #expect(fromDetail.title == fromPlan.title)
-            #expect(fromDetail.confirmLabel == fromPlan.confirmLabel)
-            #expect(fromDetail.price == fromPlan.price, "\(subject.name): both hosts seed the same price")
-            #expect(fromDetail.date == fromPlan.date, "\(subject.name): both hosts seed the same date")
-            #expect(fromDetail.location == fromPlan.location)
-            #expect(fromDetail.note == fromPlan.note)
+            let row = try #require(
+                list.items.first { $0.id == subject.id },
+                "\(subject.name) must be an Owned row for the comparison to mean anything"
+            )
+            let fromList = list.makeSaleFormViewModel(for: row)
+
+            for (host, form) in [("the plan", fromPlan), ("the list", fromList)] {
+                #expect(fromDetail.title == form.title)
+                #expect(fromDetail.confirmLabel == form.confirmLabel)
+                #expect(fromDetail.price == form.price, "\(subject.name): the detail and \(host) seed the same price")
+                #expect(fromDetail.date == form.date, "\(subject.name): the detail and \(host) seed the same date")
+                #expect(fromDetail.location == form.location)
+                #expect(fromDetail.note == form.note)
+            }
         }
 
-        // Pinned, so the pair agreeing on the wrong thing still fails.
+        // Pinned, so hosts agreeing on the wrong thing still fails.
         let unvaluedCandidate = try #require(sellPlan.candidates.first { $0.id == unvalued.id })
         #expect(sellPlan.makeSaleFormViewModel(for: unvaluedCandidate).price == nil, "no value entered means a blank field, never $0")
         #expect(sellPlan.makeSaleFormViewModel(for: unvaluedCandidate).date == now)
+        let unvaluedRow = try #require(list.items.first { $0.id == unvalued.id })
+        #expect(list.makeSaleFormViewModel(for: unvaluedRow).price == nil, "no value entered means a blank field, never $0")
+        #expect(list.makeSaleFormViewModel(for: unvaluedRow).date == now)
     }
 
     // MARK: - Delete

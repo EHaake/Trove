@@ -2580,3 +2580,70 @@ struct ItemListViewModelSoldExportTests {
         #expect(spy.documents.isEmpty)
     }
 }
+
+// MARK: - 014: Mark as sold from the Owned side's swipe
+
+@Suite("ItemListViewModel — Mark as sold from the swipe")
+struct ItemListViewModelSwipeSaleTests {
+    private let soldOn = Date(timeIntervalSince1970: 1_770_000_000)
+    private let now = Date(timeIntervalSince1970: 1_780_000_000)
+
+    /// G18: confirming the swipe's sheet records the four sale fields, points
+    /// the sale at **no** plan (006 P5), empties the item's plan *selections*
+    /// (006 P6), and moves the row from the Owned side to the Sold one.
+    ///
+    /// The stored half is refetched on a second `ModelContext` — the T003
+    /// rule: a same-context refetch hands back the object carrying unsaved
+    /// changes and would pass whether or not `markSold` saved.
+    ///
+    /// Mutations: `toward: nil` → a plan → the link assertion red; the
+    /// selection line dropped from `ItemSaleStore` → the selection assertions
+    /// red. The refusal path is structural, in
+    /// `ItemDetailViewModelTests.aRefusedSaveRollsBackAndReReadsWhatIsStored`.
+    @Test func aSaleFromTheSwipeRecordsTheFourFieldsAndMovesTheRow() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let item = Item(
+            name: "Telecaster",
+            purchasePriceCents: 100_000,
+            purchaseDate: Date(timeIntervalSince1970: 100),
+            currentValueCents: 130_000
+        )
+        context.insert(item)
+        insertItem("Blues Junior", purchasedAt: 50, into: context)
+        let plan = WishlistItem(name: "Rickenbacker 330", estimatedCostCents: 240_000)
+        context.insert(plan)
+        // The row is on a Sell Plan's selection when it is sold from the list,
+        // which is the state P6 is about.
+        item.plannedForWishlistItems = [plan]
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context, now: { self.now })
+        viewModel.load()
+        try #require(viewModel.items.map(\.name) == ["Telecaster", "Blues Junior"])
+
+        let recorded = viewModel.markSold(
+            item,
+            sale: Sale(date: soldOn, priceCents: 95_000, location: "Reverb", note: "Shipped Tuesday")
+        )
+
+        #expect(recorded)
+        #expect(viewModel.loadFailureMessage == nil)
+        #expect(viewModel.items.map(\.name) == ["Blues Junior"], "the sold row leaves the Owned side")
+        #expect(viewModel.soldItems.map(\.name) == ["Telecaster"], "and arrives on the Sold one")
+
+        let elsewhere = ModelContext(container)
+        let stored = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first { $0.name == "Telecaster" })
+        #expect(stored.sale?.date == soldOn)
+        #expect(stored.sale?.priceCents == 95_000)
+        #expect(stored.sale?.location == "Reverb")
+        #expect(stored.sale?.note == "Shipped Tuesday")
+        #expect(stored.updatedAt == now, "stamped by this screen's injected clock")
+        #expect(stored.soldTowardWishlistItem == nil, "the swipe sells toward no plan (006 P5)")
+        #expect(stored.plannedForWishlistItems?.isEmpty ?? true, "the sale drops every plan selection (006 P6)")
+
+        let storedPlan = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(storedPlan.plannedSaleItems?.isEmpty ?? true, "seen from the plan's side too")
+        #expect(storedPlan.itemsSoldToward?.isEmpty ?? true, "the sale was not recorded toward it")
+    }
+}
