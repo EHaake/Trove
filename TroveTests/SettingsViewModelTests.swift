@@ -344,7 +344,7 @@ struct SettingsViewModelExportTests {
         let itemsList = ItemListViewModel(modelContext: context, exportService: itemsSpy)
         itemsList.sortOrder = .custom
         itemsList.load()
-        await itemsList.exportPDF()
+        await itemsList.exportPDF(scope: .owned)
 
         let wishlistSpy = ExportServiceSpy()
         let wishlist = WishlistViewModel(modelContext: context, exportService: wishlistSpy)

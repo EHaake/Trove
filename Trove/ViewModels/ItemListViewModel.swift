@@ -771,12 +771,14 @@ final class ItemListViewModel {
     /// chooser with nothing in it.
     var canExportCSV: Bool { canExport(.both) }
 
-    /// The PDF is the owned collection only, on this path as on Settings'
-    /// (plan Q5), so it gates on the owned half alone — the half the file
-    /// would actually carry, which from the Sold side is not `items`
-    /// (014 plan Q8): a Sold chip no owned row is in leaves a CSV worth
-    /// writing and no PDF at all.
-    var canExportPDF: Bool { !exportableOwnedItems.isEmpty }
+    /// Whether the menu's PDF row is enabled. Since 014's chooser (plan Q14)
+    /// this reads the same widest scope the CSV row does: the row opens the
+    /// chooser rather than exporting, so it is enabled when *any* chooser row
+    /// is. The PDF is no longer the owned collection alone — an all-sold
+    /// collection, or a Sold chip no owned row is in, has a sold document
+    /// worth writing (P13/P14), and it is `canExport(.owned)` that stays
+    /// false there and disables that one row.
+    var canExportPDF: Bool { canExport(.both) }
 
     /// The owned rows a file exported from here carries: the **side on
     /// screen's** narrowing over the owned half (014 P11 — a file is never
@@ -831,6 +833,12 @@ final class ItemListViewModel {
     /// export can't drift — criterion 5's byte-identity rests on it.
     static let documentTitle = "Owned Items"
     static let wholeCoverageLabel = "All items"
+
+    /// The sold document's title (014 P14, plan Q15). Beside `documentTitle`
+    /// for its reason: the sold PDF is a document of its own, in its own file
+    /// (`ExportFilename.soldItems`), and its cover must say so rather than
+    /// repeating the owned document's words.
+    static let soldDocumentTitle = "Sold Items"
 
     /// The Sold side's order (plan Q9): most recent sale first, then name
     /// case-insensitively, then id — fully determined by the data, the
@@ -955,21 +963,52 @@ final class ItemListViewModel {
         }
     }
 
-    /// Exports the visible items as the PDF collection document. Same
-    /// snapshot rule as `exportCSV`; the cover's figures are this view
+    /// Exports the chosen scope as PDF: the owned collection document, the
+    /// sold one, or both in a single share sheet (014 P13, plan Q16). Same
+    /// snapshot rule as `exportCSV`, and the covers' figures are this view
     /// model's own arithmetic, which is what criterion 8 measures.
-    func exportPDF() async {
-        guard canExportPDF, !isBusy else { return }
+    ///
+    /// The scope has **no default** (plan Q14) — every call site says which
+    /// items it means, so the Items list's own menu keeps producing exactly
+    /// today's owned document until the chooser hands it a scope.
+    ///
+    /// A half with no rows is dropped rather than staged, so an empty file is
+    /// never produced (011 criterion 2) and "owned and sold" with nothing
+    /// sold is today's single owned document. The one or two files go through
+    /// **one** `exportFiles` call — never one per document, which would purge
+    /// each other on the live service — so the pair case can't purge itself
+    /// and the single cases share the path (`SettingsViewModel.stage(_:)`).
+    func exportPDF(scope: ExportScope) async {
+        guard canExport(scope), !isBusy else { return }
         isExporting = true
         defer { isExporting = false }
 
-        // The owned half under the on-screen side's narrowing (014 plan R2),
-        // entries and cover over the one set of rows, so the cover never
-        // claims more than the file lists.
+        var files: [ExportFile] = []
+        if scope != .sold, let document = ownedDocument() {
+            files.append(.pdf(document, filename: ExportFilename.items(fileExtension: "pdf")))
+        }
+        if scope != .owned, let document = soldDocument() {
+            files.append(.pdf(document, filename: ExportFilename.soldItems(fileExtension: "pdf")))
+        }
+
+        do {
+            let urls = try await exportService.exportFiles(files)
+            stagedExport = StagedExport(urls: urls, filenames: files.map(\.filename))
+        } catch {
+            exportFailureMessage = ExportCopy.failureMessage
+        }
+    }
+
+    /// The owned collection document, or nil when the scope's owned half is
+    /// empty. Built over `exportableOwnedItems` — the owned half under the
+    /// on-screen side's narrowing (014 plan R2) — entries and cover over the
+    /// one set of rows, so the cover never claims more than the file lists.
+    private func ownedDocument() -> PDFDocumentModel? {
         let rows = exportableOwnedItems
+        guard !rows.isEmpty else { return nil }
+
         let coverFigures = Self.figures(over: rows)
-        let records = rows.map { ItemExportRecord(item: $0) }
-        let document = PDFDocumentModel(
+        return PDFDocumentModel(
             cover: CoverSummary(
                 title: Self.documentTitle,
                 coverageLabel: exportCoverageLabel,
@@ -981,15 +1020,36 @@ final class ItemListViewModel {
                     unvaluedCount: coverFigures.unvaluedCount
                 )
             ),
-            entries: records.map { PDFEntry(record: $0) }
+            entries: rows.map { PDFEntry(record: ItemExportRecord(item: $0)) }
         )
-        let filename = ExportFilename.items(fileExtension: "pdf")
-        do {
-            let url = try await exportService.exportPDF(document, filename: filename)
-            stagedExport = StagedExport(url: url, filename: filename)
-        } catch {
-            exportFailureMessage = ExportCopy.failureMessage
-        }
+    }
+
+    /// The sold document (014 P14, plan Q15), or nil when the scope's sold
+    /// half is empty. `exportableSoldItems` for the same reason the CSV uses
+    /// it: the side's narrowing, always in Date-sold order, whatever the Sold
+    /// side happens to be sorted by (P10). Proceeds and the realised delta
+    /// come from `SaleOutcome.totals(over:)` — the Dashboard card's own sum —
+    /// and what was paid from `figures(over:)`, the header's, so the cover
+    /// can't total its rows by a rule the app doesn't use elsewhere.
+    private func soldDocument() -> PDFDocumentModel? {
+        let rows = exportableSoldItems
+        guard !rows.isEmpty else { return nil }
+
+        let saleTotals = SaleOutcome.totals(over: rows)
+        return PDFDocumentModel(
+            cover: CoverSummary(
+                title: Self.soldDocumentTitle,
+                coverageLabel: exportCoverageLabel,
+                generatedAt: .now,
+                itemCount: rows.count,
+                totals: .sold(
+                    proceedsCents: saleTotals.proceedsCents,
+                    paidCents: Self.figures(over: rows).paidCents,
+                    realisedDeltaCents: saleTotals.realisedDeltaCents
+                )
+            ),
+            entries: rows.map { PDFEntry(record: ItemExportRecord(item: $0)) }
+        )
     }
 
     // MARK: - Import (012)

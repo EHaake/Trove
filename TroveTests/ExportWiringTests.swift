@@ -27,6 +27,11 @@ struct ExportWiringTests {
         /// chooser the scope), while the Wishlist's is unchanged — a scan for
         /// one shared literal could no longer tell the two apart.
         let csvAction: String
+        /// The exact PDF intent, per screen for the same reason since
+        /// 014/T009d: the Items list's `exportPDF` takes the scope with no
+        /// default too, and until the chooser exists its row must keep firing
+        /// `.owned` — the very document Settings ships (plan Q14/Q16).
+        let pdfAction: String
     }
 
     private nonisolated static let gates = [
@@ -34,13 +39,15 @@ struct ExportWiringTests {
             path: "Trove/Views/Items/ItemListView.swift",
             csv: "canExportCSV: viewModel.canExportCSV",
             pdf: "canExportPDF: viewModel.canExportPDF",
-            csvAction: "viewModel.exportCSV(scope: .both)"
+            csvAction: "viewModel.exportCSV(scope: .both)",
+            pdfAction: "viewModel.exportPDF(scope: .owned)"
         ),
         DropdownGates(
             path: "Trove/Views/Wishlist/WishlistView.swift",
             csv: "canExportCSV: viewModel.canExport",
             pdf: "canExportPDF: viewModel.canExport",
-            csvAction: "viewModel.exportCSV()"
+            csvAction: "viewModel.exportCSV()",
+            pdfAction: "viewModel.exportPDF()"
         ),
     ]
 
@@ -68,7 +75,7 @@ struct ExportWiringTests {
             #expect(call.contains(gates.csv), "\(path) dropdown not fed \(gates.csv)")
             #expect(call.contains(gates.pdf), "\(path) dropdown not fed \(gates.pdf)")
             #expect(call.contains(gates.csvAction), "\(path) dropdown doesn't fire \(gates.csvAction)")
-            #expect(call.contains("viewModel.exportPDF()"), "\(path) dropdown doesn't fire exportPDF")
+            #expect(call.contains(gates.pdfAction), "\(path) dropdown doesn't fire \(gates.pdfAction)")
             #expect(call.contains("isPickingImportFile = true"), "\(path) dropdown doesn't open the picker")
             #expect(call.contains("isShowingSettings = true"), "\(path) dropdown doesn't open Settings")
             #expect(

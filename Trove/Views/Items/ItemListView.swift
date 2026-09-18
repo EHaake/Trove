@@ -373,7 +373,7 @@ struct ItemListView: View {
                     canExportCSV: viewModel.canExportCSV,
                     canExportPDF: viewModel.canExportPDF,
                     exportCSV: { Task { await viewModel.exportCSV(scope: .both) } },
-                    exportPDF: { Task { await viewModel.exportPDF() } },
+                    exportPDF: { Task { await viewModel.exportPDF(scope: .owned) } },
                     importCSV: { isPickingImportFile = true },
                     openSettings: { isShowingSettings = true }
                 )

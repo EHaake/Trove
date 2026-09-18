@@ -1052,7 +1052,7 @@ struct ItemListViewModelExportTests {
         viewModel.load()
 
         await viewModel.exportCSV(scope: .both)
-        await viewModel.exportPDF()
+        await viewModel.exportPDF(scope: .owned)
 
         #expect(spy.tables.isEmpty)
         #expect(spy.documents.isEmpty)
@@ -1094,7 +1094,7 @@ struct ItemListViewModelExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.load()
 
-        await viewModel.exportPDF()
+        await viewModel.exportPDF(scope: .owned)
 
         let document = try #require(spy.documents.first)
         #expect(document.entries.count == 3)
@@ -1139,7 +1139,7 @@ struct ItemListViewModelExportTests {
         // Reentrant attempts — same format and the other — bounce off the
         // guard without reaching the service.
         await viewModel.exportCSV(scope: .both)
-        await viewModel.exportPDF()
+        await viewModel.exportPDF(scope: .owned)
         #expect(spy.csvCalls == 1)
         #expect(spy.pdfCalls == 0)
 
@@ -2318,7 +2318,7 @@ struct ItemListViewModelSoldExportTests {
         let spy = ExportServiceSpy()
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.load()
-        await viewModel.exportPDF()
+        await viewModel.exportPDF(scope: .owned)
 
         let document = try #require(spy.documents.first)
         #expect(document.entries.map(\.name) == ["Kept"])
@@ -2331,12 +2331,19 @@ struct ItemListViewModelSoldExportTests {
         }
     }
 
-    /// Plan Q5's split gate: an all-sold collection has a CSV worth writing
-    /// and nothing at all to put in a PDF. One `canExport` would have to be
-    /// wrong about one of them.
-    @Test func anAllSoldCollectionCanExportACSVButNotAPDF() async throws {
+    /// G36, rewritten at 014/T009d from `anAllSoldCollectionCanExportACSVButNotAPDF`:
+    /// the split gate 006's plan Q5 pinned is gone, because the PDF is no
+    /// longer the owned collection alone (014 P13/P14). An all-sold
+    /// collection has both menu rows enabled — each opens the chooser, and
+    /// two of its three scopes have a file — and it is the **Owned scope
+    /// alone** that is disabled and stages nothing.
+    ///
+    /// Mutations, both run: `canExportPDF` reading the owned half → the menu
+    /// row hides a sold document worth writing → red; the `.owned` PDF
+    /// staging anyway → the empty document arrives → red.
+    @Test func anAllSoldCollectionOffersBothFormatsWithTheOwnedScopeDisabled() async throws {
         let context = try makeInMemoryContext()
-        insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
+        insertSold("Gone", priceCents: 40_00, soldAt: 1_000, forCents: 100_00, into: context)
         try context.save()
 
         let spy = ExportServiceSpy()
@@ -2344,13 +2351,22 @@ struct ItemListViewModelSoldExportTests {
         viewModel.load()
 
         #expect(viewModel.canExportCSV)
-        #expect(!viewModel.canExportPDF)
+        #expect(viewModel.canExportPDF, "the sold half is a PDF worth writing")
+        #expect(!viewModel.canExport(.owned), "nothing is owned")
+        #expect(viewModel.canExport(.sold))
+        #expect(viewModel.canExport(.both))
 
         await viewModel.exportCSV(scope: .both)
-        await viewModel.exportPDF()
+        await viewModel.exportPDF(scope: .owned)
 
         #expect(spy.tables.map { $0.rows.map { $0[0] } } == [["Gone"]])
-        #expect(spy.documents.isEmpty, "the PDF intent's own guard backs up the disabled row")
+        #expect(spy.documents.isEmpty, "the disabled scope's intent stages nothing")
+
+        // And the scope that does have rows produces the sold document.
+        await viewModel.exportPDF(scope: .sold)
+        let document = try #require(spy.documents.first)
+        #expect(document.cover.title == ItemListViewModel.soldDocumentTitle)
+        #expect(document.entries.map(\.name) == ["Gone"])
     }
 
     /// The other end of the gate: a narrowing that excludes both halves
@@ -2504,7 +2520,7 @@ struct ItemListViewModelSoldExportTests {
         viewModel.show(.sold)
         viewModel.categoryFilter = "Photography"
         viewModel.load()
-        await viewModel.exportPDF()
+        await viewModel.exportPDF(scope: .owned)
 
         let document = try #require(spy.documents.first)
         #expect(document.entries.map(\.name) == ["Summilux", "Leica M6"])
@@ -2518,13 +2534,16 @@ struct ItemListViewModelSoldExportTests {
         }
     }
 
-    /// G16: the gates read the rows the file would carry, not the rows on
-    /// screen. A Sold-side chip that no owned row is in still has a CSV worth
-    /// writing — the sold rows in it — and nothing at all to put in a PDF.
+    /// G16, rewritten at 014/T009d from
+    /// `aSoldChipNoOwnedRowIsInKeepsTheCSVAndDisablesThePDF`: the gates still
+    /// read the rows the file would carry rather than the rows on screen, but
+    /// what a Sold-side chip no owned row is in now disables is the **Owned
+    /// scope alone** — both menu rows stay enabled, because the sold rows in
+    /// that chip are a CSV *and* a PDF worth writing (014 P13/P14).
     ///
-    /// Mutation: gate the PDF on `!items.isEmpty` → the owned half the screen
-    /// isn't showing enables a document with no rows in it → red.
-    @Test func aSoldChipNoOwnedRowIsInKeepsTheCSVAndDisablesThePDF() async throws {
+    /// Mutation: gate `canExport(.owned)` on `!items.isEmpty` → the owned half
+    /// the screen isn't showing enables a document with no rows in it → red.
+    @Test func aSoldChipNoOwnedRowIsInDisablesTheOwnedScopeAlone() async throws {
         let context = try makeInMemoryContext()
         insertItem("Telecaster", category: "Music/Guitars", into: context)
         insertSold("Leica M6", category: "Photography/Cameras", soldAt: 1_000, forCents: 100, into: context)
@@ -2536,14 +2555,20 @@ struct ItemListViewModelSoldExportTests {
         viewModel.categoryFilter = "Photography"
         viewModel.load()
 
+        // The Owned side really does hold a row the Owned scope must not
+        // count — it is the chip, not an empty collection, that empties it.
+        try #require(viewModel.items.map(\.name) == ["Telecaster"])
+
         #expect(viewModel.canExportCSV)
-        #expect(!viewModel.canExportPDF)
+        #expect(viewModel.canExportPDF, "the sold rows in the chip are a PDF worth writing")
+        #expect(!viewModel.canExport(.owned), "no owned row is in the chip")
+        #expect(viewModel.canExport(.sold))
 
         await viewModel.exportCSV(scope: .both)
-        await viewModel.exportPDF()
+        await viewModel.exportPDF(scope: .owned)
 
         #expect(spy.tables.map { $0.rows.map { $0[0] } } == [["Leica M6"]])
-        #expect(spy.documents.isEmpty, "the PDF intent's own guard backs up the disabled row")
+        #expect(spy.documents.isEmpty, "the disabled scope's intent stages nothing")
     }
 
     /// G16's other term: a Sold-side chip that matches nothing on *either*
@@ -2581,7 +2606,7 @@ struct ItemListViewModelSoldExportTests {
         #expect(!viewModel.canExport(.both))
 
         await viewModel.exportCSV(scope: .both)
-        await viewModel.exportPDF()
+        await viewModel.exportPDF(scope: .owned)
         #expect(spy.tables.isEmpty)
         #expect(spy.documents.isEmpty)
     }
@@ -2725,6 +2750,163 @@ struct ItemListViewModelSoldExportTests {
         let itemsName = ExportFilename.items(fileExtension: "csv")
         #expect(Array(spy.filenames.dropFirst()) == [itemsName, itemsName])
         #expect(itemsName != soldName)
+    }
+
+    // MARK: - 014/T009d: the sold PDF (Decision 7, plan Q15/Q16)
+
+    /// G33: the sold document from a narrowed Sold side — its entries are the
+    /// sold rows that pass the chip, in Date-sold order whatever the side is
+    /// sorted by (P10), and its cover is titled, labelled, counted and
+    /// totalled over exactly those rows (P14). The fixture shows `Price ↑`,
+    /// so the side on screen really is holding the other order.
+    ///
+    /// Mutations, all three run: entries from `soldItems` → price-ascending →
+    /// red; cover over the unnarrowed `sold` half → count 3 and the
+    /// Jazzmaster's figures → red; paid summed from `salePriceCents` →
+    /// $1,000 in the TOTAL PAID slot → red.
+    @Test func theSoldPDFCoversTheSoldRowsThatPassTheChipInDateSoldOrder() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", category: "Music/Guitars", into: context)
+        let summicron = insertSold(
+            "Summicron 35", category: "Photography/Lenses",
+            priceCents: 300_00, soldAt: 2_000, forCents: 100_00, into: context
+        )
+        let noctilux = insertSold(
+            "Noctilux", category: "Photography/Lenses",
+            priceCents: 400_00, soldAt: 3_000, forCents: 900_00, into: context
+        )
+        insertSold(
+            "Jazzmaster", category: "Music/Guitars",
+            priceCents: 700_00, soldAt: 1_000, forCents: 500_00, into: context
+        )
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Photography"
+        viewModel.soldSortOrder = .salePriceAscending
+        viewModel.load()
+
+        // The side really is showing the other order — without this the
+        // equality below could be two orders that happen to agree.
+        try #require(viewModel.soldItems.map(\.name) == ["Summicron 35", "Noctilux"])
+
+        await viewModel.exportPDF(scope: .sold)
+
+        let document = try #require(spy.documents.first)
+        #expect(document.entries.map(\.name) == ["Noctilux", "Summicron 35"])
+        #expect(document.cover.title == "Sold Items")
+        #expect(document.cover.title == ItemListViewModel.soldDocumentTitle)
+        #expect(document.cover.coverageLabel == "Category: Photography")
+        #expect(document.cover.itemCount == document.entries.count)
+        #expect(document.cover.itemCount == 2)
+
+        // The figures the app itself would sum over exactly those rows, and
+        // the concrete cents — so a broken sum can't vouch for itself.
+        let expected = SaleOutcome.totals(over: [noctilux, summicron])
+        guard case .sold(let proceeds, let paid, let realised) = document.cover.totals else {
+            Issue.record("the sold document carries another document's totals")
+            return
+        }
+        #expect(proceeds == expected.proceedsCents)
+        #expect(realised == expected.realisedDeltaCents)
+        #expect((proceeds, paid, realised) == (1_000_00, 700_00, 300_00))
+    }
+
+    /// G34: over an unnarrowed Sold side the cover's three figures are the
+    /// summary line's own — count, proceeds and realised straight off
+    /// `soldTotals`, which is `SaleOutcome.totals` and the Dashboard card's
+    /// sum (P14: "the Dashboard card's words for a sum").
+    ///
+    /// Mutation: sum the proceeds over `purchasePriceCents` → $1,050 against
+    /// the card's $1,400 → red.
+    @Test func theSoldCoverIsTheSoldSidesOwnTotals() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Kept", priceCents: 90_00, into: context)
+        insertSold("Amp", priceCents: 600_00, soldAt: 1_000, forCents: 900_00, into: context)
+        insertSold("Cab", priceCents: 450_00, soldAt: 2_000, forCents: 500_00, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.load()
+
+        await viewModel.exportPDF(scope: .sold)
+
+        let document = try #require(spy.documents.first)
+        guard case .sold(let proceeds, let paid, let realised) = document.cover.totals else {
+            Issue.record("the sold document carries another document's totals")
+            return
+        }
+        #expect(document.cover.itemCount == viewModel.soldTotals.count)
+        #expect(proceeds == viewModel.soldTotals.proceedsCents)
+        #expect(realised == viewModel.soldTotals.realisedDeltaCents)
+        #expect((document.cover.itemCount, proceeds, paid, realised) == (2, 1_400_00, 1_050_00, 350_00))
+    }
+
+    /// G35: "Owned and sold" as a PDF is the two documents in **one** share
+    /// sheet, owned then sold (P13) — one `exportFiles` call, because two
+    /// single calls would purge each other on the live service — under their
+    /// two names, which is what stops one overwriting the other in the
+    /// staging directory (P15). A half with no rows is left out, so the file
+    /// set is never padded with an empty document (011 criterion 2).
+    ///
+    /// Mutations, all three run: stage each document in its own `exportFiles`
+    /// call → `fileSets.count == 2` → red; keep the empty half → the
+    /// nothing-sold and nothing-owned ends read two documents → red; append
+    /// the sold document first → the order and the filenames → red.
+    @Test func theBothPDFStagesOwnedThenSoldInOneFileSet() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Kept", priceCents: 100_00, valueCents: 150_00, into: context)
+        insertSold("Gone", priceCents: 40_00, soldAt: 1_000, forCents: 100_00, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportPDF(scope: .both)
+
+        let ownedName = ExportFilename.items(fileExtension: "pdf")
+        let soldName = ExportFilename.soldItems(fileExtension: "pdf")
+        #expect(spy.fileSets.count == 1, "the pair must arrive in one call, or it purges itself")
+        #expect(spy.fileSets.first?.count == 2)
+        #expect(spy.documents.map(\.cover.title) == ["Owned Items", "Sold Items"])
+        #expect(spy.documents.map { $0.entries.map(\.name) } == [["Kept"], ["Gone"]])
+        #expect(spy.filenames == [ownedName, soldName])
+        #expect(viewModel.stagedExport?.filenames == [ownedName, soldName])
+
+        // Nothing sold: today's single owned document, under today's name.
+        let ownedOnly = try makeInMemoryContext()
+        insertItem("Kept", into: ownedOnly)
+        try ownedOnly.save()
+
+        let ownedSpy = ExportServiceSpy()
+        let allOwned = ItemListViewModel(modelContext: ownedOnly, exportService: ownedSpy)
+        allOwned.load()
+        await allOwned.exportPDF(scope: .both)
+
+        #expect(ownedSpy.fileSets.count == 1)
+        #expect(ownedSpy.documents.map(\.cover.title) == ["Owned Items"])
+        #expect(ownedSpy.filenames == [ownedName])
+        #expect(allOwned.stagedExport?.filenames == [ownedName])
+
+        // Nothing owned: the sold document alone, under the sold name.
+        let soldOnly = try makeInMemoryContext()
+        insertSold("Gone", soldAt: 1_000, forCents: 100_00, into: soldOnly)
+        try soldOnly.save()
+
+        let soldSpy = ExportServiceSpy()
+        let allSold = ItemListViewModel(modelContext: soldOnly, exportService: soldSpy)
+        allSold.load()
+        await allSold.exportPDF(scope: .both)
+
+        #expect(soldSpy.fileSets.count == 1)
+        #expect(soldSpy.documents.map(\.cover.title) == ["Sold Items"])
+        #expect(soldSpy.filenames == [soldName])
+        #expect(allSold.stagedExport?.filenames == [soldName])
     }
 }
 
