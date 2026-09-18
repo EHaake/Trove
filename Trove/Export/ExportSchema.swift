@@ -97,6 +97,11 @@ nonisolated struct CoverSummary: Sendable {
         /// The unvalued count keeps the value figure an honest floor, the
         /// same rule the list header and dashboard follow.
         case items(currentValueCents: Int, paidCents: Int, unvaluedCount: Int)
+        /// 014 P14: the sold document's three figures — what the sales
+        /// brought in, what those items cost, and the realised gain or loss
+        /// between them. No floor: every sold item has a price, so there is
+        /// nothing un-valued to caveat.
+        case sold(proceedsCents: Int, paidCents: Int, realisedDeltaCents: Int)
         case wishlist(estimatedCostCents: Int)
     }
 }
@@ -215,7 +220,42 @@ extension PDFEntry {
     /// presentation where the CSV is data. Empty optionals are skipped,
     /// exactly as the detail screen filters its empty rows.
     nonisolated init(record: ItemExportRecord, timeZone: TimeZone = .current) {
-        var fields: [PDFField] = [
+        // 014 P14: on a sold record the sale leads the grid — prepended, not
+        // appended, because Decision 6 puts the mark directly under the name
+        // and the entry reads in the sold page's order. Nothing here on an
+        // owned record. The price is unwrapped alongside the date because the
+        // pair *is* the sale (`Item.sale`, and 012's import gate); a record
+        // carrying one half and not the other is not a state this app writes.
+        var fields: [PDFField] = []
+        if let soldDate = record.soldDate, let salePriceCents = record.salePriceCents {
+            fields.append(PDFField(
+                label: "Sold",
+                value: ExportSchema.day(from: soldDate, timeZone: timeZone),
+                isMono: true
+            ))
+            fields.append(PDFField(
+                label: "Sold for",
+                value: salePriceCents.formattedAsWholeCurrency(currencyCode: record.currencyCode),
+                isMono: true
+            ))
+            if let saleLocation = record.saleLocation, !saleLocation.isEmpty {
+                fields.append(PDFField(label: "Sold at", value: saleLocation))
+            }
+            fields.append(PDFField(
+                label: "Outcome",
+                value: SaleCopy.rowOutcome(
+                    deltaCents: SaleOutcome(
+                        salePriceCents: salePriceCents,
+                        purchasePriceCents: record.purchasePriceCents
+                    ).deltaCents
+                )
+            ))
+            if let saleNote = record.saleNote, !saleNote.isEmpty {
+                fields.append(PDFField(label: "Sale note", value: saleNote))
+            }
+        }
+
+        fields += [
             PDFField(
                 label: "Paid",
                 value: record.purchasePriceCents.formattedAsWholeCurrency(currencyCode: record.currencyCode),

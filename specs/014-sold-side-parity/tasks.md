@@ -402,7 +402,7 @@ review. Pause at the end of this phase — there is something to try.
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every mutation
   recorded.
 
-- [ ] **T009c — The sold document in the export layer.**
+- [x] **T009c — The sold document in the export layer.**
   Per plan §4a Q15. `CoverSummary.Totals.sold`, the `drawCover` / `countLine`
   arms, the text-taking `drawTotal` sibling, `PDFEntry.init(record:)`'s five
   prepended fields. Pattern: the `.wishlist` arm and `countLine`; the entry
@@ -608,4 +608,5 @@ interpreted here.
 | T009a — `sdd-implementer` | `opus` | ~34k | Done; counts 7 / 5 / 2 verified by the orchestrator; six pointers, nothing above edited |
 | T009b — `sdd-implementer` | `opus` | ~94k | Done; 1527 unit tests green (orchestrator re-ran: same). G26–G29 plus `filenamesCarryTheLocalDay` extended; `ExportWiringTests` gains a per-screen `csvAction` literal. Mutations: `.owned` → `items` (one edit covers G27 and G28's `canExport(.owned)`); `.sold` → `soldItems` → G27 red; `.both` sold-first → G27 + G11–G13 red; `canExportCSV` → `items` → three red; filename arms swapped → G29 red; the view literal → `.owned` → wiring red. Deviation: `ExportScope: String, Identifiable` (Q17's `ForEach`) |
 | T009b — `skeptical-reviewer` per-task review | `opus` | ~50k | Sign off, no blocking. Second-look: (1) plan Q14 says both gates read `canExport(.both)` while the PDF gate waits for T009d — T009d's line now says so; (2) `ExportScope: String` adds unpinned raw values that look persistable (`id: Self` would do) — sweep; (3) T009e must re-point the Items `csvAction` literal at the chooser-open intent, not broaden it — its line names the literal; (4) `onlyTheSoldOnlyCSVTakesTheSoldFilename` builds two `.now`s (midnight flake window) — pass a fixed date at the sweep; (5) `eachScopeIsGatedOnTheRowsItWouldCarry` alone can't see narrowed vs unnarrowed; the sibling test carries that mutation |
+| T009c — `sdd-implementer` | `opus` | ~86k | Done; 1531 unit tests green. G30 (`soldCoverCarriesTheSaleTotalsAndNoFloorNote`, `soldCoverCountLineIsSingularForOneSale`), G31 (`soldEntryLeadsWithTheSaleThenTheOwnedGrid`, `ownedEntryCarriesNoSaleFields`); G32 already pinned by T009b's `filenamesCarryTheLocalDay`. Six mutations red and reverted. Outside the footprint, mechanical: three exhaustive `switch cover.totals` in two view-model test files gained `.sold` in their non-items arm. Judgment call resolved as routine and noted in plan Q15: the sale block unwraps `soldDate` and `salePriceCents` as a pair |
 | _rows added per dispatch as the spec runs_ | | | |

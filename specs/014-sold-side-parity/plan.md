@@ -465,7 +465,9 @@ plan file the person approved and in the tier log.
   record:)` **prepends** `Sold` (`ExportSchema.day`), `Sold for` (money),
   `Sold at` (if non-empty), `Outcome` (`SaleCopy.rowOutcome(deltaCents:)` from
   `SaleOutcome(salePriceCents:purchasePriceCents:)`), `Sale note` (if
-  non-empty) when `record.soldDate != nil`, then the owned grid unchanged —
+  non-empty) when the record carries a sale — `soldDate` and `salePriceCents`
+  unwrapped as the pair `012`'s rule guarantees (as built at T009c; `?? 0`
+  would print "Sold for $0") — then the owned grid unchanged —
   prepended because Decision 6 put the mark directly under the name; the
   composer is untouched. `ExportFilename.soldItems(fileExtension:on:timeZone:)`
   = `Trove-Sold-Items-<day>`; `ItemListViewModel.soldDocumentTitle = "Sold

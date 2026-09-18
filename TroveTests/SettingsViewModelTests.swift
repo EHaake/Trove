@@ -567,8 +567,8 @@ struct SettingsViewModelExportTests {
         switch document.cover.totals {
         case let .items(value, paid, unvalued):
             #expect((value, paid, unvalued) == (150_00, 100_00, 0))
-        case .wishlist:
-            Issue.record("the items document carries wishlist totals")
+        case .wishlist, .sold:
+            Issue.record("the items document carries another document's totals")
         }
     }
 

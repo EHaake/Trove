@@ -351,6 +351,65 @@ struct ExportSchemaTests {
         #expect(entry.fields[5].value == "Good")
     }
 
+    /// 014/G31: on a sold record the sale leads the entry grid — Sold, Sold
+    /// for, Sold at, Outcome, Sale note, *then* the owned grid unchanged —
+    /// because Decision 6 puts the mark directly under the name. The two
+    /// optional rows are skipped when empty, the same rule "Bought from"
+    /// already follows. Mutations: append the five instead of prepending
+    /// (`Paid` no longer at index 5, `Sold` no longer first) → red; take the
+    /// outcome from `currentValueCents` rather than the sale price ("Gain
+    /// $550 vs paid") → red; emit `Sold at` for an empty location → red.
+    @Test func soldEntryLeadsWithTheSaleThenTheOwnedGrid() throws {
+        let newYork = zone("America/New_York")
+        let soldOn = try #require(
+            gregorian(in: "America/New_York").date(from: DateComponents(year: 2026, month: 7, day: 4))
+        )
+
+        let entry = PDFEntry(
+            record: saleFixture(
+                soldDate: soldOn,
+                salePriceCents: 320_000,
+                saleLocation: "Reverb",
+                saleNote: "Shipped to Ohio"
+            ),
+            timeZone: newYork
+        )
+
+        let labels = entry.fields.map(\.label)
+        #expect(Array(labels.prefix(6)) == [
+            "Sold", "Sold for", "Sold at", "Outcome", "Sale note", "Paid",
+        ])
+        #expect(entry.fields[0].value == "2026-07-04")
+        #expect(entry.fields[0].isMono)
+        #expect(entry.fields[1].value == "$3,200")
+        #expect(entry.fields[1].isMono)
+        #expect(entry.fields[2].value == "Reverb")
+        // Paid $2,900, sold for $3,200 — the outcome is measured against what
+        // was paid, never against "Worth now" ($3,450, which would read
+        // "Gain $550 vs paid").
+        #expect(entry.fields[3].value == "Gain $300 vs paid")
+        #expect(entry.fields[4].value == "Shipped to Ohio")
+        #expect(entry.fields[5].value == "$2,900")
+
+        // The two optional sale rows drop out exactly as the owned grid's do.
+        let sparse = PDFEntry(
+            record: saleFixture(soldDate: soldOn, salePriceCents: 290_000, saleLocation: "", saleNote: nil),
+            timeZone: newYork
+        )
+        #expect(Array(sparse.fields.map(\.label).prefix(4)) == ["Sold", "Sold for", "Outcome", "Paid"])
+        #expect(sparse.fields[2].value == "At cost")
+    }
+
+    /// The other half of G31: an owned record carries none of the five, so
+    /// the sale block is genuinely conditional rather than always drawn empty.
+    @Test func ownedEntryCarriesNoSaleFields() {
+        let labels = PDFEntry(record: saleFixture()).fields.map(\.label)
+        for label in ["Sold", "Sold for", "Sold at", "Outcome", "Sale note"] {
+            #expect(!labels.contains(label))
+        }
+        #expect(labels.first == "Paid")
+    }
+
     @Test func wishlistEntryCarriesItsFourFieldsAndNotes() {
         let record = WishlistExportRecord(
             name: "Vox AC15",
