@@ -693,7 +693,9 @@ struct ItemListView: View {
         // The chooser the export rows open is anchored here too: the host
         // draws a dropdown only for an identifier that has an anchor, and
         // the chooser replaces the overflow on this same badge (plan Q17).
-        // Three tags on one badge, merged by the anchor key's `reduce`.
+        // Three tags on one badge: `dropdownAnchor` is a transform, so each
+        // adds its entry to what the badge already publishes rather than
+        // replacing it (the key's `reduce` merges siblings, not stacked tags).
         .dropdownAnchor(HeaderDropdown.exportScope(.csv))
         .dropdownAnchor(HeaderDropdown.exportScope(.pdf))
         .accessibilityIdentifier("moreActions.items")

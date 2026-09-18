@@ -1302,6 +1302,108 @@ final class TroveUITests: XCTestCase {
         )
     }
 
+    /// `014` criterion 14's behavioral half on the seeded sold collection: the
+    /// "…" menu's two export rows don't export, they open the scope chooser
+    /// (Decision 7, plan Q17) — three rows, each enabled exactly when it has
+    /// rows under the narrowing *on screen*, with its own labelled catcher.
+    ///
+    /// The gate is read where only the device can show it: the Sold side under
+    /// the Guitars chip has a sold guitar and no owned one, so "Owned items"
+    /// must come back present-and-disabled rather than missing. `isEnabled` is
+    /// false for an element that doesn't exist, so existence is asserted first
+    /// in every case here — a chooser that drew two rows would otherwise read
+    /// as one correctly disabled.
+    ///
+    /// Its mutations: gating the chooser's rows on `viewModel.canExportCSV`
+    /// (the menu row's widest-scope gate) instead of `canExport(scope)` must
+    /// turn "Owned items" red under the Guitars chip; wiring the menu's
+    /// "Export as CSV…" straight to an export instead of to the chooser must
+    /// turn the rows' existence red.
+    @MainActor
+    func testTheExportRowsOpenAScopeChooserGatedByWhatIsOnScreen() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSold"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Items"].tap()
+
+        // By identifier: the Dashboard carries a "More actions" badge of its
+        // own, and a label query could match the wrong tab.
+        let badge = app.buttons["moreActions.items"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "the Items list must offer its overflow badge")
+        badge.tap()
+
+        let exportPDF = app.buttons["Export as PDF\u{2026}"]
+        XCTAssertTrue(exportPDF.waitForExistence(timeout: 5), "the overflow should open")
+        exportPDF.tap()
+
+        // The chooser replaced the menu on the same badge: its header, its
+        // three rows all enabled (the whole seed is in scope, unnarrowed),
+        // and none of the menu's own rows left behind.
+        XCTAssertTrue(
+            app.staticTexts["EXPORT AS PDF"].waitForExistence(timeout: 5),
+            "Export as PDF\u{2026} must open the scope chooser under its own header"
+        )
+        for title in ["Owned items", "Sold items", "Owned and sold"] {
+            XCTAssertTrue(app.buttons[title].exists, "the PDF chooser must offer \(title)")
+            XCTAssertTrue(app.buttons[title].isEnabled, "\(title) has rows in the unnarrowed seed, so it must be enabled")
+        }
+        XCTAssertFalse(
+            app.buttons["Import from CSV\u{2026}"].exists,
+            "the chooser replaces the menu's rows rather than sitting over them (plan Q17)"
+        )
+
+        app.buttons["Dismiss export options"].tap()
+        XCTAssertTrue(
+            app.buttons["Owned items"].waitForNonExistence(timeout: 5),
+            "the chooser's own labelled catcher must close it"
+        )
+
+        // The Sold side, narrowed to guitars: the seed's one guitar is sold,
+        // so the owned scope has nothing to write under what's on screen.
+        let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
+        XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the Items tab must offer the side switch")
+        switchControl.buttons["Sold"].tap()
+        let guitars = app.buttons["Guitars"]
+        XCTAssertTrue(guitars.waitForExistence(timeout: 5), "the Sold side's chips are the sold half's categories")
+        guitars.tap()
+        XCTAssertTrue(
+            soldRow(in: app, named: "Telecaster").waitForExistence(timeout: 5),
+            "the Guitars chip must leave the sold guitar on screen"
+        )
+
+        badge.tap()
+        let exportCSV = app.buttons["Export as CSV\u{2026}"]
+        XCTAssertTrue(exportCSV.waitForExistence(timeout: 5), "the overflow should open on the Sold side")
+        XCTAssertTrue(exportCSV.isEnabled, "the menu row opens the chooser, so it is enabled while any scope has rows")
+        exportCSV.tap()
+
+        XCTAssertTrue(
+            app.staticTexts["EXPORT AS CSV"].waitForExistence(timeout: 5),
+            "Export as CSV\u{2026} must open the scope chooser"
+        )
+        let owned = app.buttons["Owned items"]
+        XCTAssertTrue(owned.exists, "a scope with no rows stays in the chooser, disabled — it must not vanish")
+        XCTAssertFalse(
+            owned.isEnabled,
+            "no owned guitar is on screen, so Owned items must be disabled (criterion 14)"
+        )
+        for title in ["Sold items", "Owned and sold"] {
+            XCTAssertTrue(app.buttons[title].exists, "the CSV chooser must offer \(title)")
+            XCTAssertTrue(app.buttons[title].isEnabled, "\(title) carries the sold guitar, so it must be enabled")
+        }
+
+        // Picking a scope closes the chooser and hands off to the share
+        // sheet, which is the device pass's to look at — no existing UI test
+        // asserts one.
+        app.buttons["Sold items"].tap()
+        XCTAssertTrue(
+            owned.waitForNonExistence(timeout: 5),
+            "picking a scope must close the chooser"
+        )
+    }
+
     /// Criteria 1, 2, 3, 8 and 9 end to end on an item this test adds itself
     /// (`-uiTesting`, so the collection starts empty): the menu's **Mark as
     /// sold…**, the sheet with the price blank because the item has no
