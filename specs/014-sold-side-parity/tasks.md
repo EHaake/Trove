@@ -307,7 +307,7 @@ the same label (plan R2) — the report puts it as a question, not a fact.
   Edit at the edge, the sheet prefilled from the Leica's value, Cancel
   inert, the spoken name).
 
-- [ ] **T008 — The sold page's mark under the name.**
+- [x] **T008 — The sold page's mark under the name.**
   Per plan §7, Q11 and spec Decision 6. In `ItemDetailView.content(for:)`'s
   sold branch: `photoHero`, `titleBlock(for: item)`, `SoldMark(…)`,
   `statPair`, the rest unchanged; `SoldMark.swift`'s header comment says
@@ -438,4 +438,5 @@ interpreted here.
 | Phase 1 — `skeptical-reviewer` review + re-review | `opus` | ~130k + ~2k | Two blocking: the P16 pointer named five options (fixed), and the UI suite not run at the phase end (run: 20 tests, 0 failures; cadence written into T005/T009 Verify lines). Re-review: sign off. Second-look kept open: S1 `markSold`'s message-after-`load()` ordering has no red mutation (the scan is order-blind); S3 G11/G12 don't `#require` their hidden-side premise (would go vacuous, not red, if per-side keeping regressed — G4 is the backstop); S4 T009's round-trip test must type into the field, not drive state (view-side @State mirror would be invisible to unit guards) — carried to T009's bundle; S5 `SortDropdown` genericity — void, it is generic; S6 a CSV from Owned with the Un-valued chip on also drops sold rows carrying a value (006's inherited behaviour, label stays true) — a sentence for T011's "As built" |
 | T006 — `sdd-implementer` | `opus` | ~80k | Done; 1519 unit tests green. `theSoldSideRendersNoSortControlAndNoSearchField` → `oneNarrowingGateCoversBothSidesAndEachSideBringsItsOwnSort` (G20, plus the badge reading `visibleSortLabel`). Mutations: `side == .owned` back on the gate → red; the search clear above `switch` → red; Sold dropdown arm removed → red; `overflowControl` inside the Items gate → `ImportWiringTests` red (Items case only). Note: the two list screens no longer share a gate literal |
 | T007 — `sdd-implementer` | `opus` | ~79k | Done; 1523 unit tests in 206 suites green; `ItemListView` names `ItemSaleStore` 0 times; the imageset resolved with no `.pbxproj` edit. `theOwnedRowsSwipesDoNotOfferMarkAsSold` → `theOwnedRowsLeadingSwipeOffersEditThenSellThenCopy` + `theSaleSheetIsHostedOnceOverTheStagedRow` (G19, incl. G23's label half); new `ActionIconTests` over the four action icons (G22). Mutations: Sell/Copy swapped → red; middle button → `itemBeingEdited` → red; template intent removed → red; second `Menu` → `MenuPolicyTests` red. Note: the glyph has had no visual inspection — T010 |
+| T008 — `sdd-implementer` | `opus` | ~47k | Done; 1523 unit tests green. `theSoldBranchStampsTheMark` extended with G21; mutation: mark back above the hero → red on `title < mark` only (the other two legs are structural controls). Note for T011: `design/tokens.md`:657's Position row describes the pre-014 placement — correct the row, not just the cell |
 | _rows added per dispatch as the spec runs_ | | | |
