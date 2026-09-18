@@ -590,7 +590,10 @@ review. Pause at the end of this phase — there is something to try.
   chooser drawn at all (the anchor claim, plan Q17); the six files read from
   the container — the `.sold` PDF opened (cover words and three figures
   against the Sold summary), the `.both` share sheet showing two files, the
-  three CSVs' sale columns marking the side.
+  three CSVs' sale columns marking the side; **open a sold entry page** in the
+  `.sold` PDF for an item with all five sale fields and a long sale note — the
+  composer has never drawn an eleven-field entry and no test renders one
+  (Phase 2b review S1); the `.both` share sheet's second file opened too.
   **[person]** Accessibility Inspector (criterion 12): the swipe action
   announces "Mark as sold…"; the Sold side's field, chips and sort badge
   have labels; the chooser's first row takes focus and the catcher reads
@@ -627,7 +630,16 @@ review. Pause at the end of this phase — there is something to try.
   pair no longer "the complete record"); plan "As built": the Context's "no
   export format" corrected, R2 confirmed-and-extended, Q14–Q17 as shipped;
   "As built" sentences for `ActionIconTests`' three extra icons and the
-  Un-valued chip narrowing the sold half of a CSV (Phase 1 S6).
+  Un-valued chip narrowing the sold half of a CSV (Phase 1 S6) and, since
+  Phase 2b, stamping the sold PDF's cover with an un-valued label beside a
+  cover that has nothing to caveat (Phase 2b S5); a `DECISIONS.md` clause that
+  "Owned and sold" on an all-sold collection writes a sold-only file under
+  `Trove-Items-<date>` by P15, not by mistake (S6). Sweep items from Phase 2b:
+  S2 a fixture with `soldDate` set and `salePriceCents` nil asserting the
+  entry begins at `Paid` (the pair-unwrap claim in plan Q15 has no red);
+  S3 `ExportWiringTests`' comment claims a swapped-closure guard the scan
+  can't give (the UI test does) — soften or pin the labelled pair; S4 a
+  `realised == proceeds - paid` expectation in G33.
   **Verify:** everything above committed and pushed; `scripts/verify.sh all`
   green with the final counts recorded here (unit and UI lines both captured
   — `006`'s T020 lost the unit line to a short `tail`).
@@ -678,4 +690,5 @@ interpreted here.
 | T009h — `sdd-implementer` | `opus` | ~34k | Done; 1538 unit tests green. Mutation: a `.confirmationDialog` on `AddButton` → `MenuPolicyTests` red naming the file; restored byte-for-byte. Note: the summary truncates `#expect` messages — the offender list is only in the raw log |
 | T009i — `sdd-implementer` | `opus` | ~48k | Done; 1538 unit tests green; the three reentry tests (Items, Wishlist, Settings) in the count and green. `GatedExportServiceSpy` gates once across `exportCSV`/`exportFiles`. Mutations: `!isBusy` dropped from `exportPDF(scope:)` → `fileSetCalls == 0` red in 0.13 s (was a 20-min hang); dropped from `exportCSV(scope:)` → `csvCalls == 1` red (plus `fileSetCalls`, since the ungated CSV's `defer` clears `isBusy` — expected collateral) |
 | T009f — `sdd-implementer` | `opus` | ~72k | Done (stopped on the anchor defect, resumed after T009g). `testTheExportRowsOpenAScopeChooserGatedByWhatIsOnScreen`. Mutations (on top of the fix): rows gated on `canExportCSV` → red at "Owned items must be disabled"; the menu row exporting directly → red at "must open the scope chooser". UI suite twice, consecutive full runs: 23 tests 0 failures (implementer, T009g's all) and 23 tests 0 failures (orchestrator's re-run). At `cf3e1ee` the same suite was 23 tests 12 failures — the finding that produced T009g |
+| Phase 2b — `skeptical-reviewer` review | `opus` | ~118k | One blocking: the two back-to-back UI runs were taken at `063ea58`, before T009h/T009i — re-run `scripts/verify.sh all` twice at HEAD (`a1f5acf`): run 1 unit 1538/207 green, UI 23 tests 0 failures; run 2 unit 1538/207 green, UI 23 tests 0 failures (both at `a1f5acf`, back to back). Second-look S1–S6 written into T010/T011 above |
 | _rows added per dispatch as the spec runs_ | | | |
