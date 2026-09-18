@@ -66,6 +66,11 @@ nonisolated struct StagedExport: Identifiable, Sendable, Equatable {
 nonisolated enum ExportCopy {
     static let failureTitle = "Couldn't export"
     static let failureMessage = "Nothing was saved. Try again."
+
+    /// The scope chooser's headers (014 spec P12) — the mono header every
+    /// titled dropdown surface wears, echoing the row that opened it.
+    static let scopeTitleCSV = "EXPORT AS CSV"
+    static let scopeTitlePDF = "EXPORT AS PDF"
 }
 
 /// The share-sheet filenames the spec pins: `Trove-Items-YYYY-MM-DD.csv`

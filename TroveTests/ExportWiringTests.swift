@@ -22,15 +22,17 @@ struct ExportWiringTests {
         let csv: String
         let pdf: String
         /// The exact CSV intent this screen's row must fire. Per screen since
-        /// 014/T009b: the Items list's `exportCSV` takes the scope with no
-        /// default, so its literal names one (`.both` until T009e hands the
-        /// chooser the scope), while the Wishlist's is unchanged — a scan for
-        /// one shared literal could no longer tell the two apart.
+        /// 014/T009b, and since T009e the two screens don't even fire the same
+        /// *kind* of thing: the Items list's row opens the scope chooser
+        /// (Decision 7 — the scope is chosen there, so the row exports
+        /// nothing itself), while the Wishlist's still exports directly. A
+        /// scan for one shared literal could not tell the two apart.
         let csvAction: String
         /// The exact PDF intent, per screen for the same reason since
-        /// 014/T009d: the Items list's `exportPDF` takes the scope with no
-        /// default too, and until the chooser exists its row must keep firing
-        /// `.owned` — the very document Settings ships (plan Q14/Q16).
+        /// 014/T009d — and re-pointed at the chooser at T009e, like the CSV
+        /// one above. Re-pointed, never broadened: each screen still names
+        /// one literal, so either row quietly going back to a direct export
+        /// (or to the wrong format's chooser) fails here.
         let pdfAction: String
     }
 
@@ -39,8 +41,8 @@ struct ExportWiringTests {
             path: "Trove/Views/Items/ItemListView.swift",
             csv: "canExportCSV: viewModel.canExportCSV",
             pdf: "canExportPDF: viewModel.canExportPDF",
-            csvAction: "viewModel.exportCSV(scope: .both)",
-            pdfAction: "viewModel.exportPDF(scope: .owned)"
+            csvAction: "openDropdown = .exportScope(.csv)",
+            pdfAction: "openDropdown = .exportScope(.pdf)"
         ),
         DropdownGates(
             path: "Trove/Views/Wishlist/WishlistView.swift",
@@ -136,6 +138,76 @@ struct ExportWiringTests {
             "exactly the two export rows are gated — Import and Settings must stay ungated"
         )
         #expect(code.ranges(of: "startsGroup: true").count == 2, "three groups need two breaks")
+    }
+
+    /// G37 — the scope chooser the two export rows now open (014 Decision 7,
+    /// spec P12 and criterion 14). That they *open* it rather than export is
+    /// pinned per screen in `gates` above, alongside the Wishlist's rows,
+    /// which still export directly; this is what the Items list's host draws
+    /// when they do: one titled surface, one row per scope in the enum's own
+    /// order, each gated on that scope's own rows, and one action handing the
+    /// scope to whichever intent the format names.
+    ///
+    /// The `no literal` half is the load-bearing one: a chooser that named
+    /// `.owned` or `.both` anywhere inside it would be exporting a fixed half
+    /// under a row that says otherwise — which is the six-row menu plan Q14
+    /// refused, wearing a chooser's clothes.
+    @Test func theItemsListComposesTheScopeChooserOverEveryScope() throws {
+        let code = try SourceScan.production("Trove/Views/Items/ItemListView.swift")
+
+        let surfaces = SourceScan.argumentLists(of: "DropdownSurface", in: code)
+        try #require(surfaces.count == 1, "the Items list composes \(surfaces.count) DropdownSurfaces, expected exactly 1")
+        #expect(surfaces[0].hasPrefix("title:"), "the chooser's surface carries no header")
+        #expect(surfaces[0].contains("ExportCopy.scopeTitleCSV"), "the CSV header isn't the shared copy")
+        #expect(surfaces[0].contains("ExportCopy.scopeTitlePDF"), "the PDF header isn't the shared copy")
+
+        let chooser = try #require(
+            SourceScan.closureBodies(after: "case .exportScope(let format):", in: code).first,
+            "the host draws nothing for .exportScope"
+        )
+        #expect(
+            chooser.ranges(of: "ForEach(ItemListViewModel.ExportScope.allCases").count == 1,
+            "the chooser must list every scope, once — a hand-written row set can go stale"
+        )
+
+        let rows = SourceScan.argumentLists(of: "DropdownRow", in: chooser)
+        try #require(rows.count == 1, "one row built per scope, found \(rows.count) DropdownRows")
+        #expect(rows[0].contains("title: scope.label"), "the row doesn't name its scope from the enum")
+        #expect(
+            rows[0].contains("isEnabled: viewModel.canExport(scope)"),
+            "the row must be gated on its own scope — a menu-level flag enables rows with nothing in them"
+        )
+
+        #expect(chooser.contains("viewModel.exportCSV(scope: scope)"), "the CSV action doesn't carry the row's scope")
+        #expect(chooser.contains("viewModel.exportPDF(scope: scope)"), "the PDF action doesn't carry the row's scope")
+        for literal in [".owned", ".sold", ".both"] {
+            #expect(
+                !chooser.contains(literal),
+                "the chooser names \(literal) — the scope must travel from the row it was chosen on"
+            )
+        }
+
+        // `DropdownHost` draws a dropdown only for an identifier that has an
+        // anchor, so the badge wears all three: drop one and that row opens a
+        // chooser nothing positions or renders (plan Q17).
+        let badge = try #require(
+            SourceScan.closureBodies(after: "private var overflowControl: some View", in: code).first,
+            "the Items list has no overflowControl"
+        )
+        for anchor in [
+            ".dropdownAnchor(HeaderDropdown.overflow)",
+            ".dropdownAnchor(HeaderDropdown.exportScope(.csv))",
+            ".dropdownAnchor(HeaderDropdown.exportScope(.pdf))",
+        ] {
+            try #require(badge.contains(anchor), "overflowControl is missing \(anchor)")
+        }
+    }
+
+    /// The chooser's two headers as the spec writes them (P12), pinned by
+    /// literal beside the failure copy they share an enum with.
+    @Test func theScopeChooserHeadersReadAsTheSpecWritesThem() {
+        #expect(ExportCopy.scopeTitleCSV == "EXPORT AS CSV")
+        #expect(ExportCopy.scopeTitlePDF == "EXPORT AS PDF")
     }
 
     /// The constitution's UIKit boundary, pinned as a walk: the activity

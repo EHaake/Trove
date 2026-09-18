@@ -17,10 +17,12 @@ import SwiftUI
 /// Every row closes the dropdown before its action runs — `DropdownRow`'s
 /// doing, so the intents here are the intents alone.
 struct OverflowDropdown: View {
-    /// One gate per export row (006, plan Q5): the Items list can have a CSV
-    /// to write with nothing to put in a PDF — an all-sold collection — so a
-    /// single `canExport` would have to be wrong about one of them. The
-    /// Wishlist, which has no sold half, passes its one flag to both.
+    /// One gate per export row (006, plan Q5): the Wishlist, which has no
+    /// sold half, passes its one flag to both, and keeping two here is what
+    /// lets it. Since 014 the Items list feeds them equal — both read
+    /// `canExport(.both)` — because its rows no longer export: they open the
+    /// scope chooser, where each scope carries its own gate (plan Q14/Q17).
+    /// A row here is enabled when *any* chooser row would be.
     let canExportCSV: Bool
     let canExportPDF: Bool
     let exportCSV: () -> Void

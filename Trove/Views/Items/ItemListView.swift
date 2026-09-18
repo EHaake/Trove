@@ -2,18 +2,32 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The header's two dropdowns. One optional of this type is the screen's
+/// Which file the export chooser is choosing a scope for (014 plan Q17).
+/// Private to this screen: the two rows open the same surface under two
+/// headers, and nothing outside this file needs to name the pair.
+private enum ExportFormat: Hashable {
+    case csv
+    case pdf
+}
+
+/// The header's dropdowns. One optional of this type is the screen's
 /// whole open-menu state, which is what makes "one open at a time" true by
-/// type rather than by coordination (013 Amendment A).
+/// type rather than by coordination (013 Amendment A) — and since 014 it is
+/// what makes the export chooser a *replacement* for the overflow rather
+/// than a second plate over them: the "…" rows set this to `.exportScope`,
+/// one change in one transaction, so the plate stays and its rows swap.
 private enum HeaderDropdown: Hashable {
     case sort
     case overflow
+    /// The scope chooser the two export rows open (014 Decision 7, spec P12).
+    case exportScope(ExportFormat)
 
     /// What the tap-outside layer calls itself to VoiceOver.
     var dismissLabel: String {
         switch self {
         case .sort: "Dismiss sort options"
         case .overflow: "Dismiss more actions"
+        case .exportScope: "Dismiss export options"
         }
     }
 }
@@ -369,14 +383,38 @@ struct ItemListView: View {
                     }
                 }
             case .overflow:
+                // Since 014 the two export rows don't export: they open the
+                // scope chooser (Decision 7, spec P12). The row has already
+                // dismissed the dropdown, so setting the identifier here
+                // nets to one `.overflow → .exportScope` change in one
+                // transaction — the plate stays put and its rows swap.
                 OverflowDropdown(
                     canExportCSV: viewModel.canExportCSV,
                     canExportPDF: viewModel.canExportPDF,
-                    exportCSV: { Task { await viewModel.exportCSV(scope: .both) } },
-                    exportPDF: { Task { await viewModel.exportPDF(scope: .owned) } },
+                    exportCSV: { openDropdown = .exportScope(.csv) },
+                    exportPDF: { openDropdown = .exportScope(.pdf) },
                     importCSV: { isPickingImportFile = true },
                     openSettings: { isShowingSettings = true }
                 )
+            case .exportScope(let format):
+                // The same surface and rows the "…" is made of, under its own
+                // header — the Dashboard's ORDER BY pattern (P12). One row per
+                // scope, in the enum's order, each enabled exactly when it has
+                // rows under the narrowing on screen; the scope travels into
+                // the intent, so neither this view nor the chooser knows which
+                // half a file holds.
+                DropdownSurface(title: format == .csv ? ExportCopy.scopeTitleCSV : ExportCopy.scopeTitlePDF) {
+                    ForEach(ItemListViewModel.ExportScope.allCases) { scope in
+                        DropdownRow(title: scope.label, isEnabled: viewModel.canExport(scope)) {
+                            Task {
+                                switch format {
+                                case .csv: await viewModel.exportCSV(scope: scope)
+                                case .pdf: await viewModel.exportPDF(scope: scope)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -652,6 +690,12 @@ struct ItemListView: View {
             openDropdown = .overflow
         }
         .dropdownAnchor(HeaderDropdown.overflow)
+        // The chooser the export rows open is anchored here too: the host
+        // draws a dropdown only for an identifier that has an anchor, and
+        // the chooser replaces the overflow on this same badge (plan Q17).
+        // Three tags on one badge, merged by the anchor key's `reduce`.
+        .dropdownAnchor(HeaderDropdown.exportScope(.csv))
+        .dropdownAnchor(HeaderDropdown.exportScope(.pdf))
         .accessibilityIdentifier("moreActions.items")
     }
 
