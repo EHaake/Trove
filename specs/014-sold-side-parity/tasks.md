@@ -322,7 +322,7 @@ the same label (plan R2) — the report puts it as a question, not a fact.
   check here — T010's device pass measures the mark's place and gaps on the
   Telecaster's page.
 
-- [ ] **T009 — The UI tests, run twice.**
+- [x] **T009 — The UI tests, run twice.**
   Per plan §8 and Q13 (no seed change). Rewrite the Sort By assertion in
   `testTheSoldCardLandsOnTheSoldSideWhichListsSalesMostRecentFirst` (the
   badge *present* on Sold, "Sort by Date sold"; the field present; chips
@@ -439,4 +439,5 @@ interpreted here.
 | T006 — `sdd-implementer` | `opus` | ~80k | Done; 1519 unit tests green. `theSoldSideRendersNoSortControlAndNoSearchField` → `oneNarrowingGateCoversBothSidesAndEachSideBringsItsOwnSort` (G20, plus the badge reading `visibleSortLabel`). Mutations: `side == .owned` back on the gate → red; the search clear above `switch` → red; Sold dropdown arm removed → red; `overflowControl` inside the Items gate → `ImportWiringTests` red (Items case only). Note: the two list screens no longer share a gate literal |
 | T007 — `sdd-implementer` | `opus` | ~79k | Done; 1523 unit tests in 206 suites green; `ItemListView` names `ItemSaleStore` 0 times; the imageset resolved with no `.pbxproj` edit. `theOwnedRowsSwipesDoNotOfferMarkAsSold` → `theOwnedRowsLeadingSwipeOffersEditThenSellThenCopy` + `theSaleSheetIsHostedOnceOverTheStagedRow` (G19, incl. G23's label half); new `ActionIconTests` over the four action icons (G22). Mutations: Sell/Copy swapped → red; middle button → `itemBeingEdited` → red; template intent removed → red; second `Menu` → `MenuPolicyTests` red. Note: the glyph has had no visual inspection — T010 |
 | T008 — `sdd-implementer` | `opus` | ~47k | Done; 1523 unit tests green. `theSoldBranchStampsTheMark` extended with G21; mutation: mark back above the hero → red on `title < mark` only (the other two legs are structural controls). Note for T011: `design/tokens.md`:657's Position row describes the pre-014 placement — correct the row, not just the cell |
+| T009 — `sdd-implementer` | `opus` | ~105k | Done; unit 1523 green; UI twice back to back: 22 tests, 0 failures / 22 tests, 0 failures. Mutations: the 006 clearing back in `show` → the round-trip test red (3 failures at the round-trip assertions); the middle swipe button → `itemBeingEdited` → the sheet test red. The leading actions open with a partial press-drag (0.1 s, 40 % of the width); XCUITest reports the middle button as "Mark as sold…" (the accessibility label took — for `DECISIONS.md`, T011). Notes: per-side *sort* keeping has no UI mutation of its own (the old clearing never touched sorts); XCTest per-function selectors do work through verify.sh (Swift Testing's don't); the un-valued chip's accessibility label is "Clear the not-yet-valued filter" |
 | _rows added per dispatch as the spec runs_ | | | |

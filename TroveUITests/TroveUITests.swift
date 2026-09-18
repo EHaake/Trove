@@ -974,8 +974,15 @@ final class TroveUITests: XCTestCase {
     /// the Dashboard's Sold card says what it says, it lands on the Items
     /// tab's Sold side, the sales are listed most recent first with each
     /// row's gain or loss in the label VoiceOver actually reads, the summary
-    /// under the title matches the card, Sort By is gone from that side and
-    /// the "…" is not, and the switch goes back to Owned in one tap.
+    /// under the title matches the card, and the switch goes back to Owned in
+    /// one tap.
+    ///
+    /// Its Sort By half is `014` criterion 3's now, not `006` criterion 7's:
+    /// the Sold side *has* the search field, the chips and Sort By, in the
+    /// Owned side's positions, and the badge names that side's own default
+    /// ("Date sold"). What `006` asserted here — Sort By absent — is
+    /// superseded, and the Owned side's "Date" is checked on the way back so
+    /// the two selections can't be one.
     ///
     /// **The only test in this target that launches with `-seedSold`.** Like
     /// `-seedSellPlan`, the argument is its own: every other test here keeps
@@ -1039,19 +1046,260 @@ final class TroveUITests: XCTestCase {
             .firstMatch
         XCTAssertTrue(summary.exists, "the Sold side's summary must match the card")
 
-        // Criterion 7: Sort By is hidden on this side and the "…" is not.
-        XCTAssertFalse(app.buttons["sortOptions.items"].exists, "Sort By must not show on the Sold side")
+        // 014 criterion 3, which supersedes `006`'s criterion 7 here: the
+        // Sold side carries the Owned side's narrowing controls rather than
+        // hiding them. The badge is present and names *this* side's order —
+        // "Date sold", not "Date" — the search field is there, and the chips
+        // are the sold half's categories only.
+        let soldSortBadge = app.buttons["sortOptions.items"]
+        XCTAssertTrue(soldSortBadge.waitForExistence(timeout: 5), "Sort By must show on the Sold side (014 criterion 3)")
+        XCTAssertEqual(
+            soldSortBadge.label,
+            "Sort by Date sold",
+            "the badge must name the Sold side's own default order — it reads \"\(soldSortBadge.label)\""
+        )
         XCTAssertTrue(app.buttons["moreActions.items"].exists, "the overflow badge stays on the Sold side (criterion 7a)")
+        XCTAssertTrue(
+            app.textFields["Search name or serial"].exists,
+            "the Sold side must offer the search field (014 criterion 3)"
+        )
+        // The chips come from the sold half alone: the two sold items sit in
+        // Music/Guitars and Music/Amps, and the Leica's Photography/Cameras
+        // is the owned half's category — offering it here would narrow to
+        // nothing.
+        XCTAssertTrue(app.buttons["Guitars"].exists, "the Sold side must offer the Telecaster's category chip")
+        XCTAssertTrue(app.buttons["Amps"].exists, "the Sold side must offer the Blues Junior's category chip")
+        XCTAssertFalse(app.buttons["Cameras"].exists, "nothing sold sits in Cameras — the chip belongs to the Owned side")
+        // The un-valued chip is Owned-only by construction (plan Q2). Both
+        // spellings, since the chip's text and its accessibility label
+        // differ and either appearing here would be the defect.
+        XCTAssertFalse(app.buttons["Not yet valued"].exists, "the un-valued chip has no place on the Sold side")
+        XCTAssertFalse(
+            app.buttons["Clear the not-yet-valued filter"].exists,
+            "the un-valued chip has no place on the Sold side"
+        )
 
-        // One tap back to Owned, which is a different list and gets its
-        // narrowing controls back.
+        // One tap back to Owned, which is a different list with its own
+        // selection under the same controls.
         switchControl.buttons["Owned"].tap()
         XCTAssertTrue(
             app.staticTexts["Leica M6"].waitForExistence(timeout: 5),
             "the Owned side should list the item that wasn't sold"
         )
         XCTAssertFalse(soldRow(in: app, named: "Telecaster").exists, "a sold item must not appear on the Owned side")
-        XCTAssertTrue(app.buttons["sortOptions.items"].waitForExistence(timeout: 5), "Sort By returns on the Owned side")
+        let ownedSortBadge = app.buttons["sortOptions.items"]
+        XCTAssertTrue(ownedSortBadge.waitForExistence(timeout: 5), "Sort By stays on the Owned side")
+        XCTAssertEqual(
+            ownedSortBadge.label,
+            "Sort by Date",
+            "the Owned side's Sort By is unchanged (criterion 7) — it reads \"\(ownedSortBadge.label)\""
+        )
+        XCTAssertTrue(app.buttons["Cameras"].exists, "the Owned side's chips are the owned half's categories")
+    }
+
+    // MARK: - 014 Sold-side parity
+
+    /// `014` criteria 4, 6, 7 and 9 on the seeded sold collection: each side
+    /// keeps its own search, chip and sort while the other is visited, in both
+    /// directions, and a Sold side narrowed to nothing says so in the
+    /// no-matches words rather than "Nothing sold yet."
+    ///
+    /// Everything here is driven **through the controls on screen** — the sort
+    /// row is tapped, the query is typed into the field and read back out of
+    /// it — never through view-model state. Per-side keeping is proven below
+    /// the view, so a `@State` mirror of the query in `ItemListView` would
+    /// satisfy every unit test and still lose the Sold side's "tele" on the
+    /// way back; typing and reading the field is what would catch it.
+    ///
+    /// Its mutation: the old `006` Q15 clearing put back in
+    /// `ItemListViewModel.show(_:)` (reset `ownedNarrowing`/`soldNarrowing` on
+    /// a side change) must turn the round trip red.
+    @MainActor
+    func testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSold"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Items"].tap()
+        let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
+        XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the Items tab must offer the side switch")
+        switchControl.buttons["Sold"].tap()
+
+        // Criterion 6, from the control rather than from the model: the Sold
+        // side's Sort By offers its own orders, and Price ↑ puts the
+        // Blues Junior's $550 above the Telecaster's $1,250 — the reverse of
+        // the default date order this side arrives in.
+        let badge = app.buttons["sortOptions.items"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "the Sold side must offer Sort By")
+        badge.tap()
+        XCTAssertTrue(app.staticTexts["SORT BY"].waitForExistence(timeout: 5), "the Sold side's Sort By should open")
+        app.buttons["Price \u{2191}"].tap()
+
+        let telecaster = soldRow(in: app, named: "Telecaster")
+        let bluesJunior = soldRow(in: app, named: "Blues Junior")
+        XCTAssertTrue(bluesJunior.waitForExistence(timeout: 5), "no Sold-side row for the Blues Junior")
+        XCTAssertTrue(telecaster.exists, "no Sold-side row for the Telecaster")
+        XCTAssertLessThan(
+            bluesJunior.frame.minY,
+            telecaster.frame.minY,
+            "Price \u{2191} must put the cheaper sale first"
+        )
+
+        // Criterion 4: typed, not set. The rows narrow and the summary line
+        // follows them down to the one sale left.
+        let field = app.textFields["Search name or serial"]
+        XCTAssertTrue(field.exists, "the Sold side must offer the search field")
+        field.tap()
+        field.typeText("tele")
+        XCTAssertTrue(telecaster.waitForExistence(timeout: 5), "the query matches the Telecaster")
+        XCTAssertFalse(bluesJunior.exists, "\"tele\" must not match the Blues Junior")
+        XCTAssertTrue(
+            summaryLine(in: app, reading: "1 sold \u{00B7} $1,250 \u{00B7} +$350 vs paid").waitForExistence(timeout: 5),
+            "the Sold summary must follow the narrowing (P4)"
+        )
+
+        // Criterion 7, the first direction: the Owned side is untouched by
+        // any of it — empty field, its own row, its own sort.
+        switchControl.buttons["Owned"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Leica M6"].waitForExistence(timeout: 5),
+            "the Owned side's own row must show — the Sold side's query is not this side's"
+        )
+        // An empty `TextField` reports its placeholder as its value, which is
+        // how "nothing typed here" reads to XCUITest.
+        XCTAssertEqual(
+            field.value as? String,
+            "Search name or serial",
+            "the Owned side's search field must be empty"
+        )
+        XCTAssertEqual(
+            app.buttons["sortOptions.items"].label,
+            "Sort by Date",
+            "the Owned side's sort is its own (criterion 7)"
+        )
+
+        // Criterion 7, the other direction: the Sold side comes back exactly
+        // as it was left — the typed query still in the field, the rows still
+        // narrowed by it, the badge still on the order that was picked.
+        switchControl.buttons["Sold"].tap()
+        XCTAssertTrue(telecaster.waitForExistence(timeout: 5), "the Sold side's narrowing must survive the round trip")
+        XCTAssertEqual(field.value as? String, "tele", "the Sold side's query must survive the round trip")
+        XCTAssertFalse(bluesJunior.exists, "the Sold side must come back narrowed, not whole")
+        XCTAssertEqual(
+            app.buttons["sortOptions.items"].label,
+            "Sort by Price \u{2191}",
+            "the Sold side's sort must survive the round trip"
+        )
+
+        // Criterion 9: narrowed to nothing, this side says what the Owned
+        // side says — the shared no-matches state (P5), not its own
+        // "Nothing sold yet.", which belongs to a side with no sales at all.
+        app.buttons["Clear search"].tap()
+        XCTAssertTrue(bluesJunior.waitForExistence(timeout: 5), "clearing the query must bring both sales back")
+        field.tap()
+        field.typeText("zzz")
+        XCTAssertTrue(
+            app.staticTexts["No matches for \u{201C}zzz\u{201D}"].waitForExistence(timeout: 5),
+            "a Sold side narrowed to nothing shows the no-matches state"
+        )
+        XCTAssertFalse(
+            app.staticTexts["Nothing sold yet."].exists,
+            "criterion 9: \"Nothing sold yet.\" is for a side with nothing sold, not for a query that matched nothing"
+        )
+
+        // The state's own action, not the field's X: both carry this label
+        // while the empty state is up, and the lower one is the button the
+        // no-matches screen offers.
+        let clearActions = app.buttons
+            .matching(NSPredicate(format: "label == %@", "Clear search"))
+            .allElementsBoundByIndex
+        guard let emptyStateClear = clearActions.max(by: { $0.frame.minY < $1.frame.minY }) else {
+            return XCTFail("the no-matches state must offer Clear search")
+        }
+        emptyStateClear.tap()
+        XCTAssertTrue(bluesJunior.waitForExistence(timeout: 5), "Clear search must bring the sales back")
+        XCTAssertTrue(telecaster.exists, "Clear search must bring both sales back")
+    }
+
+    /// `014` criterion 1 on the seeded collection's one owned row: the leading
+    /// swipe's three actions in the order spec Decision 2 fixes — Edit nearest
+    /// the edge so a full swipe still edits, then Mark as sold…, then Copy —
+    /// and the middle one opening the sale sheet for *that* row's item, with
+    /// cancelling it changing nothing (P3).
+    ///
+    /// The swipe is opened with a **partial** drag rather than `swipeRight()`:
+    /// a full-velocity swipe on a leading edge fires the edge action itself
+    /// (Edit), which would open the item form and never show the three
+    /// buttons this test is about.
+    ///
+    /// Its mutation: the middle button wired to `itemBeingEdited` instead of
+    /// `itemBeingSold` must turn the sheet half red — the item form has no
+    /// `sale.sheet.price`.
+    @MainActor
+    func testTheLeadingSwipeOffersMarkAsSoldBetweenEditAndCopyAndOpensTheSheet() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSold"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Items"].tap()
+        let leica = app.staticTexts["Leica M6"]
+        XCTAssertTrue(leica.waitForExistence(timeout: 5), "the Owned side must list the seed's one owned item")
+
+        // About 40 % of the row's width, pressed first so the gesture reads as
+        // a drag rather than a flick. The row spans the window, so the
+        // window's width is the row's.
+        let start = leica.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+        start.press(
+            forDuration: 0.1,
+            thenDragTo: start.withOffset(CGVector(dx: app.frame.width * 0.4, dy: 0))
+        )
+
+        let edit = app.buttons["Edit"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 5), "the leading swipe didn't open")
+        // "Sell" is the visible word and `markAsSold` the accessibility
+        // label; XCUITest reports the latter — the button came back as
+        // "Mark as sold\u{2026}" with an empty identifier when this was
+        // instrumented (T009) — but both are matched, since which of the two
+        // surfaces is a detail of how the `Label` and the modifier compose
+        // and criterion 12 is about the button being there and announced by
+        // the menu row's own name.
+        let sell = app.buttons
+            .matching(NSPredicate(format: "label == %@ OR label == %@", "Mark as sold\u{2026}", "Sell"))
+            .firstMatch
+        XCTAssertTrue(sell.exists, "criterion 1: the leading swipe must offer Mark as sold…")
+        let copy = app.buttons["Copy"]
+        XCTAssertTrue(copy.exists, "the leading swipe still offers Copy")
+
+        // Decision 2's order, left to right: Edit is what a full swipe fires,
+        // so it stays nearest the edge.
+        XCTAssertLessThan(edit.frame.minX, sell.frame.minX, "Edit must stay nearest the leading edge")
+        XCTAssertLessThan(sell.frame.minX, copy.frame.minX, "Mark as sold… sits between Edit and Copy")
+
+        sell.tap()
+
+        // P3: the sheet *is* the confirmation, and it opens on this row's
+        // item — the Leica is valued at $2,600, so that is what the price
+        // field is seeded with. Read with the grouping separator stripped:
+        // the figure is the claim, not how the formatter groups it.
+        let price = app.textFields["sale.sheet.price"]
+        XCTAssertTrue(price.waitForExistence(timeout: 5), "Mark as sold… must open the sale sheet")
+        let typed = (price.value as? String ?? "")
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: "\u{00A0}", with: "")
+            .replacingOccurrences(of: "\u{202F}", with: "")
+        XCTAssertEqual(typed, "2600", "the sheet must open on the swiped row's item — its value reads \"\(price.value as? String ?? "")\"")
+
+        // Cancelling changes nothing: no sale, so the item is still owned and
+        // its page would carry no Sold mark.
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(price.waitForNonExistence(timeout: 5), "Cancel must close the sale sheet")
+        XCTAssertTrue(leica.waitForExistence(timeout: 5), "a cancelled sale leaves the item on the Owned side")
+        XCTAssertFalse(
+            element(in: app, identifiedBy: "sold.mark").exists,
+            "a cancelled sale marks nothing sold"
+        )
     }
 
     /// Criteria 1, 2, 3, 8 and 9 end to end on an item this test adds itself
@@ -1277,6 +1525,14 @@ final class TroveUITests: XCTestCase {
     private func soldRow(in app: XCUIApplication, named name: String, precededBy mark: String? = nil) -> XCUIElement {
         let opening = mark.map { "\($0), \(name)," } ?? "\(name),"
         return app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH[c] %@", opening)).firstMatch
+    }
+
+    /// The Sold side's summary line, matched on the words it must contain —
+    /// case-insensitively, because `monoLabel` raises this line on screen and
+    /// which case comes back is nothing these tests are about.
+    @MainActor
+    private func summaryLine(in app: XCUIApplication, reading text: String) -> XCUIElement {
+        app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", text)).firstMatch
     }
 
     /// Whether some text with exactly this label sits above `y` on screen —
