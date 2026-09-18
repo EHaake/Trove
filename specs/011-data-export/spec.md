@@ -113,6 +113,8 @@ added date).
 A **collection document**, not per-item sheets: a cover summary
 followed by one entry per exported item.
 
+*Superseded by `014-sold-side-parity` (its spec, Decision 7): since `014` the items PDF is a sold document too — from the Items list an export covers owned, sold or both, and a sold document's title reads "Sold Items"; Settings' Export All is unchanged.*
+
 - **Cover summary**: document title, date generated, what the export
   covers (the active filter, e.g. "Category: Guitars", or "All items"),
   item count, and — for the items export — total current value and
@@ -131,6 +133,7 @@ followed by one entry per exported item.
   not a screenshot of the dark UI. Exact treatment is a design/plan
   concern, not fixed here.
 - Filename: `Trove-Items-YYYY-MM-DD.pdf` / `Trove-Wishlist-YYYY-MM-DD.pdf`.
+  *Superseded by `014-sold-side-parity` (its spec, Decision 7): `Trove-Sold-Items-YYYY-MM-DD.pdf` joins these names, for a PDF exported with the sold scope.*
 
 ## Acceptance criteria
 

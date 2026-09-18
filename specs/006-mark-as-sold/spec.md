@@ -642,6 +642,7 @@ Made by the person, 2026-09-13, in this spec conversation:
    a full export includes sold items and round-trips through import; the PDF
    stays a document of what you own; a sold item's market figures are cleared
    on this device as deletion clears them today.
+   *Superseded by `014-sold-side-parity` (its spec, Decision 7): from the Items list the PDF (and the CSV) choose their scope — owned, sold, or both — so a sold PDF titled "Sold Items" exists, named `Trove-Sold-Items-<date>`; Settings' export-everything is unchanged.*
 8. **The Dashboard takes sales into account** — the person asked for this to
    be considered; the shape (the Sold card apart from the collection totals,
    scoped, hidden at zero, sold money never combined with collection money) is
@@ -768,6 +769,7 @@ plan approval):
   columns mark the side), its PDF export stays owned-only (the collection
   document), and Import and Settings are unchanged. Export follows the tab,
   not the side.
+  *Superseded by `014-sold-side-parity` (its spec, Decision 7): the "…" menu's PDF is no longer owned-only — from the Items list both exports choose their scope, owned, sold or both — while Import and Settings stay unchanged.*
 
 ## Non-goals (explicit)
 
@@ -784,6 +786,7 @@ plan approval):
   *Superseded by `014-sold-side-parity` (its spec, Decisions 3 and 4): the Sold side gains its own search, category chip and sort, and each side keeps its own across a switch; the two sides still stay distinct.*
 - **A sold-items PDF**, or sold items in the collection PDF (Decision 7); the
   Sold side's "…" offers the same owned-only PDF as the Owned side (P17).
+  *Superseded by `014-sold-side-parity` (its spec, Decision 7): a sold-items PDF is no longer a non-goal — the Items list's PDF covers owned, sold or both, and a sold document is titled "Sold Items", named `Trove-Sold-Items-<date>`.*
 - **Multiple sales per item, quantities, or partial sales** — an item is sold
   once, whole.
 - **Editing an item's own fields while it is sold** — return it first (P4).

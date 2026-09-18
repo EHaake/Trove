@@ -110,6 +110,7 @@ types (spec "What and why"). So there is no Phase 0.
   `OverflowDropdown` takes both and `ExportWiringTests` is **broadened**, not
   weakened: two rows, one gate each, Import and Settings still ungated (§7).
   *Superseded by `014-sold-side-parity` (its spec, P11): the CSV is narrowed by the on-screen side only, so the Sold side's narrowing is no longer the identity and the "Because changing side clears every narrowing (Q15)" clause above no longer holds.*
+  *Superseded by `014-sold-side-parity` (its spec, Decision 7): the PDF is no longer the Owned side only — from the Items list it takes a scope of owned, sold or both — so `canExportPDF` (owned non-empty) is no longer the gate it describes; Settings' export-everything is unchanged.*
 - **Q6. Import pair rule.** A row is a sold item iff **both** `Sold Date` and
   `Sale Price` parse (the schema's own date and money parsers). Otherwise the
   item imports unsold, and — if *any* of the four sale cells was non-blank —
