@@ -2147,3 +2147,42 @@ struct ItemListViewModelSoldExportTests {
         #expect(spy.tables.isEmpty)
     }
 }
+
+@Suite("ItemListViewModel — a refused save on the list's own intents")
+struct ItemListViewModelRefusalTests {
+    /// Structural, for the reason `aRefusedSaveRollsBackAndReReadsWhatIsStored`
+    /// gives: an in-memory `save()` can't be made to throw on demand.
+    ///
+    /// The bug this guards (found during 014's T005): the catch block set
+    /// `loadFailureMessage` and then fell through to a `load()` that begins
+    /// by clearing it, so a refused duplicate reported nothing. The rule is
+    /// the one `SellPlanViewModel.markSold(_:sale:)` follows — re-read what
+    /// is stored first, then set the message — so the catch must contain
+    /// both, with `load()` before the assignment. Both list view models and
+    /// both of their save-and-reload intents are scanned, so one can't drift
+    /// back from the other.
+    @Test func aRefusedSaveReportsItselfAfterTheReload() throws {
+        let intents: [(String, String)] = [
+            ("Trove/ViewModels/ItemListViewModel.swift", "func duplicate(id: UUID)"),
+            ("Trove/ViewModels/ItemListViewModel.swift", "func delete(id: UUID)"),
+            ("Trove/ViewModels/WishlistViewModel.swift", "func duplicate(id: UUID)"),
+            ("Trove/ViewModels/WishlistViewModel.swift", "func delete(id: UUID)"),
+        ]
+        var sources: [String: String] = [:]
+        for path in Set(intents.map(\.0)) {
+            sources[path] = try SourceScan.production(path)
+        }
+        for (path, signature) in intents {
+            let code = try #require(sources[path])
+            let bodies = SourceScan.closureBodies(after: signature, in: code)
+            try #require(bodies.count == 1, "expected exactly one \(signature) in \(path)")
+            let catches = SourceScan.closureBodies(after: "} catch", in: bodies[0])
+            try #require(catches.count == 1, "expected exactly one catch block in \(signature) in \(path)")
+            let body = catches[0]
+
+            let reload = try #require(body.range(of: "load()"), "\(path) \(signature): the refused save must re-read what is stored inside the catch")
+            let message = try #require(body.range(of: "loadFailureMessage ="), "\(path) \(signature): the refused save must report itself")
+            #expect(reload.lowerBound < message.lowerBound, "\(path) \(signature): load() clears the message, so it must run before the message is set")
+        }
+    }
+}

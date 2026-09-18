@@ -375,7 +375,11 @@ final class ItemListViewModel {
             try MarketLocalStore.clear(subjectID: id, in: modelContext)
             try modelContext.save()
         } catch {
+            // `load()` first: it begins by clearing `loadFailureMessage`, so
+            // a message set before it never reached the screen.
+            load()
             loadFailureMessage = error.localizedDescription
+            return
         }
         load()
     }
@@ -469,7 +473,11 @@ final class ItemListViewModel {
         do {
             try modelContext.save()
         } catch {
+            // `load()` first: it begins by clearing `loadFailureMessage`, so
+            // a message set before it never reached the screen.
+            load()
             loadFailureMessage = error.localizedDescription
+            return
         }
         load()
     }
