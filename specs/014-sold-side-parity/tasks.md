@@ -594,10 +594,16 @@ review. Pause at the end of this phase — there is something to try.
   `.sold` PDF for an item with all five sale fields and a long sale note — the
   composer has never drawn an eleven-field entry and no test renders one
   (Phase 2b review S1); the `.both` share sheet's second file opened too.
+  **On resumption after T010a:** re-take both measurements — at zero sales,
+  with `-seedSold`, and with the person's 13-row imported set (168.00 pt was
+  measured on that set too, so it is the one that matters).
   **[person]** Accessibility Inspector (criterion 12): the swipe action
   announces "Mark as sold…"; the Sold side's field, chips and sort badge
   have labels; the chooser's first row takes focus and the catcher reads
-  "Dismiss export options".
+  "Dismiss export options"; and, since T010a, that the header reads title,
+  then the two badges, then the summary line — confirm that order is
+  acceptable (`.accessibilitySortPriority` on the meta is the one-line
+  answer if not).
   **Verify:** the record in the Done note with both measurements, the probe's
   count per action, the byte comparison and the dataset route (added at the
   person's request, 2026-09-18: the pass also leaves a real 13-row dataset in
@@ -605,8 +611,84 @@ review. Pause at the end of this phase — there is something to try.
   person walks through actual gear rather than the in-memory seed); `scripts/verify.sh all` green
   twice.
 
+- [ ] **T010a — The meta line takes the header's full width, and two guards that can see it. `review: per-task`.**
+  Added 2026-09-18 at T010's device pass: criterion 3 measured failing — the
+  Sold side's switch at 168.00 pt against Owned's 154.33 pt with the seed and
+  with the person's 13-row set (decision review; plan Q18, §6 and §10
+  corrected).
+  **1.** New `Trove/Views/Items/ItemListHeader.swift`: `struct
+  ItemsListHeader<Meta: View, Trailing: View>: View` with `title: String`,
+  `@ViewBuilder meta`, `@ViewBuilder trailing`, body `VStack(alignment:
+  .leading, spacing: 6) { HStack(alignment: .top) { Text(title)
+  .font(theme.typography.screenTitle).foregroundStyle(theme.colors.textPrimary);
+  Spacer(); trailing }; meta }`. Internal, not `private`/`fileprivate` — the
+  test target reads it through `@testable`. It joins the target through the
+  synchronized folder (the T009g precedent); **no `.pbxproj` edit** — if the
+  build cannot see the file, stop and flag.
+  **2.** `ItemListView.header` composes it, passing `metaLine` as `meta` and
+  today's badge `HStack` verbatim as `trailing`. **The gate literal `if
+  viewModel.offersNarrowingControls`, `sortControl` and `overflowControl` stay
+  spelled inside `ItemListView.swift`** — `ItemListSidesWiringTests` (gate
+  spelled exactly twice; `sortControl` named exactly twice; `SearchField(` and
+  `sortControl` inside gate spans) and
+  `ImportWiringTests.theOverflowControlSitsOutsideEveryEmptyCollectionGate`
+  scan that file and must stay green **with no edit to either test**; an edit
+  to them is a sign the badges moved to the wrong file. Rewrite `metaLine`'s
+  doc comment: the slot is one line because the line has the header's full
+  width (Q18) — delete the sentence saying the unconditional line alone is
+  "the whole of Decision 13's fix", which is what T010 falsified.
+  **3.** New `TroveTests/ItemListHeaderLayoutTests.swift` (G38). Measure with
+  `renderBitmap(view.frame(width: contentWidth))?.height`, `contentWidth =
+  402 - 2 * ThemeMetrics.standard.screenGutter` (the iPhone 17 Pro width
+  `T020`'s probe recorded, minus the gutters the body applies), four cases over
+  the real ingredients — `SortBadge(label:)` + `OverflowBadge(isBusy: false)`
+  as `trailing`, `Text(...).monoLabel()` as `meta`:
+  (i) *baseline*, measured not remembered (the `DropdownPlacementTests` rule):
+  the Sold zero line `SaleCopy.soldSideSummary(SaleTotals(count: 0, ...))`
+  under "Date sold";
+  (ii) the Owned line `"34 items - $18,420 - 3 unvalued"` under
+  `ItemListViewModel.SortOrder.allCases`' longest label;
+  (iii) the seed's Sold line at count 6, proceeds $3,985, realised +$105 under
+  "Date sold";
+  (iv) the same at count 999, proceeds $1,248,200, realised +$112,450, under
+  `SoldSortOrder.allCases`' longest label — so a longer label added later
+  cannot sneak past.
+  Each `#expect(height == baseline)`, with the measured numbers in the failure
+  message. **If (ii) does not equal (i) on the unmodified fix — i.e. the badge
+  row turns out taller than the title's line box — stop and return it; do not
+  pad the header to make it match.**
+  **4.** `TroveUITests.testTheSoldCardLandsOnTheSoldSideWhichListsSalesMostRecentFirst`
+  (G39): read `app.otherElements["items.sideSwitch"].frame.minY` on the Sold
+  side *after* waiting on `app.buttons["sortOptions.items"]` reading "Sort by
+  Date sold" (the header must have relaid out), and again on Owned after
+  waiting on "Sort by Date"; `XCTAssertEqual(soldY, ownedY, accuracy: 1, ...)`
+  with the difference in the message. No seed change.
+  **Mutations, each recorded:** run G38 and G39 against the *unfixed* header
+  first and paste the two failures — the strongest red available and already
+  in hand (cases iii and iv ≈ baseline + one mono line; G39 ≈ 13.67 pt apart);
+  then, after the fix, (a) move `metaLine` back inside the leading `VStack` →
+  (iii) and (iv) red, (i) and (ii) green; (b) render the baseline case at
+  width 200 → all four red, which proves the instrument can see a wrap at all
+  rather than only agreeing with itself; (c) restore both.
+  Pattern: `TroveTests/SellPlanMarketLinesTests.swift` (height-by-render with
+  `.frame(width:)`), `TroveTests/DropdownPlacementTests.swift` (the
+  measured-not-remembered baseline).
+  Files: `Trove/Views/Items/ItemListHeader.swift` (new),
+  `Trove/Views/Items/ItemListView.swift`,
+  `TroveTests/ItemListHeaderLayoutTests.swift` (new),
+  `TroveUITests/TroveUITests.swift`.
+  **Verify:** `scripts/verify.sh` green, then `scripts/verify.sh all` green
+  (orchestrator re-runs, `review: per-task`); the pre-fix red output and the
+  three mutations recorded verbatim.
+
 - [ ] **T011 — Close-out.**
-  Per plan §9. Criteria 1–13 ticked in `spec.md` with citations — criterion
+  Per plan §9. Criteria 1–14 ticked in `spec.md` with citations — criterion 3 cites
+  T010's re-take **and** G38/G39, not the re-take alone; `design/tokens.md`'s
+  "Header on Sold" row records that the meta line spans the full content
+  width with the badges on the title's row; `ROADMAP.md` gains a line that
+  `WishlistView.header` carries the same construction and the same latent
+  wrap (a shared header view is the follow-up), and `DECISIONS.md` records
+  that leaving it duplicated was a choice, not an oversight — criterion
   2's evidence is the existing `SoldStateWiringTests` (both menus, rows
   swapped by `isSold`) and `MenuPolicyTests` staying green with no edit, not
   the diff's silence; criterion 10 ticked as "from the Sold side — the Owned
@@ -695,4 +777,6 @@ interpreted here.
 | T009f — `sdd-implementer` | `opus` | ~72k | Done (stopped on the anchor defect, resumed after T009g). `testTheExportRowsOpenAScopeChooserGatedByWhatIsOnScreen`. Mutations (on top of the fix): rows gated on `canExportCSV` → red at "Owned items must be disabled"; the menu row exporting directly → red at "must open the scope chooser". UI suite twice, consecutive full runs: 23 tests 0 failures (implementer, T009g's all) and 23 tests 0 failures (orchestrator's re-run). At `cf3e1ee` the same suite was 23 tests 12 failures — the finding that produced T009g |
 | Phase 2b — `skeptical-reviewer` review | `opus` | ~118k | One blocking: the two back-to-back UI runs were taken at `063ea58`, before T009h/T009i — re-run `scripts/verify.sh all` twice at HEAD (`a1f5acf`): run 1 unit 1538/207 green, UI 23 tests 0 failures; run 2 unit 1538/207 green, UI 23 tests 0 failures (both at `a1f5acf`, back to back). Second-look S1–S6 written into T010/T011 above. Re-review: sign off (~1k) |
 | Model policy deviation (the person's instruction, 2026-09-18, at the Phase 2b pause) | session → `claude-opus-5`; all agents at `opus` | — | "For the rest of the spec, use the step-down Opus model for all tasks." Experiment 1's `fable` seat and the explicit top-tier overrides on decision reviews stop here; the `sdd-implementer` and `skeptical-reviewer` defaults (`opus`) already match, so from T010 on nothing carries an override. This is the fallback clause of `CLAUDE.md`'s model policy exercised by choice rather than by an exhausted allowance — a result of experiment 1 in itself. T011 asks whether the person wants it written into the constitution |
+| T010 — device pass, `general-purpose` with simulator tools | `opus` | ~410k | Done. Measured: the sold page's mark gaps correct (29.33 pt above, the section gap by comparison with an owned page); the probe — seed 2, Cancel 0, swipe-down 0, background/foreground 0, appearance change 0, confirm 1, the file byte-identical to HEAD after removal; a typed sheet price survives backgrounding (Phase 2 S8); the unnarrowed Owned-and-sold CSV byte-equal to Settings' (`cmp` no difference, 501 bytes, same md5); the eleven- and thirteen-field sold entry pages draw correctly, the long note wrapping (Phase 2b S1); the menu-to-chooser swap re-sizes in place (plate top fixed at 115.33 pt across every frame); white on `accentBrassMid` 3.61:1 dark / 3.74:1 light, so Q9 needs no decision. Dataset loaded through the app's own import (route: the simulator's File Provider Storage → "On My iPhone"), 7 owned / 6 sold, left running for the person. `scripts/verify.sh all` green twice. **One finding returned, not fixed: criterion 3 fails** — the Sold switch at 168.00 pt vs Owned 154.33 pt once anything is sold, the summary wrapping because the new sort badge narrows its width. Owed: the person's Accessibility Inspector step |
+| Criterion 3 decision review — `skeptical-reviewer` | `opus` | ~123k | Rejected all five options the pass listed (a copy change expires at six-figure totals; `lineLimit`/a reserved slot blind the guard; amending the criterion ratifies the bug) and recommended the meta line taking the header's full width with the badges on the title's row — no copy change, no criterion amendment, no design pass. Transcribed as plan Q18, the §6/§10 corrections, guards G38/G39 and task T010a. Discloses one change: the header's VoiceOver order becomes title, badges, meta. Second-look: `WishlistView.header` has the same latent wrap (roadmap, not this spec); two recorded badge heights disagree (30 in `ThemeMetrics`' comment, 32 in `SideSwitch`'s) — G38's baseline pins the real one |
 | _rows added per dispatch as the spec runs_ | | | |
