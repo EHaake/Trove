@@ -3007,6 +3007,18 @@ struct ItemListViewModelRefusalTests {
     /// both, with `load()` before the assignment. Both list view models and
     /// both of their save-and-reload intents are scanned, so one can't drift
     /// back from the other.
+    ///
+    /// The second round adds the `rollback()` these four were missing, which
+    /// every other refusal path in the app already had
+    /// (`aRefusedSaveRollsBackAndReReadsWhatIsStored`). It has to come before
+    /// the `load()`, and it matters here for a measured reason rather than
+    /// symmetry: a fetch sees the context's pending insert and pending
+    /// delete, so without it the reload shows the copy that was never saved
+    /// or hides the row that still exists, under a message saying the save
+    /// failed — see
+    /// `PersistenceTests.aFetchSeesTheContextsPendingInsertsAndDeletesUntilRollback`,
+    /// which is the evidence. As in the detail screen's scan, `rollback()`
+    /// belongs to the failure path only.
     @Test func aRefusedSaveReportsItselfAfterTheReload() throws {
         let intents: [(String, String)] = [
             ("Trove/ViewModels/ItemListViewModel.swift", "func duplicate(id: UUID)"),
@@ -3026,9 +3038,14 @@ struct ItemListViewModelRefusalTests {
             try #require(catches.count == 1, "expected exactly one catch block in \(signature) in \(path)")
             let body = catches[0]
 
+            let rollback = try #require(body.range(of: "modelContext.rollback()"), "\(path) \(signature): the refused save must roll the context back — a fetch sees the pending insert or delete")
             let reload = try #require(body.range(of: "load()"), "\(path) \(signature): the refused save must re-read what is stored inside the catch")
             let message = try #require(body.range(of: "loadFailureMessage ="), "\(path) \(signature): the refused save must report itself")
+            #expect(rollback.lowerBound < reload.lowerBound, "\(path) \(signature): the rollback must run before the reload, or the reload re-reads the pending change")
             #expect(reload.lowerBound < message.lowerBound, "\(path) \(signature): load() clears the message, so it must run before the message is set")
+
+            let outsideCatch = bodies[0].replacingOccurrences(of: body, with: "")
+            #expect(!outsideCatch.contains("rollback()"), "\(path) \(signature): rollback belongs to the failure path only")
         }
     }
 }
