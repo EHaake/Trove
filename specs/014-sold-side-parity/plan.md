@@ -511,6 +511,34 @@ plan file the person approved and in the tier log.
   `.overflow → .exportScope` change in one transaction, so the plate stays
   and its rows swap (the device pass looks at that once). No `Menu`, no
   `confirmationDialog` (`013` Decision 17). The Wishlist's call is unchanged.
+- **Q18. The meta line takes the header's full width; the badges share the
+  title's row** (added 2026-09-18, decision review, at T010's device pass).
+  The pass measured the Sold side's switch at 168.00 pt against the Owned
+  side's 154.33 pt once anything is sold — one mono line. Cause, measured:
+  `header`'s `HStack` gave the title-and-meta `VStack` only the width the
+  badges left it (226.3 pt on Sold under "Date sold", 259.3 pt on Owned under
+  "Date"), and the sold summary needs about 232 pt, so it wrapped. §6's claim
+  held only while the slot's *width* held the line, which `014` ended by
+  putting a badge on the Sold side. `header` becomes `VStack(alignment:
+  .leading, spacing: 6) { HStack(alignment: .top) { title; Spacer(); badges };
+  metaLine }`, extracted as `ItemsListHeader` (`Trove/Views/Items/ItemListHeader.swift`)
+  taking the meta and the badges as `@ViewBuilder`s so its height is
+  measurable off-device. The badges stay top-aligned with the title, so the
+  header's height is the title's line box plus 6 plus one meta line on both
+  sides — unchanged from today provided the title's box is at least the badge
+  row's 30 pt, which T010a measures rather than assumes. The gate literal,
+  `sortControl` and `overflowControl` stay spelled in `ItemListView.swift`,
+  where G20's and `ImportWiringTests`' scans read them. **Not** `lineLimit(1)`
+  or `minimumScaleFactor` (`001`'s fixed type sizes, and either one blinds the
+  guard that has to be able to go red), **not** a shortened sold summary (the
+  person's copy, and it fails again at six-figure totals). No copy change and
+  no criterion amendment. The same latent wrap existed on the Owned side —
+  "34 ITEMS · $18,420 · 3 UNVALUED" under a long Owned sort label — and this
+  fixes it there too. Consequence to disclose: the header's VoiceOver order
+  becomes title, badges, meta; the person confirms it at criterion 12's
+  Accessibility Inspector step, and `.accessibilitySortPriority` on the meta
+  is the one-line answer if they don't like it. `WishlistView.header` carries
+  the identical shape and is **not** changed here (follow-up, `ROADMAP.md`).
 - **R3 — reading for the record:** R2 stands and now names the Owned scope;
   the sold document is the same rule applied to the sold half.
 
@@ -579,9 +607,13 @@ once per confirm.
 
 `ItemListView.body`'s header: both gated spans open on
 `viewModel.offersNarrowingControls` (Q10); the search field and chips render
-on both sides in the same slots, the switch stays where it is (`006` Decision
-13's slot is unchanged, so the switch's top edge is the same on both sides;
-the device pass re-measures it, criterion 3). `sortControl` reads
+on both sides in the same slots, and **the switch's top edge is the same on
+both sides because the meta line is the full header width, not because the
+slot is unchanged** (Q18, corrected 2026-09-18 at T010's device pass, which
+measured the old sentence false). `006` Decision 13's slot — one
+unconditional mono line on both sides — still holds, and it is a *height*
+claim two guards now measure (G38, G39) rather than a sentence the device
+pass spot-checks. `sortControl` reads
 `viewModel.visibleSortLabel` for the badge and its accessibility label. The
 host's `case .sort:` switches on `viewModel.side`: Owned composes today's
 `SortDropdown` over `SortOrder.allCases`; Sold composes one over
@@ -724,10 +756,13 @@ button and "Mark as sold…" to VoiceOver).
 | G35 | `.both` PDF: one `exportFiles` call, documents owned-then-sold, filenames `[items, soldItems]`, `stagedExport` the same; an empty half left out | two single calls; the empty half staged; order swapped |
 | G36 | all-sold: `canExportPDF` true, `canExport(.owned)` false | `canExportPDF` reads the owned half |
 | G37 | `ExportWiringTests`: the Items rows open `.exportScope(.csv/.pdf)`, the Wishlist's still export directly; the host's case composes one titled surface over `ExportScope.allCases`, rows gated `canExport(scope)`, actions passing `scope` (no literal case); three `.dropdownAnchor(` on `overflowControl` | a row gated on `canExportCSV`; the action passing `.both`; an anchor dropped |
+| G38 | `ItemListHeaderLayoutTests`: the header's rendered height at the device's content width is the one-line baseline for the Owned line, for the Sold line, and for the Sold line under the widest `SoldSortOrder` label | the meta line goes back inside the badges' row, or any control takes width from it |
+| G39 | UI: `items.sideSwitch` has the same `frame.minY` on both sides with `-seedSold` | the Sold summary wraps — the 13.67 pt T010 measured |
 
 Every guard is mutation-verified before it lands (`CLAUDE.md` Testing); the
 task's Done note records what was broken and what went red. Every source scan
 first asserts its anchor was found (`#require` on the count, the
-`ItemListSidesWiringTests` shape). Two things the suites cannot see, the
-device pass instruments (§8): the switch's top edge with the controls
-present, and the swipe's sheet presenting once per tap.
+`ItemListSidesWiringTests` shape). One thing the suites cannot see, the
+device pass instruments (§8): the swipe's sheet presenting once per tap. The
+switch's top edge, listed here until T010a, is guarded twice since — G38
+off-device and G39 on it.
