@@ -243,7 +243,15 @@ final class WishlistViewModel {
             try MarketLocalStore.clear(subjectID: id, in: modelContext)
             try modelContext.save()
         } catch {
+            // The reload below fetches a context that still holds the
+            // pending delete, so it would hide a row that still exists
+            // (`PersistenceTests.aFetchSeesTheContextsPendingInsertsAndDeletesUntilRollback`).
+            modelContext.rollback()
+            // `load()` first: it begins by clearing `loadFailureMessage`, so
+            // a message set before it never reached the screen.
+            load()
             loadFailureMessage = error.localizedDescription
+            return
         }
         load()
     }
@@ -281,7 +289,15 @@ final class WishlistViewModel {
         do {
             try modelContext.save()
         } catch {
+            // The reload below fetches a context that still holds the
+            // pending insert, so it would show a copy that was never saved
+            // (`PersistenceTests.aFetchSeesTheContextsPendingInsertsAndDeletesUntilRollback`).
+            modelContext.rollback()
+            // `load()` first: it begins by clearing `loadFailureMessage`, so
+            // a message set before it never reached the screen.
+            load()
             loadFailureMessage = error.localizedDescription
+            return
         }
         load()
     }

@@ -236,6 +236,44 @@ struct PersistenceTests {
         #expect(fetched.first?.desireToKeep == 2)
         #expect(fetched.first?.condition == .good)
     }
+
+    /// What a fetch sees while the context still holds unsaved changes — the
+    /// platform fact the list view models' refusal paths rest on, measured
+    /// rather than assumed (CLAUDE.md: a claim about how the system behaves
+    /// gets the test that would catch it being false).
+    ///
+    /// All four answers, on iOS 27: a pending insert is *already* in the
+    /// fetch, a pending delete is *already* gone from it, and `rollback()`
+    /// undoes each. So a refused `save()` in `duplicate(id:)` or
+    /// `delete(id:)` cannot just re-`load()` — the fetch would hand back the
+    /// copy that was never stored, or hide the row that still is, under a
+    /// message saying the save failed. `rollback()` first is what makes the
+    /// reload read the store. If a future OS changes any of this, this test
+    /// goes red before the four catch blocks quietly become wrong.
+    @Test func aFetchSeesTheContextsPendingInsertsAndDeletesUntilRollback() throws {
+        let names = { (context: ModelContext) in
+            try context.fetch(FetchDescriptor<Item>()).map(\.name).sorted()
+        }
+
+        // A pending insert, unsaved: visible.
+        let inserting = ModelContext(try makeInMemoryContainer())
+        inserting.insert(Item(name: "Stored", purchasePriceCents: 1))
+        try inserting.save()
+        inserting.insert(Item(name: "Unsaved", purchasePriceCents: 2))
+        #expect(try names(inserting) == ["Stored", "Unsaved"], "an unsaved insert is already in the fetch")
+        inserting.rollback()
+        #expect(try names(inserting) == ["Stored"], "rollback() discards the pending insert")
+
+        // A pending delete, unsaved: already gone.
+        let deleting = ModelContext(try makeInMemoryContainer())
+        let doomed = Item(name: "Doomed", purchasePriceCents: 1)
+        deleting.insert(doomed)
+        try deleting.save()
+        deleting.delete(doomed)
+        #expect(try names(deleting) == [], "an unsaved delete is already out of the fetch")
+        deleting.rollback()
+        #expect(try names(deleting) == ["Doomed"], "rollback() restores the pending delete")
+    }
 }
 
 /// 002/T003: the two synced market fields. Optional integers with no
