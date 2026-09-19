@@ -268,6 +268,7 @@ Settings alone.
 | Badge glyph | SF `ellipsis`, `15px` semibold, `accentBrass`, in an `18×14` frame sized against the sort badge's text row |
 | Exporting state | glyph swaps to a small `ProgressView` tinted brass; whole control disabled |
 | Menu | **bespoke since `013` Amendment A** — `OverflowDropdown` on the Sort picker's surface above, opened on the screen's dropdown host: five rows in three groups (the two exports, disabled when the view is empty; Import; Settings), no header row (P9), the group breaks as above. From `011` to `013` it was a system `Menu`, safe from the T029c tear because its label is a constant-size glyph; the amendment's rule — **bespoke inside the page, system in the bars** — ended that, so the two badges side by side open one visual language. `DetailOverflowMenu`, in the navigation bar, is the app's one system menu. |
+| Export rows, Items list (`014` Decision 7, P12) | the two export rows no longer export: each **opens a second dropdown on the same badge**, headed "EXPORT AS CSV" / "EXPORT AS PDF", offering Owned items · Sold items · Owned and sold, each row disabled when it has no rows under the on-screen narrowing. Same surface, same plate, same anchor — the plate stays put and its rows swap (measured at `014`'s device pass: plate top fixed at 115.33 pt across every frame). Dismiss catcher "Dismiss export options". No `Menu` and no `confirmationDialog` (`013` Decision 17); the Wishlist's two rows still export directly |
 | Hint | "Opens more actions" — a button with a hint; SwiftUI has no pop-up trait to give it (`013` Decision 18). The sort badge's is "Opens sort options", the Dashboard order control's "Opens order options" |
 | Dashboard order control (`013` A, P12) | Design's "BY VALUE" label as drawn — `monoLabel` in `textQuiet`, no pill — opening the shared surface under an "ORDER BY" header, the current order tinted and checked, no REORDER tag |
 
@@ -290,6 +291,13 @@ which fails contrast on white.
 | Page | US Letter `612×792pt`, `54pt` margins |
 | Photo box | `132×99pt`, aspect-fit, top-right of the entry |
 
+`014` adds a **second document, "Sold Items"**, on exactly these tokens and
+no new ones: TOTAL SOLD FOR in print brass (the headline slot), TOTAL PAID
+and REALISED in ink, the count line "N sold", no floor note, and each entry
+led by Sold · Sold for · Sold at · Outcome · Sale note above the owned grid.
+The sale's sign is carried by `SaleCopy`'s words, never by colour —
+`PrintPalette` has no moss or rust and gains none.
+
 Type scale — same three faces as the app via their PostScript names
 (one source, so `FontRegistrationTests` keeps covering the PDF), at a
 deliberately separate print scale: wordmark Archivo 600 `26pt` (tracked
@@ -302,17 +310,23 @@ IBM Plex Mono `10.5pt` · cover totals IBM Plex Mono 500 `15pt` · cover floor n
 
 | Token | Value |
 |---|---|
-| Leading action button width | `76px` each (Edit, Duplicate) |
+| Leading action button width | `76px` each — Edit and Copy on both lists, and on the Items list's **owned** rows a third, Sell, between them since `014` (Edit stays nearest the edge, so a full swipe still edits). Sold rows carry no leading swipe |
 | Trailing delete button width | `88px` |
 | Action row height | `78px` (matches full row height) |
 | Edit background | `divider` (`#3A3B3E`) |
 | Duplicate background | `surfaceInset` (`#26272A`) |
+| Sell background (`014`) | `accentBrassMid` — the one brass that is mid-tone in *both* palettes, so the white label reads the same on either appearance (white on it measured 3.61:1 dark / 3.74:1 light at `014`'s device pass) |
+| Sell glyph (`014`) | `ActionSell` — a price-tag outline in `action-edit.svg`'s house style (24 viewBox, 1.5 stroke, template, vector preserved); the "…" menu row wears SF `tag`, so the swipe wears the same sign |
 | Delete background | `accentRust` (`#9C4A34`) |
 | Icon box | `20px`, `1.5px` stroke — matches the tab-bar icon convention |
 
-Leading actions deliberately use neutral tones (`divider`, `surfaceInset`)
-rather than accent colors, so rust stays the only consequential color on
-a swiped-open row — nothing competes with Delete for attention.
+Leading actions deliberately avoid rust, so it stays the only
+**consequential** color on a swiped-open row — nothing competes with Delete
+for attention. Edit and Copy take neutral tones (`divider`, `surfaceInset`);
+`014`'s Sell takes `accentBrassMid` rather than a third neutral, because
+three grey buttons in a row would be one gesture with no legible middle, and
+because the action is not consequential — a sheet follows it, and the sheet
+is the confirmation.
 
 The 2026-08-29 export refresh relabels this button DUPLICATE — that text
 is **outdated**, confirmed at review: the on-screen string stays "Copy"
@@ -639,8 +653,8 @@ the Sold side summary) keep the signed `+$200 vs paid` form.
 | Halves | two, `62` wide each, no seam, IBM Plex Mono `11`, centred | |
 | Active half | `accentBrass` fill, `background` ink, weight 500 | |
 | Inactive half | no fill, `accentBrass` text, weight 400 | |
-| Placement | its own row under the title block, left-aligned; `controlRowGap` (16) below the meta line; `sectionGap` (24) above the search field on Owned; `15` above the first row on Sold | |
-| Header on Sold | Sort By and search hidden, "…" stays; the meta line is the sold summary, realised part in moss/rust | |
+| Placement | its own row under the title block, left-aligned; `controlRowGap` (16) below the meta line; `sectionGap` (24) above the search field on Owned; `15` above the first row on Sold | `014`: **the Owned spacing on both sides** — the Sold side now carries the same search field below the switch, so `sectionGap` (24) is the gap there too and the `15`-to-the-first-row case is gone. The meta line above the switch spans the header's full content width with the badges on the title's row (`014` plan Q18), which is what holds the switch's top edge equal: **154.333 pt on both sides**, measured at T010 with zero sales, with `-seedSold` and on a 13-row collection |
+| Header on Sold | Sort By and search hidden, "…" stays; the meta line is the sold summary, realised part in moss/rust | `014`: **nothing is hidden** — the search field, the category chips and Sort By render on the Sold side in the Owned side's slots, behind one gate (`offersNarrowingControls`, spelled twice), once anything has been sold; the badge reads that side's own sort ("Date sold" by default) and the chips are the sold categories only, with no Un-valued chip. The meta line is still the sold summary, now full-width under the title-and-badges row (Q18) |
 | Motion | the fill slides to the tapped half, `.snappy(duration: 0.2)`, rows cross-fade; fade only under Reduce Motion (0.25 s at the Design pass, shortened at T018b under spec Decision 13's "fast and smooth") | rows do not cross-fade — the fill's animated `.offset` is the only motion (T015 left the row fade out; Phase 5 review S6; recorded at the sweep) |
 | **Sold row** | | |
 | Shape | the Owned row (`List` chrome, plate, `52` thumbnail, `13` padding and gap) with no dial and no trend arrow | |
@@ -654,7 +668,7 @@ the Sold side summary) keep the signed `+$200 vs paid` form.
 | Realised line | `monoMeta` 11.5, moss/rust by sign; `4` under the figures | |
 | Tap cue | `arrow.right`, 11pt medium, `accentBrass`, trailing, vertically centred; the whole card is the button | |
 | **Sold mark (detail)** | | |
-| Position | first in the scroll content, above the photo hero; `sectionGap` 24 to the hero | |
+| Position | directly under the title block — photo hero, name, then the mark, then the stats — inside the page's one `sectionGap` (24) stack, so the gap above and below it is the page's standing section gap (`014` Decision 6) | Until `014` it was first in the scroll content, *above* the photo hero, with `sectionGap` 24 to the hero; the person asked for it under the name at `014`'s reading. Only its place moved — words, colours, `sold.mark` identifier and combined accessibility element are unchanged |
 | Tag | "SOLD", `monoLabel` type, `textPrimary` fill, `background` ink, padding `3 6 3 7`, `2px` radius (`thumbnailRadius`) | |
 | Outcome | on the tag's line, `10` after it; IBM Plex Mono 500 15 (`monoValue`), moss/rust/`textBody` | |
 | Sale line | `8` below; `monoMeta` in `textBody`, the price lifted to 500 `textPrimary` | |

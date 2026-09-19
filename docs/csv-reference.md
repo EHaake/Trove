@@ -18,8 +18,19 @@ step's count is the guard against doing that by accident.
 | | Items | Wishlist |
 |---|---|---|
 | Export filename | `Trove-Items-YYYY-MM-DD.csv` | `Trove-Wishlist-YYYY-MM-DD.csv` |
+| Sold-only filename | `Trove-Sold-Items-YYYY-MM-DD.csv` | — |
 | Template filename | `Trove-Items-Template.csv` | `Trove-Wishlist-Template.csv` |
 | Columns | 18 | 9 |
+
+An export from the Items screen asks which rows to include first — **owned
+items**, **sold items**, or **owned and sold** — so there are three possible
+files, all on the 18-column layout below. Owned and owned-and-sold are both
+written as `Trove-Items-YYYY-MM-DD.csv`; only the sold-only file takes the
+`Trove-Sold-Items` name. In a sold-only file every row has the four sale
+columns filled, and its rows are in date-sold order, most recent first —
+the same order the sold half takes inside an owned-and-sold file, whatever
+the screen is sorted by. Settings' Export All is unchanged: the complete
+record, as `Trove-Items` and `Trove-Wishlist`.
 
 Encoding is UTF-8. Trove writes a byte-order mark and CRLF line
 endings for Excel's sake; on import both are optional, and any

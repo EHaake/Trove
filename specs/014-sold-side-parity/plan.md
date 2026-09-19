@@ -772,3 +772,142 @@ first asserts its anchor was found (`#require` on the count, the
 device pass instruments (§8): the swipe's sheet presenting once per tap. The
 switch's top edge, listed here until T010a, is guarded twice since — G38
 off-device and G39 on it.
+
+---
+
+## As built
+
+Written at T011's close-out (2026-09-18), after every task and every review.
+This section is the record of what the plan above got right, what it got
+wrong, and where the build departed from it; the plan's own text is left as
+drafted so the two can be read against each other.
+
+### Four sentences above are false, and are corrected here
+
+- **§6's claim that the switch's top edge matches "because the slot is
+  unchanged"** was measured false at T010's device pass: with a sort badge on
+  the Sold side, `header`'s `HStack` left the title-and-meta `VStack` only
+  226.3 pt on Sold (259.3 on Owned), the sold summary needs about 232 pt, it
+  wrapped, and the switch sat **168.00 pt** against Owned's 154.33. The claim
+  held only while the slot's *width* held the line, which this spec ended.
+  Q18 is the fix — the meta line takes the header's full width, the badges
+  share the title's row — and §6 now says so. The lesson worth keeping: a
+  layout equality that rests on "nothing moved" stops being true the moment
+  something is added beside it, so it wants a measured guard (G38/G39), not a
+  sentence.
+- **Q17's first shape, `anchorPreference`**, was wrong: a set-modifier
+  stacked three times on one view *replaces* the key's value, so only the
+  last tag survived and the "…" badge opened nothing (T009f, six UI tests red
+  at `cf3e1ee`). The `reduce` the plan trusted merges across **siblings**,
+  not across stacked modifiers on one view. Corrected in place to
+  `transformAnchorPreference` and guarded by `DropdownAnchorTests`.
+- **Q15's pair-unwrap** ("`soldDate` and `salePriceCents` unwrapped as the
+  pair `012`'s rule guarantees") was a claim with no red until T010b: both
+  existing entry tests stayed green when the pair was rewritten as `?? 0`.
+  A half-record fixture — sold date set, price nil — now asserts the entry
+  begins at `Paid`, and the rewrite reddens.
+- **The Context's "no export format"** is also false as written: Decision 7,
+  taken at the Phase 2 pause, added a sold PDF document, a three-scope
+  chooser and a second items filename. The CSV *schema* is unchanged, which
+  is what the sentence should have said. §4a is the design that followed.
+
+### R1 and R2
+
+- **R1 — confirmed**, and then *corrected by the person* on 2026-09-18 at
+  their reading: from the **Sold** side a CSV's owned half is Custom order
+  (no owned row is visible, so "visible order" names nothing), which is what
+  the plan proposed and G14 guards. From the **Owned** side the file is the
+  rows in visible order, as `011` always wrote it, so the byte identity with
+  Settings holds under Custom and not under an arbitrary sort — criterion 10
+  carries that wording now. The plan's own sentence ("whatever either side's
+  sort shows") was true only of the Sold side.
+- **R2 — confirmed and extended.** It was disclosed to the person at the
+  Phase 2 pause as the plan required, and not overturned: the PDF follows
+  the on-screen side's narrowing with the same coverage label. Decision 7
+  then extended it — R2 now names the **Owned scope**, and the sold document
+  applies the identical rule to the sold half (R3). Guards G15, G33.
+
+### Q1–Q18 as shipped
+
+- **Q1–Q3 as written.** `ownedNarrowing` / `soldNarrowing` behind the
+  existing property names, `soldSortOrder` beside `sortOrder`, `show(_:)`
+  clearing nothing, `apply`'s clear moved below `show(.owned)`. The
+  `@Observable` note held: no view needed a binding change.
+- **Q4–Q8 as written**, with one forced spelling at T003: the textual rename
+  in `exportableSoldItems` would have made an Owned export follow a Sold
+  query, so that one line is `narrowed(sold, by: narrowing).sorted(by:
+  isInSoldOrder)` deliberately.
+- **Q9 as written, and the platform claim resolved in its favour**: the
+  swipe button carries `SaleCopy.swipeSell` = "Sell" and
+  `.accessibilityLabel(SaleCopy.markAsSold)`, and XCUITest reads the button
+  back as "Mark as sold…" — so the modifier overrides the `Label`'s text.
+  `accentBrassMid` measured **3.61:1 (dark) / 3.74:1 (light)** for white on
+  the tint at T010, so Q9's "if the label is illegible this is a decision
+  review" branch was never taken.
+- **Q10–Q13 as written.** No seed changed; no `.pbxproj` edit anywhere in
+  the spec (the `ActionSell` imageset resolved inside the existing
+  catalogue, as planned).
+- **Q14 as written but for one detail**: `ExportScope` is declared
+  `String, CaseIterable, Identifiable` rather than bare `CaseIterable` — the
+  raw string is `id`'s backing for the chooser's `ForEach`. The review's
+  second-look stands recorded: those raw values are unpinned and *look*
+  persistable, though nothing persists them (`id: Self` would have avoided
+  the appearance). `SoldSortOrder` carries the same shape, for the same
+  reason.
+- **Q15–Q16 as written**, plus the pair-unwrap guard above.
+- **Q17 corrected in place** (the `transformAnchorPreference` above), with
+  two testing notes from the same review shipped as their own tasks:
+  `GatedExportServiceSpy` now gates **once across** `exportCSV` and
+  `exportFiles` (T009i), which turned the reentry probe from a 20-minute
+  deadlock into a 0.13 s red; and `MenuPolicyTests` names
+  `.confirmationDialog(` beside `Menu` (T009h), closing the half of `013`
+  Decision 17 that no scan had ever covered.
+- **Q18 as written**, including the disclosed consequence: the header's
+  VoiceOver order is now title, badges, meta, which goes to the person at
+  criterion 12's step. `WishlistView.header` was **not** changed, as Q18
+  said; it carries the identical construction and the same latent wrap, and
+  a shared header view is on `ROADMAP.md` as the follow-up.
+
+### Deviations from the plan's text
+
+- **`loadFailureMessage` is set *after* `load()`** in the list's `markSold`
+  catch, not before, because `load()` clears it first (T005). The refusal
+  scan is order-blind, so this ordering has no red mutation — recorded as an
+  open second-look rather than papered over.
+- **Three test files gained a `.sold` arm** in an exhaustive `switch
+  cover.totals` (T009c) — outside the task's footprint, mechanical,
+  compiler-forced.
+- **Test files beyond the plan's list**: `ItemListHeaderLayoutTests.swift`
+  (Q18/G38), `DropdownAnchorTests.swift` (Q17's guard) and an `ActionIconTests`
+  suite inside `TabIconTests.swift`. `ActionIconTests` covers **three icons
+  beyond its task line** — all four action glyphs resolve, render as
+  templates and are four different marks, not just the new one.
+- **`scripts/verify.sh` was corrected** (committed on its own, `28b9dfa`): its
+  no-count guard fired on a *passing* one-test Swift Testing suite. Outside
+  every task's file list, disclosed here rather than folded into a task.
+- **`006` `spec.md` line 69's "from two places"** was left as written at
+  T001 — outside that task's scope, and still true.
+
+### Two behaviours inherited rather than designed, worth stating plainly
+
+- **The Un-valued chip narrows the sold half of a CSV too.** It is an
+  Owned-side chip (Q2), but `narrowed(_:by:)` applies the whole narrowing to
+  both halves, so a CSV taken from the Owned side with Un-valued on drops
+  sold rows that carry a value. This is `006`'s inherited behaviour, not new
+  here; the coverage label says "un-valued", so the file's label stays true
+  to what it holds.
+- **The same chip reaches the sold PDF's cover label** since Phase 2b: a
+  sold document exported under Un-valued is stamped with an un-valued
+  coverage label beside a cover that has nothing to caveat. Again true, if
+  odd to read; changing it would mean per-scope labels, which no criterion
+  asks for.
+- **"Owned and sold" on an all-sold collection writes a sold-only file under
+  `Trove-Items-<date>`.** That is P15 as written — only the `.sold` scope
+  takes the `Trove-Sold-Items` name — not a filename bug.
+
+### One pre-existing defect found and not fixed here
+
+`ItemListViewModel.duplicate(id:)`'s catch sets `loadFailureMessage` and then
+calls `load()`, which clears it — so a refused duplicate reports nothing to
+the person. Found at T005, outside this spec's footprint, and flagged for a
+`fix/` branch.

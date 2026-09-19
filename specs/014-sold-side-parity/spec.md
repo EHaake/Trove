@@ -191,11 +191,30 @@ to point here (Inherited caveats).
 
 ## Copy
 
-- Leading swipe action: "Sell" or "Mark as sold" — settled at planning
-  within the 76 pt action width (Design requirements); the placeholder is
-  "Sell".
-- Sort options: "Date sold", "Price ↓", "Price ↑", "Paid ↓", "Paid ↑",
-  "Gain ↓", "Gain ↑", "Name" — placeholders (P6).
+Settled at planning and shipped as written — the placeholders below became
+decisions on plan approval, and these are the strings that are in the build:
+
+- **Leading swipe action**: "Sell" on the button (`SaleCopy.swipeSell`) —
+  "Mark as sold" does not fit the 76 pt action width beside a glyph at the
+  swipe's label size — with **"Mark as sold…"** (`SaleCopy.markAsSold`, the
+  "…" menu row's own name) as the spoken name, so the same action is
+  announced the same way from both places (plan Q9). XCUITest read the button
+  back as "Mark as sold…" at T009, so the modifier took.
+- **Sort options**, in menu order: "Date sold", "Price ↓", "Price ↑",
+  "Paid ↓", "Paid ↑", "Gain ↓", "Gain ↑", "Name"
+  (`ItemListViewModel.SoldSortOrder.label`), defaulting to "Date sold". `↓` is
+  largest first, the Owned side's convention, which is what carries the one
+  fixed rule — a reader can tell which end a loss sorts to — by the glyph and
+  never by colour.
+- **The export scope chooser** (Decision 7): headers "EXPORT AS CSV" /
+  "EXPORT AS PDF" (`ExportCopy.scopeTitleCSV` / `scopeTitlePDF`), rows "Owned
+  items" / "Sold items" / "Owned and sold"
+  (`ItemListViewModel.ExportScope.label`), dismiss catcher "Dismiss export
+  options". The sold document's title is "Sold Items"
+  (`ItemListViewModel.soldDocumentTitle`), its cover eyebrows TOTAL SOLD FOR,
+  TOTAL PAID and REALISED, its count line "N sold". Filenames:
+  `Trove-Sold-Items-<YYYY-MM-DD>` for sold-only files, `Trove-Items-<YYYY-MM-DD>`
+  for owned and for owned-and-sold (P15).
 - The Sold side's no-matches state reuses the Owned side's copy.
 
 ## Design requirements
@@ -221,35 +240,171 @@ to point here (Inherited caveats).
 
 ## Acceptance criteria
 
-1. [ ] On the Owned side, a row's leading swipe offers Edit, Mark as sold…
+Thirteen of the fourteen were verified at T011's close-out (2026-09-18) — by
+the unit suite (**1540 tests in 208 suites**), the UI suite (**23 tests, run
+twice back to back**), and the T010 device pass on the simulator, walked twice:
+once over the seeded states and once over the person's own 7 owned / 6 sold
+collection, loaded through the app's own import. **Criterion 12 is an honest
+partial and stays unticked** — the Accessibility Inspector sweep is the
+person's own step, and what an agent could read of it is recorded there.
+Each criterion below names what was actually verified, so what is left is
+exactly the observation nobody has made yet.
+
+1. [x] On the Owned side, a row's leading swipe offers Edit, Mark as sold…
    and Copy in that order; a full swipe still edits; Mark as sold… opens the
    sale sheet for that row's item, and cancelling it changes nothing. The
    trailing swipe is still delete-only on both sides, and Sold rows have no
    leading swipe.
-2. [ ] The item page's "…" menu is unchanged in both states, and no new
+    *Verified by*: `ItemListSidesWiringTests.theOwnedRowsLeadingSwipeOffersEditThenSellThenCopy`
+    (the three leading buttons by position — Edit nearest the edge, so the
+    full swipe keeps editing — the middle one reading `SaleCopy.swipeSell`,
+    staging `itemBeingSold` and carrying `SaleCopy.markAsSold` as its
+    accessibility label, G19/G23), `theSaleSheetIsHostedOnceOverTheStagedRow`
+    (exactly one `.sheet(item: $itemBeingSold)` over
+    `makeSaleFormViewModel(for:)`, confirming through `markSold` and clearing
+    the staged row) and `theSoldRowsCarryOnlyTheTrailingDelete` (no leading
+    swipe on the Sold side; the trailing swipe delete-only on both).
+    Mutations: Sell and Copy swapped → red; the middle button staging
+    `itemBeingEdited` → red; confirm calling `load()` instead of the writer →
+    red. The sale itself by
+    `ItemListViewModelSwipeSaleTests.aSaleFromTheSwipeRecordsTheFourFieldsAndMovesTheRow`
+    (G18, refetched on a second `ModelContext`) and the seed by
+    `ItemDetailViewModelTests.everyHostSeedsTheMarkSheetIdentically` (G17 —
+    the list, the detail and the plan seed one sheet one way). On screen:
+    `testTheLeadingSwipeOffersMarkAsSoldBetweenEditAndCopyAndOpensTheSheet`.
+    On the device (T010): a probe inside the sale writer counted seed 2,
+    Cancel 0, swipe-down 0, background/foreground 0, appearance change 0 and
+    confirm 1 — the `.sheet(item:)` lesson instrumented rather than
+    eyeballed — and the file was byte-identical to HEAD once the probe came
+    out.
+2. [x] The item page's "…" menu is unchanged in both states, and no new
    button appears on the page.
-3. [ ] Once anything has been sold, the Sold side shows the search field, the
+    *Verified by*: the **existing** `SoldStateWiringTests` staying green with
+    no edit — `bothMenuRowsAndTheSoldEditLabelReadSaleCopy`,
+    `theMenuIsComposedOnceWithItsRowsSwappedByTheSoldFlag` (one `Menu`, its
+    rows chosen by `isSold`) and `theOverflowMenuHostsExactlyOneSystemMenu` —
+    together with `MenuPolicyTests`, likewise unedited except for T009h's
+    broadening (it now names `.confirmationDialog(` beside `Menu`, closing
+    the half of `013` Decision 17 the scan had left unguarded; mutation: a
+    `.confirmationDialog` on `AddButton` → red naming the file). Those suites
+    pin the menu's composition positively, so the evidence is that they held
+    while the page around them changed — not that the diff happens to be
+    silent on the file. No button was added: the sold branch composes
+    `photoHero`, `titleBlock`, `SoldMark(`, `statPair`, `desireCard` and
+    `details` and nothing else (`theSoldBranchStampsTheMark`, criterion 11).
+3. [x] Once anything has been sold, the Sold side shows the search field, the
    category chips and Sort By in the Owned side's positions; the switch's
    top edge is at the same point on both sides (measured, as `006`
    criterion 7a was).
-4. [ ] Searching on the Sold side narrows the rows by name or serial; the
+    *Verified by*: **T010's re-take after T010a** — the switch's top edge
+    **154.333 pt on both sides** in all three states: zero sales, `-seedSold`,
+    and the person's own 13-row collection, which is the state that read
+    168.00 pt before the fix. The Sold summary is one band running to x=764
+    where it used to break at x=584 and spill a second line; title/badge row,
+    meta, switch, search field and chip row land on identical rows on both
+    sides, and the Owned side under its widest label (`Market ↓`) is
+    unchanged. **And two standing guards**, because a number measured once is
+    not a rule: `ItemListHeaderLayoutTests.theHeaderIsOneMetaLineTallForEverySummaryAndEverySortLabel`
+    (G38 — the header's rendered height at the device content width is the
+    one-line baseline for every Owned and every Sold summary, each also at
+    six-figure scale, under each side's widest sort label, the widest
+    measured by rendering every label rather than counted; plus an
+    empty-trailing case that reddens **alone** if the badge row ever outgrows
+    the title's line box, verified by raising `OverflowBadge`'s padding to
+    30) with `theScreensHeaderPutsTheMetaLineUnderTheBadgesRatherThanBesideThem`,
+    and on screen `items.sideSwitch`'s `frame.minY` read on both sides with
+    `-seedSold` (G39 — the 13.667 pt the device pass measured). The first
+    device pass **found this criterion failing** (Sold 168.00 vs Owned 154.33,
+    the sold summary wrapping because the new sort badge narrowed its slot);
+    the cause and the fix are plan Q18 — the meta line takes the header's
+    full width with the badges on the title's row — and the pre-fix red was
+    captured first and reproduced the device measurement exactly.
+4. [x] Searching on the Sold side narrows the rows by name or serial; the
    summary line follows the rows on screen and never disappears.
-5. [ ] The Sold side's chips are the categories of sold items only; tapping
+    *Verified by*: `ItemListViewModelSoldSideTests.theSoldSummaryFollowsTheSoldSidesNarrowing`
+    (G10 — a query narrows `soldItems`, the totals follow it, and a query
+    matching nothing reads exactly "0 sold · $0"),
+    `theSummaryLineIsTheSharedCopyOverTheSharedTotals` and
+    `theSoldTotalsComeFromSaleOutcomeAndNotFromArithmeticHere`; the name-or-serial
+    rule itself is `SearchMatchingTests`', reached by both halves through the
+    one `narrowed(_:by:)`. Never disappearing:
+    `ItemListSidesWiringTests.neitherSidesMetaLineIsConditional` and
+    `theSoldSideReadsTheViewModelsSummaryLine`. Mutation: totals summed over
+    the unnarrowed `sold` → red. On screen:
+    `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch` types into the
+    Sold field and reads the rows back.
+5. [x] The Sold side's chips are the categories of sold items only; tapping
    one narrows the rows, and there is no Un-valued chip.
-6. [ ] Sort By on the Sold side offers exactly Date sold, Price ↓, Price ↑,
+    *Verified by*: `ItemListViewModelSoldSideTests.theSoldSidesChipsAreTheSoldCategoriesOnly`
+    (G7 — the Sold pair built from the sold half, the Owned pair unchanged,
+    `categoryOptions` following the side on screen; mutation: build either
+    from `all` → red) and `ItemListViewModelShowSideTests.theUnvaluedFilterIsRefusedWhileTheSoldSideIsOnScreen`
+    (G6, plan Q2 — the setter refuses the write on Sold and leaves Owned's
+    copy standing, so `soldNarrowing.showsOnlyUnvalued` can never be true and
+    the shared chip row cannot render the chip there; mutation: drop the
+    guard → red). On screen: the Sold-card UI test's chip assertions in
+    `testTheSoldCardLandsOnTheSoldSideWhichListsSalesMostRecentFirst`.
+6. [x] Sort By on the Sold side offers exactly Date sold, Price ↓, Price ↑,
    Paid ↓, Paid ↑, Gain ↓, Gain ↑ and Name, defaults to Date sold, and each
    order is correct on a fixture with a gain, a loss and an at-cost sale;
    ties resolve by the side's standing order.
-7. [ ] Each side keeps its own search, chip and sort while the other side is
+    *Verified by*: `SoldSortOrderTests.theMenuIsTheSpecsEightOptionsInOrder`
+    and `theSoldSideDefaultsToDateSold` (G1 — the labels, the case order and
+    the default by literal), `eachOrderSortsTheFixtureItsOwnWay` (G2 — all
+    eight orders over a four-row fixture carrying a gain, a loss and an
+    at-cost sale; mutations: any comparator deleted → its cases red, reversed
+    → red, the gain comparator reading paid → the Gain cases red) and
+    `aSalePriceTieFallsToTheStandingOrderNotToName` (G3 — asked of the
+    **static** comparator in both argument orders, since a tie-break cannot
+    be guarded through a fetch, whose order is indeterminate; mutations:
+    `?? false` in place of the standing order → red, the tie falling to name
+    → red both ways).
+7. [x] Each side keeps its own search, chip and sort while the other side is
    visited, in both directions, and neither side's state changes the
    other's; at launch both sides are clean. The Owned side's Sort By is
    unchanged and reads "Date".
-8. [ ] The Dashboard's Sold card lands on the Sold side as it stands; the
+    *Verified by*: `ItemListViewModelShowSideTests.theOwnedSideKeepsItsNarrowingWhileTheSoldSideIsVisited`
+    and `theSoldSideKeepsItsNarrowingWhileTheOwnedSideIsVisited` (G4 — chip,
+    query, un-valued and sort across a switch in both directions, with the
+    rows narrowed by them on return; mutations: `006`'s clears back in
+    `show`, or one shared `Narrowing` → red), `aFreshViewModelOpensOnOwned`
+    (G5 — both sides clean, Owned on screen, "Date" and "Date sold"),
+    `askingForTheSideAlreadyOnScreenLeavesTheFilterAlone`, and the badge leg
+    of `ItemListSidesWiringTests.oneNarrowingGateCoversBothSidesAndEachSideBringsItsOwnSort`
+    (G20 — `sortControl` reads `visibleSortLabel`, not `sortOrder.label`;
+    mutation: back to `sortOrder.label` → red). `apply`'s clear moved below
+    `show(.owned)` so an Owned request cannot wipe the Sold side's query on
+    its way through (plan Q3), pinned by the same suite's ordering assertion.
+    On screen: `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch` types
+    into the field, switches, comes back and reads it — the round trip driven
+    through the UI, not through state.
+8. [x] The Dashboard's Sold card lands on the Sold side as it stands; the
    Dashboard's category routes still land on Owned with that chip set.
-9. [ ] A Sold side narrowed to nothing shows the no-matches state with its
+    *Verified by*: `ItemListSidesWiringTests.theSoldRequestIsExactlyOneShowCall`
+    (the `.sold` route is one `show(.sold)` and writes nothing — P9) with the
+    same suite's assertion that every Owned case calls `show(.owned)` before
+    any write (G20, plan Q3). On screen:
+    `testTheSoldCardLandsOnTheSoldSideWhichListsSalesMostRecentFirst`. On the
+    device (T010): the Sold card landing on a Sold side that still carried
+    its own chip, and a category route landing on Owned with that chip set.
+9. [x] A Sold side narrowed to nothing shows the no-matches state with its
    filter copy, not "Nothing sold yet"; with nothing sold at all it still
    shows "Nothing sold yet" and no controls.
-10. [ ] An Owned-and-sold CSV exported from a narrowed Sold side holds the
+    *Verified by*: `ItemListViewModelSoldSideTests.theSoldSidesEmptyStateIsNothingSoldOrStillSyncing`
+    (G9 — five cases through the shared `ListEmptyReason.reason`, with
+    `.nothingAdded` mapped to `.nothingSold` afterwards and `stillSyncing`'s
+    precedence intact; mutation: pick the case directly again, `006`'s shape
+    → the query and chip cases read `.nothingSold` → red) and
+    `theEmptiedOwnedSideStillSaysEverythingSoldWithANoMatchQueryLeftOnSold`
+    (G25 — the hidden side's query cannot turn an emptied Owned side back
+    into a first launch; mutation: the guard reading `soldItems.isEmpty`
+    instead of `soldTotalCount > 0` → red), with
+    `ItemListSidesWiringTests.theNothingSoldStateReadsTheSoldCopyAndOffersNoAction`
+    and `ItemListViewModelSoldSideTests.theNarrowingControlsGateFollowsTheSideOnScreen`
+    (G8 — the gate reads the side on screen's own count, so nothing sold
+    means no controls). On the device (T010): a Sold side with nothing sold
+    at all showing "Nothing sold yet" and no controls.
+10. [x] An Owned-and-sold CSV exported from a narrowed Sold side holds the
     owned and sold rows that pass that narrowing, with a true coverage label,
     and the hidden side's own narrowing has no effect on it; exported with no
     narrowing on the side on screen it is byte-identical to Settings'
@@ -257,14 +412,66 @@ to point here (Inherited caveats).
     the Owned side under the Custom sort as `013` established (corrected
     2026-09-18 at the person's reading: from Owned the file is the rows in
     visible order, so the identity holds under Custom, plan R1).
-11. [ ] On a sold item's page the Sold mark sits directly under the item's
+    *Verified by*: `ItemListViewModelSoldExportTests.aCSVFromTheSoldSideFollowsTheSoldChipAndNotTheOwnedOne`
+    (G11), `aCSVFromTheOwnedSideIgnoresTheSoldSidesKeptQuery` (G12),
+    `theCSVsSoldHalfIsDateSoldOrderWhateverTheSideIsShowing` (G13, P10) and
+    `SettingsViewModelTests.theListsCSVMatchesSettingsFromEitherSideWhateverSortsShow`
+    (G14) beside `theListsUnfilteredCSVStillMatchesSettingsByteForByteWithASalePresent`;
+    mutations: the export reading `ownedNarrowing` or `items` from the Sold
+    side → red; reading `soldNarrowing` from Owned → red; writing `soldItems`
+    (the view's order) → red. The coverage label follows the side on screen
+    through `exportCoverageLabel` (mutation: build it from `ownedNarrowing` →
+    red). On the device (T010): an unnarrowed Owned-and-sold CSV taken from
+    the Items list and Settings' export-everything CSV compared with `cmp` —
+    no difference, 501 bytes, same md5. **Read from the Sold side this is the
+    whole criterion**; from the **Owned** side the identity holds under
+    Custom, which is what the criterion's own corrected wording says (plan
+    R1, the correction the person made on 2026-09-18 at their reading). The
+    Owned side's own export is `011`'s, unchanged.
+11. [x] On a sold item's page the Sold mark sits directly under the item's
     name, below the photo and above the stats, with its words and colours
     unchanged.
+    *Verified by*: `SoldStateWiringTests.theSoldBranchStampsTheMark`
+    (G21 — in the sold branch the offsets satisfy `photoHero` <
+    `titleBlock(for: item)` < `SoldMark(` < `statPair(for: item)`; mutation:
+    the mark back above the hero → red on `title < mark`), with the mark's
+    own words, colours and combined accessibility element untouched
+    (`theMarkReadsSaleCopyAndAnnouncesItselfAsOneElement`,
+    `everySoldSurfaceMapsIsLossToTheRustAndMossTokens`). On the device
+    (T010): the mark measured 29.33 pt under the title with the section gap
+    matching an owned page's by comparison.
 12. [ ] Every new control is reachable by VoiceOver with a label and, for the
     swipe action, a name — the person's step with Accessibility Inspector.
-13. [ ] The existing UI suite still starts from the state each test was
+    **An honest partial — this one is not done.** *What is known*: the swipe
+    action's spoken name is **"Mark as sold…"**, read out of the live
+    accessibility tree by XCUITest at T009, which is what settles the one
+    platform claim the suites could not check (that `.accessibilityLabel` on
+    a swipe-action `Button` overrides its `Label`'s text — plan Q9; "Sell" is
+    the visible word, `SaleCopy.swipeSell`). The labels themselves are pinned
+    off-device: `SaleCopyTests.theActionLabels`,
+    `ItemListSidesWiringTests.theSwitchIsLabelledAndMarksItsActiveHalfSelected`,
+    the swipe button's label leg of `theOwnedRowsLeadingSwipeOffersEditThenSellThenCopy`
+    (G23), the chooser's dismiss catcher "Dismiss export options" and the
+    sort badge's "Opens sort options" with `visibleSortLabel` as its value.
+    *What is owed*: the person's own pass with Accessibility Inspector over
+    the Sold side's search field, its category chips and its sort badge, and
+    over the export scope chooser — first-row focus on opening and the
+    dismiss catcher — plus a confirmation that the header's VoiceOver order
+    (now **title, badges, meta**, a disclosed consequence of plan Q18) reads
+    acceptably; `.accessibilitySortPriority` on the meta line is the one-line
+    answer if it does not. Nobody has run Accessibility Inspector over these
+    surfaces; the tool is not available to an agent here.
+13. [x] The existing UI suite still starts from the state each test was
     written against; the suite passes twice back to back.
-14. [ ] From the Items list, Export as CSV… and Export as PDF… each offer
+    *Verified by*: `scripts/verify.sh all` run twice, consecutively, at
+    `a1f5acf` (23 tests, 0 failures each) and again after the header fix at
+    `d5be739` (23 tests, 0 failures each) — the second pair the one that
+    counts, since T010a changed the header every UI test renders. No seed
+    changed in this spec (plan Q13): `-seedSold` is `006`'s, still gated on
+    the store the app actually built being in-memory, so every existing test
+    keeps the starting state it was written against
+    (`UITestSeedTests`).
+14. [x] From the Items list, Export as CSV… and Export as PDF… each offer
     Owned items, Sold items and Owned and sold, each enabled only when it has
     rows under the on-screen narrowing; the sold CSV holds exactly the sold
     rows that pass, in Date-sold order; the sold PDF's cover reads "Sold
@@ -273,6 +480,42 @@ to point here (Inherited caveats).
     name; Owned and sold gives criterion 10's CSV and, as a PDF, the two
     documents in one share sheet; the "…" menu's rows, the Wishlist's
     exports and Settings' exports are unchanged.
+    *Verified by*: `ItemListViewModelSoldExportTests.theExportScopesReadOwnedSoldBothInMenuOrder`
+    (G26), `theThreeScopesPartitionTheRecordFromANarrowedSoldSide` (G27 —
+    owned in Custom order, sold date-desc whatever `soldSortOrder` shows,
+    both = owned then sold), `eachScopeIsGatedOnTheRowsItWouldCarry` with
+    `anAllSoldCollectionOffersBothFormatsWithTheOwnedScopeDisabled` (G28/G36)
+    and `aSoldChipNoOwnedRowIsInDisablesTheOwnedScopeAlone`;
+    `ExportTempFileTests.filenamesCarryTheLocalDay` and the same sold-export
+    suite's `onlyTheSoldOnlyCSVTakesTheSoldFilename` (G29/G32 —
+    `Trove-Sold-Items-<day>` for sold-only, `Trove-Items-<day>` for owned and
+    for both); `PDFComposerTests.soldCoverCarriesTheSaleTotalsAndNoFloorNote`
+    and `soldCoverCountLineIsSingularForOneSale` (G30 — "Sold Items",
+    "N sold", TOTAL SOLD FOR / TOTAL PAID / REALISED, no floor note);
+    `ExportSchemaTests.soldEntryLeadsWithTheSaleThenTheOwnedGrid` and
+    `ownedEntryCarriesNoSaleFields` (G31 — the five sale fields **prepended**
+    under the name, optionals skipped when empty, an owned record carrying
+    none; a half-record fixture with a sold date and no price added at T010b
+    pins the pair-unwrap, and makes the `?? 0` rewrite red);
+    `theSoldPDFCoversTheSoldRowsThatPassTheChipInDateSoldOrder` (G33, with
+    T010b's `realised == proceeds − paid` expectation beside the concrete
+    triple), `theSoldCoverIsTheSoldSidesOwnTotals` (G34) and
+    `theBothPDFStagesOwnedThenSoldInOneFileSet` (G35 — one `exportFiles`
+    call, owned then sold, an empty half left out); the wiring by
+    `ExportWiringTests.theItemsListComposesTheScopeChooserOverEveryScope`,
+    `theScopeChooserHeadersReadAsTheSpecWritesThem` (G37) and its per-screen
+    `csvAction`/`pdfAction` literals — the Wishlist's rows still export
+    directly, and `SettingsWiringTests`/`SettingsViewModelTests` are
+    unchanged. The anchor mechanism itself has its own guard after T009f
+    found it broken: `DropdownAnchorTests` (three stacked tags reach a reader
+    as three keys; the helper reverted from `transformAnchorPreference` to
+    `anchorPreference` leaves one). On screen:
+    `testTheExportRowsOpenAScopeChooserGatedByWhatIsOnScreen`. On the device
+    (T010): all six files read back out of the container, the sold PDF's
+    cover figures checked against the Sold side's own summary, the eleven-
+    and thirteen-field sold entry pages drawing correctly with a long note
+    wrapping, the two-document share sheet, and the menu-to-chooser swap
+    re-sizing in place (plate top fixed at 115.33 pt across every frame).
 
 ## Decisions record
 
