@@ -1,6 +1,10 @@
 # 015 — Mark as Bought: Tasks
 
-**Status**: Draft — pending sign-off
+**Status**: **Signed off** (2026-09-19) by the `skeptical-reviewer` — one
+blocking finding fixed and re-reviewed, two further blocking findings raised
+by the re-review and fixed by the orchestrator under the loop cap, all logged
+in the tier log. Pending the person's approval of the spec-conformance
+summary; no implementation task starts before that.
 
 Drafted against the approved `spec.md` (Approved 2026-09-19) and the draft
 `plan.md` in this directory, for branch `015-mark-as-bought` off `main`
@@ -80,12 +84,17 @@ button); the Sell Plan's action is a **bag glyph in the top-right corner**, not
 a word, and if that reads as a puzzle the one-line fallback is a button reading
 "Bought" (plan §8); and **there is no undo** — a purchase made by mistake is
 corrected by deleting the item and re-adding the want, which is Decision 5 and
-not an omission. **Two things the spec did not say, which the person decides at
+not an omission. **Four things the spec did not say, which the person decides at
 that pause**: a bought entry is not counted in Settings' wanted-items number,
 is not in the export-everything wishlist file, and is **not** removed by
-"Delete all wanted items" (plan R1); and buying from a Sell Plan screen takes
-the person back to the Wishlist, two screens up (plan R2). The report puts both
-as questions, not facts.
+"Delete all wanted items" (plan R1); buying from a Sell Plan screen takes the
+person back to the Wishlist, two screens up (plan R2); the line under the price
+stays silent when the difference is under a dollar, rather than reading "$0
+more than you estimated" (plan Q7 — criterion 6 says "when they differ", and
+this is narrower); and the purchase date can be set in the future, unlike the
+sale sheet's, because the Edit screen that owns the same field allows it (plan
+Q9 — a departure from the spec's "the sale sheet's twin"). The report puts all
+four as questions, not facts.
 
 ## Phase 1 — Foundations: the marker, the writer, the rule (**foundational**)
 
@@ -138,7 +147,8 @@ as questions, not facts.
   Per plan §3, Q4, Q5, Q6 and Q12. New
   `Trove/Models/WishlistPurchaseStore.swift`, exactly the body plan §3 gives:
   `MarketLocalStore.clear(subjectID:)` **first**; the `Item` built with the
-  eleven carried/entered fields and `sortOrder` from
+  eleven fields `Item.init` takes there (the thirteen G5 checks are those
+  eleven, plus `desireToKeep` left at the default and `sortOrder`), `sortOrder` from
   `ManualOrderHelper.nextPosition(after:)` over every existing `Item`;
   `context.insert`; the photos **moved** (per photo:
   `wishlistItem = nil`, `item = item`, `sortOrder` renumbered from zero over
@@ -181,9 +191,14 @@ as questions, not facts.
   exactly once across all of them, that one assignment inside
   `Trove/Models/WishlistPurchaseStore.swift`, and no `boughtDate = nil` or
   `boughtDate = .none` anywhere. **Not a noun scan** — it counts the marker's
-  writers, nothing else (mutations: add `wanted.boughtDate = nil` to any view
-  model → red naming the file; move the write into `WishlistViewModel` → the
-  location leg red; both reverted).
+  writers, nothing else. **Match assignments only**, `boughtDate\s*=(?!=)`:
+  T004 adds four `boughtDate == nil` comparisons, and a pattern that counts
+  those reddens at T004 having been recorded green here (mutations: add
+  `wanted.boughtDate = nil` to any view model → red naming the file; move the
+  write into `WishlistViewModel` → the location leg red; add a
+  `boughtDate == nil` comparison to a view model → **stays green**, which is
+  the third mutation and the one that proves the pattern tells a write from a
+  read; all three reverted).
   Also confirm `PhotoOwnershipTests` stays green with no edit — and if its
   invariant has no case over a moved photo, add one there rather than here.
   Files: `Trove/Models/WishlistPurchaseStore.swift` (new),
@@ -260,10 +275,17 @@ as questions, not facts.
   `SellPlanViewModel`: `makePurchaseFormViewModel(for:)` (the detail's and the
   plan's take no argument — their subject is the entry they hold) and
   `markBought` → `WishlistPurchaseStore.markBought(…, at: now(), in:
-  modelContext)`, one `save()`, on refusal `rollback()` then `load()` then the
-  failure message **in that order** (`load()` clears the message first — the
-  ordering `WishlistViewModel.delete` already has right and `014`'s T005 got
-  backwards), returning the outcome. `WishlistDetailViewModel` also gains
+  modelContext)`, one `save()`, `rollback()` on refusal, returning the outcome.
+  **The failure property and the ordering are per host — do not copy one shape
+  three times** (plan §6): `WishlistViewModel` sets `loadFailureMessage`
+  *after* `rollback()` and `load()`, because its `load()` opens by clearing it
+  (the ordering `delete(id:)` already has right and `014`'s T005 got
+  backwards); `SellPlanViewModel` sets its existing `saveFailureMessage` in the
+  order its own `markSold` uses (`rollback()`, message, `load()`), since its
+  `load()` clears nothing and two intents on one screen should read alike;
+  `WishlistDetailViewModel` gets a **new `purchaseFailureMessage`** — not
+  `deleteFailureMessage`, which names a different act — set after `rollback()`.
+  `WishlistDetailViewModel` also gains
   `private(set) var hasBeenBought`, set from the fetched entry in `load()`
   (plan R2). `SellPlanViewModel.markBought(purchase:)` does **not** reload on
   success — the screen is dismissing. Pattern:
@@ -367,14 +389,51 @@ as questions, not facts.
 
 - [ ] **T009 — The wishlist detail's menu row, its sheet, and dismiss-on-bought.**
   Per plan §8 and **R2**. In `WishlistDetailView`: the `DetailOverflowMenu`
-  call moves to the `(noun:edit:middle:delete:)` initializer with `middle =
-  Row(title: PurchaseCopy.markAsBought, systemImage: "bag", action: {
-  isMarkingBought = true })`; `@State private var isMarkingBought = false` and
+  call moves to the `(noun:edit:middle:delete:)` initializer, which means the
+  file now builds two **`DetailOverflowMenu.Row`** values — qualified, since
+  `Row` does not resolve bare here — `edit:` being today's Edit/pencil row and
+  `middle:` being `DetailOverflowMenu.Row(title: PurchaseCopy.markAsBought,
+  systemImage: "bag", action: { isMarkingBought = true })`;
+  `@State private var isMarkingBought = false` and
   a `.sheet(isPresented:)` over `PurchaseFormView`, confirming through
   `viewModel.markBought(purchase:)` and `dismiss()`ing on true; `.onAppear`
   becomes `viewModel.load()` then `if viewModel.hasBeenBought { dismiss() }`.
-  **No button anywhere in `content(for:)`** (criterion 2, spec P1). Pattern:
-  `ItemDetailView.overflowMenu` and its `markAsSoldRow`. Tests
+  **No button anywhere in `content(for:)`** (criterion 2, spec P1).
+  **This reverses a `006` decision and breaks a `006` guard — rewrite it, do
+  not dodge it.** `SoldStateWiringTests.theWishlistPageKeepsTheOriginalMenuAndNamesNoSaleCopy`
+  (`:114–129`) asserts `!code.contains("DetailOverflowMenu.Row")` over this
+  file, because in `006` the wishlist page was untouched; the change above
+  makes that claim false, and spelling the rows `.init(...)` to keep the scan
+  green would be the false-passing shape `CLAUDE.md` records four times.
+  Rewrite it to pin the new rule: the file composes `DetailOverflowMenu(`,
+  builds **two** `DetailOverflowMenu.Row` argument lists — `edit:` and
+  `middle:` — of which **exactly one** names `PurchaseCopy.markAsBought`, and
+  the file still names **no** `SaleCopy` (the half of the original claim that
+  is still true). Use `SourceScan.argumentLists(of: "DetailOverflowMenu.Row",
+  in: code)`, `#require` the total, then filter — the shape
+  `SoldStateWiringTests.swift:54-68` already uses. Sign-off correction,
+  2026-09-19 (re-review): counting `DetailOverflowMenu.Row` occurrences and
+  expecting **one** reads red on correct code, since the file legitimately
+  holds two. **Leave the two-argument convenience initializer in place** — after
+  this change `ItemDetailView` and the component's own `#Preview` are its
+  callers, the preview is invisible to `SourceScan.production`, and deleting
+  the initializer is scope creep that would break it. Say so in the corrected
+  doc comment, so it does not read as dead. Correct
+  `DetailOverflowMenu.swift`'s doc comment in the same commit — the sentence
+  recording the two-argument initializer as "what the wishlist's page asks for
+  — it is untouched by this spec" is now false; say what `015` does to it and
+  leave `006`'s reasoning above it intact. **Append a "Superseded by `015`"
+  pointer to `specs/006-mark-as-sold/plan.md:559-561`**, whose claim that the
+  two-argument initializer is kept "so `WishlistDetailView` is untouched" this
+  task falsifies — in place, beside the original, never editing the shipped
+  claim away (`014/plan.md:704-711` is the pattern). Sign-off correction,
+  2026-09-19 (re-review N2): plan §1 first said no pointers were due.
+  `DECISIONS.md` gets the reversal at T013, and T013 verifies the pointer
+  landed. Mutations: spell the rows `.init(` → the rewritten test's
+  one-middle-`Row` leg red (where the old test would have gone green — record
+  both, that contrast is the point); drop the middle row → the `#require` on
+  the anchor fails; name `SaleCopy` in the file → red.
+  Pattern: `ItemDetailView.overflowMenu` and its `markAsSoldRow`. Tests
   (`WishlistPurchaseWiringTests`): **G17** — `PurchaseCopy.markAsBought`
   appears in `WishlistDetailView.swift` **exactly once**, inside the
   `DetailOverflowMenu(` argument list, and the file composes exactly one
@@ -385,12 +444,23 @@ as questions, not facts.
   no edit — this adds a row to the app's one system menu, not a second menu
   (confirm; a `Menu` added to `WishlistDetailView` → red, reverted).
   Files: `Trove/Views/Wishlist/WishlistDetailView.swift`,
+  `Trove/Views/Shared/DetailOverflowMenu.swift` (doc comment),
+  `TroveTests/SoldStateWiringTests.swift`,
   `TroveTests/WishlistPurchaseWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
 - [ ] **T010 — The Sell Plan's action, its sheet, and its dismiss.**
+  Sign-off correction, 2026-09-19 (re-review): G18's gate leg scans for a
+  `viewModel.wishlistItem != nil` span, but `SellPlanView.swift:49` reads
+  `if let wanted = viewModel.wishlistItem`. Write the gate with that exact
+  spelling — `.toolbar { if viewModel.wishlistItem != nil { … } }` — so the
+  scan matches what correct code says; a behaviourally-identical `if let _ =`
+  or `.disabled(… == nil)` would redden a guard over working code.
   Per plan §8 and **R2**. In `SellPlanView`: a
-  `.toolbar { ToolbarItem(placement: .topBarTrailing) { … } }` holding a
+  `.toolbar { ToolbarItem(placement: .topBarTrailing) { … } }` holding —
+  **only when `viewModel.wishlistItem != nil`**, since this screen already
+  draws a `missingItem` state when its entry has gone and an ungated button
+  there would confirm a purchase with no subject — a
   `Button { isMarkingBought = true } label: { Image(systemName: "bag") }` with
   `.accessibilityLabel(PurchaseCopy.markAsBought)` and
   `.accessibilityIdentifier("purchase.sellPlan")`; `@State private var
@@ -402,11 +472,11 @@ as questions, not facts.
   `WishlistDetailView`'s `.toolbar` block for the placement;
   `SellPlanView`'s existing sale sheet for the host shape. Tests
   (`WishlistPurchaseWiringTests`): **G18** — exactly one toolbar button naming
-  `PurchaseCopy.markAsBought`, exactly one
-  `.sheet(isPresented: $isMarkingBought` over `PurchaseFormView(`, the confirm
-  closure naming both `markBought` and `dismiss`, and the file naming no
-  `WishlistPurchaseStore` (mutations: drop the `dismiss()` → red; host the
-  sheet twice → red). The existing `SellPlanWiringTests` and
+  `PurchaseCopy.markAsBought`, composed **inside** a `viewModel.wishlistItem
+  != nil` span, exactly one `.sheet(isPresented: $isMarkingBought` over
+  `PurchaseFormView(`, the confirm closure naming both `markBought` and
+  `dismiss`, and the file naming no `WishlistPurchaseStore` (mutations: drop
+  the `dismiss()` → red; host the sheet twice → red; drop the gate → red). The existing `SellPlanWiringTests` and
   `SellPlanFramingTests` stay green with no edit — confirm.
   Files: `Trove/Views/Wishlist/SellPlanView.swift`,
   `TroveTests/WishlistPurchaseWiringTests.swift`.
@@ -483,8 +553,12 @@ as questions, not facts.
   twice, and citing T012's probe as the observation; **criterion 15 ticked on
   `PurchaseUndoTests` plus the diff**, saying plainly that no test enumerates
   the bought item's menu and that the evidence is `ItemDetailView` and
-  `DetailOverflowMenu` being untouched in this spec's diff (the `014`
-  criterion-2 lesson); criterion 12 an honest partial until the person's
+  `ItemDetailView` being untouched and `DetailOverflowMenu` changed **only in
+  its doc comment**, which adds no return path (the `014` criterion-2 lesson).
+  Sign-off correction, 2026-09-19 (re-review N1): the citation first claimed
+  both files were untouched, which this spec's own §8 refutes. **Verify the
+  `006` pointer T009 appended is present** (`grep -c` over
+  `specs/006-mark-as-sold/plan.md`, the `014` T001 shape); criterion 12 an honest partial until the person's
   Accessibility Inspector step, naming the spoken name T012 read. **Re-run
   G14's two mutations against the finished tree** (T003 wrote
   `PurchaseUndoTests` before the views existed, so its "exactly once across
@@ -497,12 +571,23 @@ as questions, not facts.
   plus a row for the purchase sheet; `README.md`'s wishlist bullet;
   `specs/ROADMAP.md`'s `015` entry and status row, its `009` entry (a completed
   plan now has a definition; the unreachable orphan a hand-corrected purchase
-  leaves is `009`'s to surface or sweep), and a follow-up line for the shared
-  field chrome three sheets now copy (plan Q8); `DECISIONS.md` (the marker as
-  one optional date with no relationship and why; photos moved rather than
-  copied, and why the duplicate path is the wrong shape here; Settings treating
-  a bought entry as off the wishlist, R1; the unbounded purchase date, Q9; the
-  Sell Plan's bar button and which spoken name shipped). Finally the pre-merge
+  leaves is `009`'s to surface or sweep), a follow-up line for the shared
+  field chrome three sheets now copy (plan Q8), and a **`fix/` follow-up for a
+  defect in already-merged code found while planning and deliberately not
+  fixed here**: `WishlistViewModel.duplicate(id:)` rebuilds photos through
+  `Photo(imageData:source:sortOrder:)`, which writes none of the three
+  attribution fields, so duplicating a wanted item with a `005` stock photo
+  loses its credit today — a licence-compliance defect outside every criterion
+  in this spec, and `CLAUDE.md` gives a merged-code bug its own branch;
+  `DECISIONS.md` (the marker as one optional date with no relationship and why;
+  photos moved rather than copied, and why the duplicate path is the wrong
+  shape here; Settings treating a bought entry as off the wishlist, R1; the
+  unbounded purchase date, Q9; the sub-dollar floor and its consequence that a
+  genuinely zero estimate reads as no estimate, Q7; **the `006` reversal** —
+  the wishlist page now builds menu rows, `DetailOverflowMenu`'s doc comment
+  corrected and `SoldStateWiringTests`' wishlist-page test rewritten rather
+  than loosened; the Sell Plan's bar button and which spoken name shipped).
+  Finally the pre-merge
   `skeptical-reviewer` sweep over `git diff main...HEAD` (bundle cut after
   `git add -A`, so untracked files are in it) and the PR marked ready for
   review.
@@ -528,6 +613,8 @@ orchestrator had to redo, and why) are recorded here too.
 | Task / invocation | Tier | Tokens | Outcome / miss reason |
 |---|---|---|---|
 | Spec session (this spec's `spec.md`, drafting and approval) | `opus` (raised to high for the spec conversation) | orchestrating seat, not measured separately | Draft 2026-09-19, approved the same day with Decisions 5–7 |
-| `sdd-planner` — plan.md and tasks.md | `opus` | | |
-| `skeptical-reviewer` — plan/tasks sign-off and re-review | `opus` | | |
+| `sdd-planner` — plan.md and tasks.md (draft, then the sign-off fix pass) | `opus` | 305k (257k draft + 48k fix pass) | 13 tasks, 3 phases, 23 guards; no product question returned |
+| `skeptical-reviewer` — plan/tasks sign-off | `opus` | 175k | 1 blocking (B1: T009 reddens a `006` guard), 8 non-blocking; 6 folded into the fix pass, S7/S8 recorded |
+| `skeptical-reviewer` — sign-off re-review | `opus` | 100k | B1 and S1–S6 confirmed resolved; **2 new blocking findings introduced by the fix pass** (N1, N2 — both stale "untouched" claims about `DetailOverflowMenu`). Loop cap reached, so the orchestrator fixed both directly and logged them, per `CLAUDE.md` |
+| Orchestrator — post-re-review corrections | `opus` (session, medium) | n/a | N1, N2, plus four second-look items the re-review named: the "exactly one `Row`" phrasing (would redden on correct code), G18's gate spelling, the convenience initializer's fate, and Q10's factually-wrong rationale |
 | _rows added per dispatch as the spec runs_ | | | |
