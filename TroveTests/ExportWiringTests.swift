@@ -21,18 +21,28 @@ struct ExportWiringTests {
         let path: String
         let csv: String
         let pdf: String
-        /// The exact CSV intent this screen's row must fire. Per screen since
-        /// 014/T009b, and since T009e the two screens don't even fire the same
-        /// *kind* of thing: the Items list's row opens the scope chooser
-        /// (Decision 7 — the scope is chosen there, so the row exports
-        /// nothing itself), while the Wishlist's still exports directly. A
-        /// scan for one shared literal could not tell the two apart.
+        /// The exact CSV intent this screen's row must fire, **argument label
+        /// included**. Per screen since 014/T009b, and since T009e the two
+        /// screens don't even fire the same *kind* of thing: the Items list's
+        /// row opens the scope chooser (Decision 7 — the scope is chosen
+        /// there, so the row exports nothing itself), while the Wishlist's
+        /// still exports directly. A scan for one shared literal could not
+        /// tell the two apart.
+        ///
+        /// The label is what makes the claim below true (T010b/S3 of the
+        /// Phase 2b sweep): the assertions are `contains` over the whole
+        /// argument list, so pinning the body alone — `openDropdown =
+        /// .exportScope(.csv)` — stayed green when the two closures were
+        /// swapped, both bodies still being somewhere in the list. Pinned as
+        /// `exportCSV: { … }`, a swap moves the body out from under its label
+        /// and fails.
         let csvAction: String
-        /// The exact PDF intent, per screen for the same reason since
-        /// 014/T009d — and re-pointed at the chooser at T009e, like the CSV
-        /// one above. Re-pointed, never broadened: each screen still names
-        /// one literal, so either row quietly going back to a direct export
-        /// (or to the wrong format's chooser) fails here.
+        /// The exact PDF intent, labelled the same way and for the same
+        /// reasons — per screen since 014/T009d, re-pointed at the chooser at
+        /// T009e. Re-pointed, never broadened: each screen still names one
+        /// literal, so either row quietly going back to a direct export (or
+        /// to the wrong format's chooser, or to the other row's closure)
+        /// fails here.
         let pdfAction: String
     }
 
@@ -41,15 +51,15 @@ struct ExportWiringTests {
             path: "Trove/Views/Items/ItemListView.swift",
             csv: "canExportCSV: viewModel.canExportCSV",
             pdf: "canExportPDF: viewModel.canExportPDF",
-            csvAction: "openDropdown = .exportScope(.csv)",
-            pdfAction: "openDropdown = .exportScope(.pdf)"
+            csvAction: "exportCSV: { openDropdown = .exportScope(.csv) }",
+            pdfAction: "exportPDF: { openDropdown = .exportScope(.pdf) }"
         ),
         DropdownGates(
             path: "Trove/Views/Wishlist/WishlistView.swift",
             csv: "canExportCSV: viewModel.canExport",
             pdf: "canExportPDF: viewModel.canExport",
-            csvAction: "viewModel.exportCSV()",
-            pdfAction: "viewModel.exportPDF()"
+            csvAction: "exportCSV: { Task { await viewModel.exportCSV() } }",
+            pdfAction: "exportPDF: { Task { await viewModel.exportPDF() } }"
         ),
     ]
 

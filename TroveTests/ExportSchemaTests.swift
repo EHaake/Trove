@@ -402,12 +402,34 @@ struct ExportSchemaTests {
 
     /// The other half of G31: an owned record carries none of the five, so
     /// the sale block is genuinely conditional rather than always drawn empty.
-    @Test func ownedEntryCarriesNoSaleFields() {
+    ///
+    /// The half-record below is the pair half (plan Q15): the date and the
+    /// price are unwrapped *together*, because the pair is the sale — one
+    /// half without the other is not a state this app writes, and a record
+    /// that somehow carried one reads as owned rather than as a $0 sale.
+    /// Mutation: unwrap the date alone and take the price as
+    /// `salePriceCents ?? 0` → the half-record grows a "Sold" row reading
+    /// "Sold for $0" → red.
+    @Test func ownedEntryCarriesNoSaleFields() throws {
+        let saleLabels = ["Sold", "Sold for", "Sold at", "Outcome", "Sale note"]
+
         let labels = PDFEntry(record: saleFixture()).fields.map(\.label)
-        for label in ["Sold", "Sold for", "Sold at", "Outcome", "Sale note"] {
+        for label in saleLabels {
             #expect(!labels.contains(label))
         }
         #expect(labels.first == "Paid")
+
+        let soldOn = try #require(
+            gregorian(in: "America/New_York").date(from: DateComponents(year: 2026, month: 7, day: 4))
+        )
+        let halfLabels = PDFEntry(
+            record: saleFixture(soldDate: soldOn, salePriceCents: nil),
+            timeZone: zone("America/New_York")
+        ).fields.map(\.label)
+        for label in saleLabels {
+            #expect(!halfLabels.contains(label), "a date without its price drew \(label)")
+        }
+        #expect(halfLabels.first == "Paid")
     }
 
     @Test func wishlistEntryCarriesItsFourFieldsAndNotes() {

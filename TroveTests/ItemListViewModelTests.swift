@@ -2760,10 +2760,12 @@ struct ItemListViewModelSoldExportTests {
     /// totalled over exactly those rows (P14). The fixture shows `Price ↑`,
     /// so the side on screen really is holding the other order.
     ///
-    /// Mutations, all three run: entries from `soldItems` → price-ascending →
+    /// Mutations, all four run: entries from `soldItems` → price-ascending →
     /// red; cover over the unnarrowed `sold` half → count 3 and the
     /// Jazzmaster's figures → red; paid summed from `salePriceCents` →
-    /// $1,000 in the TOTAL PAID slot → red.
+    /// $1,000 in the TOTAL PAID slot → red, on the concrete cents *and* on
+    /// the realised-less-paid relationship below, which is the one that still
+    /// holds if the fixture's figures are ever rewritten (T010b/S4).
     @Test func theSoldPDFCoversTheSoldRowsThatPassTheChipInDateSoldOrder() async throws {
         let context = try makeInMemoryContext()
         insertItem("Telecaster", category: "Music/Guitars", into: context)
@@ -2812,6 +2814,13 @@ struct ItemListViewModelSoldExportTests {
         #expect(proceeds == expected.proceedsCents)
         #expect(realised == expected.realisedDeltaCents)
         #expect((proceeds, paid, realised) == (1_000_00, 700_00, 300_00))
+        // The cover's three figures come from two arithmetic sources —
+        // proceeds and realised off `SaleOutcome.totals`, paid off
+        // `figures(over:)` — so they agreeing is a claim, not a given. Pinned
+        // as the relationship rather than left to the fixture's cents, which
+        // satisfy it by coincidence: a paid summed over some other set of
+        // rows fails here whatever the fixture's figures are.
+        #expect(realised == proceeds - paid, "the cover's realised isn't its own proceeds less its own paid")
     }
 
     /// G34: over an unnarrowed Sold side the cover's three figures are the
