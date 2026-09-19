@@ -311,7 +311,7 @@ struct SettingsViewModelExportTests {
         let itemsList = ItemListViewModel(modelContext: context, exportService: itemsSpy)
         itemsList.sortOrder = .custom
         itemsList.load()
-        await itemsList.exportCSV()
+        await itemsList.exportCSV(scope: .both)
 
         let wishlistSpy = ExportServiceSpy()
         let wishlist = WishlistViewModel(modelContext: context, exportService: wishlistSpy)
@@ -344,7 +344,7 @@ struct SettingsViewModelExportTests {
         let itemsList = ItemListViewModel(modelContext: context, exportService: itemsSpy)
         itemsList.sortOrder = .custom
         itemsList.load()
-        await itemsList.exportPDF()
+        await itemsList.exportPDF(scope: .owned)
 
         let wishlistSpy = ExportServiceSpy()
         let wishlist = WishlistViewModel(modelContext: context, exportService: wishlistSpy)
@@ -452,7 +452,7 @@ struct SettingsViewModelExportTests {
         let list = ItemListViewModel(modelContext: context, exportService: listSpy)
         list.sortOrder = .custom
         list.load()
-        await list.exportCSV()
+        await list.exportCSV(scope: .both)
 
         let listTable = try #require(listSpy.tables.first)
         try #require(
@@ -460,6 +460,87 @@ struct SettingsViewModelExportTests {
             "the list's own order changed — the equality below would be two wrongs agreeing"
         )
         #expect(CSVWriter.write(settingsSpy.tables[0]) == CSVWriter.write(listTable))
+    }
+
+    /// 014/G14: `013`'s byte-identity holds from **either** side of the Items
+    /// list, whatever sort either side is showing (criterion 10). The list's
+    /// sorts are reading aids; the file is the record — owned rows in Custom
+    /// order when no owned row is on screen (014 plan R1), sold rows always in
+    /// Date-sold order (P10).
+    ///
+    /// Mutation: order the owned half by `isOrderedBefore` from the Sold side
+    /// → the `Date` sort puts Zulu first and the files diverge → red; write
+    /// the sold half in the view's order → `Price ↑` and `Gain ↓` each
+    /// diverge → red.
+    @Test func theListsCSVMatchesSettingsFromEitherSideWhateverSortsShow() async throws {
+        let context = try makeInMemoryContext()
+        // Manual positions, names and purchase dates all disagree, so Custom
+        // order and the Owned side's `Date` sort are genuinely two orders.
+        let charlie = insertItem("Charlie", order: 0, createdAt: 100, into: context)
+        charlie.purchaseDate = try day(2020, 1, 1)
+        let bravo = insertItem("Bravo", order: 0, createdAt: 200, into: context)
+        bravo.purchaseDate = try day(2024, 5, 1)
+        let lowerAlpha = insertItem("alpha", order: 0, createdAt: 300, into: context)
+        lowerAlpha.purchaseDate = try day(2022, 9, 1)
+        let zulu = insertItem("Zulu", order: 1, createdAt: 50, into: context)
+        zulu.purchaseDate = try day(2026, 1, 1)
+        insertWanted("Pedal", order: 0, into: context)
+        // Three sales whose prices and gains each order them differently from
+        // Date sold — so `Price ↑` and `Gain ↓` are both real alternatives.
+        let zebra = insertItem("Zebra", priceCents: 89_000, order: 9, into: context)
+        zebra.sale = Sale(date: try day(2026, 6, 1), priceCents: 90_000, location: "Reverb", note: nil)
+        let beta = insertItem("beta", order: 1, into: context)
+        beta.sale = Sale(date: try day(2026, 3, 1), priceCents: 20_000, location: nil, note: nil)
+        let alpha = insertItem("Alpha", order: 2, into: context)
+        alpha.sale = Sale(date: try day(2026, 3, 1), priceCents: 30_000, location: nil, note: nil)
+        try context.save()
+
+        let settingsSpy = ExportServiceSpy()
+        let settings = SettingsViewModel(modelContext: context, exportService: settingsSpy)
+        settings.load()
+        await settings.exportEverythingAsCSV()
+        let expected = CSVWriter.write(settingsSpy.tables[0])
+
+        // From the Sold side, with the Owned side left on `Date` and the Sold
+        // side on `Price ↑`.
+        let soldSpy = ExportServiceSpy()
+        let fromSold = ItemListViewModel(modelContext: context, exportService: soldSpy)
+        fromSold.sortOrder = .purchaseDate
+        fromSold.show(.sold)
+        fromSold.soldSortOrder = .salePriceAscending
+        fromSold.load()
+        try #require(
+            fromSold.items.map(\.name) == ["Zulu", "Bravo", "alpha", "Charlie"],
+            "the Owned side is showing an order the file must not use"
+        )
+        try #require(
+            fromSold.soldItems.map(\.name) == ["beta", "Alpha", "Zebra"],
+            "the Sold side is showing an order the file must not use"
+        )
+        await fromSold.exportCSV(scope: .both)
+        let fromSoldTable = try #require(soldSpy.tables.first)
+        try #require(
+            fromSoldTable.rows.map { $0[0] } == ["Charlie", "Bravo", "alpha", "Zulu", "Zebra", "Alpha", "beta"],
+            "the list's own order changed — the equality below would be two wrongs agreeing"
+        )
+        #expect(CSVWriter.write(fromSoldTable) == expected)
+
+        // And from the Owned side under Custom, with the Sold side holding
+        // `Gain ↓` — a third order again, and equally not the file's.
+        let ownedSpy = ExportServiceSpy()
+        let fromOwned = ItemListViewModel(modelContext: context, exportService: ownedSpy)
+        fromOwned.show(.sold)
+        fromOwned.soldSortOrder = .gainDescending
+        fromOwned.show(.owned)
+        fromOwned.sortOrder = .custom
+        fromOwned.load()
+        try #require(
+            fromOwned.soldItems.map(\.name) == ["Alpha", "beta", "Zebra"],
+            "the hidden Sold side is holding an order the file must not use"
+        )
+        await fromOwned.exportCSV(scope: .both)
+        let fromOwnedTable = try #require(ownedSpy.tables.first)
+        #expect(CSVWriter.write(fromOwnedTable) == expected)
     }
 
     /// 006/G16: the everything-PDF is the owned collection only — its
@@ -486,8 +567,8 @@ struct SettingsViewModelExportTests {
         switch document.cover.totals {
         case let .items(value, paid, unvalued):
             #expect((value, paid, unvalued) == (150_00, 100_00, 0))
-        case .wishlist:
-            Issue.record("the items document carries wishlist totals")
+        case .wishlist, .sold:
+            Issue.record("the items document carries another document's totals")
         }
     }
 

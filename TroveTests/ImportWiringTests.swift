@@ -36,19 +36,30 @@ struct ImportWiringTests {
         "Trove/Views/Wishlist/WishlistView.swift",
     ]
 
+    /// The empty-collection gate each list screen hides its narrowing
+    /// controls behind. The Items screen's changed at 014 — both sides
+    /// narrow now, so the gate reads the view model's rule rather than the
+    /// Owned side's count (014 plan Q10) — while the wishlist, which has
+    /// one side, still counts. The anchor travels with the screen so this
+    /// scan keeps looking at a real header on both.
+    private nonisolated static let listGates = [
+        ("Trove/Views/Items/ItemListView.swift", "if viewModel.offersNarrowingControls"),
+        ("Trove/Views/Wishlist/WishlistView.swift", "if viewModel.totalCount > 0"),
+    ]
+
     /// 012 criterion 1's structural half: the overflow control lives
-    /// OUTSIDE every `totalCount > 0` gate, on both screens — the badge
+    /// OUTSIDE every empty-collection gate, on both screens — the badge
     /// must exist on a fresh install. The sort badge staying *inside* one
     /// of those gates proves the scan is looking at the real header, not
     /// an empty span. The empty-collection UI test is this guard's
     /// behavioral twin; re-nesting the control must turn both red.
-    @Test(arguments: lists)
-    func theOverflowControlSitsOutsideEveryEmptyCollectionGate(path: String) throws {
+    @Test(arguments: listGates)
+    func theOverflowControlSitsOutsideEveryEmptyCollectionGate(path: String, gate: String) throws {
         let code = try SourceScan.production(path)
         try #require(code.contains("overflowControl"), "\(path) doesn't build the overflow control")
 
-        let gatedSpans = SourceScan.closureBodies(after: "if viewModel.totalCount > 0", in: code)
-        try #require(!gatedSpans.isEmpty, "\(path) has no totalCount gates — wrong scan target?")
+        let gatedSpans = SourceScan.closureBodies(after: gate, in: code)
+        try #require(!gatedSpans.isEmpty, "\(path) has no `\(gate)` gates — wrong scan target?")
         #expect(
             gatedSpans.contains { $0.contains("sortControl") },
             "\(path): the sort badge should still hide when empty — did the header move?"
@@ -56,7 +67,7 @@ struct ImportWiringTests {
         for span in gatedSpans {
             #expect(
                 !span.contains("overflowControl"),
-                "\(path) nests the overflow control inside a totalCount gate — criterion 1 broken"
+                "\(path) nests the overflow control inside an empty-collection gate — criterion 1 broken"
             )
         }
     }

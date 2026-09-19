@@ -2,18 +2,32 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The header's two dropdowns. One optional of this type is the screen's
+/// Which file the export chooser is choosing a scope for (014 plan Q17).
+/// Private to this screen: the two rows open the same surface under two
+/// headers, and nothing outside this file needs to name the pair.
+private enum ExportFormat: Hashable {
+    case csv
+    case pdf
+}
+
+/// The header's dropdowns. One optional of this type is the screen's
 /// whole open-menu state, which is what makes "one open at a time" true by
-/// type rather than by coordination (013 Amendment A).
+/// type rather than by coordination (013 Amendment A) — and since 014 it is
+/// what makes the export chooser a *replacement* for the overflow rather
+/// than a second plate over them: the "…" rows set this to `.exportScope`,
+/// one change in one transaction, so the plate stays and its rows swap.
 private enum HeaderDropdown: Hashable {
     case sort
     case overflow
+    /// The scope chooser the two export rows open (014 Decision 7, spec P12).
+    case exportScope(ExportFormat)
 
     /// What the tap-outside layer calls itself to VoiceOver.
     var dismissLabel: String {
         switch self {
         case .sort: "Dismiss sort options"
         case .overflow: "Dismiss more actions"
+        case .exportScope: "Dismiss export options"
         }
     }
 }
@@ -33,6 +47,12 @@ struct ItemListView: View {
     /// form, same pre-fill, the detail screen already presents; the swipe is
     /// a shortcut into that flow, not a new one (spec.md).
     @State private var itemBeingEdited: Item?
+
+    /// The row whose Sell swipe action is open in the sale sheet (014 plan §5).
+    /// The same optional-item staging the Edit sheet above uses, and the same
+    /// sheet the item's own page presents — the swipe is a shortcut into that
+    /// flow, never a second way to record a sale.
+    @State private var itemBeingSold: Item?
 
     /// The chip the next layout pass should bring into view.
     ///
@@ -102,25 +122,29 @@ struct ItemListView: View {
                     // The switch sits here, in the standing header, rather than
                     // beside the rows — so it is there over an empty Owned side
                     // (a person whose only item is now sold) exactly as it is
-                    // over a full one (plan §4). Never bound to `side`: a tap
-                    // asks `show(_:)`, which is what clears the narrowing on a
-                    // change (plan Q15).
+                    // over a full one (006 plan §4). Never bound to `side`: a
+                    // tap asks `show(_:)`, which sets the side and reloads —
+                    // and since 014 that is the whole of it, because each side
+                    // now keeps its own search, chip and sort while the other
+                    // is visited (014 plan Q3, replacing 006 Q15).
                     SideSwitch(side: viewModel.side, select: { viewModel.show($0) })
                         .padding(.horizontal, theme.metrics.screenGutter)
 
                     // Controls for narrowing a list need a list to narrow. On a
                     // first run they were a search field over nothing and a
                     // lone "All" chip, both of which made the screen look like
-                    // it had lost something rather than not started yet. And
-                    // the Sold side has no narrowing at all (P16, plan Q15),
-                    // so the same gate carries the side.
-                    if viewModel.totalCount > 0, viewModel.side == .owned {
+                    // it had lost something rather than not started yet. Since
+                    // 014 the Sold side narrows too, so the rule is the same on
+                    // both sides and the view model owns the reading of it: the
+                    // side on screen has something to narrow (014 plan Q10).
+                    if viewModel.offersNarrowingControls {
                         SearchField(placeholder: "Search name or serial", text: $viewModel.searchText)
                             .padding(.horizontal, theme.metrics.screenGutter)
                             // The Design pass's `sectionGap` under the switch,
-                            // on top of this stack's own `controlRowGap`. On
-                            // the Sold side, where nothing follows the switch,
-                            // the stack's bottom padding is the whole gap.
+                            // on top of this stack's own `controlRowGap`. On a
+                            // side with nothing to narrow, where nothing follows
+                            // the switch, the stack's bottom padding is the
+                            // whole gap.
                             .padding(.top, theme.metrics.sectionGap - theme.metrics.controlRowGap)
 
                         // Full-bleed so chips scroll off the edge rather than
@@ -179,6 +203,22 @@ struct ItemListView: View {
             NavigationStack {
                 ItemFormView(modelContext: modelContext, editing: item)
             }
+        }
+        // The Sell swipe's sheet (014 T007, plan §5): the shared sale form,
+        // seeded by the view model exactly as the item page's and the Sell
+        // Plan's are. `.sheet(item:)` over the row's item rather than a flag,
+        // so two rows can never both be selling; the sheet writes nothing
+        // itself, so what a confirmed sale means is decided here — through
+        // `markSold`, which points the sale at no plan (006 P5).
+        .sheet(item: $itemBeingSold, onDismiss: viewModel.load) { item in
+            SaleFormView(
+                viewModel: viewModel.makeSaleFormViewModel(for: item),
+                confirm: { sale in
+                    viewModel.markSold(item, sale: sale)
+                    itemBeingSold = nil
+                },
+                cancel: { itemBeingSold = nil }
+            )
         }
         // 013's Settings sheet. Owned here like the form sheets, for the
         // same reason: a Delete All behind it has to show on this list the
@@ -313,25 +353,68 @@ struct ItemListView: View {
         .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
             switch dropdown {
             case .sort:
-                SortDropdown(
-                    options: ItemListViewModel.SortOrder.allCases,
-                    selection: viewModel.sortOrder,
-                    label: \.label,
-                    isManualOrder: { $0 == .custom }
-                ) { option in
-                    // The row has already closed the dropdown.
-                    viewModel.sortOrder = option
-                    viewModel.load()
+                // One badge, one host, two menus — the side on screen picks
+                // which orders it offers, and each writes its own selection
+                // (014 plan §6). Nothing is shared between them but the
+                // drawing.
+                switch viewModel.side {
+                case .owned:
+                    SortDropdown(
+                        options: ItemListViewModel.SortOrder.allCases,
+                        selection: viewModel.sortOrder,
+                        label: \.label,
+                        isManualOrder: { $0 == .custom }
+                    ) { option in
+                        // The row has already closed the dropdown.
+                        viewModel.sortOrder = option
+                        viewModel.load()
+                    }
+                case .sold:
+                    // No REORDER tag: the Sold side has no manual order to
+                    // drag into (P16), so no option is the manual one.
+                    SortDropdown(
+                        options: ItemListViewModel.SoldSortOrder.allCases,
+                        selection: viewModel.soldSortOrder,
+                        label: \.label,
+                        isManualOrder: { _ in false }
+                    ) { option in
+                        viewModel.soldSortOrder = option
+                        viewModel.load()
+                    }
                 }
             case .overflow:
+                // Since 014 the two export rows don't export: they open the
+                // scope chooser (Decision 7, spec P12). The row has already
+                // dismissed the dropdown, so setting the identifier here
+                // nets to one `.overflow → .exportScope` change in one
+                // transaction — the plate stays put and its rows swap.
                 OverflowDropdown(
                     canExportCSV: viewModel.canExportCSV,
                     canExportPDF: viewModel.canExportPDF,
-                    exportCSV: { Task { await viewModel.exportCSV() } },
-                    exportPDF: { Task { await viewModel.exportPDF() } },
+                    exportCSV: { openDropdown = .exportScope(.csv) },
+                    exportPDF: { openDropdown = .exportScope(.pdf) },
                     importCSV: { isPickingImportFile = true },
                     openSettings: { isShowingSettings = true }
                 )
+            case .exportScope(let format):
+                // The same surface and rows the "…" is made of, under its own
+                // header — the Dashboard's ORDER BY pattern (P12). One row per
+                // scope, in the enum's order, each enabled exactly when it has
+                // rows under the narrowing on screen; the scope travels into
+                // the intent, so neither this view nor the chooser knows which
+                // half a file holds.
+                DropdownSurface(title: format == .csv ? ExportCopy.scopeTitleCSV : ExportCopy.scopeTitlePDF) {
+                    ForEach(ItemListViewModel.ExportScope.allCases) { scope in
+                        DropdownRow(title: scope.label, isEnabled: viewModel.canExport(scope)) {
+                            Task {
+                                switch format {
+                                case .csv: await viewModel.exportCSV(scope: scope)
+                                case .pdf: await viewModel.exportPDF(scope: scope)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -415,6 +498,25 @@ struct ItemListView: View {
                             Label { Text("Edit") } icon: { Image("ActionEdit") }
                         }
                         .tint(theme.colors.divider)
+                        // 014 criterion 1: Mark as sold… between Edit and
+                        // Copy, so Edit stays nearest the edge and a full
+                        // swipe still edits (spec Decision 2). "Sell" is the
+                        // visible word — "Mark as sold" doesn't fit the 76 pt
+                        // action beside a glyph — and `markAsSold`, the menu
+                        // row's own name, is what VoiceOver says, so the same
+                        // action is announced the same way from both places
+                        // (criterion 12). Brass mid-tone, the one brass that
+                        // reads mid in both appearances: not rust, which stays
+                        // the only consequential colour on a swiped-open row,
+                        // and not a third neutral, which would leave three grey
+                        // buttons with no legible middle.
+                        Button {
+                            itemBeingSold = item
+                        } label: {
+                            Label { Text(SaleCopy.swipeSell) } icon: { Image("ActionSell") }
+                        }
+                        .tint(theme.colors.accentBrassMid)
+                        .accessibilityLabel(SaleCopy.markAsSold)
                         // "Copy" on screen, "Duplicate" in code — Design's
                         // chosen string, per plan.md's Resolved decisions
                         // (the refreshed export's DUPLICATE is outdated
@@ -508,16 +610,9 @@ struct ItemListView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Items")
-                    .font(theme.typography.screenTitle)
-                    .foregroundStyle(theme.colors.textPrimary)
-                metaLine
-            }
-
-            Spacer()
-
+        ItemsListHeader(title: "Items") {
+            metaLine
+        } trailing: {
             // Nothing to sort on an empty list, so the sort badge still
             // hides — but the "…" shows regardless since 012 (criterion 1,
             // superseding 011's hide-when-empty rule): its menu carries
@@ -526,12 +621,15 @@ struct ItemListView: View {
             // is exactly who they serve. Guarded from both directions —
             // ImportWiringTests' brace-span scan and the empty-collection
             // UI test.
-            // Sort By hides on the Sold side (criterion 7, P16) under the same
-            // gate the search field and the chips use — one spelling, in both
-            // places, so a side can't end up with one narrowing control and
-            // not the others.
+            // Sort By stands on both sides since 014 (criterion 3), under the
+            // same gate the search field and the chips use — one spelling, in
+            // both places, so a side can't end up with one narrowing control
+            // and not the others. The gate, `sortControl` and
+            // `overflowControl` stay spelled here rather than moving into
+            // `ItemsListHeader` with the layout: this file is what G20's and
+            // `ImportWiringTests`' brace-span scans read.
             HStack(spacing: 8) {
-                if viewModel.totalCount > 0, viewModel.side == .owned {
+                if viewModel.offersNarrowingControls {
                     sortControl
                 }
                 overflowControl
@@ -545,8 +643,13 @@ struct ItemListView: View {
     ///
     /// Both branches are one `.monoLabel()` line and neither is conditional,
     /// so the slot is the same height on either side and the `SideSwitch`
-    /// below never moves. That is the whole of Decision 13's fix: the
-    /// person saw the switch jump up when the Sold side had nothing on it.
+    /// below never moves. Unconditional was never the whole of it, though:
+    /// the slot is *one* line only because `ItemsListHeader` gives the line
+    /// the header's full width (014 plan Q18). While it stood beside the
+    /// badges, the width they left it wrapped the Sold summary and pushed
+    /// the switch 13.67 pt down on that side alone — which is what T010's
+    /// device pass measured, and what `ItemListHeaderLayoutTests` (G38) and
+    /// the Sold-card UI test (G39) now measure instead of asserting.
     @ViewBuilder
     private var metaLine: some View {
         switch viewModel.side {
@@ -588,6 +691,14 @@ struct ItemListView: View {
             openDropdown = .overflow
         }
         .dropdownAnchor(HeaderDropdown.overflow)
+        // The chooser the export rows open is anchored here too: the host
+        // draws a dropdown only for an identifier that has an anchor, and
+        // the chooser replaces the overflow on this same badge (plan Q17).
+        // Three tags on one badge: `dropdownAnchor` is a transform, so each
+        // adds its entry to what the badge already publishes rather than
+        // replacing it (the key's `reduce` merges siblings, not stacked tags).
+        .dropdownAnchor(HeaderDropdown.exportScope(.csv))
+        .dropdownAnchor(HeaderDropdown.exportScope(.pdf))
         .accessibilityIdentifier("moreActions.items")
     }
 
@@ -608,12 +719,15 @@ struct ItemListView: View {
     /// `Menu` (the T029c saga in one sentence: UIKit animated the Menu
     /// label's bounds beyond SwiftUI's reach; a custom control has no such
     /// machinery, so the badge simply hugs its label again).
+    /// Since 014 the badge reads `visibleSortLabel` rather than either side's
+    /// order directly: one control over two selections, so the side on screen
+    /// is the one it names — and the one it names aloud (014 plan §6).
     private var sortControl: some View {
-        SortBadge(label: viewModel.sortOrder.label) {
+        SortBadge(label: viewModel.visibleSortLabel) {
             openDropdown = .sort
         }
         .dropdownAnchor(HeaderDropdown.sort)
-        .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+        .accessibilityLabel("Sort by \(viewModel.visibleSortLabel)")
         .accessibilityHint("Opens sort options")
         .accessibilityIdentifier("sortOptions.items")
     }
@@ -632,18 +746,21 @@ struct ItemListView: View {
         // intersected with a filter left over from last time.
         // Both narrowing requests name the Owned side first: a request that
         // arrived while the Sold side was showing has to land on the side that
-        // can show it, and `show(.owned)` is what clears the narrowing on the
-        // way across (plan Q15) — so the writes below have to follow it, never
-        // precede it.
-        viewModel.searchText = ""
+        // can show it, and since 014 `show(_:)` clears nothing, so each case
+        // clears what it is replacing itself — inside the case, after the
+        // crossing, so a request for the Owned side can't reach across and
+        // wipe the query the Sold side is holding (014 plan Q3, replacing
+        // 006 Q15). Nothing runs before the switch for the same reason.
         switch request {
         case .category(let path):
             viewModel.show(.owned)
+            viewModel.searchText = ""
             viewModel.categoryFilter = path
             viewModel.showsOnlyUnvalued = false
             chipToReveal = path
         case .unvalued:
             viewModel.show(.owned)
+            viewModel.searchText = ""
             viewModel.categoryFilter = ""
             viewModel.showsOnlyUnvalued = true
             chipToReveal = Self.unvaluedChipID

@@ -83,8 +83,17 @@ nonisolated final class GatedExportServiceSpy: ExportService {
         var csvCalls = 0
         var pdfCalls = 0
         var fileSetCalls = 0
+        var gateTaken = false
         var released = false
         var waiter: CheckedContinuation<Void, Never>?
+
+        /// One gate shared by `exportCSV` and `exportFiles`: true for the
+        /// first call of either kind, false for every call after it.
+        mutating func takeGate() -> Bool {
+            guard !gateTaken else { return false }
+            gateTaken = true
+            return true
+        }
     }
 
     private let state = Mutex(State())
@@ -93,16 +102,21 @@ nonisolated final class GatedExportServiceSpy: ExportService {
     var pdfCalls: Int { state.withLock { $0.pdfCalls } }
     var fileSetCalls: Int { state.withLock { $0.fileSetCalls } }
 
-    /// 013's set path gates on the same first-call-only rule as `exportCSV`
-    /// below, for the same reason: a reentrant `exportFiles` that reaches the
-    /// spy must fail a count, not hang the test.
+    /// 013's set path shares ONE gate with `exportCSV` below, not a gate of
+    /// its own: whichever of the two is called first blocks until
+    /// `release()`, and every later call of either kind returns at once.
+    /// The rule is cross-method because 014's Items PDF stages a *set* — a
+    /// reentrant PDF that leaks past the busy guard while a CSV is gated
+    /// arrives here as the FIRST `exportFiles` call, so a per-method gate
+    /// would deadlock the test instead of failing its count. Counters stay
+    /// per method, so each path's assertion still names the path it means.
     @concurrent func exportFiles(_ files: [ExportFile]) async throws -> [URL] {
-        let isFirstCall = state.withLock { state -> Bool in
+        let takesGate = state.withLock { state -> Bool in
             state.fileSetCalls += 1
-            return state.fileSetCalls == 1
+            return state.takeGate()
         }
         let urls = files.map { URL(filePath: "/dev/null/\($0.filename)") }
-        guard isFirstCall else { return urls }
+        guard takesGate else { return urls }
         await waitUntilReleased()
         return urls
     }
@@ -128,15 +142,18 @@ nonisolated final class GatedExportServiceSpy: ExportService {
     }
 
     @concurrent func exportCSV(_ table: CSVTable, filename: String) async throws -> URL {
-        // Only the FIRST call gates. A reentrant call that wrongly reaches
-        // the spy must fail the call-count assertion *fast* — gating it too
-        // would deadlock the test instead of failing it, which is how the
-        // T019/S1 mutation was first "caught" (by a hang, not a red).
-        let isFirstCall = state.withLock { state -> Bool in
+        // Only the first call across BOTH this method and `exportFiles`
+        // gates; everything after it returns at once. A reentrant call that
+        // wrongly reaches the spy — in either method — must fail a
+        // call-count assertion *fast*, because gating it would deadlock the
+        // test instead of failing it, which is how the T019/S1 mutation was
+        // first "caught" (by a hang, not a red). `exportPDF` stays ungated
+        // and counted: `WishlistViewModel` still calls it directly.
+        let takesGate = state.withLock { state -> Bool in
             state.csvCalls += 1
-            return state.csvCalls == 1
+            return state.takeGate()
         }
-        guard isFirstCall else { return URL(filePath: "/dev/null/\(filename)") }
+        guard takesGate else { return URL(filePath: "/dev/null/\(filename)") }
 
         await waitUntilReleased()
         return URL(filePath: "/dev/null/\(filename)")

@@ -144,6 +144,18 @@ struct SoldStateWiringTests {
             branch.contains("viewModel.sale") && branch.contains("viewModel.saleOutcome"),
             "the mark is built from something other than the view model's sale and outcome"
         )
+
+        // G21, where it sits (`014` criterion 11, plan Q11): photo, name, the
+        // mark, then the stats — one `sectionGap` stack, so the order *is* the
+        // layout. Mutation: move the mark back above `photoHero` → red.
+        let hero = try #require(branch.range(of: "photoHero"), "the sold page draws no photo — wrong target?")
+        let title = try #require(branch.range(of: "titleBlock(for: item)"), "the sold page names the item nowhere — wrong target?")
+        let mark = try #require(branch.range(of: "SoldMark("), "the sold page doesn't stamp the Sold mark")
+        let stats = try #require(branch.range(of: "statPair(for: item)"), "the sold page shows no paid/value stats — wrong target?")
+
+        #expect(hero.upperBound < title.lowerBound, "the sold page's name is composed above the photo")
+        #expect(title.upperBound < mark.lowerBound, "the Sold mark is composed above the item's name (criterion 11)")
+        #expect(mark.upperBound < stats.lowerBound, "the Sold mark is composed below the paid/value stats (criterion 11)")
     }
 
     /// Q8, the whole of it: what would *act* is left out of the sold page.

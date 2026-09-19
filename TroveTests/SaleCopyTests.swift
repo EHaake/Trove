@@ -15,6 +15,10 @@ struct SaleCopyTests {
         #expect(SaleCopy.markAsSold == "Mark as sold…")
         #expect(SaleCopy.editSale == "Edit sale…")
         #expect(SaleCopy.returnToCollection == "Return to collection…")
+        // 014 G23's copy half: the Owned swipe's visible word. The spoken
+        // name is `markAsSold` above, pinned as the button's
+        // `.accessibilityLabel` by `ItemListSidesWiringTests`.
+        #expect(SaleCopy.swipeSell == "Sell")
     }
 
     @Test func theSheetTitlesAndButtonsByMode() {

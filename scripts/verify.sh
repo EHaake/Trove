@@ -40,10 +40,13 @@ grep -E '\.swift:[0-9]+:[0-9]+: error:|^error:|xcodebuild: error:|\*\* BUILD FAI
 echo "## failures"
 grep '✘' "$LOG" | sed 's/^[[:space:]\xe2\x80\x8b]*//' | sort -u | head -n 20
 echo "## counts"
-grep -E 'Test run with [0-9]+ tests|Executed [1-9][0-9]* tests?|\*\* (TEST|BUILD) (SUCCEEDED|FAILED) \*\*' "$LOG" | sort -u
+grep -E 'Test run with [0-9]+ tests?|Executed [1-9][0-9]* tests?|\*\* (TEST|BUILD) (SUCCEEDED|FAILED) \*\*' "$LOG" | sort -u
 echo "## tail"
 grep -vE '◇ |✔ Test |CloudKit|NSURLError|LocalDataTask|^\), _NSURL|IDETestOperationsObserverDebug|Recovery encountered|^[[:space:]]*$' "$LOG" | tail -n 40
-if ! grep -qE 'Test run with [1-9][0-9]* tests|Executed [1-9][0-9]* tests?' "$LOG"; then
+# Swift Testing writes "1 test" and "2 tests", so the plural is optional —
+# a one-test suite selector used to trip this guard and report a false red.
+# The zero case is unchanged: "0 tests" still matches neither alternative.
+if ! grep -qE 'Test run with [1-9][0-9]* tests?|Executed [1-9][0-9]* tests?' "$LOG"; then
   echo "## NO TEST COUNT — zero tests ran (bad selector?); treating as failure"
   STATUS=1
 fi

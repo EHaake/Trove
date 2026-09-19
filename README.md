@@ -38,21 +38,35 @@ purchases.
   plan's candidates but keeps its photos and history; the dashboard
   gains a Sold card — how many, for how much, and how that compares to
   what you paid — and a sell plan keeps listing what was sold toward
-  it, each row marked sold, even once every candidate has gone.
+  it, each row marked sold, even once every candidate has gone. Marking
+  something sold is on the swipe as well as in the item's menu — Sell,
+  between Edit and Copy, opening the same sheet — and the sold item's
+  page shows the sale directly under its name. The Sold side has the
+  same search, category chips and sort the Owned side does, with sorts
+  that fit things already sold: date sold, price, what you paid, gain or
+  loss, or name. Each side keeps its own search, chip and sort while you
+  look at the other one.
 - **Low-friction item management** — swipe to delete, edit, or copy on
-  both lists; press-and-hold drag reordering under a "Custom" sort,
-  with an accessible Move up/Move down path for VoiceOver; and value
+  both lists (and to sell, on an owned item's row); press-and-hold drag
+  reordering under a "Custom" sort, with an accessible Move up/Move down
+  path for VoiceOver; and value
   and cost sorts in both directions, with ties resolving by your own
   manual order, and a Market sort on both lists.
 - **Export** — the exact view you're looking at, as a data-grade CSV
   with a canonical, re-importable schema, or as a print-first PDF
   collection document — cover summary, then one photo-and-fields entry
-  per item — delivered through the share sheet. On the Items tab the CSV
-  is the whole record: the owned rows as you filtered and sorted them,
-  then the sold ones, most recent sale first, each with what it sold
-  for, when and where. The PDF stays a document of what you own, so the
-  two formats are offered independently — a collection you have sold
-  entirely still exports a CSV, and no PDF. The CSV carries an item's
+  per item — delivered through the share sheet. On the Items tab each
+  format asks which rows first: owned, sold, or both. Owned is the file
+  you already had. "Owned and sold" as a CSV is the whole record — the
+  owned rows as you filtered and sorted them, then the sold ones, most
+  recent sale first, each with what it sold for, when and where — and as
+  a PDF it is two documents in one share sheet. Sold on its own is its
+  own document: a "Sold Items" PDF whose cover totals what those items
+  sold for, what was paid and the realised gain or loss, each entry
+  carrying the sale under the name, or a CSV of just those rows. Every
+  choice follows what you have narrowed on screen, and a choice with
+  nothing in it is greyed out — so a collection you have sold entirely
+  still exports, in either format. The CSV carries an item's
   Reverb match and the year it was made, so a round trip restores them;
   it never carries the fetched figures, which belong to the device that
   fetched them.
@@ -105,7 +119,7 @@ purchases.
 
 ## Status
 
-Ten specs shipped: `001-core-inventory` (v1 — item tracking, the
+Eleven specs shipped: `001-core-inventory` (v1 — item tracking, the
 dashboard, the wishlist, the Sell Plan, CloudKit sync),
 `010-item-management-enhancements` (merged 2026-08-30 — swipe actions,
 drag-to-reorder, duplication, expanded sorting, and a design-depth
@@ -130,11 +144,16 @@ dated sentence saying why), `004-themes` (merged 2026-09-09 — light
 mode of the brass/moss/rust identity, with a System/Light/Dark choice
 in Settings), `005-stock-photos` (merged 2026-09-13 — an item with
 no photo of its own can borrow a credited one from Wikimedia Commons,
-in the app and in the PDF export), and `006-mark-as-sold` (merged
+in the app and in the PDF export), `006-mark-as-sold` (merged
 2026-09-15 — mark an item sold from its page or from a sell plan and
 it moves to a Sold side of the Items tab with what it sold for, when
 and where; a Sold card on the dashboard, a Sold figure on each sell
-plan, four new CSV columns, and a sale that can be undone).
+plan, four new CSV columns, and a sale that can be undone), and
+`014-sold-side-parity` (merged 2026-09-19 — Mark as sold on the Items list's
+swipe, the Sold side gaining the search, category chips and sort the
+Owned side has with sorts that fit things already sold, each side
+keeping its own, the sale shown under a sold item's name, and exports
+that ask first whether you mean owned, sold or both).
 See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.

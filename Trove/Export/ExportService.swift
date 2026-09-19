@@ -66,6 +66,11 @@ nonisolated struct StagedExport: Identifiable, Sendable, Equatable {
 nonisolated enum ExportCopy {
     static let failureTitle = "Couldn't export"
     static let failureMessage = "Nothing was saved. Try again."
+
+    /// The scope chooser's headers (014 spec P12) — the mono header every
+    /// titled dropdown surface wears, echoing the row that opened it.
+    static let scopeTitleCSV = "EXPORT AS CSV"
+    static let scopeTitlePDF = "EXPORT AS PDF"
 }
 
 /// The share-sheet filenames the spec pins: `Trove-Items-YYYY-MM-DD.csv`
@@ -77,6 +82,18 @@ nonisolated enum ExportFilename {
         timeZone: TimeZone = .current
     ) -> String {
         "Trove-Items-\(ExportSchema.day(from: date, timeZone: timeZone)).\(fileExtension)"
+    }
+
+    /// The sold-only files (014 P15). Their own name because `exportFiles`
+    /// writes one directory keyed by filename: an owned and a sold document
+    /// staged under one name in a single set would overwrite each other
+    /// (014 plan Q15). Owned and owned-and-sold keep `items` above.
+    static func soldItems(
+        fileExtension: String,
+        on date: Date = .now,
+        timeZone: TimeZone = .current
+    ) -> String {
+        "Trove-Sold-Items-\(ExportSchema.day(from: date, timeZone: timeZone)).\(fileExtension)"
     }
 
     static func wishlist(
