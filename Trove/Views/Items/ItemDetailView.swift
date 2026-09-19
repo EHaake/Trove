@@ -273,11 +273,13 @@ struct ItemDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
                 if viewModel.isSold {
+                    photoHero
+                    titleBlock(for: item)
+
                     if let sale = viewModel.sale, let outcome = viewModel.saleOutcome {
                         SoldMark(sale: sale, outcome: outcome)
                     }
-                    photoHero
-                    titleBlock(for: item)
+
                     statPair(for: item)
                     desireCard(for: item, isInteractive: false)
                     details(for: item)

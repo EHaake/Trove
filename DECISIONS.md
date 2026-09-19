@@ -533,3 +533,104 @@ the next upgrade: the license must be accepted by the person
 and `xcrun simctl list devices` must run once so CoreSimulator restarts
 before `scripts/verify.sh` can find a destination.
 
+
+## Sold-side parity and the export scope (`014`, complete 2026-09-18)
+
+The product decisions are numbered 1–7 (plus the P-items) in
+`specs/014-sold-side-parity/spec.md`; this records what reaches beyond that
+spec.
+
+- **Per-side state is two values behind one set of names** (plan Q1). The
+  Items list now keeps a separate search, chip and sort for Owned and for
+  Sold, and the obvious shape — a `side` check at every reader — would have
+  put that check in the view, the chips, the empty states, the router's
+  `apply` and both exports. Instead `ItemListViewModel` holds a private
+  `ownedNarrowing` and `soldNarrowing` and exposes `categoryFilter`,
+  `searchText` and `showsOnlyUnvalued` as computed properties over *the side
+  on screen's* value. Nothing outside the view model can name the hidden
+  side's narrowing, so "the controls always show the side on screen" and "a
+  file is never narrowed by something not visible" are true by construction
+  rather than by everyone remembering — and every existing test and binding
+  kept its spelling. The rule this instances: **when one screen has two
+  modes, make the mode a private selector over two stored values, not a
+  parameter every reader has to pass.** Its one refusal is in the same
+  spirit: `showsOnlyUnvalued`'s setter silently declines the write while Sold
+  is on screen (`006`'s reasoning — a sold item's current value is not
+  something the app has an opinion about), so the Sold copy can never be
+  true and the shared chip row needs no side check. A refusal rather than a
+  `precondition`, because no legitimate writer exists on that side.
+- **A file's order comes from the record, its contents from the screen.** The
+  CSV's sold half is always in date-sold order, whatever sort the Sold side
+  is showing, while *which* rows it holds follows exactly what is narrowed on
+  screen — and the hidden side's own narrowing plays no part at all. The two
+  halves of that rule pull in opposite directions on purpose: the view's sort
+  is a reading aid and the file's order is the record's, but a file that
+  quietly held rows the screen was hiding would make its own coverage label a
+  lie. It is also what keeps `013`'s byte identity between the Items list's
+  unnarrowed export and Settings' export-everything alive with two sides in
+  play. From the **Owned** side the owned rows are in visible order, as `011`
+  always wrote them, so that identity holds under Custom specifically — the
+  person corrected the criterion's wording to say so at their reading.
+- **"Sell" on the button, "Mark as sold…" to VoiceOver.** The leading swipe
+  action is 76 pt wide beside a glyph, which "Mark as sold" does not fit, so
+  the visible word is "Sell" and the button's `.accessibilityLabel` is
+  `SaleCopy.markAsSold` — the "…" menu row's own name — so the same action is
+  announced the same way wherever it is reached from. That a modifier on a
+  swipe-action `Button` overrides its `Label`'s text is a platform claim no
+  unit test in this project can check; it was settled by reading the live
+  accessibility tree with XCUITest, which reports the button as "Mark as
+  sold…". **The shipped name is the spoken one.** The general note: when a
+  visible string and a spoken string differ deliberately, pin both, and
+  verify the spoken one against the tree rather than against the source.
+- **The export scope is a chooser, not six menu rows** (spec Decision 7, plan
+  Q14–Q17). Once exports could be owned, sold or both for either format, the
+  obvious move was six rows in the "…" menu. Rejected on three counts: `013`
+  criterion 1 fixes that menu's row order and its tests `#require` four rows;
+  the menu is shared with the Wishlist, which has no sold half; and six rows
+  reads as six unrelated actions. The two existing rows now *open* a second
+  dropdown on the same badge — headed EXPORT AS CSV / EXPORT AS PDF, offering
+  Owned items · Sold items · Owned and sold, each disabled when it has no
+  rows — so the plate stays put and its contents swap. Also rejected: scoping
+  by "this side", because changing side changes which *narrowing* is in
+  force, and the two choices must be independent.
+- **"Owned and sold" as a PDF is two documents, not one.** A single combined
+  cover would have to print TOTAL VALUE beside TOTAL SOLD FOR under one item
+  count — the mixed figures `006` Decision 7 refused — or grow a section page,
+  which is new drawing in a spec with no design pass. So the choice stages
+  two documents in **one** `exportFiles` call, owned then sold, with an empty
+  half left out. One call, not two, because the export path writes one
+  directory and a second call would purge the first file.
+- **The sold document needs its own filename, and the shared one is not a
+  bug.** `Trove-Sold-Items-<date>` exists because `exportFiles` writes a
+  directory keyed by filename, so two documents under one name would
+  overwrite each other; `.owned` keeps `Trove-Items-<date>` because it is the
+  very document Settings ships under that name. The consequence worth writing
+  down so nobody "fixes" it later: **"Owned and sold" over a collection where
+  everything has sold writes a sold-only file under `Trove-Items-<date>`.**
+  That is P15 as written — only the sold-*only* scope takes the sold name —
+  not a mistake.
+- **Settings' PDF pair is no longer "the complete record".** Settings exports
+  owned + wishlist as PDFs and the complete record as a CSV pair, unchanged
+  by this spec. With a sold document now available from the Items list, the
+  PDF half of Settings' export is the narrower one, and any future wording
+  about "everything" on that screen has to say which format it means.
+- **`WishlistView.header` was left duplicated on purpose.** `014` extracted
+  the Items header into `ItemsListHeader` to fix a wrap that pushed the side
+  switch 13.67 pt down; the Wishlist's header is the same construction with
+  the same latent wrap, and it was **not** changed — out of the spec's
+  footprint, covered by no criterion, and a shared header is a small
+  mechanical change that deserves its own diff rather than riding along in a
+  close-out. It is on `ROADMAP.md` as the follow-up, with the guard to extend
+  named. The rule: **finding a second instance of a bug you just fixed is a
+  roadmap entry, not a licence to widen the current task** — as long as it is
+  actually written down.
+- **The session moved to the stepped-down Opus model mid-spec, by choice.**
+  At the Phase 2b pause on 2026-09-18 the person instructed: for the rest of
+  the spec, use the step-down Opus model for every task. That ends experiment
+  1's Fable seat and the explicit top-tier overrides on decision reviews for
+  this spec; the `sdd-implementer` and `skeptical-reviewer` defaults already
+  matched, so nothing from T010 on carried an override. It is `CLAUDE.md`'s
+  **Fallback clause exercised by choice rather than by an exhausted
+  allowance**, which is a result of experiment 1 in itself, and the tier log
+  records what ran and from when. Whether it becomes the standing policy is
+  the person's call, not a decision `014` makes.

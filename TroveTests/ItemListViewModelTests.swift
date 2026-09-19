@@ -999,7 +999,7 @@ struct ItemListViewModelExportTests {
         viewModel.sortOrder = .currentValueAscending
         viewModel.load()
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         let table = try #require(spy.tables.first)
         #expect(table.headers == ExportSchema.itemHeaders)
@@ -1014,7 +1014,7 @@ struct ItemListViewModelExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: ExportServiceSpy())
         viewModel.load()
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         let staged = try #require(viewModel.stagedExport)
         #expect(staged.filenames == [ExportFilename.items(fileExtension: "csv")])
@@ -1051,8 +1051,8 @@ struct ItemListViewModelExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.load()
 
-        await viewModel.exportCSV()
-        await viewModel.exportPDF()
+        await viewModel.exportCSV(scope: .both)
+        await viewModel.exportPDF(scope: .owned)
 
         #expect(spy.tables.isEmpty)
         #expect(spy.documents.isEmpty)
@@ -1072,7 +1072,7 @@ struct ItemListViewModelExportTests {
         )
         viewModel.load()
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         #expect(viewModel.exportFailureMessage == ExportCopy.failureMessage)
         #expect(viewModel.stagedExport == nil)
@@ -1094,7 +1094,7 @@ struct ItemListViewModelExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.load()
 
-        await viewModel.exportPDF()
+        await viewModel.exportPDF(scope: .owned)
 
         let document = try #require(spy.documents.first)
         #expect(document.entries.count == 3)
@@ -1130,7 +1130,7 @@ struct ItemListViewModelExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.load()
 
-        let inFlight = Task { await viewModel.exportCSV() }
+        let inFlight = Task { await viewModel.exportCSV(scope: .both) }
         for _ in 0..<10_000 where spy.csvCalls == 0 { await Task.yield() }
         try #require(spy.csvCalls == 1, "gated export never started")
 
@@ -1138,10 +1138,10 @@ struct ItemListViewModelExportTests {
 
         // Reentrant attempts — same format and the other — bounce off the
         // guard without reaching the service.
-        await viewModel.exportCSV()
-        await viewModel.exportPDF()
+        await viewModel.exportCSV(scope: .both)
+        await viewModel.exportPDF(scope: .owned)
         #expect(spy.csvCalls == 1)
-        #expect(spy.pdfCalls == 0)
+        #expect(spy.fileSetCalls == 0, "a reentrant PDF reached the service")
 
         spy.release()
         await inFlight.value
@@ -1217,7 +1217,7 @@ struct ItemListViewModelImportTests {
 
         let importing = Task { await viewModel.importCSV(from: dummyURL) }
         for _ in 0..<10_000 where importSpy.itemCalls == 0 { await Task.yield() }
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         #expect(exportSpy.tables.isEmpty, "export must refuse while an import is in flight")
         importSpy.release()
         await importing.value
@@ -1229,7 +1229,7 @@ struct ItemListViewModelImportTests {
             modelContext: context, exportService: gatedExport, importService: secondImportSpy
         )
         second.load()
-        let exporting = Task { await second.exportCSV() }
+        let exporting = Task { await second.exportCSV(scope: .both) }
         for _ in 0..<10_000 where gatedExport.csvCalls == 0 { await Task.yield() }
         await second.importCSV(from: dummyURL)
         #expect(secondImportSpy.itemURLs.isEmpty, "import must refuse while an export is in flight")
@@ -1792,9 +1792,107 @@ struct ItemListViewModelSoldSideTests {
         }
     }
 
-    /// Plan Q9: the Sold side's emptiness has one cause, and mid-import it
-    /// has the other. Neither goes through `ListEmptyReason.reason`, which
-    /// weighs narrowings this side doesn't have.
+    /// G7, plan Q5: the Sold side's chips are the categories of *sold* items
+    /// only — it never offers one nothing sold sits in — the Owned side's are
+    /// unchanged, and `categoryOptions` follows the side on screen under the
+    /// one name the chip row reads.
+    ///
+    /// Mutation: build both pairs from `all` → each side offers all four paths
+    /// → red. Make the getter ignore the side (always Owned's) → the Sold
+    /// expectation reads the owned pair → red.
+    @Test func theSoldSidesChipsAreTheSoldCategoriesOnly() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", category: "Music/Guitars", into: context)
+        insertItem("Leica M6", category: "Photography/Cameras", into: context)
+        insertSold("Jazzmaster", category: "Music/Amps", soldAt: 1_000, forCents: 100, into: context)
+        insertSold("Summicron 35", category: "Photography/Lenses", soldAt: 2_000, forCents: 100, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.load()
+        #expect(viewModel.categoryOptions == ["Music/Guitars", "Photography/Cameras"])
+        #expect(viewModel.categoryLabels["Music/Guitars"] == "Guitars")
+
+        viewModel.show(.sold)
+        #expect(viewModel.categoryOptions == ["Music/Amps", "Photography/Lenses"])
+        #expect(viewModel.categoryLabels["Music/Amps"] == "Amps")
+        #expect(viewModel.categoryLabels["Music/Guitars"] == nil, "an owned-only category has no chip here")
+
+        viewModel.show(.owned)
+        #expect(viewModel.categoryOptions == ["Music/Guitars", "Photography/Cameras"], "Owned's row is unchanged")
+    }
+
+    /// G8, plan Q6: one gate, both sides — "controls need a list to narrow."
+    /// The side on screen's own count decides, so an all-sold collection
+    /// offers the controls on Sold and not on Owned, and a never-sold one the
+    /// other way round.
+    ///
+    /// Mutation: have the gate read the other side's count → both pairs
+    /// invert → red.
+    @Test func theNarrowingControlsGateFollowsTheSideOnScreen() throws {
+        let allSold = try makeInMemoryContext()
+        insertSold("Gone", soldAt: 1_000, forCents: 100, into: allSold)
+        try allSold.save()
+
+        let seller = ItemListViewModel(modelContext: allSold)
+        seller.load()
+        #expect(!seller.offersNarrowingControls, "nothing owned is left to narrow")
+        seller.show(.sold)
+        #expect(seller.offersNarrowingControls, "one sale is a list to narrow")
+
+        let neverSold = try makeInMemoryContext()
+        insertItem("Kept", into: neverSold)
+        try neverSold.save()
+
+        let keeper = ItemListViewModel(modelContext: neverSold)
+        keeper.load()
+        #expect(keeper.offersNarrowingControls)
+        keeper.show(.sold)
+        #expect(!keeper.offersNarrowingControls, "nothing sold: no controls, the Owned side's rule at zero")
+    }
+
+    /// G10, plan Q6/P4: the Sold side's summary follows its narrowing the way
+    /// the Owned side's header total follows its filter — "1 sold · …" over a
+    /// query matching one sale, and `SaleCopy`'s zero form over one matching
+    /// none. The line is still always present, so the switch above it cannot
+    /// move.
+    ///
+    /// Mutation: sum the totals over the unnarrowed `sold` half → both
+    /// narrowed readings stay at the whole side's two sales → red.
+    @Test func theSoldSummaryFollowsTheSoldSidesNarrowing() throws {
+        let context = try makeInMemoryContext()
+        insertSold("Gone", priceCents: 500_00, soldAt: 1_000, forCents: 800_00, into: context)
+        insertSold("Also gone", priceCents: 300_00, soldAt: 2_000, forCents: 150_00, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.show(.sold)
+        try #require(viewModel.soldTotals == SaleTotals(count: 2, proceedsCents: 950_00, realisedDeltaCents: 150_00))
+
+        viewModel.searchText = "also"
+        viewModel.load()
+        #expect(viewModel.soldItems.map(\.name) == ["Also gone"])
+        #expect(viewModel.soldTotals == SaleTotals(count: 1, proceedsCents: 150_00, realisedDeltaCents: -150_00))
+        #expect(viewModel.soldSummaryLine == SaleCopy.soldSideSummary(viewModel.soldTotals))
+        #expect(viewModel.soldSummaryLine.hasPrefix("1 sold · "))
+
+        viewModel.searchText = "zzz"
+        viewModel.load()
+        #expect(viewModel.soldItems.isEmpty)
+        #expect(viewModel.soldTotals == SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0))
+        #expect(viewModel.soldSummaryLine == "0 sold · $0")
+    }
+
+    /// G9, plan Q7: the Sold side goes through `ListEmptyReason.reason` now
+    /// that it carries a narrowing of its own — the same five cases and the
+    /// same precedence the Owned side has always had, with the `.nothingAdded`
+    /// the shared rule hands back mapped to `.nothingSold` afterwards. A Sold
+    /// side narrowed to nothing says so rather than claiming nothing was ever
+    /// sold (P5).
+    ///
+    /// Mutation: pick the case directly again (the 006 shape —
+    /// `soldItems.isEmpty ? … : .nothingSold`, no `reason(...)`) → the query
+    /// and chip cases read `.nothingSold` → red.
     @Test func theSoldSidesEmptyStateIsNothingSoldOrStillSyncing() throws {
         let context = try makeInMemoryContext()
         insertItem("Kept", into: context)
@@ -1808,12 +1906,36 @@ struct ItemListViewModelSoldSideTests {
         syncing.show(.sold)
         #expect(syncing.emptyReason == .stillSyncing)
 
-        insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
+        // A stale query over a side with nothing sold at all is still
+        // `.nothingSold`: `reason(...)`'s `totalCount` guard outranks it, so
+        // "no matches for that" is never said of an empty side.
+        let stale = ItemListViewModel(modelContext: context)
+        stale.show(.sold)
+        stale.searchText = "zzz"
+        stale.load()
+        #expect(stale.emptyReason == .nothingSold)
+
+        insertSold("Gone", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
         try context.save()
         settled.load()
         syncing.load()
         #expect(settled.emptyReason == nil)
         #expect(syncing.emptyReason == nil, "a side with rows on it is not an empty state")
+
+        settled.searchText = "zzz"
+        settled.load()
+        #expect(settled.emptyReason == .searchMatchedNothing(query: "zzz"))
+
+        settled.searchText = ""
+        settled.categoryFilter = "Photography"
+        settled.load()
+        #expect(settled.emptyReason == .categoryMatchedNothing)
+
+        // The query the person typed a second ago keeps its answer mid-import,
+        // exactly as it does on the Owned side.
+        syncing.searchText = "zzz"
+        syncing.load()
+        #expect(syncing.emptyReason == .searchMatchedNothing(query: "zzz"))
     }
 
     /// Spec Decision 12, and the Owned side's own precedence around it: an
@@ -1851,6 +1973,36 @@ struct ItemListViewModelSoldSideTests {
             syncing.emptyReason == .stillSyncing,
             "the sold half is here but the owned half may still be arriving — `stillSyncing` still wins"
         )
+    }
+
+    /// G25: the Everything-sold guard weighs `soldTotalCount`, not
+    /// `soldItems.count` — which since 014 is the *narrowed* sold half. A
+    /// no-match query left behind on the Sold side must not turn an emptied
+    /// Owned side back into a first launch; that is the hidden side leaking
+    /// into the visible one that Decision 4 forbids.
+    ///
+    /// Mutation: have the guard read `!soldItems.isEmpty` again → the first
+    /// expectation reads `.nothingAdded` → red.
+    @Test func theEmptiedOwnedSideStillSaysEverythingSoldWithANoMatchQueryLeftOnSold() throws {
+        let context = try makeInMemoryContext()
+        insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.show(.sold)
+        viewModel.searchText = "zzz"
+        viewModel.load()
+        try #require(viewModel.soldItems.isEmpty, "the Sold side is narrowed to nothing")
+
+        viewModel.show(.owned)
+        #expect(
+            viewModel.emptyReason == .everythingSold,
+            "a query left on the hidden side changed what the visible one says"
+        )
+
+        let neverSold = ItemListViewModel(modelContext: try makeInMemoryContext())
+        neverSold.load()
+        #expect(neverSold.emptyReason == .nothingAdded, "and nothing ever sold is still a first launch")
     }
 
     /// The mapping is the `.nothingAdded` case's alone: a narrowed-to-nothing
@@ -1914,15 +2066,18 @@ struct ItemListViewModelSoldSideTests {
 
 @Suite("ItemListViewModel — changing side")
 struct ItemListViewModelShowSideTests {
-    /// G33, Owned → Sold: the switch is an intent that clears every
-    /// narrowing (plan Q15), so the Sold side can never carry a filter it
-    /// shows no control for — and the CSV exported from there is the
-    /// complete record rather than a Cameras-only file.
+    /// G4, Owned → Sold → Owned: the Owned side's four values — chip, query,
+    /// un-valued and a non-default sort — survive a visit to the Sold side and
+    /// are still in force on the rows when it comes back (014 Decision 4,
+    /// replacing 006 Q15's clearing). While Sold is up, none of them is
+    /// readable through the controls' own property names: the hidden side
+    /// never leaks into the visible one.
     ///
-    /// Mutation: keep the filter across the switch (drop the three clears in
-    /// `show(_:)`) → the three fields read set and the CSV loses three of
-    /// its four rows → red.
-    @Test func switchingToSoldClearsEveryNarrowing() async throws {
+    /// Mutations, both run: restore the three clears in `show(_:)` → the four
+    /// values read back empty → red; give both sides one shared `Narrowing`
+    /// → the Sold side opens under "Leica"/"Photography" and `soldItems`
+    /// empties → red.
+    @Test func theOwnedSideKeepsItsNarrowingWhileTheSoldSideIsVisited() throws {
         let context = try makeInMemoryContext()
         insertItem("Leica M6", category: "Photography/Cameras", valueCents: nil, purchasedAt: 200, into: context)
         insertItem("Telecaster", category: "Music/Guitars", valueCents: 120_00, purchasedAt: 100, into: context)
@@ -1930,57 +2085,108 @@ struct ItemListViewModelShowSideTests {
         insertSold("Jazzmaster", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
         try context.save()
 
-        let spy = ExportServiceSpy()
-        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        let viewModel = ItemListViewModel(modelContext: context)
         viewModel.categoryFilter = "Photography"
         viewModel.searchText = "Leica"
         viewModel.showsOnlyUnvalued = true
+        viewModel.sortOrder = .currentValueAscending
         viewModel.load()
         try #require(viewModel.items.map(\.name) == ["Leica M6"])
 
         viewModel.show(.sold)
 
         #expect(viewModel.side == .sold)
-        #expect(viewModel.categoryFilter.isEmpty)
-        #expect(viewModel.searchText.isEmpty)
+        #expect(viewModel.categoryFilter.isEmpty, "Owned's chip is visible on the Sold side")
+        #expect(viewModel.searchText.isEmpty, "Owned's query is visible on the Sold side")
         #expect(!viewModel.showsOnlyUnvalued)
+        #expect(viewModel.soldSortOrder == .soldDate, "the Sold side opens on its own default")
+        #expect(
+            viewModel.soldItems.map(\.name) == ["Summicron 35", "Jazzmaster"],
+            "the Sold side is narrowed by its own (clean) narrowing, not by Owned's"
+        )
 
-        await viewModel.exportCSV()
-        let table = try #require(spy.tables.first)
-        #expect(table.rows.map { $0[0] } == ["Leica M6", "Telecaster", "Summicron 35", "Jazzmaster"])
+        viewModel.show(.owned)
+
+        #expect(viewModel.categoryFilter == "Photography")
+        #expect(viewModel.searchText == "Leica")
+        #expect(viewModel.showsOnlyUnvalued)
+        #expect(viewModel.sortOrder == .currentValueAscending)
+        #expect(viewModel.items.map(\.name) == ["Leica M6"], "and the rows are narrowed by them again")
     }
 
-    /// G33, Sold → Owned: the same clearing in the other direction. Owned is
-    /// "today's Items list", never today's list under a filter left behind by
-    /// a visit to Sold.
-    @Test func switchingBackToOwnedClearsEveryNarrowingToo() async throws {
+    /// G4, the other direction: the Sold side's three values — chip, query and
+    /// its own sort — survive a visit to the Owned side, and while Owned is up
+    /// none of them narrows anything there.
+    ///
+    /// Mutations, both run: restore the three clears in `show(_:)` → the Sold
+    /// values read back empty → red; one shared `Narrowing` → the Owned side
+    /// opens under "Music"/"jazz" and `items` empties → red.
+    @Test func theSoldSideKeepsItsNarrowingWhileTheOwnedSideIsVisited() throws {
         let context = try makeInMemoryContext()
         insertItem("Leica M6", category: "Photography/Cameras", purchasedAt: 200, into: context)
         insertItem("Telecaster", category: "Music/Guitars", purchasedAt: 100, into: context)
         insertSold("Summicron 35", category: "Photography/Lenses", soldAt: 2_000, forCents: 100, into: context)
+        insertSold("Jazzmaster", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
         try context.save()
 
-        let spy = ExportServiceSpy()
-        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        let viewModel = ItemListViewModel(modelContext: context)
         viewModel.show(.sold)
-        // A narrowing set while the Sold side is up — only reachable from a
-        // router request or a stale write, and cleared on the way out either
-        // way.
-        viewModel.categoryFilter = "Photography"
-        viewModel.searchText = "Summicron"
-        viewModel.showsOnlyUnvalued = true
+        viewModel.categoryFilter = "Music"
+        viewModel.searchText = "jazz"
+        viewModel.soldSortOrder = .salePriceAscending
+        viewModel.load()
+        try #require(viewModel.soldItems.map(\.name) == ["Jazzmaster"])
 
         viewModel.show(.owned)
 
-        #expect(viewModel.side == .owned)
-        #expect(viewModel.categoryFilter.isEmpty)
-        #expect(viewModel.searchText.isEmpty)
-        #expect(!viewModel.showsOnlyUnvalued)
-        #expect(viewModel.items.map(\.name) == ["Leica M6", "Telecaster"])
+        #expect(viewModel.categoryFilter.isEmpty, "the Sold side's chip is visible on Owned")
+        #expect(viewModel.searchText.isEmpty, "the Sold side's query is visible on Owned")
+        #expect(viewModel.sortOrder == .purchaseDate, "Owned's own Sort By is untouched")
+        #expect(
+            viewModel.items.map(\.name) == ["Leica M6", "Telecaster"],
+            "the Owned rows are narrowed by Owned's (clean) narrowing"
+        )
 
-        await viewModel.exportCSV()
-        let table = try #require(spy.tables.first)
-        #expect(table.rows.map { $0[0] } == ["Leica M6", "Telecaster", "Summicron 35"])
+        viewModel.show(.sold)
+
+        #expect(viewModel.categoryFilter == "Music")
+        #expect(viewModel.searchText == "jazz")
+        #expect(viewModel.soldSortOrder == .salePriceAscending)
+        #expect(viewModel.soldItems.map(\.name) == ["Jazzmaster"], "and the sold rows are narrowed by them again")
+    }
+
+    /// G6, plan Q2: un-valued is Owned-only *structurally*. A write while the
+    /// Sold side is on screen is refused — the Sold copy can never hold
+    /// `true`, so the shared chip row never renders the chip there — and
+    /// Owned's own copy is untouched by the attempt.
+    ///
+    /// Mutations, both run: drop the guard so the setter writes through
+    /// `narrowing` → the read after the write on Sold is `true` → red; drop
+    /// the guard leaving the write on `ownedNarrowing` → the `false` written
+    /// on Sold lands on Owned and the last expectation → red.
+    @Test func theUnvaluedFilterIsRefusedWhileTheSoldSideIsOnScreen() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", valueCents: nil, into: context)
+        insertItem("Telecaster", valueCents: 120_00, into: context)
+        insertSold("Jazzmaster", valueCents: nil, soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.showsOnlyUnvalued = true
+        viewModel.load()
+        try #require(viewModel.items.map(\.name) == ["Leica M6"])
+
+        viewModel.show(.sold)
+        viewModel.showsOnlyUnvalued = true
+        #expect(!viewModel.showsOnlyUnvalued, "the Sold side has no un-valued filter to turn on")
+
+        viewModel.showsOnlyUnvalued = false
+        viewModel.load()
+        #expect(viewModel.soldItems.map(\.name) == ["Jazzmaster"], "neither write narrowed the sold rows")
+
+        viewModel.show(.owned)
+        #expect(viewModel.showsOnlyUnvalued, "Owned's own copy survived both attempts")
+        #expect(viewModel.items.map(\.name) == ["Leica M6"])
     }
 
     /// G33's third case: asking for the side already on screen is not a
@@ -2005,18 +2211,39 @@ struct ItemListViewModelShowSideTests {
         #expect(viewModel.items.map(\.name) == ["Leica M6"], "and it reloaded under that filter")
     }
 
-    /// The side is a plain launch-time default (plan Q4): the tab opens on
+    /// The side is a plain launch-time default (006 plan Q4): the tab opens on
     /// Owned however the last visit ended, because nothing stores it.
+    ///
+    /// G5 extends that to the per-side state 014 adds: nothing about either
+    /// side's narrowing or sort is stored either, so a fresh view model starts
+    /// clean on *both* sides — Owned on "Date", Sold on "Date sold" (P8).
     @Test func aFreshViewModelOpensOnOwned() throws {
         let context = try makeInMemoryContext()
-        insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
+        insertSold("Gone", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
         try context.save()
 
         let viewModel = ItemListViewModel(modelContext: context)
         viewModel.show(.sold)
+        viewModel.categoryFilter = "Music"
+        viewModel.searchText = "gone"
+        viewModel.soldSortOrder = .name
+        viewModel.sortOrder = .currentValue
         try #require(viewModel.side == .sold)
 
-        #expect(ItemListViewModel(modelContext: context).side == .owned)
+        let fresh = ItemListViewModel(modelContext: context)
+        #expect(fresh.side == .owned)
+        #expect(fresh.categoryFilter.isEmpty)
+        #expect(fresh.searchText.isEmpty)
+        #expect(!fresh.showsOnlyUnvalued)
+        #expect(fresh.sortOrder == .purchaseDate)
+        #expect(fresh.visibleSortLabel == "Date")
+
+        fresh.show(.sold)
+        #expect(fresh.categoryFilter.isEmpty, "the Sold side starts clean too")
+        #expect(fresh.searchText.isEmpty)
+        #expect(!fresh.showsOnlyUnvalued)
+        #expect(fresh.soldSortOrder == .soldDate)
+        #expect(fresh.visibleSortLabel == "Date sold")
     }
 }
 
@@ -2040,7 +2267,7 @@ struct ItemListViewModelSoldExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.categoryFilter = "Photography"
         viewModel.load()
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         let filtered = try #require(spy.tables.first)
         #expect(filtered.headers == ExportSchema.itemHeaders)
@@ -2050,7 +2277,7 @@ struct ItemListViewModelSoldExportTests {
         // Unfiltered: every owned row in visible order, then every sold row.
         viewModel.categoryFilter = ""
         viewModel.load()
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         let whole = try #require(spy.tables.last)
         #expect(whole.rows.map { $0[0] } == ["Leica M6", "Telecaster", "Summicron 35", "Jazzmaster"])
     }
@@ -2069,7 +2296,7 @@ struct ItemListViewModelSoldExportTests {
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.searchText = "leica"
         viewModel.load()
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
 
         let table = try #require(spy.tables.first)
         #expect(table.rows.map { $0[0] } == ["Leica M6", "Leica Summicron"])
@@ -2091,7 +2318,7 @@ struct ItemListViewModelSoldExportTests {
         let spy = ExportServiceSpy()
         let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
         viewModel.load()
-        await viewModel.exportPDF()
+        await viewModel.exportPDF(scope: .owned)
 
         let document = try #require(spy.documents.first)
         #expect(document.entries.map(\.name) == ["Kept"])
@@ -2099,17 +2326,24 @@ struct ItemListViewModelSoldExportTests {
         switch document.cover.totals {
         case let .items(value, paid, unvalued):
             #expect((value, paid, unvalued) == (150_00, 100_00, 0))
-        case .wishlist:
-            Issue.record("the items document carries wishlist totals")
+        case .wishlist, .sold:
+            Issue.record("the items document carries another document's totals")
         }
     }
 
-    /// Plan Q5's split gate: an all-sold collection has a CSV worth writing
-    /// and nothing at all to put in a PDF. One `canExport` would have to be
-    /// wrong about one of them.
-    @Test func anAllSoldCollectionCanExportACSVButNotAPDF() async throws {
+    /// G36, rewritten at 014/T009d from `anAllSoldCollectionCanExportACSVButNotAPDF`:
+    /// the split gate 006's plan Q5 pinned is gone, because the PDF is no
+    /// longer the owned collection alone (014 P13/P14). An all-sold
+    /// collection has both menu rows enabled — each opens the chooser, and
+    /// two of its three scopes have a file — and it is the **Owned scope
+    /// alone** that is disabled and stages nothing.
+    ///
+    /// Mutations, both run: `canExportPDF` reading the owned half → the menu
+    /// row hides a sold document worth writing → red; the `.owned` PDF
+    /// staging anyway → the empty document arrives → red.
+    @Test func anAllSoldCollectionOffersBothFormatsWithTheOwnedScopeDisabled() async throws {
         let context = try makeInMemoryContext()
-        insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
+        insertSold("Gone", priceCents: 40_00, soldAt: 1_000, forCents: 100_00, into: context)
         try context.save()
 
         let spy = ExportServiceSpy()
@@ -2117,13 +2351,22 @@ struct ItemListViewModelSoldExportTests {
         viewModel.load()
 
         #expect(viewModel.canExportCSV)
-        #expect(!viewModel.canExportPDF)
+        #expect(viewModel.canExportPDF, "the sold half is a PDF worth writing")
+        #expect(!viewModel.canExport(.owned), "nothing is owned")
+        #expect(viewModel.canExport(.sold))
+        #expect(viewModel.canExport(.both))
 
-        await viewModel.exportCSV()
-        await viewModel.exportPDF()
+        await viewModel.exportCSV(scope: .both)
+        await viewModel.exportPDF(scope: .owned)
 
         #expect(spy.tables.map { $0.rows.map { $0[0] } } == [["Gone"]])
-        #expect(spy.documents.isEmpty, "the PDF intent's own guard backs up the disabled row")
+        #expect(spy.documents.isEmpty, "the disabled scope's intent stages nothing")
+
+        // And the scope that does have rows produces the sold document.
+        await viewModel.exportPDF(scope: .sold)
+        let document = try #require(spy.documents.first)
+        #expect(document.cover.title == ItemListViewModel.soldDocumentTitle)
+        #expect(document.entries.map(\.name) == ["Gone"])
     }
 
     /// The other end of the gate: a narrowing that excludes both halves
@@ -2143,8 +2386,611 @@ struct ItemListViewModelSoldExportTests {
         #expect(!viewModel.canExportCSV)
         #expect(!viewModel.canExportPDF)
 
-        await viewModel.exportCSV()
+        await viewModel.exportCSV(scope: .both)
         #expect(spy.tables.isEmpty)
+    }
+
+    // MARK: - 014/T004: the file follows the side on screen
+
+    /// G11: a CSV exported from the Sold side carries the owned *and* the
+    /// sold rows that pass the **Sold** side's chip, and the Owned side's own
+    /// kept chip and query play no part (P11) — a file is never narrowed by
+    /// something not on screen. The owned half arrives in Custom order, where
+    /// no owned row is visible to have a visible order (plan R1).
+    ///
+    /// Mutation: narrow the owned half by `ownedNarrowing` (or hand the
+    /// export `items`, which is that same narrowing) → the file reads
+    /// ["Telecaster"] instead → red.
+    @Test func aCSVFromTheSoldSideFollowsTheSoldChipAndNotTheOwnedOne() async throws {
+        let context = try makeInMemoryContext()
+        // Manual positions run against the names and the purchase dates, so a
+        // name sort or the Owned side's Date sort fails the owned half.
+        insertItem("Leica M6", category: "Photography/Cameras", purchasedAt: 300, order: 1, into: context)
+        insertItem("Summilux", category: "Photography/Lenses", purchasedAt: 100, order: 0, into: context)
+        insertItem("Telecaster", category: "Music/Guitars", purchasedAt: 200, order: 2, into: context)
+        insertSold("Summicron 35", category: "Photography/Lenses", soldAt: 2_000, forCents: 100, into: context)
+        insertSold("Noctilux", category: "Photography/Lenses", soldAt: 3_000, forCents: 100, into: context)
+        insertSold("Jazzmaster", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        // The Owned side keeps a narrowing of its own while the Sold side is
+        // on screen (014 Decision 4) — this is the one the file must ignore.
+        viewModel.categoryFilter = "Music"
+        viewModel.searchText = "tele"
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Photography"
+        viewModel.load()
+        await viewModel.exportCSV(scope: .both)
+
+        let table = try #require(spy.tables.first)
+        #expect(table.headers == ExportSchema.itemHeaders)
+        #expect(table.rows.map { $0[0] } == ["Summilux", "Leica M6", "Noctilux", "Summicron 35"])
+        #expect(viewModel.exportCoverageLabel == "Category: Photography")
+    }
+
+    /// G12: the mirror image — from the Owned side, a query the Sold side is
+    /// still holding narrows nothing. `006`'s guards fix the Owned side's own
+    /// behaviour; this one fixes that 014's second narrowing didn't leak into
+    /// it.
+    ///
+    /// Mutation: narrow either half by `soldNarrowing` → the sold half loses
+    /// the Jazzmaster (and the owned half the Telecaster) → red.
+    @Test func aCSVFromTheOwnedSideIgnoresTheSoldSidesKeptQuery() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Leica M6", purchasedAt: 200, into: context)
+        insertItem("Telecaster", purchasedAt: 100, into: context)
+        insertSold("Leica Summicron", soldAt: 2_000, forCents: 100, into: context)
+        insertSold("Jazzmaster", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.searchText = "leica"
+        viewModel.show(.owned)
+        viewModel.load()
+        await viewModel.exportCSV(scope: .both)
+
+        let table = try #require(spy.tables.first)
+        #expect(table.rows.map { $0[0] } == ["Leica M6", "Telecaster", "Leica Summicron", "Jazzmaster"])
+        #expect(viewModel.exportCoverageLabel == "All items")
+    }
+
+    /// G13: the Sold side's *sort* is a reading aid, not the record's order
+    /// (P10). Whatever the side is showing, the file's sold rows are in
+    /// Date-sold order — which is what keeps `013`'s byte-identity with
+    /// Settings' CSV true.
+    ///
+    /// Mutation: write `soldItems` into the file, or sort the sold half with
+    /// `isInSoldOrder` (the side's current selection) instead of
+    /// `areInSoldOrder` → the file reads price-ascending → red.
+    @Test func theCSVsSoldHalfIsDateSoldOrderWhateverTheSideIsShowing() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Kept", into: context)
+        insertSold("Amp", soldAt: 1_000, forCents: 900_00, into: context)
+        insertSold("Cab", soldAt: 2_000, forCents: 100_00, into: context)
+        insertSold("Pedal", soldAt: 3_000, forCents: 500_00, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.soldSortOrder = .salePriceAscending
+        viewModel.load()
+
+        // The side really is showing the other order — without this the
+        // equality below could be two orders that happen to agree.
+        try #require(viewModel.soldItems.map(\.name) == ["Cab", "Pedal", "Amp"])
+
+        await viewModel.exportCSV(scope: .both)
+        let table = try #require(spy.tables.first)
+        #expect(table.rows.map { $0[0] } == ["Kept", "Pedal", "Cab", "Amp"])
+    }
+
+    /// G15: the PDF follows the on-screen side's narrowing too (plan R2) —
+    /// the owned rows that pass the **Sold** side's chip, a cover counted and
+    /// totalled over those same rows, and a coverage label that names the chip
+    /// actually on screen. The alternative would be a cover that lies.
+    ///
+    /// Mutation: build the entries or the cover from `items` → the document
+    /// lists the Telecaster and counts 1 → red; read the label from the side
+    /// that isn't on screen → "Category: Music" → red.
+    @Test func thePDFFromANarrowedSoldSideCoversTheOwnedRowsThatPassIt() async throws {
+        let context = try makeInMemoryContext()
+        insertItem(
+            "Leica M6", category: "Photography/Cameras",
+            priceCents: 100_00, valueCents: 150_00, purchasedAt: 300, order: 1, into: context
+        )
+        insertItem(
+            "Summilux", category: "Photography/Lenses",
+            priceCents: 40_00, valueCents: nil, purchasedAt: 100, order: 0, into: context
+        )
+        insertItem(
+            "Telecaster", category: "Music/Guitars",
+            priceCents: 20_00, valueCents: 30_00, purchasedAt: 200, order: 2, into: context
+        )
+        insertSold("Jazzmaster", category: "Music/Guitars", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.categoryFilter = "Music"
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Photography"
+        viewModel.load()
+        await viewModel.exportPDF(scope: .owned)
+
+        let document = try #require(spy.documents.first)
+        #expect(document.entries.map(\.name) == ["Summilux", "Leica M6"])
+        #expect(document.cover.itemCount == 2)
+        #expect(document.cover.coverageLabel == "Category: Photography")
+        switch document.cover.totals {
+        case let .items(value, paid, unvalued):
+            #expect((value, paid, unvalued) == (150_00, 140_00, 1))
+        case .wishlist, .sold:
+            Issue.record("the items document carries another document's totals")
+        }
+    }
+
+    /// G16, rewritten at 014/T009d from
+    /// `aSoldChipNoOwnedRowIsInKeepsTheCSVAndDisablesThePDF`: the gates still
+    /// read the rows the file would carry rather than the rows on screen, but
+    /// what a Sold-side chip no owned row is in now disables is the **Owned
+    /// scope alone** — both menu rows stay enabled, because the sold rows in
+    /// that chip are a CSV *and* a PDF worth writing (014 P13/P14).
+    ///
+    /// Mutation: gate `canExport(.owned)` on `!items.isEmpty` → the owned half
+    /// the screen isn't showing enables a document with no rows in it → red.
+    @Test func aSoldChipNoOwnedRowIsInDisablesTheOwnedScopeAlone() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", category: "Music/Guitars", into: context)
+        insertSold("Leica M6", category: "Photography/Cameras", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Photography"
+        viewModel.load()
+
+        // The Owned side really does hold a row the Owned scope must not
+        // count — it is the chip, not an empty collection, that empties it.
+        try #require(viewModel.items.map(\.name) == ["Telecaster"])
+
+        #expect(viewModel.canExportCSV)
+        #expect(viewModel.canExportPDF, "the sold rows in the chip are a PDF worth writing")
+        #expect(!viewModel.canExport(.owned), "no owned row is in the chip")
+        #expect(viewModel.canExport(.sold))
+
+        await viewModel.exportCSV(scope: .both)
+        await viewModel.exportPDF(scope: .owned)
+
+        #expect(spy.tables.map { $0.rows.map { $0[0] } } == [["Leica M6"]])
+        #expect(spy.documents.isEmpty, "the disabled scope's intent stages nothing")
+    }
+
+    /// G16's other term: a Sold-side chip that matches nothing on *either*
+    /// half disables the CSV too — even though the hidden Owned side is
+    /// unnarrowed and has rows of its own. `006`'s
+    /// `aFilterThatExcludesBothHalvesDisablesTheCSVToo` only ever asked this
+    /// of the Owned side, where the gate's owned term and `items` are the
+    /// same thing; from the Sold side they are not, and an empty file would
+    /// be produced (criterion 2).
+    ///
+    /// Mutation: gate the CSV on `!items.isEmpty` → the Owned side's hidden
+    /// rows enable a file the chip excludes → red.
+    @Test func aSoldChipMatchingNeitherHalfDisablesTheCSVFromTheSoldSide() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", category: "Music/Guitars", into: context)
+        insertSold("Leica M6", category: "Photography/Cameras", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Audio"
+        viewModel.load()
+
+        // The Owned side really does have a row the gate must not count.
+        try #require(viewModel.items.map(\.name) == ["Telecaster"])
+
+        #expect(!viewModel.canExportCSV)
+        #expect(!viewModel.canExportPDF)
+        // G28: and no scope under the chooser has rows either — the menu row
+        // that opens it is disabled precisely because all three are. The
+        // Owned scope is the one `items` would get wrong here.
+        #expect(!viewModel.canExport(.owned))
+        #expect(!viewModel.canExport(.sold))
+        #expect(!viewModel.canExport(.both))
+
+        await viewModel.exportCSV(scope: .both)
+        await viewModel.exportPDF(scope: .owned)
+        #expect(spy.tables.isEmpty)
+        #expect(spy.documents.isEmpty)
+    }
+
+    // MARK: - 014/T009b: the export scope (Decision 7)
+
+    /// G26: the chooser's three scopes and the words on them, pinned by
+    /// literal and in menu order (014 P12, plan Q14) — `allCases` *is* the
+    /// menu, so a reordered enum is a reordered surface and a reworded label
+    /// is a reworded row.
+    @Test func theExportScopesReadOwnedSoldBothInMenuOrder() {
+        #expect(ItemListViewModel.ExportScope.allCases == [.owned, .sold, .both])
+        #expect(
+            ItemListViewModel.ExportScope.allCases.map(\.label)
+                == ["Owned items", "Sold items", "Owned and sold"]
+        )
+    }
+
+    /// G27: the three scopes partition the record the side on screen covers.
+    /// From a Sold side under a chip: `.owned` is the owned rows that pass, in
+    /// Custom order (plan R1); `.sold` is the sold rows that pass, in
+    /// Date-sold order whatever the side is sorted by (P10); `.both` is the
+    /// first then the second, which is the file 011 and 013 already pinned.
+    ///
+    /// The fixture makes each wrong answer visibly wrong: the Owned side
+    /// holds a chip and query of its own (so `items` is one different row),
+    /// and the Sold side is showing `Price ↑` (so `soldItems` is the other
+    /// order).
+    ///
+    /// Mutations, all three run: `.owned` reading `items` → the file reads
+    /// ["Telecaster"] → red; `.sold` reading `soldItems` → price-ascending →
+    /// red; `.both` sold-first → red.
+    @Test func theThreeScopesPartitionTheRecordFromANarrowedSoldSide() async throws {
+        let context = try makeInMemoryContext()
+        // Manual positions run against the names and the purchase dates, so a
+        // name sort or the Owned side's Date sort fails the owned half.
+        insertItem("Leica M6", category: "Photography/Cameras", purchasedAt: 300, order: 1, into: context)
+        insertItem("Summilux", category: "Photography/Lenses", purchasedAt: 100, order: 0, into: context)
+        insertItem("Telecaster", category: "Music/Guitars", purchasedAt: 200, order: 2, into: context)
+        insertSold(
+            "Summicron 35", category: "Photography/Lenses",
+            soldAt: 2_000, forCents: 100_00, into: context
+        )
+        insertSold(
+            "Noctilux", category: "Photography/Lenses",
+            soldAt: 3_000, forCents: 900_00, into: context
+        )
+        insertSold("Jazzmaster", category: "Music/Guitars", soldAt: 1_000, forCents: 500_00, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        // The Owned side keeps a narrowing of its own while the Sold side is
+        // on screen (014 Decision 4) — the one no scope may follow.
+        viewModel.categoryFilter = "Music"
+        viewModel.searchText = "tele"
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Photography"
+        viewModel.soldSortOrder = .salePriceAscending
+        viewModel.load()
+
+        // Both wrong sources really are on screen holding something else —
+        // without these the equalities below could be orders that agree.
+        try #require(viewModel.items.map(\.name) == ["Telecaster"])
+        try #require(viewModel.soldItems.map(\.name) == ["Summicron 35", "Noctilux"])
+
+        await viewModel.exportCSV(scope: .owned)
+        await viewModel.exportCSV(scope: .sold)
+        await viewModel.exportCSV(scope: .both)
+
+        let owned = ["Summilux", "Leica M6"]
+        let sold = ["Noctilux", "Summicron 35"]
+        #expect(spy.tables.map { $0.rows.map { $0[0] } } == [owned, sold, owned + sold])
+        for table in spy.tables {
+            #expect(table.headers == ExportSchema.itemHeaders)
+        }
+        #expect(viewModel.exportCoverageLabel == "Category: Photography")
+    }
+
+    /// G28: each scope is gated on the rows it would actually carry, so a
+    /// chooser row is offered only when there is a file behind it (criterion
+    /// 2: an empty file is never produced) — and the intent behind a
+    /// disabled row guards itself, the way `exportPDF` always has.
+    @Test func eachScopeIsGatedOnTheRowsItWouldCarry() async throws {
+        let soldOnly = try makeInMemoryContext()
+        insertSold("Gone", soldAt: 1_000, forCents: 100, into: soldOnly)
+        try soldOnly.save()
+
+        let soldSpy = ExportServiceSpy()
+        let allSold = ItemListViewModel(modelContext: soldOnly, exportService: soldSpy)
+        allSold.load()
+        #expect(!allSold.canExport(.owned), "nothing is owned")
+        #expect(allSold.canExport(.sold))
+        #expect(allSold.canExport(.both))
+        #expect(allSold.canExportCSV, "the menu row opens a chooser two of whose rows have files")
+
+        await allSold.exportCSV(scope: .owned)
+        #expect(soldSpy.tables.isEmpty, "the disabled scope's intent stages nothing")
+        #expect(allSold.stagedExport == nil)
+
+        let ownedOnly = try makeInMemoryContext()
+        insertItem("Kept", into: ownedOnly)
+        try ownedOnly.save()
+
+        let ownedSpy = ExportServiceSpy()
+        let allOwned = ItemListViewModel(modelContext: ownedOnly, exportService: ownedSpy)
+        allOwned.load()
+        #expect(allOwned.canExport(.owned))
+        #expect(!allOwned.canExport(.sold), "nothing has been sold")
+        #expect(allOwned.canExport(.both))
+
+        await allOwned.exportCSV(scope: .sold)
+        #expect(ownedSpy.tables.isEmpty)
+        #expect(allOwned.stagedExport == nil)
+    }
+
+    /// G29: a sold-only file carries its own name (014 P15) — `exportFiles`
+    /// writes one directory keyed by filename, so the sold document and the
+    /// owned one cannot share `Trove-Items` — while `.owned` and `.both` keep
+    /// the name Settings ships the very same document under.
+    ///
+    /// Mutation: swap the two arms of the filename choice → red on both ends.
+    ///
+    /// The *format* of the sold name is not re-asserted here against a
+    /// `.now` of this test's own: `ExportTempFileTests.filenamesCarryTheLocalDay`
+    /// already pins `Trove-Sold-Items-YYYY-MM-DD` for both extensions under a
+    /// fixed date and zone, and a literal comparison built from a second
+    /// clock reading fails on a midnight rollover between the two (T011
+    /// sweep, S6). What is left is the claim this test is for — which scope
+    /// gets which name — in the shape every other filename assertion in the
+    /// suite uses: the view model's staged name against `ExportFilename`'s.
+    @Test func onlyTheSoldOnlyCSVTakesTheSoldFilename() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Kept", into: context)
+        insertSold("Gone", soldAt: 1_000, forCents: 100, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportCSV(scope: .sold)
+        let soldName = ExportFilename.soldItems(fileExtension: "csv")
+        #expect(spy.filenames == [soldName])
+        #expect(viewModel.stagedExport?.filenames == [soldName])
+
+        await viewModel.exportCSV(scope: .owned)
+        await viewModel.exportCSV(scope: .both)
+        let itemsName = ExportFilename.items(fileExtension: "csv")
+        #expect(Array(spy.filenames.dropFirst()) == [itemsName, itemsName])
+        #expect(itemsName != soldName)
+    }
+
+    // MARK: - 014/T009d: the sold PDF (Decision 7, plan Q15/Q16)
+
+    /// G33: the sold document from a narrowed Sold side — its entries are the
+    /// sold rows that pass the chip, in Date-sold order whatever the side is
+    /// sorted by (P10), and its cover is titled, labelled, counted and
+    /// totalled over exactly those rows (P14). The fixture shows `Price ↑`,
+    /// so the side on screen really is holding the other order.
+    ///
+    /// Mutations, all four run: entries from `soldItems` → price-ascending →
+    /// red; cover over the unnarrowed `sold` half → count 3 and the
+    /// Jazzmaster's figures → red; paid summed from `salePriceCents` →
+    /// $1,000 in the TOTAL PAID slot → red, on the concrete cents *and* on
+    /// the realised-less-paid relationship below, which is the one that still
+    /// holds if the fixture's figures are ever rewritten (T010b/S4).
+    @Test func theSoldPDFCoversTheSoldRowsThatPassTheChipInDateSoldOrder() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Telecaster", category: "Music/Guitars", into: context)
+        let summicron = insertSold(
+            "Summicron 35", category: "Photography/Lenses",
+            priceCents: 300_00, soldAt: 2_000, forCents: 100_00, into: context
+        )
+        let noctilux = insertSold(
+            "Noctilux", category: "Photography/Lenses",
+            priceCents: 400_00, soldAt: 3_000, forCents: 900_00, into: context
+        )
+        insertSold(
+            "Jazzmaster", category: "Music/Guitars",
+            priceCents: 700_00, soldAt: 1_000, forCents: 500_00, into: context
+        )
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.categoryFilter = "Photography"
+        viewModel.soldSortOrder = .salePriceAscending
+        viewModel.load()
+
+        // The side really is showing the other order — without this the
+        // equality below could be two orders that happen to agree.
+        try #require(viewModel.soldItems.map(\.name) == ["Summicron 35", "Noctilux"])
+
+        await viewModel.exportPDF(scope: .sold)
+
+        let document = try #require(spy.documents.first)
+        #expect(document.entries.map(\.name) == ["Noctilux", "Summicron 35"])
+        #expect(document.cover.title == "Sold Items")
+        #expect(document.cover.title == ItemListViewModel.soldDocumentTitle)
+        #expect(document.cover.coverageLabel == "Category: Photography")
+        #expect(document.cover.itemCount == document.entries.count)
+        #expect(document.cover.itemCount == 2)
+
+        // The figures the app itself would sum over exactly those rows, and
+        // the concrete cents — so a broken sum can't vouch for itself.
+        let expected = SaleOutcome.totals(over: [noctilux, summicron])
+        guard case .sold(let proceeds, let paid, let realised) = document.cover.totals else {
+            Issue.record("the sold document carries another document's totals")
+            return
+        }
+        #expect(proceeds == expected.proceedsCents)
+        #expect(realised == expected.realisedDeltaCents)
+        #expect((proceeds, paid, realised) == (1_000_00, 700_00, 300_00))
+        // The cover's three figures come from two arithmetic sources —
+        // proceeds and realised off `SaleOutcome.totals`, paid off
+        // `figures(over:)` — so they agreeing is a claim, not a given. Pinned
+        // as the relationship rather than left to the fixture's cents, which
+        // satisfy it by coincidence: a paid summed over some other set of
+        // rows fails here whatever the fixture's figures are.
+        #expect(realised == proceeds - paid, "the cover's realised isn't its own proceeds less its own paid")
+    }
+
+    /// G34: over an unnarrowed Sold side the cover's three figures are the
+    /// summary line's own — count, proceeds and realised straight off
+    /// `soldTotals`, which is `SaleOutcome.totals` and the Dashboard card's
+    /// sum (P14: "the Dashboard card's words for a sum").
+    ///
+    /// Mutation: sum the proceeds over `purchasePriceCents` → $1,050 against
+    /// the card's $1,400 → red.
+    @Test func theSoldCoverIsTheSoldSidesOwnTotals() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Kept", priceCents: 90_00, into: context)
+        insertSold("Amp", priceCents: 600_00, soldAt: 1_000, forCents: 900_00, into: context)
+        insertSold("Cab", priceCents: 450_00, soldAt: 2_000, forCents: 500_00, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.show(.sold)
+        viewModel.load()
+
+        await viewModel.exportPDF(scope: .sold)
+
+        let document = try #require(spy.documents.first)
+        guard case .sold(let proceeds, let paid, let realised) = document.cover.totals else {
+            Issue.record("the sold document carries another document's totals")
+            return
+        }
+        #expect(document.cover.itemCount == viewModel.soldTotals.count)
+        #expect(proceeds == viewModel.soldTotals.proceedsCents)
+        #expect(realised == viewModel.soldTotals.realisedDeltaCents)
+        #expect((document.cover.itemCount, proceeds, paid, realised) == (2, 1_400_00, 1_050_00, 350_00))
+    }
+
+    /// G35: "Owned and sold" as a PDF is the two documents in **one** share
+    /// sheet, owned then sold (P13) — one `exportFiles` call, because two
+    /// single calls would purge each other on the live service — under their
+    /// two names, which is what stops one overwriting the other in the
+    /// staging directory (P15). A half with no rows is left out, so the file
+    /// set is never padded with an empty document (011 criterion 2).
+    ///
+    /// Mutations, all three run: stage each document in its own `exportFiles`
+    /// call → `fileSets.count == 2` → red; keep the empty half → the
+    /// nothing-sold and nothing-owned ends read two documents → red; append
+    /// the sold document first → the order and the filenames → red.
+    @Test func theBothPDFStagesOwnedThenSoldInOneFileSet() async throws {
+        let context = try makeInMemoryContext()
+        insertItem("Kept", priceCents: 100_00, valueCents: 150_00, into: context)
+        insertSold("Gone", priceCents: 40_00, soldAt: 1_000, forCents: 100_00, into: context)
+        try context.save()
+
+        let spy = ExportServiceSpy()
+        let viewModel = ItemListViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportPDF(scope: .both)
+
+        let ownedName = ExportFilename.items(fileExtension: "pdf")
+        let soldName = ExportFilename.soldItems(fileExtension: "pdf")
+        #expect(spy.fileSets.count == 1, "the pair must arrive in one call, or it purges itself")
+        #expect(spy.fileSets.first?.count == 2)
+        #expect(spy.documents.map(\.cover.title) == ["Owned Items", "Sold Items"])
+        #expect(spy.documents.map { $0.entries.map(\.name) } == [["Kept"], ["Gone"]])
+        #expect(spy.filenames == [ownedName, soldName])
+        #expect(viewModel.stagedExport?.filenames == [ownedName, soldName])
+
+        // Nothing sold: today's single owned document, under today's name.
+        let ownedOnly = try makeInMemoryContext()
+        insertItem("Kept", into: ownedOnly)
+        try ownedOnly.save()
+
+        let ownedSpy = ExportServiceSpy()
+        let allOwned = ItemListViewModel(modelContext: ownedOnly, exportService: ownedSpy)
+        allOwned.load()
+        await allOwned.exportPDF(scope: .both)
+
+        #expect(ownedSpy.fileSets.count == 1)
+        #expect(ownedSpy.documents.map(\.cover.title) == ["Owned Items"])
+        #expect(ownedSpy.filenames == [ownedName])
+        #expect(allOwned.stagedExport?.filenames == [ownedName])
+
+        // Nothing owned: the sold document alone, under the sold name.
+        let soldOnly = try makeInMemoryContext()
+        insertSold("Gone", soldAt: 1_000, forCents: 100_00, into: soldOnly)
+        try soldOnly.save()
+
+        let soldSpy = ExportServiceSpy()
+        let allSold = ItemListViewModel(modelContext: soldOnly, exportService: soldSpy)
+        allSold.load()
+        await allSold.exportPDF(scope: .both)
+
+        #expect(soldSpy.fileSets.count == 1)
+        #expect(soldSpy.documents.map(\.cover.title) == ["Sold Items"])
+        #expect(soldSpy.filenames == [soldName])
+        #expect(allSold.stagedExport?.filenames == [soldName])
+    }
+}
+
+// MARK: - 014: Mark as sold from the Owned side's swipe
+
+@Suite("ItemListViewModel — Mark as sold from the swipe")
+struct ItemListViewModelSwipeSaleTests {
+    private let soldOn = Date(timeIntervalSince1970: 1_770_000_000)
+    private let now = Date(timeIntervalSince1970: 1_780_000_000)
+
+    /// G18: confirming the swipe's sheet records the four sale fields, points
+    /// the sale at **no** plan (006 P5), empties the item's plan *selections*
+    /// (006 P6), and moves the row from the Owned side to the Sold one.
+    ///
+    /// The stored half is refetched on a second `ModelContext` — the T003
+    /// rule: a same-context refetch hands back the object carrying unsaved
+    /// changes and would pass whether or not `markSold` saved.
+    ///
+    /// Mutations: `toward: nil` → a plan → the link assertion red; the
+    /// selection line dropped from `ItemSaleStore` → the selection assertions
+    /// red. The refusal path is structural, in
+    /// `ItemDetailViewModelTests.aRefusedSaveRollsBackAndReReadsWhatIsStored`.
+    @Test func aSaleFromTheSwipeRecordsTheFourFieldsAndMovesTheRow() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let item = Item(
+            name: "Telecaster",
+            purchasePriceCents: 100_000,
+            purchaseDate: Date(timeIntervalSince1970: 100),
+            currentValueCents: 130_000
+        )
+        context.insert(item)
+        insertItem("Blues Junior", purchasedAt: 50, into: context)
+        let plan = WishlistItem(name: "Rickenbacker 330", estimatedCostCents: 240_000)
+        context.insert(plan)
+        // The row is on a Sell Plan's selection when it is sold from the list,
+        // which is the state P6 is about.
+        item.plannedForWishlistItems = [plan]
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context, now: { self.now })
+        viewModel.load()
+        try #require(viewModel.items.map(\.name) == ["Telecaster", "Blues Junior"])
+
+        let recorded = viewModel.markSold(
+            item,
+            sale: Sale(date: soldOn, priceCents: 95_000, location: "Reverb", note: "Shipped Tuesday")
+        )
+
+        #expect(recorded)
+        #expect(viewModel.loadFailureMessage == nil)
+        #expect(viewModel.items.map(\.name) == ["Blues Junior"], "the sold row leaves the Owned side")
+        #expect(viewModel.soldItems.map(\.name) == ["Telecaster"], "and arrives on the Sold one")
+
+        let elsewhere = ModelContext(container)
+        let stored = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first { $0.name == "Telecaster" })
+        #expect(stored.sale?.date == soldOn)
+        #expect(stored.sale?.priceCents == 95_000)
+        #expect(stored.sale?.location == "Reverb")
+        #expect(stored.sale?.note == "Shipped Tuesday")
+        #expect(stored.updatedAt == now, "stamped by this screen's injected clock")
+        #expect(stored.soldTowardWishlistItem == nil, "the swipe sells toward no plan (006 P5)")
+        #expect(stored.plannedForWishlistItems?.isEmpty ?? true, "the sale drops every plan selection (006 P6)")
+
+        let storedPlan = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(storedPlan.plannedSaleItems?.isEmpty ?? true, "seen from the plan's side too")
+        #expect(storedPlan.itemsSoldToward?.isEmpty ?? true, "the sale was not recorded toward it")
     }
 }
 

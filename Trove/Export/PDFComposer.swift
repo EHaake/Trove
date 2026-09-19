@@ -371,25 +371,49 @@ nonisolated enum PDFComposer {
                 ))
                 writer.advance(6)
             }
+        case .sold(let proceedsCents, let paidCents, let realisedDeltaCents):
+            // 014 P14: the sold document's three figures, in the Dashboard
+            // card's words. No floor note — every sold item has a price.
+            // REALISED draws in ink like TOTAL PAID: the sign is carried by
+            // `SaleCopy.realised`'s words, not by colour, because
+            // `PrintPalette` has no moss or rust and gains none (plan Q15).
+            drawTotal(label: "TOTAL SOLD FOR", cents: proceedsCents, color: PrintPalette.brass, on: writer)
+            drawTotal(label: "TOTAL PAID", cents: paidCents, color: PrintPalette.ink, on: writer)
+            drawTotal(
+                label: "REALISED",
+                text: SaleCopy.realised(deltaCents: realisedDeltaCents),
+                color: PrintPalette.ink,
+                on: writer
+            )
         case .wishlist(let estimatedCostCents):
             drawTotal(label: "TOTAL ESTIMATED COST", cents: estimatedCostCents, color: PrintPalette.brass, on: writer)
         }
     }
 
     private static func drawTotal(label: String, cents: Int, color: CGColor, on writer: PageWriter) {
+        drawTotal(
+            label: label,
+            text: cents.formattedAsWholeCurrency(currencyCode: "USD"),
+            color: color,
+            on: writer
+        )
+    }
+
+    /// The same slot for a figure that isn't a bare amount — REALISED reads
+    /// "+$350 vs paid", composed by `SaleCopy` so the page and the Dashboard
+    /// card can't spell it differently. The money sibling above forwards
+    /// here, so there is one set of type sizes and advances, not two.
+    private static func drawTotal(label: String, text: String, color: CGColor, on writer: PageWriter) {
         writer.draw(styled(label, font: PrintType.mono(7.5, weight: .medium), color: PrintPalette.secondary, kern: 1.2))
         writer.advance(4)
-        writer.draw(styled(
-            cents.formattedAsWholeCurrency(currencyCode: "USD"),
-            font: PrintType.mono(15, weight: .medium),
-            color: color
-        ))
+        writer.draw(styled(text, font: PrintType.mono(15, weight: .medium), color: color))
         writer.advance(16)
     }
 
     private static func countLine(for cover: CoverSummary) -> String {
         switch cover.totals {
         case .items: "\(cover.itemCount) \(cover.itemCount == 1 ? "item" : "items")"
+        case .sold: "\(cover.itemCount) sold"
         case .wishlist: "\(cover.itemCount) wanted"
         }
     }

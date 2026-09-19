@@ -13,8 +13,10 @@ import Testing
 /// failure CLAUDE.md names — the first draft of this guard would have been
 /// red on the app's own component name). Swift's `Regex` has no
 /// lookbehind, so the boundary is "start of text or a non-identifier
-/// character" spelled out. `.pickerStyle(.menu)` and `.contextMenu` are
-/// system menus too, and are covered so the rule can't be routed around.
+/// character" spelled out. `.pickerStyle(.menu)`, `.contextMenu` and
+/// `.confirmationDialog(` are system menus too — `013` Decision 17 rules
+/// out the confirmation dialog by name alongside the system `Menu` — and
+/// are covered so the rule can't be routed around. `.alert(` stays allowed.
 @Suite("Menu policy")
 struct MenuPolicyTests {
     private let allowlist: Set<String> = ["DetailOverflowMenu.swift"]
@@ -45,6 +47,7 @@ struct MenuPolicyTests {
             let hostsOne = code.contains(systemMenu)
                 || code.contains(".pickerStyle(.menu)")
                 || code.contains(".contextMenu")
+                || code.contains(".confirmationDialog(")
             if allowlist.contains(name) {
                 #expect(hostsOne, "\(file) is allowed a system menu and must still host one — else the allowlist is stale")
                 allowedSeen += 1

@@ -25,6 +25,16 @@ struct PDFComposerTests {
         )
     }
 
+    private func soldCover(itemCount: Int = 2) -> CoverSummary {
+        CoverSummary(
+            title: "Sold Items",
+            coverageLabel: "All items",
+            generatedAt: generated,
+            itemCount: itemCount,
+            totals: .sold(proceedsCents: 240_000, paidCents: 205_000, realisedDeltaCents: 35_000)
+        )
+    }
+
     private func wishlistCover() -> CoverSummary {
         CoverSummary(
             title: "Wishlist",
@@ -80,6 +90,35 @@ struct PDFComposerTests {
         #expect(text.contains("$1,050"))
         #expect(!text.contains("TOTAL PAID"))
         #expect(!text.contains("not yet valued"))
+    }
+
+    /// 014/G30: the sold document's cover is the same shapes with the sold
+    /// side's words — TOTAL SOLD FOR where TOTAL VALUE sits, REALISED in
+    /// `SaleCopy`'s wording, "N sold" for the count, and no floor note,
+    /// because a sold item always has a price. Mutations: draw the `.items`
+    /// labels from the `.sold` arm → red; draw the floor note → red; spell
+    /// the count line "items" → red.
+    @Test func soldCoverCarriesTheSaleTotalsAndNoFloorNote() throws {
+        let text = try page(0, of: PDFDocumentModel(cover: soldCover(), entries: []))
+        #expect(text.contains("Sold Items"))
+        #expect(text.contains("All items"))
+        #expect(text.contains("2 sold"))
+        #expect(text.contains("TOTAL SOLD FOR"))
+        #expect(text.contains("$2,400"))
+        #expect(text.contains("TOTAL PAID"))
+        #expect(text.contains("$2,050"))
+        #expect(text.contains("REALISED"))
+        // The words carry the sign — the print palette has no moss or rust.
+        #expect(text.contains("+$350 vs paid"))
+        #expect(!text.contains("TOTAL VALUE"))
+        #expect(!text.contains("not yet valued"))
+    }
+
+    /// The count line reads for one sale as the items cover's does for one
+    /// item — "1 sold", not "1 solds" or a bare figure.
+    @Test func soldCoverCountLineIsSingularForOneSale() throws {
+        let text = try page(0, of: PDFDocumentModel(cover: soldCover(itemCount: 1), entries: []))
+        #expect(text.contains("1 sold"))
     }
 
     /// The floor note exists to keep the value figure honest; with nothing

@@ -327,6 +327,7 @@ has made yet.
     (brace-span scan over the Owned rows' `.swipeActions`, `#require`ing its
     anchor). On the device (T019): the menu row present on an owned page and
     used from there; the swipe's contents are the scan's, not an observation.
+    *Superseded by `014-sold-side-parity` (its spec, Decision 2): the Items list's swipe now offers **Mark as sold…** too, between Edit and Copy, with Edit nearest the edge.*
 2. [x] The sale sheet requires a sale price (pre-filled with the current value
    when the item has one), defaults the date to today and refuses a future
    date, and takes an optional place and note. Cancel records nothing.
@@ -626,6 +627,7 @@ Made by the person, 2026-09-13, in this spec conversation:
    confirmation and permanence.
 4. **Mark as sold… lives in the detail's top-right menu and on Sell Plan
    rows.** Not on the Items list's swipe, which stays delete-only.
+   *Superseded by `014-sold-side-parity` (its spec, Decision 2): Mark as sold… is on the Items list's swipe as well, sitting between Edit and Copy with Edit nearest the edge.*
 5. **The Sell Plan learns what was sold toward it, and still subtracts
    nothing.** A sale sold from a plan remembers that wishlist item; the plan
    shows a Sold figure beside Selected. `001`'s no-arithmetic framing holds.
@@ -640,6 +642,7 @@ Made by the person, 2026-09-13, in this spec conversation:
    a full export includes sold items and round-trips through import; the PDF
    stays a document of what you own; a sold item's market figures are cleared
    on this device as deletion clears them today.
+   *Superseded by `014-sold-side-parity` (its spec, Decision 7): from the Items list the PDF (and the CSV) choose their scope — owned, sold, or both — so a sold PDF titled "Sold Items" exists, named `Trove-Sold-Items-<date>`; Settings' export-everything is unchanged.*
 8. **The Dashboard takes sales into account** — the person asked for this to
    be considered; the shape (the Sold card apart from the collection totals,
    scoped, hidden at zero, sold money never combined with collection money) is
@@ -710,6 +713,7 @@ Added 2026-09-13, at the person's reading of the Draft:
     P16's "no filtering or sorting on the Sold side" and Q15's clearing
     rule). Both are design changes to shipped behaviour, so they get a spec
     of their own rather than a fix branch.
+    *The deferral landed: `014-sold-side-parity` (complete 2026-09-18) shipped the leading-swipe action and the Sold side's search, chips and Sort By. The visible button on the item page was withdrawn by the person at that spec's reading (its Decision 1) and is a roadmap consideration, not a plan.*
 
 Proposed at drafting, 2026-09-13, by Claude Code (these become decisions on
 plan approval):
@@ -760,11 +764,13 @@ plan approval):
   Sort By is hidden on the Sold side, which is always most recent first;
   swipe-to-delete works on a sold row with the same confirmation as an owned
   one, since Delete is one of the sold page's three actions anyway.
+  *Superseded by `014-sold-side-parity` (its spec, Decision 3 and P6): Sort By is offered on the Sold side too, with its own eight options — Date sold, Price ↓, Price ↑, Paid ↓, Paid ↑, Gain ↓, Gain ↑ and Name — defaulting to Date sold, newest first.*
 - **P17. The "…" menu is the same on both sides.** Its CSV export covers
   both owned and sold items (the file is the complete record and the sale
   columns mark the side), its PDF export stays owned-only (the collection
   document), and Import and Settings are unchanged. Export follows the tab,
   not the side.
+  *Superseded by `014-sold-side-parity` (its spec, Decision 7): the "…" menu's PDF is no longer owned-only — from the Items list both exports choose their scope, owned, sold or both — while Import and Settings stay unchanged.*
 
 ## Non-goals (explicit)
 
@@ -778,8 +784,10 @@ plan approval):
   a flat, dated list. A natural follow-up once there is history to show.
 - **Sorting, filtering or searching the Sold side**, or mixing sold items into
   the Owned side behind a filter — the two sides stay distinct.
+  *Superseded by `014-sold-side-parity` (its spec, Decisions 3 and 4): the Sold side gains its own search, category chip and sort, and each side keeps its own across a switch; the two sides still stay distinct.*
 - **A sold-items PDF**, or sold items in the collection PDF (Decision 7); the
   Sold side's "…" offers the same owned-only PDF as the Owned side (P17).
+  *Superseded by `014-sold-side-parity` (its spec, Decision 7): a sold-items PDF is no longer a non-goal — the Items list's PDF covers owned, sold or both, and a sold document is titled "Sold Items", named `Trove-Sold-Items-<date>`.*
 - **Multiple sales per item, quantities, or partial sales** — an item is sold
   once, whole.
 - **Editing an item's own fields while it is sold** — return it first (P4).

@@ -27,6 +27,13 @@ nonisolated enum SaleCopy {
     // The sold page's third action, Delete, keeps reading `ItemDeleteCopy` —
     // one word for one deletion, whichever side the item is on.
 
+    /// The Owned side's leading swipe (014 plan Q9). The *visible* word only —
+    /// "Mark as sold" does not fit a swipe button beside a glyph — while the
+    /// spoken name stays `markAsSold`, which the button carries as its
+    /// `.accessibilityLabel` so the menu row and the swipe announce the one
+    /// action the same way (criterion 12).
+    static let swipeSell = "Sell"
+
     // MARK: - The sale sheet
 
     /// Title and confirm button by mode. Two constants each rather than a

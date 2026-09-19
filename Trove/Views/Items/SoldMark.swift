@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// What a sold item's page says about its sale, first in the scroll content
-/// (`006` plan §5; the artboards are `design/elements/006-mark-as-sold/
-/// DetailSoldGain` and `DetailSoldLoss`): the SOLD tag, the outcome beside
-/// it, the sale line beneath, and the sale's note under that when there is
-/// one (spec Decision 11).
+/// What a sold item's page says about its sale, under the title block —
+/// below the photo and above the paid/value stats (`014` Decision 6; it sat
+/// first in the scroll content through `006`). `006` plan §5 has the rest;
+/// the artboards are `design/elements/006-mark-as-sold/DetailSoldGain` and
+/// `DetailSoldLoss`: the SOLD tag, the outcome beside it, the sale line
+/// beneath, and the sale's note under that when there is one (`006` spec
+/// Decision 11).
 ///
 /// Unplated, so the mark reads as a stamp on the page rather than another
 /// card: the page below it is the familiar one, read-only.

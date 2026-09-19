@@ -28,6 +28,11 @@ extension EnvironmentValues {
 /// are resolved lazily in the host's overlay, so a badge inside a scrolling
 /// header is found where it currently is — no geometry is ever written into
 /// state, which is what keeps this free of layout cycles.
+///
+/// `reduce` merges the dictionaries of *sibling* subtrees, and that is all it
+/// does: it is never called for two tags on one view, where the outer
+/// modifier's value simply replaces the inner one's. Stacking is handled by
+/// `dropdownAnchor` being a transform instead — see its comment.
 struct DropdownAnchorKey: PreferenceKey {
     static let defaultValue: [AnyHashable: Anchor<CGRect>] = [:]
 
@@ -38,9 +43,24 @@ struct DropdownAnchorKey: PreferenceKey {
 
 extension View {
     /// Tags a badge as the thing the dropdown with this identifier positions
-    /// against.
+    /// against. One badge may carry several tags — the Items list's "…" is
+    /// the anchor for the overflow *and* for the export-scope choosers that
+    /// replace it (plan Q17).
+    ///
+    /// A transform, not `anchorPreference`, precisely because of that:
+    /// setting a preference overwrites whatever the child published for the
+    /// same key, so three stacked set-modifiers leave only the outermost
+    /// tag, and the host — which draws a dropdown only for an identifier
+    /// that has an anchor — silently opens nothing for the other two. (That
+    /// is what it did at `cf3e1ee`: the "…" badge was dead and six UI tests
+    /// went red.) `transformAnchorPreference` receives the value the view
+    /// already publishes and adds to it, so every tag survives; the key's
+    /// `reduce` still merges across siblings, which is a different question
+    /// and was never the one at issue here. Guarded by `DropdownAnchorTests`.
     func dropdownAnchor<ID: Hashable>(_ id: ID) -> some View {
-        anchorPreference(key: DropdownAnchorKey.self, value: .bounds) { [AnyHashable(id): $0] }
+        transformAnchorPreference(key: DropdownAnchorKey.self, value: .bounds) { anchors, anchor in
+            anchors[AnyHashable(id)] = anchor
+        }
     }
 
     /// The screen-level host for a screen's in-page dropdowns: one open at a
