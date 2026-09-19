@@ -610,16 +610,9 @@ struct ItemListView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Items")
-                    .font(theme.typography.screenTitle)
-                    .foregroundStyle(theme.colors.textPrimary)
-                metaLine
-            }
-
-            Spacer()
-
+        ItemsListHeader(title: "Items") {
+            metaLine
+        } trailing: {
             // Nothing to sort on an empty list, so the sort badge still
             // hides — but the "…" shows regardless since 012 (criterion 1,
             // superseding 011's hide-when-empty rule): its menu carries
@@ -631,7 +624,10 @@ struct ItemListView: View {
             // Sort By stands on both sides since 014 (criterion 3), under the
             // same gate the search field and the chips use — one spelling, in
             // both places, so a side can't end up with one narrowing control
-            // and not the others.
+            // and not the others. The gate, `sortControl` and
+            // `overflowControl` stay spelled here rather than moving into
+            // `ItemsListHeader` with the layout: this file is what G20's and
+            // `ImportWiringTests`' brace-span scans read.
             HStack(spacing: 8) {
                 if viewModel.offersNarrowingControls {
                     sortControl
@@ -647,8 +643,13 @@ struct ItemListView: View {
     ///
     /// Both branches are one `.monoLabel()` line and neither is conditional,
     /// so the slot is the same height on either side and the `SideSwitch`
-    /// below never moves. That is the whole of Decision 13's fix: the
-    /// person saw the switch jump up when the Sold side had nothing on it.
+    /// below never moves. Unconditional was never the whole of it, though:
+    /// the slot is *one* line only because `ItemsListHeader` gives the line
+    /// the header's full width (014 plan Q18). While it stood beside the
+    /// badges, the width they left it wrapped the Sold summary and pushed
+    /// the switch 13.67 pt down on that side alone — which is what T010's
+    /// device pass measured, and what `ItemListHeaderLayoutTests` (G38) and
+    /// the Sold-card UI test (G39) now measure instead of asserting.
     @ViewBuilder
     private var metaLine: some View {
         switch viewModel.side {

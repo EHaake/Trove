@@ -813,6 +813,28 @@ final class TroveUITests: XCTestCase {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
 
+    /// Waits until `element` reads `label` — the gate the frame readings in
+    /// G39 stand behind. A frame read while the badge still names the other
+    /// side's order is a frame from before the header relaid out, so the two
+    /// sides would not be comparable; the assertion that follows each wait
+    /// then reports *what* it reads if the wait ran out.
+    @MainActor
+    private func waitForLabel(
+        _ element: XCUIElement,
+        _ label: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let reads = expectation(for: NSPredicate(format: "label == %@", label), evaluatedWith: element)
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [reads], timeout: 5),
+            .completed,
+            "the element still reads \"\(element.label)\" rather than \"\(label)\"",
+            file: file,
+            line: line
+        )
+    }
+
     @MainActor
     private func assertNoMarketActionsBeyondFind(
         in app: XCUIApplication,
@@ -1053,11 +1075,22 @@ final class TroveUITests: XCTestCase {
         // are the sold half's categories only.
         let soldSortBadge = app.buttons["sortOptions.items"]
         XCTAssertTrue(soldSortBadge.waitForExistence(timeout: 5), "Sort By must show on the Sold side (014 criterion 3)")
+        waitForLabel(soldSortBadge, "Sort by Date sold")
         XCTAssertEqual(
             soldSortBadge.label,
             "Sort by Date sold",
             "the badge must name the Sold side's own default order — it reads \"\(soldSortBadge.label)\""
         )
+
+        // 014 criterion 3's measured half (G39, plan Q18): the switch's top
+        // edge is at the same point on both sides. T010's device pass
+        // row-profiled it 13.67 pt lower here — 168.00 pt against Owned's
+        // 154.33 — because the Sold summary wrapped in the width the sort
+        // badge left it. The wait above is the gate on both readings: the
+        // header has to have relaid out under this side's order before its
+        // frame means anything. `ItemListHeaderLayoutTests` measures the
+        // same claim off-device, in points, on the ingredients.
+        let soldSwitchTop = switchControl.frame.minY
         XCTAssertTrue(app.buttons["moreActions.items"].exists, "the overflow badge stays on the Sold side (criterion 7a)")
         XCTAssertTrue(
             app.textFields["Search name or serial"].exists,
@@ -1089,10 +1122,19 @@ final class TroveUITests: XCTestCase {
         XCTAssertFalse(soldRow(in: app, named: "Telecaster").exists, "a sold item must not appear on the Owned side")
         let ownedSortBadge = app.buttons["sortOptions.items"]
         XCTAssertTrue(ownedSortBadge.waitForExistence(timeout: 5), "Sort By stays on the Owned side")
+        waitForLabel(ownedSortBadge, "Sort by Date")
         XCTAssertEqual(
             ownedSortBadge.label,
             "Sort by Date",
             "the Owned side's Sort By is unchanged (criterion 7) — it reads \"\(ownedSortBadge.label)\""
+        )
+
+        let ownedSwitchTop = switchControl.frame.minY
+        XCTAssertEqual(
+            soldSwitchTop,
+            ownedSwitchTop,
+            accuracy: 1,
+            "the side switch sits \(abs(soldSwitchTop - ownedSwitchTop)) pt apart between the sides — Sold at \(soldSwitchTop), Owned at \(ownedSwitchTop). Something in the header changes height with the side (criterion 3)"
         )
         XCTAssertTrue(app.buttons["Cameras"].exists, "the Owned side's chips are the owned half's categories")
     }

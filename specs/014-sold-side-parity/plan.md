@@ -526,7 +526,13 @@ plan file the person approved and in the tier log.
   measurable off-device. The badges stay top-aligned with the title, so the
   header's height is the title's line box plus 6 plus one meta line on both
   sides — unchanged from today provided the title's box is at least the badge
-  row's 30 pt, which T010a measures rather than assumes. The gate literal,
+  row's 30 pt. That proviso is **G38's empty-trailing case**, a standing
+  guard, not a number checked once: it renders the same header with no badges
+  at all and expects the height unchanged, so it goes red *alone* if the badge
+  row ever outgrows the title's line box (verified at T010a by raising
+  `OverflowBadge`'s vertical padding to 30 — every badge-carrying case rose
+  together to 94 and stayed mutually equal; only the empty-trailing case
+  caught it). The gate literal,
   `sortControl` and `overflowControl` stay spelled in `ItemListView.swift`,
   where G20's and `ImportWiringTests`' scans read them. **Not** `lineLimit(1)`
   or `minimumScaleFactor` (`001`'s fixed type sizes, and either one blinds the
@@ -756,7 +762,7 @@ button and "Mark as sold…" to VoiceOver).
 | G35 | `.both` PDF: one `exportFiles` call, documents owned-then-sold, filenames `[items, soldItems]`, `stagedExport` the same; an empty half left out | two single calls; the empty half staged; order swapped |
 | G36 | all-sold: `canExportPDF` true, `canExport(.owned)` false | `canExportPDF` reads the owned half |
 | G37 | `ExportWiringTests`: the Items rows open `.exportScope(.csv/.pdf)`, the Wishlist's still export directly; the host's case composes one titled surface over `ExportScope.allCases`, rows gated `canExport(scope)`, actions passing `scope` (no literal case); three `.dropdownAnchor(` on `overflowControl` | a row gated on `canExportCSV`; the action passing `.both`; an anchor dropped |
-| G38 | `ItemListHeaderLayoutTests`: the header's rendered height at the device's content width is the one-line baseline for the Owned line, for the Sold line, and for the Sold line under the widest `SoldSortOrder` label | the meta line goes back inside the badges' row, or any control takes width from it |
+| G38 | `ItemListHeaderLayoutTests`: the header's rendered height at the device's content width is the one-line baseline for the Owned line and the Sold line, each also at six-figure scale, under the widest label of each side's own sort — the widest measured by rendering every label, not counted; plus an empty-trailing case for the badge-row proviso, and a scan that the screen composes `ItemsListHeader` with the meta under the badges | the meta line goes back inside the badges' row, or any control takes width from it (every summary case reddens); the badge row outgrows the title's line box (the empty-trailing case reddens alone); the call site re-nests the meta into the trailing slot (the scan reddens, the heights do not) |
 | G39 | UI: `items.sideSwitch` has the same `frame.minY` on both sides with `-seedSold` | the Sold summary wraps — the 13.67 pt T010 measured |
 
 Every guard is mutation-verified before it lands (`CLAUDE.md` Testing); the
