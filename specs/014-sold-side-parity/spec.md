@@ -1,8 +1,8 @@
 # 014 — Sold-Side Parity and Mark as Sold on the Swipe
 
 **Status**: **Approved** (2026-09-16) — written with the person in this spec
-session from the requests carried out of `006` (`specs/NEXT-sold-side-parity.md`,
-`006` Decision 16), and revised the same day at the person's reading of the
+session from the requests carried out of `006` (its Decision 16, which
+deferred exactly these two changes to a spec of their own), and revised the same day at the person's reading of the
 first Draft (Decisions 1–6) and approved the same day with P9 and P11 confirmed. Every product decision below was made by the
 person and is listed in the Decisions record; the P-items are Claude Code's
 proposals and become decisions on plan approval, as `006`'s did.
@@ -289,9 +289,19 @@ exactly the observation nobody has made yet.
     `.confirmationDialog` on `AddButton` → red naming the file). Those suites
     pin the menu's composition positively, so the evidence is that they held
     while the page around them changed — not that the diff happens to be
-    silent on the file. No button was added: the sold branch composes
-    `photoHero`, `titleBlock`, `SoldMark(`, `statPair`, `desireCard` and
-    `details` and nothing else (`theSoldBranchStampsTheMark`, criterion 11).
+    silent on the file. That no button was added is evidenced by the **diff**,
+    not by a test: `ItemDetailView`'s only change in this spec is the reorder
+    Decision 6 asked for — `photoHero` and `titleBlock(for: item)` moved above
+    the mark's `if` block, four insertions and two deletions, no new element.
+    The tests around it pin less than that:
+    `SoldStateWiringTests.theSoldBranchStampsTheMark` pins the *order* of the
+    four elements it names (hero < title < `SoldMark(` < stats, G21) and
+    `theSoldBranchOmitsTheMarketSectionAndFindAPhoto` pins two named
+    *exclusions*. **Neither enumerates the branch**, so a seventh element
+    added to it — including the very button Decision 1 withdrew — would pass
+    every suite today. Recorded here rather than claimed away; an
+    enumerating scan is the guard if that ever needs to be more than a
+    reading of the diff.
 3. [x] Once anything has been sold, the Sold side shows the search field, the
    category chips and Sort By in the Owned side's positions; the switch's
    top edge is at the same point on both sides (measured, as `006`
@@ -505,8 +515,13 @@ exactly the observation nobody has made yet.
     `ExportWiringTests.theItemsListComposesTheScopeChooserOverEveryScope`,
     `theScopeChooserHeadersReadAsTheSpecWritesThem` (G37) and its per-screen
     `csvAction`/`pdfAction` literals — the Wishlist's rows still export
-    directly, and `SettingsWiringTests`/`SettingsViewModelTests` are
-    unchanged. The anchor mechanism itself has its own guard after T009f
+    directly, and Settings' exports are untouched at the source: `Trove/ViewModels/SettingsViewModel.swift`
+    is **absent from this spec's diff entirely**, which is the claim that
+    matters — `SettingsViewModelTests` itself did change (its call sites took
+    the scoped `exportCSV(scope:)` / `exportPDF(scope:)` signatures, an
+    exhaustive `switch cover.totals` gained a `.sold` arm, and G14's
+    byte-identity cases grew), so citing that suite as unedited would have
+    been false. The anchor mechanism itself has its own guard after T009f
     found it broken: `DropdownAnchorTests` (three stacked tags reach a reader
     as three keys; the helper reverted from `transformAnchorPreference` to
     `anchorPreference` leaves one). On screen:

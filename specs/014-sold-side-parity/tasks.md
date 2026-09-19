@@ -97,10 +97,20 @@ the same label (plan R2) — the report puts it as a question, not a fact.
   pointer `006`'s T007 appended to `specs/011-data-export/plan.md`.
   Files: `specs/006-mark-as-sold/spec.md`, `specs/006-mark-as-sold/plan.md`.
   **Verify:** `grep -c "Superseded by \`014-sold-side-parity\`" specs/006-mark-as-sold/spec.md`
-  prints 4 and the same over `plan.md` prints 4 — the pointer's own phrase,
-  so Decision 16's existing mention (which cites `NEXT-sold-side-parity.md`,
-  not this directory) is not counted; `git diff --stat` touches only those
-  two files.
+  prints 4 and the same over `plan.md` prints 4 at this task — the pointer's
+  own phrase, so Decision 16's own mention of the deferral is not counted (it
+  cites no file; an earlier draft of this line said it cited
+  `NEXT-sold-side-parity.md`, which is wrong — no such file exists in this
+  repo); `git diff --stat` touches only those two files.
+  **Counts as they stand at the close-out** (T011, after T009a's round):
+  `spec.md` **7**, `plan.md` **5**, and `specs/011-data-export/spec.md` **2**.
+  T009a appended six when Decision 7 superseded `006`'s export rules — three
+  in `006`'s spec, one in its plan, two in `011`'s spec, per this spec's
+  Inherited caveats. T011 appended one more at `006` Decision 16 itself, but
+  it does **not** carry the "Superseded by" phrase and so is not in those
+  counts: Decision 16 was not reversed, it was *fulfilled*, and the pointer
+  says so (`grep -c "014-sold-side-parity" specs/006-mark-as-sold/spec.md`
+  prints 8).
 
 - [x] **T002 — `SoldSortOrder` and its comparators.**
   Per plan §2 and Q4. `ItemListViewModel.SoldSortOrder` (eight cases in menu

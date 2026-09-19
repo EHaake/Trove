@@ -119,7 +119,7 @@ purchases.
 
 ## Status
 
-Ten specs shipped: `001-core-inventory` (v1 — item tracking, the
+Eleven specs shipped: `001-core-inventory` (v1 — item tracking, the
 dashboard, the wishlist, the Sell Plan, CloudKit sync),
 `010-item-management-enhancements` (merged 2026-08-30 — swipe actions,
 drag-to-reorder, duplication, expanded sorting, and a design-depth
@@ -144,11 +144,16 @@ dated sentence saying why), `004-themes` (merged 2026-09-09 — light
 mode of the brass/moss/rust identity, with a System/Light/Dark choice
 in Settings), `005-stock-photos` (merged 2026-09-13 — an item with
 no photo of its own can borrow a credited one from Wikimedia Commons,
-in the app and in the PDF export), and `006-mark-as-sold` (merged
+in the app and in the PDF export), `006-mark-as-sold` (merged
 2026-09-15 — mark an item sold from its page or from a sell plan and
 it moves to a Sold side of the Items tab with what it sold for, when
 and where; a Sold card on the dashboard, a Sold figure on each sell
-plan, four new CSV columns, and a sale that can be undone).
+plan, four new CSV columns, and a sale that can be undone), and
+`014-sold-side-parity` (2026-09-18 — Mark as sold on the Items list's
+swipe, the Sold side gaining the search, category chips and sort the
+Owned side has with sorts that fit things already sold, each side
+keeping its own, the sale shown under a sold item's name, and exports
+that ask first whether you mean owned, sold or both).
 See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.

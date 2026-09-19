@@ -713,6 +713,7 @@ Added 2026-09-13, at the person's reading of the Draft:
     P16's "no filtering or sorting on the Sold side" and Q15's clearing
     rule). Both are design changes to shipped behaviour, so they get a spec
     of their own rather than a fix branch.
+    *The deferral landed: `014-sold-side-parity` (complete 2026-09-18) shipped the leading-swipe action and the Sold side's search, chips and Sort By. The visible button on the item page was withdrawn by the person at that spec's reading (its Decision 1) and is a roadmap consideration, not a plan.*
 
 Proposed at drafting, 2026-09-13, by Claude Code (these become decisions on
 plan approval):

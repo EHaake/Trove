@@ -1300,17 +1300,27 @@ final class TroveUITests: XCTestCase {
 
         let edit = app.buttons["Edit"]
         XCTAssertTrue(edit.waitForExistence(timeout: 5), "the leading swipe didn't open")
-        // "Sell" is the visible word and `markAsSold` the accessibility
-        // label; XCUITest reports the latter — the button came back as
-        // "Mark as sold\u{2026}" with an empty identifier when this was
-        // instrumented (T009) — but both are matched, since which of the two
-        // surfaces is a detail of how the `Label` and the modifier compose
-        // and criterion 12 is about the button being there and announced by
-        // the menu row's own name.
+        // "Sell" is the visible word and `SaleCopy.markAsSold` the
+        // accessibility label the button carries. Which of the two a
+        // VoiceOver user hears is a platform question no unit test in this
+        // project can answer — whether `.accessibilityLabel` overrides a
+        // `Label`'s text is only visible in the live accessibility tree —
+        // so this is the one place criterion 12's spoken name is checked.
+        // It matched *either* spelling while the answer was unknown (T009's
+        // instrumented read); the answer has been "Mark as sold\u{2026}" in
+        // every run since, so the close-out pins that alone. Matching "Sell"
+        // too would have let the modifier silently stop working.
+        //
+        // Mutation: drop `.accessibilityLabel(SaleCopy.markAsSold)` from the
+        // Sell button in `ItemListView` → the button reads "Sell" and this
+        // assertion goes red.
         let sell = app.buttons
-            .matching(NSPredicate(format: "label == %@ OR label == %@", "Mark as sold\u{2026}", "Sell"))
+            .matching(NSPredicate(format: "label == %@", "Mark as sold\u{2026}"))
             .firstMatch
-        XCTAssertTrue(sell.exists, "criterion 1: the leading swipe must offer Mark as sold…")
+        XCTAssertTrue(
+            sell.exists,
+            "criteria 1 and 12: the leading swipe's middle action must exist and be announced as \"Mark as sold…\" (the visible word is \"Sell\")"
+        )
         let copy = app.buttons["Copy"]
         XCTAssertTrue(copy.exists, "the leading swipe still offers Copy")
 

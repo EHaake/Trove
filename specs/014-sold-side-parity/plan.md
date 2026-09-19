@@ -837,10 +837,19 @@ drafted so the two can be read against each other.
   in `exportableSoldItems` would have made an Owned export follow a Sold
   query, so that one line is `narrowed(sold, by: narrowing).sorted(by:
   isInSoldOrder)` deliberately.
-- **Q9 as written, and the platform claim resolved in its favour**: the
-  swipe button carries `SaleCopy.swipeSell` = "Sell" and
-  `.accessibilityLabel(SaleCopy.markAsSold)`, and XCUITest reads the button
-  back as "Mark as sold…" — so the modifier overrides the `Label`'s text.
+- **Q9 as written, and the platform claim resolved in its favour — and now
+  guarded, not merely observed**: the swipe button carries
+  `SaleCopy.swipeSell` = "Sell" and `.accessibilityLabel(SaleCopy.markAsSold)`,
+  and XCUITest reads the button back as "Mark as sold…" — so the modifier
+  overrides the `Label`'s text. The UI test matched *either* spelling from
+  T009 to the close-out, which was the right hedge while the answer was
+  unknown and the wrong one once it was known: the modifier could have
+  stopped taking effect and the suite would have stayed green on "Sell". At
+  T011 the `OR` was dropped and the spoken name pinned alone
+  (`testTheLeadingSwipeOffersMarkAsSoldBetweenEditAndCopyAndOpensTheSheet`),
+  mutation-verified by removing `.accessibilityLabel(SaleCopy.markAsSold)`
+  from the Sell button → red. **This is the only guard in the project on
+  that platform behaviour**, and criterion 12's known half rests on it.
   `accentBrassMid` measured **3.61:1 (dark) / 3.74:1 (light)** for white on
   the tint at T010, so Q9's "if the label is illegible this is a decision
   review" branch was never taken.

@@ -2729,6 +2729,15 @@ struct ItemListViewModelSoldExportTests {
     /// the name Settings ships the very same document under.
     ///
     /// Mutation: swap the two arms of the filename choice → red on both ends.
+    ///
+    /// The *format* of the sold name is not re-asserted here against a
+    /// `.now` of this test's own: `ExportTempFileTests.filenamesCarryTheLocalDay`
+    /// already pins `Trove-Sold-Items-YYYY-MM-DD` for both extensions under a
+    /// fixed date and zone, and a literal comparison built from a second
+    /// clock reading fails on a midnight rollover between the two (T011
+    /// sweep, S6). What is left is the claim this test is for — which scope
+    /// gets which name — in the shape every other filename assertion in the
+    /// suite uses: the view model's staged name against `ExportFilename`'s.
     @Test func onlyTheSoldOnlyCSVTakesTheSoldFilename() async throws {
         let context = try makeInMemoryContext()
         insertItem("Kept", into: context)
@@ -2742,7 +2751,6 @@ struct ItemListViewModelSoldExportTests {
         await viewModel.exportCSV(scope: .sold)
         let soldName = ExportFilename.soldItems(fileExtension: "csv")
         #expect(spy.filenames == [soldName])
-        #expect(soldName == "Trove-Sold-Items-\(ExportSchema.day(from: .now)).csv")
         #expect(viewModel.stagedExport?.filenames == [soldName])
 
         await viewModel.exportCSV(scope: .owned)
