@@ -450,9 +450,13 @@ exactly the observation nobody has made yet.
     `everySoldSurfaceMapsIsLossToTheRustAndMossTokens`). On the device
     (T010): the mark measured 29.33 pt under the title with the section gap
     matching an owned page's by comparison.
-12. [ ] Every new control is reachable by VoiceOver with a label and, for the
+12. [x] Every new control is reachable by VoiceOver with a label and, for the
     swipe action, a name — the person's step with Accessibility Inspector.
-    **An honest partial — this one is not done.** *What is known*: the swipe
+    **Attested by the person, 2026-09-19**: they ran Accessibility Inspector
+    over the new surfaces and reported all items pass, including the header's
+    new reading order, which they accepted as it stands (so
+    `.accessibilitySortPriority` was not needed). *What was known before
+    their pass*: the swipe
     action's spoken name is **"Mark as sold…"**, read out of the live
     accessibility tree by XCUITest at T009, which is what settles the one
     platform claim the suites could not check (that `.accessibilityLabel` on
@@ -463,14 +467,12 @@ exactly the observation nobody has made yet.
     the swipe button's label leg of `theOwnedRowsLeadingSwipeOffersEditThenSellThenCopy`
     (G23), the chooser's dismiss catcher "Dismiss export options" and the
     sort badge's "Opens sort options" with `visibleSortLabel` as its value.
-    *What is owed*: the person's own pass with Accessibility Inspector over
-    the Sold side's search field, its category chips and its sort badge, and
-    over the export scope chooser — first-row focus on opening and the
-    dismiss catcher — plus a confirmation that the header's VoiceOver order
-    (now **title, badges, meta**, a disclosed consequence of plan Q18) reads
-    acceptably; `.accessibilitySortPriority` on the meta line is the one-line
-    answer if it does not. Nobody has run Accessibility Inspector over these
-    surfaces; the tool is not available to an agent here.
+    *What their pass added*: the Sold side's search field, its category chips
+    and its sort badge; the export scope chooser's first-row focus and its
+    dismiss catcher; and the header's reading order (now **title, badges,
+    meta**, a disclosed consequence of plan Q18). Accessibility Inspector is
+    not available to an agent here, so this criterion could only ever be
+    closed by the person — and it was, rather than being inferred.
 13. [x] The existing UI suite still starts from the state each test was
     written against; the suite passes twice back to back.
     *Verified by*: `scripts/verify.sh all` run twice, consecutively, at

@@ -149,7 +149,7 @@ in the app and in the PDF export), `006-mark-as-sold` (merged
 it moves to a Sold side of the Items tab with what it sold for, when
 and where; a Sold card on the dashboard, a Sold figure on each sell
 plan, four new CSV columns, and a sale that can be undone), and
-`014-sold-side-parity` (2026-09-18 — Mark as sold on the Items list's
+`014-sold-side-parity` (merged 2026-09-19 — Mark as sold on the Items list's
 swipe, the Sold side gaining the search, category chips and sort the
 Owned side has with sorts that fit things already sold, each side
 keeping its own, the sale shown under a sold item's name, and exports
