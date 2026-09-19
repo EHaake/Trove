@@ -88,7 +88,8 @@ actually useful once the app is in daily use.
   a ranking no real device had the history for. Follow-ups it recorded:
   - **Dynamic Type** (spec Decision 11) — every font in the app is
     fixed-size, a `001` limitation this spec inherited; worth its own
-    spec, since it touches every screen.
+    spec, since it touches every screen. **Numbered `017-dynamic-type`
+    on 2026-09-19** — see its entry below.
   - **Fixed** (`fix/stale-trend-arrows`, 2026-09-07) — **the list rows'
     stale arrows** (Decision 12): the item list and wishlist rows drew
     the trend arrow on a figure older than thirty days, where the Sell
@@ -271,6 +272,193 @@ actually useful once the app is in daily use.
   screen that doesn't block or get blocked by anything already in
   flight — it deserves a real Claude Design pass rather than an
   improvised layout, the same reasoning that held `008` to v2.
+
+  **Re-read 2026-09-19, after `006` and `014` shipped: worth more than
+  when it was written, and now waiting on `015-mark-as-bought`.** Worth
+  more, because `WishlistItem.itemsSoldToward` means a plan has
+  *progress* — a row can say "3 of 5 sold, $1,240 raised of $1,800"
+  rather than only `001`'s "3 of 5 candidates selected". Waiting,
+  because the screen hangs entirely on the word **active** and the app
+  has no definition of it: today the only one available is "you have
+  ticked at least one candidate," and nothing can ever take a plan off
+  the list again. Buy the thing the plan was funding and it still reads
+  as active, forever. `015` supplies the ending — build this screen
+  first and "active" quietly means "not un-ticked," which stops being
+  true the day the buy side lands. `006`'s open question (a plan whose
+  candidates have all sold still showing the "Nothing to sell yet"
+  empty state) is the same missing lifecycle seen from another angle.
+- **`015-mark-as-bought`** — the other half of the core loop, and the one
+  piece of it the app has never had. `CLAUDE.md`'s own description of Trove
+  is "track what you own, track what you want to buy next, and use the gap
+  between current value and original cost to plan sales that fund future
+  purchases." `006` and `014` built the selling half properly. **Nothing
+  records that the purchase happened.** There is no buy action, no
+  wishlist→owned conversion, and no trace of the idea anywhere in the code
+  or in this file — it was never deferred, it was never thought of.
+
+  What that costs today: you sell three things toward a lens, `006` records
+  them on `WishlistItem.itemsSoldToward`, you buy the lens — and then you
+  delete the wishlist entry and retype the whole thing as a new item,
+  losing its photos, its `categoryPath`, its `reverbProductID` match, its
+  `year`, and the entire record of what paid for it. The app watches you
+  save up and then looks away at the moment of purchase.
+
+  The schema is most of the way there already. `itemsSoldToward` exists and
+  is `.nullify`-ed precisely so those sales outlive the plan (`006` P5,
+  P10). What is missing is the act and its record. The shape to scope,
+  deliberately mirroring `014` rather than inventing a new idiom: a **Buy**
+  action on the Wishlist's leading swipe beside the existing ones and on
+  the detail screen's menu row; a sheet asking price, date, place and
+  condition, as `SaleFormView` asks for the sale's four; an `Item` created
+  carrying name, category, photos, Reverb match and year across; the
+  wishlist entry leaving the list; and a link from the new item back to the
+  sales that funded it, so the page can say whether they covered it.
+
+  The real product questions, for the spec conversation rather than here:
+  whether the Wishlist grows a **Bought side** the way the Items tab grew
+  Sold (the parity argument from `014` says yes, the "don't build a shelf"
+  instinct from the withdrawn item-page button says be careful), whether
+  the funding link is shown on the item, on the bought wishlist entry, or
+  both, and what happens to a purchase the sales did *not* cover. It also
+  finally settles `006`'s open question about a sell plan whose candidates
+  have all sold — a plan gets an ending.
+
+  **`009-sell-plan-list` waits on this** — see its entry.
+- **`016-collection-value-history`** — how the collection's value has moved
+  over time. The app knows what you paid and what things are worth right
+  now, and the gap between those two numbers is its entire framing — but
+  it is a snapshot with no past tense. `002` keeps per-product market
+  history in the device-local store; **nothing records your collection's
+  own total**, and `006`'s realized gains and losses from actual sales are
+  charted nowhere.
+
+  The unusual argument for doing this early rather than when it feels due:
+  **it is the one spec whose value depends on having shipped it sooner.**
+  A history feature built in six months opens on an empty chart either way.
+  Built now, it has six months of data by then. Every month it waits is a
+  month of history that does not exist.
+
+  To scope: what gets snapshotted (total current value, total purchase
+  cost, item count — and whether sold items' realized gain joins them),
+  how often and on what trigger, and where the snapshots live. That last
+  one is the interesting question and echoes a decision already made
+  twice: `002` put market figures in a second, unsynced store because they
+  are per-device facts, and `004` put the theme choice in `UserDefaults`
+  for the same reason. A value history is *not* per-device — it is the
+  person's own data and belongs in the synced store, which makes it the
+  first new synced entity since `001` and brings the CloudKit rules with
+  it (every property optional or defaulted, no `@Attribute(.unique)`,
+  `CloudKitSchemaTests` extended). Where it surfaces is a Design question:
+  a Dashboard line, a card that opens a chart, or a sparkline beside the
+  hero total.
+- **`017-dynamic-type`** — the iOS text-size setting, which Trove ignores
+  completely. Recorded as a follow-up in `003`'s Decision 11 on 2026-09-07
+  and never given a number; it is given one here so it stops aging inside
+  another spec's footnotes.
+
+  The state of it, from the code rather than from memory: every font in the
+  app is built by one function, `ThemeTypography.font(_:size:weight:)`, and
+  it returns `.custom(name, fixedSize: size)`. **`fixedSize:` is the
+  initializer that explicitly opts out of scaling.** Below it sit hard
+  numbers taken off Design's mock — a 30pt screen title, a 68pt dashboard
+  total, 13.5pt body, 10.5pt mono labels. There is not one `relativeTo:`
+  and not one `dynamicTypeSize` reference in the 127 source files. Set a
+  phone to the largest accessibility size and Trove renders identically to
+  the smallest, alone among the apps on the device.
+
+  Two reasons it matters. It is an **accessibility floor, not a
+  preference** — 10.5pt is unreadable for some people and there is
+  currently nothing they can do about it; `014`'s criterion 12 needed an
+  Accessibility Inspector pass by hand, the second spec running where
+  accessibility was the person's manual step rather than something the
+  suite covers. And **the bill grows with every screen**: the font change
+  itself is nearly trivial (one function, one initializer, a text style per
+  role), while the real work is every fixed row height, the desire dial's
+  numeral sized off its own diameter, the header `014` already measured
+  wrapping at default sizes, and the PDF export, which must *not* scale —
+  `PrintPalette` is paper-fixed and its type should be too. `008`'s chips
+  and `009`'s card rows would both be built at fixed sizes and then
+  revisited.
+
+  Related but distinct from `019` below: both are "the layout has only ever
+  been asked to render one way." Dynamic Type stretches it vertically, the
+  foldable horizontally, and a plausible scoping merges them. Kept separate
+  because this one is an accessibility obligation the app owes today and
+  the other waits on hardware.
+- **`018-system-design-language`** — deciding, once, how much of Apple's
+  design language the app wears. The occasion is a real inconsistency: the
+  Dashboard and both list screens open the app's **own** dropdown surface
+  from their "…", while the item and wishlist detail screens open a
+  **system** `Menu` from the nav bar, and the tab bar at the bottom is a
+  plain system `TabView` wearing iOS 26's liquid glass. Three different
+  looks for the same gesture.
+
+  **That split is not an accident, and this entry exists to reverse a
+  decision rather than fix a bug.** `013` Amendment A, Decision 17 and
+  criterion 27 set the standing rule — *bespoke inside the page, system in
+  the bars* — and it is enforced: `MenuPolicyTests` walks every file under
+  `Trove/Views` and `Trove/App` and **fails the build if a system menu
+  appears inside page content**, allowlisting `DetailOverflowMenu.swift`
+  alone. The guard is pointed the opposite way from where this spec wants
+  to go, so adopting system menus means rewriting the policy and its test
+  together, deliberately and in the open — not quietly deleting a red test,
+  which `CLAUDE.md` forbids for good reason.
+
+  The person's position, recorded 2026-09-19: lean **system**, because the
+  tab bar already wears liquid glass, because more default iOS means less
+  bespoke surface to build and maintain, and because it keeps the app
+  conformant with Apple's current language. The honest counterweight, so
+  the spec conversation has both halves: the rule reaches further than the
+  "…" menus — `SideSwitch` (the Owned/Sold switch), the Sell Plan's own
+  control and `SortPicker` are all bespoke *under this same rule*, so
+  "go system" plausibly means a system `Picker` where `006` and `014` spent
+  real effort measuring a 19.7 pt jump and a `matchedGeometryEffect`
+  stutter out of a custom one. `013` also records that the person found the
+  still dropdown **stiff**, which is why it grows out of the badge with a
+  fade, and `OverflowDropdown` carries group breaks the system menu it
+  replaced had none of. Those are things a system menu will not do.
+
+  So the question to settle is not "system or bespoke" in the abstract but
+  **where the line falls now**: menus and pickers to the system, with the
+  app's identity carried by type, colour and the content of the cards
+  rather than by the chrome, is one coherent answer — and probably the one
+  the lean above points at. Worth a Claude Design pass, since it changes
+  how most of the app looks. **Settle this before `019`**, so a foldable
+  layout is not drawn around bespoke surfaces that are then thrown away.
+- **`019-foldable-layout`** — a design for the foldable iPhone Duo,
+  announced for release soon (noted 2026-09-19). The occasion is new
+  hardware; the work underneath it is adaptive layout, which this app has
+  never done at all.
+
+  How narrow the app currently is, from the project file rather than from
+  impression: `TARGETED_DEVICE_FAMILY = 1` (iPhone only, no iPad),
+  `INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone =
+  UIInterfaceOrientationPortrait` (portrait locked), and **zero**
+  references to `horizontalSizeClass`, `verticalSizeClass` or
+  `NavigationSplitView` across all 127 source files. Trove has exactly one
+  layout, drawn for one width, and has never been asked to be anything
+  else. An unfolded foldable is not a wider iPhone — it is a different size
+  class, where a single-column list of cards at 800-odd points reads as a
+  mistake, and where the Dashboard/Items/Wishlist split is a natural
+  two-column arrangement the app has no structure for.
+
+  Two prerequisites before this can be scoped honestly. **The device's
+  actual metrics and an SDK/simulator for it** — screen dimensions, the
+  folded and unfolded size classes, how the transition is delivered to a
+  SwiftUI app, and whatever Apple's own guidance says; none of that should
+  be guessed at, and nothing in this entry does. And **a `.pbxproj`
+  change**, since the orientation lock and possibly the device family have
+  to move — `CLAUDE.md`'s "Project file safety" section says to stop and
+  flag that before doing it, not fold it into an unrelated task, so it
+  belongs in this spec's own first task with the person's sign-off.
+
+  Related work already on the page: `003`'s `fix/sell-plan-row-narrow-width`
+  measured the Sell Plan row's floor at **355 pt** and found the row
+  spilling out of its own card below it — the one existing datapoint that
+  the layout has real width sensitivities, and it was found at a *narrow*
+  width. `017` above is the vertical half of the same unexamined
+  assumption, and settling `018`'s chrome question first keeps this pass
+  from designing surfaces that are about to be replaced.
 - **`010-item-management-enhancements`** — Came up right as `001` was
   wrapping up: a request for swipe-left-to-delete on `ItemListView`/
   `WishlistView` rows (standard iOS convention), which grew into wanting
