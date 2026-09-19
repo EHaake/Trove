@@ -683,6 +683,37 @@ review. Pause at the end of this phase — there is something to try.
   (orchestrator re-runs, `review: per-task`); the pre-fix red output and the
   three mutations recorded verbatim.
 
+- [ ] **T010b — The three Phase 2b sweep items (guards only).**
+  Added 2026-09-18: the Phase 2b review's S2, S3 and S4 were listed on T011
+  as sweep items; they are test changes, so they land here rather than inside
+  the documentation close-out.
+  **S2 — the pair-unwrap claim has no red.** Plan Q15 says `soldDate` and
+  `salePriceCents` are unwrapped as the pair `012`'s rule guarantees, but both
+  `ExportSchemaTests` entry tests use records where the two are either both
+  present or both absent, so rewriting the condition to `if let soldDate` with
+  `salePriceCents ?? 0` leaves them green. Add a fixture with `soldDate` set
+  and `salePriceCents` nil and assert the entry begins at `Paid` (no sale
+  fields). Mutation: that rewrite → red.
+  **S3 — a comment claims a guarantee its scan cannot give.**
+  `ExportWiringTests`' doc comment says "either row quietly going back to a
+  direct export (or to the wrong format's chooser) fails here"; the
+  assertions are `contains` over the whole `OverflowDropdown(...)` argument
+  list, so swapping the two closures leaves both literals present and the test
+  green. Pin the labelled pair as one literal each (`"exportCSV: {
+  openDropdown = .exportScope(.csv) }"` and its PDF twin) so the claim becomes
+  true; if the formatting makes a single literal brittle, instead soften the
+  comment to name the UI test as the guard — say which you did and why.
+  Mutation: swap the two closures → red.
+  **S4 — the sold cover's three figures come from two arithmetic sources.**
+  `soldDocument()` takes proceeds and realised from `SaleOutcome.totals(over:)`
+  and paid from `figures(over:).paidCents`; G33 pins concrete cents that
+  happen to satisfy `realised == proceeds − paid`. Add that relationship as
+  its own expectation in G33 so it is a guard, not a coincidence of the
+  fixture.
+  Files: `TroveTests/ExportSchemaTests.swift`, `TroveTests/ExportWiringTests.swift`,
+  `TroveTests/ItemListViewModelTests.swift`.
+  **Verify:** `scripts/verify.sh` green; each mutation recorded.
+
 - [ ] **T011 — Close-out.**
   Per plan §9. Criteria 1–14 ticked in `spec.md` with citations — criterion 3 cites
   T010's re-take **and** G38/G39, not the re-take alone; `design/tokens.md`'s
