@@ -210,6 +210,29 @@ further, and whenever something unexpected bears on spec adherence.
 
 ## Model policy
 
+**Amended 2026-09-19, at the person's instruction: every role runs at
+`opus`.** Experiment 1 ran the orchestrating seat and the top-tier
+decisions on `fable`; partway through `014-sold-side-parity` the person
+said to use the stepped-down Opus for all tasks for the rest of that
+spec, and at its merge asked for that to stand. So: **there is no top
+tier distinct from the implementation tier any more** — the
+`sdd-planner`, the `skeptical-reviewer` (sign-off, per-phase, per-task,
+decision reviews and the pre-merge sweep) and the `sdd-implementer` all
+run at `opus`, which is what their definitions already default to, so
+**no dispatch carries a model override**. The session runs on
+`claude-opus-5`. Everything else below — the roles, the review cadence,
+the loop cap, the bundle discipline, the escape hatch — is unchanged,
+and the paragraphs that follow describe experiment 1 as it ran, which is
+the record this amendment supersedes rather than deletes. Two
+consequences worth stating: the Fallback clause below is now about
+`opus`'s own budget, not `fable`'s, and experiment 1's measurements stay
+in `005`'s and `014`'s tier logs as history. `014` recorded the switch
+mid-spec as the fallback clause exercised by choice rather than by an
+exhausted allowance, and nothing went wrong in the half-spec that
+followed it.
+
+*What follows is experiment 1's policy as adopted, superseded above.*
+
 Adopted 2026-09-11 for **experiment 1**, following the
 `spec-driven-development` skill's experiment-1 branch (session model
 `claude-fable-5-1`). It replaces the prior policy — decided 2026-09-04 and
@@ -223,18 +246,20 @@ policy; experiment 1 takes effect from its tier log's experiment-1 row onward.
 Decided once, alongside the involvement level; the tier names change as models
 do, the roles don't.
 
-- **Tiers by name**: top tier `fable`; implementation tier `opus`;
-  session tier `fable` at medium effort (experiment 1 — the top and
-  session tiers are the same model at different effort; the fallback
-  session model is `claude-opus-4-8`, the full ID, since a
-  previous-generation model has no short alias). These names are the
-  only place a model is spelled out; everything below refers to the
-  roles.
+- **Tiers by name** *(as amended 2026-09-19: every tier is `opus`; the
+  session is `claude-opus-5`; the fallback session model stays
+  `claude-opus-4-8`, the full ID, since a previous-generation model has
+  no short alias)*. As experiment 1 had them: top tier `fable`;
+  implementation tier `opus`; session tier `fable` at medium effort —
+  the top and session tiers the same model at different effort. These
+  names are the only place a model is spelled out; everything below
+  refers to the roles.
 - **The session runs at the session tier, at medium effort**, set in
   this repo's `.claude/settings.json` — written at project setup from
-  the skill's `assets/settings-template.json` (`"model":
-  "claude-fable-5-1"`, `"effortLevel": "medium"`, and a level under
-  `"modelSettings"` for each tier's full model ID). If that file is missing or lacks these
+  the skill's `assets/settings-template.json` (since the 2026-09-19
+  amendment `"model": "claude-opus-5"`, `"effortLevel": "medium"`, and a
+  level under `"modelSettings"` for each tier's full model ID; it read
+  `"claude-fable-5-1"` under experiment 1). If that file is missing or lacks these
   keys, recreate it from the template and commit it before dispatching
   anything; nobody creates it by hand. Project settings outrank user
   settings, so a model picked in the app's picker only affects the
@@ -293,7 +318,8 @@ do, the roles don't.
   ends when `plan.md` and `tasks.md` are final, with a new session
   (not `/clear`, which keeps the model) whose opening prompt is the
   spec session's last message. A session in this repo opens at the
-  session tier — the top tier's model at medium — so a spec session
+  session tier — since the 2026-09-19 amendment that is `opus` at
+  medium, and every role's model besides — so a spec session
   states its model and effort first (`/effort status`) and asks the
   person to raise effort to high for this session (`/effort high`)
   before continuing. The next session opens at medium again from
