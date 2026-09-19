@@ -1,10 +1,12 @@
 # 015 — Mark as Bought
 
-**Status**: **Draft** (2026-09-19) — written with the person in this spec
-session. The Decisions record below holds what they have already settled;
-the **P-items** are Claude Code's proposals and become decisions on plan
-approval, as `002`'s, `005`'s and `006`'s did. The **Open questions** section
-is what the person still has to answer at their reading of this Draft.
+**Status**: **Approved** (2026-09-19) — written with the person in this spec
+session and approved the same day at their reading of the Draft, which
+answered its three open questions: **no undo** (Decision 5), the
+over/under-estimate line **kept** (Decision 6), and the wishlist notes
+**carried across** (Decision 7). The Decisions record below holds every
+product decision; the **P-items** are Claude Code's proposals and become
+decisions on plan approval, as `002`'s, `005`'s and `006`'s did.
 
 Authored in a Claude Code spec session of its own, per `CLAUDE.md`'s model
 policy as amended 2026-09-19 (Opus 5, the session raised to high effort for
@@ -12,10 +14,9 @@ the spec conversation).
 
 **Depends on**: `001-core-inventory` (`Item`, `WishlistItem`, the wishlist
 screen and its rows, the Sell Plan, the custom order), `006-mark-as-sold`
-(the sale sheet this spec mirrors, `itemsSoldToward`, and the
-Return-to-collection undo whose shape this spec's undo follows),
+(the sale sheet this spec mirrors, and `itemsSoldToward`),
 `010-item-management-enhancements` (the wishlist's leading and trailing
-swipes, and the delete confirmation a destructive undo reuses),
+swipes),
 `013-settings-menu` ("bespoke in the page, system in the bars", which places
 the new action), `014-sold-side-parity` (the Sell-on-the-swipe pattern this
 spec copies onto the Wishlist, and its withdrawn item-page button, whose
@@ -113,8 +114,8 @@ Asks for four things (P2), mirroring `006`'s sale sheet field for field:
   across and has to be asked for.
 
 When the entered price differs from the estimated cost, the sheet says by how
-much in one sentence — over or under what you had guessed (P3). It is a line
-of copy, not a figure the app stores or acts on. This is the kind of
+much in one sentence — over or under what you had guessed (Decision 6). It
+is a line of copy, not a figure the app stores or acts on. This is the kind of
 observation the app exists to make, and it costs nothing: both numbers are
 already on screen.
 
@@ -123,20 +124,21 @@ already on screen.
 On confirming the sheet:
 
 - A new **item** is created in the collection, carrying across everything the
-  wishlist entry already knew (P4): its **name**, **category path**,
+  wishlist entry already knew (P3): its **name**, **category path**,
   **photos** with their credits intact (a `005` stock photo keeps its
   photographer, licence and link), its **Reverb product match**, its
   **year**, and its **currency**. Its **notes** carry across too — losing
   typed text is worse than carrying a sentence that is now slightly stale,
-  and it is editable like any other field.
-- The item's **current value** starts at the purchase price (P5). For
+  and it is editable like any other field (the notes specifically confirmed
+  as Decision 7).
+- The item's **current value** starts at the purchase price (P4). For
   something bought today those are the same number, and starting it unvalued
   would put a brand-new purchase straight into the Dashboard's un-valued
   count, which is noise rather than a prompt.
 - The item's **desire to keep** starts at the ordinary default. The
   wishlist's *desire to own* is a three-level scale about wanting and the
   item's is a five-level scale about keeping; they are different questions
-  and mapping one onto the other would invent an answer (P6).
+  and mapping one onto the other would invent an answer (P5).
 - The item is **appended to the end of the custom order**, as an imported
   item is.
 - The **wishlist entry is marked bought** and leaves the Wishlist. It is not
@@ -144,29 +146,31 @@ On confirming the sheet:
 - Its **sell plan is retained and reads as completed**: the items sold toward
   it stay recorded, and the remaining *unsold* candidates are released from
   the plan, since nothing is earmarked toward a purchase that has happened
-  (P7). This mirrors `006` P6, which empties the selection at the sale.
+  (P6). This mirrors `006` P6, which empties the selection at the sale.
 - Every Dashboard figure updates as it would for any item added by any other
   route. There is **no Bought card** and no new Dashboard surface
   (Decision 1).
 
-### Undoing a purchase
+### Correcting a mistake
 
-A purchase marked by mistake can be undone (P8), the way a sale can since
-`006`. **Return to wishlist** sits in the bought item's own menu — not as a
-button on the page, for the reason above. It restores the wishlist entry at
-its old place in the wishlist's custom order, with its sell plan active
-again, and **removes the item that the purchase created**.
+**There is no undo** (Decision 5). This is a deliberate departure from
+`006`, which ships Return to collection, and the asymmetry is the reason:
+returning a sold item destroys nothing, because the sale was four fields on
+a row that already existed, whereas returning a bought item would have to
+delete a row the purchase brought into being — one that by then may carry
+photos, a serial number or notes added since. An undo that destroys real
+data is a worse hazard than the mistake it reverses.
 
-That last clause is the one real asymmetry with `006`. Returning a sold item
-to the collection destroys nothing, because the sale was four fields on a row
-that already existed. Returning a bought item to the wishlist has to remove a
-row that the purchase brought into being, and by then it may carry photos, a
-serial number or notes that were added afterwards. So the undo goes behind
-the same confirmation the delete flow uses, and its copy says plainly that
-the item record goes away.
+The mistake is also much harder to make than the one `006` guards against.
+Every path to a purchase opens a sheet that has to be filled in and
+confirmed; there is no gesture that completes a purchase on its own.
 
-**This is the one thing in this Draft the person has not yet settled** — see
-Open questions.
+A purchase marked in error is corrected by hand, with tools the app already
+has: delete the item, and add the thing back to the wishlist. Two
+consequences follow and are accepted rather than solved here — the
+re-added entry is a new one, so the original marked-bought entry stays in
+the store unreachable, and it will appear as a completed plan when `009`
+ships. Both are recorded in the Non-goals.
 
 ### Sync and privacy
 
@@ -184,7 +188,7 @@ Open questions.
   `011`, which is exactly what the purchase sheet filled in.
 - A **bought wishlist entry does not export**: it is no longer on the
   wishlist, and the wishlist CSV is what is on the wishlist.
-- **Import is unchanged.** No new column means nothing new to parse (P9).
+- **Import is unchanged.** No new column means nothing new to parse (P7).
 
 ## Copy
 
@@ -198,12 +202,6 @@ Open questions.
   - under: **$120 less than you estimated**
   - over: **$85 more than you estimated**
   - equal: the line is absent, not a sentence saying zero.
-- The undo action: **Return to wishlist…**
-- The undo confirmation title: **Return to wishlist?**
-- Its body: **This puts *(name)* back on your wishlist with its sell plan.
-  The item and anything added to it since — photos, notes, serial number —
-  will be removed from your collection.**
-- Its confirm button: **Return to wishlist**
 
 Exact wording is the design pass's to refine; the shape above is what the
 spec asserts.
@@ -254,16 +252,14 @@ spec asserts.
     item added any other way, and the Dashboard grows no new surface.
 11. [ ] Buying the last wishlist item leaves the Wishlist in its existing
     empty state, not a broken or blank one.
-12. [ ] **Return to wishlist** restores the entry at its old place in the
-    wishlist's custom order with its plan active again, removes the item, and
-    asks for confirmation first with copy that says the item record goes
-    away.
-13. [ ] The bought marker survives a relaunch and syncs; the schema still
+12. [ ] The bought marker survives a relaunch and syncs; the schema still
     validates against CloudKit.
-14. [ ] Exports are unchanged in shape: the new item exports as an ordinary
+13. [ ] Exports are unchanged in shape: the new item exports as an ordinary
     item in both formats, a bought wishlist entry exports in neither, and
     import parses today's files exactly as it does now.
-15. [ ] Nothing in this feature opens a network connection.
+14. [ ] Nothing in this feature opens a network connection.
+15. [ ] No path in the app undoes a purchase, and the bought item's menu
+    offers nothing that returns it to the wishlist (Decision 5).
 
 ## Decisions record
 
@@ -286,30 +282,28 @@ Made by the person, 2026-09-19, in this spec session:
    alternative from the same answer: "we could retain the sell plan and have
    the sell plan marked as completed, which would be a record of that
    anyways." Chosen over deletion because the plan hangs off the wishlist
-   entry and dies with it, because deletion would destroy the sold-toward
-   history `006` deliberately made survivable, and because an undo is
-   impossible once the row is gone.
+   entry and dies with it, and because deletion would destroy the
+   sold-toward history `006` deliberately made survivable. A third reason
+   given at the time — that an undo is impossible once the row is gone —
+   fell away with Decision 5; the first two carry the decision on their
+   own.
 4. **All three entry points** — the swipe, the detail menu and the Sell Plan
    screen — with the placement details left to Claude Code's judgement.
 
-## Open questions
+Made by the person, 2026-09-19, at their reading of the Draft, answering its
+three open questions and approving it:
 
-For the person, at their reading of this Draft:
-
-1. **Does the undo ship in this spec, and in this shape?** P8 proposes
-   **Return to wishlist** in the bought item's menu, removing the item behind
-   a confirmation. The alternative is **no undo at all**: every path to a
-   purchase goes through a sheet that must be confirmed, so an accidental
-   *completed* purchase is considerably harder to produce than the mis-tap
-   `006`'s Return to collection guards against — and a mistake can still be
-   fixed by hand, by deleting the item and re-adding the wishlist entry. The
-   argument for shipping it anyway is symmetry with `006` and the fact that
-   the marked-bought entry is otherwise unreachable by any means.
-2. **Is the comparison line (P3) wanted?** It is the one piece of this spec
-   that is an opinion rather than a mechanic.
-3. **Should the wishlist entry's notes carry across (P4)?** Proposed yes. A
-   note reading "want this in black" is odd on something you now own, but
-   losing text someone typed is worse, and it is editable.
+5. **No undo.** The Draft proposed **Return to wishlist** in the bought
+   item's menu, mirroring `006`'s Return to collection. Withdrawn: that undo
+   would have to delete the item the purchase created, which by then may
+   carry photos, a serial number or notes added since, and a destructive
+   undo is a worse hazard than the mistake it reverses. Every path to a
+   purchase already goes through a sheet that has to be confirmed, so the
+   mis-tap `006` guards against cannot happen here. A purchase marked in
+   error is corrected by hand.
+6. **The over/under-estimate line stays.** When the price paid differs from
+   the estimate, the sheet says by how much, in words.
+7. **The wishlist entry's notes carry across** to the new item.
 
 ## Non-goals (explicit)
 
@@ -322,6 +316,13 @@ For the person, at their reading of this Draft:
   screen that shows it is `009-sell-plan-list`, whose entry records that it
   waits on this spec for a definition of "active". A bought wishlist entry is
   invisible until `009` ships.
+- **Undoing a purchase** (Decision 5). No Return to wishlist, no
+  confirmation flow, nothing in the bought item's menu. Two consequences are
+  accepted rather than solved: a purchase corrected by hand leaves the
+  original marked-bought entry in the store unreachable, and that orphan
+  will read as a completed plan once `009-sell-plan-list` ships. Both are
+  cheap to address in `009`, which is the spec that first has a screen to
+  address them on.
 - **A one-tap purchase** — every path opens the sheet.
 - **Buying something that was never on the wishlist.** Adding an item
   directly is what the Items tab has always done; this spec is about the
@@ -329,10 +330,10 @@ For the person, at their reading of this Draft:
 - **Partial or planned purchases**, deposits, layaway, or a purchase recorded
   as pending.
 - **Any change to the sale sheet, the sold side, or `006`'s fields.**
-- **Any new CSV column, export document, or import behaviour** (P9).
+- **Any new CSV column, export document, or import behaviour** (P7).
 - **A Dashboard figure for money spent**, purchases over time, or any chart —
   that is `016-collection-value-history`'s territory.
-- **Mapping desire-to-own onto desire-to-keep** (P6).
+- **Mapping desire-to-own onto desire-to-keep** (P5).
 - **Editing the purchase after the fact through this feature** — the item is
   an ordinary item and its Edit screen already owns every field the sheet
   filled in.
