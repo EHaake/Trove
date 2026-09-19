@@ -599,7 +599,10 @@ review. Pause at the end of this phase — there is something to try.
   have labels; the chooser's first row takes focus and the catcher reads
   "Dismiss export options".
   **Verify:** the record in the Done note with both measurements, the probe's
-  count per action and the byte comparison; `scripts/verify.sh all` green
+  count per action, the byte comparison and the dataset route (added at the
+  person's request, 2026-09-18: the pass also leaves a real 13-row dataset in
+  the persistent store, loaded through the app's own Import from CSV, so the
+  person walks through actual gear rather than the in-memory seed); `scripts/verify.sh all` green
   twice.
 
 - [ ] **T011 — Close-out.**
@@ -691,4 +694,5 @@ interpreted here.
 | T009i — `sdd-implementer` | `opus` | ~48k | Done; 1538 unit tests green; the three reentry tests (Items, Wishlist, Settings) in the count and green. `GatedExportServiceSpy` gates once across `exportCSV`/`exportFiles`. Mutations: `!isBusy` dropped from `exportPDF(scope:)` → `fileSetCalls == 0` red in 0.13 s (was a 20-min hang); dropped from `exportCSV(scope:)` → `csvCalls == 1` red (plus `fileSetCalls`, since the ungated CSV's `defer` clears `isBusy` — expected collateral) |
 | T009f — `sdd-implementer` | `opus` | ~72k | Done (stopped on the anchor defect, resumed after T009g). `testTheExportRowsOpenAScopeChooserGatedByWhatIsOnScreen`. Mutations (on top of the fix): rows gated on `canExportCSV` → red at "Owned items must be disabled"; the menu row exporting directly → red at "must open the scope chooser". UI suite twice, consecutive full runs: 23 tests 0 failures (implementer, T009g's all) and 23 tests 0 failures (orchestrator's re-run). At `cf3e1ee` the same suite was 23 tests 12 failures — the finding that produced T009g |
 | Phase 2b — `skeptical-reviewer` review | `opus` | ~118k | One blocking: the two back-to-back UI runs were taken at `063ea58`, before T009h/T009i — re-run `scripts/verify.sh all` twice at HEAD (`a1f5acf`): run 1 unit 1538/207 green, UI 23 tests 0 failures; run 2 unit 1538/207 green, UI 23 tests 0 failures (both at `a1f5acf`, back to back). Second-look S1–S6 written into T010/T011 above. Re-review: sign off (~1k) |
+| Model policy deviation (the person's instruction, 2026-09-18, at the Phase 2b pause) | session → `claude-opus-5`; all agents at `opus` | — | "For the rest of the spec, use the step-down Opus model for all tasks." Experiment 1's `fable` seat and the explicit top-tier overrides on decision reviews stop here; the `sdd-implementer` and `skeptical-reviewer` defaults (`opus`) already match, so from T010 on nothing carries an override. This is the fallback clause of `CLAUDE.md`'s model policy exercised by choice rather than by an exhausted allowance — a result of experiment 1 in itself. T011 asks whether the person wants it written into the constitution |
 | _rows added per dispatch as the spec runs_ | | | |
