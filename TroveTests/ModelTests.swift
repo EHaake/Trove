@@ -424,3 +424,33 @@ struct ItemSaleFieldsTests {
         #expect(item.saleOutcome?.deltaCents == -100_000)
     }
 }
+
+/// 015/T001 (G1): the bought marker on `WishlistItem` — one optional `Date`
+/// and the predicate that reads it (plan §1/Q1). Optional with no default and
+/// no uniqueness keeps the schema CloudKit-additive, which
+/// `CloudKitSchemaTests` covers (its red run for this task: declare the field
+/// `@Attribute(.unique) var boughtDate: Date?` and the validator throws).
+/// Persistence across a second `ModelContext` is G2's.
+@Suite("The bought marker on WishlistItem")
+struct WishlistBoughtFieldTests {
+    @Test func aFreshEntryIsStillWanted() throws {
+        let context = try makeInMemoryContext()
+        let wanted = WishlistItem(name: "Rickenbacker 330")
+        context.insert(wanted)
+
+        #expect(wanted.boughtDate == nil)
+        #expect(!wanted.isBought)
+    }
+
+    @Test func aDateMakesItBought() throws {
+        let context = try makeInMemoryContext()
+        let boughtOn = Date(timeIntervalSince1970: 1_770_000_000)
+        let wanted = WishlistItem(name: "Rickenbacker 330")
+        context.insert(wanted)
+
+        wanted.boughtDate = boughtOn
+
+        #expect(wanted.boughtDate == boughtOn)
+        #expect(wanted.isBought)
+    }
+}

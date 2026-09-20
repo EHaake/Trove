@@ -100,7 +100,7 @@ four as questions, not facts.
 
 ## Phase 1 — Foundations: the marker, the writer, the rule (**foundational**)
 
-- [ ] **T001 — `WishlistItem.boughtDate`, `isBought`, and the CloudKit claim.**
+- [x] **T001 — `WishlistItem.boughtDate`, `isBought`, and the CloudKit claim.**
   Per plan §1 and Q1. Add `var boughtDate: Date?` to `WishlistItem` —
   **declared without an initializer**, exactly as `Item.soldDate` is, because
   T013's `PurchaseUndoTests` counts assignments and `= nil` would be one — with
@@ -122,6 +122,20 @@ four as questions, not facts.
   Files: `Trove/Models/WishlistItem.swift`, `TroveTests/ModelTests.swift`,
   `TroveTests/CloudKitSchemaTests.swift` (comment).
   **Verify:** `scripts/verify.sh` green; both mutations recorded verbatim.
+  **Done** (2026-09-19): `boughtDate` declared with no initializer after
+  `year`, `isBought` beside it, the two doc-comment sentences on
+  `plannedSaleItems` (emptied) and `itemsSoldToward` (kept), and the
+  `CloudKitSchemaTests` paragraph naming the field. New `ModelTests` suite
+  "The bought marker on WishlistItem" (2 tests). `scripts/verify.sh` green:
+  **1555 tests in 211 suites** (baseline 1553/210). Mutations, both reverted:
+  inverting `isBought` to `boughtDate == nil` → both G1 tests red
+  (`ModelTests.swift:442`, `:454`); `@Attribute(.unique) var boughtDate` →
+  `CloudKitSchemaTests.schemaMeetsCloudKitRequirements` red on "CloudKit
+  integration does not support unique constraints". **Recorded**: that second
+  mutation also reddened `TwoStoreContainerTests.theProductionPairingLoadsAndSplits`
+  — the CloudKit claim has two live guards, not one. Also recorded for later
+  bundles: `Item.isSold` is declared in `Trove/Models/Sale.swift`, not
+  `Item.swift`.
 
 - [ ] **T002 — `Purchase` and `PurchaseCopy`.**
   Per plan §2, Q2, Q3 and Q7. New `Trove/Models/Purchase.swift`
@@ -648,4 +662,5 @@ orchestrator had to redo, and why) are recorded here too.
 | `skeptical-reviewer` — plan/tasks sign-off | `opus` | 175k | 1 blocking (B1: T009 reddens a `006` guard), 8 non-blocking; 6 folded into the fix pass, S7/S8 recorded |
 | `skeptical-reviewer` — sign-off re-review | `opus` | 100k | B1 and S1–S6 confirmed resolved; **2 new blocking findings introduced by the fix pass** (N1, N2 — both stale "untouched" claims about `DetailOverflowMenu`). Loop cap reached, so the orchestrator fixed both directly and logged them, per `CLAUDE.md` |
 | Orchestrator — post-re-review corrections | `opus` (session, medium) | n/a | N1, N2, plus four second-look items the re-review named: the "exactly one `Row`" phrasing (would redden on correct code), G18's gate spelling, the convenience initializer's fate, and Q10's factually-wrong rationale |
+| `sdd-implementer` — T001 (the marker and the CloudKit mutation) | `opus` | 46k | Done first pass; both mutations red as planned; found a second CloudKit guard (`TwoStoreContainerTests`) |
 | _rows added per dispatch as the spec runs_ | | | |
