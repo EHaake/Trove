@@ -128,6 +128,51 @@ prerequisites of its own (amended 2026-09-03, spec `002` Decision 19).
   reviewer is scoped to a diff, cut the diff after `git add -N` so
   untracked files appear in it — a bundle that silently omits the new
   files gets a sign-off on nothing (`002`, T021).
+- **A test that asserts on source text pins the spelling, not the
+  behavior — so a source scan may pin an injection point that nothing
+  else can reach, and never a behavior a view-model test could reach
+  instead.** Added 2026-09-19, at the person's instruction, from the
+  `spec-driven-development` skill's principles section. It is the shape
+  the rule above catches most often, and it needs its own statement
+  because it passes that rule's letter while failing its substance: a
+  claim did become a test, and the test cannot fail for a behavioral
+  reason or pass for one. Rename a parameter and it goes red with
+  nothing broken. Write the same behavior a different way and it goes
+  red. **Delete the behavior and keep the string and it stays green.**
+  This project has already shipped that last case twice — the
+  seven-noun policy scan the prose alone satisfied, whose table could
+  be deleted while it stayed green (`002`), and `014`'s guard that the
+  wishlist page builds no menu rows, which `015`'s own planning found
+  could be kept green by spelling the rows `.init(` while the thing it
+  guarded had already happened.
+  The rule is narrow on purpose, and an absolute ban would lose to the
+  real problem the pattern solves: some layers genuinely cannot be
+  reached any other way. `MenuPolicyTests` is the legitimate shape —
+  "no system menu inside page content" is a fact about view bodies that
+  no view-model test can observe. A scan asserting that a view model
+  sets a particular property is not: that is a behavior, and the
+  view-model suite reaches it.
+  Two consequences worth stating. **When a source scan is the only
+  coverage of something load-bearing, the honest reading is that the
+  thing is untested** — not that it is covered awkwardly. And the same
+  root cause produces an opposite symptom worth checking for at the
+  same time: **testing effort follows testability, not risk.** The
+  awkward layer gets a scan or nothing while some easy pure function
+  beside it accumulates exhaustive coverage. Coverage inverted against
+  risk reads as discipline and isn't; the check is to list what would
+  actually hurt if it broke, then see where the tests are.
+  **Measured here on 2026-09-19, before the rule existed: 164 of 1,542
+  test functions assert on source text — 10 %, about 3,600 lines,
+  concentrated in the thirteen `*WiringTests` files, three of which are
+  nothing else.** (A larger figure quoted from the skill — 502 of 1,547
+  — is another project's measurement, not this one's.) These
+  **are not a defect list**: they were written correctly under the
+  rules in force at the time, and per the amendment rule this one binds
+  work from the commit that adds it. Nothing is retired on its account
+  until the person decides otherwise, and if a sweep is ever worth
+  doing it is its own spec scoped to named guards, never "apply the new
+  rule to the suite," which has no acceptance criterion and no end.
+
 - **UI tests need a controlled starting state, and a narrow test-only
   branch in shipping code is an acceptable way to get one.** A UI test
   whose starting data is whatever the simulator happened to have left
