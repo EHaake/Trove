@@ -29,8 +29,14 @@ import SwiftUI
 /// toward it (P15).
 struct SellPlanView: View {
     @State private var viewModel: SellPlanViewModel
+    /// Whether the purchase sheet is up (015 plan §8). A flag rather than the
+    /// Wishlist row's `.sheet(item:)` staging, for the reason the wanted
+    /// entry's page holds one too: this screen has one subject, so there is
+    /// nothing to choose between.
+    @State private var isMarkingBought = false
 
     @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
 
     init(modelContext: ModelContext, wishlistItemID: UUID, syncMonitor: SyncMonitor = .notSyncing) {
         _viewModel = State(
@@ -54,6 +60,29 @@ struct SellPlanView: View {
         }
         .navigationTitle("Sell plan")
         .navigationBarTitleDisplayMode(.inline)
+        // 015 (plan §8, criterion 3): Mark as bought… for the wanted item this
+        // plan belongs to, as a bar button rather than a menu — this screen has
+        // no Edit or Delete for it to sit beside, and a one-row menu is a menu
+        // for nothing. It lands in the same top-right corner the wanted entry's
+        // "…" occupies, so "the action is top-right" is true on both screens.
+        //
+        // The gate is not decoration: this screen already draws `missingItem`
+        // when its entry has gone (deleted on another device), and an ungated
+        // button there would be tappable over no subject and would confirm a
+        // purchase of nothing.
+        .toolbar {
+            if viewModel.wishlistItem != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isMarkingBought = true
+                    } label: {
+                        Image(systemName: "bag")
+                    }
+                    .accessibilityLabel(PurchaseCopy.markAsBought)
+                    .accessibilityIdentifier("purchase.sellPlan")
+                }
+            }
+        }
         .onAppear(perform: viewModel.load)
         // An import landing while this screen is open changes what it should
         // show, and nothing else tells it — the view models fetch on appear
@@ -74,6 +103,23 @@ struct SellPlanView: View {
                     viewModel.saleCandidate = nil
                 },
                 cancel: { viewModel.saleCandidate = nil }
+            )
+        }
+        // 015 (plan §8): a second sheet, beside the sale sheet above — the
+        // shared purchase form, seeded by the view model exactly as the
+        // Wishlist row's and the wanted entry's page are, so all three hosts
+        // open on the same defaults. The sheet writes nothing itself: what a
+        // confirmed purchase means is decided here, through `markBought`, the
+        // one path into the store. A purchase that took pops this screen (R2),
+        // since the plan's subject is no longer wanted.
+        .sheet(isPresented: $isMarkingBought) {
+            PurchaseFormView(
+                viewModel: viewModel.makePurchaseFormViewModel(),
+                confirm: { purchase in
+                    isMarkingBought = false
+                    if viewModel.markBought(purchase: purchase) { dismiss() }
+                },
+                cancel: { isMarkingBought = false }
             )
         }
     }

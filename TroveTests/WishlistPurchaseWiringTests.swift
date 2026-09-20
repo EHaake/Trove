@@ -16,6 +16,7 @@ struct WishlistPurchaseWiringTests {
     private nonisolated static let sheet = "Trove/Views/Wishlist/PurchaseFormView.swift"
     private nonisolated static let list = "Trove/Views/Wishlist/WishlistView.swift"
     private nonisolated static let detail = "Trove/Views/Wishlist/WishlistDetailView.swift"
+    private nonisolated static let plan = "Trove/Views/Wishlist/SellPlanView.swift"
 
     /// The spec's field order, twice over: the five elements are *declared* in
     /// that order, and the sheet's one column *composes* them in that order —
@@ -398,6 +399,114 @@ struct WishlistPurchaseWiringTests {
         #expect(
             guarded[0].contains("dismiss()"),
             "the bought branch doesn't dismiss the page (R2):\n\(guarded[0])"
+        )
+    }
+
+    // MARK: - The Sell Plan (G18)
+
+    /// G18, criterion 3: the plan offers **Mark as bought…** from one bar
+    /// button in its top-right corner, and only while the entry the plan
+    /// belongs to is still there — the screen draws `missingItem` when it has
+    /// gone, and an ungated button would be tappable over no subject. The
+    /// gate's span is what the button is required to sit *inside*, so a button
+    /// moved out of it fails here rather than passing on the words alone.
+    ///
+    /// Mutations: drop the gate → no `viewModel.wishlistItem != nil` span →
+    /// red; move the button out of the gate → the span is empty of it → red;
+    /// drop the identifier T012 drives it by → red.
+    @Test func theSellPlanOffersMarkAsBoughtOnlyWhileItsEntryIsStillThere() throws {
+        let code = try SourceScan.production(Self.plan)
+
+        let mentions = code.ranges(of: "PurchaseCopy.markAsBought").count
+        try #require(
+            mentions == 1,
+            "the plan names PurchaseCopy.markAsBought \(mentions) times, expected exactly 1 — one bar button is the whole offer (criterion 3)"
+        )
+
+        let toolbars = SourceScan.closureBodies(after: ".toolbar", in: code)
+        try #require(toolbars.count == 1, "the plan carries \(toolbars.count) toolbars, expected exactly 1")
+        let toolbar = try #require(toolbars.first)
+
+        let gates = SourceScan.closureBodies(after: "if viewModel.wishlistItem != nil", in: toolbar)
+        try #require(
+            gates.count == 1,
+            "the plan's toolbar carries \(gates.count) `viewModel.wishlistItem != nil` gates, expected exactly 1 — an ungated button would confirm a purchase of nothing when the entry has gone"
+        )
+        let gate = try #require(gates.first)
+
+        #expect(
+            gate.contains("ToolbarItem(placement: .topBarTrailing)"),
+            "the gated button isn't the top-right bar item the wanted entry's \u{2026} occupies:\n\(gate)"
+        )
+
+        let actions = SourceScan.closureBodies(after: "Button", in: gate)
+        try #require(actions.count == 1, "the gate holds \(actions.count) buttons, expected exactly 1 — a bar button, not a menu")
+        #expect(
+            actions[0].contains("isMarkingBought = true"),
+            "the plan's button doesn't open the purchase sheet:\n\(actions[0])"
+        )
+
+        #expect(
+            gate.contains("Image(systemName: \"bag\")"),
+            "the plan's button wears no bag glyph:\n\(gate)"
+        )
+        #expect(
+            gate.contains(".accessibilityLabel(PurchaseCopy.markAsBought)"),
+            "the plan's button doesn't say Mark as bought\u{2026} to VoiceOver — a bare glyph says nothing:\n\(gate)"
+        )
+
+        let literals = Set(SourceScan.stringLiterals(in: gate))
+        #expect(
+            literals.contains("purchase.sellPlan"),
+            "the plan's button carries no identifier for T012's device pass to drive it by:\n\(gate)"
+        )
+    }
+
+    /// G18's other half, R2: the plan hosts the shared purchase form once —
+    /// beside the sale sheet it already presents, not instead of it — seeded
+    /// by the view model exactly as the list's and the page's are, and a
+    /// purchase that *took* pops this screen, since the plan's subject is no
+    /// longer wanted. `dismiss()` is required inside the `markBought` branch
+    /// rather than anywhere in the closure, so dismissing unconditionally —
+    /// which would throw away a refused save's message — fails here too.
+    ///
+    /// Mutations: drop the `dismiss()` → red; host the sheet twice → red;
+    /// dismiss outside the branch → red.
+    @Test func thePlansPurchaseSheetIsHostedOnceAndPopsTheScreenOnlyOnceItTakes() throws {
+        let code = try SourceScan.production(Self.plan)
+
+        let hosts = code.ranges(of: ".sheet(isPresented: $isMarkingBought").count
+        try #require(hosts == 1, "the plan presents \(hosts) purchase sheets, expected exactly 1")
+
+        let sheets = SourceScan.closureBodies(after: ".sheet(isPresented: $isMarkingBought", in: code)
+        let sheet = try #require(sheets.first)
+
+        #expect(
+            sheet.contains("PurchaseFormView("),
+            "the purchase sheet composes something other than the shared purchase form:\n\(sheet)"
+        )
+        #expect(
+            sheet.contains("viewModel.makePurchaseFormViewModel()"),
+            "the sheet seeds its own form instead of the view model's, which is what keeps every host's defaults equal:\n\(sheet)"
+        )
+
+        let confirms = SourceScan.closureBodies(after: "confirm:", in: sheet)
+        try #require(confirms.count == 1, "the sheet carries \(confirms.count) confirm closures, expected exactly 1")
+        let confirm = try #require(confirms.first)
+
+        let took = SourceScan.closureBodies(after: "if viewModel.markBought(purchase: purchase)", in: confirm)
+        try #require(
+            took.count == 1,
+            "confirming runs \(took.count) `viewModel.markBought(purchase:)` branches, expected exactly 1 — the one path into the store, and the only thing that may pop this screen"
+        )
+        #expect(
+            took[0].contains("dismiss()"),
+            "a purchase that took doesn't pop the plan, so the person would be left on a plan for something they now own (R2):\n\(confirm)"
+        )
+
+        #expect(
+            !code.contains("WishlistPurchaseStore"),
+            "the plan names the purchase store directly — the write belongs behind the view model"
         )
     }
 

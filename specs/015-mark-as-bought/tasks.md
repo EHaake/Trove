@@ -748,7 +748,7 @@ four as questions, not facts.
   `SourceScan` itself** — the next person to document a scanned file will hit
   it, and the failure points at the wrong file entirely.
 
-- [ ] **T010 — The Sell Plan's action, its sheet, and its dismiss.**
+- [x] **T010 — The Sell Plan's action, its sheet, and its dismiss.**
   Sign-off correction, 2026-09-19 (re-review): G18's gate leg scans for a
   `viewModel.wishlistItem != nil` span, but `SellPlanView.swift:49` reads
   `if let wanted = viewModel.wishlistItem`. Write the gate with that exact
@@ -780,6 +780,31 @@ four as questions, not facts.
   Files: `Trove/Views/Wishlist/SellPlanView.swift`,
   `TroveTests/WishlistPurchaseWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done** (2026-09-20): a gated `.topBarTrailing` bag button and a second
+  sheet beside the existing sale one; no `Menu`; the file names no
+  `WishlistPurchaseStore`. **Additions only** — `git diff --stat` reads
+  `2 files changed, 155 insertions(+)`, zero removed lines. `scripts/verify.sh`
+  green at **1614 tests in 224 suites** (baseline 1612/224).
+  Three mutations, all reverted: drop the `dismiss()` → red; host the sheet
+  twice → red; **drop the gate → red**, which is the leg that matters, since
+  this screen already draws a `missingItem` state and an ungated button would
+  confirm a purchase with no subject. The gate is written
+  `viewModel.wishlistItem != nil` — the sign-off's exact spelling — while the
+  body keeps its own `if let wanted =`; a behaviourally identical `if let _ =`
+  would have reddened a guard over working code.
+  **The dismiss leg is deliberately scoped to the `markBought` branch** rather
+  than the whole closure, so an *unconditional* `dismiss()` — which would
+  throw away a refused save's message — fails too.
+  **The existing suites are unedited and green**, and the implementer checked
+  its two new literals against their scans rather than assuming: `bag` and
+  `purchase.sellPlan` match neither the framing suite's twelve terms nor the
+  wiring suite's spaced-literal filter.
+  **A bundle correction for later tasks**: there is no
+  `TroveTests/SellPlanFramingTests.swift` — `SellPlanFramingTests` is a second
+  suite at the foot of `TroveTests/SellPlanViewModelTests.swift`.
+  **Recorded**: the Sell Plan now hosts two sheets on one view (the sale's
+  `.sheet(item:)` and the purchase's `.sheet(isPresented:)`). Nothing
+  exercises them together — worth a moment at T012's device pass.
 
 - [ ] **T011 — The UI tests, run twice.**
   Per plan §9 — **no seed change**: `-seedSellPlan` already carries the one
@@ -962,4 +987,5 @@ orchestrator had to redo, and why) are recorded here too.
 | `sdd-implementer` — T007 (the purchase sheet) + the unbounded-date guard | `opus` | 107k | Done first pass; 7 mutations; caught a substring false-pass in its own leg before landing it, and found the same shape in merged code |
 | `sdd-implementer` — T008 (the Buy swipe, the sheet on the list, the `ActionBuy` glyph) | `opus` | 104k | Done first pass; 6 mutations (2 beyond the task line, to back its own added legs); the imageset needed no project edit |
 | `sdd-implementer` — T009 (the menu row, the `006` reversal, the rewritten guard) | `opus` | 115k | Done first pass; 8 mutations; **demonstrated the `.init(` dodge** by running the old guard beside the new one; found the `#Preview`-in-a-comment scan landmine |
+| `sdd-implementer` — T010 (the Sell Plan's gated bar button and its sheet) | `opus` | 77k | Done first pass; 3 mutations; additions only; checked its new literals against the two neighbouring suites' scans |
 | _rows added per dispatch as the spec runs_ | | | |
