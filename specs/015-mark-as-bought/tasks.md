@@ -806,7 +806,7 @@ four as questions, not facts.
   `.sheet(item:)` and the purchase's `.sheet(isPresented:)`). Nothing
   exercises them together — worth a moment at T012's device pass.
 
-- [ ] **T011 — The UI tests, run twice.**
+- [x] **T011 — The UI tests, run twice.**
   Per plan §9 — **no seed change**: `-seedSellPlan` already carries the one
   wanted item ("Summicron 35mm f/2", estimated $2,400) and the owned
   candidates these two tests read. New
@@ -830,6 +830,36 @@ four as questions, not facts.
   **Verify:** `scripts/verify.sh` green; `scripts/verify.sh ui` green twice,
   both counts in the Done note; mutations recorded. **Phase 2 closes here —
   pause for the person** (what can be tried is in the handoff note above).
+  **Done** (2026-09-20): two new UI tests, no seed change. **Both UI runs
+  back to back: `Executed 25 tests, with 0 failures (0 unexpected)`** —
+  532.3 s and 529.4 s, identical results, so isolation is shown rather than
+  assumed (23 → 25). Unit suite unmoved at **1614 tests in 224 suites**.
+  The partial `press(forDuration:thenDragTo:)` across 40 % of the row opened
+  the leading actions fine, so **there is no finding for T012 on that count**.
+  The middle button is matched on `"Mark as bought…"` alone — no `OR "Buy"`
+  hedge, which is `014`'s close-out lesson.
+  Three mutations, all reverted and the production files confirmed
+  byte-identical by hash: the middle button wired to `itemBeingEdited` → the
+  price field is absent → red; the `.accessibilityLabel` removed → the button
+  announces "Buy" → red, which is the leg that would otherwise rot silently;
+  the Wishlist's bought filter dropped → **both** criterion 8 and criterion 11
+  legs red.
+  **One deviation, forced by the accessibility tree**: plan §9's shape for the
+  Items-tab assertion (`app.staticTexts` BEGINSWITH the name, copying the
+  `soldRow` helper) went red on a real, listed row. A probe of the hierarchy
+  showed an **owned** row's `.combine`d element surfaces as an `other`
+  element while a **sold** row's surfaces as a static text — which is why
+  `soldRow` can query `staticTexts` and this cannot. The query is now
+  `descendants(matching: .any)` with the same predicate; the assertion is
+  unchanged. Probe removed. **This is the instrument-the-mechanism rule
+  working in the small**: the shape was not "fixed" by guessing, it was
+  settled by dumping the tree.
+  **Recorded**: a bought item's row reads `Summicron 35mm f/2, Photography ·
+  Lenses, $2,400, +0 vs paid, Desire to keep` — the delta renders `+0 vs
+  paid`, not `+$0`, which is what a just-bought item always shows (P4). Worth
+  the person's eye at T012. Per-function `-only-testing:` selectors **do**
+  work for XCTest UI tests (~15–25 s each against ~9 min for the suite),
+  unlike the Swift Testing ones; the suite is now 25 tests at ~9 min a run.
 
 ## Phase 3 — Verification and close-out
 
@@ -988,4 +1018,5 @@ orchestrator had to redo, and why) are recorded here too.
 | `sdd-implementer` — T008 (the Buy swipe, the sheet on the list, the `ActionBuy` glyph) | `opus` | 104k | Done first pass; 6 mutations (2 beyond the task line, to back its own added legs); the imageset needed no project edit |
 | `sdd-implementer` — T009 (the menu row, the `006` reversal, the rewritten guard) | `opus` | 115k | Done first pass; 8 mutations; **demonstrated the `.init(` dodge** by running the old guard beside the new one; found the `#Preview`-in-a-comment scan landmine |
 | `sdd-implementer` — T010 (the Sell Plan's gated bar button and its sheet) | `opus` | 77k | Done first pass; 3 mutations; additions only; checked its new literals against the two neighbouring suites' scans |
+| `sdd-implementer` — T011 (the two UI tests, suite run twice) | `opus` | 92k | Done first pass; 3 mutations; UI 23 → 25, both runs identical; found the owned-vs-sold row element-type difference by probing rather than guessing |
 | _rows added per dispatch as the spec runs_ | | | |
