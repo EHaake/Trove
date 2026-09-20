@@ -177,7 +177,7 @@ four as questions, not facts.
   removed at the person's request, criterion 6's equality case needs an
   explicit `deltaCents != 0` guard to replace it.
 
-- [ ] **T003 — `WishlistPurchaseStore.markBought` — the one writer. `review: per-task`.**
+- [x] **T003 — `WishlistPurchaseStore.markBought` — the one writer. `review: per-task`.**
   Per plan §3, Q4, Q5, Q6 and Q12. New
   `Trove/Models/WishlistPurchaseStore.swift`, exactly the body plan §3 gives:
   `MarketLocalStore.clear(subjectID:)` **first**; the `Item` built with the
@@ -241,6 +241,49 @@ four as questions, not facts.
   `TroveTests/PhotoOwnershipTests.swift`.
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every mutation
   recorded; the new suite in the count.
+  **Done** (2026-09-19): the store is plan §3's body line for line; three new
+  suites in the count — `scripts/verify.sh` green at **1570 tests in 214
+  suites** (baseline 1562/212), **re-run by the orchestrator** before and
+  after the review fix, same count both times. `PhotoOwnershipTests` **did**
+  need a case added: its invariant had no case over a photo that changes
+  parent. Mutations, all reverted and all red as specified — G5
+  (`currentValueCents` nil; `desireToOwn` passed as `desireToKeep`;
+  `sortOrder` from a count; and, added by the review, `currencyCode` dropped);
+  G6 (photos rebuilt in `duplicate(id:)`'s faithful shape → id, count and
+  credit legs red; `wishlistItem` left set → the ownership leg red in both
+  suites); G7 (`itemsSoldToward` cleared; `plannedSaleItems` left); G2 (the
+  caller's `save()` dropped); G8 (the market clear dropped); **G14's three**
+  — a `boughtDate = nil` added to a view model → red naming the file; the
+  write moved out of the store → the location leg red while the count leg
+  stays green; a `boughtDate == nil` **comparison** added to a view model →
+  **stays green**, which is what proves the pattern tells a write from a read
+  and why T004's four predicates will not redden it.
+  **G14 against the constitution rule added after sign-off** (`5026305`): it
+  survives, and the reviewer agreed. It asserts an absence and a uniqueness
+  count across all production files — no view-model suite can observe that
+  the *app* contains no other writer, which is criterion 15's actual claim —
+  and it fails the "delete the behaviour, keep the string" test in the right
+  direction, since deleting the one assignment takes the count to zero.
+  **Two false-passing fixtures found and fixed, same shape**: `desireToOwn`
+  was 3, equal to `desireToKeep`'s default, so a carried-across value was
+  invisible (found by the implementer); `currencyCode` was `"USD"`, which
+  **both** initializers default to, so dropping `currencyCode:
+  wanted.currencyCode` left the test green (found by the review, blocking).
+  Per `CLAUDE.md` the whole diff was then audited for the shape leg by leg —
+  nothing else found, and the reviewer re-checked the audit against the
+  constructors. **Carry this forward**: whenever a test asserts field X is
+  carried across, the fixture's X must differ from `Item.init`'s default for
+  X — for `currencyCode` that means never `"USD"`.
+  **Review**: `skeptical-reviewer`, one blocking finding (the `currencyCode`
+  leg), fixed and re-reviewed; signed off with three non-blocking items left
+  open for the sweep and T013 — (a) criterion 15's close-out wording must say
+  G14 cannot see an undo implemented by deleting the created `Item` and
+  re-inserting a `WishlistItem` (belongs in plan Q13's close-out note);
+  (b) the doc comment's "a failure in the clear leaves nothing written" is
+  inspection, not a test, matching `ItemSaleStore`'s existing posture;
+  (c) `(try? context.fetch(…)) ?? []` would silently put the item at the
+  *top* of the order — plan §3's literal code, identical to
+  `ItemFormViewModel.save()`, so a known property of both call sites.
 
 - [ ] **T004 — What leaves the Wishlist: the exclusion rule at five read sites. `review: per-task`.**
   Per plan §4, Q11, Q12 and **R1**. `WishlistViewModel.load()` splits the fetch
@@ -682,4 +725,8 @@ orchestrator had to redo, and why) are recorded here too.
 | Orchestrator — post-re-review corrections | `opus` (session, medium) | n/a | N1, N2, plus four second-look items the re-review named: the "exactly one `Row`" phrasing (would redden on correct code), G18's gate spelling, the convenience initializer's fate, and Q10's factually-wrong rationale |
 | `sdd-implementer` — T001 (the marker and the CloudKit mutation) | `opus` | 46k | Done first pass; both mutations red as planned; found a second CloudKit guard (`TwoStoreContainerTests`) |
 | `sdd-implementer` — T002 (`Purchase`, `PurchaseCopy`, the comparison line) | `opus` | 53k | Done first pass; 3 mutations red; two small deviations logged in the Done note |
+| `sdd-implementer` — T003 (`WishlistPurchaseStore`, the one writer) | `opus` | 115k | Done first pass; 11 mutations; found a false-passing fixture itself (`desireToOwn`) and fixed it |
+| `skeptical-reviewer` — T003 per-task review | `opus` | 86k | **1 blocking** (the `currencyCode` leg could not fail — the same shape the implementer had just fixed once), 5 non-blocking |
+| `sdd-implementer` — T003 review fix | `opus` (same agent resumed) | 20k more | Blocking fixed and mutation-verified; whole diff audited for the shape, nothing else found; 2 non-blocking applied |
+| `skeptical-reviewer` — T003 re-review | `opus` (same agent resumed) | 4k more | Signed off; nothing blocking; 3 non-blocking carried to the sweep and T013 |
 | _rows added per dispatch as the spec runs_ | | | |

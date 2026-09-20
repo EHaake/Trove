@@ -49,6 +49,35 @@ struct PhotoOwnershipTests {
         #expect(photo.wishlistItem == nil)
     }
 
+    /// 015: the purchase is the one place a photo *changes* parent, which is
+    /// the one writer that could leave both sides set. Refetched on a second
+    /// context, so what is checked is what actually reached the store.
+    @Test func photosMovedByAPurchaseBelongToTheItemAlone() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let wanted = WishlistItem(name: "Summicron 35mm f/2", categoryPath: "Photography/Lenses")
+        context.insert(wanted)
+        wanted.photos = PhotoSelection.appending([Data([0x01]), Data([0x02])], to: [])
+        try context.save()
+
+        try WishlistPurchaseStore.markBought(
+            wanted,
+            purchase: Purchase(date: .now, priceCents: 240_000, location: nil, condition: .excellent),
+            at: .now,
+            in: context
+        )
+        try context.save()
+
+        let elsewhere = ModelContext(container)
+        let item = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first)
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        let photos = try elsewhere.fetch(FetchDescriptor<Photo>())
+        #expect(photos.count == 2, "the purchase moves the rows, it doesn't copy or drop them")
+        #expect(photos.allSatisfy { $0.item === item })
+        #expect(photos.allSatisfy { $0.wishlistItem == nil })
+        #expect(entry.photos?.isEmpty == true)
+    }
+
     /// The two entities' photo sets stay separate even with both populated —
     /// this is what would fail if the relationships were wired to a single
     /// shared inverse.
