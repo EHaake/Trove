@@ -114,18 +114,18 @@ final class ItemFormViewModel {
         guard validationErrors.isEmpty else { return false }
 
         let item = editingItem ?? Item()
-        item.name = Self.trimmed(name)
+        item.name = FieldNormalization.trimmed(name)
         item.categoryPath = canonicalCategoryPath()
         item.purchasePriceCents = Money.cents(from: purchasePrice ?? 0)
         item.purchaseDate = purchaseDate
-        item.serialNumber = Self.nilIfBlank(serialNumber)
+        item.serialNumber = FieldNormalization.nilIfBlank(serialNumber)
         item.year = parsedYear
-        item.purchaseLocation = Self.nilIfBlank(purchaseLocation)
+        item.purchaseLocation = FieldNormalization.nilIfBlank(purchaseLocation)
         item.currentValueCents = currentValue.map(Money.cents(from:))
         item.desireToKeep = desireToKeep
         item.condition = condition
-        item.conditionNotes = Self.nilIfBlank(conditionNotes)
-        item.notes = Self.nilIfBlank(notes)
+        item.conditionNotes = FieldNormalization.nilIfBlank(conditionNotes)
+        item.notes = FieldNormalization.nilIfBlank(notes)
         // Dropped photos are deleted, not just unlinked — see
         // PhotoSelection.orphaned. Captured before the reassignment,
         // which is what replaces the old set.
@@ -176,7 +176,7 @@ final class ItemFormViewModel {
     /// nothing else — the whole of what a search may send (spec P1) — mirroring
     /// how `ItemDetailViewModel.makePhotoFetchViewModel` seeds it.
     func makePhotoFetchViewModel() -> PhotoFetchViewModel {
-        PhotoFetchViewModel(seed: Self.trimmed(name), service: photoService)
+        PhotoFetchViewModel(seed: FieldNormalization.trimmed(name), service: photoService)
     }
 
     /// Find a photo…: the notice stands in front the first time on this
@@ -225,35 +225,28 @@ final class ItemFormViewModel {
 
     private func validate() -> Set<ValidationError> {
         var errors: Set<ValidationError> = []
-        if Self.trimmed(name).isEmpty { errors.insert(.nameMissing) }
-        if Self.trimmed(categoryPath).isEmpty { errors.insert(.categoryMissing) }
+        if FieldNormalization.trimmed(name).isEmpty { errors.insert(.nameMissing) }
+        if FieldNormalization.trimmed(categoryPath).isEmpty { errors.insert(.categoryMissing) }
         if let purchasePrice {
             if purchasePrice < 0 { errors.insert(.priceNegative) }
         } else {
             errors.insert(.priceMissing)
         }
         if let currentValue, currentValue < 0 { errors.insert(.currentValueNegative) }
-        if !Self.trimmed(yearText).isEmpty, parsedYear == nil { errors.insert(.yearInvalid) }
+        if !FieldNormalization.trimmed(yearText).isEmpty, parsedYear == nil { errors.insert(.yearInvalid) }
         return errors
     }
 
-    /// The typed year, or `nil` when the field is blank *or* unusable. Which
-    /// of the two it is, `validate()` decides — a blank field is the "any
-    /// year" answer, anything else that fails to parse is an error.
+    /// The typed year. Blank and unusable both read as `nil` here;
+    /// `validate()` is what tells the two apart.
     private var parsedYear: Int? {
-        let text = Self.trimmed(yearText)
-        guard text.count == 4, text.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
-        guard let value = Int(text),
-              (FieldNormalization.earliestYear...maximumYear).contains(value) else { return nil }
-        return value
+        FieldNormalization.parsedYear(yearText, maximum: maximumYear)
     }
 
     /// Canonicalized at save time, per plan.md — reusing an existing path's
     /// casing rather than correcting the user's typing as they go.
     private func canonicalCategoryPath() -> String {
-        let typed = Self.trimmed(categoryPath)
-        let helper = CategoryPathHelper(modelContext: modelContext)
-        return (try? helper.canonicalize(typed)) ?? typed
+        CategoryPathHelper.canonicalOrTyped(categoryPath, in: modelContext)
     }
 
     private func populate(from item: Item) {
@@ -270,19 +263,5 @@ final class ItemFormViewModel {
         conditionNotes = item.conditionNotes ?? ""
         notes = item.notes ?? ""
         photos = item.photos ?? []
-    }
-
-    // Delegating to the shared definition since 012/T005: the import
-    // pipeline normalizes cells with the same rules, and two copies of
-    // "what blank means" is exactly the drift the one-definition move
-    // prevents. See FieldNormalization.
-    private static func trimmed(_ value: String) -> String {
-        FieldNormalization.trimmed(value)
-    }
-
-    /// Optional-in-the-model fields are plain strings here so they can bind to
-    /// text fields; blank means "not provided", not an empty value.
-    private static func nilIfBlank(_ value: String) -> String? {
-        FieldNormalization.nilIfBlank(value)
     }
 }
