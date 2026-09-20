@@ -247,10 +247,17 @@ behind is `009`'s to surface or sweep, as this spec's Non-goals record.
   `let wanted = all.filter { !$0.isBought }` — the `ItemListViewModel` owned/sold
   split's shape — with `totalCount`, `items`, `categoryOptions`,
   `categoryLabels` and `marketSummaries` all derived from `wanted`, never from
-  `all`. `totalCount` matters as much as `items`: it is what
-  `ListEmptyReason.reason` distinguishes "nothing here yet" from "your filter
-  matched nothing" by, so a bought entry left in the count would leave the
-  Wishlist showing a filter's empty state after its last row was bought.
+  `all`. `totalCount` matters as much as `items`.
+  **Corrected at T004, in the code this paragraph directed**: the reason given
+  here was wrong. `ListEmptyReason.reason` falls through to `.nothingAdded`
+  whenever nothing is narrowing the list, so a stale `totalCount` alone does
+  *not* produce a filter's empty state — that hazard needs a chip or a query
+  still set, which is the secondary case. The real, unqualified reason is that
+  `WishlistView` gates the search field and the category chips (`:99`) and the
+  header's sort control (`:287`) on `totalCount > 0`, so a stale count leaves
+  those sitting over an empty list after the last entry is bought, filter or
+  no filter. The requirement is unchanged; only its justification was. Found
+  by the implementer, confirmed by the per-task review.
   **No new empty reason**: buying the last wanted item lands on today's
   `.nothingAdded` state, whose copy ("Nothing on the list yet" / "Keep track of
   what you're after…") reads correctly after a purchase — unlike the Items
@@ -457,7 +464,13 @@ keeps a bought entry off both screens); `WishlistViewModel.duplicate` and
 `confirmImport` and `WishlistFormViewModel`'s `nextPosition` fetches (they
 renumber or append over the whole table, which is what keeps positions dense);
 `CategoryPathHelper.allCategoryPaths` (the category is real, and the new item
-carries it anyway). One consequence to state rather than fix: `WishlistViewModel.move`
+carries it anyway). **A sixth, added at T004's review**: `MarketRefresher.currentTarget(for:)`,
+the by-id re-read after the network hop, which this list first missed. It is
+left unchanged for the same reason its `.owned` branch already ignores
+`soldDate` — an entry bought mid-walk costs at most one request for a row
+that is already invisible and whose local rows were just cleared. So Q12's
+flat sentence "a bought entry is never a refresh target" is true of
+`targets(in:)` and not of a walk already under way. One consequence to state rather than fix: `WishlistViewModel.move`
 renumbers the *visible* rows from zero, so a bought entry's stale `sortOrder`
 can collide with a live one. `ManualOrderHelper.areInCustomOrder` breaks a
 position tie by name and id, so the visible order stays fully determined, and

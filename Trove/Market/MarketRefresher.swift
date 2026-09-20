@@ -115,10 +115,16 @@ final class MarketRefresher {
     /// value to track, so it drops out of the walk and out of Settings'
     /// count. The predicate reads `soldDate`, not the match, which is kept —
     /// so returning the item to the collection resumes refreshing it.
+    ///
+    /// A bought wanted entry is never a target either (015, Q12): it has left
+    /// the Wishlist, so an invisible row costs no request and no place in
+    /// Settings' matched count. Its match is kept for the same reason, and
+    /// the new item it created carries that match as an owned target of its
+    /// own.
     static func targets(in context: ModelContext) throws -> [MarketRefreshTarget] {
         let items = try context.fetch(FetchDescriptor<Item>(predicate: #Predicate { $0.reverbProductID != nil && $0.soldDate == nil }))
             .sorted(by: ManualOrderHelper.areInCustomOrder)
-        let wanted = try context.fetch(FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.reverbProductID != nil }))
+        let wanted = try context.fetch(FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.reverbProductID != nil && $0.boughtDate == nil }))
             .sorted(by: ManualOrderHelper.areInCustomOrder)
         return items.compactMap { item in
             item.reverbProductID.map {

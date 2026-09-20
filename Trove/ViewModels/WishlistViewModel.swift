@@ -140,11 +140,28 @@ final class WishlistViewModel {
     func load() {
         loadFailureMessage = nil
         do {
+            // One fetch, split once (015 plan Q11), the shape
+            // `ItemListViewModel.load` uses for owned/sold: `totalCount`, the
+            // list, the chips and the market summaries all derive from
+            // `wanted`, so a bought entry can't reach any of them by being
+            // missed at one of five call sites.
+            //
+            // `totalCount` matters as much as `items`, and not for the reason
+            // Q11 gives: `ListEmptyReason.reason` falls through to
+            // `.nothingAdded` anyway when nothing is narrowing. What the count
+            // actually drives is the screen's chrome — `WishlistView` gates
+            // the search field and chips on `totalCount > 0`, and the header's
+            // sort control likewise — so a bought entry left in the count
+            // leaves a search field, a chip row and a sort badge sitting over
+            // an empty list after the last entry is bought, filter or no
+            // filter. Secondarily, with a chip or a query still set, the count
+            // is what picks the filter's empty copy over the collection's.
             let all = try modelContext.fetch(FetchDescriptor<WishlistItem>())
-            totalCount = all.count
+            let wanted = all.filter { !$0.isBought }
+            totalCount = wanted.count
             // Before the sort, not after: the Market orders read these.
-            marketSummaries = Self.summaries(for: all, in: modelContext, now: now())
-            items = all
+            marketSummaries = Self.summaries(for: wanted, in: modelContext, now: now())
+            items = wanted
                 .filter { CategoryPathHelper.path($0.categoryPath, isWithin: categoryFilter) }
                 // Name only. A wishlist item has no serial number — it isn't
                 // owned yet — so there's nothing else to match on.
@@ -155,7 +172,7 @@ final class WishlistViewModel {
             // list uses would fill most of this row with chips that lead
             // nowhere, since a wishlist is short and a collection isn't.
             categoryOptions = CategoryPathHelper.sortedDistinctPaths(
-                all.map { (path: $0.categoryPath, createdAt: $0.createdAt) }
+                wanted.map { (path: $0.categoryPath, createdAt: $0.createdAt) }
             )
             categoryLabels = CategoryPathHelper.displayLabels(for: categoryOptions)
         } catch {
@@ -281,6 +298,8 @@ final class WishlistViewModel {
         modelContext.insert(copy)
 
         // Whole collection in manual order, never the filtered slice.
+        // Bought entries included, deliberately (015 plan §4): this renumbers
+        // over the whole table, which is what keeps positions dense.
         let ordered = (try? modelContext.fetch(
             FetchDescriptor<WishlistItem>(sortBy: [SortDescriptor(\.sortOrder)])
         )) ?? []
@@ -468,6 +487,8 @@ final class WishlistViewModel {
             defer { isImportingFile = false }
             await Task.yield()
 
+            // Bought entries included, deliberately (015 plan §4): the import
+            // appends past every stored position, not past the visible ones.
             let existing = (try? modelContext.fetch(FetchDescriptor<WishlistItem>())) ?? []
             let base = ManualOrderHelper.nextPosition(after: existing)
             var knownPaths = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []

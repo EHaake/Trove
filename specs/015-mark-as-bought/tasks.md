@@ -285,7 +285,7 @@ four as questions, not facts.
   *top* of the order — plan §3's literal code, identical to
   `ItemFormViewModel.save()`, so a known property of both call sites.
 
-- [ ] **T004 — What leaves the Wishlist: the exclusion rule at five read sites. `review: per-task`.**
+- [x] **T004 — What leaves the Wishlist: the exclusion rule at five read sites. `review: per-task`.**
   Per plan §4, Q11, Q12 and **R1**. `WishlistViewModel.load()` splits the fetch
   (`let wanted = all.filter { !$0.isBought }`) and derives `totalCount`,
   `items`, `categoryOptions`, `categoryLabels` and `marketSummaries` from
@@ -321,6 +321,42 @@ four as questions, not facts.
   `TroveTests/MarketRefresherTests.swift`.
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every mutation
   recorded.
+  **Done** (2026-09-19): all five read sites changed; the five left alone each
+  carry their one-line "deliberately unchanged" comment. `scripts/verify.sh`
+  green at **1580 tests in 216 suites** (baseline 1570/214), **re-run by the
+  orchestrator**. `ExportSchemaTests` and `PurchaseUndoTests` both green
+  **unmodified** — the four new `boughtDate == nil` predicates left the
+  one-writer guard green, which is what T003's third mutation predicted.
+  Mutations M1–M8, all reverted, each reddening its own predicate's legs and
+  nothing else's; in particular M2 (filter `items`, leave `totalCount =
+  all.count`) reddens the **empty-state leg alone**, as the task line
+  required.
+  **Two deviations, both accepted**: (a) four comment-only edits outside the
+  task line's `Files:` list — plan §4 requires the "unchanged, deliberately"
+  comment at each of those sites and the file list under-described it; per
+  this file's own header the plan section is the authority. (b) `totalCount`
+  is asserted in the empty-state test rather than in G9's first test, because
+  M2 can only redden one leg if the count is asserted in one place.
+  **Review**: `skeptical-reviewer`, **no blocking findings**, signed off.
+  Seven second-look items; four were cheap and were applied in the same
+  commit — the `load()` comment rewritten (see below), the export test's
+  overclaiming message corrected, a `marketSummaries` leg added, and the
+  reorder fixture moved so the position collision it describes actually
+  happens. Three are carried: criterion 11's real guard is the *filtered*
+  empty-state leg rather than the unfiltered one (say so at T013);
+  `MarketRefresher.currentTarget(for:)` was missing from plan §4's
+  enumeration (**fixed in `plan.md` in this commit**); and R1's promise that
+  the person hears about the two Settings behaviours the spec never mentioned
+  is carried into the Phase 2 pause report.
+  **`plan.md` corrected in place, twice, by the orchestrator**: Q11's stated
+  rationale was factually wrong — `ListEmptyReason.reason` falls through to
+  `.nothingAdded` whenever nothing narrows the list, so a stale `totalCount`
+  alone does not produce a filter's empty state. The requirement is unchanged
+  and the real reason is that `WishlistView` gates the search field, the chips
+  and the sort control on `totalCount > 0`. The implementer found it, then
+  copied the wrong wording into a code comment anyway; the review caught that
+  and both now state the traced reason. §4's "five left alone" list gained a
+  sixth site with its reason.
 
 - [ ] **T005 — `PurchaseFormViewModel`.**
   Per plan §5, Q7, Q9 and Q10's seeding rule. New
@@ -729,4 +765,7 @@ orchestrator had to redo, and why) are recorded here too.
 | `skeptical-reviewer` — T003 per-task review | `opus` | 86k | **1 blocking** (the `currencyCode` leg could not fail — the same shape the implementer had just fixed once), 5 non-blocking |
 | `sdd-implementer` — T003 review fix | `opus` (same agent resumed) | 20k more | Blocking fixed and mutation-verified; whole diff audited for the shape, nothing else found; 2 non-blocking applied |
 | `skeptical-reviewer` — T003 re-review | `opus` (same agent resumed) | 4k more | Signed off; nothing blocking; 3 non-blocking carried to the sweep and T013 |
+| `sdd-implementer` — T004 (the exclusion rule at five read sites) | `opus` | 122k | Done first pass; 6 mutations; returned a finding that plan Q11's rationale is factually wrong |
+| `skeptical-reviewer` — T004 per-task review | `opus` | 90k | **No blocking findings**; 7 second-look, incl. a second false-passing shape (an assertion message claiming more than it can detect) and a missing sixth reader |
+| `sdd-implementer` — T004 second-look fixes | `opus` (same agent resumed) | 39k more | 4 applied, 2 new mutations; the `marketSummaries` leg turned out reachable after all (a cross-device purchase) |
 | _rows added per dispatch as the spec runs_ | | | |

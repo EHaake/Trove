@@ -245,6 +245,7 @@ final class SellPlanViewModel {
     func load() {
         loadFailureMessage = nil
         do {
+            // By id, unchanged by 015 (plan §4): R2's job, not this fetch's.
             let id = wishlistItemID
             var descriptor = FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.id == id })
             descriptor.fetchLimit = 1

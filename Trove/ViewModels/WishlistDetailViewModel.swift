@@ -47,6 +47,8 @@ final class WishlistDetailViewModel {
     }
 
     func load() {
+        // By id, unchanged by 015 (plan §4): R2 gets this screen off a bought
+        // entry rather than making the fetch miss the row it was pushed onto.
         let id = itemID
         var descriptor = FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.id == id })
         descriptor.fetchLimit = 1

@@ -1193,3 +1193,179 @@ struct WishlistViewModelCommitTests {
 
 // 012's `WishlistViewModelTemplateTests` moved to
 // `SettingsViewModelTemplateTests` with the intent (013/T010, T013).
+
+// MARK: - 015/G9: what leaves the Wishlist
+
+/// G9 (015, plan §4 and Q11, criteria 8 and 11). A bought entry is off the
+/// Wishlist entirely: out of the list, the count, the chips and the header's
+/// total, and still out after a reorder.
+///
+/// Every fixture here makes the bought entry differ from the live ones in
+/// *each* dimension asserted — a different name, a different category, a
+/// different estimated cost — so each assertion fails for its own reason
+/// rather than sharing one. A bought entry indistinguishable from a live one
+/// would prove nothing.
+@Suite("A bought entry leaves the Wishlist")
+struct WishlistBoughtExclusionTests {
+    private let boughtAt = Date(timeIntervalSince1970: 1_780_000_000)
+
+    @discardableResult
+    private func insert(
+        _ name: String,
+        category: String,
+        costCents: Int,
+        order: Int,
+        into context: ModelContext
+    ) -> WishlistItem {
+        let wanted = WishlistItem(
+            name: name,
+            categoryPath: category,
+            estimatedCostCents: costCents,
+            sortOrder: order
+        )
+        context.insert(wanted)
+        return wanted
+    }
+
+    /// Through `WishlistPurchaseStore` — the app's only writer of the marker,
+    /// so these fixtures are bought the way the app buys.
+    @discardableResult
+    private func buy(_ wanted: WishlistItem, priceCents: Int, in context: ModelContext) throws -> Item {
+        let item = try WishlistPurchaseStore.markBought(
+            wanted,
+            purchase: Purchase(date: boughtAt, priceCents: priceCents, location: "Reverb", condition: .excellent),
+            at: boughtAt,
+            in: context
+        )
+        try context.save()
+        return item
+    }
+
+    /// A figure row for a subject, written through the store's own writer.
+    private func seedFigure(for id: UUID, medianCents: Int, in context: ModelContext) throws {
+        let product = MarketProduct(
+            id: 42,
+            slug: "product-42",
+            title: "Product 42",
+            usedLowCents: 100_000,
+            usedTotal: 12,
+            listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=42")!
+        )
+        let figure = MarketFigure(
+            medianCents: medianCents, lowCents: 100_000, highCents: 400_000,
+            count: 12, fetchedAt: boughtAt, isTruncated: false, yearScope: .any
+        )
+        try MarketLocalStore.record(
+            .figure(figure), product: product,
+            for: MarketSubjectKey(subjectID: id, kind: .wanted), in: context
+        )
+        try context.save()
+    }
+
+    /// The list, the chips, the header total and the market summaries.
+    /// `totalCount` is asserted in
+    /// `buyingTheOnlyWantedEntryLandsOnTodaysNothingAddedState` below and
+    /// deliberately not here, so a count left deriving from the whole fetch
+    /// reddens that one leg and names itself.
+    ///
+    /// The bought entry's figure row is seeded *after* the purchase on
+    /// purpose. `markBought` clears this device's rows first (Q12), so a
+    /// locally-made purchase leaves none — but the rows live in the
+    /// device-local store while the marker syncs through CloudKit
+    /// (`TwoStoreContainerTests`), so an entry bought on another device
+    /// arrives here marked, with this device's figure row still sitting
+    /// beside it. That is the state this leg guards, and it is why the leg
+    /// can fail at all.
+    @Test func aBoughtEntryIsOutOfTheListTheChipsTheTotalAndTheMarketSummaries() throws {
+        let context = try makeInMemoryContext()
+        let amp = insert("Vox AC15", category: "Music/Amps", costCents: 10_000, order: 0, into: context)
+        let gibson = insert("Gibson ES-335", category: "Music/Guitars", costCents: 250_000, order: 1, into: context)
+        try context.save()
+        try buy(gibson, priceCents: 300_000, in: context)
+        try seedFigure(for: amp.id, medianCents: 140_000, in: context)
+        try seedFigure(for: gibson.id, medianCents: 390_000, in: context)
+
+        let viewModel = WishlistViewModel(modelContext: context, now: { self.boughtAt })
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Vox AC15"])
+        #expect(viewModel.categoryOptions == ["Music/Amps"], "the bought entry's category still offers a chip")
+        #expect(viewModel.categoryLabels == ["Music/Amps": "Amps"])
+        #expect(viewModel.totalEstimatedCostCents == 10_000, "the bought entry's estimate is still in the header total")
+        #expect(viewModel.emptyReason == nil)
+        // The live entry's summary proves the derivation still works, so the
+        // bought entry's absence can't be "no summaries at all".
+        #expect(viewModel.marketSummaries[amp.id]?.medianCents == 140_000)
+        #expect(viewModel.marketSummaries[gibson.id] == nil, "the bought entry still has a market summary")
+    }
+
+    /// Criterion 11, and Q11's reason for splitting the count as well as the
+    /// list: today's `.nothingAdded` state, no new case. The second half is
+    /// the hazard a stale `totalCount` would cause — a chip the person chose
+    /// before the purchase is still selected, and a count that still holds
+    /// the bought row turns "nothing here yet" into "your filter matched
+    /// nothing".
+    @Test func buyingTheOnlyWantedEntryLandsOnTodaysNothingAddedState() throws {
+        let context = try makeInMemoryContext()
+        let amp = insert("Vox AC15", category: "Music/Amps", costCents: 10_000, order: 0, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.load()
+        try #require(viewModel.items.count == 1)
+        try #require(viewModel.totalCount == 1)
+        try #require(viewModel.emptyReason == nil)
+
+        try buy(amp, priceCents: 120_000, in: context)
+        viewModel.load()
+
+        #expect(viewModel.items.isEmpty)
+        #expect(viewModel.totalCount == 0, "a bought entry is still in the count the empty state is decided by")
+        #expect(viewModel.emptyReason == .nothingAdded)
+
+        viewModel.categoryFilter = "Music/Amps"
+        viewModel.load()
+
+        #expect(
+            viewModel.emptyReason == .nothingAdded,
+            "with the chip still selected, a stale count reads as a filter's empty state instead"
+        )
+    }
+
+    /// A reorder renumbers the visible rows from zero (plan §4), so a bought
+    /// entry's stale position collides with a live one. The bought entry sits
+    /// at position 0 and the live rows at 1 and 2 for exactly that reason:
+    /// the drag renumbers them to 0 and 1, so one live row lands on the
+    /// bought row's stored position. It must still be absent on the next
+    /// load, and still be in the store.
+    @Test func aBoughtEntryNeverReappearsAfterAReorder() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let gibson = insert("Gibson ES-335", category: "Music/Guitars", costCents: 250_000, order: 0, into: context)
+        insert("Vox AC15", category: "Music/Amps", costCents: 10_000, order: 1, into: context)
+        insert("Fender Twin", category: "Music/Amps", costCents: 180_000, order: 2, into: context)
+        try context.save()
+        try buy(gibson, priceCents: 300_000, in: context)
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.load()
+        try #require(viewModel.items.map(\.name) == ["Vox AC15", "Fender Twin"])
+
+        viewModel.moveDown(id: try #require(viewModel.items.first).id)
+        viewModel.load()
+
+        #expect(viewModel.items.map(\.name) == ["Fender Twin", "Vox AC15"])
+        #expect(viewModel.categoryOptions == ["Music/Amps"])
+        #expect(viewModel.loadFailureMessage == nil)
+
+        let elsewhere = ModelContext(container)
+        let stored = try elsewhere.fetch(FetchDescriptor<WishlistItem>())
+        #expect(stored.count == 3, "the bought entry was deleted, not just hidden")
+        let bought = try #require(stored.first { $0.name == "Gibson ES-335" })
+        #expect(bought.isBought)
+        #expect(
+            stored.contains { !$0.isBought && $0.sortOrder == bought.sortOrder },
+            "the collision this test exists for never happened — the fixture's positions drifted"
+        )
+    }
+}
