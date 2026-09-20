@@ -14,6 +14,10 @@ struct WishlistDetailView: View {
     @State private var selectedPhotoIndex = 0
     @State private var isEditing = false
     @State private var isConfirmingDelete = false
+    /// Whether the purchase sheet is up (015 plan §8). A flag rather than the
+    /// Wishlist row's `.sheet(item:)` staging: this screen holds one entry, so
+    /// there is nothing to choose between.
+    @State private var isMarkingBought = false
     @State private var sellPlanRoute: SellPlanRoute?
     /// The match sheet's detent, driven by which phase it is showing.
     @State private var matchDetent: PresentationDetent = .medium
@@ -42,9 +46,25 @@ struct WishlistDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                // 015 (plan §8, criterion 2): Mark as bought… sits between
+                // Edit and Delete, in the menu the screen already has — the
+                // page itself gets no button, so the action reads as one of
+                // this entry's few, not as the thing the screen is for. The
+                // rows are `DetailOverflowMenu.Row` values, qualified because
+                // `Row` doesn't resolve bare out here; `006` built the middle
+                // row for the owned page and this spec takes it up.
                 DetailOverflowMenu(
                     noun: "wanted item",
-                    edit: { isEditing = true },
+                    edit: DetailOverflowMenu.Row(
+                        title: "Edit",
+                        systemImage: "pencil",
+                        action: { isEditing = true }
+                    ),
+                    middle: DetailOverflowMenu.Row(
+                        title: PurchaseCopy.markAsBought,
+                        systemImage: "bag",
+                        action: { isMarkingBought = true }
+                    ),
                     delete: { isConfirmingDelete = true }
                 )
             }
@@ -71,6 +91,23 @@ struct WishlistDetailView: View {
         .sheet(isPresented: $viewModel.isFindingPhoto, onDismiss: viewModel.load) {
             photoSheet
         }
+        // 015 (plan §8): the shared purchase form, seeded by the view model
+        // exactly as the Wishlist row's and the Sell Plan's are, so all three
+        // hosts open on the same defaults. The sheet writes nothing itself —
+        // what a confirmed purchase means is decided here, through
+        // `markBought`, the one path into the store — and a purchase that
+        // took pops this screen (R2), since the entry it holds is no longer
+        // wanted.
+        .sheet(isPresented: $isMarkingBought) {
+            PurchaseFormView(
+                viewModel: viewModel.makePurchaseFormViewModel(),
+                confirm: { purchase in
+                    isMarkingBought = false
+                    if viewModel.markBought(purchase: purchase) { dismiss() }
+                },
+                cancel: { isMarkingBought = false }
+            )
+        }
         // An alert rather than a confirmation dialog, for the same reason as
         // the item detail screen: from a toolbar button the dialog renders as
         // a popover that drops the cancel button entirely.
@@ -92,7 +129,17 @@ struct WishlistDetailView: View {
                 syncMonitor: syncMonitor
             )
         }
-        .onAppear(perform: viewModel.load)
+        // R2: a screen already on the stack when its entry is bought gets
+        // itself out of the way. Confirming on the Sell Plan pops it back to
+        // here, and `load()` is what sets `hasBeenBought`, so this screen pops
+        // in turn — landing on the Wishlist, which no longer lists the entry.
+        // Without it the menu behind would still offer Mark as bought… for an
+        // entry already bought. The cross-device case is closed in the writer
+        // instead (§3, T006a), where no view-side mechanism has to reach.
+        .onAppear {
+            viewModel.load()
+            if viewModel.hasBeenBought { dismiss() }
+        }
     }
 
     /// The notice first, once per device, then the picker (spec Decision

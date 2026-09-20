@@ -649,7 +649,7 @@ four as questions, not facts.
   forces a far slower `xcodebuild test` than a source change — each icon
   mutation took over ten minutes against roughly two for a Swift-only edit.
 
-- [ ] **T009 — The wishlist detail's menu row, its sheet, and dismiss-on-bought.**
+- [x] **T009 — The wishlist detail's menu row, its sheet, and dismiss-on-bought.**
   Per plan §8 and **R2**. In `WishlistDetailView`: the `DetailOverflowMenu`
   call moves to the `(noun:edit:middle:delete:)` initializer, which means the
   file now builds two **`DetailOverflowMenu.Row`** values — qualified, since
@@ -710,6 +710,43 @@ four as questions, not facts.
   `TroveTests/SoldStateWiringTests.swift`,
   `TroveTests/WishlistPurchaseWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done** (2026-09-20): the page moved to the `(noun:edit:middle:delete:)`
+  initializer with two qualified rows built **inline** in the call (G17
+  requires the word to sit *inside* the argument list, so a computed property
+  like the pattern's `markAsSoldRow` would have reddened the guard over
+  correct code); the sheet presented once; `.onAppear` reloads then dismisses
+  on `hasBeenBought`; **no button in `content(for:)`**. `scripts/verify.sh`
+  green at **1612 tests in 224 suites** (baseline 1609/224 — three new tests;
+  the rewritten `006` guard replaces one, so no net change there).
+  **The dodge was demonstrated, not just avoided.** Mutation M1 spelled the
+  rows `.init(` **and temporarily re-added `006`'s guard verbatim beside the
+  rewrite**: the rewritten guard went red on its two-row anchor while
+  `theWishlistPageKeepsTheOriginalMenuAndNamesNoSaleCopy` — `006`'s
+  assertions unchanged — **passed over a page that had already grown the
+  row**. That is the second time this project has caught this exact shape on
+  this exact guard (the first was `015`'s own planning finding about `014`),
+  and it is now a demonstration rather than an argument.
+  Seven further mutations, all reverted: the row dropped → both anchors
+  `#require`-fail; `SaleCopy` named → red; a page button added → the mention
+  count goes to 2 → red; the `.onAppear` guard dropped → red; a real `Menu`
+  added → **`MenuPolicyTests` red** (it needed **no edit** for the rows
+  themselves — a `DetailOverflowMenu.Row` is not a system menu); the sheet
+  confirming into nothing → red; and **M8, criterion 2's real failure mode**
+  — the word *moved* from the row to a page button, so the count stays 1 and
+  only the "it is inside the menu's argument list" leg catches it.
+  **The task line was wrong about one fact and the implementer corrected it
+  accurately**: `ItemDetailView` calls the *four*-argument initializer, so
+  after this change the component's own `#Preview` is the **only** caller of
+  the two-argument one. Same conclusion — keep it, it is not dead — stated
+  truthfully in the doc comment and in the `006` pointer.
+  **A landmine found and worth the whole project knowing**: `SourceScan.production`
+  cuts a file at the first literal `#Preview` **before** stripping comments,
+  so merely writing "`#Preview`" **inside a doc comment** truncates the file
+  to its header for every scan. Doing so silently reddened `MenuPolicyTests`
+  and `SoldStateWiringTests` with no code change. Caught on the first verify
+  and fixed by rewording. **T013 should record this in `plan.md` or beside
+  `SourceScan` itself** — the next person to document a scanned file will hit
+  it, and the failure points at the wrong file entirely.
 
 - [ ] **T010 — The Sell Plan's action, its sheet, and its dismiss.**
   Sign-off correction, 2026-09-19 (re-review): G18's gate leg scans for a
@@ -924,4 +961,5 @@ orchestrator had to redo, and why) are recorded here too.
 | `skeptical-reviewer` — Phase 1 re-review | `opus` (same agent resumed) | 16k more | Signed off; nothing blocking; found a mis-spliced doc comment (orchestrator fixed) and one device-pass residual |
 | `sdd-implementer` — T007 (the purchase sheet) + the unbounded-date guard | `opus` | 107k | Done first pass; 7 mutations; caught a substring false-pass in its own leg before landing it, and found the same shape in merged code |
 | `sdd-implementer` — T008 (the Buy swipe, the sheet on the list, the `ActionBuy` glyph) | `opus` | 104k | Done first pass; 6 mutations (2 beyond the task line, to back its own added legs); the imageset needed no project edit |
+| `sdd-implementer` — T009 (the menu row, the `006` reversal, the rewritten guard) | `opus` | 115k | Done first pass; 8 mutations; **demonstrated the `.init(` dodge** by running the old guard beside the new one; found the `#Preview`-in-a-comment scan landmine |
 | _rows added per dispatch as the spec runs_ | | | |

@@ -560,6 +560,12 @@ per P1), and the three intents:
 the existing `(noun:edit:delete:)` initializer kept so `WishlistDetailView`
 is untouched:
 
+*Superseded by `015-mark-as-bought` (its spec, criterion 2; plan §8):
+`WishlistDetailView` is no longer untouched — it moves to the
+`(noun:edit:middle:delete:)` initializer for a **Mark as bought…** middle row,
+so both detail screens now build their own rows. The two-argument initializer
+is still kept, but its only caller is `DetailOverflowMenu`'s own `#Preview`.*
+
 ```swift
 struct DetailOverflowMenu: View {
     struct Row { let title: String; let systemImage: String; let action: () -> Void }

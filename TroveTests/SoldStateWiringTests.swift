@@ -109,9 +109,29 @@ struct SoldStateWiringTests {
         )
     }
 
-    /// The kept initializer, from the caller's side: the wishlist's page is
-    /// untouched by this spec, and it names none of its words.
-    @Test func theWishlistPageKeepsTheOriginalMenuAndNamesNoSaleCopy() throws {
+    /// The wishlist page's menu, from the caller's side. **`015` reversed the
+    /// `006` decision this guard was written for**: `006` left the wanted
+    /// entry's page on the `(noun:edit:delete:)` initializer and asserted it
+    /// built no rows at all, which `015` T009 made false by giving it a
+    /// **Mark as bought…** middle row. The claim is rewritten rather than
+    /// dodged — spelling the rows `.init(...)` to keep the old scan green is
+    /// the false-passing shape `CLAUDE.md` records, and `015`'s planning found
+    /// `014`'s wishlist guard already kept green that way.
+    ///
+    /// So: the page still composes the menu, and now builds exactly two rows
+    /// — Edit and the middle one — of which exactly one names the purchase
+    /// word. The half of the original claim that is still true stands
+    /// unchanged: selling is the owned side's business, so no `SaleCopy` word
+    /// appears here.
+    ///
+    /// The rows are counted through their argument lists, `#require`d before
+    /// anything is asserted over them: a page that composed the menu with no
+    /// rows, or with a third, fails on the anchor rather than reading over a
+    /// span that isn't there.
+    ///
+    /// Mutations: spell either row `.init(` → the two-row `#require` fails;
+    /// drop the middle row → the same; name `SaleCopy` here → red.
+    @Test func theWishlistPageBuildsItsOwnRowsAndStillNamesNoSaleCopy() throws {
         let code = try SourceScan.production(Self.wishlistDetail)
 
         #expect(
@@ -122,9 +142,24 @@ struct SoldStateWiringTests {
             !code.contains("SaleCopy"),
             "the wishlist page names SaleCopy — selling is the owned side's business"
         )
+
+        let rows = SourceScan.argumentLists(of: "DetailOverflowMenu.Row", in: code)
+        try #require(
+            rows.count == 2,
+            "the wishlist page builds \(rows.count) menu rows, expected 2 — Edit and Mark as bought… (015 plan §8)"
+        )
+
+        let edits = rows.filter { $0.contains("isEditing = true") }
+        #expect(edits.count == 1, "\(edits.count) rows open the wishlist form, expected exactly 1")
+
+        let bought = rows.filter { $0.contains("PurchaseCopy.markAsBought") }
         #expect(
-            !code.contains("DetailOverflowMenu.Row"),
-            "the wishlist page builds menu rows — it should still use the (noun:edit:delete:) initializer"
+            bought.count == 1,
+            "\(bought.count) of the page's menu rows name PurchaseCopy.markAsBought, expected exactly 1"
+        )
+        #expect(
+            bought.first?.contains("isMarkingBought = true") == true,
+            "the Mark as bought… row doesn't open the purchase sheet: \(bought.first ?? "—")"
         )
     }
 

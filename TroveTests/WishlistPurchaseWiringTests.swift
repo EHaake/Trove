@@ -15,6 +15,7 @@ import Testing
 struct WishlistPurchaseWiringTests {
     private nonisolated static let sheet = "Trove/Views/Wishlist/PurchaseFormView.swift"
     private nonisolated static let list = "Trove/Views/Wishlist/WishlistView.swift"
+    private nonisolated static let detail = "Trove/Views/Wishlist/WishlistDetailView.swift"
 
     /// The spec's field order, twice over: the five elements are *declared* in
     /// that order, and the sheet's one column *composes* them in that order —
@@ -285,6 +286,118 @@ struct WishlistPurchaseWiringTests {
         #expect(
             !code.contains("WishlistPurchaseStore"),
             "the list names the purchase store directly — the write belongs behind the view model"
+        )
+    }
+
+    // MARK: - The wanted entry's page (G17, G19)
+
+    /// G17, criterion 2: **Mark as bought…** is offered from the page's menu
+    /// and from nowhere else on the page. The word is counted over the whole
+    /// file and required to appear exactly once, then that one occurrence is
+    /// shown to sit inside the `DetailOverflowMenu(` argument list — so a
+    /// button added to `content(for:)` takes the count to 2 and fails here,
+    /// which is the half of criterion 2 that says what the page *doesn't*
+    /// have. `SoldStateWiringTests` pins the rows themselves.
+    ///
+    /// Mutations: add a page button naming the word → the count goes to 2 →
+    /// red; move the word out of the menu → the second leg red; drop the row
+    /// → the count is 0 → red.
+    @Test func theMenuIsTheOnlyPlaceThePageOffersMarkAsBought() throws {
+        let code = try SourceScan.production(Self.detail)
+
+        let mentions = code.ranges(of: "PurchaseCopy.markAsBought").count
+        try #require(
+            mentions == 1,
+            "the page names PurchaseCopy.markAsBought \(mentions) times, expected exactly 1 — the menu row is the whole offer, the page itself carries no button (criterion 2)"
+        )
+
+        let menus = SourceScan.argumentLists(of: "DetailOverflowMenu", in: code)
+            .filter { $0.contains("noun:") }
+        try #require(menus.count == 1, "the page composes \(menus.count) overflow menus, expected exactly 1")
+        let menu = try #require(menus.first)
+
+        #expect(
+            menu.contains("PurchaseCopy.markAsBought"),
+            "the page's one mention of Mark as bought… isn't in its menu — criterion 2 puts it there and nowhere else:\n\(menu)"
+        )
+    }
+
+    /// G17's other half: the sheet the row opens is the shared purchase form,
+    /// presented once, seeded by the view model exactly as the list's and the
+    /// Sell Plan's are, and confirmed through `markBought` — the write stays
+    /// the view model's, so the page never names the store.
+    ///
+    /// Mutations: seed a `PurchaseFormViewModel` in the view → red; confirm
+    /// into anything but `markBought` → red; present the sheet twice → the
+    /// `#require` fails.
+    @Test func thePurchaseSheetIsPresentedOnceOverTheEntryThePageHolds() throws {
+        let code = try SourceScan.production(Self.detail)
+
+        let sheets = SourceScan.closureBodies(after: ".sheet(isPresented: $isMarkingBought", in: code)
+        try #require(
+            sheets.count == 1,
+            "the page presents \(sheets.count) purchase sheets, expected exactly 1"
+        )
+        let sheet = try #require(sheets.first)
+
+        #expect(
+            sheet.contains("PurchaseFormView("),
+            "the purchase sheet composes something other than the shared purchase form:\n\(sheet)"
+        )
+        #expect(
+            sheet.contains("viewModel.makePurchaseFormViewModel()"),
+            "the sheet seeds its own form instead of the view model's, which is what keeps every host's defaults equal:\n\(sheet)"
+        )
+        #expect(
+            sheet.contains("viewModel.markBought(purchase: purchase)"),
+            "the sheet confirms into something other than `markBought`, the one path into the store:\n\(sheet)"
+        )
+        #expect(
+            !code.contains("WishlistPurchaseStore"),
+            "the page names the purchase store directly — the write belongs behind the view model"
+        )
+    }
+
+    /// G19, R2: a page already on the stack when its entry is bought gets
+    /// itself out of the way. `.onAppear` reloads *first* — `load()` is what
+    /// sets `hasBeenBought` — and pops only under that flag, so the ordering
+    /// is pinned as well as the presence: a guard read before the reload
+    /// would test the value the screen was pushed with.
+    ///
+    /// Mutations: drop the guard (back to `.onAppear(perform: viewModel.load)`)
+    /// → red; dismiss unconditionally → the guard's body is gone → red; read
+    /// `hasBeenBought` before `load()` → the ordering leg red.
+    @Test func thePageDismissesItselfOnAppearOnceItsEntryIsBought() throws {
+        let code = try SourceScan.production(Self.detail)
+
+        let appearances = SourceScan.closureBodies(after: ".onAppear", in: code)
+        try #require(
+            appearances.count == 1,
+            "the page carries \(appearances.count) .onAppear closures, expected exactly 1"
+        )
+        let appear = try #require(appearances.first)
+
+        let reload = try #require(
+            appear.range(of: "viewModel.load()"),
+            "the page's .onAppear no longer reloads:\n\(appear)"
+        )
+        let flag = try #require(
+            appear.range(of: "viewModel.hasBeenBought"),
+            "the page's .onAppear doesn't read hasBeenBought — a page pushed onto a bought entry would stay up (R2):\n\(appear)"
+        )
+        #expect(
+            reload.upperBound < flag.lowerBound,
+            "the guard reads hasBeenBought before load() has set it:\n\(appear)"
+        )
+
+        let guarded = SourceScan.closureBodies(after: "if viewModel.hasBeenBought", in: appear)
+        try #require(
+            guarded.count == 1,
+            "the .onAppear has \(guarded.count) `if viewModel.hasBeenBought` branches, expected exactly 1"
+        )
+        #expect(
+            guarded[0].contains("dismiss()"),
+            "the bought branch doesn't dismiss the page (R2):\n\(guarded[0])"
         )
     }
 

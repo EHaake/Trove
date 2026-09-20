@@ -29,8 +29,19 @@ import SwiftUI
 /// one item's page can offer Edit / **Mark as sold…** / Delete while it is
 /// owned and **Edit sale…** / **Return to collection…** / Delete once it is
 /// sold. The original `(noun:edit:delete:)` initializer is kept and still
-/// means "Edit"/pencil with nothing between, which is what the wishlist's
-/// page asks for — it is untouched by this spec.
+/// means "Edit"/pencil with nothing between, which was what the wishlist's
+/// page asked for through `006` — that spec left it untouched.
+///
+/// **`015` reversed that** (plan §8, criterion 2): the wanted entry's page
+/// takes the middle row too, offering Edit / **Mark as bought…** / Delete
+/// through the same `(noun:edit:middle:delete:)` initializer, so both detail
+/// screens now build their rows themselves and the sentence above holds only
+/// as history (`specs/006-mark-as-sold/plan.md` carries the pointer). The
+/// two-argument initializer stays all the same, and is not dead: the preview
+/// at the foot of this file calls it, and a preview is invisible to the
+/// source scans that read this file (they stop at it), so a scan reporting
+/// the initializer unused would be wrong — removing it is no part of what
+/// `015` set out to do, and would break that preview.
 struct DetailOverflowMenu: View {
     /// One row of the menu: what it says, the SF Symbol beside it, and what
     /// it does. Delete is not a `Row` — its `.destructive` role and its word
