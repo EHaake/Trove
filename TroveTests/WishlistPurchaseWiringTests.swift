@@ -170,18 +170,29 @@ struct WishlistPurchaseWiringTests {
         )
     }
 
-    /// The two things the spec says *about* the comparison line, which G21
-    /// pinned the presence and position of but neither of: criterion 6's "shows
+    /// The three things the spec says *about* the comparison line, which G21
+    /// pinned the presence and position of but none of: criterion 6's "shows
     /// nothing when they are equal" — which holds only if the view asks the
     /// optional rather than defaulting it, since `Text(viewModel.comparisonLine
     /// ?? "")` would place an empty line's padding and still satisfy every
-    /// other scan here — and plan §7's "no colour branch", the spec's "not
+    /// other scan here — plan §7's "no colour branch", the spec's "not
     /// colour-coded as gain or loss", since an observation that turns red or
-    /// green is a verdict. The swipe's `!contains("accentRust")` leg, three
-    /// tests down, is the same shape for the same reason.
+    /// green is a verdict, and the Design requirement that it stay **quiet**,
+    /// "supporting text, not a figure competing with the price field". The
+    /// swipe's `!contains("accentRust")` leg, three tests down, is the same
+    /// shape for the same reason.
+    ///
+    /// The quiet leg is T011b's, the person's decision at the Phase 2 pause
+    /// overturning plan §7's `.monoLabel(color:)`: that modifier uppercases
+    /// and letterspaces, which drew the line in the identical treatment as the
+    /// PURCHASE PRICE label above it. Sentence case is the rule now, and
+    /// `monoLabel` is the one way to lose it — so the leg names it, alongside
+    /// the house pairing for quiet supporting prose that replaced it. Case is
+    /// applied by a modifier, not by the string, so `PurchaseCopy`'s own tests
+    /// cannot see this; only the body can.
     ///
     /// Mutations: rewrite as `Text(viewModel.comparisonLine ?? "")` → red;
-    /// colour it with any accent → red.
+    /// colour it with any accent → red; put `.monoLabel(color:)` back → red.
     @Test func theComparisonLineIsConditionalOnTheOptionalAndCarriesNoAccent() throws {
         let code = try SourceScan.production(Self.sheet)
 
@@ -196,6 +207,15 @@ struct WishlistPurchaseWiringTests {
         #expect(
             !comparison.contains("accent"),
             "the comparison line wears an accent colour — it is an observation, not a verdict on gain or loss (plan \u{00A7}7):\n\(comparison)"
+        )
+        #expect(
+            !comparison.contains("monoLabel"),
+            "the comparison line wears the all-caps letterspaced label treatment, so it reads as a second PURCHASE PRICE label rather than an observation (T011b):\n\(comparison)"
+        )
+        #expect(
+            comparison.contains(".font(theme.typography.secondary)")
+                && comparison.contains(".foregroundStyle(theme.colors.textQuiet)"),
+            "the comparison line isn't the house pairing for quiet supporting prose \u{2014} secondary on textQuiet (T011b):\n\(comparison)"
         )
     }
 

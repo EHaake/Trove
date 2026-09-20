@@ -910,6 +910,34 @@ four as questions, not facts.
   right order" are different claims, and the R2 chain is three dismissals
   deep with a sheet animating through the first two.
 
+- [x] **T011b — Sentence case on the comparison line. [the person's decision at the Phase 2 pause]**
+  Not a defect and not a review finding: the Phase 2 pause put the rendered
+  string in front of the person — `$120 LESS THAN YOU ESTIMATED`, letterspaced
+  all-caps in the identical treatment as the `PURCHASE PRICE` label above it —
+  and asked whether that was the "quiet supporting text" the spec's Design
+  section calls for. **They chose sentence case; everything else about the
+  line stays.** `plan.md` §7 is corrected in place with the reversal beside
+  the original.
+  `.monoLabel(color:)` → `.font(theme.typography.secondary)` +
+  `.foregroundStyle(theme.colors.textQuiet)`, which the implementer confirmed
+  is the app's house pairing for quiet prose rather than assuming it: **no
+  shared modifier exists** (`monoLabel` is the app's only text-treatment
+  modifier), the explicit two-line pair is used at **28 call sites**, and the
+  two closest analogues — `SellPlanMarketLines`' sentence-case reason line and
+  `PhotoPickerField`'s status line — are exactly this pairing.
+  `scripts/verify.sh` green at **1615 tests in 224 suites**, re-run by the
+  orchestrator. UI suite not re-run: no UI test references the identifier or
+  the line's text. Mutations, both reverted: `monoLabel` put back → red;
+  `textQuiet` → `accentRust` → red.
+  **The finding underneath it, for the sweep**: this line's *treatment* was
+  pinned by nothing. The wiring guard covered presence, position,
+  conditionality and no-accent — so the plan's styling choice could ship and
+  reach the person rather than a test. Two legs were **added** (not
+  rewritten; there was nothing to rewrite). Quiet supporting text elsewhere
+  in the app has the same exposure, and a `quietProse()` modifier would have
+  28 call sites if the project ever wants one — a judgment call outside this
+  spec.
+
 ## Phase 3 — Verification and close-out
 
 - [ ] **T012 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver]**
@@ -1071,4 +1099,5 @@ orchestrator had to redo, and why) are recorded here too.
 | `skeptical-reviewer` — Phase 2 review | `opus` | 126k | **1 blocking** (B1: criterion 4's cancel half unguarded on two of three hosts), 6 second-look |
 | `sdd-implementer` — T011a (B1 + two second-look) | `opus` (T010's agent resumed) | 20k more | B1 fixed; 5 mutations, incl. re-running the inherited leg's mutation rather than assuming it |
 | `skeptical-reviewer` — Phase 2 re-review | `opus` (same agent resumed) | 13k more | Signed off; nothing blocking; declined to raise any second-look item, with reasons |
+| `sdd-implementer` — T011b (sentence case, the person's decision) | `opus` | 61k | Done first pass; 2 mutations; found the line's treatment was pinned by nothing and added the legs |
 | _rows added per dispatch as the spec runs_ | | | |

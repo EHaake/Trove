@@ -207,11 +207,20 @@ struct PurchaseFormView: View {
     /// Quiet supporting text, and deliberately not colour-coded: the spec
     /// calls it an observation, not a verdict, so there is no branch here on
     /// over versus under.
+    ///
+    /// Sentence case (T011b, the person's decision at the Phase 2 pause,
+    /// overturning plan §7's `.monoLabel`). `monoLabel` uppercases and
+    /// letterspaces, which drew this line in the identical treatment as the
+    /// PURCHASE PRICE label directly above it — a second field label rather
+    /// than the observation the spec asks for. The pairing here is the house
+    /// one for quiet supporting prose (`SellPlanMarketLines`' reason line,
+    /// `PhotoPickerField`'s status line): `secondary` on `textQuiet`.
     @ViewBuilder
     private var comparison: some View {
         if let line = viewModel.comparisonLine {
             Text(line)
-                .monoLabel(color: theme.colors.textQuiet)
+                .font(theme.typography.secondary)
+                .foregroundStyle(theme.colors.textQuiet)
                 .accessibilityIdentifier("purchase.sheet.comparison")
         }
     }

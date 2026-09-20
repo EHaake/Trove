@@ -595,10 +595,27 @@ graphical popover (unbounded, Q9). Four fields in the spec's order:
 1. **Purchase price** and **Purchase date** paired on one row, `priceAndDate`'s
    layout exactly (`$` prefix, decimal pad, `.accessibilityIdentifier("purchase.sheet.price")`).
 2. The **comparison line** directly under that row when
-   `viewModel.comparisonLine` is non-nil: `.monoLabel(color: theme.colors.textQuiet)`,
+   `viewModel.comparisonLine` is non-nil: ~~`.monoLabel(color: theme.colors.textQuiet)`~~
+   **`.font(theme.typography.secondary)` + `.foregroundStyle(theme.colors.textQuiet)`**,
    no colour branch, no arrow, no figure treatment — the spec's "quiet,
    supporting text, not colour-coded as gain or loss". Identifier
    `"purchase.sheet.comparison"`.
+   **Overturned by the person at the Phase 2 pause, 2026-09-20 (T011b).**
+   `monoLabel` applies `.textCase(.uppercase)` and `monoLabelTracking`, so
+   this plan's choice shipped the line as `$120 LESS THAN YOU ESTIMATED` —
+   letterspaced all-caps in the identical treatment as the `PURCHASE PRICE`
+   field label above it, reading as a third field label rather than as an
+   observation. Faithful to this paragraph, and not what the spec's Design
+   section asked for. The person chose sentence case on being shown the
+   rendered string. `secondary` on `textQuiet` is the app's house pairing for
+   quiet supporting prose (28 call sites; the closest analogues are
+   `SellPlanMarketLines`' reason line and `PhotoPickerField`'s status line),
+   and there is no shared modifier for it — `monoLabel` is the app's only
+   text-treatment modifier. **Recorded for the sweep**: this line's treatment
+   shipped pinned by nothing — the wiring guard covered presence, position,
+   conditionality and no-accent, but not the styling — which is why the
+   plan's choice reached the person rather than a test. Quiet supporting text
+   elsewhere in the app has the same exposure.
 3. **Bought from** — `labelledField` + `plainTextField`, the sale sheet's
    `soldAtField` with this spec's words.
 4. **Condition** — `ItemFormView`'s label-plus-`FlowLayout`-of-capsules over
