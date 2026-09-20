@@ -73,16 +73,17 @@ struct TabIconTests {
 /// black it was authored in — invisible on `accentRust`'s or
 /// `accentBrassMid`'s fill, and indistinguishable from the misnamed case at a
 /// glance. `TabIconTests`' own list is the tab bar's, so this is a sibling
-/// suite rather than four more names in it.
+/// suite rather than five more names in it.
 ///
-/// `ActionSell` (014 G22) is the newest of them and the reason this suite
-/// exists; the three that shipped in `001` come along because the same two
-/// failures were never guarded for them either.
+/// `ActionSell` (014 G22) is the reason this suite exists; the three that
+/// shipped in `001` come along because the same two failures were never
+/// guarded for them either, and `ActionBuy` (015 G16) joins them as the
+/// wishlist swipe's own glyph.
 @Suite("Action icons")
 struct ActionIconTests {
     /// The names `ItemListView`'s and the wishlist's swipe actions pass to
     /// `Image(_:)`. `nonisolated` for the same reason as the tab list above.
-    private nonisolated static let assetNames = ["ActionEdit", "ActionDuplicate", "ActionDelete", "ActionSell"]
+    private nonisolated static let assetNames = ["ActionEdit", "ActionDuplicate", "ActionDelete", "ActionSell", "ActionBuy"]
 
     private func icon(_ name: String) -> UIImage? {
         UIImage(named: name, in: .main, with: nil)
@@ -110,9 +111,10 @@ struct ActionIconTests {
         )
     }
 
-    /// Four distinct marks, not one asset wired up four times — the
-    /// copy-paste in `Contents.json` that both checks above would pass.
-    @Test func theFourIconsAreFourDifferentMarks() throws {
+    /// Five distinct marks, not one asset wired up five times — the
+    /// copy-paste in `Contents.json`, or in the `.svg` beside it, that both
+    /// checks above would pass.
+    @Test func theFiveIconsAreFiveDifferentMarks() throws {
         let data = try Self.assetNames.map { name in
             let image = try #require(icon(name), "No asset named \"\(name)\"")
             return try #require(image.pngData(), "\(name) has no raster representation")

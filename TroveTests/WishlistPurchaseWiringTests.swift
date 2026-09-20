@@ -14,6 +14,7 @@ import Testing
 @Suite("Wishlist purchase sheet wiring")
 struct WishlistPurchaseWiringTests {
     private nonisolated static let sheet = "Trove/Views/Wishlist/PurchaseFormView.swift"
+    private nonisolated static let list = "Trove/Views/Wishlist/WishlistView.swift"
 
     /// The spec's field order, twice over: the five elements are *declared* in
     /// that order, and the sheet's one column *composes* them in that order —
@@ -164,6 +165,126 @@ struct WishlistPurchaseWiringTests {
         #expect(
             !picker.contains("in:"),
             "the purchase date picker carries a bound — Q9 leaves it unbounded, as Item.purchaseDate's own editor is:\n\(picker)"
+        )
+    }
+
+    // MARK: - The list's swipe (G15)
+
+    /// G15, criterion 1 from the list's side: the wishlist row's one leading
+    /// swipe is Edit, **Buy**, Copy in that order — Edit still nearest the
+    /// edge, so a full swipe still edits — the middle button stages the row
+    /// for the purchase sheet rather than the form sheet, says `markAsBought`
+    /// to VoiceOver while reading "Buy" on screen (plan Q14), and wears the
+    /// brass mid-tone and the bag glyph; the trailing swipe is still the
+    /// delete alone, naming nothing about buying.
+    ///
+    /// The three buttons are cut apart at their own `Button` keywords rather
+    /// than scanned over the whole block, so *which* button carries which
+    /// word, target and tint is what's pinned — a block containing all three
+    /// words in any arrangement would otherwise pass. `ItemListSidesWiringTests`'
+    /// twin, since `014` settled this shape on the Items list.
+    ///
+    /// Mutations: swap the Buy and Copy buttons → red; the middle button
+    /// writing `itemBeingEdited` → red.
+    @Test func theWishlistRowsLeadingSwipeOffersEditThenBuyThenCopy() throws {
+        let code = try SourceScan.production(Self.list)
+
+        let trailing = SourceScan.closureBodies(after: ".swipeActions(edge: .trailing)", in: code)
+        try #require(trailing.count == 1, "the wishlist rows carry \(trailing.count) trailing swipe blocks, expected exactly 1")
+        #expect(
+            !trailing[0].contains("PurchaseCopy"),
+            "the trailing swipe names PurchaseCopy — buying belongs on the leading swipe, the delete stays alone (criterion 1): \(trailing[0])"
+        )
+
+        let blocks = SourceScan.closureBodies(after: ".swipeActions(edge: .leading)", in: code)
+        try #require(blocks.count == 1, "the wishlist rows carry \(blocks.count) leading swipe blocks, expected exactly 1")
+        let leading = try #require(blocks.first)
+
+        let starts = leading.ranges(of: "Button").map(\.lowerBound)
+        try #require(
+            starts.count == 3,
+            "the leading swipe carries \(starts.count) buttons, expected 3 — Edit, Buy, Copy"
+        )
+        let buttons = starts.indices.map { index -> String in
+            let end = index + 1 < starts.count ? starts[index + 1] : leading.endIndex
+            return String(leading[starts[index]..<end])
+        }
+
+        #expect(
+            buttons[0].contains("Text(\"Edit\")"),
+            "the button nearest the edge isn't Edit — a full swipe would stop editing (criterion 1): \(buttons[0])"
+        )
+        #expect(buttons[0].contains("itemBeingEdited = item"), "the first button doesn't open the form sheet: \(buttons[0])")
+
+        #expect(
+            buttons[1].contains("Text(PurchaseCopy.swipeBuy)"),
+            "the middle button doesn't read the swipe's own word: \(buttons[1])"
+        )
+        #expect(
+            buttons[1].contains("itemBeingBought = item"),
+            "the middle button doesn't stage the row for the purchase sheet: \(buttons[1])"
+        )
+        #expect(
+            buttons[1].contains(".accessibilityLabel(PurchaseCopy.markAsBought)"),
+            "the Buy button doesn't say the menu row's own name to VoiceOver (plan Q14): \(buttons[1])"
+        )
+        #expect(buttons[1].contains("Image(\"ActionBuy\")"), "the Buy button wears no bag glyph: \(buttons[1])")
+        #expect(
+            buttons[1].contains(".tint(theme.colors.accentBrassMid)"),
+            "the Buy button isn't the brass mid-tone — the one brass that reads mid in both appearances (plan Q14): \(buttons[1])"
+        )
+        #expect(
+            !buttons[1].contains("accentRust"),
+            "the Buy button is rust, which stays the one consequential colour on a swiped-open row: \(buttons[1])"
+        )
+
+        #expect(buttons[2].contains("Text(\"Copy\")"), "the last button isn't Copy: \(buttons[2])")
+        #expect(buttons[2].contains("viewModel.duplicate"), "the last button doesn't duplicate: \(buttons[2])")
+    }
+
+    /// G15's other half: the purchase sheet is hosted here, once, over the
+    /// row's own entry — the `.sheet(item:)` shape the Items list uses for the
+    /// sale sheet (014 plan §5), so two rows can never both be being bought —
+    /// seeded by the view model's factory rather than a `PurchaseFormViewModel`
+    /// built in the view, confirming through `markBought` and clearing the
+    /// staging on both exits. The write stays the view model's: the screen
+    /// never names the store itself (plan Q4).
+    ///
+    /// Mutation: drop `itemBeingBought = nil` from the confirm closure → red
+    /// (the sheet would stay up over a bought entry).
+    @Test func thePurchaseSheetIsHostedOnceOverTheStagedRow() throws {
+        let code = try SourceScan.production(Self.list)
+
+        #expect(
+            code.ranges(of: ".sheet(item: $itemBeingBought").count == 1,
+            "the list presents \(code.ranges(of: ".sheet(item: $itemBeingBought").count) purchase sheets, expected exactly 1"
+        )
+        #expect(
+            code.contains(".sheet(item: $itemBeingBought, onDismiss: viewModel.load)"),
+            "the purchase sheet doesn't re-read the list on dismiss, so a bought entry would linger on the wishlist"
+        )
+
+        let bodies = SourceScan.closureBodies(after: ".sheet(item: $itemBeingBought", in: code)
+        try #require(bodies.count == 1, "the purchase sheet opens \(bodies.count) spans, expected exactly 1")
+        let sheet = try #require(bodies.first)
+
+        #expect(sheet.contains("PurchaseFormView("), "the purchase sheet composes something other than the shared purchase form: \(sheet)")
+        #expect(
+            sheet.contains("viewModel.makePurchaseFormViewModel(for: item)"),
+            "the sheet seeds its own form instead of the view model's, which is what keeps every host's defaults equal: \(sheet)"
+        )
+        #expect(
+            sheet.contains("viewModel.markBought(item, purchase: purchase)"),
+            "the sheet confirms into something other than `markBought`: \(sheet)"
+        )
+        #expect(
+            sheet.ranges(of: "itemBeingBought = nil").count == 2,
+            "the sheet clears its staging \(sheet.ranges(of: "itemBeingBought = nil").count) times, expected 2 — confirm and cancel both close it"
+        )
+
+        #expect(
+            !code.contains("WishlistPurchaseStore"),
+            "the list names the purchase store directly — the write belongs behind the view model"
         )
     }
 

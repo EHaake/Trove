@@ -584,7 +584,7 @@ four as questions, not facts.
   §7 specifies verbatim, and whether it reads as the "quiet" supporting text
   the spec asks for is **the person's call at the Phase 2 pause**.
 
-- [ ] **T008 — The Wishlist row's Buy swipe, the sheet on the list, the `ActionBuy` icon.**
+- [x] **T008 — The Wishlist row's Buy swipe, the sheet on the list, the `ActionBuy` icon.**
   Per plan §8 and Q14. In `WishlistView`: `@State private var itemBeingBought:
   WishlistItem?`; the leading swipe becomes Edit / **Buy**
   (`Label { Text(PurchaseCopy.swipeBuy) } icon: { Image("ActionBuy") }`,
@@ -619,6 +619,35 @@ four as questions, not facts.
   `TroveTests/TabIconTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded. No simulator check
   here — T012 covers the swipe on both appearances and the spoken name.
+  **Done** (2026-09-20): Edit / **Buy** / Copy in the one leading block, Edit
+  still nearest the edge (criterion 1), the trailing delete untouched and
+  naming no `PurchaseCopy`; the sheet hosted once over the staged row; the
+  view names no `WishlistPurchaseStore`. **The new imageset joined the build
+  by existing inside `Trove/Assets.xcassets/` — no `.pbxproj` edit and
+  nothing to flag**, which settles the same question for the rest of the
+  spec's asset work. `scripts/verify.sh` green at **1609 tests in 224
+  suites** (baseline 1607/224 — the parameterized icon tests count once per
+  function, so the fifth glyph adds no test).
+  **Six mutations**, all reverted (restored from the implementer's own copy,
+  never `git checkout --`, which is unsafe once the orchestrator has staged):
+  swap Buy and Copy → **7 legs red**; the middle button wired to
+  `itemBeingEdited` → the target leg red **alone**, which is what proves each
+  leg is evaluated against the middle button rather than the block; drop one
+  `itemBeingBought = nil` → red; remove `"template-rendering-intent"` → only
+  the `ActionBuy` case of the parameterized template test falls; copy
+  `action-sell.svg`'s bytes into the new imageset → **the distinctness leg
+  alone** red, resolve and template staying green as specified; and the two
+  negative legs (`PurchaseCopy` in the trailing block, `WishlistPurchaseStore`
+  in the view) each red on their own.
+  **T007's substring trap was checked for, not assumed**: every positive
+  literal in G15 is closed on both sides (`Text(PurchaseCopy.swipeBuy)`,
+  `Image("ActionBuy")`, `.accessibilityLabel(PurchaseCopy.markAsBought)`), so
+  a rename to `…X` cannot satisfy it. One leg is declared as reddened by no
+  mutation run — `!buttons[1].contains("accentRust")` — but it is a genuine
+  negative over a slice the other legs prove is the right slice.
+  **Recorded for T012 and any later asset work**: an `Assets.xcassets` change
+  forces a far slower `xcodebuild test` than a source change — each icon
+  mutation took over ten minutes against roughly two for a Swift-only edit.
 
 - [ ] **T009 — The wishlist detail's menu row, its sheet, and dismiss-on-bought.**
   Per plan §8 and **R2**. In `WishlistDetailView`: the `DetailOverflowMenu`
@@ -894,4 +923,5 @@ orchestrator had to redo, and why) are recorded here too.
 | `sdd-implementer` — T006a (B1 + five second-look) | `opus` (same agent resumed) | 45k more | B1 fixed in the one writer; 12-leg mutation; caught a clock coincidence in its own new test |
 | `skeptical-reviewer` — Phase 1 re-review | `opus` (same agent resumed) | 16k more | Signed off; nothing blocking; found a mis-spliced doc comment (orchestrator fixed) and one device-pass residual |
 | `sdd-implementer` — T007 (the purchase sheet) + the unbounded-date guard | `opus` | 107k | Done first pass; 7 mutations; caught a substring false-pass in its own leg before landing it, and found the same shape in merged code |
+| `sdd-implementer` — T008 (the Buy swipe, the sheet on the list, the `ActionBuy` glyph) | `opus` | 104k | Done first pass; 6 mutations (2 beyond the task line, to back its own added legs); the imageset needed no project edit |
 | _rows added per dispatch as the spec runs_ | | | |
