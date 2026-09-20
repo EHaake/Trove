@@ -137,7 +137,7 @@ four as questions, not facts.
   bundles: `Item.isSold` is declared in `Trove/Models/Sale.swift`, not
   `Item.swift`.
 
-- [ ] **T002 — `Purchase` and `PurchaseCopy`.**
+- [x] **T002 — `Purchase` and `PurchaseCopy`.**
   Per plan §2, Q2, Q3 and Q7. New `Trove/Models/Purchase.swift`
   (`nonisolated struct Purchase: Sendable, Equatable` — `date`, `priceCents`,
   `location: String?`, `condition: Condition`) and
@@ -158,6 +158,24 @@ four as questions, not facts.
   (new), `TroveTests/PurchaseCopyTests.swift` (new).
   **Verify:** `scripts/verify.sh` green, the new suite **in the count** (stop
   and flag if it is not); mutations recorded.
+  **Done** (2026-09-19): both value files landed in the synchronized folders
+  with no `.pbxproj` edit; new `PurchaseCopyTests` suite "Purchase copy"
+  (7 tests) **is in the count** — `scripts/verify.sh` green at **1562 tests
+  in 212 suites** (baseline 1555/211). Mutations, all reverted: swap
+  more/less → 4 issues across both comparison tests; drop the zero-estimate
+  guard → the no-estimate case red; drop the sub-dollar floor → 3 issues
+  (the 40¢ case *and* the exact-equality case, one more than predicted).
+  **Deviations**: (a) the task line predicted the dropped-guard case would
+  read "$2,400 less than you estimated" — with the spec's own sign
+  convention (`paid − estimate`) a $2,400 purchase against a 0 estimate
+  reads "more"; the spec's convention was implemented and the test still
+  reddens. (b) `boughtFromPlaceholder`'s wording is given nowhere in spec or
+  plan, so it mirrors `SaleCopy.soldAtPlaceholder`: "eBay, Reverb, a
+  friend…". One-line reword if T012's pass wants otherwise.
+  **Recorded for T013**: exact-equality silence is carried by the sub-dollar
+  floor alone (`abs(delta) >= 100` covers delta 0) — if the floor is ever
+  removed at the person's request, criterion 6's equality case needs an
+  explicit `deltaCents != 0` guard to replace it.
 
 - [ ] **T003 — `WishlistPurchaseStore.markBought` — the one writer. `review: per-task`.**
   Per plan §3, Q4, Q5, Q6 and Q12. New
@@ -663,4 +681,5 @@ orchestrator had to redo, and why) are recorded here too.
 | `skeptical-reviewer` — sign-off re-review | `opus` | 100k | B1 and S1–S6 confirmed resolved; **2 new blocking findings introduced by the fix pass** (N1, N2 — both stale "untouched" claims about `DetailOverflowMenu`). Loop cap reached, so the orchestrator fixed both directly and logged them, per `CLAUDE.md` |
 | Orchestrator — post-re-review corrections | `opus` (session, medium) | n/a | N1, N2, plus four second-look items the re-review named: the "exactly one `Row`" phrasing (would redden on correct code), G18's gate spelling, the convenience initializer's fate, and Q10's factually-wrong rationale |
 | `sdd-implementer` — T001 (the marker and the CloudKit mutation) | `opus` | 46k | Done first pass; both mutations red as planned; found a second CloudKit guard (`TwoStoreContainerTests`) |
+| `sdd-implementer` — T002 (`Purchase`, `PurchaseCopy`, the comparison line) | `opus` | 53k | Done first pass; 3 mutations red; two small deviations logged in the Done note |
 | _rows added per dispatch as the spec runs_ | | | |
