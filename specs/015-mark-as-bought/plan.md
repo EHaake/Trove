@@ -111,6 +111,38 @@ behind is `009`'s to surface or sweep, as this spec's Non-goals record.
   cross-device window deliberately** (a relaunch mid-screen, or two
   simulators), per `CLAUDE.md`'s instrument-the-mechanism rule.
 
+  **As built, measured at T012's device pass (2026-09-20).** Both pops fire,
+  in order: `sellPlan.dismiss` at +52 ms from confirm,
+  `detail.onAppear hasBeenBought=true` at +61 ms, `detail.dismiss` in the
+  same frame. The logic spans 61 ms; the **animations do not overlap**. The
+  detail screen's dismissal cannot be *requested* until `.onAppear` fires,
+  and `.onAppear` fires as the screen comes on — so SwiftUI plays the two
+  pops in sequence and the wanted item's detail page is drawn fully on
+  screen, unobscured and static, for **270–330 ms** (visible in some form
+  ~460 ms) before sliding off. Note the diagnosis does not blame the
+  platform: the serialisation is entailed by the trigger's design, not by a
+  `NavigationStack` defect, and it was established by a probe on the
+  mechanism rather than by a visual proxy for it.
+  **This is accepted for `015`** — decision review, 2026-09-20, recommending
+  (a) over suppressing the intermediate animation or popping to root.
+  Criterion 8 is about surfaces and copies — no Bought side, no Bought card,
+  no second copy in a list — and a screen unwinding is not a surface; R2
+  already specified the intermediate screen, so what the device pass found is
+  the *duration* of an anticipated transition, not an unanticipated one.
+  Criterion 8 is met; the polish bar is dented by ~300 ms on one of three
+  paths. The two alternatives are both worse than they look: suppressing the
+  second pop's animation removes the slide-off nobody is complaining about
+  and leaves a jump cut mid-movement, and popping to root is **not available
+  cheaply** — the Wishlist tab is `NavigationStack { WishlistView(…) }` with
+  **no path binding**, unlike Items' `$router.itemsPath`, so there is no root
+  path to clear. Both would also rewrite **G18**, whose `dismiss()` leg is
+  deliberately scoped inside the `markBought` branch — a source-text guard
+  re-spelled at close-out, weeks after the constitution's amendment about
+  exactly that shape. And decisively: **nothing chosen here could be guarded
+  by a test** — this plan says so itself, "the double pop is a thing only the
+  device can show." Deferred to `ROADMAP.md` with the fix direction named, so
+  the next spec inherits the analysis rather than repeating it.
+
 ## Proposed at planning (Q1–Q14) — approved on plan approval unless overturned
 
 - **Q1. The marker is one optional `Date`, and nothing else.**

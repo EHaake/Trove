@@ -940,7 +940,7 @@ four as questions, not facts.
 
 ## Phase 3 — Verification and close-out
 
-- [ ] **T012 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver]**
+- [x] **T012 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver]**
   Per plan §9 and every criterion, on the iPhone simulator with `-uiTesting
   -seedSellPlan`, and once more on the **persistent** store for the relaunch.
   **Instrument, don't eyeball**: a temporary file probe inside
@@ -976,6 +976,83 @@ four as questions, not facts.
   **Verify:** the record in the Done note with the probe's count per action per
   host, the filmed pop, the credit observation and the relaunch result;
   `scripts/verify.sh all` green twice.
+  **Done** (2026-09-20), agent's half. `scripts/verify.sh all` green **twice**:
+  1615 tests / 224 suites and `Executed 25 tests, with 0 failures` both runs.
+  Working tree confirmed byte-identical to HEAD afterwards by hash and
+  `git diff --exit-code`; every probe removed.
+  **The probe's counts — nothing but a confirm ever reached `markBought`:**
+
+  | Action | swipe | menu | Sell Plan |
+  |---|---|---|---|
+  | Cancel | 0 | 0 | 0 (×3) |
+  | Swipe-down dismiss | 0 | — | — |
+  | Background → foreground | 0 | — | — |
+  | Appearance change | 0 | — | — |
+  | Confirm | 1 | 1 | 1 (×2) |
+
+  **Passed**: three entry points, one identically-seeded sheet, each cancelling
+  inert; the swipe's three buttons ascending on both appearances (`minX` 10 /
+  70 / 130, read from the tree, not the picture) with a full swipe still
+  opening Edit; the comparison line in sentence case appearing, changing and
+  vanishing as typed; the moved photo with its **STOCK PHOTO** badge and
+  credit intact (criterion 7); the entry gone and the Dashboard picking the
+  item up with no new surface (criteria 8, 10) — desire dial at the default 3,
+  the item last under Custom sort; today's empty state on buying the last
+  entry (criterion 11); **relaunch on the persistent store** (criterion 12's
+  persistence half); Delete-All disabled with a bought entry and enabled
+  without, the items CSV carrying it with unchanged headers and the wishlist
+  CSV **header-only** (criterion 13, R1); two sheets on one view never
+  stranding each other.
+  **The swipe's spoken name, read from the accessibility tree:
+  `Mark as bought…`** — the modifier took; it does **not** read "Buy". For
+  `DECISIONS.md` at T013.
+  **Findings:**
+  1. **R2's two pops step.** Instrumented, not inferred: both fire in order
+     (`sellPlan.dismiss` +52 ms, `detail.onAppear hasBeenBought=true` +61 ms,
+     `detail.dismiss` same frame) and it lands on the Wishlist — but SwiftUI
+     animates them sequentially, so the wanted page sits **fully on screen,
+     static, for 270–330 ms** still reading WANTED. Filmed. **Went to a
+     decision review, which recommended accepting it**; `plan.md` R2 carries
+     the "As built" paragraph and T013 adds the roadmap entry with the fix
+     direction named (own the Wishlist's route at the root — the tab has no
+     path binding today, unlike Items).
+  2. **The bag glyph reads as a puzzle** — the agent's plain judgement. Fine
+     beside a word in the swipe and the menu; alone in a toolbar a bare
+     outline bag most often means *cart*, on the one screen whose subject is
+     selling. **The person's call** (plan §8's one-line fallback is a button
+     reading "Bought").
+  3. **The sheet's title truncates to `Mark as bo…`** on all three hosts,
+     because the confirm button "Mark as bought" takes the width. Cosmetic,
+     on every purchase. **The person's call.**
+  4. **"Bought from" could not be typed into at the medium detent** by
+     synthetic taps — but **the shipped sale sheet's "Sold at" behaves
+     identically**, and the large detent works, so this isolates to the
+     harness, not to `015`. One hand check owed.
+  **Could not be checked, stated plainly rather than implied to pass:**
+  - **The cross-device window** (carried item 2). A relaunch resets
+    navigation to the root, so the "screen already in the foreground when
+    the marker arrives" state cannot be rebuilt that way; the only in-app
+    window is the ~300 ms of finding 1, shorter than one round trip of the
+    tap tooling. **`alreadyBought` remains proven only by the unit test —
+    the person's two-device step is the real check.**
+  - **Criterion 14** (no network) was not separately proven on device; the
+    purchase path takes no service, but the absence of a connection could not
+    be observed without cutting the session. T013 ticks it by inspection.
+  - **Criterion 9**'s retained record is **not observable through the UI**
+    once the entry leaves the Wishlist, and by criterion 13 it is in no
+    export. The unit tests are the only witness, and T013 must say so.
+  - **Criterion 12's VoiceOver half** and the two-device sync are the
+    person's steps, still outstanding.
+  **Also recorded**: a just-bought item's row reads `$2,400  +0 vs paid` in
+  green — judged deliberate, since the format is every other row's and "no
+  change yet" is truthful for an item whose value starts at its price. And
+  the comparison line's **no-estimate** case is **unreachable through the
+  app's own forms** — the wanted-item form refuses to save without an
+  estimated cost, so only an import can produce one (which also exercised
+  criterion 13's import leg).
+  **Pre-existing, not `015`'s**: in Light, the swipe's Edit and Copy glyphs
+  are white on a near-white circle and read faintly; the Buy button is the
+  legible one.
 
 - [ ] **T013 — Close-out.**
   Per plan §10. Criteria 1–15 ticked in `spec.md` with per-criterion citations
@@ -1100,4 +1177,6 @@ orchestrator had to redo, and why) are recorded here too.
 | `sdd-implementer` — T011a (B1 + two second-look) | `opus` (T010's agent resumed) | 20k more | B1 fixed; 5 mutations, incl. re-running the inherited leg's mutation rather than assuming it |
 | `skeptical-reviewer` — Phase 2 re-review | `opus` (same agent resumed) | 13k more | Signed off; nothing blocking; declined to raise any second-look item, with reasons |
 | `sdd-implementer` — T011b (sentence case, the person's decision) | `opus` | 61k | Done first pass; 2 mutations; found the line's treatment was pinned by nothing and added the legs |
+| `general-purpose` (simulator tools) — T012 device pass | `opus` | 345k | Agent's half done; 4 findings, 4 things it could not check and said so; probe counts clean; suites green twice |
+| `skeptical-reviewer` — decision review, R2's stepping pops | `opus` | 42k | Recommended **accept**; criterion 8 not broken (surfaces vs. a stack unwinding); both alternatives worse, and nothing chosen could be guarded by a test |
 | _rows added per dispatch as the spec runs_ | | | |
