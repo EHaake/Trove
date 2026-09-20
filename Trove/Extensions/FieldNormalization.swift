@@ -32,4 +32,24 @@ nonisolated enum FieldNormalization {
     /// (the forms `Calendar.current`, `ImportSchema.year(from:)` the time
     /// zone and instant it is handed).
     static let earliestYear = 1900
+
+    /// A typed four-digit year, or `nil` when the text is blank *or*
+    /// unusable. Callers tell the two apart themselves: for both form view
+    /// models a blank field is the "any year" answer and anything else that
+    /// fails to parse is a validation error.
+    ///
+    /// Here for the reason `earliestYear` is here — the item form and the
+    /// wishlist form held byte-identical copies of this, which is the drift
+    /// the one-definition move exists to prevent.
+    ///
+    /// `maximum` is a parameter rather than a constant beside `earliestYear`
+    /// deliberately, preserving the split that constant already documents:
+    /// the lower bound is shared, the upper one moves with the calendar and
+    /// each caller reads a clock of its own.
+    static func parsedYear(_ text: String, maximum: Int) -> Int? {
+        let text = trimmed(text)
+        guard text.count == 4, text.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        guard let value = Int(text), (earliestYear...maximum).contains(value) else { return nil }
+        return value
+    }
 }

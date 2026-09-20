@@ -177,6 +177,21 @@ struct CategoryPathHelper {
         known.first { $0.caseInsensitiveCompare(typedPath) == .orderedSame } ?? typedPath
     }
 
+    /// The form-save path: trim what was typed, canonicalize it against the
+    /// paths already in use, and fall back to the typed text when the fetch
+    /// fails. One definition, for the reason the pair above records — the two
+    /// form view models held byte-identical private copies of exactly this.
+    ///
+    /// Deliberately here rather than in `FieldNormalization` beside the year
+    /// parsing it was hoisted with: that type is `nonisolated` string work the
+    /// import pipeline runs off the main actor, and a `ModelContext` parameter
+    /// would put a non-Sendable type in its API for a caller that is always on
+    /// the main actor anyway.
+    static func canonicalOrTyped(_ typedPath: String, in modelContext: ModelContext) -> String {
+        let typed = FieldNormalization.trimmed(typedPath)
+        return (try? CategoryPathHelper(modelContext: modelContext).canonicalize(typed)) ?? typed
+    }
+
     /// Every distinct path in use, case-insensitively, keeping whichever
     /// casing was attached to the earliest-created record using that path.
     private func canonicalPaths() throws -> [String] {

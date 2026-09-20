@@ -114,11 +114,11 @@ final class WishlistFormViewModel {
         guard validationErrors.isEmpty else { return false }
 
         let item = editingItem ?? WishlistItem()
-        item.name = Self.trimmed(name)
+        item.name = FieldNormalization.trimmed(name)
         item.categoryPath = canonicalCategoryPath()
         item.estimatedCostCents = Money.cents(from: estimatedCost ?? 0)
         item.year = parsedYear
-        item.notes = Self.nilIfBlank(notes)
+        item.notes = FieldNormalization.nilIfBlank(notes)
         item.desireToOwn = desireToOwn
         // Assigning the whole set, not appending: SwiftData sets each photo's
         // `wishlistItem` inverse from this side, and anything the user removed
@@ -168,7 +168,7 @@ final class WishlistFormViewModel {
     /// The picker's view model, seeded with the form's current **name** and
     /// nothing else — the whole of what a search may send (spec P1).
     func makePhotoFetchViewModel() -> PhotoFetchViewModel {
-        PhotoFetchViewModel(seed: Self.trimmed(name), service: photoService)
+        PhotoFetchViewModel(seed: FieldNormalization.trimmed(name), service: photoService)
     }
 
     /// Find a photo…: the notice stands in front the first time on this
@@ -218,25 +218,22 @@ final class WishlistFormViewModel {
 
     private func validate() -> Set<ValidationError> {
         var errors: Set<ValidationError> = []
-        if Self.trimmed(name).isEmpty { errors.insert(.nameMissing) }
-        if Self.trimmed(categoryPath).isEmpty { errors.insert(.categoryMissing) }
+        if FieldNormalization.trimmed(name).isEmpty { errors.insert(.nameMissing) }
+        if FieldNormalization.trimmed(categoryPath).isEmpty { errors.insert(.categoryMissing) }
         if let estimatedCost {
             if estimatedCost < 0 { errors.insert(.costNegative) }
         } else {
             errors.insert(.costMissing)
         }
-        if !Self.trimmed(yearText).isEmpty, parsedYear == nil { errors.insert(.yearInvalid) }
+        if !FieldNormalization.trimmed(yearText).isEmpty, parsedYear == nil { errors.insert(.yearInvalid) }
         return errors
     }
 
-    /// The typed year, or `nil` when the field is blank *or* unusable —
-    /// `validate()` tells the two apart. Mirrors the item form exactly.
+    /// The typed year. Blank and unusable both read as `nil` here;
+    /// `validate()` is what tells the two apart. Shares one definition with
+    /// the item form rather than mirroring it.
     private var parsedYear: Int? {
-        let text = Self.trimmed(yearText)
-        guard text.count == 4, text.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
-        guard let value = Int(text),
-              (FieldNormalization.earliestYear...maximumYear).contains(value) else { return nil }
-        return value
+        FieldNormalization.parsedYear(yearText, maximum: maximumYear)
     }
 
     private func nextSortOrder() -> Int {
@@ -245,9 +242,7 @@ final class WishlistFormViewModel {
     }
 
     private func canonicalCategoryPath() -> String {
-        let typed = Self.trimmed(categoryPath)
-        let helper = CategoryPathHelper(modelContext: modelContext)
-        return (try? helper.canonicalize(typed)) ?? typed
+        CategoryPathHelper.canonicalOrTyped(categoryPath, in: modelContext)
     }
 
     private func populate(from item: WishlistItem) {
@@ -258,15 +253,5 @@ final class WishlistFormViewModel {
         notes = item.notes ?? ""
         photos = item.photos ?? []
         desireToOwn = item.desireToOwn
-    }
-
-    // Delegating to the shared definition since 012/T005 — see the note in
-    // ItemFormViewModel and FieldNormalization itself.
-    private static func trimmed(_ value: String) -> String {
-        FieldNormalization.trimmed(value)
-    }
-
-    private static func nilIfBlank(_ value: String) -> String? {
-        FieldNormalization.nilIfBlank(value)
     }
 }
