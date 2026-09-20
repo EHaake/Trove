@@ -112,6 +112,14 @@ struct SellPlanView: View {
         // confirmed purchase means is decided here, through `markBought`, the
         // one path into the store. A purchase that took pops this screen (R2),
         // since the plan's subject is no longer wanted.
+        //
+        // Only one that took. A refused save rolls back, so the entry and its
+        // plan are still exactly as they were, and popping would move the
+        // person off a screen that is still correct. Worth being plain about
+        // what that costs: `markBought` records the reason in
+        // `saveFailureMessage`, and **no view in the app reads that property**
+        // — so a refusal is silent today, and staying put is the whole of what
+        // the person is told.
         .sheet(isPresented: $isMarkingBought) {
             PurchaseFormView(
                 viewModel: viewModel.makePurchaseFormViewModel(),

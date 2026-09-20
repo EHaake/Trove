@@ -861,6 +861,55 @@ four as questions, not facts.
   work for XCTest UI tests (~15–25 s each against ~9 min for the suite),
   unlike the Swift Testing ones; the suite is now 25 tests at ~9 min a run.
 
+- [x] **T011a — The Phase 2 review's blocking finding: cancelling has to change nothing.**
+  Raised by the phase review. **Criterion 4's cancel half was unguarded on
+  two of the three hosts.** Both flag-based hosts' tests descended into
+  `confirm:` and stopped; nothing in the project asserted
+  `isMarkingBought = false` anywhere, and no UI test opens either of those
+  sheets. Deleting that one line from either cancel closure left the unit
+  suite at 1614/224 and the UI suite at 25/0 **while Cancel stopped closing
+  the sheet at all** — the person would have met it at the walkthrough.
+  **It was a family, not an instance**: the list host was covered only
+  because its clear appears twice and the test counts occurrences. Worth
+  watching on any future `.sheet(isPresented:)` host — the confirm path is
+  the interesting one to write a test for, and the cancel path is the one
+  that silently breaks the sheet entirely.
+  Fixed with a cancel leg on each uncovered host, `#require`ing the closure
+  was found before asserting. **Three mutations**, all reverted — including
+  emptying `WishlistView`'s closure, the host that already had a leg, run
+  because an inherited leg that is assumed to work is how a false pass
+  survives. Each reddened its own host's test and only that.
+  Also fixed: **a comment asserting something untrue** — `SellPlanView`
+  justified scoping `dismiss()` inside the `markBought` branch because an
+  unconditional dismiss "would throw away a refused save's message", but no
+  view in the app reads any failure message. The behaviour is right and the
+  reason was false; both now say so plainly, including that the refusal is
+  silent *today*, which leaves the gap legible rather than deleted. And
+  **two legs G21 was missing**: criterion 6's "shows nothing when they are
+  equal" on the view side (`Text(viewModel.comparisonLine ?? "")` would have
+  satisfied the old scan — mutation D reddens **only** the new test, with
+  the order and identifier tests staying green, which demonstrates the hole
+  rather than asserting it) and plan §7's no-colour-branch rule.
+  `scripts/verify.sh` green at **1615 tests in 224 suites**, re-run by the
+  orchestrator. UI suite deliberately not re-run — the only shipping change
+  is a comment, and comments are stripped before any scan reads a file.
+  **Re-reviewed and signed off; nothing blocking remains.**
+  **Carried to the sweep and the tier log**: the wanted entry's page offers
+  the row over a missing entry while the Sell Plan gates it — no criterion
+  requires the gate, plan §8 states the rule only for the Sell Plan, and the
+  page's Edit and Delete rows carry the identical exposure from `006`, so
+  gating only the new row would be inconsistent and gating all three is
+  larger than this spec; and criterion 2's guard counts the symbol, so a page
+  button typed as a raw literal would pass.
+  **Carried to T012, and the framing matters**: criteria 2, 3 and R2 have
+  **no automated end-to-end coverage** — the one end-to-end test runs the
+  swipe, the only path involving no navigation. The Sell Plan's confirm is
+  the device pass's first item, and **the double pop must be confirmed by
+  instrumenting the pops, not by arriving at the Wishlist and inferring
+  them**: "I ended up on the right screen" and "both dismissals fired in the
+  right order" are different claims, and the R2 chain is three dismissals
+  deep with a sheet animating through the first two.
+
 ## Phase 3 — Verification and close-out
 
 - [ ] **T012 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver]**
@@ -1019,4 +1068,7 @@ orchestrator had to redo, and why) are recorded here too.
 | `sdd-implementer` — T009 (the menu row, the `006` reversal, the rewritten guard) | `opus` | 115k | Done first pass; 8 mutations; **demonstrated the `.init(` dodge** by running the old guard beside the new one; found the `#Preview`-in-a-comment scan landmine |
 | `sdd-implementer` — T010 (the Sell Plan's gated bar button and its sheet) | `opus` | 77k | Done first pass; 3 mutations; additions only; checked its new literals against the two neighbouring suites' scans |
 | `sdd-implementer` — T011 (the two UI tests, suite run twice) | `opus` | 92k | Done first pass; 3 mutations; UI 23 → 25, both runs identical; found the owned-vs-sold row element-type difference by probing rather than guessing |
+| `skeptical-reviewer` — Phase 2 review | `opus` | 126k | **1 blocking** (B1: criterion 4's cancel half unguarded on two of three hosts), 6 second-look |
+| `sdd-implementer` — T011a (B1 + two second-look) | `opus` (T010's agent resumed) | 20k more | B1 fixed; 5 mutations, incl. re-running the inherited leg's mutation rather than assuming it |
+| `skeptical-reviewer` — Phase 2 re-review | `opus` (same agent resumed) | 13k more | Signed off; nothing blocking; declined to raise any second-look item, with reasons |
 | _rows added per dispatch as the spec runs_ | | | |

@@ -170,6 +170,35 @@ struct WishlistPurchaseWiringTests {
         )
     }
 
+    /// The two things the spec says *about* the comparison line, which G21
+    /// pinned the presence and position of but neither of: criterion 6's "shows
+    /// nothing when they are equal" — which holds only if the view asks the
+    /// optional rather than defaulting it, since `Text(viewModel.comparisonLine
+    /// ?? "")` would place an empty line's padding and still satisfy every
+    /// other scan here — and plan §7's "no colour branch", the spec's "not
+    /// colour-coded as gain or loss", since an observation that turns red or
+    /// green is a verdict. The swipe's `!contains("accentRust")` leg, three
+    /// tests down, is the same shape for the same reason.
+    ///
+    /// Mutations: rewrite as `Text(viewModel.comparisonLine ?? "")` → red;
+    /// colour it with any accent → red.
+    @Test func theComparisonLineIsConditionalOnTheOptionalAndCarriesNoAccent() throws {
+        let code = try SourceScan.production(Self.sheet)
+
+        let bodies = SourceScan.closureBodies(after: "private var comparison: some View", in: code)
+        try #require(bodies.count == 1, "the sheet declares \(bodies.count) comparison lines, expected exactly 1")
+        let comparison = try #require(bodies.first)
+
+        #expect(
+            comparison.contains("if let line = viewModel.comparisonLine"),
+            "the comparison line isn't conditional on the optional, so equal figures would still place a line (criterion 6):\n\(comparison)"
+        )
+        #expect(
+            !comparison.contains("accent"),
+            "the comparison line wears an accent colour — it is an observation, not a verdict on gain or loss (plan \u{00A7}7):\n\(comparison)"
+        )
+    }
+
     // MARK: - The list's swipe (G15)
 
     /// G15, criterion 1 from the list's side: the wishlist row's one leading
@@ -328,9 +357,14 @@ struct WishlistPurchaseWiringTests {
     /// Sell Plan's are, and confirmed through `markBought` — the write stays
     /// the view model's, so the page never names the store.
     ///
+    /// Cancelling lowers the binding (criterion 4: cancelling changes nothing
+    /// at all). Without it the sheet does not close at all, since
+    /// `isPresented` stays true — and nothing else in the project asserts it.
+    ///
     /// Mutations: seed a `PurchaseFormViewModel` in the view → red; confirm
     /// into anything but `markBought` → red; present the sheet twice → the
-    /// `#require` fails.
+    /// `#require` fails; drop `isMarkingBought = false` from the cancel
+    /// closure → red.
     @Test func thePurchaseSheetIsPresentedOnceOverTheEntryThePageHolds() throws {
         let code = try SourceScan.production(Self.detail)
 
@@ -353,6 +387,14 @@ struct WishlistPurchaseWiringTests {
             sheet.contains("viewModel.markBought(purchase: purchase)"),
             "the sheet confirms into something other than `markBought`, the one path into the store:\n\(sheet)"
         )
+
+        let cancels = SourceScan.closureBodies(after: "cancel:", in: sheet)
+        try #require(cancels.count == 1, "the sheet carries \(cancels.count) cancel closures, expected exactly 1")
+        #expect(
+            cancels[0].contains("isMarkingBought = false"),
+            "cancelling doesn't lower the binding, so the sheet would not close at all (criterion 4):\n\(cancels[0])"
+        )
+
         #expect(
             !code.contains("WishlistPurchaseStore"),
             "the page names the purchase store directly — the write belongs behind the view model"
@@ -467,11 +509,21 @@ struct WishlistPurchaseWiringTests {
     /// by the view model exactly as the list's and the page's are, and a
     /// purchase that *took* pops this screen, since the plan's subject is no
     /// longer wanted. `dismiss()` is required inside the `markBought` branch
-    /// rather than anywhere in the closure, so dismissing unconditionally —
-    /// which would throw away a refused save's message — fails here too.
+    /// rather than anywhere in the closure, so dismissing unconditionally
+    /// fails here too: a refused save rolls back, leaving the entry and its
+    /// plan exactly as they were, and the person should stay on a screen that
+    /// is still correct rather than be popped off it. Worth being plain about
+    /// what that costs — `saveFailureMessage` is read by no view in the app,
+    /// so a refusal is silent today, and staying put is the whole of what the
+    /// person is told.
+    ///
+    /// Cancelling lowers the binding (criterion 4: cancelling changes nothing
+    /// at all). Without it the sheet does not close at all, since
+    /// `isPresented` stays true — and nothing else in the project asserts it.
     ///
     /// Mutations: drop the `dismiss()` → red; host the sheet twice → red;
-    /// dismiss outside the branch → red.
+    /// dismiss outside the branch → red; drop `isMarkingBought = false` from
+    /// the cancel closure → red.
     @Test func thePlansPurchaseSheetIsHostedOnceAndPopsTheScreenOnlyOnceItTakes() throws {
         let code = try SourceScan.production(Self.plan)
 
@@ -502,6 +554,13 @@ struct WishlistPurchaseWiringTests {
         #expect(
             took[0].contains("dismiss()"),
             "a purchase that took doesn't pop the plan, so the person would be left on a plan for something they now own (R2):\n\(confirm)"
+        )
+
+        let cancels = SourceScan.closureBodies(after: "cancel:", in: sheet)
+        try #require(cancels.count == 1, "the sheet carries \(cancels.count) cancel closures, expected exactly 1")
+        #expect(
+            cancels[0].contains("isMarkingBought = false"),
+            "cancelling doesn't lower the binding, so the sheet would not close at all (criterion 4):\n\(cancels[0])"
         )
 
         #expect(
