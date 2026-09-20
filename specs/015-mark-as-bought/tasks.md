@@ -524,7 +524,7 @@ four as questions, not facts.
 
 ## Phase 2 — Screens
 
-- [ ] **T007 — The purchase sheet.**
+- [x] **T007 — The purchase sheet.**
   Per plan §7, Q8 and the spec's Copy and Design requirements. New
   `Trove/Views/Wishlist/PurchaseFormView.swift`: `SaleFormView`'s
   `NavigationStack`, detents, toolbar pair, `PlateSurface` chrome and rust
@@ -549,6 +549,40 @@ four as questions, not facts.
   **Verify:** `scripts/verify.sh` green, the new suite in the count; mutations
   recorded. No simulator check here — T012 covers the sheet's look, its live
   comparison line and its spoken field names.
+  **Done** (2026-09-20): the sale sheet's twin — same `NavigationStack`,
+  detents, toolbar pair, `PlateSurface` chrome and rust invalid border; the
+  date popover **unbounded** (Q9); the comparison line beneath the price with
+  no colour branch; condition as capsules, not a picker. The file names no
+  `SaleCopy`, no `"Note"`, no `ModelContext` and no `WishlistPurchaseStore`.
+  New suite **in the count** — `scripts/verify.sh` green at **1607 tests in
+  224 suites** (baseline 1602/223). **Seven mutations**, all reverted:
+  reordering the fields' *composition* and reordering their *declarations*
+  (both needed — either edit alone moves the fields, and only walking both
+  catches both); confirm without the `purchase()` guard; a
+  `.pickerStyle(.menu)` condition control → **`MenuPolicyTests` red**, so the
+  tempting mistake is genuinely blocked; each of the four naming legs firing
+  independently; a renamed identifier; and a date bound pasted back in.
+  **A leg was found false-passing while being written and restructured before
+  it landed**: `code.contains("purchase.sheet.comparison")` is satisfied by
+  the longer literal `"purchase.sheet.comparisonX"`, so renaming the
+  identifier left it green. It now compares whole string literals.
+  **Two additions beyond the task line, both declared and mutation-verified**:
+  `theIdentifiersArePresent` (T012 drives the sheet by those identifiers), and
+  — at the orchestrator's request, from the implementer's own finding —
+  `theDatePickerIsUnbounded`. The second is the twin-file risk plan Q9 names:
+  paste `in:` back from `SaleFormView` and the deliberate divergence vanishes
+  with nothing red. It passes the constitution's source-scan rule for the
+  right reason — the view model's side is already covered behaviourally, but
+  a *popover's bound* is a view-body fact no view-model test can observe.
+  **Two findings carried to the close-out**: (a) **the same substring
+  false-pass shape lives in merged code** — `SaleFormWiringTests.theIdentifiersArePresent`
+  stays green if `sale.sheet.price` is renamed to `sale.sheet.priceX`. Per
+  `CLAUDE.md`'s audit-the-shape rule this wants a scan of every `*WiringTests`
+  for substring identifier checks, and per its merged-code rule that is a
+  `fix/` branch of its own, not this spec. (b) `monoLabel` uppercases, so the
+  comparison line reads **"$120 LESS THAN YOU ESTIMATED"**. That is what plan
+  §7 specifies verbatim, and whether it reads as the "quiet" supporting text
+  the spec asks for is **the person's call at the Phase 2 pause**.
 
 - [ ] **T008 — The Wishlist row's Buy swipe, the sheet on the list, the `ActionBuy` icon.**
   Per plan §8 and Q14. In `WishlistView`: `@State private var itemBeingBought:
@@ -859,4 +893,5 @@ orchestrator had to redo, and why) are recorded here too.
 | `skeptical-reviewer` — Phase 1 review | `opus` | 140k | **1 blocking** (B1: `markBought` not idempotent — only visible at phase level), 7 second-look |
 | `sdd-implementer` — T006a (B1 + five second-look) | `opus` (same agent resumed) | 45k more | B1 fixed in the one writer; 12-leg mutation; caught a clock coincidence in its own new test |
 | `skeptical-reviewer` — Phase 1 re-review | `opus` (same agent resumed) | 16k more | Signed off; nothing blocking; found a mis-spliced doc comment (orchestrator fixed) and one device-pass residual |
+| `sdd-implementer` — T007 (the purchase sheet) + the unbounded-date guard | `opus` | 107k | Done first pass; 7 mutations; caught a substring false-pass in its own leg before landing it, and found the same shape in merged code |
 | _rows added per dispatch as the spec runs_ | | | |
