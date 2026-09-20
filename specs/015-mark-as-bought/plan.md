@@ -1,11 +1,14 @@
 # 015 — Mark as Bought — Technical Plan
 
-**Status**: **Signed off** (2026-09-19) by the `skeptical-reviewer`. Sign-off
+**Status**: **Final** (2026-09-19) — the person approved the
+spec-conformance summary the same day, which is the product-owner gate per
+`CLAUDE.md`'s involvement level. Implementation may start.
+
+Signed off (2026-09-19) by the `skeptical-reviewer`. Sign-off
 raised one blocking finding, fixed and re-reviewed; the re-review raised two
 more (N1, N2 — stale "untouched" claims about `DetailOverflowMenu` that this
 spec's own §8 refutes), which the orchestrator fixed directly under the
-review loop cap. Each correction is marked in place. Pending the person's
-approval of the spec-conformance summary.
+review loop cap. Each correction is marked in place.
 
 Drafted by the `sdd-planner` (Opus 5, high effort — per `CLAUDE.md`'s model
 policy as amended 2026-09-19, where every role runs at `opus` and no dispatch

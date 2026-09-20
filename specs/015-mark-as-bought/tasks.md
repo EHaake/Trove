@@ -1,10 +1,12 @@
 # 015 — Mark as Bought: Tasks
 
-**Status**: **Signed off** (2026-09-19) by the `skeptical-reviewer` — one
+**Status**: **Final** (2026-09-19) — the person approved the
+spec-conformance summary the same day. No task has started.
+
+Signed off (2026-09-19) by the `skeptical-reviewer` — one
 blocking finding fixed and re-reviewed, two further blocking findings raised
 by the re-review and fixed by the orchestrator under the loop cap, all logged
-in the tier log. Pending the person's approval of the spec-conformance
-summary; no implementation task starts before that.
+in the tier log.
 
 Drafted against the approved `spec.md` (Approved 2026-09-19) and the draft
 `plan.md` in this directory, for branch `015-mark-as-bought` off `main`
@@ -597,6 +599,35 @@ four as questions, not facts.
   **Verify:** everything above committed and pushed; `scripts/verify.sh all`
   green with the final counts recorded here (unit **and** UI lines both
   captured).
+
+## Constitution changes since sign-off
+
+`main` moved after these documents were signed off, and two commits bear on
+them. The branch has `main` merged in as of 2026-09-19.
+
+1. **`CLAUDE.md`'s Testing section gained a rule about source scans**
+   (`5026305`): *a source scan may pin an injection point that nothing else
+   can reach, and never a behavior a view-model test could reach instead.*
+   It binds work from that commit, which is **after** this plan's guards were
+   reviewed — so the first task that writes one should check it against the
+   rule rather than assume the sign-off covered it. A first read says the
+   planned scans survive, because each pins a fact about a **view body** that
+   no view-model test can observe: G14 (the marker assigned exactly once, so
+   no undo path exists), G15 (the swipe's button order), G17 (the menu row),
+   G18 (the toolbar gate). None of them asserts a view model's behaviour.
+   G18 is the one to look at hardest — the re-review already flagged that its
+   scan pins an exact spelling — and if any guard turns out to assert
+   something the view-model suite reaches, it goes to the phase review as a
+   finding rather than being written and left.
+
+2. **Two helpers moved** (`578b535`, PR #28), both in files this plan cites
+   as patterns. `parsedYear` is now `FieldNormalization.parsedYear(_:maximum:)`
+   and the form-save canonicalization is now
+   `CategoryPathHelper.canonicalOrTyped(_:in:)`; the four private forwarding
+   statics in `ItemFormViewModel` and `WishlistFormViewModel` are gone, and
+   their call sites name `FieldNormalization` directly. Plan §3's
+   `Item(...)`-plus-`sortOrder` sequence is unaffected, but anything copying
+   the forms' *shape* should copy the current one.
 
 ## Tier log
 
