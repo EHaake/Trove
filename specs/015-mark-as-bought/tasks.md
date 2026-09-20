@@ -358,7 +358,7 @@ four as questions, not facts.
   and both now state the traced reason. §4's "five left alone" list gained a
   sixth site with its reason.
 
-- [ ] **T005 — `PurchaseFormViewModel`.**
+- [x] **T005 — `PurchaseFormViewModel`.**
   Per plan §5, Q7, Q9 and Q10's seeding rule. New
   `Trove/ViewModels/PurchaseFormViewModel.swift`: `@Observable`, no SwiftUI
   import, `price: Decimal?` seeded from `estimatedCostCents` **only when it is
@@ -382,6 +382,28 @@ four as questions, not facts.
   `TroveTests/PurchaseFormViewModelTests.swift` (new).
   **Verify:** `scripts/verify.sh` green, the new suite in the count; mutations
   recorded.
+  **Done** (2026-09-19): `SaleFormViewModel` field for field, minus the mode
+  and the date bound; Foundation and Observation only, no SwiftUI. Three new
+  suites **in the count** — `scripts/verify.sh` green at **1591 tests in 219
+  suites** (baseline 1580/216). Mutations, both reverted: a `?? 0` seed → the
+  no-estimate case red on all three legs; a date rule added → **exactly one**
+  test red, the Q9 pin that names the divergence, which is the right blast
+  radius.
+  **Falsifiability walk done on every new assertion** (the discipline T003
+  and T004 forced): the estimate 240_000, the seeded price 2400, the typed
+  price 239_901 and the `.fair` condition are each distinct from every
+  default and from each other, so no leg passes by coincidence — and
+  `.excellent` is *not* `Condition`'s first case, which is what makes the
+  default assertion falsifiable at all.
+  **One assertion declared weak rather than dressed up**:
+  `namesTheSheetFromTheCopyTable` cannot catch `sheetTitle` and `confirm`
+  being swapped, because **they are the identical string "Mark as bought"**.
+  Kept, with a comment, because it does catch a hand-typed literal drifting
+  from the table. **T007 must not write a view test that looks like it pins
+  that wiring** — no test can.
+  **One extra test beyond the task's list, declared**: `readsABlankPriceAsZero`,
+  which is the only coverage of `comparisonLine`'s `?? 0` branch (plan §5
+  names it; the task line's "three typed prices" did not reach it).
 
 - [ ] **T006 — The three hosts' intents.**
   Per plan §6 and Q10. On `WishlistViewModel`, `WishlistDetailViewModel` and
@@ -768,4 +790,5 @@ orchestrator had to redo, and why) are recorded here too.
 | `sdd-implementer` — T004 (the exclusion rule at five read sites) | `opus` | 122k | Done first pass; 6 mutations; returned a finding that plan Q11's rationale is factually wrong |
 | `skeptical-reviewer` — T004 per-task review | `opus` | 90k | **No blocking findings**; 7 second-look, incl. a second false-passing shape (an assertion message claiming more than it can detect) and a missing sixth reader |
 | `sdd-implementer` — T004 second-look fixes | `opus` (same agent resumed) | 39k more | 4 applied, 2 new mutations; the `marketSummaries` leg turned out reachable after all (a cross-device purchase) |
+| `sdd-implementer` — T005 (`PurchaseFormViewModel`) | `opus` | 54k | Done first pass; 2 mutations; falsifiability walk found one assertion that cannot fail and said so instead of hiding it |
 | _rows added per dispatch as the spec runs_ | | | |
