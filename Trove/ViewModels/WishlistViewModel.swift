@@ -321,6 +321,47 @@ final class WishlistViewModel {
         load()
     }
 
+    // MARK: - Marking a wanted entry bought (015)
+
+    /// The purchase sheet for a row, seeded exactly as the wanted-entry page
+    /// and the Sell Plan seed their own (plan Q10): the price from the entry's
+    /// estimated cost when it has one and blank when it doesn't — never a
+    /// pre-filled $0, the 006 P1 rule — and today's date from this screen's
+    /// injected clock, so a test can pin it. One seeding rule for all three
+    /// hosts; G12 pins them equal.
+    func makePurchaseFormViewModel(for wanted: WishlistItem) -> PurchaseFormViewModel {
+        PurchaseFormViewModel(estimatedCostCents: wanted.estimatedCostCents, now: now)
+    }
+
+    /// Mark as bought… from a row: the entry becomes an owned item and leaves
+    /// this list.
+    ///
+    /// `WishlistPurchaseStore` is the one writer (015 plan Q4) and callers
+    /// save — the `delete(id:)` shape, one intent, one immediate save, no
+    /// separate step. `load()` then drops the entry, since it is bought now.
+    ///
+    /// Returns false on a refused save, which rolls back.
+    @discardableResult
+    func markBought(_ wanted: WishlistItem, purchase: Purchase) -> Bool {
+        do {
+            try WishlistPurchaseStore.markBought(wanted, purchase: purchase, at: now(), in: modelContext)
+            try modelContext.save()
+        } catch {
+            // The reload below fetches a context that still holds the pending
+            // insert and the pending marker, so it would hide a row that is
+            // still wanted and show an item that was never saved
+            // (`PersistenceTests.aFetchSeesTheContextsPendingInsertsAndDeletesUntilRollback`).
+            modelContext.rollback()
+            // `load()` first: it begins by clearing `loadFailureMessage`, so
+            // a message set before it never reached the screen.
+            load()
+            loadFailureMessage = error.localizedDescription
+            return false
+        }
+        load()
+        return true
+    }
+
     // MARK: - Export (011)
 
     /// See `ItemListViewModel`'s export section — one pattern, both lists.

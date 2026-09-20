@@ -1369,3 +1369,55 @@ struct WishlistBoughtExclusionTests {
         )
     }
 }
+
+// MARK: - 015/T006: the Wishlist row's purchase intent
+
+/// The host-specific half of T006's guards — the cross-host ones
+/// (`everyHostSeedsThePurchaseSheetIdentically`, the landing comparison and
+/// the refusal scan) live in `WishlistDetailViewModelTests`, where a claim
+/// about three screens agreeing can be stated once.
+@Suite("Marking bought from a Wishlist row")
+struct WishlistRowPurchaseTests {
+    private let now = Date(timeIntervalSince1970: 1_783_000_000)
+
+    private func purchase(priceCents: Int = 219_500) -> Purchase {
+        Purchase(date: Date(timeIntervalSince1970: 1_781_234_567), priceCents: priceCents, location: "Kerrisdale Cameras", condition: .good)
+    }
+
+    /// A successful purchase reloads, so the row is gone from the list, the
+    /// count behind the screen's chrome drops, and the header's total drops
+    /// with it — the three things `load()` is what supplies here.
+    @Test func aPurchaseTakesTheRowOffTheListImmediately() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        insertWanted("Summicron", category: "Photography/Lenses", costCents: 240_000, order: 0, into: context)
+        insertWanted("Vox AC15", category: "Music/Amps", costCents: 90_000, order: 1, into: context)
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context, now: { self.now })
+        viewModel.load()
+        #expect(viewModel.items.count == 2)
+        #expect(viewModel.totalCount == 2)
+        #expect(viewModel.totalEstimatedCostCents == 330_000)
+
+        let row = try #require(viewModel.items.first { $0.name == "Summicron" })
+        #expect(viewModel.markBought(row, purchase: purchase()))
+
+        #expect(viewModel.items.map(\.name) == ["Vox AC15"], "the bought entry leaves the list without a second load()")
+        #expect(viewModel.totalCount == 1, "and leaves the count the screen's chrome is gated on")
+        #expect(viewModel.totalEstimatedCostCents == 90_000, "and leaves the header's total")
+        #expect(viewModel.categoryOptions == ["Music/Amps"], "and leaves the chip row")
+        #expect(viewModel.loadFailureMessage == nil)
+
+        // A second context, so this is what actually reached the store rather
+        // than what the shared context is still holding unsaved.
+        let elsewhere = ModelContext(container)
+        let stored = try elsewhere.fetch(FetchDescriptor<Item>())
+        #expect(stored.map(\.name) == ["Summicron"], "the owned item is saved, not merely pending")
+        #expect(stored.first?.purchasePriceCents == 219_500, "at what was paid, not the 240,000 estimate")
+        let entries = try elsewhere.fetch(FetchDescriptor<WishlistItem>())
+        #expect(entries.count == 2, "the entry itself is kept, marked rather than deleted (Decision 3)")
+        #expect(entries.first { $0.name == "Summicron" }?.boughtDate == now)
+        #expect(entries.first { $0.name == "Vox AC15" }?.boughtDate == nil)
+    }
+}

@@ -405,7 +405,7 @@ four as questions, not facts.
   which is the only coverage of `comparisonLine`'s `?? 0` branch (plan §5
   names it; the task line's "three typed prices" did not reach it).
 
-- [ ] **T006 — The three hosts' intents.**
+- [x] **T006 — The three hosts' intents.**
   Per plan §6 and Q10. On `WishlistViewModel`, `WishlistDetailViewModel` and
   `SellPlanViewModel`: `makePurchaseFormViewModel(for:)` (the detail's and the
   plan's take no argument — their subject is the entry they hold) and
@@ -455,6 +455,70 @@ four as questions, not facts.
   `TroveTests/DashboardViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded; `scripts/verify.sh ui`
   once at the phase end, count recorded (the `014` Phase 1 review's cadence).
+  **Done** (2026-09-19): the three hosts each got the two members, with the
+  three *different* failure orderings plan §6 specifies — `WishlistViewModel`
+  reports after `load()` because its `load()` clears that property, the other
+  two before. `scripts/verify.sh` green at **1599 tests in 223 suites**
+  (baseline 1591/219) and `scripts/verify.sh ui` green: `Executed 23 tests,
+  with 0 failures (0 unexpected)`. **Fourteen mutations**, all reverted, each
+  naming the leg it reddened — including M7, which is the `014` T005 ordering
+  bug deliberately reintroduced and caught.
+  **Three assertion legs deleted as unfalsifiable rather than shipped**: the
+  cross-host `title`/`confirmLabel` comparison (get-only constants on one
+  type), and a `fetch(WishlistItem).isEmpty` leg that asserted its own setup.
+  **One fixture coincidence found and fixed by the implementer** before
+  reporting: a seed of `desireToOwn: 3` would have let a store carrying the
+  wanting scale across pass. That is the fifth instance of this shape in the
+  spec and the second caught before review.
+  **Recorded**: the Dashboard's breakdown groups by the *leading* path
+  segment, so G22's fixture needed three different roots to exercise it;
+  `FetchDescriptor<Item>` order is not insertion order, so the landing helper
+  selects by name.
+
+- [ ] **T006a — The Phase 1 review's blocking finding: a purchase can only happen once.**
+  Raised by the phase review, not by the plan. **`markBought` was not
+  idempotent**: there was no `isBought` check in the store or in any host, so
+  a second call inserted a **second `Item`** and **re-stamped `boughtDate`,
+  destroying the first purchase's marker** — the duplicate criterion 8
+  forbids, with no undo to correct it. Two windows reached it, and the first
+  is the case R2 exists for: `.onAppear` fires on push and on return, **not
+  when the data changes underneath**, so a marker arriving from another
+  device (criterion 12 says it syncs) leaves the action live on a foreground
+  screen; and the Sell Plan deliberately does not reload on success, so its
+  button stays live while the view dismisses. Only the phase view could see
+  this — T003's review saw one function with one caller, and T006's hosts
+  were written against a store that looked safe.
+  **Fixed in the one writer**, so it closes both windows and every future
+  host: `PurchaseError.alreadyBought`, thrown (**not** a `precondition`,
+  which could only fail by trapping — the untestable shape `CLAUDE.md`
+  records from `002` T021), guarded **before** the market clear so a refusal
+  writes nothing at all. Both tests behavioural, refetched on a second
+  context; the host test builds all three hosts *before* the purchase, which
+  reproduces the cross-device window rather than describing it. Mutation
+  (guard removed) → **12 legs red**, covering both halves of the damage.
+  The implementer caught a clock coincidence in their own new test first —
+  the hosts shared the store's injected clock, so a re-stamp would have
+  written the identical instant and 2 of the 12 stayed green.
+  Also fixed: S3 (the sixth unchanged refresher site got its comment), S4
+  (the loose "its `load()` clears nothing" corrected in three code comments
+  and in `plan.md` Q10), S5 (`itemPhotoNames` held sort orders, not names),
+  S6 (the detail host's missing "nothing loaded" test), S1 (T005's weak
+  assertion's comment now states what it actually guards). The orchestrator
+  moved a mis-spliced G19 doc comment back onto its own test.
+  `scripts/verify.sh` green at **1602 tests in 223 suites**, re-run by the
+  orchestrator. **Re-reviewed and signed off; nothing blocking remains.**
+  **Two things carried out of it**: (a) `plan.md` R2 now says what `.onAppear`
+  does and does not cover, and **T012 must exercise the cross-device window
+  deliberately** — the unit test proves the guard, not that the marker is
+  visible in time; (b) **a refused purchase is silent on all three screens**
+  (no view reads any failure message), which was a disk-failure path nobody
+  would meet and is now the expected outcome of a real sequence. On the
+  Wishlist row it self-corrects; on the other two the person taps, the sheet
+  closes, and the page still offers the action. **This goes to the person at
+  the Phase 2 pause as a fifth question**, with the cost stated: it needs a
+  copy string plus either a `LocalizedError` conformance or an explicit case
+  in each host, not a one-line change.
+
   **Phase 1 closes here — pause for the person** (nothing to try yet; the pause
   is the review gate — the report may offer to run straight on).
 
@@ -791,4 +855,8 @@ orchestrator had to redo, and why) are recorded here too.
 | `skeptical-reviewer` — T004 per-task review | `opus` | 90k | **No blocking findings**; 7 second-look, incl. a second false-passing shape (an assertion message claiming more than it can detect) and a missing sixth reader |
 | `sdd-implementer` — T004 second-look fixes | `opus` (same agent resumed) | 39k more | 4 applied, 2 new mutations; the `marketSummaries` leg turned out reachable after all (a cross-device purchase) |
 | `sdd-implementer` — T005 (`PurchaseFormViewModel`) | `opus` | 54k | Done first pass; 2 mutations; falsifiability walk found one assertion that cannot fail and said so instead of hiding it |
+| `sdd-implementer` — T006 (the three hosts' intents) | `opus` | 141k | Done first pass; **14 mutations**; deleted 3 unfalsifiable legs and fixed a fixture coincidence itself |
+| `skeptical-reviewer` — Phase 1 review | `opus` | 140k | **1 blocking** (B1: `markBought` not idempotent — only visible at phase level), 7 second-look |
+| `sdd-implementer` — T006a (B1 + five second-look) | `opus` (same agent resumed) | 45k more | B1 fixed in the one writer; 12-leg mutation; caught a clock coincidence in its own new test |
+| `skeptical-reviewer` — Phase 1 re-review | `opus` (same agent resumed) | 16k more | Signed off; nothing blocking; found a mis-spliced doc comment (orchestrator fixed) and one device-pass residual |
 | _rows added per dispatch as the spec runs_ | | | |

@@ -93,11 +93,23 @@ behind is `009`'s to surface or sweep, as this spec's Non-goals record.
   §8) — two pops in sequence, landing on the Wishlist, which no longer lists
   it. Without this the detail screen behind the Sell Plan would keep offering
   **Mark as bought…** for an entry already bought, and a second tap would
-  create a second item. The alternative — showing the existing "This item is
+  create a second item. **Scope, corrected at the Phase 1 review**:
+  `.onAppear` covers a screen the person *navigates back to*, which is the
+  in-session case above. It does not fire when the entry changes underneath a
+  screen that is already in the foreground — the cross-device case criterion
+  12 makes real. That window is closed in the one writer instead (§3, T006a),
+  which is where it should have been from the start, since no view-side
+  mechanism can cover every host. The alternative — showing the existing "This item is
   gone" state — was rejected: its detail line ("It was removed somewhere
   else.") would be false, and rewording it is a copy change this spec has no
   mandate for. The double pop is a thing only the device can show; T012
   instruments it (§9). Guards G18, G19.
+  **Added at the Phase 1 re-review**: T006a's guard reads `wanted.isBought`
+  off the object the host holds, so on a device it depends on CloudKit's
+  merge having reached that context before the tap. The unit test proves the
+  guard, not that the marker is visible in time — so **T012 exercises the
+  cross-device window deliberately** (a relaunch mid-screen, or two
+  simulators), per `CLAUDE.md`'s instrument-the-mechanism rule.
 
 ## Proposed at planning (Q1–Q14) — approved on plan approval unless overturned
 
@@ -229,7 +241,12 @@ behind is `009`'s to surface or sweep, as this spec's Non-goals record.
   `markSold` uses (`rollback()`, message, `load()`) so the two intents on one
   screen read alike; `WishlistDetailViewModel` gets a **new**
   `purchaseFailureMessage` rather than reusing `deleteFailureMessage`, set
-  after `rollback()` (its `load()` clears nothing). The reason is structural,
+  after `rollback()` (its `load()` does not clear *that* property).
+  **Corrected at the Phase 1 review**: this said "its `load()` clears
+  nothing", which is false of both hosts — `SellPlanViewModel.load()` opens by
+  clearing `loadFailureMessage`. The true and narrower statement, which is the
+  one the ordering rests on, is that neither `load()` clears the property the
+  purchase reports into. The reason is structural,
   not naming — sign-off correction, 2026-09-19 (re-review): the first draft
   said `deleteFailureMessage` "is read by a different call site", which is
   false, since nothing under `Trove/Views` reads it or `saveFailureMessage`
@@ -429,6 +446,22 @@ static func markBought(
     return item
 }
 ```
+
+**Amended at the Phase 1 review, 2026-09-19 — the store refuses an entry it
+has already bought.** As first written, `markBought` had no `isBought` check
+and neither did any of the three hosts, so a second call inserted a **second
+`Item`** and **re-stamped `boughtDate`, destroying the first purchase's
+marker** — the duplicate criterion 8 forbids, with no undo to correct it
+(Decision 5). Two windows reach it, and the first is the case R2 exists for:
+`WishlistDetailView`'s `.onAppear` fires on push and on return from a pushed
+screen, **not when the data changes underneath**, so a marker arriving from
+another device (criterion 12 says it syncs) leaves the action live on a
+foreground screen; and the Sell Plan deliberately does not reload on success
+(§6), so its button stays live while the view dismisses. The guard belongs in
+the one writer rather than in three views, so it closes both windows and every
+future host at once, and it **throws** rather than asserting — a
+`precondition` could only fail by trapping, which is the untestable shape
+`CLAUDE.md` records from `002` T021. Logged as **T006a**.
 
 `desireToKeep` is left at the initializer's 3 rather than passed, so P5 is
 visible as an absence with a comment rather than as a value that looks chosen.

@@ -1385,3 +1385,509 @@ private struct MarketTestFailure: Error, CustomStringConvertible {
     let description: String
     init(_ description: String) { self.description = description }
 }
+
+// MARK: - 015/T006: the three hosts' purchase intents
+
+/// G12, G13, G19 (015 plan §6, Q10, R2; criterion 4). Three screens can open
+/// the purchase sheet — a Wishlist row, this page, and the Sell Plan — and
+/// criterion 4 says all three open *one* sheet, seeded identically. These
+/// guards sit together in one suite rather than one per host file, because
+/// every claim here is a claim about the three agreeing: split across three
+/// files, each half would pass on its own while the pair disagreed.
+@Suite("Marking a wanted entry bought — the three hosts")
+struct WishlistPurchaseHostTests {
+    private let now = Date(timeIntervalSince1970: 1_783_000_000)
+    private let boughtOn = Date(timeIntervalSince1970: 1_781_234_567)
+
+    /// A wanted entry carrying something in every field the purchase moves
+    /// across, so the landing comparison below can tell a host that dropped
+    /// one from a host that carried it.
+    @discardableResult
+    private func insertWanted(
+        _ name: String,
+        category: String = "Photography/Lenses",
+        costCents: Int,
+        into context: ModelContext
+    ) -> WishlistItem {
+        let wanted = WishlistItem(
+            name: name,
+            categoryPath: category,
+            estimatedCostCents: costCents,
+            currencyCode: "CAD",
+            notes: "Chrome, not black",
+            // 1, never 3: `Item.init` defaults `desireToKeep` to 3, so a
+            // fixture rated 3 could not tell P5's "left at the default" from
+            // a store that carried the wanting scale across.
+            desireToOwn: 1,
+            sortOrder: 7,
+            reverbProductID: 9_112,
+            year: 1971
+        )
+        context.insert(wanted)
+        return wanted
+    }
+
+    /// The purchase every landing test records. None of its four values is a
+    /// default, and none coincides with a neighbouring field a broken host
+    /// might grab instead: the price is not the estimate, the date is not
+    /// `now`, the place is a real string rather than nil, and the condition
+    /// is not `Item.init`'s `.excellent`.
+    private var purchase: Purchase {
+        Purchase(date: boughtOn, priceCents: 219_500, location: "Kerrisdale Cameras", condition: .good)
+    }
+
+    // MARK: G12 — one seed, three hosts
+
+    /// G12 (criterion 4): for the same entry and the same clock, the Wishlist
+    /// row's sheet, this page's, and the Sell Plan's are seeded identically.
+    ///
+    /// Both an entry that carries an estimate and one that doesn't: agreeing
+    /// on the estimated entry alone would leave a host free to seed a $0
+    /// price where the others leave the field blank — the one distinction the
+    /// `006` P1 rule rests on, and the one a `?? 0` slipped into any host
+    /// would break.
+    @Test func everyHostSeedsThePurchaseSheetIdentically() throws {
+        let context = try makeInMemoryContext()
+        let estimated = insertWanted("Summicron 35mm f/2", costCents: 240_000, into: context)
+        let unestimated = insertWanted("Vox AC15 Custom", category: "Music/Amps", costCents: 0, into: context)
+        try context.save()
+
+        let list = WishlistViewModel(modelContext: context, now: { self.now })
+        list.load()
+
+        for subject in [estimated, unestimated] {
+            let page = WishlistDetailViewModel(modelContext: context, itemID: subject.id, now: { self.now })
+            page.load()
+            let fromPage = page.makePurchaseFormViewModel()
+
+            let row = try #require(
+                list.items.first { $0.id == subject.id },
+                "\(subject.name) must be a Wishlist row for the comparison to mean anything"
+            )
+            let fromList = list.makePurchaseFormViewModel(for: row)
+
+            let plan = SellPlanViewModel(modelContext: context, wishlistItemID: subject.id, now: { self.now })
+            plan.load()
+            let fromPlan = plan.makePurchaseFormViewModel()
+
+            // The comparison is over what a host can actually influence. All
+            // three return the one `PurchaseFormViewModel`, whose `title` and
+            // `confirmLabel` are get-only constants — comparing those across
+            // hosts cannot fail for any reason, so it isn't done here; the
+            // copy is `PurchaseCopyTests`' and `PurchaseFormViewModelTests`'
+            // to pin. `location` and `condition` are `var`s a host could set
+            // after construction, which is a divergence criterion 4 forbids,
+            // so they stay.
+            for (host, form) in [("the list", fromList), ("the plan", fromPlan)] {
+                #expect(fromPage.price == form.price, "\(subject.name): the page and \(host) seed the same price")
+                #expect(fromPage.date == form.date, "\(subject.name): the page and \(host) seed the same date")
+                #expect(fromPage.location == form.location)
+                #expect(fromPage.condition == form.condition)
+                #expect(
+                    fromPage.comparisonLine == form.comparisonLine,
+                    "\(subject.name): the page and \(host) compare against the same estimate"
+                )
+            }
+        }
+
+        // Pinned, so three hosts agreeing on the wrong thing still fails.
+        // $2,400 rather than the cents, today rather than the entry's own
+        // dates, and — the P1 distinction — nil rather than 0.
+        let estimatedRow = try #require(list.items.first { $0.id == estimated.id })
+        #expect(list.makePurchaseFormViewModel(for: estimatedRow).price == Decimal(string: "2400"))
+        #expect(list.makePurchaseFormViewModel(for: estimatedRow).date == now)
+        let unestimatedRow = try #require(list.items.first { $0.id == unestimated.id })
+        #expect(
+            list.makePurchaseFormViewModel(for: unestimatedRow).price == nil,
+            "no estimate means a blank field, never $0"
+        )
+        #expect(unestimated.estimatedCostCents == 0, "the fixture must actually have no estimate")
+    }
+
+    // MARK: G12 — one landing, three hosts
+
+    /// Everything a purchase leaves behind, read off a **second** context so
+    /// only what reached the store is counted.
+    private struct Landing: Equatable, CustomStringConvertible {
+        var itemCount: Int
+        var name: String
+        var categoryPath: String
+        var purchasePriceCents: Int
+        var purchaseDate: Date
+        var purchaseLocation: String?
+        var currentValueCents: Int?
+        var condition: Condition
+        var currencyCode: String
+        var notes: String?
+        var reverbProductID: Int?
+        var year: Int?
+        var desireToKeep: Int
+        /// The photos' `sortOrder`s, in display order — a count and a
+        /// numbering, not an identity. Which photos landed is G6's, in
+        /// `WishlistPurchaseStoreTests`; this field only has to diverge when
+        /// one host moves a different number of them or numbers them
+        /// differently.
+        var itemPhotoSortOrders: [Int]
+        var boughtDate: Date?
+        var wishlistPhotoCount: Int
+        var plannedSaleCount: Int
+
+        var description: String { "\(name) @ \(purchasePriceCents), bought \(String(describing: boughtDate))" }
+    }
+
+    private func landing(in container: ModelContainer) throws -> Landing {
+        // A second context: `ModelContext.fetch` hands back objects carrying
+        // unsaved changes, so a same-context refetch would pass whether or
+        // not the host saved.
+        let elsewhere = ModelContext(container)
+        let items = try elsewhere.fetch(FetchDescriptor<Item>())
+        // By name, never `first`: `FetchDescriptor` promises no order, and the
+        // plan's candidate is an `Item` in this store too.
+        let item = try #require(
+            items.first { $0.name == "Summicron 35mm f/2" },
+            "the purchase must have reached the store"
+        )
+        let wanted = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        return Landing(
+            itemCount: items.count,
+            name: item.name,
+            categoryPath: item.categoryPath,
+            purchasePriceCents: item.purchasePriceCents,
+            purchaseDate: item.purchaseDate,
+            purchaseLocation: item.purchaseLocation,
+            currentValueCents: item.currentValueCents,
+            condition: item.condition,
+            currencyCode: item.currencyCode,
+            notes: item.notes,
+            reverbProductID: item.reverbProductID,
+            year: item.year,
+            desireToKeep: item.desireToKeep,
+            itemPhotoSortOrders: PhotoSelection.inDisplayOrder(item.photos ?? []).map(\.sortOrder),
+            boughtDate: wanted.boughtDate,
+            wishlistPhotoCount: (wanted.photos ?? []).count,
+            plannedSaleCount: (wanted.plannedSaleItems ?? []).count
+        )
+    }
+
+    /// The fixture each host buys: one wanted entry with two photos and a
+    /// candidate already on its plan, plus the owned item that candidate is.
+    private func seedWorld() throws -> (container: ModelContainer, context: ModelContext, wanted: WishlistItem) {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let wanted = insertWanted("Summicron 35mm f/2", costCents: 240_000, into: context)
+        let photos = [
+            Photo(imageData: Data([0x01]), source: .device, sortOrder: 0),
+            Photo(imageData: Data([0x02]), source: .device, sortOrder: 1),
+        ]
+        for photo in photos { context.insert(photo) }
+        wanted.photos = photos
+        let candidate = Item(
+            name: "Nikon F3",
+            categoryPath: "Photography/Cameras",
+            purchasePriceCents: 40_000,
+            currentValueCents: 55_000,
+            desireToKeep: 1
+        )
+        context.insert(candidate)
+        wanted.plannedSaleItems = [candidate]
+        try context.save()
+        return (container, context, wanted)
+    }
+
+    /// G12's second half: a purchase made through any of the three hosts
+    /// leaves the *same* item and the *same* marker in the store. The
+    /// comparison is what matters — a host on a different clock, or one that
+    /// never saved, diverges here even though its own screen looked right.
+    @Test func aPurchaseThroughAnyHostLandsIdentically() throws {
+        let viaList = try seedWorld()
+        let list = WishlistViewModel(modelContext: viaList.context, now: { self.now })
+        list.load()
+        let row = try #require(list.items.first)
+        #expect(list.markBought(row, purchase: purchase))
+
+        let viaPage = try seedWorld()
+        let page = WishlistDetailViewModel(modelContext: viaPage.context, itemID: viaPage.wanted.id, now: { self.now })
+        page.load()
+        #expect(page.markBought(purchase: purchase))
+
+        let viaPlan = try seedWorld()
+        let plan = SellPlanViewModel(modelContext: viaPlan.context, wishlistItemID: viaPlan.wanted.id, now: { self.now })
+        plan.load()
+        #expect(plan.markBought(purchase: purchase))
+
+        let fromList = try landing(in: viaList.container)
+        let fromPage = try landing(in: viaPage.container)
+        let fromPlan = try landing(in: viaPlan.container)
+        #expect(fromList == fromPage, "the Wishlist row and the page must leave the same thing")
+        #expect(fromList == fromPlan, "the Wishlist row and the Sell Plan must leave the same thing")
+
+        // Pinned, so three hosts landing the same wrong thing still fails.
+        // Each value differs from the default and from the neighbouring field
+        // a broken store would reach for.
+        #expect(fromList.itemCount == 2, "the purchase adds one item beside the plan's candidate")
+        #expect(fromList.name == "Summicron 35mm f/2")
+        #expect(fromList.purchasePriceCents == 219_500, "what was paid, not the 240,000 estimate")
+        #expect(fromList.currentValueCents == 219_500, "P4: worth what it cost, on the day it arrived")
+        #expect(fromList.purchaseDate == boughtOn, "the date entered, not the marker's clock")
+        #expect(fromList.boughtDate == now, "the marker's clock, not the date entered")
+        #expect(fromList.condition == .good, "the condition entered, not Item.init's .excellent")
+        #expect(fromList.purchaseLocation == "Kerrisdale Cameras")
+        #expect(fromList.currencyCode == "CAD", "the entry's currency, not the USD default")
+        #expect(fromList.notes == "Chrome, not black")
+        #expect(fromList.reverbProductID == 9_112)
+        #expect(fromList.year == 1971)
+        #expect(fromList.desireToKeep == 3, "P5: left at Item.init's own default, never carried across")
+        #expect(fromList.itemPhotoSortOrders == [0, 1], "both photos moved across, renumbered from zero")
+        #expect(fromList.wishlistPhotoCount == 0, "moved, never copied")
+        #expect(fromList.plannedSaleCount == 0, "P6: nothing is earmarked toward a purchase that has happened")
+    }
+
+    // MARK: G13 — the refused save
+
+    /// G13: the three hosts' failure path, structurally — the shape
+    /// `ItemDetailViewModelTests.aRefusedSaveRollsBackAndReReadsWhatIsStored`
+    /// uses, and for the same reason: an in-memory `save()` can't be made to
+    /// throw on demand and no `SaveFailingContext` exists in this tree, so no
+    /// view-model test can reach this path at all. A source scan is the only
+    /// coverage there is here, which means the honest reading is that the
+    /// refusal path is untested behaviourally and this pins its wiring.
+    ///
+    /// The **order** is scanned as well as the contents, because it is the one
+    /// thing that differs between the three and the one `014`'s T005 got
+    /// backwards: `WishlistViewModel.load()` opens by clearing
+    /// `loadFailureMessage`, so a message set before the reload never reaches
+    /// the screen; neither of the other two hosts' `load()`s clears the
+    /// property *it* reports in — the Sell Plan's clears `loadFailureMessage`
+    /// but not `saveFailureMessage`, and the page's clears neither — so
+    /// theirs are set straight after the rollback, matching the intents
+    /// beside them.
+    @Test func aRefusedPurchaseRollsBackAndReportsInItsHostsOwnProperty() throws {
+        // (file, signature, the property the host reports in, whether the
+        // message is set *after* the reload)
+        let intents: [(String, String, String, Bool)] = [
+            (
+                "Trove/ViewModels/WishlistViewModel.swift",
+                "func markBought(_ wanted: WishlistItem, purchase: Purchase) -> Bool",
+                "loadFailureMessage =",
+                true
+            ),
+            (
+                "Trove/ViewModels/WishlistDetailViewModel.swift",
+                "func markBought(purchase: Purchase) -> Bool",
+                "purchaseFailureMessage =",
+                false
+            ),
+            (
+                "Trove/ViewModels/SellPlanViewModel.swift",
+                "func markBought(purchase: Purchase) -> Bool",
+                "saveFailureMessage =",
+                false
+            ),
+        ]
+        for (path, signature, failureMessage, messageAfterReload) in intents {
+            let code = try SourceScan.production(path)
+            let bodies = SourceScan.closureBodies(after: signature, in: code)
+            try #require(bodies.count == 1, "expected exactly one \(signature) in \(path)")
+            let body = bodies[0]
+            #expect(body.ranges(of: "modelContext.save()").count == 1, "\(signature) must save exactly once")
+            #expect(
+                body.contains("WishlistPurchaseStore.markBought("),
+                "\(signature) must go through the one writer (plan Q4)"
+            )
+
+            let catches = SourceScan.closureBodies(after: "} catch", in: body)
+            try #require(catches.count == 1, "expected exactly one catch block in \(signature)")
+            let recovery = catches[0]
+            #expect(recovery.contains("modelContext.rollback()"), "\(signature): the refused save must roll the context back")
+            #expect(recovery.contains("load()"), "\(signature): the refused save must re-read what is stored")
+            #expect(recovery.contains("return false"), "\(signature): the refused save must answer false")
+            #expect(recovery.contains(failureMessage), "\(signature): the refused save must report itself in \(failureMessage)")
+
+            let rollback = try #require(recovery.range(of: "modelContext.rollback()"), "\(signature)")
+            let reload = try #require(recovery.range(of: "load()"), "\(signature)")
+            let message = try #require(recovery.range(of: failureMessage), "\(signature)")
+            #expect(rollback.lowerBound < message.lowerBound, "\(signature): the rollback comes first")
+            if messageAfterReload {
+                #expect(
+                    reload.lowerBound < message.lowerBound,
+                    "\(signature): load() clears the message it reports in, so the reload must come first"
+                )
+            } else {
+                #expect(
+                    message.lowerBound < reload.lowerBound,
+                    "\(signature): the message is set straight after the rollback, as the intents beside it are"
+                )
+            }
+
+            let outsideCatch = recovery.isEmpty ? body : body.replacingOccurrences(of: recovery, with: "")
+            #expect(!outsideCatch.contains("rollback()"), "\(signature): rollback belongs to the failure path only")
+        }
+
+        // Q10's reason for a *new* property rather than a share of
+        // `deleteFailureMessage`: `delete()` clears that one on entry, so
+        // sharing it would let an unrelated delete attempt wipe a purchase
+        // refusal.
+        let page = try SourceScan.production("Trove/ViewModels/WishlistDetailViewModel.swift")
+        let markBought = try #require(SourceScan.closureBodies(after: "func markBought(purchase: Purchase) -> Bool", in: page).first)
+        #expect(
+            !markBought.contains("deleteFailureMessage"),
+            "a refused purchase must not report itself in the property delete() clears"
+        )
+        let delete = try #require(SourceScan.closureBodies(after: "func delete() -> Bool", in: page).first)
+        #expect(
+            !delete.contains("purchaseFailureMessage"),
+            "and delete() must not clear the purchase's own"
+        )
+    }
+
+    // MARK: B1 — an entry is bought once
+
+    /// **T006a/B1.** A second purchase of the same entry is refused by the
+    /// one writer, so no host can produce one.
+    ///
+    /// Two windows make this reachable rather than theoretical. R2's
+    /// mechanism is `WishlistDetailView`'s `.onAppear`, which fires on push
+    /// and on return from a pushed screen — not when the marker arrives from
+    /// another device while the page sits in the foreground (criterion 12).
+    /// And `SellPlanViewModel.markBought` deliberately does not reload on
+    /// success (§6), so its subject and its button stay live while the screen
+    /// dismisses. Neither is a view bug a view can fix, which is why the
+    /// guard is in the store.
+    ///
+    /// What a missing guard costs is both halves of this test: a **second
+    /// `Item`** built from the name, category, notes, match and year still
+    /// sitting on the entry, and a **re-stamped `boughtDate`** that destroys
+    /// the first purchase's date. Decision 5 leaves no undo for either.
+    ///
+    /// Thrown, never `precondition`ed, so this can be a behavioural test at
+    /// all — see `PurchaseError`.
+    @Test func anEntryCanOnlyBeBoughtOnce() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let wanted = insertWanted("Summicron 35mm f/2", costCents: 240_000, into: context)
+        try context.save()
+
+        try WishlistPurchaseStore.markBought(wanted, purchase: purchase, at: now, in: context)
+        try context.save()
+
+        // A second purchase, a day later and at a different price, so a
+        // re-stamped marker or a second item would be unmistakable.
+        let later = now.addingTimeInterval(86_400)
+        let second = Purchase(date: later, priceCents: 111_100, location: "Craigslist", condition: .fair)
+        #expect(throws: WishlistPurchaseStore.PurchaseError.alreadyBought) {
+            try WishlistPurchaseStore.markBought(wanted, purchase: second, at: later, in: context)
+        }
+        try context.save()
+
+        let elsewhere = ModelContext(container)
+        let items = try elsewhere.fetch(FetchDescriptor<Item>())
+        #expect(items.count == 1, "a second purchase must not insert a second item")
+        #expect(items.first?.purchasePriceCents == 219_500, "and the first purchase's price stands")
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(entry.boughtDate == now, "the original marker survives — Decision 5 leaves no undo to restore it with")
+    }
+
+    /// The same refusal reaching each of the three hosts, which is where a
+    /// person actually taps. None of them writes anything, each rolls the
+    /// context back, each reports in its own property, and each answers
+    /// false — so a view wired to the outcome cannot dismiss on a refusal.
+    @Test func everyHostRefusesToBuyAnEntryTwice() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let wanted = insertWanted("Summicron 35mm f/2", costCents: 240_000, into: context)
+        try context.save()
+
+        // A day on from the first purchase, so a host that re-stamped the
+        // marker would be stamping a *different* instant — with all four
+        // clocks equal, the surviving-marker assertion below could not fail.
+        let later = now.addingTimeInterval(86_400)
+
+        // The hosts are built *before* the purchase, the way they are on a
+        // device when the marker arrives from elsewhere: each is holding the
+        // entry as still-wanted.
+        let list = WishlistViewModel(modelContext: context, now: { later })
+        list.load()
+        let row = try #require(list.items.first)
+        let page = WishlistDetailViewModel(modelContext: context, itemID: wanted.id, now: { later })
+        page.load()
+        let plan = SellPlanViewModel(modelContext: context, wishlistItemID: wanted.id, now: { later })
+        plan.load()
+
+        try WishlistPurchaseStore.markBought(wanted, purchase: purchase, at: now, in: context)
+        try context.save()
+
+        let second = Purchase(date: later, priceCents: 111_100, location: "Craigslist", condition: .fair)
+        #expect(list.markBought(row, purchase: second) == false)
+        #expect(list.loadFailureMessage != nil, "the Wishlist reports in the property its load() clears")
+        #expect(page.markBought(purchase: second) == false)
+        #expect(page.purchaseFailureMessage != nil, "the page reports in its own purchase property")
+        #expect(page.deleteFailureMessage == nil, "and not in the one delete() clears")
+        #expect(plan.markBought(purchase: second) == false)
+        #expect(plan.saveFailureMessage != nil, "the Sell Plan reports where markSold does")
+
+        let elsewhere = ModelContext(container)
+        let items = try elsewhere.fetch(FetchDescriptor<Item>())
+        #expect(items.count == 1, "three refused taps leave the one item the first purchase made")
+        #expect(items.map(\.purchasePriceCents) == [219_500], "at the first purchase's price, not the second's")
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(entry.boughtDate == now, "and the original marker, three times over")
+    }
+
+    // MARK: G19 — the page gets out of the way
+
+    /// **T006a/S6.** The page's subject is the entry it loaded, so a page
+    /// whose entry was deleted on another device while it sat open writes
+    /// nothing rather than buying whatever it can find. The sibling of
+    /// `SellPlanPurchaseTests.aPurchaseWithNoEntryLoadedWritesNothing`, and
+    /// the host whose guard can actually fire in practice.
+    @Test func aPurchaseFromAPageHoldingNothingWritesNothing() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        insertWanted("Summicron 35mm f/2", costCents: 240_000, into: context)
+        try context.save()
+
+        let page = WishlistDetailViewModel(modelContext: context, itemID: UUID(), now: { self.now })
+        page.load()
+        #expect(page.item == nil, "the fixture must actually leave the page holding nothing")
+        #expect(page.markBought(purchase: purchase) == false)
+        #expect(page.purchaseFailureMessage == nil, "nothing was attempted, so there is nothing to report")
+
+        let elsewhere = ModelContext(container)
+        #expect(try elsewhere.fetch(FetchDescriptor<Item>()).isEmpty, "no item is created")
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(entry.boughtDate == nil, "and the entry on screen elsewhere is untouched")
+    }
+
+    /// G19 (R2): the page knows its entry has been bought, so `.onAppear` can
+    /// take it off the stack rather than offer to buy it again.
+    @Test func hasBeenBoughtIsTrueOnlyForABoughtEntry() throws {
+        let context = try makeInMemoryContext()
+        let bought = insertWanted("Summicron 35mm f/2", costCents: 240_000, into: context)
+        let stillWanted = insertWanted("Vox AC15 Custom", category: "Music/Amps", costCents: 90_000, into: context)
+        try context.save()
+
+        let untouched = WishlistDetailViewModel(modelContext: context, itemID: bought.id, now: { self.now })
+        #expect(untouched.hasBeenBought == false, "nothing is known before load()")
+        untouched.load()
+        #expect(untouched.hasBeenBought == false, "a wanted entry is not bought")
+
+        try WishlistPurchaseStore.markBought(bought, purchase: purchase, at: now, in: context)
+        try context.save()
+
+        let onTheBought = WishlistDetailViewModel(modelContext: context, itemID: bought.id, now: { self.now })
+        onTheBought.load()
+        #expect(onTheBought.hasBeenBought, "R2: this page must take itself off the stack")
+
+        // The other entry is untouched, so the flag reads its *own* entry
+        // rather than "something somewhere was bought".
+        let onTheOther = WishlistDetailViewModel(modelContext: context, itemID: stillWanted.id, now: { self.now })
+        onTheOther.load()
+        #expect(onTheOther.hasBeenBought == false, "a second entry is not bought by the first entry's purchase")
+
+        // And a page that did the buying itself learns it from its own reload.
+        let buyer = WishlistDetailViewModel(modelContext: context, itemID: stillWanted.id, now: { self.now })
+        buyer.load()
+        #expect(buyer.markBought(purchase: purchase))
+        #expect(buyer.hasBeenBought, "the successful purchase's reload sets the flag R2 reads")
+    }
+}

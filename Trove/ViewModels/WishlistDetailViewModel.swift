@@ -20,6 +20,18 @@ final class WishlistDetailViewModel {
     private(set) var item: WishlistItem?
     private(set) var deleteFailureMessage: String?
 
+    /// A refused purchase (015 plan Q10). Its own property rather than a
+    /// share of `deleteFailureMessage`: `delete()` clears that one on entry,
+    /// so an unrelated delete attempt would wipe a purchase refusal. Nothing
+    /// under `Trove/Views` reads it yet — the same as its two neighbours —
+    /// so a refused purchase is silent on this page.
+    private(set) var purchaseFailureMessage: String?
+
+    /// R2: a detail screen already pushed onto an entry that has since been
+    /// bought takes itself off the stack rather than offering to buy it again.
+    /// Set by `load()`; the view reads it in `.onAppear`.
+    private(set) var hasBeenBought = false
+
     /// Distinguishes "not loaded yet" from "loaded, and it's gone".
     private(set) var hasLoaded = false
 
@@ -53,6 +65,7 @@ final class WishlistDetailViewModel {
         var descriptor = FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.id == id })
         descriptor.fetchLimit = 1
         item = try? modelContext.fetch(descriptor).first
+        hasBeenBought = item?.isBought == true
         hasLoaded = true
         loadMarket()
     }
@@ -80,6 +93,48 @@ final class WishlistDetailViewModel {
             deleteFailureMessage = error.localizedDescription
             return false
         }
+    }
+
+    // MARK: - Marking this entry bought (015)
+
+    /// The purchase sheet, seeded exactly as the Wishlist row's and the Sell
+    /// Plan's are (plan Q10): the price from this entry's estimated cost when
+    /// it has one and blank when it doesn't — never a pre-filled $0, the 006
+    /// P1 rule — and today's date from this screen's injected clock. No
+    /// argument: the subject is the entry this screen holds. G12 pins the
+    /// three hosts equal.
+    func makePurchaseFormViewModel() -> PurchaseFormViewModel {
+        PurchaseFormViewModel(estimatedCostCents: item?.estimatedCostCents ?? 0, now: now)
+    }
+
+    /// Mark as bought…: the entry becomes an owned item, and this screen's
+    /// reload is what sets `hasBeenBought` so R2 can pop it.
+    ///
+    /// `WishlistPurchaseStore` is the one writer (015 plan Q4) and callers
+    /// save — the `store(_:)` shape, one intent, one immediate save.
+    ///
+    /// Returns false on a refused save, which rolls back.
+    @discardableResult
+    func markBought(purchase: Purchase) -> Bool {
+        purchaseFailureMessage = nil
+        guard let item else { return false }
+        do {
+            try WishlistPurchaseStore.markBought(item, purchase: purchase, at: now(), in: modelContext)
+            try modelContext.save()
+        } catch {
+            // `rollback()` discards every pending change on the shared context
+            // — the same recovery the market and photo intents use — so the
+            // entry is still wanted and no item was created. The message is
+            // set here rather than after `load()`, unlike the Wishlist's:
+            // this screen's `load()` does not clear `purchaseFailureMessage`
+            // — it clears no failure property at all.
+            modelContext.rollback()
+            purchaseFailureMessage = error.localizedDescription
+            load()
+            return false
+        }
+        load()
+        return true
     }
 
     // MARK: - Display

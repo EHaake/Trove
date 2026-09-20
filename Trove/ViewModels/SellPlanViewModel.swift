@@ -435,6 +435,55 @@ final class SellPlanViewModel {
     func makeSaleFormViewModel(for item: Item) -> SaleFormViewModel {
         SaleFormViewModel(mode: .mark, prefill: nil, currentValueCents: item.currentValueCents, now: now)
     }
+
+    // MARK: - Marking this plan's wanted entry bought (015)
+
+    /// The purchase sheet, seeded exactly as the Wishlist row's and the
+    /// wanted-entry page's are (plan Q10): the price from the entry's
+    /// estimated cost when it has one and blank when it doesn't — never a
+    /// pre-filled $0, the 006 P1 rule — and today's date from this screen's
+    /// injected clock. No argument: the subject is this plan's own
+    /// `wishlistItem`. G12 pins the three hosts equal.
+    func makePurchaseFormViewModel() -> PurchaseFormViewModel {
+        PurchaseFormViewModel(estimatedCostCents: estimatedCostCents, now: now)
+    }
+
+    /// Mark as bought… from the plan: the entry becomes an owned item, its
+    /// remaining selections are released by the store, and this screen
+    /// dismisses (plan R2).
+    ///
+    /// `WishlistPurchaseStore` is the one writer (015 plan Q4) and callers
+    /// save — the `markSold(_:sale:)` shape beside it, one intent, one
+    /// immediate save. **No reload on success**, unlike its neighbour: the
+    /// screen is going away, and re-deriving a plan whose subject has just
+    /// been bought would only repopulate it to be thrown out.
+    ///
+    /// Reports a refusal in `saveFailureMessage`, the property `markSold`
+    /// uses, in the order `markSold` uses — two intents on one screen read
+    /// alike, and `load()` does not clear *that* property. (It does clear
+    /// `loadFailureMessage`, which is why the ordering here is the opposite
+    /// of `WishlistViewModel`'s rather than a matter of taste.)
+    ///
+    /// Returns false on a refused save, which rolls back.
+    @discardableResult
+    func markBought(purchase: Purchase) -> Bool {
+        saveFailureMessage = nil
+        guard let wishlistItem else { return false }
+        do {
+            try WishlistPurchaseStore.markBought(wishlistItem, purchase: purchase, at: now(), in: modelContext)
+            try modelContext.save()
+        } catch {
+            // `rollback()` discards every pending change on the shared
+            // context, not only this intent's — the same recovery `markSold`
+            // uses. The reload below then shows what is actually stored: the
+            // plan as it was, with its selections intact.
+            modelContext.rollback()
+            saveFailureMessage = error.localizedDescription
+            load()
+            return false
+        }
+        return true
+    }
 }
 
 /// The order the plan lists candidates in (003 plan Q1).

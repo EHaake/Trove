@@ -1065,3 +1065,76 @@ struct SellPlanSalesTests {
         #expect(viewModel.saleCandidate == nil)
     }
 }
+
+// MARK: - 015/T006: the Sell Plan's purchase intent
+
+/// The host-specific half of T006's guards — the cross-host ones live in
+/// `WishlistDetailViewModelTests`.
+@Suite("Marking bought from the Sell Plan")
+struct SellPlanPurchaseTests {
+    private let now = Date(timeIntervalSince1970: 1_783_000_000)
+
+    private var purchase: Purchase {
+        Purchase(date: Date(timeIntervalSince1970: 1_781_234_567), priceCents: 219_500, location: "Kerrisdale Cameras", condition: .good)
+    }
+
+    /// Plan §6: this host alone does **not** reload on success, because the
+    /// screen is dismissing (R2) and re-deriving a plan whose subject has
+    /// just been bought would only repopulate it to be thrown out.
+    ///
+    /// The observable difference is the selection. The store releases
+    /// `plannedSaleItems` as part of the purchase, so a reload would refetch
+    /// the entry and leave `selectedIDs` empty; skipping it leaves the screen
+    /// exactly as the person last saw it. The second context below shows the
+    /// release did happen in the store — so this is "the screen wasn't
+    /// re-derived", not "the release didn't run".
+    @Test func aPurchaseDoesNotReDeriveTheScreenItIsDismissing() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let plan = wanted(into: context)
+        let candidate = owned("Nikon F3", desire: 1, valueCents: 55_000, into: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+        viewModel.toggle(candidate)
+        #expect(viewModel.selectedIDs == [candidate.id])
+        #expect(viewModel.selectedValueCents == 55_000)
+
+        #expect(viewModel.markBought(purchase: purchase))
+
+        #expect(viewModel.selectedIDs == [candidate.id], "no reload: the screen is left as the person last saw it")
+        #expect(viewModel.selectedValueCents == 55_000)
+        #expect(viewModel.candidates.map(\.name) == ["Nikon F3"])
+        #expect(viewModel.saveFailureMessage == nil)
+
+        // A second context: the purchase and the release both reached the
+        // store, which is what makes the four assertions above a statement
+        // about the reload rather than about the write.
+        let elsewhere = ModelContext(container)
+        let stored = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first { $0.name == "Summicron 35mm f/2" })
+        #expect(stored.purchasePriceCents == 219_500)
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(entry.boughtDate == now)
+        #expect(entry.plannedSaleItems?.isEmpty == true, "P6: the plan is released in the store, reload or no reload")
+    }
+
+    /// The plan's subject is its own `wishlistItem`, so an unloaded screen —
+    /// or one whose entry was deleted elsewhere — writes nothing rather than
+    /// buying whatever it can find.
+    @Test func aPurchaseWithNoEntryLoadedWritesNothing() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        _ = wanted(into: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: UUID(), now: { self.now })
+        viewModel.load()
+        #expect(viewModel.markBought(purchase: purchase) == false)
+
+        let elsewhere = ModelContext(container)
+        #expect(try elsewhere.fetch(FetchDescriptor<Item>()).isEmpty, "no item is created")
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(entry.boughtDate == nil, "and the entry on screen elsewhere is untouched")
+    }
+}

@@ -14,12 +14,36 @@ import SwiftData
 /// MainActor by the project default, like `ItemSaleStore`: it writes through
 /// the caller's `ModelContext`.
 enum WishlistPurchaseStore {
+    /// Why a purchase was refused.
+    ///
+    /// Thrown rather than `precondition`ed: a precondition can only "fail" by
+    /// trapping, so no test could reach the refusal behaviourally — the exact
+    /// mistake `CLAUDE.md` records from `002`'s T021.
+    nonisolated enum PurchaseError: Error, Equatable, Sendable {
+        /// The entry already carries a marker, so buying it again would
+        /// insert a **second** `Item` from fields still sitting on the entry
+        /// and re-stamp `boughtDate`, destroying the first purchase's date —
+        /// and Decision 5 leaves no undo to correct either with.
+        case alreadyBought
+    }
+
     /// The purchase: a new owned item carrying everything the wanted entry
     /// knew, its photos moved across, the entry marked bought, its unsold
     /// candidates released and its sold-toward history kept.
     ///
-    /// Throws only from the market clear, which runs first, so a failure
-    /// there leaves nothing written. The caller saves.
+    /// **An entry is bought once.** The guard lives here rather than in the
+    /// three hosts because the two windows in which a second tap is reachable
+    /// are windows the hosts cannot close: `WishlistDetailView`'s `.onAppear`
+    /// (R2's mechanism) fires on push and on return, not when a marker
+    /// arrives from another device mid-screen (criterion 12), and
+    /// `SellPlanViewModel.markBought` deliberately does not reload on success
+    /// (§6), so its subject and its button stay live while the screen
+    /// dismisses. One guard in the one writer closes both, and every future
+    /// host with them.
+    ///
+    /// Throws `PurchaseError.alreadyBought`, or from the market clear. Both
+    /// run before anything is written, so a failure leaves nothing behind.
+    /// The caller saves.
     ///
     /// `Item.init` hard-sets `createdAt`/`updatedAt` to `.now`; `now` here is
     /// the marker's own stamp, and the `at:` parameter exists so a test can
@@ -28,6 +52,11 @@ enum WishlistPurchaseStore {
     static func markBought(
         _ wanted: WishlistItem, purchase: Purchase, at now: Date, in context: ModelContext
     ) throws -> Item {
+        // Before the clear, and before anything else: a refused second
+        // purchase must not even drop the market rows of the entry whose
+        // first purchase already cleared them.
+        guard !wanted.isBought else { throw PurchaseError.alreadyBought }
+
         // First, so a failure here leaves nothing written (ItemSaleStore's shape).
         try MarketLocalStore.clear(subjectID: wanted.id, in: context)
 

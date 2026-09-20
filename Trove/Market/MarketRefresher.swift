@@ -92,6 +92,14 @@ final class MarketRefresher {
 
     /// The item as it is right now — its match, condition and year re-read
     /// after the network hop.
+    ///
+    /// Deliberately unchanged by 015 (plan §4), the sixth of the unchanged
+    /// read sites and the one §4 itself missed the first time: this re-read
+    /// does **not** drop an entry bought since the walk began. It costs at
+    /// most one already-issued request's worth of recording, for a row that
+    /// is invisible anyway and whose local rows the purchase has just
+    /// cleared — the same reason the `.owned` branch beside it ignores
+    /// `soldDate`.
     private func currentTarget(for key: MarketSubjectKey) -> MarketRefreshTarget? {
         let id = key.subjectID
         switch key.kind {
