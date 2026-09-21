@@ -24,6 +24,16 @@ struct PurchaseFormPrefillTests {
         #expect(form.date == t0)
         #expect(form.location.isEmpty)
         #expect(form.condition == .excellent)
+
+        // T012e: the confirm label comes from the copy table. This assertion
+        // was the other half of T006a's `namesTheSheetFromTheCopyTable` (see
+        // the note below) and went as collateral when the sheet's title did;
+        // nothing else at any level catches `confirmLabel` being pointed at
+        // `PurchaseCopy.cancel` or at a hand-typed string of its own — the
+        // wiring test pins only that the button reads `viewModel.confirmLabel`,
+        // `PurchaseCopyTests.theSheetButtons` pins only the constant's text,
+        // and the UI test taps the button by identifier, never by label.
+        #expect(form.confirmLabel == PurchaseCopy.confirm)
     }
 
     /// Q10/`006` P1: no estimate, no pre-filled price — blank and required.
@@ -50,6 +60,11 @@ struct PurchaseFormPrefillTests {
     // already dropped the same comparison. `title` no longer exists, so that
     // is the state this suite is in now: the test went with the thing it
     // guarded rather than being kept as a comparison that cannot fail.
+    //
+    // Its *other* assertion — `confirmLabel == PurchaseCopy.confirm` — was
+    // not deleted for that reason and is restored above (T012e): it is a
+    // live property with a live rule, and it had been left with no
+    // unit-level guard at all.
 }
 
 /// 015/T005, G20. What the purchase sheet refuses and what it records

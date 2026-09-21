@@ -167,7 +167,7 @@ behind is `009`'s to surface or sweep, as this spec's Non-goals record.
 - **Q3. `PurchaseCopy` is this spec's string table.** `Trove/Models/PurchaseCopy.swift`,
   `SaleCopy`'s shape and rules (no SwiftUI, no colour, pinned whole by
   `PurchaseCopyTests`): `markAsBought` (`"Mark as bought\u{2026}"`),
-  `swipeBuy` (`"Buy"`), `sheetTitle`, `confirm`, `cancel`, `purchasePriceLabel`,
+  `swipeBuy` (`"Buy"`), ~~`sheetTitle`~~, `confirm`, `cancel`, `purchasePriceLabel`,
   `purchaseDateLabel`, `boughtFromLabel`, `boughtFromPlaceholder`,
   `conditionLabel`, and `comparison(paidCents:estimatedCostCents:) -> String?`
   (Q7). Its own table rather than rows added to `SaleCopy`: the spec's
@@ -287,7 +287,29 @@ behind is `009`'s to surface or sweep, as this spec's Non-goals record.
   unrelated delete attempt wipe a purchase refusal. Note the consequence
   while it is in view: nothing surfaces `purchaseFailureMessage` on screen
   either, so a refused purchase is silent on that page — consistent with the
-  two existing properties, and recorded here rather than discovered later. `SellPlanViewModel`'s takes no
+  two existing properties, and recorded here rather than discovered later.
+  **Overtaken by T012b, 2026-09-20 — every sentence above about *which*
+  property each host uses and in *what order* is now false, and the
+  differences it was so careful about are gone.** The person, shown at the
+  walkthrough that a refused purchase is silent on all three screens, said to
+  fix it. Surfacing it exposed that this paragraph's central choice could not
+  have worked: `WishlistView` hosts the sheet with
+  `.sheet(item:, onDismiss: viewModel.load)`, so the reload on dismiss wipes
+  `loadFailureMessage` before any alert could read it — **a message that
+  cannot survive to be displayed is the wrong property**, whatever the
+  ordering. All three hosts now have their **own** `purchaseFailureMessage`,
+  which deletes the ordering rule rather than adjusting it, and all three read
+  `rollback()` → message → `load()` → `return false`. `SellPlanViewModel`
+  keeps `saveFailureMessage` untouched for `markSold`: sharing it would have
+  surfaced a refused **sale**, which this spec's Non-goals forbid. G13 was
+  rewritten accordingly — it lost the per-host table and gained the invariant
+  that makes one ordering safe (nothing outside `markBought` writes the
+  property), and its claim about *which message* moved to the view-model
+  suite, where it can fail for a behavioural reason. **T012d then confirmed on
+  the device** that the alert actually appears on all three hosts, which no
+  test in this project can observe: the sheet-then-alert sequence is a known
+  SwiftUI failure mode, and the reason it does not bite here is that the alert
+  is attached to the host's view rather than to the sheet's content. `SellPlanViewModel`'s takes no
   argument beyond the
   purchase: its subject is the plan's own `wishlistItem`. G12 pins the three
   seeds equal, G13 the three refusal paths.
@@ -559,7 +581,7 @@ final class PurchaseFormViewModel {
     var condition: Condition = .excellent          // Item's own default (spec: "the same value a new item defaults to")
     private(set) var validationErrors: Set<ValidationError> = []
 
-    var title: String { PurchaseCopy.sheetTitle }
+    // `title` removed at T012a — see the correction under §7.
     var confirmLabel: String { PurchaseCopy.confirm }
     /// The spec's one line of copy under the price, or nothing (Q7).
     var comparisonLine: String? { PurchaseCopy.comparison(
@@ -623,6 +645,21 @@ diverges → red).
 its `[.medium, .large]` detents, its Cancel/confirm toolbar pair, its
 `PlateSurface` field chrome and rust invalid border, its date button and
 graphical popover (unbounded, Q9). Four fields in the spec's order:
+
+**Corrected at the walkthrough, 2026-09-20 (T012a) — the sheet has no
+navigation title.** As specified it carried `.navigationTitle(viewModel.title)`
+like its twin, and on the device that truncated to `Mark as bo…` on all three
+hosts, because the confirm button "Mark as bought" takes the width. The
+person's call was to remove it as redundant with that button. `viewModel.title`
+and `PurchaseCopy.sheetTitle` went with it, and so did
+`PurchaseFormViewModelTests.namesTheSheetFromTheCopyTable` — the test T005 had
+already declared could barely fail; deleting it here is correct rather than a
+dodge, because the thing it guarded no longer exists. **This is a stated
+departure from "the sale sheet's twin"**: `SaleFormView` keeps its title.
+`.navigationBarTitleDisplayMode(.inline)` is **kept** — dropping it too would
+leave the bar in large-title layout with empty space where a title isn't,
+which is a different screen from the one the person approved. A new guard pins
+the absence, since the absence is now the rule.
 
 1. **Purchase price** and **Purchase date** paired on one row, `priceAndDate`'s
    layout exactly (`$` prefix, decimal pad, `.accessibilityIdentifier("purchase.sheet.price")`).
@@ -710,7 +747,8 @@ confirm wired to call `confirm` unguarded → red). The comparison line's own
   `viewModel.load(); if viewModel.hasBeenBought { dismiss() }` (R2).
 - **`SellPlanView`**: `ToolbarItem(placement: .topBarTrailing)` holding — **only
   when `viewModel.wishlistItem != nil`** — a
-  `Button { isMarkingBought = true } label: { Image(systemName: "bag") }` with
+  `Button { isMarkingBought = true } label: { Image(systemName: "bag") }`
+  — ~~the glyph~~ **`Text(PurchaseCopy.swipeBuy)` since T012a, see below** — with
   `.accessibilityLabel(PurchaseCopy.markAsBought)` and
   `.accessibilityIdentifier("purchase.sellPlan")` — a bar button, not a menu,
   because this screen has no Edit or Delete to sit beside and a one-row menu is
@@ -726,6 +764,17 @@ confirm wired to call `confirm` unguarded → red). The comparison line's own
   text button reading "Bought" with the same accessibility label** — `014` Q9's
   short-word-plus-spoken-name pattern — which is a one-line change, not a
   redesign; it is offered in the pause note rather than guessed at now.
+  **Taken at the walkthrough, 2026-09-20 (T012a), with a different word.** The
+  device pass judged the bare glyph a puzzle — alone in a toolbar an outline
+  bag most often reads as *cart*, on the one screen whose whole subject is
+  selling — and the person agreed and asked for a word, leaving the choice.
+  **The word shipped is `PurchaseCopy.swipeBuy` ("Buy"), not "Bought"**: it is
+  already the short form of this exact action on the Wishlist's swipe, so one
+  short word covers one action in both places, whereas "Bought" reads as a
+  state and would be a second short form for the same thing. No new string.
+  The gate, placement, accessibility label and identifier are unchanged, and
+  G18's leg was rewritten to pin the word **and** the absence of any `Image(`
+  in the gate, so a glyph cannot return beside it.
 
 **Testable claims**: G15 (the list's swipe order and wiring), G16 (the glyph),
 G17 (the menu row and the absent page button), G18 (the Sell Plan's toolbar,
@@ -830,7 +879,7 @@ wishlist-page test rewritten to pin the new rule). Then the pre-merge
 | G15 | `WishlistPurchaseWiringTests`: the leading swipe names Edit, `PurchaseCopy.swipeBuy`, Copy in order; Buy writes `itemBeingBought`, carries `.accessibilityLabel(PurchaseCopy.markAsBought)` and `"ActionBuy"`; the trailing block names no `PurchaseCopy`; one `.sheet(item: $itemBeingBought` over `PurchaseFormView(` and `makePurchaseFormViewModel(for:` | any order, wiring or label change |
 | G16 | `ActionIconTests`: `ActionBuy` resolves, renders as a template, and the five action glyphs are five distinct marks | the imageset missing or not template; the svg copied from `action-sell` |
 | G17 | the detail's `DetailOverflowMenu` carries the middle row, and `PurchaseCopy.markAsBought` appears in that file exactly once; **`SoldStateWiringTests`' rewritten wishlist-page test** — exactly one middle `DetailOverflowMenu.Row`, titled `PurchaseCopy.markAsBought`, and still no `SaleCopy` | a page button added (count 2); the row dropped (count 0, `#require` fails); the rows spelled `.init(` to dodge the old scan; `SaleCopy` reaching this page |
-| G18 | the Sell Plan composes one toolbar buy action **inside a `wishlistItem != nil` gate** and one `.sheet(isPresented: $isMarkingBought)` over `PurchaseFormView(`, and dismisses on a true `markBought` | the dismiss dropped; the sheet hosted twice; the gate dropped, leaving the action tappable over the missing-item state |
+| G18 | the Sell Plan composes one toolbar buy action **inside a `wishlistItem != nil` gate**, labelled `Text(PurchaseCopy.swipeBuy)` with **no `Image(`** in the gate (T012a), and one `.sheet(isPresented: $isMarkingBought)` over `PurchaseFormView(`, dismissing on a true `markBought` and clearing the flag on cancel (T011a) | the dismiss dropped; the sheet hosted twice; the gate dropped, leaving the action tappable over the missing-item state; the glyph put back; the cancel closure emptied |
 | G19 | `hasBeenBought` is true for a bought entry and false otherwise; `WishlistDetailView.onAppear` dismisses on it | the flag never set; the `.onAppear` check dropped |
 | G20 | `PurchaseFormViewModelTests`: the seed, the two validation errors, a future date accepted, a blank location nil'd | a pre-filled 0; a date rule added without a decision |
 | G21 | the sheet's five composed elements in source order; no `SaleCopy`, no Note, no `ModelContext`; confirm guarded by `purchase()` | a field reordered or dropped; confirm fires on an invalid sheet |

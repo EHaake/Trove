@@ -43,8 +43,14 @@ final class WishlistDetailViewModel {
     /// `hasBeenBought` is, and 0 when nothing is loaded.
     ///
     /// This is the relationship's *size*, never its contents or its order —
-    /// the boundary this type's own doc comment draws, and the one
-    /// `loadingDoesNotTouchTheSellPlan` pins.
+    /// the boundary this type's own doc comment draws. **It is held here, in
+    /// the code, and by no test** (corrected at T012e): there is nothing for
+    /// a test to observe, because the only way to break the boundary is to
+    /// expose the items themselves and no test can assert the absence of a
+    /// property that was never written. `loadingDoesNotTouchTheSellPlan`
+    /// pins the neighbouring fact — that loading leaves the relationship and
+    /// its items alone — and would stay green if this property handed back
+    /// the whole `plannedSaleItems` array.
     private(set) var plannedSaleCount = 0
 
     private let modelContext: ModelContext
@@ -131,7 +137,18 @@ final class WishlistDetailViewModel {
     @discardableResult
     func markBought(purchase: Purchase) -> Bool {
         purchaseFailureMessage = nil
-        guard let item else { return false }
+        guard let item else {
+            // T012e: not silent. R2 takes this page off the stack when the
+            // entry has been bought — but an entry deleted on another device
+            // while the sheet is open leaves this page holding nothing, and a
+            // confirm that closes the sheet saying nothing is exactly the
+            // state T012b existed to remove. `failureMessage` rather than
+            // `alreadyBought`: nothing is known about why the entry is gone,
+            // and "Nothing was changed" is true of this path — it returns
+            // ahead of every write.
+            purchaseFailureMessage = PurchaseCopy.failureMessage
+            return false
+        }
         do {
             try WishlistPurchaseStore.markBought(item, purchase: purchase, at: now(), in: modelContext)
             try modelContext.save()

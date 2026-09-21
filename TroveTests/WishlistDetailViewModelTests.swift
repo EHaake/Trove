@@ -1825,13 +1825,16 @@ struct WishlistPurchaseHostTests {
                 )
             }
 
-            // And the other way round: nothing else clears the purchase's
-            // own property, which is what lets every host set the message
-            // before its reload rather than after it.
+            // And the other way round: nothing else *in this view model*
+            // clears the purchase's own property, which is what lets every
+            // host set the message before its reload rather than after it.
+            // Scoped to the view-model file on purpose — the three views'
+            // alert bindings legitimately write `purchaseFailureMessage =
+            // nil` on OK, and this scan says nothing about them.
             let outsideMarkBought = code.replacingOccurrences(of: body, with: "")
             #expect(
                 !outsideMarkBought.contains("purchaseFailureMessage ="),
-                "\(path): something other than markBought writes purchaseFailureMessage — if it is load(), the message is wiped before the alert can read it"
+                "\(path): something other than markBought in this view model writes purchaseFailureMessage — if it is load(), the message is wiped before the alert can read it"
             )
 
             let outsideCatch = recovery.isEmpty ? body : body.replacingOccurrences(of: recovery, with: "")
@@ -2005,6 +2008,18 @@ struct WishlistPurchaseHostTests {
     /// nothing rather than buying whatever it can find. The sibling of
     /// `SellPlanPurchaseTests.aPurchaseWithNoEntryLoadedWritesNothing`, and
     /// the host whose guard can actually fire in practice.
+    ///
+    /// **And says so (T012e).** This path used to return false with
+    /// `purchaseFailureMessage` just cleared, so confirming closed the sheet
+    /// and reported nothing — the silent refusal T012b existed to remove,
+    /// surviving on the one path T012b didn't reach.
+    /// `PurchaseCopy.failureMessage` rather than `alreadyBought`: the entry
+    /// is gone, not bought, and "Nothing was changed" is true because the
+    /// guard returns ahead of every write — which the two store assertions
+    /// below check for real.
+    ///
+    /// Mutation: restore `guard let item else { return false }` → the
+    /// message is nil and this goes red.
     @Test func aPurchaseFromAPageHoldingNothingWritesNothing() throws {
         let container = try makeInMemoryContainer()
         let context = ModelContext(container)
@@ -2015,7 +2030,10 @@ struct WishlistPurchaseHostTests {
         page.load()
         #expect(page.item == nil, "the fixture must actually leave the page holding nothing")
         #expect(page.markBought(purchase: purchase) == false)
-        #expect(page.purchaseFailureMessage == nil, "nothing was attempted, so there is nothing to report")
+        #expect(
+            page.purchaseFailureMessage == PurchaseCopy.failureMessage,
+            "a confirm that can't find its entry must say so — closing the sheet in silence is the state T012b removed everywhere else"
+        )
 
         let elsewhere = ModelContext(container)
         #expect(try elsewhere.fetch(FetchDescriptor<Item>()).isEmpty, "no item is created")

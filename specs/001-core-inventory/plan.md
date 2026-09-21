@@ -232,6 +232,14 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
   `SellPlanView`. This screen does **not** show the ranked list by
   default — see the note under `SellPlanView` for why.
 
+  *Superseded in part by `015-mark-as-bought` (T012c, 2026-09-20): the button
+  is no longer a fixed label. When the entry has a saved plan it reads "View
+  your sell plan" / "<n> item(s) set aside"; with no plan it reads exactly as
+  above. The rule this paragraph protects is intact — the subtitle carries a
+  **count of what the person set aside**, never a target or a progress figure,
+  which is what "names the task, not a target" forbids. The ranked list is
+  still not shown here.*
+
   Edit and Delete also live here (and on `ItemDetailView`), reached via
   `DetailOverflowMenu` — one shared circular "..." button opening a
   `Menu`, Delete styled with the menu's `.destructive` role. Replaces an

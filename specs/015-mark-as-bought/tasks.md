@@ -1147,6 +1147,77 @@ four as questions, not facts.
   seen a saved plan. The new state has **no UI-suite coverage**; a second seed
   argument would be its own task under the constitution's two conditions.
 
+- [x] **T012d — The refusal alert, confirmed on the device. [general-purpose agent with simulator tools]**
+  Raised as **blocking** by the T012a–c review. T012b's whole deliverable was
+  covered by **a source scan that the `.alert` modifier is spelled in the
+  file**, and nothing else: no test reaches a refusal, and T012's device pass
+  ran *before* T012b, so no device had ever executed the code. Per `CLAUDE.md`,
+  "when a source scan is the only coverage of something load-bearing, the
+  honest reading is that the thing is untested" — and the specific risk was
+  real, since all three hosts set the message and tear down the sheet in the
+  same state update, with the Wishlist also running a full `load()` in that
+  transaction, and "alert dropped when presented right after a sheet
+  dismissal" is a long-standing SwiftUI behaviour.
+  Instrumented by inverting the store's guard so every purchase threw
+  `alreadyBought`, then driving all three hosts on the persistent walkthrough
+  store. **The alert appears on all three, immediately, with no perceptible
+  delay**, reading `Couldn't mark it bought` / `This one is already marked
+  bought — it may have been bought on another device. Nothing was changed.`
+  OK dismisses it; a second refusal fires again, so the binding's setter
+  resets the property correctly; store counts were identical before and after
+  four refusals, so **"Nothing was changed" is true on the device, not just in
+  the rollback's intent**. The Wishlist's reload does not interfere, and the
+  reason is structural rather than luck: `load()` never touches
+  `purchaseFailureMessage`. **Why the known SwiftUI trap does not bite here**:
+  the alert is attached to the *host's* view, not to the sheet's content, so
+  it is not competing for the same presentation slot. Mutation reverted, tree
+  byte-identical, `scripts/verify.sh` green at 1622/224.
+  **The standing gap, recorded rather than papered over**: this confirms the
+  mechanism once, by hand. The automated coverage is still the scan, so
+  deleting the alert and keeping the string would stay green. Durable coverage
+  means a UI test driving a real refusal — not another scan.
+
+- [x] **T012e — Five second-look fixes from the T012a–c review.**
+  All non-blocking, all cheap, all mutation-verified. `scripts/verify.sh`
+  green at **1622 tests in 224 suites** — unchanged, since every new
+  assertion went into an existing test function. No view file changed, so the
+  UI suite was not re-run.
+  1. **`confirmLabel` lost its only unit-level guard** as collateral when
+     T012a deleted `namesTheSheetFromTheCopyTable`. `title` genuinely no
+     longer exists; the `confirmLabel` assertion did not go for that reason.
+     Restored (mutation: `confirmLabel` → `PurchaseCopy.cancel` → red).
+  2. **A doc comment credited a test that cannot see what it claims** —
+     `plannedSaleCount`'s comment said `loadingDoesNotTouchTheSellPlan` pins
+     the size-not-contents boundary, but that test would stay green if the
+     whole array were exposed. Corrected to say the boundary is held in the
+     code and by no test.
+  3. **The alert scan's message leg read the whole file**, so in
+     `WishlistView` (two alerts) and `WishlistDetailView` (three) it could be
+     satisfied by a *different* alert's message closure. Now sliced and scoped
+     to the refusal alert. The mutation — move the message closure to a
+     neighbouring alert — goes red, and `grep` during it confirmed **the old
+     leg would have stayed green on exactly that mutation**.
+  4. **G13's invariant message claimed more than it checks** — the views'
+     alert bindings legitimately write the property. Narrowed to "in this view
+     model".
+  5. **One refusal path was still silent, on the host T012b was most careful
+     about**: `SellPlanViewModel.markBought`'s no-entry `guard` returned false
+     with the message just cleared, reachable when the entry vanishes from
+     another device while the sheet is open — exactly the state T012b existed
+     to remove. Fixed there and on `WishlistDetailViewModel`, which had the
+     same shape. `WishlistViewModel` has no such guard (its entry is a
+     parameter), so the shape existed on exactly those two.
+  **One deviation, declared**: item 5's tests already existed and the page's
+  asserted `purchaseFailureMessage == nil` — the very behaviour item 5
+  overturns — so that assertion was *changed* rather than a duplicate test
+  added. The mutation shows both are falsifiable.
+  **Recorded for the sweep**: the refusal alert's message is a *trailing*
+  closure, so `SourceScan.argumentLists(of: ".alert")` can never contain it.
+  Any alert-message scan needs the slice-and-scope shape now in
+  `everyPurchaseHostShowsTheRefusalAlert`. **The other `*WiringTests` alert
+  checks (export, import, delete) may have the same unscoped whole-file
+  shape** — not looked at, outside the task.
+
 - [ ] **T013 — Close-out.**
   Per plan §10. Criteria 1–15 ticked in `spec.md` with per-criterion citations
   — **criterion 14 ticked by inspection**, stating in the tick that no test can
@@ -1276,4 +1347,8 @@ orchestrator had to redo, and why) are recorded here too.
 | `sdd-implementer` — T012a (the button's word, the sheet's title) | `opus` | 71k | Done first pass; 2 mutations; kept the inline display mode and said why |
 | `sdd-implementer` — T012b (a refused purchase says so) | `opus` | 156k | Done first pass; 6 mutations; G13 rewritten, with the message's assertion moved from the scan to the view-model suite |
 | `sdd-implementer` — T012c (the sell plan's trace) | `opus` | 84k | Done first pass; 2 mutations; held `003`'s no-target rule; found the seed has never produced a saved plan |
+| `skeptical-reviewer` — T012a–c review | `opus` | 96k | **2 blocking** (B1: `plan.md` contradicted the code in five places; B2: the alerts observed by nothing), 7 second-look |
+| `general-purpose` (simulator tools) — T012d, the alert on the device | `opus` | 140k | Alert fires on all three hosts; "Nothing was changed" true on device; the SwiftUI trap does not bite because the alert sits on the host, not the sheet |
+| `sdd-implementer` — T012e (five second-look fixes) | `opus` | 106k | Done first pass; 3 mutations; found the old alert-message leg would have stayed green on its own mutation |
+| Orchestrator — B1, `plan.md` corrected in place | `opus` (session) | n/a | Q3, §6, §7 twice, §8 and the G18 row; plus a `Superseded in part` pointer appended to `001`'s entry-point rule |
 | _rows added per dispatch as the spec runs_ | | | |

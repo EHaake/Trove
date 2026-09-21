@@ -480,7 +480,18 @@ final class SellPlanViewModel {
     @discardableResult
     func markBought(purchase: Purchase) -> Bool {
         purchaseFailureMessage = nil
-        guard let wishlistItem else { return false }
+        guard let wishlistItem else {
+            // T012e: not silent. The toolbar gate makes this near
+            // unreachable — but the entry can vanish from another device
+            // while the sheet is already open, and a confirm that closes the
+            // sheet saying nothing is exactly the state T012b existed to
+            // remove. `failureMessage` rather than `alreadyBought`: nothing
+            // is known about why the entry is gone, and "Nothing was
+            // changed" is true of this path — it returns ahead of every
+            // write.
+            purchaseFailureMessage = PurchaseCopy.failureMessage
+            return false
+        }
         do {
             try WishlistPurchaseStore.markBought(wishlistItem, purchase: purchase, at: now(), in: modelContext)
             try modelContext.save()

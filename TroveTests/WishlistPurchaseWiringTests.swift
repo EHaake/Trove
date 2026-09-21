@@ -671,9 +671,34 @@ struct WishlistPurchaseWiringTests {
             alert.contains("viewModel.purchaseFailureMessage = nil"),
             "\(path)'s refusal alert never clears the message, so OK would leave it pending and it would show again:\n\(alert)"
         )
+        // The message closure sits *outside* the argument list's parentheses,
+        // so `alert` above cannot hold it — and a whole-file scan for it is
+        // no scan at all here, since `WishlistView` carries four alerts and
+        // `WishlistDetailView` two: a neighbouring alert's message would
+        // satisfy it while this one said nothing (T012e). Scoped instead to
+        // the first `message:` closure after this alert's arguments, which
+        // is this alert's own — a trailing closure follows its call
+        // immediately — and required to arrive before any later `.alert(`,
+        // so a refusal alert with no message of its own cannot borrow the
+        // next one's.
+        let tail = String(code[try #require(code.range(of: alert), "\(path)").upperBound...])
+        let messageLabel = try #require(
+            tail.range(of: "message:"),
+            "\(path)'s refusal alert has no message at all — a refusal the person cannot read"
+        )
+        if let nextAlert = tail.range(of: ".alert(") {
+            try #require(
+                messageLabel.lowerBound < nextAlert.lowerBound,
+                "\(path)'s refusal alert carries no message closure — the next one found belongs to the alert after it"
+            )
+        }
+        let message = try #require(
+            SourceScan.closureBodies(after: "message:", in: tail).first,
+            "\(path)'s refusal alert has an unterminated message closure"
+        )
         #expect(
-            code.contains("Text(viewModel.purchaseFailureMessage ?? PurchaseCopy.failureMessage)"),
-            "\(path) doesn't show the host's own message, only the generic one — the already-bought sentence is the refusal a person actually meets"
+            message.contains("Text(viewModel.purchaseFailureMessage ?? PurchaseCopy.failureMessage)"),
+            "\(path) doesn't show the host's own message, only the generic one — the already-bought sentence is the refusal a person actually meets:\n\(message)"
         )
     }
 

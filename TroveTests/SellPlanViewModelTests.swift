@@ -1122,6 +1122,20 @@ struct SellPlanPurchaseTests {
     /// The plan's subject is its own `wishlistItem`, so an unloaded screen —
     /// or one whose entry was deleted elsewhere — writes nothing rather than
     /// buying whatever it can find.
+    ///
+    /// **And says so (T012e).** This path used to return false with
+    /// `purchaseFailureMessage` just cleared, so confirming closed the sheet
+    /// and reported nothing — the silent refusal T012b existed to remove,
+    /// surviving on the one path T012b didn't reach. The toolbar gate makes
+    /// it near-unreachable, not unreachable: the entry can vanish from
+    /// another device while the sheet is already open.
+    /// `PurchaseCopy.failureMessage` rather than `alreadyBought`: the entry
+    /// is gone, not bought, and "Nothing was changed" is true because the
+    /// guard returns ahead of every write — which the two store assertions
+    /// below check for real.
+    ///
+    /// Mutation: restore `guard let wishlistItem else { return false }` →
+    /// the message is nil and this goes red.
     @Test func aPurchaseWithNoEntryLoadedWritesNothing() throws {
         let container = try makeInMemoryContainer()
         let context = ModelContext(container)
@@ -1131,6 +1145,14 @@ struct SellPlanPurchaseTests {
         let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: UUID(), now: { self.now })
         viewModel.load()
         #expect(viewModel.markBought(purchase: purchase) == false)
+        #expect(
+            viewModel.purchaseFailureMessage == PurchaseCopy.failureMessage,
+            "a confirm that can't find its entry must say so — closing the sheet in silence is the state T012b removed everywhere else"
+        )
+        #expect(
+            viewModel.saveFailureMessage == nil,
+            "and in its own property, never markSold's, which the purchase alert does not read"
+        )
 
         let elsewhere = ModelContext(container)
         #expect(try elsewhere.fetch(FetchDescriptor<Item>()).isEmpty, "no item is created")
