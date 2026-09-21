@@ -475,7 +475,7 @@ four as questions, not facts.
   `FetchDescriptor<Item>` order is not insertion order, so the landing helper
   selects by name.
 
-- [ ] **T006a — The Phase 1 review's blocking finding: a purchase can only happen once.**
+- [x] **T006a — The Phase 1 review's blocking finding: a purchase can only happen once.**
   Raised by the phase review, not by the plan. **`markBought` was not
   idempotent**: there was no `isBought` check in the store or in any host, so
   a second call inserted a **second `Item`** and **re-stamped `boughtDate`,
@@ -1028,6 +1028,11 @@ four as questions, not facts.
      synthetic taps — but **the shipped sale sheet's "Sold at" behaves
      identically**, and the large detent works, so this isolates to the
      harness, not to `015`. One hand check owed.
+     **Closed 2026-09-20**: the hand check was step A2.7 of the person's
+     walkthrough and they reported Part A "all good, everything works well or
+     experienced as expected". The field takes typing at the medium detent on
+     a real finger; the inference was right, and it is now an observation
+     rather than an inference.
   **Could not be checked, stated plainly rather than implied to pass:**
   - **The cross-device window** (carried item 2). A relaunch resets
     navigation to the root, so the "screen already in the foreground when
@@ -1218,7 +1223,7 @@ four as questions, not facts.
   checks (export, import, delete) may have the same unscoped whole-file
   shape** — not looked at, outside the task.
 
-- [ ] **T013 — Close-out.**
+- [x] **T013 — Close-out.**
   Per plan §10. Criteria 1–15 ticked in `spec.md` with per-criterion citations
   — **criterion 14 ticked by inspection**, stating in the tick that no test can
   catch it being false without being the broad-scan shape `CLAUDE.md` names
@@ -1383,7 +1388,7 @@ orchestrator had to redo, and why) are recorded here too.
 | `sdd-implementer` — T011b (sentence case, the person's decision) | `opus` | 61k | Done first pass; 2 mutations; found the line's treatment was pinned by nothing and added the legs |
 | `general-purpose` (simulator tools) — T012 device pass | `opus` | 345k | Agent's half done; 4 findings, 4 things it could not check and said so; probe counts clean; suites green twice |
 | `skeptical-reviewer` — decision review, R2's stepping pops | `opus` | 42k | Recommended **accept**; criterion 8 not broken (surfaces vs. a stack unwinding); both alternatives worse, and nothing chosen could be guarded by a test |
-| `general-purpose` (simulator tools) — walkthrough dataset load | `opus` | 185k | 20 items / 9 categories / 7 wanted on the persistent store, one stock photo, one live sell plan; found 2 pre-existing oddities |
+| `general-purpose` (simulator tools) — walkthrough dataset load | `opus` | 185k | 20 items / 9 categories / 7 wanted on the persistent store, one stock photo, one live sell plan. Two pre-existing oddities, named so the record survives the merge: **sell-plan rows tick on the row body, not on the checkbox itself** (the person judged this fine — a large target, left as is), and **a saved sell plan left no trace on the wanted item's page** (fixed in this spec as T012c, at the person's instruction) |
 | `sdd-implementer` — T012a (the button's word, the sheet's title) | `opus` | 71k | Done first pass; 2 mutations; kept the inline display mode and said why |
 | `sdd-implementer` — T012b (a refused purchase says so) | `opus` | 156k | Done first pass; 6 mutations; G13 rewritten, with the message's assertion moved from the scan to the view-model suite |
 | `sdd-implementer` — T012c (the sell plan's trace) | `opus` | 84k | Done first pass; 2 mutations; held `003`'s no-target rule; found the seed has never produced a saved plan |
@@ -1392,4 +1397,7 @@ orchestrator had to redo, and why) are recorded here too.
 | `sdd-implementer` — T012e (five second-look fixes) | `opus` | 106k | Done first pass; 3 mutations; found the old alert-message leg would have stayed green on its own mutation |
 | Orchestrator — B1, `plan.md` corrected in place | `opus` (session) | n/a | Q3, §6, §7 twice, §8 and the G18 row; plus a `Superseded in part` pointer appended to `001`'s entry-point rule |
 | `sdd-implementer` — T013 close-out (documentation half) | `opus` | 201k | Done first pass; `006` pointer confirmed; G14's two mutations re-run over the finished tree and both behaved; criterion 12 left an honest partial per house convention |
-| _rows added per dispatch as the spec runs_ | | | |
+| `sdd-implementer` — T013a (two sweep fixes, plus one it found itself) | `opus` | 32k | Done; flagged the same false claim in the test suite's comment rather than assuming its scope, and folded it in when asked |
+| `skeptical-reviewer` — pre-merge sweep | `opus` | 250k | **2 blocking** (both records, not code: an unticked T006a, and a miscounted/misattributed ROADMAP row), 8 second-look incl. a tenth unfalsifiable assertion |
+| `skeptical-reviewer` — sweep re-review | `opus` (same agent resumed) | 10k more | **Signed off, ready to merge**; one cosmetic doubled em dash fixed by the orchestrator |
+| Orchestrator — sweep fixes | `opus` (session) | n/a | B1, B2, and second-looks 4, 5 and 8; the T012 hand-check closed by the person's own A2.7 |

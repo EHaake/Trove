@@ -2,10 +2,17 @@ import Foundation
 import Testing
 @testable import Trove
 
-/// Spec 015's copy, pinned whole (the `SaleCopyTests` model): every string in
-/// the spec's Copy section, and the comparison line's five cases — under,
-/// over, equal, no estimate, and less than a dollar apart — which are the
-/// readings criterion 6 turns on.
+/// `PurchaseCopy`'s table, pinned whole (the `SaleCopyTests` model): the
+/// purchase sheet's and the purchase actions' strings, and the comparison
+/// line's five cases — under, over, equal, no estimate, and less than a dollar
+/// apart — which are the readings criterion 6 turns on.
+///
+/// Not all of spec 015's Copy section, since T012c: the Sell Plan entry
+/// point's four strings live inline in
+/// `WishlistDetailViewModel.sellPlanEntryTitle` and `.sellPlanEntrySubtitle`,
+/// because which of them a person sees is a branch rather than a fixed label.
+/// They are covered where the branch is, by `WishlistDetailViewModelTests`,
+/// which is the behavioural reach a literal pinned here would not have.
 @Suite("Purchase copy")
 struct PurchaseCopyTests {
     // MARK: - The fixed strings
@@ -50,10 +57,10 @@ struct PurchaseCopyTests {
         #expect(PurchaseCopy.failureMessage
             == "Something went wrong saving the purchase. Nothing was changed.")
 
-        // Two refusals, two readings: an entry bought elsewhere is not a
-        // failed write, and one message for both would tell the person the
-        // wrong thing in whichever case it wasn't written for.
-        #expect(PurchaseCopy.alreadyBought != PurchaseCopy.failureMessage)
+        // No "the two messages differ" leg: the literals above already pin
+        // both, so it could not fail. Which host maps which refusal to which
+        // message is behaviour, checked by
+        // `WishlistDetailViewModelTests.everyHostRefusesToBuyAnEntryTwice`.
     }
 
     // MARK: - The comparison line
