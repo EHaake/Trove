@@ -33,6 +33,15 @@ final class SellPlanViewModel {
     private(set) var loadFailureMessage: String?
     private(set) var saveFailureMessage: String?
 
+    /// A refused purchase (015 T012b). Its own property rather than the
+    /// share of `saveFailureMessage` §6 gave it: that was right while both
+    /// were invisible, but the purchase alert this screen now shows would
+    /// read a refused *sale* out of a shared property, and this spec's
+    /// non-goals forbid any change to the sale sheet or the sold side.
+    /// Settable so the alert's binding can clear it on OK, the
+    /// `exportFailureMessage` shape; `markSold` is untouched.
+    var purchaseFailureMessage: String?
+
     /// The device's own market figures for the owned items, keyed by item —
     /// one fetch per `load()`, the same step every other row surface goes
     /// through (`MarketSummary.summaries(forSubjects:in:now:)`), so this
@@ -245,6 +254,7 @@ final class SellPlanViewModel {
     func load() {
         loadFailureMessage = nil
         do {
+            // By id, unchanged by 015 (plan §4): R2's job, not this fetch's.
             let id = wishlistItemID
             var descriptor = FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.id == id })
             descriptor.fetchLimit = 1
@@ -433,6 +443,74 @@ final class SellPlanViewModel {
     /// the clock is this screen's injected one, so a test can pin the date.
     func makeSaleFormViewModel(for item: Item) -> SaleFormViewModel {
         SaleFormViewModel(mode: .mark, prefill: nil, currentValueCents: item.currentValueCents, now: now)
+    }
+
+    // MARK: - Marking this plan's wanted entry bought (015)
+
+    /// The purchase sheet, seeded exactly as the Wishlist row's and the
+    /// wanted-entry page's are (plan Q10): the price from the entry's
+    /// estimated cost when it has one and blank when it doesn't — never a
+    /// pre-filled $0, the 006 P1 rule — and today's date from this screen's
+    /// injected clock. No argument: the subject is this plan's own
+    /// `wishlistItem`. G12 pins the three hosts equal.
+    func makePurchaseFormViewModel() -> PurchaseFormViewModel {
+        PurchaseFormViewModel(estimatedCostCents: estimatedCostCents, now: now)
+    }
+
+    /// Mark as bought… from the plan: the entry becomes an owned item, its
+    /// remaining selections are released by the store, and this screen
+    /// dismisses (plan R2).
+    ///
+    /// `WishlistPurchaseStore` is the one writer (015 plan Q4) and callers
+    /// save — the `markSold(_:sale:)` shape beside it, one intent, one
+    /// immediate save. **No reload on success**, unlike its neighbour: the
+    /// screen is going away, and re-deriving a plan whose subject has just
+    /// been bought would only repopulate it to be thrown out.
+    ///
+    /// Reports a refusal in `purchaseFailureMessage`, its own property and
+    /// not `markSold`'s `saveFailureMessage` (T012b). §6 shared the two
+    /// because two intents on one screen should read alike, which was right
+    /// while neither was rendered; now that this one has an alert, sharing
+    /// would surface a refused *sale* through it, and this spec's non-goals
+    /// forbid any change to the sale sheet or the sold side. Neither
+    /// property is cleared by `load()`, so the message still outlives the
+    /// reload below.
+    ///
+    /// Returns false on a refused save, which rolls back.
+    @discardableResult
+    func markBought(purchase: Purchase) -> Bool {
+        purchaseFailureMessage = nil
+        guard let wishlistItem else {
+            // T012e: not silent. The toolbar gate makes this near
+            // unreachable — but the entry can vanish from another device
+            // while the sheet is already open, and a confirm that closes the
+            // sheet saying nothing is exactly the state T012b existed to
+            // remove. `failureMessage` rather than `alreadyBought`: nothing
+            // is known about why the entry is gone, and "Nothing was
+            // changed" is true of this path — it returns ahead of every
+            // write.
+            purchaseFailureMessage = PurchaseCopy.failureMessage
+            return false
+        }
+        do {
+            try WishlistPurchaseStore.markBought(wishlistItem, purchase: purchase, at: now(), in: modelContext)
+            try modelContext.save()
+        } catch {
+            // `rollback()` discards every pending change on the shared
+            // context, not only this intent's — the same recovery `markSold`
+            // uses. The reload below then shows what is actually stored: the
+            // plan as it was, with its selections intact.
+            modelContext.rollback()
+            // Which refusal it was, since the two read nothing alike: an
+            // entry bought on another device mid-screen (B1, the one a
+            // person can actually meet) against a failed write.
+            purchaseFailureMessage = error as? WishlistPurchaseStore.PurchaseError == .alreadyBought
+                ? PurchaseCopy.alreadyBought
+                : PurchaseCopy.failureMessage
+            load()
+            return false
+        }
+        return true
     }
 }
 

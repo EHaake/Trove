@@ -237,6 +237,8 @@ final class WishlistFormViewModel {
     }
 
     private func nextSortOrder() -> Int {
+        // Bought entries included, deliberately (015 plan §4): a new want
+        // appends past every stored position, which keeps them dense.
         let existing = (try? modelContext.fetch(FetchDescriptor<WishlistItem>())) ?? []
         return ManualOrderHelper.nextPosition(after: existing)
     }

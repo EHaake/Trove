@@ -64,6 +64,14 @@ final class WishlistViewModel {
     private(set) var categoryLabels: [String: String] = [:]
     private(set) var loadFailureMessage: String?
 
+    /// A refused purchase (015 T012b). Its own property rather than a share
+    /// of `loadFailureMessage`, which `load()` clears on entry: the list
+    /// hosts the purchase sheet with `onDismiss: viewModel.load`, so a
+    /// message reported into that property would be wiped by the reload the
+    /// dismissal triggers, before any alert could show it. Settable so the
+    /// alert's binding can clear it on OK, the `exportFailureMessage` shape.
+    var purchaseFailureMessage: String?
+
     private let modelContext: ModelContext
 
     private let syncMonitor: SyncMonitor
@@ -140,11 +148,28 @@ final class WishlistViewModel {
     func load() {
         loadFailureMessage = nil
         do {
+            // One fetch, split once (015 plan Q11), the shape
+            // `ItemListViewModel.load` uses for owned/sold: `totalCount`, the
+            // list, the chips and the market summaries all derive from
+            // `wanted`, so a bought entry can't reach any of them by being
+            // missed at one of five call sites.
+            //
+            // `totalCount` matters as much as `items`, and not for the reason
+            // Q11 gives: `ListEmptyReason.reason` falls through to
+            // `.nothingAdded` anyway when nothing is narrowing. What the count
+            // actually drives is the screen's chrome — `WishlistView` gates
+            // the search field and chips on `totalCount > 0`, and the header's
+            // sort control likewise — so a bought entry left in the count
+            // leaves a search field, a chip row and a sort badge sitting over
+            // an empty list after the last entry is bought, filter or no
+            // filter. Secondarily, with a chip or a query still set, the count
+            // is what picks the filter's empty copy over the collection's.
             let all = try modelContext.fetch(FetchDescriptor<WishlistItem>())
-            totalCount = all.count
+            let wanted = all.filter { !$0.isBought }
+            totalCount = wanted.count
             // Before the sort, not after: the Market orders read these.
-            marketSummaries = Self.summaries(for: all, in: modelContext, now: now())
-            items = all
+            marketSummaries = Self.summaries(for: wanted, in: modelContext, now: now())
+            items = wanted
                 .filter { CategoryPathHelper.path($0.categoryPath, isWithin: categoryFilter) }
                 // Name only. A wishlist item has no serial number — it isn't
                 // owned yet — so there's nothing else to match on.
@@ -155,7 +180,7 @@ final class WishlistViewModel {
             // list uses would fill most of this row with chips that lead
             // nowhere, since a wishlist is short and a collection isn't.
             categoryOptions = CategoryPathHelper.sortedDistinctPaths(
-                all.map { (path: $0.categoryPath, createdAt: $0.createdAt) }
+                wanted.map { (path: $0.categoryPath, createdAt: $0.createdAt) }
             )
             categoryLabels = CategoryPathHelper.displayLabels(for: categoryOptions)
         } catch {
@@ -281,6 +306,8 @@ final class WishlistViewModel {
         modelContext.insert(copy)
 
         // Whole collection in manual order, never the filtered slice.
+        // Bought entries included, deliberately (015 plan §4): this renumbers
+        // over the whole table, which is what keeps positions dense.
         let ordered = (try? modelContext.fetch(
             FetchDescriptor<WishlistItem>(sortBy: [SortDescriptor(\.sortOrder)])
         )) ?? []
@@ -300,6 +327,57 @@ final class WishlistViewModel {
             return
         }
         load()
+    }
+
+    // MARK: - Marking a wanted entry bought (015)
+
+    /// The purchase sheet for a row, seeded exactly as the wanted-entry page
+    /// and the Sell Plan seed their own (plan Q10): the price from the entry's
+    /// estimated cost when it has one and blank when it doesn't — never a
+    /// pre-filled $0, the 006 P1 rule — and today's date from this screen's
+    /// injected clock, so a test can pin it. One seeding rule for all three
+    /// hosts; G12 pins them equal.
+    func makePurchaseFormViewModel(for wanted: WishlistItem) -> PurchaseFormViewModel {
+        PurchaseFormViewModel(estimatedCostCents: wanted.estimatedCostCents, now: now)
+    }
+
+    /// Mark as bought… from a row: the entry becomes an owned item and leaves
+    /// this list.
+    ///
+    /// `WishlistPurchaseStore` is the one writer (015 plan Q4) and callers
+    /// save — the `delete(id:)` shape, one intent, one immediate save, no
+    /// separate step. `load()` then drops the entry, since it is bought now.
+    ///
+    /// Returns false on a refused save, which rolls back and says so in
+    /// `purchaseFailureMessage` — the alert this list shows.
+    @discardableResult
+    func markBought(_ wanted: WishlistItem, purchase: Purchase) -> Bool {
+        purchaseFailureMessage = nil
+        do {
+            try WishlistPurchaseStore.markBought(wanted, purchase: purchase, at: now(), in: modelContext)
+            try modelContext.save()
+        } catch {
+            // The reload below fetches a context that still holds the pending
+            // insert and the pending marker, so it would hide a row that is
+            // still wanted and show an item that was never saved
+            // (`PersistenceTests.aFetchSeesTheContextsPendingInsertsAndDeletesUntilRollback`).
+            modelContext.rollback()
+            // Straight after the rollback, as the other two hosts do: the
+            // property is this intent's own and no `load()` clears it, so
+            // the reload below can't wipe it and the ordering is one rule
+            // for all three rather than a per-host detail to get right.
+            //
+            // Which refusal it was, too, since the two read nothing alike:
+            // an entry bought on another device mid-screen (B1, the one a
+            // person can actually meet) against a failed write.
+            purchaseFailureMessage = error as? WishlistPurchaseStore.PurchaseError == .alreadyBought
+                ? PurchaseCopy.alreadyBought
+                : PurchaseCopy.failureMessage
+            load()
+            return false
+        }
+        load()
+        return true
     }
 
     // MARK: - Export (011)
@@ -468,6 +546,8 @@ final class WishlistViewModel {
             defer { isImportingFile = false }
             await Task.yield()
 
+            // Bought entries included, deliberately (015 plan §4): the import
+            // appends past every stored position, not past the visible ones.
             let existing = (try? modelContext.fetch(FetchDescriptor<WishlistItem>())) ?? []
             let base = ManualOrderHelper.nextPosition(after: existing)
             var knownPaths = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []

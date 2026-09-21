@@ -201,6 +201,8 @@ struct CategoryPathHelper {
     private func allRecords() throws -> [(path: String, createdAt: Date)] {
         let itemRecords = try modelContext.fetch(FetchDescriptor<Item>())
             .map { (path: $0.categoryPath, createdAt: $0.createdAt) }
+        // Bought entries included, deliberately (015 plan §4): the category
+        // is real, and the item the purchase created carries it anyway.
         let wishlistRecords = try modelContext.fetch(FetchDescriptor<WishlistItem>())
             .map { (path: $0.categoryPath, createdAt: $0.createdAt) }
         return itemRecords + wishlistRecords

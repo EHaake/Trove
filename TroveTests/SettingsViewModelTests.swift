@@ -1175,3 +1175,179 @@ struct SettingsViewModelMarketRefreshTests {
         #expect(viewModel.canRefreshMarketValues)
     }
 }
+
+// MARK: - 015/G10: Settings treats a bought entry as off the wishlist
+
+/// G10 (015, plan §4 and R1, criterion 13). Settings reads `WishlistItem` in
+/// three places, and all three take the bought entry as gone: the count that
+/// feeds `canDeleteWishlist` and the delete alert, the export-everything
+/// fetch, and the Delete-all walk. The matched count follows too (G11's
+/// Settings half).
+///
+/// Each fixture's bought entry differs from the live ones by name, category
+/// and estimated cost, and its purchase price differs from its estimate — so
+/// a leg that counts it, exports it, deletes it or refreshes it fails on a
+/// value no correct implementation produces.
+@Suite("Settings treats a bought entry as off the wishlist")
+struct SettingsBoughtExclusionTests {
+    private let boughtAt = Date(timeIntervalSince1970: 1_780_000_000)
+
+    /// Through `WishlistPurchaseStore` — the app's only writer of the marker.
+    @discardableResult
+    private func buy(_ wanted: WishlistItem, priceCents: Int, in context: ModelContext) throws -> Item {
+        let item = try WishlistPurchaseStore.markBought(
+            wanted,
+            purchase: Purchase(date: boughtAt, priceCents: priceCents, location: "Reverb", condition: .excellent),
+            at: boughtAt,
+            in: context
+        )
+        try context.save()
+        return item
+    }
+
+    // MARK: - The count (R1)
+
+    @Test func theWishlistCountAndItsFlagsIgnoreABoughtEntry() throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Vox AC15", category: "Music/Amps", costCents: 10_000, order: 0, into: context)
+        let gibson = insertWanted("Gibson ES-335", category: "Music/Guitars", costCents: 250_000, order: 1, into: context)
+        try context.save()
+        try buy(gibson, priceCents: 300_000, in: context)
+
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+
+        #expect(viewModel.wishlistCount == 1, "the bought entry is still counted as wanted")
+        #expect(viewModel.canDeleteWishlist)
+        #expect(viewModel.itemCount == 1, "the purchase's item is an ordinary item")
+
+        viewModel.requestDeleteAll(.wishlist)
+        #expect(viewModel.alert == .confirmDelete(.wishlist, count: 1))
+    }
+
+    /// The other end: buy the last wanted entry and the row disables itself.
+    /// `canExportEverything` stays true on the item the purchase created,
+    /// which is what R1 means by "not on the wishlist" rather than "gone".
+    @Test func buyingTheLastWantedEntryDisablesDeleteAllWanted() throws {
+        let context = try makeInMemoryContext()
+        let amp = insertWanted("Vox AC15", category: "Music/Amps", costCents: 10_000, order: 0, into: context)
+        try context.save()
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+        try #require(viewModel.canDeleteWishlist)
+
+        try buy(amp, priceCents: 120_000, in: context)
+        viewModel.load()
+
+        #expect(viewModel.wishlistCount == 0)
+        #expect(!viewModel.canDeleteWishlist)
+        #expect(viewModel.canExportEverything, "the purchased item is still exportable")
+
+        viewModel.requestDeleteAll(.wishlist)
+        #expect(viewModel.alert == nil, "a wishlist with nothing wanted on it still offered the deletion")
+    }
+
+    // MARK: - The export (criterion 13)
+
+    @Test func theWishlistCSVCarriesOnlyLiveRowsWhileTheItemsCSVCarriesThePurchase() async throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Vox AC15", category: "Music/Amps", costCents: 10_000, order: 0, into: context)
+        let gibson = insertWanted("Gibson ES-335", category: "Music/Guitars", costCents: 250_000, order: 1, into: context)
+        try context.save()
+        try buy(gibson, priceCents: 300_000, in: context)
+
+        let spy = ExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportEverythingAsCSV()
+
+        #expect(spy.tables.count == 2)
+        #expect(spy.tables[1].rows.map { $0[0] } == ["Vox AC15"], "the bought entry is in the wishlist CSV")
+        #expect(spy.tables[0].rows.map { $0[0] } == ["Gibson ES-335"], "the purchase's item is missing from the items CSV")
+        // Table count and order only. This compares the emitted headers
+        // against the very constants the producer emits, so a new wishlist
+        // column would move both sides together and leave this green — the
+        // no-new-column half of criterion 13 is held by `ExportSchemaTests`'
+        // `wishlistHeaders` literal, not here.
+        #expect(spy.tables.map(\.headers) == [ExportSchema.itemHeaders, ExportSchema.wishlistHeaders],
+                "the two files are in the wrong order, or one of them is missing")
+    }
+
+    @Test func theWishlistPDFCarriesOnlyLiveRowsAndItsCoverTotal() async throws {
+        let context = try makeInMemoryContext()
+        insertWanted("Vox AC15", category: "Music/Amps", costCents: 10_000, order: 0, into: context)
+        let gibson = insertWanted("Gibson ES-335", category: "Music/Guitars", costCents: 250_000, order: 1, into: context)
+        try context.save()
+        try buy(gibson, priceCents: 300_000, in: context)
+
+        let spy = ExportServiceSpy()
+        let viewModel = SettingsViewModel(modelContext: context, exportService: spy)
+        viewModel.load()
+
+        await viewModel.exportEverythingAsPDF()
+
+        #expect(spy.documents.count == 2)
+        #expect(spy.documents[1].entries.map(\.name) == ["Vox AC15"])
+        #expect(spy.documents[1].cover.itemCount == 1)
+        #expect(spy.documents[0].entries.map(\.name) == ["Gibson ES-335"])
+        guard case .wishlist(let cost) = spy.documents[1].cover.totals else {
+            Issue.record("the wishlist document's cover carries the wrong totals")
+            return
+        }
+        #expect(cost == 10_000, "the bought entry's estimate is in the wishlist cover total")
+    }
+
+    // MARK: - Delete all wanted items (R1)
+
+    @Test func deleteAllWantedLeavesTheBoughtEntryInTheStore() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        insertWanted("Vox AC15", category: "Music/Amps", costCents: 10_000, order: 0, into: context)
+        insertWanted("Fender Twin", category: "Music/Amps", costCents: 180_000, order: 1, into: context)
+        let gibson = insertWanted("Gibson ES-335", category: "Music/Guitars", costCents: 250_000, order: 2, into: context)
+        try context.save()
+        try buy(gibson, priceCents: 300_000, in: context)
+
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+        viewModel.requestDeleteAll(.wishlist)
+        try #require(viewModel.alert == .confirmDelete(.wishlist, count: 2))
+
+        await viewModel.confirmDeleteAll(.wishlist)?.value
+
+        let elsewhere = ModelContext(container)
+        let survivors = try elsewhere.fetch(FetchDescriptor<WishlistItem>())
+        #expect(survivors.map(\.name) == ["Gibson ES-335"], "the gesture deleted more, or less, than the count promised")
+        #expect(try #require(survivors.first).isBought)
+        #expect(try elsewhere.fetchCount(FetchDescriptor<Item>()) == 1, "the purchase's item went with the wipe")
+        #expect(viewModel.wishlistCount == 0)
+    }
+
+    // MARK: - The matched count (G11's Settings half)
+
+    /// The arithmetic is the point: before the purchase two wanted entries
+    /// are matched; after it the count is still 2, but it is a *different* 2
+    /// — the new item takes the entry's place as an owned target. Leave the
+    /// bought entry in the walk and it is 3.
+    @Test func theMatchedCountDropsTheBoughtEntryAndPicksUpItsItem() throws {
+        let context = try makeInMemoryContext()
+        let amp = WishlistItem(name: "Vox AC15", categoryPath: "Music/Amps", sortOrder: 0, reverbProductID: 7)
+        let gibson = WishlistItem(name: "Gibson ES-335", categoryPath: "Music/Guitars", sortOrder: 1, reverbProductID: 42)
+        context.insert(amp)
+        context.insert(gibson)
+        try context.save()
+
+        let viewModel = SettingsViewModel(modelContext: context)
+        viewModel.load()
+        try #require(viewModel.matchedCount == 2)
+
+        try buy(gibson, priceCents: 300_000, in: context)
+        viewModel.load()
+
+        #expect(viewModel.matchedCount == 2, "the bought entry is still a refresh target — that would be 3")
+        let targets = try MarketRefresher.targets(in: context)
+        #expect(!targets.contains { $0.key.subjectID == gibson.id })
+        #expect(targets.map(\.productID) == [42, 7], "the purchase's item carries the match, as an owned target")
+    }
+}

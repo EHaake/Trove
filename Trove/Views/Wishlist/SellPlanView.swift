@@ -29,8 +29,14 @@ import SwiftUI
 /// toward it (P15).
 struct SellPlanView: View {
     @State private var viewModel: SellPlanViewModel
+    /// Whether the purchase sheet is up (015 plan §8). A flag rather than the
+    /// Wishlist row's `.sheet(item:)` staging, for the reason the wanted
+    /// entry's page holds one too: this screen has one subject, so there is
+    /// nothing to choose between.
+    @State private var isMarkingBought = false
 
     @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
 
     init(modelContext: ModelContext, wishlistItemID: UUID, syncMonitor: SyncMonitor = .notSyncing) {
         _viewModel = State(
@@ -54,6 +60,39 @@ struct SellPlanView: View {
         }
         .navigationTitle("Sell plan")
         .navigationBarTitleDisplayMode(.inline)
+        // 015 (plan §8, criterion 3): Mark as bought… for the wanted item this
+        // plan belongs to, as a bar button rather than a menu — this screen has
+        // no Edit or Delete for it to sit beside, and a one-row menu is a menu
+        // for nothing. It lands in the same top-right corner the wanted entry's
+        // "…" occupies, so "the action is top-right" is true on both screens.
+        //
+        // The gate is not decoration: this screen already draws `missingItem`
+        // when its entry has gone (deleted on another device), and an ungated
+        // button there would be tappable over no subject and would confirm a
+        // purchase of nothing.
+        //
+        // The button wears the word, not a glyph (T012a, the person's decision
+        // at the device pass): a bare outline bag alone in a toolbar reads as
+        // *cart*, and it sits on the one screen in the app whose whole subject
+        // is selling. The word is `PurchaseCopy.swipeBuy` rather than a new
+        // constant — it is already the short form of this exact action on the
+        // wishlist's swipe, so one short word covers one action in both
+        // places; "Bought" would read as a state rather than an action, and
+        // would be a second short form for the same thing. The spoken name
+        // stays the full `markAsBought`, as it does on the swipe.
+        .toolbar {
+            if viewModel.wishlistItem != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isMarkingBought = true
+                    } label: {
+                        Text(PurchaseCopy.swipeBuy)
+                    }
+                    .accessibilityLabel(PurchaseCopy.markAsBought)
+                    .accessibilityIdentifier("purchase.sellPlan")
+                }
+            }
+        }
         .onAppear(perform: viewModel.load)
         // An import landing while this screen is open changes what it should
         // show, and nothing else tells it — the view models fetch on appear
@@ -75,6 +114,46 @@ struct SellPlanView: View {
                 },
                 cancel: { viewModel.saleCandidate = nil }
             )
+        }
+        // 015 (plan §8): a second sheet, beside the sale sheet above — the
+        // shared purchase form, seeded by the view model exactly as the
+        // Wishlist row's and the wanted entry's page are, so all three hosts
+        // open on the same defaults. The sheet writes nothing itself: what a
+        // confirmed purchase means is decided here, through `markBought`, the
+        // one path into the store. A purchase that took pops this screen (R2),
+        // since the plan's subject is no longer wanted.
+        //
+        // Only one that took. A refused save rolls back, so the entry and its
+        // plan are still exactly as they were, and popping would move the
+        // person off a screen that is still correct. Since T012b the person
+        // is also told why: `markBought` records the reason in
+        // `purchaseFailureMessage`, and the alert below reads it.
+        .sheet(isPresented: $isMarkingBought) {
+            PurchaseFormView(
+                viewModel: viewModel.makePurchaseFormViewModel(),
+                confirm: { purchase in
+                    isMarkingBought = false
+                    if viewModel.markBought(purchase: purchase) { dismiss() }
+                },
+                cancel: { isMarkingBought = false }
+            )
+        }
+        // 015 T012b: a refused purchase says so. Before this the reason was
+        // recorded in a view-model property no view read, so confirming on a
+        // refusal closed the sheet, left the screen standing and told the
+        // person nothing. The export alert's shape, with OK the only way
+        // out; it reads `purchaseFailureMessage` and not the sale's
+        // `saveFailureMessage`, so a refused *sale* can never surface here.
+        .alert(
+            PurchaseCopy.failureTitle,
+            isPresented: Binding(
+                get: { viewModel.purchaseFailureMessage != nil },
+                set: { if !$0 { viewModel.purchaseFailureMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.purchaseFailureMessage ?? PurchaseCopy.failureMessage)
         }
     }
 

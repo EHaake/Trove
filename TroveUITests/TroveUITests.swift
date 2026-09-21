@@ -1699,4 +1699,175 @@ final class TroveUITests: XCTestCase {
             .allElementsBoundByIndex
             .contains { $0.frame.minY < y }
     }
+
+    // MARK: - 015 Mark as bought
+
+    /// `015` criteria 1 and 5 on the seeded Sell Plan collection
+    /// (`-seedSellPlan`, unchanged: it already carries the one wanted item,
+    /// "Summicron 35mm f/2" at an estimated $2,400): the wishlist row's
+    /// leading swipe offers **Mark as bought…** between Edit and Copy, and
+    /// tapping it opens the purchase sheet pre-filled from that estimate.
+    ///
+    /// The `014` twin of this test on the Items list
+    /// (`testTheLeadingSwipeOffersMarkAsSoldBetweenEditAndCopyAndOpensTheSheet`)
+    /// is the pattern, including the partial drag: `swipeRight()` fires the
+    /// edge action instead of opening the tray (`014` T009's finding).
+    ///
+    /// Its mutations: wiring the middle swipe button to `itemBeingEdited`
+    /// instead of `itemBeingBought` must turn the price field's existence red
+    /// (the edit form opens instead of the sheet); dropping
+    /// `.accessibilityLabel(PurchaseCopy.markAsBought)` from that button must
+    /// turn the button's existence red, because it then reads "Buy" — which
+    /// is why this matches `"Mark as bought\u{2026}"` alone and never `OR
+    /// "Buy"` (the `014` close-out lesson: the hedge lets the modifier stop
+    /// working in silence).
+    @MainActor
+    func testTheWishlistsLeadingSwipeOffersMarkAsBoughtAndTheSheetSeedsFromTheEstimate() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSellPlan"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Wishlist"].tap()
+        let summicron = app.staticTexts["Summicron 35mm f/2"]
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "the seed's one wanted item must be on the Wishlist")
+
+        openLeadingSwipe(on: summicron, in: app)
+
+        let edit = app.buttons["Edit"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 5), "the leading swipe didn't open")
+        // "Buy" is the visible word and `PurchaseCopy.markAsBought` the
+        // accessibility label the button carries — the Items list's Sell
+        // swipe, on the wanted side. Matched on the spoken name alone.
+        let buy = app.buttons
+            .matching(NSPredicate(format: "label == %@", "Mark as bought\u{2026}"))
+            .firstMatch
+        XCTAssertTrue(
+            buy.exists,
+            "criterion 1: the wishlist's leading swipe must offer an action announced as \"Mark as bought…\" (the visible word is \"Buy\")"
+        )
+        let copy = app.buttons["Copy"]
+        XCTAssertTrue(copy.exists, "the wishlist's leading swipe still offers Copy")
+
+        // Criterion 1's order, left to right: Edit is what a full swipe
+        // fires, so it stays nearest the edge.
+        XCTAssertLessThan(edit.frame.minX, buy.frame.minX, "Edit must stay nearest the leading edge")
+        XCTAssertLessThan(buy.frame.minX, copy.frame.minX, "Mark as bought… sits between Edit and Copy")
+
+        buy.tap()
+
+        // Criterion 5's pre-fill: the Summicron is wanted at an estimated
+        // $2,400, so that is what the price field opens with. Read with the
+        // grouping separator stripped — the figure is the claim, not how the
+        // formatter groups it.
+        let price = app.textFields["purchase.sheet.price"]
+        XCTAssertTrue(price.waitForExistence(timeout: 5), "Mark as bought… must open the purchase sheet")
+        let typed = (price.value as? String ?? "")
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: "\u{00A0}", with: "")
+            .replacingOccurrences(of: "\u{202F}", with: "")
+        XCTAssertEqual(typed, "2400", "the sheet must pre-fill from the estimate — it reads \"\(price.value as? String ?? "")\"")
+
+        // Cancelling buys nothing: the entry is still wanted, and nothing was
+        // added to the collection.
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(price.waitForNonExistence(timeout: 5), "Cancel must close the purchase sheet")
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "a cancelled purchase leaves the entry on the Wishlist")
+
+        app.buttons["Items"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Telecaster"].waitForExistence(timeout: 5),
+            "the Items tab should list the seed's owned gear"
+        )
+        XCTAssertFalse(
+            app.staticTexts["Summicron 35mm f/2"].exists,
+            "a cancelled purchase adds nothing to the collection"
+        )
+    }
+
+    /// `015` criteria 8 and 11, the whole move: the same swipe, a condition
+    /// chosen, **Mark as bought** — and the entry is gone from the Wishlist,
+    /// which falls back to its existing empty state, while the Items tab
+    /// lists it at what was paid.
+    ///
+    /// Its mutation: dropping `WishlistViewModel.load`'s `!$0.isBought`
+    /// filter must turn the empty state red — the bought row is still listed.
+    @MainActor
+    func testMarkingAWantedItemBoughtMovesItToTheCollection() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSellPlan"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Wishlist"].tap()
+        let summicron = app.staticTexts["Summicron 35mm f/2"]
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "the seed's one wanted item must be on the Wishlist")
+
+        openLeadingSwipe(on: summicron, in: app)
+
+        let buy = app.buttons
+            .matching(NSPredicate(format: "label == %@", "Mark as bought\u{2026}"))
+            .firstMatch
+        XCTAssertTrue(buy.waitForExistence(timeout: 5), "the leading swipe must offer Mark as bought…")
+        buy.tap()
+
+        let price = app.textFields["purchase.sheet.price"]
+        XCTAssertTrue(price.waitForExistence(timeout: 5), "Mark as bought… must open the purchase sheet")
+
+        // Criterion 5's condition, which is a row of capsule chips rather
+        // than a picker (a system menu inside page content is what
+        // `MenuPolicyTests` forbids). The chip carries the selected trait,
+        // which is both how VoiceOver says which one is chosen and how this
+        // reads the selection back.
+        let good = app.buttons["Good"]
+        XCTAssertTrue(good.exists, "criterion 5: the sheet must ask for a condition")
+        good.tap()
+        XCTAssertTrue(good.isSelected, "the tapped condition chip must come back selected")
+
+        app.buttons["purchase.sheet.confirm"].tap()
+        XCTAssertTrue(price.waitForNonExistence(timeout: 5), "Mark as bought must close the sheet")
+
+        // Criteria 8 and 11: the last wanted entry is bought, so the Wishlist
+        // is empty — and lands on the empty state it already had, in its own
+        // words.
+        XCTAssertTrue(
+            app.staticTexts["Nothing on the list yet"].waitForExistence(timeout: 5),
+            "criterion 11: buying the last wishlist item leaves the Wishlist in its existing empty state"
+        )
+        XCTAssertFalse(
+            summicron.exists,
+            "criterion 8: the bought entry leaves the Wishlist"
+        )
+
+        // And criterion 8's other half: it is in the collection now, at what
+        // was paid — the row is one `.combine`d element, so the name and the
+        // figure are in the one label.
+        app.buttons["Items"].tap()
+        // Matched across every type rather than `app.staticTexts`: an owned
+        // row's `.combine`d element comes back as a plain container, not a
+        // static text (the Sold side's row does come back as one, which is
+        // why `soldRow` can query `staticTexts` — read off the hierarchy,
+        // not assumed). The comma is what tells the combined row from the
+        // plain name inside it.
+        let row = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Summicron 35mm f/2,"))
+            .firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "criterion 8: the bought entry must appear in the collection")
+        XCTAssertTrue(row.label.contains("$2,400"), "the row reads \"\(row.label)\"")
+    }
+
+    /// Opens a row's leading swipe tray with a **partial** drag across about
+    /// 40 % of the row, pressed first so the gesture reads as a drag rather
+    /// than a flick. Never `swipeRight()`, which travels far enough to fire
+    /// the edge action instead of leaving the tray open — `014` T009's
+    /// finding, and the reason the Items list's twin test drags this way too.
+    /// The row spans the window, so the window's width is the row's.
+    @MainActor
+    private func openLeadingSwipe(on row: XCUIElement, in app: XCUIApplication) {
+        let start = row.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+        start.press(
+            forDuration: 0.1,
+            thenDragTo: start.withOffset(CGVector(dx: app.frame.width * 0.4, dy: 0))
+        )
+    }
 }

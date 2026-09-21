@@ -51,6 +51,12 @@ struct WishlistView: View {
     /// shortcut into the same flow the detail screen offers (T024).
     @State private var itemBeingEdited: WishlistItem?
 
+    /// The row whose Buy swipe action is open in the purchase sheet (015 plan
+    /// §8). The same optional-entry staging the Edit sheet above uses, and the
+    /// same sheet the wanted entry's own page presents — the swipe is a
+    /// shortcut into that flow, never a second way to record a purchase.
+    @State private var itemBeingBought: WishlistItem?
+
     /// The row a swipe has asked to delete, held until the alert resolves it.
     /// The swipe-then-tap gesture is a fine two-step on its own; what it
     /// can't do is *say* anything — and every other delete path in the app
@@ -139,6 +145,22 @@ struct WishlistView: View {
                 WishlistFormView(modelContext: modelContext, editing: item)
             }
         }
+        // The Buy swipe's sheet (015 T008, plan §8): the shared purchase
+        // form, seeded by the view model exactly as the wanted entry's page
+        // and the Sell Plan's are. `.sheet(item:)` over the row's entry rather
+        // than a flag, so two rows can never both be being bought; the sheet
+        // writes nothing itself, so what a confirmed purchase means is decided
+        // here — through `markBought`, which is the one path into the store.
+        .sheet(item: $itemBeingBought, onDismiss: viewModel.load) { item in
+            PurchaseFormView(
+                viewModel: viewModel.makePurchaseFormViewModel(for: item),
+                confirm: { purchase in
+                    viewModel.markBought(item, purchase: purchase)
+                    itemBeingBought = nil
+                },
+                cancel: { itemBeingBought = nil }
+            )
+        }
         // 013's Settings sheet — ItemListView's twin, refetching on dismiss
         // so a Delete All behind it shows here at once.
         .sheet(isPresented: $isShowingSettings, onDismiss: viewModel.load) {
@@ -208,6 +230,23 @@ struct WishlistView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.exportFailureMessage ?? ExportCopy.failureMessage)
+        }
+        // 015 T012b: a refused purchase says so. Before this the reason was
+        // recorded in a view-model property no view read, so the sheet just
+        // closed and nothing happened — and since B1 the refusal a person
+        // can actually meet is an entry bought on another device while this
+        // screen was open. The export alert's shape, one line for one
+        // message, with OK the only way out.
+        .alert(
+            PurchaseCopy.failureTitle,
+            isPresented: Binding(
+                get: { viewModel.purchaseFailureMessage != nil },
+                set: { if !$0 { viewModel.purchaseFailureMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.purchaseFailureMessage ?? PurchaseCopy.failureMessage)
         }
         // 012's file picker and import alert — ItemListView's twins; see
         // the notes there (cancel-safe by construction, one presentation
@@ -379,6 +418,23 @@ struct WishlistView: View {
                             Label { Text("Edit") } icon: { Image("ActionEdit") }
                         }
                         .tint(theme.colors.divider)
+                        // 015 criterion 1: Mark as bought… between Edit and
+                        // Copy, so Edit stays nearest the edge and a full
+                        // swipe still edits. "Buy" is the visible word — the
+                        // fuller name doesn't fit the ~76 pt action beside a
+                        // glyph — and `markAsBought`, the menu row's own
+                        // name, is what VoiceOver says, so the same action is
+                        // announced the same way from both places (plan Q14).
+                        // Brass mid-tone, the one brass that reads mid in both
+                        // appearances, exactly as the Items list's Sell swipe
+                        // wears it (014 T007).
+                        Button {
+                            itemBeingBought = item
+                        } label: {
+                            Label { Text(PurchaseCopy.swipeBuy) } icon: { Image("ActionBuy") }
+                        }
+                        .tint(theme.colors.accentBrassMid)
+                        .accessibilityLabel(PurchaseCopy.markAsBought)
                         Button {
                             viewModel.duplicate(id: item.id)
                         } label: {

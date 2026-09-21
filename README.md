@@ -16,6 +16,19 @@ purchases.
   desire-to-keep — three levels (Someday / Soon / Next), shown as a
   three-segment gauge rather than a recolored version of the owned-item
   dial, since the two ratings mean structurally different things.
+- **Marking something bought** — when you finally buy the thing you were
+  saving for, swipe its row on the wishlist and tap Buy (or use the same
+  action from the item's "…" menu or from its Sell Plan). One sheet asks
+  what you paid, when, where and what condition it's in, and says in
+  passing how the price compared to what you'd estimated. The wanted item
+  becomes an item in your collection, keeping its name, category, photos
+  and their credits, its Reverb match, its year and your notes — nothing
+  to retype — and it leaves the wishlist. Nothing is thrown away: the
+  sell plan you built around it survives as a record of what you sold
+  toward it. There's no undo, on purpose — every way in goes through a
+  sheet you have to confirm, and an undo would have to delete the item
+  the purchase created. A purchase made by mistake is corrected by
+  deleting the item and adding the want back.
 - **A dashboard** — total current value, total spent, the gap between
   them, and a category breakdown, with un-valued items excluded from
   every figure rather than silently treated as worthless; and a Market

@@ -634,3 +634,141 @@ spec.
   allowance**, which is a result of experiment 1 in itself, and the tier log
   records what ran and from when. Whether it becomes the standing policy is
   the person's call, not a decision `014` makes.
+
+## Marking something bought (`015`, complete 2026-09-21)
+
+The product decisions are numbered 1–7 (plus the P-items) in
+`specs/015-mark-as-bought/spec.md`; this records what reaches beyond that
+spec.
+
+- **The purchase's marker is one optional date, with no relationship to the
+  item it created** (plan Q1). `WishlistItem.boughtDate: Date?`, declared
+  exactly as `Item.soldDate` is, with `isBought` as the one predicate. The
+  tempting shape was a link from the wanted entry to the `Item` the purchase
+  produced, and it was refused on three counts. Nothing in the spec reads one:
+  no screen shows a bought entry at all. Decision 2 is precisely about not
+  asserting links the app cannot stand behind, and "this item came from that
+  want" is a claim the app would then have to keep true through an edit, a
+  delete and a hand correction. And an optional relationship is
+  **CloudKit-additive**, so `009` can add one later without a migration if a
+  screen turns out to want it. Nothing else goes on the entry either — the
+  price and the date of the purchase live on the `Item`, which *is* the record
+  of the purchase. The general rule: a marker that answers one question
+  ("has this happened?") should not grow a second job before something needs
+  it.
+- **Photos are moved, not copied — and the copy path in the app is the wrong
+  shape** (plan Q6). A `Photo` carries two independently optional parents,
+  `item` and `wishlistItem`, and the invariant "at most one of the two" has
+  been held by every writer only ever writing its own side. The purchase is
+  the one place a photo **changes parent**, so it writes both — `wishlistItem
+  = nil`, `item = item`, per photo, in display order with `sortOrder`
+  renumbered — and constructs nothing. The reason this mattered enough to plan
+  is the alternative that was already in the codebase:
+  `WishlistViewModel.duplicate(id:)` rebuilds photos through
+  `Photo(imageData:source:sortOrder:)`, an initializer that writes **none** of
+  the three attribution fields, so a duplicated wanted item's `005` stock
+  photo loses its photographer, licence and link while still being displayed.
+  Copying the purchase into that shape would have broken criterion 7 and the
+  licence with it. It is a real defect in merged code, found by asking this
+  question and deliberately **not** fixed inside `015` — no criterion there
+  authorised touching it, and `CLAUDE.md` gives a merged-code bug its own
+  branch. It is on `ROADMAP.md` as one. The rule worth keeping: **moving a
+  child between parents is two link writes, never a reconstruction** — a
+  reconstruction silently drops every field the initializer doesn't take, and
+  a row count in the store is the cheapest test that catches it.
+- **Settings treats a bought entry as off the wishlist, in all three of its
+  wishlist surfaces** (plan R1, disclosed to the person at the Phase 2 pause
+  and not overturned). The spec settled only the export: a bought entry is in
+  neither wishlist file. The other two were the plan's reading and go the same
+  way — it is **not counted** in the wanted-items number, and **"Delete all
+  wanted items" does not delete it**. Counting it would put a number in a
+  destructive alert that disagrees with the list the person just looked at;
+  deleting it would destroy the completed sell plan Decision 3 exists to keep,
+  on a gesture whose count never mentioned it. The accepted cost is that a
+  bought entry survives a wishlist wipe as an unreachable row — the same
+  consequence the Non-goals already accept for a purchase corrected by hand,
+  and `009-sell-plan-list` is where both get addressed.
+- **The purchase date is unbounded, and the sale date is not** (plan Q9). This
+  is a deliberate inconsistency between two sheets the spec calls twins, and
+  the reason is that they fill different fields. `SaleFormView` bounds its
+  picker at today and rejects a future date, because a sale that has not
+  happened is not a sale. The purchase sheet fills `Item.purchaseDate`, and
+  that field's *own* editor — `ItemFormView`'s "Date bought" — has always
+  taken any date at all. A sheet that refuses what the Edit screen accepts is
+  one rule with two answers, and the person meets both. The general form:
+  **when a new surface writes an existing field, it inherits that field's
+  rules, not its neighbour's.**
+- **The comparison line is silent below a dollar, which makes a genuinely
+  zero estimate read as no estimate** (plan Q7). "$120 less than you
+  estimated" appears only when the two differ by at least a dollar — the
+  spec's criterion says "when they differ", and this is narrower on purpose,
+  because every money figure in the app draws whole dollars and a 40-cent
+  difference would otherwise render "$0 more than you estimated", which is
+  worse than the silence the spec asks for at equality. The consequence worth
+  writing down: `estimatedCostCents` is a **non-optional `Int` whose 0 means
+  "none"**, as the pre-fill already read it, so an entry estimated at exactly
+  $0 gets no pre-fill and no comparison line, while every other surface in the
+  app renders it as "$0". Making the two distinguishable would mean an
+  optional field and a migration, for a case no criterion mentions. One
+  implementation note that outlives the decision: **the sub-dollar floor is
+  what carries the equality case too** (`abs(delta) >= 100` covers delta 0),
+  so removing the floor without adding an explicit `deltaCents != 0` guard
+  would make the app say "$0 more than you estimated".
+- **A `006` decision was reversed, and the guard that pinned it was rewritten
+  rather than dodged.** `006` left the wanted item's page on
+  `DetailOverflowMenu`'s two-argument initializer, wrote that into the
+  component's doc comment ("which is what the wishlist's page asks for — it is
+  untouched by this spec"), and pinned it from the caller's side with a scan
+  asserting the file contains no `DetailOverflowMenu.Row`. Criterion 2 puts
+  **Mark as bought…** in that menu, so **the wishlist page now builds its own
+  rows** — two of them — and all three of those artefacts were corrected in
+  the same commit: the doc comment says what `015` did and leaves `006`'s
+  reasoning above it intact, a "Superseded by `015`" pointer was appended in
+  place beside the original claim in `006`'s `plan.md` (never editing the
+  shipped claim away), and the guard was **rewritten to pin the new rule** —
+  two `Row` argument lists, exactly one naming `PurchaseCopy.markAsBought`,
+  and still no `SaleCopy`, which is the half of the original claim that is
+  still true. The alternative was spelling the rows `.init(` to keep the old
+  scan green, and that is the false-passing shape `CLAUDE.md` records four
+  times. **It was demonstrated rather than argued**: the mutation spelled the
+  rows `.init(` *and* temporarily re-added `006`'s guard verbatim beside the
+  rewrite — the rewritten guard went red while `006`'s own assertions passed
+  over a page that had already grown the row. The rule: **when a spec falsifies
+  an earlier spec's claim, correct the claim where it was written, and rewrite
+  the test to hold the new rule — never adjust the code's spelling so the old
+  test keeps passing.**
+- **"Buy" on both buttons, "Mark as bought…" everywhere it is spoken.** The
+  wishlist row's swipe action is ~76 pt wide beside a glyph, which the full
+  name does not fit, so the visible word is "Buy" and the button's
+  `.accessibilityLabel` is the menu row's own name — `014`'s arrangement,
+  transferred. **Confirmed on the device, not assumed**: XCUITest read the
+  swipe button back from the live accessibility tree as **`Mark as bought…`**,
+  so the modifier takes; the UI test pins that spelling **alone**, with no
+  `OR "Buy"` hedge, which is `014`'s close-out lesson (a hedge lets the
+  accessibility label silently stop working). The **Sell Plan's bar button
+  wears the same word**, which was not the plan: it shipped as a bare SF `bag`
+  glyph, the device pass judged it a puzzle — alone in a toolbar an outline bag
+  most often reads as *cart*, on the one screen whose subject is selling — and
+  the person agreed ("the bag suggests Shopping Cart"). "Buy" rather than
+  "Bought" because it is already the short form of this exact action on the
+  swipe: one short word for one action in both places, where "Bought" would
+  read as a state and be a second short form for the same thing. No new
+  string.
+- **A refused purchase says so, and the person overruled a review to get
+  there.** The Phase 2 review found that a refused purchase was silent on all
+  three screens — the reason was written to a view-model property no view read
+  — and recommended a roadmap entry rather than a close-out fix. Shown it at
+  the walkthrough, the person said "Do it now." Two things came out of doing
+  it that are worth more than the alert. First, **a message that cannot
+  survive to be displayed is the wrong property**: the Wishlist reported into
+  `loadFailureMessage`, and its sheet's `onDismiss: viewModel.load` wipes that
+  before any alert could read it — so the plan's careful per-host ordering
+  rule was not merely awkward, it could not have worked. Giving all three
+  hosts their own `purchaseFailureMessage` **deleted** the rule rather than
+  adjusting it. Second, **the alert belongs on the host's view, not inside the
+  sheet's content**: "alert dropped when presented right after a sheet
+  dismissal" is a long-standing SwiftUI behaviour, and the reason it does not
+  bite here is structural — the two are not competing for the same
+  presentation slot. That was confirmed by driving a real refusal on the
+  device, because no test in this project can observe it. A refused **sale**
+  is still silent, deliberately untouched, and on `ROADMAP.md`.

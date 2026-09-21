@@ -14,6 +14,10 @@ struct WishlistDetailView: View {
     @State private var selectedPhotoIndex = 0
     @State private var isEditing = false
     @State private var isConfirmingDelete = false
+    /// Whether the purchase sheet is up (015 plan §8). A flag rather than the
+    /// Wishlist row's `.sheet(item:)` staging: this screen holds one entry, so
+    /// there is nothing to choose between.
+    @State private var isMarkingBought = false
     @State private var sellPlanRoute: SellPlanRoute?
     /// The match sheet's detent, driven by which phase it is showing.
     @State private var matchDetent: PresentationDetent = .medium
@@ -42,9 +46,25 @@ struct WishlistDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                // 015 (plan §8, criterion 2): Mark as bought… sits between
+                // Edit and Delete, in the menu the screen already has — the
+                // page itself gets no button, so the action reads as one of
+                // this entry's few, not as the thing the screen is for. The
+                // rows are `DetailOverflowMenu.Row` values, qualified because
+                // `Row` doesn't resolve bare out here; `006` built the middle
+                // row for the owned page and this spec takes it up.
                 DetailOverflowMenu(
                     noun: "wanted item",
-                    edit: { isEditing = true },
+                    edit: DetailOverflowMenu.Row(
+                        title: "Edit",
+                        systemImage: "pencil",
+                        action: { isEditing = true }
+                    ),
+                    middle: DetailOverflowMenu.Row(
+                        title: PurchaseCopy.markAsBought,
+                        systemImage: "bag",
+                        action: { isMarkingBought = true }
+                    ),
                     delete: { isConfirmingDelete = true }
                 )
             }
@@ -71,6 +91,40 @@ struct WishlistDetailView: View {
         .sheet(isPresented: $viewModel.isFindingPhoto, onDismiss: viewModel.load) {
             photoSheet
         }
+        // 015 (plan §8): the shared purchase form, seeded by the view model
+        // exactly as the Wishlist row's and the Sell Plan's are, so all three
+        // hosts open on the same defaults. The sheet writes nothing itself —
+        // what a confirmed purchase means is decided here, through
+        // `markBought`, the one path into the store — and a purchase that
+        // took pops this screen (R2), since the entry it holds is no longer
+        // wanted.
+        .sheet(isPresented: $isMarkingBought) {
+            PurchaseFormView(
+                viewModel: viewModel.makePurchaseFormViewModel(),
+                confirm: { purchase in
+                    isMarkingBought = false
+                    if viewModel.markBought(purchase: purchase) { dismiss() }
+                },
+                cancel: { isMarkingBought = false }
+            )
+        }
+        // 015 T012b: a refused purchase says so. Before this the reason was
+        // recorded in a view-model property no view read, so the sheet just
+        // closed and nothing happened — and since B1 the refusal a person
+        // can actually meet is an entry bought on another device while this
+        // page sat open (criterion 12). The export alert's shape, with OK
+        // the only way out.
+        .alert(
+            PurchaseCopy.failureTitle,
+            isPresented: Binding(
+                get: { viewModel.purchaseFailureMessage != nil },
+                set: { if !$0 { viewModel.purchaseFailureMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.purchaseFailureMessage ?? PurchaseCopy.failureMessage)
+        }
         // An alert rather than a confirmation dialog, for the same reason as
         // the item detail screen: from a toolbar button the dialog renders as
         // a popover that drops the cancel button entirely.
@@ -92,7 +146,17 @@ struct WishlistDetailView: View {
                 syncMonitor: syncMonitor
             )
         }
-        .onAppear(perform: viewModel.load)
+        // R2: a screen already on the stack when its entry is bought gets
+        // itself out of the way. Confirming on the Sell Plan pops it back to
+        // here, and `load()` is what sets `hasBeenBought`, so this screen pops
+        // in turn — landing on the Wishlist, which no longer lists the entry.
+        // Without it the menu behind would still offer Mark as bought… for an
+        // entry already bought. The cross-device case is closed in the writer
+        // instead (§3, T006a), where no view-side mechanism has to reach.
+        .onAppear {
+            viewModel.load()
+            if viewModel.hasBeenBought { dismiss() }
+        }
     }
 
     /// The notice first, once per device, then the picker (spec Decision
@@ -363,20 +427,25 @@ struct WishlistDetailView: View {
     /// explicit that showing it automatically would overstate what it currently
     /// does. The label names the task ("find items to sell"), not a target —
     /// nothing here says how much is needed or how close the user is.
+    ///
+    /// 015 T012c gives it a second reading, at the person's instruction: once
+    /// a plan is saved it says "View your sell plan" over a count of what is
+    /// set aside, because leaving a plan and coming back showed no sign the
+    /// selection had been kept. **The rule above is unchanged, not relaxed** —
+    /// a count is a fact about what the person themselves chose, while a
+    /// figure like "$840 of $3,900" is a target and a completion figure, which
+    /// is the thing that was refused. Both lines come from the view model, so
+    /// which one shows is a behaviour `WishlistDetailViewModelTests` reaches.
     private func findItemsToSell(for item: WishlistItem) -> some View {
         Button {
             sellPlanRoute = SellPlanRoute(wishlistItemID: item.id)
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Find items to sell")
+                    Text(viewModel.sellPlanEntryTitle)
                         .font(theme.typography.rowTitle)
                         .foregroundStyle(theme.colors.accentBrass)
-                    // True today: `SellPlanViewModel.rank` really does put the
-                    // least-wanted gear first. Design's own subtitle, kept
-                    // because it describes the ranking that exists rather
-                    // than a target the app doesn't compute.
-                    Text("Browse your lowest desire-to-keep items")
+                    Text(viewModel.sellPlanEntrySubtitle)
                         .font(theme.typography.secondary)
                         .foregroundStyle(theme.colors.textLabelSecondary)
                 }

@@ -18,6 +18,13 @@ import Testing
 /// launch-time error and starts being other people's devices going quiet.
 ///
 /// This caught `Item.photos` declared as `[Photo]` instead of `[Photo]?`.
+///
+/// The second thing it has been asked to catch is `015`'s
+/// `WishlistItem.boughtDate`: the plan claims that field is optional, carries
+/// no unique constraint, and is therefore additive to a store already in the
+/// field, and T001 proved the claim is checked here rather than merely
+/// asserted — declaring it `@Attribute(.unique) var boughtDate: Date?` turns
+/// this test red.
 @Suite("CloudKit schema compatibility")
 struct CloudKitSchemaTests {
     @Test func schemaMeetsCloudKitRequirements() throws {

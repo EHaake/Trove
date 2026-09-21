@@ -92,6 +92,14 @@ final class MarketRefresher {
 
     /// The item as it is right now — its match, condition and year re-read
     /// after the network hop.
+    ///
+    /// Deliberately unchanged by 015 (plan §4), the sixth of the unchanged
+    /// read sites and the one §4 itself missed the first time: this re-read
+    /// does **not** drop an entry bought since the walk began. It costs at
+    /// most one already-issued request's worth of recording, for a row that
+    /// is invisible anyway and whose local rows the purchase has just
+    /// cleared — the same reason the `.owned` branch beside it ignores
+    /// `soldDate`.
     private func currentTarget(for key: MarketSubjectKey) -> MarketRefreshTarget? {
         let id = key.subjectID
         switch key.kind {
@@ -115,10 +123,16 @@ final class MarketRefresher {
     /// value to track, so it drops out of the walk and out of Settings'
     /// count. The predicate reads `soldDate`, not the match, which is kept —
     /// so returning the item to the collection resumes refreshing it.
+    ///
+    /// A bought wanted entry is never a target either (015, Q12): it has left
+    /// the Wishlist, so an invisible row costs no request and no place in
+    /// Settings' matched count. Its match is kept for the same reason, and
+    /// the new item it created carries that match as an owned target of its
+    /// own.
     static func targets(in context: ModelContext) throws -> [MarketRefreshTarget] {
         let items = try context.fetch(FetchDescriptor<Item>(predicate: #Predicate { $0.reverbProductID != nil && $0.soldDate == nil }))
             .sorted(by: ManualOrderHelper.areInCustomOrder)
-        let wanted = try context.fetch(FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.reverbProductID != nil }))
+        let wanted = try context.fetch(FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.reverbProductID != nil && $0.boughtDate == nil }))
             .sorted(by: ManualOrderHelper.areInCustomOrder)
         return items.compactMap { item in
             item.reverbProductID.map {

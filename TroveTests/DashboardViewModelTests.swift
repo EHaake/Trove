@@ -926,3 +926,162 @@ struct DashboardSoldFiguresTests {
         #expect(viewModel.soldTotals == SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0))
     }
 }
+
+// MARK: - 015/G22: an item that arrived by purchase
+
+/// G22 (criterion 10): "every Dashboard figure reflects the new item exactly
+/// as it would an item added any other way."
+///
+/// That is a claim about **indistinguishability**, so the test compares two
+/// collections rather than asserting numbers: the same Dashboard is run over
+/// a store where the item arrived through `WishlistPurchaseStore` and over
+/// one where the identical fields were typed in, and every figure it exposes
+/// must match. Asserting a list of expected numbers would pass a Dashboard
+/// that read a purchased item differently *and* had the expectations written
+/// to match it; comparing the two stores cannot.
+///
+/// The two stores are deliberately *not* identical underneath: the purchased
+/// one also holds the bought wishlist entry the purchase left behind, which
+/// is exactly the thing that must change no figure.
+@Suite("The Dashboard cannot tell a purchased item from a typed one")
+struct DashboardPurchasedItemTests {
+    private let boughtAt = Date(timeIntervalSince1970: 1_783_000_000)
+    private let paidOn = Date(timeIntervalSince1970: 1_781_234_567)
+    private let created = Date(timeIntervalSince1970: 1_700_000_000)
+
+    /// Every figure the Dashboard exposes, labelled, as text — so a
+    /// divergence names itself rather than showing up as two unequal structs.
+    private func figures(of viewModel: DashboardViewModel) -> [String] {
+        var lines = [
+            "valuedCount=\(viewModel.valuedCount)",
+            "unvaluedCount=\(viewModel.unvaluedCount)",
+            "totalItemCount=\(viewModel.totalItemCount)",
+            "isEmpty=\(viewModel.isEmpty)",
+            "totalCurrentValueCents=\(viewModel.totalCurrentValueCents)",
+            "totalSpentCents=\(viewModel.totalSpentCents)",
+            "valueDeltaCents=\(viewModel.valueDeltaCents)",
+            "hasAnyValues=\(viewModel.hasAnyValues)",
+            "valuedShare=\(viewModel.valuedShare)",
+            "categoryCount=\(viewModel.categoryCount)",
+            "marketTotalCents=\(viewModel.marketTotalCents)",
+            "marketFigureCount=\(viewModel.marketFigureCount)",
+            "hasMarketFigures=\(viewModel.hasMarketFigures)",
+            "marketLine=\(viewModel.marketLine)",
+            "hasSales=\(viewModel.hasSales)",
+            "soldLine=\(viewModel.soldLine)",
+            "soldDeltaLine=\(viewModel.soldDeltaLine)",
+            "loadFailureMessage=\(String(describing: viewModel.loadFailureMessage))",
+            // The id inside `.item` is the one thing that legitimately differs
+            // between two stores, so the case is compared and the id isn't.
+            "unvaluedDestination=\(label(viewModel.unvaluedDestination))",
+        ]
+        for slice in viewModel.breakdown {
+            lines.append(
+                "slice \(slice.path)|\(slice.label)|n=\(slice.itemCount)|unvalued=\(slice.unvaluedCount)"
+                    + "|value=\(slice.currentValueCents)|spent=\(slice.spentCents)|delta=\(slice.valueDeltaCents)"
+                    + "|drill=\(slice.canDrillIn)|hasValues=\(slice.hasAnyValues)|share=\(viewModel.valueShare(of: slice))"
+            )
+        }
+        return lines
+    }
+
+    private func label(_ destination: DashboardViewModel.UnvaluedDestination) -> String {
+        switch destination {
+        case .none: "none"
+        case .item: "item"
+        case .filteredList: "filteredList"
+        }
+    }
+
+    /// The two items present in both stores, so the purchased one is measured
+    /// against neighbours rather than alone: one valued, one not, each under a
+    /// top-level category of its own — the breakdown groups by the leading
+    /// segment, so three paths under "Photography" would collapse to one slice
+    /// and leave the breakdown half-exercised.
+    private func insertNeighbours(into context: ModelContext) {
+        let valued = Item(
+            name: "Telecaster",
+            categoryPath: "Music/Guitars",
+            purchasePriceCents: 40_000,
+            purchaseDate: paidOn,
+            currentValueCents: 55_000
+        )
+        valued.createdAt = created
+        context.insert(valued)
+        let unvalued = Item(
+            name: "Mogami interconnect",
+            categoryPath: "Audio/Cables",
+            purchasePriceCents: 9_000,
+            purchaseDate: paidOn,
+            currentValueCents: nil
+        )
+        unvalued.createdAt = created.addingTimeInterval(60)
+        context.insert(unvalued)
+    }
+
+    @Test func aPurchasedItemReadsExactlyLikeATypedOne() throws {
+        let purchase = Purchase(date: paidOn, priceCents: 219_500, location: "Kerrisdale Cameras", condition: .good)
+
+        // Store A: the item arrived through the purchase, and the bought
+        // wishlist entry it came from is still there.
+        let purchasedContext = try makeInMemoryContext()
+        insertNeighbours(into: purchasedContext)
+        let wanted = WishlistItem(
+            name: "Summicron 35mm f/2",
+            categoryPath: "Photography/Lenses",
+            estimatedCostCents: 240_000,
+            notes: "Chrome, not black",
+            reverbProductID: 9_112,
+            year: 1971
+        )
+        purchasedContext.insert(wanted)
+        let bought = try WishlistPurchaseStore.markBought(wanted, purchase: purchase, at: boughtAt, in: purchasedContext)
+        // `Item.init` stamps `createdAt` with the wall clock on both paths, so
+        // neither store controls it; pinned equal here because the breakdown's
+        // casing rule reads it and a race would decide the order.
+        bought.createdAt = created.addingTimeInterval(120)
+        try purchasedContext.save()
+
+        // Store B: the same fields, typed in.
+        let typedContext = try makeInMemoryContext()
+        insertNeighbours(into: typedContext)
+        let typed = Item(
+            name: "Summicron 35mm f/2",
+            categoryPath: "Photography/Lenses",
+            purchasePriceCents: 219_500,
+            purchaseDate: paidOn,
+            purchaseLocation: "Kerrisdale Cameras",
+            currentValueCents: 219_500,
+            condition: .good,
+            notes: "Chrome, not black",
+            reverbProductID: 9_112,
+            year: 1971
+        )
+        typed.createdAt = created.addingTimeInterval(120)
+        typedContext.insert(typed)
+        try typedContext.save()
+
+        let purchased = DashboardViewModel(modelContext: purchasedContext, now: { self.boughtAt })
+        purchased.load()
+        let typedDashboard = DashboardViewModel(modelContext: typedContext, now: { self.boughtAt })
+        typedDashboard.load()
+
+        #expect(figures(of: purchased) == figures(of: typedDashboard))
+
+        // The comparison only means something over a Dashboard with something
+        // to say: three items, two categories' worth of value, one un-valued
+        // row and a real spend behind it all.
+        #expect(purchased.totalItemCount == 3)
+        #expect(purchased.valuedCount == 2)
+        #expect(purchased.unvaluedCount == 1)
+        #expect(purchased.categoryCount == 3)
+        #expect(purchased.totalCurrentValueCents == 274_500)
+        #expect(purchased.totalSpentCents == 259_500)
+
+        // The bought entry is still sitting behind store A while every figure
+        // above matched store B, which has none — that pair is what "the
+        // Dashboard grows no new surface" means here. Store B's own emptiness
+        // is not asserted: this test inserts its rows, so it would be
+        // asserting its own setup.
+    }
+}

@@ -109,7 +109,12 @@ final class SettingsViewModel {
     /// a row whose list just emptied disables itself.
     func load() {
         itemCount = (try? modelContext.fetchCount(FetchDescriptor<Item>())) ?? 0
-        wishlistCount = (try? modelContext.fetchCount(FetchDescriptor<WishlistItem>())) ?? 0
+        // 015/R1: a bought entry is not on the wishlist, so it is not in this
+        // number — which is the delete alert's count, `canDeleteWishlist` and
+        // half of `canExportEverything`.
+        wishlistCount = (try? modelContext.fetchCount(
+            FetchDescriptor<WishlistItem>(predicate: #Predicate<WishlistItem> { $0.boughtDate == nil })
+        )) ?? 0
         matchedCount = ((try? MarketRefresher.targets(in: modelContext)) ?? []).count
     }
 
@@ -188,7 +193,11 @@ final class SettingsViewModel {
         let sold = items
             .filter(\.isSold)
             .sorted(by: ItemListViewModel.areInSoldOrder)
-        let wanted = try modelContext.fetch(FetchDescriptor<WishlistItem>())
+        // 015 criterion 13: a bought entry exports in neither format. Its new
+        // item is in the owned fetch above, as an ordinary item.
+        let wanted = try modelContext.fetch(
+            FetchDescriptor<WishlistItem>(predicate: #Predicate<WishlistItem> { $0.boughtDate == nil })
+        )
             .sorted(by: ManualOrderHelper.areInCustomOrder)
         return (owned, sold, wanted)
     }
@@ -424,8 +433,14 @@ final class SettingsViewModel {
                         try MarketLocalStore.clear(subjectID: item.id, in: modelContext)
                         modelContext.delete(item)
                     }
+                // 015/R1: the same predicate `wishlistCount` uses, so the
+                // gesture deletes exactly what the alert's number promised —
+                // and a bought entry's completed sell plan (Decision 3)
+                // survives a wishlist wipe it was never counted in.
                 case .wishlist:
-                    for wanted in try modelContext.fetch(FetchDescriptor<WishlistItem>()) {
+                    for wanted in try modelContext.fetch(
+                        FetchDescriptor<WishlistItem>(predicate: #Predicate<WishlistItem> { $0.boughtDate == nil })
+                    ) {
                         try MarketLocalStore.clear(subjectID: wanted.id, in: modelContext)
                         modelContext.delete(wanted)
                     }

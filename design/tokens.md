@@ -310,13 +310,15 @@ IBM Plex Mono `10.5pt` · cover totals IBM Plex Mono 500 `15pt` · cover floor n
 
 | Token | Value |
 |---|---|
-| Leading action button width | `76px` each — Edit and Copy on both lists, and on the Items list's **owned** rows a third, Sell, between them since `014` (Edit stays nearest the edge, so a full swipe still edits). Sold rows carry no leading swipe |
+| Leading action button width | `76px` each — Edit and Copy on both lists, plus a third between them on each: **Sell** on the Items list's **owned** rows since `014`, and **Buy** on the Wishlist's rows since `015` (Edit stays nearest the edge on both, so a full swipe still edits). Sold rows carry no leading swipe; a **bought** wanted entry has no row at all — it has left the Wishlist |
 | Trailing delete button width | `88px` |
 | Action row height | `78px` (matches full row height) |
 | Edit background | `divider` (`#3A3B3E`) |
 | Duplicate background | `surfaceInset` (`#26272A`) |
 | Sell background (`014`) | `accentBrassMid` — the one brass that is mid-tone in *both* palettes, so the white label reads the same on either appearance (white on it measured 3.61:1 dark / 3.74:1 light at `014`'s device pass) |
 | Sell glyph (`014`) | `ActionSell` — a price-tag outline in `action-edit.svg`'s house style (24 viewBox, 1.5 stroke, template, vector preserved); the "…" menu row wears SF `tag`, so the swipe wears the same sign |
+| Buy background (`015`) | `accentBrassMid` — the same tint as Sell, and for the same reason: one brass that reads mid-tone in both palettes (white on it measured 3.61:1 dark / 3.74:1 light at `014`'s device pass, so `015` owed no new measurement). The two lists' middle action is the same colour because it is the same *kind* of action — a sheet follows it, and the sheet is the confirmation |
+| Buy glyph (`015`) | `ActionBuy` — a bag outline in `action-sell.svg`'s house style (24 viewBox, 1.5 stroke, `#000`, template, vector preserved); the wanted page's "…" menu row wears SF `bag`, so the swipe wears the same sign. The button's visible word is **Buy** and its spoken name is **Mark as bought…**, read back from the live accessibility tree at `015`'s device pass |
 | Delete background | `accentRust` (`#9C4A34`) |
 | Icon box | `20px`, `1.5px` stroke — matches the tab-bar icon convention |
 
@@ -326,7 +328,9 @@ for attention. Edit and Copy take neutral tones (`divider`, `surfaceInset`);
 `014`'s Sell takes `accentBrassMid` rather than a third neutral, because
 three grey buttons in a row would be one gesture with no legible middle, and
 because the action is not consequential — a sheet follows it, and the sheet
-is the confirmation.
+is the confirmation. `015`'s Buy is the same arrangement on the
+Wishlist, so both lists read as one pattern: two neutrals with one brass
+between them.
 
 The 2026-08-29 export refresh relabels this button DUPLICATE — that text
 is **outdated**, confirmed at review: the on-screen string stays "Copy"
@@ -692,6 +696,29 @@ them: one example set runs through the canvas (three sales, $2,400,
 `soldSummaryLine`), not under the switch; the Sell Plan's Selected figure
 drops from Archivo 34 to 26 in the three-figure layout; the sold page's
 desire card drops its level hint as well as "TAP OR DRAG".
+
+### Mark as bought (`015`)
+
+**No design pass.** `015` added no colour, no component and no surface: the
+purchase sheet is the sale sheet's twin, the swipe action is `014`'s
+arrangement on the other list (see *Swipe-action rows* above), and the menu
+row is a row in the app's one existing system menu. So there is nothing to
+record here but the sheet's own measurements and the two places it departs
+from its twin — both settled by the person at a pause, not by a pass.
+
+| Property | Value |
+|---|---|
+| **Purchase sheet** | |
+| Size | `[.medium, .large]` detents, the sale sheet's — `.large` when the keyboard rises |
+| Bar | **no title** (`015` T012a — as the sale sheet's twin it carried one, and on the device it truncated to "Mark as bo…" beside a confirm button saying the same words, so the person had it removed; `.navigationBarTitleDisplayMode(.inline)` is kept, or the bar falls back to large-title layout with empty space where a title isn't). Cancel `textBody` left, "Mark as bought" `accentBrass` semibold right; no bottom save bar |
+| Fields | Purchase price + Purchase date paired on one row (`listRowGap` 10), the comparison line directly beneath, then Bought from, then Condition; `sectionGap` 24 between; the item form's field chrome throughout |
+| Date popover | **unbounded** — deliberately not the sale sheet's `in:` bound (plan Q9), because `ItemFormView`'s "Date bought" fills the same field and takes any date |
+| Condition | `ItemFormView`'s label-plus-`FlowLayout` of capsules over `Condition.allCases`, each chip keeping its selected trait — not a picker, which would put a system menu inside page content |
+| Comparison line | `theme.typography.secondary` on `textQuiet`, sentence case, no colour branch, no arrow, no figure treatment — "$120 less than you estimated". **Corrected at the Phase 2 pause** (`015` T011b): the plan specified `monoLabel`, which uppercases and tracks, so it shipped reading `$120 LESS THAN YOU ESTIMATED` in the identical treatment as the `PURCHASE PRICE` label above it. The app has no shared modifier for quiet prose — the explicit `secondary` + `textQuiet` pair is used at 28 call sites |
+| Invalid | `1px accentRust` border on the blank price, no message — the sale sheet's |
+| **Sell Plan bar button** | |
+| Action | `Text(PurchaseCopy.swipeBuy)` — the word **Buy** — at `.topBarTrailing`, in the corner the wanted page's "…" occupies, gated on the plan still having an entry. A bar button rather than a menu: a one-row menu is a menu for nothing. **It was a bare SF `bag` glyph until the device pass** (`015` T012a), which read as *cart* on the one screen whose subject is selling |
+
 
 ## Corner radii
 

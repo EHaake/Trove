@@ -39,6 +39,14 @@ final class WishlistItem {
     /// 002, Decision 29: the wanted instrument's year, as on `Item.year`.
     var year: Int?
 
+    /// 015: when this wanted item was bought, or nil while it is still wanted.
+    /// **The one bought predicate** — `boughtDate == nil` is "still wanted"
+    /// everywhere, in `#Predicate` and in memory alike, the way `Item.soldDate`
+    /// is the one sold predicate. Written only by `WishlistPurchaseStore`, and
+    /// never cleared: there is no undo (spec Decision 5, guarded by
+    /// `PurchaseUndoTests`).
+    var boughtDate: Date?
+
     var createdAt: Date = Date.now
 
     /// Optional for the same CloudKit reason as `Item.photos` — read it as
@@ -59,6 +67,10 @@ final class WishlistItem {
     /// The delete rule is deliberately `.nullify`: abandoning a wishlist item
     /// must never delete the gear on its Sell Plan. `Item` owns the
     /// `@Relationship(inverse:)` declaration for this pair.
+    ///
+    /// 015: buying the wanted item empties this — the candidates still unsold
+    /// are released from the plan, since there is nothing left to fund (spec
+    /// P6).
     @Relationship(deleteRule: .nullify)
     var plannedSaleItems: [Item]? = []
 
@@ -69,8 +81,16 @@ final class WishlistItem {
     /// `.nullify` here as well: deleting this wishlist item leaves those sales
     /// standing with no plan attached (P10). `Item` owns the
     /// `@Relationship(inverse:)` declaration for this pair, as it does above.
+    ///
+    /// 015: buying the wanted item leaves this untouched — what was sold
+    /// toward the purchase stays recorded against it (spec P6, Decision 3).
     @Relationship(deleteRule: .nullify)
     var itemsSoldToward: [Item]? = []
+
+    /// The one bought predicate, in memory, as `Item.isSold` is for the sale.
+    /// Predicates and sort descriptors can only see the stored `boughtDate`,
+    /// so they spell out `boughtDate == nil` themselves (plan Q1).
+    var isBought: Bool { boughtDate != nil }
 
     init(
         name: String = "",

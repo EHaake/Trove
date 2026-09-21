@@ -219,6 +219,40 @@ struct MarketRefresherTests {
         #expect(targets.map(\.productID) == [1], "the sold item must drop out of the walk")
         #expect(sold.reverbProductID == 2, "its match is kept — only the refresh stops")
     }
+
+    /// G11 (015, Q12) — the mirror of the sold rule above. A bought wanted
+    /// entry has left the Wishlist, so it is no refresh target: an invisible
+    /// row must cost no request and no place in Settings' matched count. The
+    /// entry keeps its match, and the item the purchase created carries that
+    /// same match as an owned target, so the walk's total is unchanged while
+    /// its membership is not — which is why both the product IDs and the
+    /// kinds are asserted.
+    @Test func aBoughtMatchedEntryIsNoTarget() throws {
+        let context = try makeInMemoryContext()
+        let amp = WishlistItem(name: "Vox AC15", categoryPath: "Music/Amps", sortOrder: 0, reverbProductID: 7)
+        let gibson = WishlistItem(name: "Gibson ES-335", categoryPath: "Music/Guitars", sortOrder: 1, reverbProductID: 42)
+        for model in [amp, gibson] { context.insert(model) }
+        try context.save()
+
+        let before = try MarketRefresher.targets(in: context)
+        #expect(before.map(\.productID) == [7, 42], "both are targets while both are wanted")
+        #expect(before.map(\.key.kind) == [.wanted, .wanted])
+
+        // Bought through the app's only writer of the marker.
+        try WishlistPurchaseStore.markBought(
+            gibson,
+            purchase: Purchase(date: t0, priceCents: 300_000, location: "Reverb", condition: .excellent),
+            at: t0,
+            in: context
+        )
+        try context.save()
+
+        let after = try MarketRefresher.targets(in: context)
+        #expect(!after.contains { $0.key.subjectID == gibson.id }, "the bought entry must drop out of the walk")
+        #expect(after.map(\.productID) == [42, 7])
+        #expect(after.map(\.key.kind) == [.owned, .wanted])
+        #expect(gibson.reverbProductID == 42, "its match is kept — only the refresh stops")
+    }
 }
 
 private struct TestFailure: Error, CustomStringConvertible {
