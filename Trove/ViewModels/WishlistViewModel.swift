@@ -64,6 +64,14 @@ final class WishlistViewModel {
     private(set) var categoryLabels: [String: String] = [:]
     private(set) var loadFailureMessage: String?
 
+    /// A refused purchase (015 T012b). Its own property rather than a share
+    /// of `loadFailureMessage`, which `load()` clears on entry: the list
+    /// hosts the purchase sheet with `onDismiss: viewModel.load`, so a
+    /// message reported into that property would be wiped by the reload the
+    /// dismissal triggers, before any alert could show it. Settable so the
+    /// alert's binding can clear it on OK, the `exportFailureMessage` shape.
+    var purchaseFailureMessage: String?
+
     private let modelContext: ModelContext
 
     private let syncMonitor: SyncMonitor
@@ -340,9 +348,11 @@ final class WishlistViewModel {
     /// save — the `delete(id:)` shape, one intent, one immediate save, no
     /// separate step. `load()` then drops the entry, since it is bought now.
     ///
-    /// Returns false on a refused save, which rolls back.
+    /// Returns false on a refused save, which rolls back and says so in
+    /// `purchaseFailureMessage` — the alert this list shows.
     @discardableResult
     func markBought(_ wanted: WishlistItem, purchase: Purchase) -> Bool {
+        purchaseFailureMessage = nil
         do {
             try WishlistPurchaseStore.markBought(wanted, purchase: purchase, at: now(), in: modelContext)
             try modelContext.save()
@@ -352,10 +362,18 @@ final class WishlistViewModel {
             // still wanted and show an item that was never saved
             // (`PersistenceTests.aFetchSeesTheContextsPendingInsertsAndDeletesUntilRollback`).
             modelContext.rollback()
-            // `load()` first: it begins by clearing `loadFailureMessage`, so
-            // a message set before it never reached the screen.
+            // Straight after the rollback, as the other two hosts do: the
+            // property is this intent's own and no `load()` clears it, so
+            // the reload below can't wipe it and the ordering is one rule
+            // for all three rather than a per-host detail to get right.
+            //
+            // Which refusal it was, too, since the two read nothing alike:
+            // an entry bought on another device mid-screen (B1, the one a
+            // person can actually meet) against a failed write.
+            purchaseFailureMessage = error as? WishlistPurchaseStore.PurchaseError == .alreadyBought
+                ? PurchaseCopy.alreadyBought
+                : PurchaseCopy.failureMessage
             load()
-            loadFailureMessage = error.localizedDescription
             return false
         }
         load()

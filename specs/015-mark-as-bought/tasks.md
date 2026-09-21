@@ -1054,6 +1054,99 @@ four as questions, not facts.
   are white on a near-white circle and read faintly; the Buy button is the
   legible one.
 
+- [x] **T012a — The Sell Plan's button reads "Buy"; the sheet loses its title. [the person's decisions]**
+  Two calls the person made at the walkthrough, 2026-09-20. **D1**: the device
+  pass judged the bare bag glyph a puzzle — alone in a toolbar an outline bag
+  most often means *cart*, on the one screen whose subject is selling — and
+  the person agreed ("the bag suggests Shopping Cart"), leaving the word to
+  the orchestrator. **`PurchaseCopy.swipeBuy` ("Buy") reused, no new
+  string**: it is already the short form of this exact action on the swipe, so
+  one short word covers one action in both places; "Bought" would read as a
+  state and be a second short form for the same thing. The gate, placement,
+  accessibility label and identifier are untouched. **D2**: the title
+  truncated to `Mark as bo…` on all three hosts because the confirm button
+  takes the width, so it is **removed** as redundant with that button —
+  a **deliberate departure from "the sale sheet's twin"**, named in the view's
+  doc comment. `PurchaseFormViewModel.title`, `PurchaseCopy.sheetTitle` and
+  their legs went with it, **including `namesTheSheetFromTheCopyTable`** —
+  the test T005 declared could barely fail. Deleting it here is correct rather
+  than a dodge: the thing it guarded no longer exists.
+  `scripts/verify.sh` green at **1615 tests in 224 suites** — the count did
+  **not** move, because the deleted test is offset by the new guard on the
+  title's *absence*, which is now the rule. UI 25/0. Mutations, both reverted:
+  the bag glyph put back → the rewritten G18 leg red on **both** halves (the
+  word present *and* no `Image(` in the gate — the second is what stops a
+  glyph returning *beside* the word); a `.navigationTitle` put back → red.
+  **One deviation, and it is the right one**: `.navigationBarTitleDisplayMode(.inline)`
+  was **kept**. Removing it too would leave the bar in large-title layout with
+  empty space where a title isn't — a different screen from the one the person
+  approved.
+
+- [x] **T012b — A refused purchase says so. [the person's decision]**
+  The Phase 2 review recorded that a refused purchase is silent on all three
+  screens and recommended a roadmap entry rather than a close-out fix. **The
+  person overruled that: "Do it now."**
+  An alert per host, in the shape the app already uses for a failed export.
+  **Two view-model corrections this forced, both settled rather than
+  improvised**: (1) `WishlistViewModel` got its **own**
+  `purchaseFailureMessage`, because it reported into `loadFailureMessage` and
+  the sheet's `onDismiss: viewModel.load` wipes that before any alert could
+  show it — **a message that cannot survive to be displayed is the wrong
+  property**, and the dedicated one makes plan §6's careful ordering question
+  disappear rather than needing to be got right; (2) `SellPlanViewModel` got
+  its own too, leaving `saveFailureMessage` **exactly as it was** — sharing it
+  would have surfaced a refused **sale**, which this spec's Non-goals forbid.
+  The spec settled that, not the orchestrator.
+  Copy chosen by the orchestrator and reported to the person:
+  `failureTitle` "Couldn't mark it bought"; `alreadyBought` "This one is
+  already marked bought — it may have been bought on another device. Nothing
+  was changed."; `failureMessage` "Something went wrong saving the purchase.
+  Nothing was changed." The "Nothing was changed" clause is load-bearing and
+  true — the guard sits ahead of the market clear and the catch rolls back.
+  **G13 was rewritten, and the rewrite is the interesting part.** Its whole
+  point had been the per-host ordering table, which existed *because* the
+  Wishlist reported into a property its own `load()` clears. Giving all three
+  hosts their own property **deletes that rule rather than adjusting it**, so
+  the scan lost two columns, gained one ordering for all three, and gained the
+  invariant that makes a single ordering safe — nothing outside `markBought`,
+  `load()` included, writes the property. **What it no longer scans is the
+  message itself**: that is a behaviour `markBought`-twice reaches, so per
+  `CLAUDE.md`'s 2026-09-19 rule it moved to the view-model suite. Mutation 4
+  shows the split working from both ends — the scan red on the ordering
+  anchor, the view-model test red on the value.
+  `scripts/verify.sh` green at **1618 tests in 224 suites**; UI 25/0. Six
+  mutations, all reverted.
+  **Recorded**: `WishlistDetailViewModel` previously reported
+  `error.localizedDescription`; all three now report `PurchaseCopy`, so no raw
+  system error string can reach a Trove screen from this path. And a refused
+  **sale** on the Sell Plan remains silent — untouched by design, and a
+  roadmap candidate.
+
+- [x] **T012c — A saved sell plan leaves a trace. [the person's decision; a scope addition]**
+  The person: *"there should be an indication that a sell plan exists… change
+  'Find items to sell' to something like 'View your sell plan'. Do it in this
+  spec."* **This is merged code from an earlier spec changed inside `015` at
+  the owner's explicit instruction** — not a bug, so not a `fix/` branch;
+  recorded as a scope addition rather than drift.
+  `WishlistDetailViewModel` derives `plannedSaleCount` in `load()` the way
+  `hasBeenBought` already is; the button reads "View your sell plan" /
+  "<n> item(s) set aside" when a plan exists and today's copy when it does not.
+  **The trap was real and was held**: `003` deliberately refused to put a
+  target or a progress figure on that button. A **count** is a fact about what
+  the person themselves set aside; **"$840 of $3,900" is a target**, and is
+  exactly what was refused. The doc comment now says why the count is allowed
+  where the figure is not, so the rule does not read as abandoned.
+  `scripts/verify.sh` green at **1622 tests in 224 suites**; UI 25/0. Two
+  mutations, both reverted. **No source scan added, deliberately** — both
+  strings come from the view model, so the view has no branch of its own and
+  the thing a scan would have guarded is what the view-model tests reach.
+  Also widened `PurchaseCopy.swipeBuy`'s doc comment, which since T012a is
+  narrower than its use.
+  **A gap found and stated rather than papered over**: `-seedSellPlan` seeds
+  candidates but **never assigns `plannedSaleItems`**, so no UI test has ever
+  seen a saved plan. The new state has **no UI-suite coverage**; a second seed
+  argument would be its own task under the constitution's two conditions.
+
 - [ ] **T013 — Close-out.**
   Per plan §10. Criteria 1–15 ticked in `spec.md` with per-criterion citations
   — **criterion 14 ticked by inspection**, stating in the tick that no test can
@@ -1179,4 +1272,8 @@ orchestrator had to redo, and why) are recorded here too.
 | `sdd-implementer` — T011b (sentence case, the person's decision) | `opus` | 61k | Done first pass; 2 mutations; found the line's treatment was pinned by nothing and added the legs |
 | `general-purpose` (simulator tools) — T012 device pass | `opus` | 345k | Agent's half done; 4 findings, 4 things it could not check and said so; probe counts clean; suites green twice |
 | `skeptical-reviewer` — decision review, R2's stepping pops | `opus` | 42k | Recommended **accept**; criterion 8 not broken (surfaces vs. a stack unwinding); both alternatives worse, and nothing chosen could be guarded by a test |
+| `general-purpose` (simulator tools) — walkthrough dataset load | `opus` | 185k | 20 items / 9 categories / 7 wanted on the persistent store, one stock photo, one live sell plan; found 2 pre-existing oddities |
+| `sdd-implementer` — T012a (the button's word, the sheet's title) | `opus` | 71k | Done first pass; 2 mutations; kept the inline display mode and said why |
+| `sdd-implementer` — T012b (a refused purchase says so) | `opus` | 156k | Done first pass; 6 mutations; G13 rewritten, with the message's assertion moved from the scan to the view-model suite |
+| `sdd-implementer` — T012c (the sell plan's trace) | `opus` | 84k | Done first pass; 2 mutations; held `003`'s no-target rule; found the seed has never produced a saved plan |
 | _rows added per dispatch as the spec runs_ | | | |

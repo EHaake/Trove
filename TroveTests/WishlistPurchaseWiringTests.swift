@@ -18,6 +18,11 @@ struct WishlistPurchaseWiringTests {
     private nonisolated static let detail = "Trove/Views/Wishlist/WishlistDetailView.swift"
     private nonisolated static let plan = "Trove/Views/Wishlist/SellPlanView.swift"
 
+    /// The three screens that can mark an entry bought. Not the sheet: it
+    /// hands a `Purchase` to its host and learns nothing about what became
+    /// of it.
+    private nonisolated static let purchaseHosts = [list, detail, plan]
+
     /// The spec's field order, twice over: the five elements are *declared* in
     /// that order, and the sheet's one column *composes* them in that order —
     /// two different edits, and either alone would move the comparison line
@@ -141,6 +146,33 @@ struct WishlistPurchaseWiringTests {
         #expect(
             literals.contains("purchase.sheet.comparison"),
             "the comparison line's identifier is missing or renamed"
+        )
+    }
+
+    /// T012a, the person's decision at the device pass: the sheet carries
+    /// **no navigation title**. It read "Mark as bought", the confirm button
+    /// reads "Mark as bought", and in one inline bar the title truncated to
+    /// "Mark as bo…" on all three hosts; the person's call was that the title
+    /// is the redundant one. The absence is the rule now, so it needs a guard
+    /// — this is a fact about the view body that no view-model test can
+    /// observe, and `PurchaseFormViewModel.title` no longer exists for one to
+    /// look at. The display mode is required alongside it, because dropping
+    /// *that* too would give the bar a large-title layout with empty space
+    /// where a title isn't, which is a different screen from the one the
+    /// person approved.
+    ///
+    /// Mutation: put any `.navigationTitle(…)` back → red; drop
+    /// `.navigationBarTitleDisplayMode(.inline)` → red.
+    @Test func theSheetCarriesNoNavigationTitle() throws {
+        let code = try SourceScan.production(Self.sheet)
+
+        #expect(
+            !code.contains("navigationTitle"),
+            "the purchase sheet names a navigation title again — T012a removed it as redundant with the confirm button, which says the same words and truncated it to \"Mark as bo\u{2026}\""
+        )
+        #expect(
+            code.contains(".navigationBarTitleDisplayMode(.inline)"),
+            "the purchase sheet's bar isn't inline — without a title, a large-title bar holds empty space where the title isn't"
         )
     }
 
@@ -473,9 +505,18 @@ struct WishlistPurchaseWiringTests {
     /// gate's span is what the button is required to sit *inside*, so a button
     /// moved out of it fails here rather than passing on the words alone.
     ///
+    /// The button reads the **word** "Buy" (`PurchaseCopy.swipeBuy`), not a
+    /// glyph — T012a, the person's decision at the device pass: a bare outline
+    /// bag alone in a toolbar most often means *cart*, on the one screen in
+    /// the app whose whole subject is selling. The word is the swipe's own
+    /// short form rather than a second constant for one action. Pinned here as
+    /// the rule, both halves — the word present and no glyph at all — rather
+    /// than loosened to tolerate either spelling.
+    ///
     /// Mutations: drop the gate → no `viewModel.wishlistItem != nil` span →
     /// red; move the button out of the gate → the span is empty of it → red;
-    /// drop the identifier T012 drives it by → red.
+    /// drop the identifier T012 drives it by → red; put `Image(systemName:
+    /// "bag")` back in place of the word → both new legs red.
     @Test func theSellPlanOffersMarkAsBoughtOnlyWhileItsEntryIsStillThere() throws {
         let code = try SourceScan.production(Self.plan)
 
@@ -509,8 +550,12 @@ struct WishlistPurchaseWiringTests {
         )
 
         #expect(
-            gate.contains("Image(systemName: \"bag\")"),
-            "the plan's button wears no bag glyph:\n\(gate)"
+            gate.contains("Text(PurchaseCopy.swipeBuy)"),
+            "the plan's button doesn't wear the word Buy \u{2014} T012a replaced the bag glyph with it, since a bare outline bag alone in a toolbar reads as *cart* on the one screen whose subject is selling:\n\(gate)"
+        )
+        #expect(
+            !gate.contains("Image("),
+            "the plan's button carries a glyph again \u{2014} T012a made it the word alone:\n\(gate)"
         )
         #expect(
             gate.contains(".accessibilityLabel(PurchaseCopy.markAsBought)"),
@@ -532,10 +577,11 @@ struct WishlistPurchaseWiringTests {
     /// rather than anywhere in the closure, so dismissing unconditionally
     /// fails here too: a refused save rolls back, leaving the entry and its
     /// plan exactly as they were, and the person should stay on a screen that
-    /// is still correct rather than be popped off it. Worth being plain about
-    /// what that costs — `saveFailureMessage` is read by no view in the app,
-    /// so a refusal is silent today, and staying put is the whole of what the
-    /// person is told.
+    /// is still correct rather than be popped off it. Staying put is half of
+    /// what the person is told; since T012b the other half is the refusal
+    /// alert `everyPurchaseHostShowsTheRefusalAlert` pins, reading
+    /// `purchaseFailureMessage` — before it, the reason was recorded in a
+    /// property no view read and a refusal was silent.
     ///
     /// Cancelling lowers the binding (criterion 4: cancelling changes nothing
     /// at all). Without it the sheet does not close at all, since
@@ -586,6 +632,48 @@ struct WishlistPurchaseWiringTests {
         #expect(
             !code.contains("WishlistPurchaseStore"),
             "the plan names the purchase store directly — the write belongs behind the view model"
+        )
+    }
+
+    // MARK: - The refusal alert (T012b)
+
+    /// Every host that can mark an entry bought can say that it didn't
+    /// (T012b). A view-body fact and nothing else: what the message *says*,
+    /// and which property it comes from, is behaviour that
+    /// `WishlistDetailViewModelTests.everyHostRefusesToBuyAnEntryTwice`
+    /// asserts by refusing a purchase for real. What no view-model test can
+    /// see is whether any view ever renders it — which is exactly the state
+    /// all three screens were in before this task: the reason was recorded
+    /// and nothing read it, so a refused purchase closed the sheet in
+    /// silence.
+    ///
+    /// Mutations: delete the alert from any one host → that host's case goes
+    /// red; present it off `exportFailureMessage` or the Sell Plan's
+    /// `saveFailureMessage` → red; drop the `set:` half so OK cannot lower
+    /// it → red.
+    @Test(arguments: purchaseHosts)
+    func everyPurchaseHostShowsTheRefusalAlert(path: String) throws {
+        let code = try SourceScan.production(path)
+
+        let alerts = SourceScan.argumentLists(of: ".alert", in: code)
+            .filter { $0.contains("PurchaseCopy.failureTitle") }
+        try #require(
+            alerts.count == 1,
+            "\(path) presents \(alerts.count) refusal alerts, expected exactly 1 — a refused purchase must not be silent"
+        )
+        let alert = alerts[0]
+
+        #expect(
+            alert.contains("viewModel.purchaseFailureMessage != nil"),
+            "\(path)'s refusal alert is presented off something other than the host's own purchase failure:\n\(alert)"
+        )
+        #expect(
+            alert.contains("viewModel.purchaseFailureMessage = nil"),
+            "\(path)'s refusal alert never clears the message, so OK would leave it pending and it would show again:\n\(alert)"
+        )
+        #expect(
+            code.contains("Text(viewModel.purchaseFailureMessage ?? PurchaseCopy.failureMessage)"),
+            "\(path) doesn't show the host's own message, only the generic one — the already-bought sentence is the refusal a person actually meets"
         )
     }
 

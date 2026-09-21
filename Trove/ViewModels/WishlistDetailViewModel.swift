@@ -14,7 +14,9 @@ import SwiftData
 /// `SellPlanViewModel`, one screen further in — plan.md is explicit that the
 /// plan is reached by a deliberate tap rather than shown alongside the item, and
 /// a detail model that quietly computed candidates would undo that by making
-/// them available to render here.
+/// them available to render here. Since 015 T012c it reads the relationship's
+/// *size* — `plannedSaleCount`, for the entry point's label — which is how
+/// many items the person set aside, never which ones or in what order.
 @Observable
 final class WishlistDetailViewModel {
     private(set) var item: WishlistItem?
@@ -22,10 +24,11 @@ final class WishlistDetailViewModel {
 
     /// A refused purchase (015 plan Q10). Its own property rather than a
     /// share of `deleteFailureMessage`: `delete()` clears that one on entry,
-    /// so an unrelated delete attempt would wipe a purchase refusal. Nothing
-    /// under `Trove/Views` reads it yet — the same as its two neighbours —
-    /// so a refused purchase is silent on this page.
-    private(set) var purchaseFailureMessage: String?
+    /// so an unrelated delete attempt would wipe a purchase refusal. T012b
+    /// gave it the alert this page shows, and the two other hosts a property
+    /// of this name and shape. Settable so the alert's binding can clear it
+    /// on OK, the `exportFailureMessage` shape.
+    var purchaseFailureMessage: String?
 
     /// R2: a detail screen already pushed onto an entry that has since been
     /// bought takes itself off the stack rather than offering to buy it again.
@@ -34,6 +37,15 @@ final class WishlistDetailViewModel {
 
     /// Distinguishes "not loaded yet" from "loaded, and it's gone".
     private(set) var hasLoaded = false
+
+    /// How many owned items this entry has set aside on its Sell Plan (015
+    /// T012c). Set by `load()` from the fetched entry, exactly as
+    /// `hasBeenBought` is, and 0 when nothing is loaded.
+    ///
+    /// This is the relationship's *size*, never its contents or its order —
+    /// the boundary this type's own doc comment draws, and the one
+    /// `loadingDoesNotTouchTheSellPlan` pins.
+    private(set) var plannedSaleCount = 0
 
     private let modelContext: ModelContext
     private let itemID: UUID
@@ -66,6 +78,7 @@ final class WishlistDetailViewModel {
         descriptor.fetchLimit = 1
         item = try? modelContext.fetch(descriptor).first
         hasBeenBought = item?.isBought == true
+        plannedSaleCount = item?.plannedSaleItems?.count ?? 0
         hasLoaded = true
         loadMarket()
     }
@@ -113,7 +126,8 @@ final class WishlistDetailViewModel {
     /// `WishlistPurchaseStore` is the one writer (015 plan Q4) and callers
     /// save — the `store(_:)` shape, one intent, one immediate save.
     ///
-    /// Returns false on a refused save, which rolls back.
+    /// Returns false on a refused save, which rolls back and says so in
+    /// `purchaseFailureMessage` — the alert this page shows.
     @discardableResult
     func markBought(purchase: Purchase) -> Bool {
         purchaseFailureMessage = nil
@@ -125,11 +139,17 @@ final class WishlistDetailViewModel {
             // `rollback()` discards every pending change on the shared context
             // — the same recovery the market and photo intents use — so the
             // entry is still wanted and no item was created. The message is
-            // set here rather than after `load()`, unlike the Wishlist's:
-            // this screen's `load()` does not clear `purchaseFailureMessage`
-            // — it clears no failure property at all.
+            // set straight after it and before the reload, the one ordering
+            // all three hosts share since T012b: no host's `load()` clears
+            // `purchaseFailureMessage`, so none of them has to get this
+            // right separately.
             modelContext.rollback()
-            purchaseFailureMessage = error.localizedDescription
+            // Which refusal it was, since the two read nothing alike: an
+            // entry bought on another device mid-screen (B1, the one a
+            // person can actually meet) against a failed write.
+            purchaseFailureMessage = error as? WishlistPurchaseStore.PurchaseError == .alreadyBought
+                ? PurchaseCopy.alreadyBought
+                : PurchaseCopy.failureMessage
             load()
             return false
         }
@@ -166,6 +186,45 @@ final class WishlistDetailViewModel {
     /// can drop the heading too rather than leaving a label over blank space.
     var hasNotes: Bool {
         item?.notes?.isEmpty == false
+    }
+
+    // MARK: - The Sell Plan entry point (015 T012c)
+
+    /// Whether this entry already has a saved Sell Plan — the person's
+    /// decision at `015`'s walkthrough: leaving a plan and coming back left
+    /// the page saying "Find items to sell", with nothing to show the
+    /// selection had been kept.
+    var hasSellPlan: Bool { plannedSaleCount > 0 }
+
+    /// The entry point's first line: the task when there's no plan, the plan
+    /// itself once one exists.
+    var sellPlanEntryTitle: String {
+        hasSellPlan ? "View your sell plan" : "Find items to sell"
+    }
+
+    /// The entry point's second line.
+    ///
+    /// **Why a count is allowed here where a figure is not.** The button's
+    /// doc comment in `WishlistDetailView` records `003`'s rule: this label
+    /// names the task, *not a target* — nothing here says how much is needed
+    /// or how close the person is. That rule still binds. A count is a fact
+    /// about what the person themselves set aside; "$840 of $3,900" is a
+    /// target and a completion figure, and it is exactly what was refused.
+    /// So this line may say how many items are on the plan and must never
+    /// say money or progress.
+    ///
+    /// Pluralised inline with a ternary because the app has no
+    /// pluralisation helper — the shape `SaleCopy.sellPlanSoldCaption` and
+    /// the dashboard's own captions already use.
+    var sellPlanEntrySubtitle: String {
+        guard hasSellPlan else {
+            // True today: `SellPlanViewModel.rank` really does put the
+            // least-wanted gear first. Design's own subtitle, kept because it
+            // describes the ranking that exists rather than a target the app
+            // doesn't compute.
+            return "Browse your lowest desire-to-keep items"
+        }
+        return "\(plannedSaleCount) \(plannedSaleCount == 1 ? "item" : "items") set aside"
     }
 
     // MARK: - Market (002)

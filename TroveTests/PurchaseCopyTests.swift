@@ -17,8 +17,9 @@ struct PurchaseCopyTests {
         #expect(PurchaseCopy.swipeBuy == "Buy")
     }
 
-    @Test func theSheetTitleAndButtons() {
-        #expect(PurchaseCopy.sheetTitle == "Mark as bought")
+    /// No `sheetTitle` leg: T012a removed the sheet's navigation title (the
+    /// person's decision at the device pass), and the constant went with it.
+    @Test func theSheetButtons() {
         #expect(PurchaseCopy.confirm == "Mark as bought")
         #expect(PurchaseCopy.cancel == "Cancel")
     }
@@ -29,6 +30,30 @@ struct PurchaseCopyTests {
         #expect(PurchaseCopy.boughtFromLabel == "Bought from")
         #expect(PurchaseCopy.boughtFromPlaceholder == "eBay, Reverb, a friend…")
         #expect(PurchaseCopy.conditionLabel == "Condition")
+    }
+
+    // MARK: - A refused purchase
+
+    /// T012b's three strings, pinned as literals. The two messages both end
+    /// "Nothing was changed", which is a claim about the code as much as a
+    /// sentence: the already-bought guard sits ahead of the market clear,
+    /// and every other refusal is rolled back
+    /// (`WishlistDetailViewModelTests.everyHostRefusesToBuyAnEntryTwice`
+    /// checks the store side of it).
+    ///
+    /// Mutation: swap the two messages → the behavioural tests on the three
+    /// hosts go red as well as this one.
+    @Test func theRefusalAlertsWords() {
+        #expect(PurchaseCopy.failureTitle == "Couldn't mark it bought")
+        #expect(PurchaseCopy.alreadyBought
+            == "This one is already marked bought — it may have been bought on another device. Nothing was changed.")
+        #expect(PurchaseCopy.failureMessage
+            == "Something went wrong saving the purchase. Nothing was changed.")
+
+        // Two refusals, two readings: an entry bought elsewhere is not a
+        // failed write, and one message for both would tell the person the
+        // wrong thing in whichever case it wasn't written for.
+        #expect(PurchaseCopy.alreadyBought != PurchaseCopy.failureMessage)
     }
 
     // MARK: - The comparison line

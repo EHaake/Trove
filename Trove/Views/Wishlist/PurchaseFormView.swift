@@ -24,6 +24,17 @@ import SwiftUI
 /// sheet that refuses what the Edit screen accepts is one rule with two
 /// answers.
 ///
+/// A second deliberate divergence, and the sharper one (T012a, the person's
+/// decision at the device pass): this sheet carries **no navigation title**,
+/// where `SaleFormView` keeps `.navigationTitle(viewModel.title)`. The title
+/// read "Mark as bought", the confirm button reads "Mark as bought", and with
+/// both in one inline bar the title truncated to "Mark as bo…" on every host.
+/// The person's reason: the title is redundant with the button, so the title
+/// is what goes. Saying it here so it reads as the decision it is rather than
+/// as drift from the twin — and `PurchaseCopy.sheetTitle` and
+/// `PurchaseFormViewModel.title` went with it, so there is no unused constant
+/// left behind for someone to wire back up by accident.
+///
 /// Every word comes from `PurchaseCopy`, never typed here, so the sheet and
 /// the rest of the spec's surfaces cannot drift apart.
 struct PurchaseFormView: View {
@@ -73,7 +84,10 @@ struct PurchaseFormView: View {
                 // that rubber-bands over empty space reads as broken.
                 .scrollBounceBehavior(.basedOnSize)
             }
-            .navigationTitle(viewModel.title)
+            // No navigation title at all — see the note above. The inline
+            // display mode stays: it is what keeps the bar the compact strip
+            // Cancel and Mark as bought sit in, rather than a large-title bar
+            // holding empty space where a title isn't.
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

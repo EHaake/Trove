@@ -70,13 +70,23 @@ struct SellPlanView: View {
         // when its entry has gone (deleted on another device), and an ungated
         // button there would be tappable over no subject and would confirm a
         // purchase of nothing.
+        //
+        // The button wears the word, not a glyph (T012a, the person's decision
+        // at the device pass): a bare outline bag alone in a toolbar reads as
+        // *cart*, and it sits on the one screen in the app whose whole subject
+        // is selling. The word is `PurchaseCopy.swipeBuy` rather than a new
+        // constant — it is already the short form of this exact action on the
+        // wishlist's swipe, so one short word covers one action in both
+        // places; "Bought" would read as a state rather than an action, and
+        // would be a second short form for the same thing. The spoken name
+        // stays the full `markAsBought`, as it does on the swipe.
         .toolbar {
             if viewModel.wishlistItem != nil {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         isMarkingBought = true
                     } label: {
-                        Image(systemName: "bag")
+                        Text(PurchaseCopy.swipeBuy)
                     }
                     .accessibilityLabel(PurchaseCopy.markAsBought)
                     .accessibilityIdentifier("purchase.sellPlan")
@@ -115,11 +125,9 @@ struct SellPlanView: View {
         //
         // Only one that took. A refused save rolls back, so the entry and its
         // plan are still exactly as they were, and popping would move the
-        // person off a screen that is still correct. Worth being plain about
-        // what that costs: `markBought` records the reason in
-        // `saveFailureMessage`, and **no view in the app reads that property**
-        // — so a refusal is silent today, and staying put is the whole of what
-        // the person is told.
+        // person off a screen that is still correct. Since T012b the person
+        // is also told why: `markBought` records the reason in
+        // `purchaseFailureMessage`, and the alert below reads it.
         .sheet(isPresented: $isMarkingBought) {
             PurchaseFormView(
                 viewModel: viewModel.makePurchaseFormViewModel(),
@@ -129,6 +137,23 @@ struct SellPlanView: View {
                 },
                 cancel: { isMarkingBought = false }
             )
+        }
+        // 015 T012b: a refused purchase says so. Before this the reason was
+        // recorded in a view-model property no view read, so confirming on a
+        // refusal closed the sheet, left the screen standing and told the
+        // person nothing. The export alert's shape, with OK the only way
+        // out; it reads `purchaseFailureMessage` and not the sale's
+        // `saveFailureMessage`, so a refused *sale* can never surface here.
+        .alert(
+            PurchaseCopy.failureTitle,
+            isPresented: Binding(
+                get: { viewModel.purchaseFailureMessage != nil },
+                set: { if !$0 { viewModel.purchaseFailureMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.purchaseFailureMessage ?? PurchaseCopy.failureMessage)
         }
     }
 

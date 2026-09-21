@@ -17,14 +17,22 @@ nonisolated enum PurchaseCopy {
     /// The ellipsis is `…` (`\u{2026}`), matching `SaleCopy.markAsSold`.
     static let markAsBought = "Mark as bought\u{2026}"
 
-    /// The *visible* word where a swipe button's width is short — "Mark as
-    /// bought" does not fit beside a glyph — while the spoken name stays
-    /// `markAsBought`. `SaleCopy.swipeSell`'s arrangement, on the wanted side.
+    /// The *visible* short form of this action in the two places whose width
+    /// is short — the wishlist row's swipe, where "Mark as bought" does not
+    /// fit beside a glyph, and (since T012a) the Sell Plan's toolbar button,
+    /// which wears the word rather than a bag glyph that would read as
+    /// *cart*. One short word for one action in both places; the spoken name
+    /// stays `markAsBought` in each. `SaleCopy.swipeSell`'s arrangement, on
+    /// the wanted side. The name still says "swipe" because that is where it
+    /// started and both callers spell it the same way.
     static let swipeBuy = "Buy"
 
     // MARK: - The sheet
 
-    static let sheetTitle = "Mark as bought"
+    /// No `sheetTitle`: T012a removed the sheet's navigation title, the
+    /// person's decision at the device pass — it truncated to "Mark as bo…"
+    /// beside a confirm button saying the same words, so the title was both
+    /// redundant and broken.
     static let confirm = "Mark as bought"
     static let cancel = "Cancel"
 
@@ -33,6 +41,28 @@ nonisolated enum PurchaseCopy {
     static let boughtFromLabel = "Bought from"
     static let boughtFromPlaceholder = "eBay, Reverb, a friend\u{2026}"
     static let conditionLabel = "Condition"
+
+    // MARK: - A refused purchase
+
+    /// The alert all three hosts show when a purchase is refused (T012b).
+    /// Before this the reason was recorded in a view-model property no view
+    /// read, so a refusal closed the sheet and said nothing at all.
+    static let failureTitle = "Couldn't mark it bought"
+
+    /// The one refusal a person can actually meet: the entry already carries
+    /// a marker, so `WishlistPurchaseStore.markBought` threw
+    /// `PurchaseError.alreadyBought` — which on a real device means it was
+    /// bought elsewhere while this screen was open (B1, criterion 12).
+    ///
+    /// "Nothing was changed" is load-bearing and true: the guard sits ahead
+    /// of the market clear, so a refused second purchase writes nothing at
+    /// all.
+    static let alreadyBought = "This one is already marked bought \u{2014} it may have been bought on another device. Nothing was changed."
+
+    /// Any other refusal — a failed save, or a failed market clear. True
+    /// for the same reason from the other end: the host rolls the context
+    /// back, so none of the purchase's writes survive it.
+    static let failureMessage = "Something went wrong saving the purchase. Nothing was changed."
 
     // MARK: - The comparison line
 

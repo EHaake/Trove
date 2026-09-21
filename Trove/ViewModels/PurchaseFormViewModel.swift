@@ -40,9 +40,12 @@ final class PurchaseFormViewModel {
 
     private let estimatedCostCents: Int
 
-    /// Title and confirm label come from `PurchaseCopy`, never typed inline,
-    /// so the sheet and its tests read the same strings.
-    var title: String { PurchaseCopy.sheetTitle }
+    /// The confirm label comes from `PurchaseCopy`, never typed inline, so the
+    /// sheet and its tests read the same string. There is no `title` beside
+    /// it: T012a removed the sheet's navigation title (the person's decision —
+    /// it truncated to "Mark as bo…" beside a confirm button saying the same
+    /// words), and a get-only property nothing reads is a wire waiting to be
+    /// plugged back in.
     var confirmLabel: String { PurchaseCopy.confirm }
 
     /// The spec's one line of copy under the price, or nothing (Q7). Computed

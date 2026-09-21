@@ -33,6 +33,15 @@ final class SellPlanViewModel {
     private(set) var loadFailureMessage: String?
     private(set) var saveFailureMessage: String?
 
+    /// A refused purchase (015 T012b). Its own property rather than the
+    /// share of `saveFailureMessage` §6 gave it: that was right while both
+    /// were invisible, but the purchase alert this screen now shows would
+    /// read a refused *sale* out of a shared property, and this spec's
+    /// non-goals forbid any change to the sale sheet or the sold side.
+    /// Settable so the alert's binding can clear it on OK, the
+    /// `exportFailureMessage` shape; `markSold` is untouched.
+    var purchaseFailureMessage: String?
+
     /// The device's own market figures for the owned items, keyed by item —
     /// one fetch per `load()`, the same step every other row surface goes
     /// through (`MarketSummary.summaries(forSubjects:in:now:)`), so this
@@ -458,16 +467,19 @@ final class SellPlanViewModel {
     /// screen is going away, and re-deriving a plan whose subject has just
     /// been bought would only repopulate it to be thrown out.
     ///
-    /// Reports a refusal in `saveFailureMessage`, the property `markSold`
-    /// uses, in the order `markSold` uses — two intents on one screen read
-    /// alike, and `load()` does not clear *that* property. (It does clear
-    /// `loadFailureMessage`, which is why the ordering here is the opposite
-    /// of `WishlistViewModel`'s rather than a matter of taste.)
+    /// Reports a refusal in `purchaseFailureMessage`, its own property and
+    /// not `markSold`'s `saveFailureMessage` (T012b). §6 shared the two
+    /// because two intents on one screen should read alike, which was right
+    /// while neither was rendered; now that this one has an alert, sharing
+    /// would surface a refused *sale* through it, and this spec's non-goals
+    /// forbid any change to the sale sheet or the sold side. Neither
+    /// property is cleared by `load()`, so the message still outlives the
+    /// reload below.
     ///
     /// Returns false on a refused save, which rolls back.
     @discardableResult
     func markBought(purchase: Purchase) -> Bool {
-        saveFailureMessage = nil
+        purchaseFailureMessage = nil
         guard let wishlistItem else { return false }
         do {
             try WishlistPurchaseStore.markBought(wishlistItem, purchase: purchase, at: now(), in: modelContext)
@@ -478,7 +490,12 @@ final class SellPlanViewModel {
             // uses. The reload below then shows what is actually stored: the
             // plan as it was, with its selections intact.
             modelContext.rollback()
-            saveFailureMessage = error.localizedDescription
+            // Which refusal it was, since the two read nothing alike: an
+            // entry bought on another device mid-screen (B1, the one a
+            // person can actually meet) against a failed write.
+            purchaseFailureMessage = error as? WishlistPurchaseStore.PurchaseError == .alreadyBought
+                ? PurchaseCopy.alreadyBought
+                : PurchaseCopy.failureMessage
             load()
             return false
         }

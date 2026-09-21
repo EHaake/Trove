@@ -108,6 +108,23 @@ struct WishlistDetailView: View {
                 cancel: { isMarkingBought = false }
             )
         }
+        // 015 T012b: a refused purchase says so. Before this the reason was
+        // recorded in a view-model property no view read, so the sheet just
+        // closed and nothing happened — and since B1 the refusal a person
+        // can actually meet is an entry bought on another device while this
+        // page sat open (criterion 12). The export alert's shape, with OK
+        // the only way out.
+        .alert(
+            PurchaseCopy.failureTitle,
+            isPresented: Binding(
+                get: { viewModel.purchaseFailureMessage != nil },
+                set: { if !$0 { viewModel.purchaseFailureMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.purchaseFailureMessage ?? PurchaseCopy.failureMessage)
+        }
         // An alert rather than a confirmation dialog, for the same reason as
         // the item detail screen: from a toolbar button the dialog renders as
         // a popover that drops the cancel button entirely.
@@ -410,20 +427,25 @@ struct WishlistDetailView: View {
     /// explicit that showing it automatically would overstate what it currently
     /// does. The label names the task ("find items to sell"), not a target —
     /// nothing here says how much is needed or how close the user is.
+    ///
+    /// 015 T012c gives it a second reading, at the person's instruction: once
+    /// a plan is saved it says "View your sell plan" over a count of what is
+    /// set aside, because leaving a plan and coming back showed no sign the
+    /// selection had been kept. **The rule above is unchanged, not relaxed** —
+    /// a count is a fact about what the person themselves chose, while a
+    /// figure like "$840 of $3,900" is a target and a completion figure, which
+    /// is the thing that was refused. Both lines come from the view model, so
+    /// which one shows is a behaviour `WishlistDetailViewModelTests` reaches.
     private func findItemsToSell(for item: WishlistItem) -> some View {
         Button {
             sellPlanRoute = SellPlanRoute(wishlistItemID: item.id)
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Find items to sell")
+                    Text(viewModel.sellPlanEntryTitle)
                         .font(theme.typography.rowTitle)
                         .foregroundStyle(theme.colors.accentBrass)
-                    // True today: `SellPlanViewModel.rank` really does put the
-                    // least-wanted gear first. Design's own subtitle, kept
-                    // because it describes the ranking that exists rather
-                    // than a target the app doesn't compute.
-                    Text("Browse your lowest desire-to-keep items")
+                    Text(viewModel.sellPlanEntrySubtitle)
                         .font(theme.typography.secondary)
                         .foregroundStyle(theme.colors.textLabelSecondary)
                 }

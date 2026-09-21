@@ -231,6 +231,23 @@ struct WishlistView: View {
         } message: {
             Text(viewModel.exportFailureMessage ?? ExportCopy.failureMessage)
         }
+        // 015 T012b: a refused purchase says so. Before this the reason was
+        // recorded in a view-model property no view read, so the sheet just
+        // closed and nothing happened — and since B1 the refusal a person
+        // can actually meet is an entry bought on another device while this
+        // screen was open. The export alert's shape, one line for one
+        // message, with OK the only way out.
+        .alert(
+            PurchaseCopy.failureTitle,
+            isPresented: Binding(
+                get: { viewModel.purchaseFailureMessage != nil },
+                set: { if !$0 { viewModel.purchaseFailureMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.purchaseFailureMessage ?? PurchaseCopy.failureMessage)
+        }
         // 012's file picker and import alert — ItemListView's twins; see
         // the notes there (cancel-safe by construction, one presentation
         // optional, dismiss-only when nothing is importable).

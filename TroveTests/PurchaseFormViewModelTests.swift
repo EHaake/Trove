@@ -41,31 +41,15 @@ struct PurchaseFormPrefillTests {
         #expect(form.validationErrors.contains(.priceMissing))
     }
 
-    /// Title and confirm label come from `PurchaseCopy`, not from literals
-    /// typed into the view model.
-    ///
-    /// **Corrected at T006a (S1); T005's version of this note understated
-    /// it.** The weakness is not only that both constants spell "Mark as
-    /// bought" and so cannot be told apart. It is that the *only* mutation
-    /// that reddens this is a hand-typed literal whose text **differs** from
-    /// the table: swap the two properties over, or return `PurchaseCopy`'s
-    /// other constant, or type the identical string by hand, and it stays
-    /// green. So what it guards is exactly one thing — a variant drifting
-    /// out of step with the table — and it is not evidence that either
-    /// property is wired to the right constant.
-    ///
-    /// Kept rather than deleted, because that one thing is real and nothing
-    /// else covers it. Worth stating beside the inconsistency the Phase 1
-    /// review turned up: T006's cross-host seed test drops its own
-    /// `title`/`confirmLabel` comparison as unfalsifiable. That is consistent
-    /// with this — there, all three hosts read the same get-only property, so
-    /// there is no drift to catch at all; here there is.
-    @Test func namesTheSheetFromTheCopyTable() {
-        let form = PurchaseFormViewModel(estimatedCostCents: 240_000, now: { self.t0 })
-
-        #expect(form.title == PurchaseCopy.sheetTitle)
-        #expect(form.confirmLabel == PurchaseCopy.confirm)
-    }
+    // T006a's `namesTheSheetFromTheCopyTable` is gone, deleted at T012a along
+    // with the sheet's navigation title. Its own note said the one thing it
+    // could catch was a *variant* drifting out of step with the table — one of
+    // `title`/`confirmLabel` reading a hand-typed literal while the other read
+    // `PurchaseCopy` — and that with a single get-only property there is no
+    // drift to catch at all, which is why T006's cross-host seed test had
+    // already dropped the same comparison. `title` no longer exists, so that
+    // is the state this suite is in now: the test went with the thing it
+    // guarded rather than being kept as a comparison that cannot fail.
 }
 
 /// 015/T005, G20. What the purchase sheet refuses and what it records
