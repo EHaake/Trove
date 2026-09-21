@@ -5,10 +5,11 @@ of its own, per `CLAUDE.md`'s model policy as amended 2026-09-19 (Opus 5,
 raised to high effort for the conversation). The **Decisions record** below
 holds every product decision the person made in that conversation. The
 **P-items** are Claude Code's proposals and become decisions on plan approval,
-as `002`'s, `005`'s, `006`'s and `015`'s did. Four P-items are flagged in the
-**Open questions** section as ones the person should look at specifically,
-because each of them either renders an existing judgement more loudly than it
-is rendered today or destroys a record another spec deliberately kept.
+as `002`'s, `005`'s, `006`'s and `015`'s did. The conversation ran to a second
+round: the person's reading of the first Draft replaced its most destructive
+proposal with a simpler rule (Decision 9) and settled the one remaining fork
+through the principle behind it (Decision 10), so **nothing is left open** —
+this Draft is complete and awaits approval rather than answers.
 
 **Depends on**: `001-core-inventory` (the wishlist, the Sell Plan screen and
 its ranking, the tab bar, the manual wishlist order, the cross-tab deep-link
@@ -95,10 +96,13 @@ Three things this spec deliberately preserves:
 - **A plan is active until the wanted item is bought**, at which point it is
   **completed** (Decision 1) — `015`'s marker is the ending, and it is the
   only one besides deletion.
-- **Existing plans carry over.** Anyone using the app today has wanted items
-  with selections, sold-toward history, or both, and no stored plan. Those
-  read as plans that were created and appear on the list; nobody has to
-  re-make a plan they already made (P10).
+- **Existing plans carry over, once.** Anyone using the app today has wanted
+  items with selections, sold-toward history, or both, and no stored plan.
+  Those become plans and appear on the list; nobody has to re-make a plan they
+  already made (P10). This happens **once**, to the collection as it stands —
+  it is not a standing rule that a want with sold-toward history has a plan.
+  That distinction matters because the sold-toward record survives a deletion
+  (P3): a standing rule would resurrect a plan the moment you deleted it.
 
 ### The Plans tab
 
@@ -141,27 +145,43 @@ A plan can be deleted, like anything else in the app (Decision 3), from the
 row's swipe, with the app's existing delete confirmation and a sentence naming
 what survives — the shape `010` settled and `WishlistDeleteCopy` holds.
 
-- **Deleting an active plan** removes the plan and clears what was set aside.
-  The wanted item **stays on your wishlist**, unchanged and still wanted, and
-  **anything already sold toward it stays sold** — those items are in your
-  collection's Sold side with their sale records intact, exactly as they were
-  (P3). The wanted item's page goes back to offering to create a plan.
-- **Deleting a completed plan removes the bought wanted entry itself** (P4).
-  It has no other existence in the app — it is in no list and in no export —
-  so from your side the plan *is* the entry. **The item you bought is
-  untouched**: it is an ordinary item in your collection and stays there, as
-  does everything that sold toward the purchase.
+**Deleting a plan deletes the plan and nothing else** (Decision 9). The same
+rule on both sides, in the person's words: "deleting a sell plan should only
+delete the sell plan. Sold items should be items that are sold. Nothing more."
+
+- Every **item** involved is untouched. Owned gear that was set aside is still
+  owned and goes back in the pool. Anything sold toward the plan is still
+  sold, still in your collection's Sold side, still carrying the price you
+  recorded for it.
+- **Deleting an active plan** leaves the wanted item on your wishlist,
+  unchanged and still wanted, with no plan — its page goes back to offering to
+  create one (P3).
+- **Deleting a completed plan** leaves the item you bought exactly where it is,
+  an ordinary item in your collection. What goes is the record that the
+  purchase was planned (P4).
+- **The record of what sold toward the want survives the deletion** (P3). Those
+  sales really happened and really were toward that thing; deleting a plan is
+  a statement about the plan, not a retraction of history. Make a new plan for
+  the same want later and that history is still there.
 
 This is what answers the orphan `015` left behind. When a purchase is marked
-in error, the correction is done by hand — delete the item, add the want back
-— and the original marked-bought entry stays in the store, unreachable, and
+in error the correction is done by hand — delete the item, add the want back —
+and the original marked-bought entry stays in the store, unreachable, and
 surfaces here as a completed plan for a purchase that never happened. The app
-cannot tell that entry apart from a real one and this spec does not try
-(P4): it shows it, which is the first time anything has, and lets you delete
-it. No automatic sweep — the only signal that would distinguish an orphan is
-that its purchased item no longer exists, which is equally true of a real
-purchase you later sold or deleted, so a sweep would silently destroy real
-history to tidy up a rare mistake.
+cannot tell that entry apart from a real one and does not try: it **shows**
+it, which is the first time anything has, and lets you delete the phantom plan
+off the list. No automatic sweep — the only signal that would distinguish an
+orphan is that its purchased item no longer exists, which is equally true of a
+real purchase you later sold or deleted, so a sweep would silently destroy
+real history to tidy up a rare mistake.
+
+**What that leaves, said plainly rather than implied**: the orphaned entry
+itself is not removed from the store, only its plan and its place on this
+list. A bought entry with no plan is in no list, no count, no export and no
+screen — it is exactly as inert as `015` left it, and deleting its plan is
+what takes it off the one surface it had reached. Removing the row itself
+would mean deleting a record `015` kept on purpose, on a guess about which
+purchases were real.
 
 ### Marking something bought from here
 
@@ -225,15 +245,16 @@ copy type and is pinned by literal, never typed inline in a view.
 - A row's counts, reusing the wanted page's existing wording: **"<n> item(s)
   set aside"**, and **"<n> sold toward it"**.
 - The covered marker: one short word, **Covered** (P8).
-- Deleting an active plan: **"Delete the sell plan for <name>?"** over a
-  consequence sentence naming all three promises, the way `WishlistDeleteCopy`
-  does — the wanted item stays, anything sold toward it stays sold, and this
-  can't be undone. Confirm **Delete**, cancel **Keep**, matching `010`'s
-  unified verb.
-- Deleting a completed plan: its own title and its own consequence sentence,
-  because what it removes is different — the record of the purchase's plan
-  goes, the item you bought stays in your collection, and anything sold toward
-  it stays sold.
+- Deleting a plan: **"Delete the sell plan for <name>?"** over a consequence
+  sentence naming all three promises, the way `WishlistDeleteCopy` does —
+  nothing you own or sold is touched, what sold toward it stays on the record,
+  and this can't be undone. Confirm **Delete**, cancel **Keep**, matching
+  `010`'s unified verb.
+- The two sides differ in **one clause**, because what remains differs: on
+  Active the wanted item stays on your wishlist, on Completed the item you
+  bought stays in your collection. One string with one varying clause, not two
+  sets of copy that can drift — the mistake `WishlistDeleteCopy`'s own doc
+  comment records being found at a pre-merge review.
 - The Dashboard card: **"<n> active sell plan(s)"**.
 - Empty states: Active with none, Completed with none, and the tab before you
   own or want anything at all.
@@ -285,28 +306,33 @@ was.
 9. [ ] Tapping a row opens that wanted item's existing Sell Plan screen, with
    its selection, ranking and Sold section exactly as that screen shows them
    today.
-10. [ ] Deleting an active plan leaves the wanted item on the wishlist with no
-    plan, leaves everything sold toward it sold and in the collection, and
-    says so before it happens.
-11. [ ] Deleting a completed plan removes the bought entry, leaves the
-    purchased item in the collection untouched, leaves everything sold toward
-    it sold, and says so before it happens.
-12. [ ] An orphaned completed plan — the one a hand-corrected purchase leaves
-    behind — is visible on the Completed side and can be deleted from it.
-13. [ ] **Mark as bought…** from an active row opens the same sheet, seeded
+10. [ ] Deleting a plan, on either side, changes no item anywhere in the app:
+    nothing is created, removed, unsold, or repriced, and gear that was set
+    aside is simply owned again.
+11. [ ] Deleting an active plan leaves the wanted item on the wishlist with no
+    plan; deleting a completed plan leaves the purchased item in the collection
+    untouched. Both say what will happen before it happens, and neither can be
+    undone.
+12. [ ] The record of what sold toward a want survives deleting its plan, and
+    a plan created for that want afterwards still shows that history — and a
+    deleted plan does not come back on its own.
+13. [ ] An orphaned completed plan — the one a hand-corrected purchase leaves
+    behind — is visible on the Completed side and can be taken off it by
+    deleting the plan.
+14. [ ] **Mark as bought…** from an active row opens the same sheet, seeded
     the same way, as the three hosts `015` built; confirming moves the row to
     Completed, and cancelling changes nothing at all.
-14. [ ] The Dashboard shows a card counting active sell plans that opens the
+15. [ ] The Dashboard shows a card counting active sell plans that opens the
     Plans tab, is absent when there are none, and does not appear inside a
     category drill-down.
-15. [ ] Each of the four empty states says something true about what is
+16. [ ] Each of the four empty states says something true about what is
     missing, rather than a blank screen or the wrong diagnosis.
-16. [ ] That a plan exists survives a relaunch and syncs; the schema still
+17. [ ] That a plan exists survives a relaunch and syncs; the schema still
     validates against CloudKit.
-17. [ ] Exports and import are unchanged in shape: no new column in either
+18. [ ] Exports and import are unchanged in shape: no new column in either
     format, no plan in any export, and today's files parse exactly as they do
     now.
-18. [ ] Nothing in this feature opens a network connection.
+19. [ ] Nothing in this feature opens a network connection.
 
 ## Decisions record
 
@@ -326,13 +352,17 @@ Made by the person, 2026-09-21, in this spec session:
    recorded because it constrains the definition above: the plan cannot be the
    pool, and the pool cannot be the plan.
 3. **A plan can be deleted**, like anything else in the app.
-4. **Both a Dashboard card and a fourth tab.** This overturns the roadmap's
-   own argument for this feature, which held that a permanent tab should be a
-   distinct place to be rather than a filtered slice of data reachable
-   elsewhere, and proposed the card alone. It does **not** overturn `001`,
-   which left the fourth tab slot empty with the instruction to fill it when a
-   real feature needed it. *The person's reasoning for the reversal is to be
-   recorded at their reading of this Draft — see Open questions.*
+4. **Both a Dashboard card and a fourth tab**, because **"sell plans are a
+   first class citizen, like owned items and wishlist items."** That sentence
+   is the reasoning, and it meets the roadmap's objection on its own terms
+   rather than setting it aside: the roadmap held that a tab should be a
+   distinct place to be and not a filtered slice of data reachable elsewhere,
+   and the answer is that a plan is not a slice of the wishlist at all. It is
+   its own kind of thing — a want on one tab, the gear that would fund it on
+   another, and an intent that spans them and lives on neither. The two
+   existing content tabs are the app's two first-class records; this is the
+   third. It does **not** overturn `001`, which left the fourth slot empty with
+   the instruction to fill it when a real feature needed it.
 5. **Counts, not money figures.** The standing refusal from `003`, held again
    by `015`, holds here. Said when the alternative was offered and declined
    for now: a completed plan could say what it raised without naming a target,
@@ -342,6 +372,18 @@ Made by the person, 2026-09-21, in this spec session:
 7. **Mark as bought… is offered from this screen too** — "the point of the
    sell plan is to complete it by purchasing the item."
 8. **No design pass for the fourth tab's icon**, "at the moment anyways."
+9. **Deleting a sell plan deletes only the sell plan.** "Sold items should be
+   items that are sold. Nothing more." The same rule on both sides: no item is
+   created, removed or altered by deleting a plan, and nothing is unsold. This
+   replaces the Draft's proposal that deleting a completed plan should also
+   remove the bought entry behind it — see P4 for what that leaves.
+10. **A sale's figure is the price it actually sold for**, not the value the
+    item carried while it was owned. "Once an item is sold and updated as such,
+    that should be reflected in the sell plan, since it will be reflected in
+    the sold item itself." Already true of the Sell Plan's Sold figure, and
+    recorded here because it is what settles P8: a judgement built on prices
+    actually received is a different claim from one built partly on estimates
+    of what unsold gear might fetch.
 
 ## Proposals (P-items)
 
@@ -356,14 +398,21 @@ overturns them.
 - **P2 — Row content** as listed above, and nothing else. In particular, no
   ranking preview and no candidate list on the row: the Sell Plan screen is one
   tap away and is where the pool belongs.
-- **P3 — Deleting an active plan** clears the plan and the selection, keeps the
-  wanted item, keeps the sold-toward history.
-- **P4 — Deleting a completed plan deletes the bought wanted entry.** This is
-  the one proposal that destroys something another spec deliberately kept
-  (`015` Decision 3), and it is proposed anyway because the record's only
-  purpose is to be seen on this screen, and a record you can see but never
-  remove is how the orphan became a problem in the first place. The purchase
-  itself is untouched.
+- **P3 — What "the plan" is, for deletion.** The stored plan and the current
+  selection go; the **sold-toward record stays**. Decision 9 settles that no
+  item is touched, and this settles the one thing inside the plan that is not
+  an item: the link saying these sales were made toward this want. It stays
+  because it is a record of something that really happened, because `006` made
+  it survivable on purpose, and because keeping it means a new plan for the
+  same want later still knows what you already sold.
+- **P4 — Deleting a completed plan removes the plan, not the bought entry**
+  (Decision 9). The consequence to be clear about: the entry itself then sits
+  in the store with no plan, in no list, no count, no export and no screen —
+  exactly as inert as `015` left it, and no longer surfacing here. So an
+  orphan can be taken off this list but its underlying row is never removed.
+  That is the cost of the rule, and it is cheaper than the alternative, which
+  was to delete a record `015` kept on purpose on a guess about which
+  purchases were real.
 - **P5 — Sort options per side.** Active: date created (newest first, the
   default), date created oldest first, name, and the wishlist's own manual
   order. Completed: date bought (newest first, the default), date bought
@@ -374,11 +423,14 @@ overturns them.
   Dashboard only.
 - **P7 — No export or import change of any kind**, as `015` made none.
 - **P8 — The covered marker reads the sales alone**, not the sales plus the
-  current selection. The app's existing boolean on the Sell Plan screen
-  includes the selection, which answers "would this plan pencil out"; the
-  useful signal on a list of plans is the narrower "the money is already
-  raised," which is also what the person described. The two live side by side
-  and mean different things, and this is the one the row carries.
+  current selection, and Decision 10 is what picks it. The app's existing
+  boolean on the Sell Plan screen includes the selection, so it is part real
+  money and part estimate — an answer to "would this plan pencil out," on a
+  screen where the estimates are visible beside it and can be judged. A row on
+  a list has no such context, so the only claim it can make honestly is the one
+  built entirely on prices actually received: **the money is already raised.**
+  The two cues live side by side, mean different things, and each belongs where
+  it is.
 - **P9 — The wanted item's entry point gains a create state.** This is a third
   change to merged code on that page — `001` built it, `015` T012c retouched
   it at the person's instruction, and this spec changes what its two states
@@ -401,7 +453,10 @@ overturns them.
   screen is a fourth host for an existing sheet.
 - **Undoing a purchase** (`015` Decision 5). Deleting a completed plan removes
   the plan's record, never the item.
-- **Automatically detecting or sweeping orphaned entries** (P4).
+- **Automatically detecting or sweeping orphaned entries** (P4), and
+  **removing the bought entry behind a deleted completed plan** (Decision 9).
+- **Unselling, repricing, or otherwise altering any item as a side effect of
+  deleting a plan** (Decision 9).
 - **Surfacing bought entries anywhere else** — no Bought side on the Wishlist,
   no export, no Dashboard figure. `015` Decision 1 stands; this screen is the
   one surface they get.
@@ -427,22 +482,19 @@ overturns them.
 
 ## Open questions
 
-For the person's reading of this Draft. Everything else above is either their
-decision or a P-item that can ride to plan approval.
+**None.** The four the first Draft carried were answered in the same session:
 
-1. **The fourth tab's reasoning** (Decision 4). The tab is decided; what is
-   missing is the one line saying why, since it overturns an argument written
-   down in `ROADMAP.md`. My reading, to confirm or replace: *a sell plan is a
-   distinct place to be rather than a filtered slice of the wishlist, because
-   it spans the collection — the wanted item is on the Wishlist but everything
-   that funds it is in Items, and no existing tab is where that lives.*
-2. **P4 — deleting a completed plan deletes the bought entry.** This destroys
-   the record `015` Decision 3 kept on purpose. The alternative is that the
-   orphan can be hidden but never removed, which is not much of an answer.
-   Worth a deliberate yes.
-3. **P8 — the covered marker reads the sales alone.** Confirm that "covered"
-   on this screen should mean the money is already raised, rather than the
-   Sell Plan screen's wider "this would pencil out if you sold what you have
-   ticked." They differ, and only one of them means "go buy it."
-4. **P1's labels.** **Plans**, **Active** and **Completed** — confirm, or
-   rename before anything is built against them.
+1. **The fourth tab's reasoning** — answered, and it is now Decision 4's first
+   sentence rather than a gloss of mine.
+2. **Deleting a completed plan** — the proposal was overturned. Decision 9
+   replaced it with one rule for both sides, and P4 states what that leaves.
+3. **The covered marker** — settled by Decision 10 rather than by picking one
+   of the two options: a figure built on prices actually received is the only
+   one a row can state without its context, which is P8.
+4. **The labels** — Plans, Active and Completed, left to Claude Code and kept.
+   One word per tab, as the three existing tabs are, and the two sides named
+   for the lifecycle Decision 1 defines rather than for what is on them.
+
+What remains before implementation is the ordinary gate: the person approves
+this spec, the `sdd-planner` drafts `plan.md` and `tasks.md` against it, and
+the `skeptical-reviewer` signs them off.
