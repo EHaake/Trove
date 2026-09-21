@@ -34,6 +34,7 @@ own.
 | `005-stock-photos` | **Shipped** — merged to `main` 2026-09-13 via [PR #21](https://github.com/EHaake/Trove/pull/21); sixteen tasks with four sub-lettered additions (T012a, the taken-with relevance filter the person's Phase 3 device testing asked for; T015a–c, from the device pass), eleven criteria verified with per-criterion records in `spec.md` and **two honest partials named** (no second device for the sync check; no dual-licensed GFDL + CC-BY-SA file in any live search). The app's **second network dependency** — Wikimedia Commons, the one source whose terms let a fetched photo be stored, synced and shown offline. Two review findings were caught as false coverage rather than by failing (a ported-licence acceptance, a bare-number relevance drop), a render test was probed, found false-passing and deleted, and the picker's `.task` firing count was settled by a probe inside the service rather than by inference. The first spec measured under the model policy's **experiment 1** — the orchestrating session moved to Fable at Phase 4, its tier log in `tasks.md`. |
 | `006-mark-as-sold` | **Shipped** — merged to `main` 2026-09-15 via [PR #23](https://github.com/EHaake/Trove/pull/23); twenty tasks (T001–T020) with ten sub-lettered additions — three of them from the person's walkthrough at the Phase 5 pause (T018a–T018c) and one from the device pass (T018d) — seventeen criteria (1–16, with 7a) verified with per-criterion records in `spec.md` and **two honest partials named** (no second device for the sync check; the VoiceOver reading is the person's step). The app's **first record of a real transaction** — a sale is four fields and a link on the item itself, so it syncs as one record and "Return to collection" is nil-ing them; the Items tab grows a Sold side beside Owned, the Dashboard a Sold card, and the Sell Plan a third figure that still subtracts nothing. Three things were settled by measurement rather than argument: a 19.7 pt jump in the Owned/Sold switch, the stutter beneath it (a `matchedGeometryEffect` across an insert/remove crossfades instead of moving), and the sale sheet presenting exactly once per confirm (a probe inside the writer, not a screenshot). Xcode 27 arrived mid-spec and the branch carries the toolchain fixes and a warning-free build. The second spec measured under the model policy's **experiment 1**, its tier log in `tasks.md`. |
 | `014-sold-side-parity` | **Shipped** — merged to `main` 2026-09-19 via [PR #25](https://github.com/EHaake/Trove/pull/25); all tasks through T011's close-out done (2026-09-18), every criterion verified — criterion 12 attested by the person with Accessibility Inspector on 2026-09-19, so the spec closes with no partials; eleven tasks with eleven sub-lettered additions (T009a–T009i for Decision 7's export scope and the dropdown-anchor defect it uncovered, T010a for the device pass's criterion-3 finding, T010b for the Phase 2b sweep), **1540 unit tests in 208 suites** and **23 UI tests** green, the UI suite twice back to back. Thirteen of fourteen criteria verified with per-criterion records in `spec.md` and **one honest partial named** (criterion 12's Accessibility Inspector sweep is the person's step). The two things `006` left the person fighting — **Mark as sold…** hidden in a menu, and a Sold side with no way to find anything in it — answered by a Sell action on the leading swipe and the Owned side's search, chips and sort on Sold, each side keeping its own. The person's Phase 2 reading added Decision 7 mid-spec: exports from the Items list now choose owned, sold or both, for either format, with a "Sold Items" PDF of its own. Two claims the work falsified are recorded in `plan.md`'s **As built** — a header equality that held only while nothing sat beside it (the device pass measured it 13.67 pt out, and two guards now hold it), and an `anchorPreference` that silently dropped two of three dropdown anchors. The session moved to the stepped-down Opus model at the person's instruction from T010 on; its tier log is in `tasks.md`. |
+| `015-mark-as-bought` | **Complete** — all tasks through T013's close-out done (2026-09-21); thirteen tasks with eight sub-lettered additions (T006a from the Phase 1 review, T011a from the Phase 2 review, T011b and T012a–c from the person's two pauses, T012d–e from the review that followed), **1622 unit tests in 224 suites** and **25 UI tests** green, the UI suite twice back to back. Fourteen of fifteen criteria verified with per-criterion records in `spec.md` and **one honest partial named** (the two-device sync check — nobody has run it and no agent can). The buying half of the core loop, which the app had never had: **Mark as bought…** from the wishlist swipe, the wanted item's menu and its Sell Plan, one sheet for price, date, place and condition, and an item that carries the entry's photos, credits, category, Reverb match, year and notes across. The wanted entry is **marked, not deleted**, so the sell plan built around it survives as the record that it was carried out — which finally gives `009-sell-plan-list` a definition of "active". No undo, by the person's decision. The Phase 1 review caught that a purchase could happen **twice** (a second `Item`, and the first purchase's marker overwritten) — visible only at phase level, fixed in the one writer. The person's walkthrough added three changes mid-spec: sentence case on the comparison line, a word instead of a bag glyph on the Sell Plan, an alert when a purchase is refused, and a saved sell plan now leaves a trace on the wanted item's page. |
 
 ## Future specs
 
@@ -230,6 +231,91 @@ actually useful once the app is in daily use.
   `ItemListHeaderLayoutTests`' height guard extended to the Wishlist's
   summaries. Small, mechanical, and worth doing before the next screen
   grows a badge.
+- **`fix/wishlist-duplicate-loses-photo-credit`** — a licence-compliance
+  defect in **already-merged** code, found while planning `015` and
+  deliberately not fixed there. `WishlistViewModel.duplicate(id:)` rebuilds a
+  copied entry's photos through `Photo(imageData:source:sortOrder:)`, which
+  writes **none** of the three attribution fields — so duplicating a wanted
+  item that carries a `005` stock photo produces a copy whose photographer,
+  licence and source link are gone, while the photo itself is still shown.
+  That is the credit `005` exists to keep, and the app is showing a
+  CC-licensed image without it. Found because `015` Q6 had to decide how the
+  purchase moves photos and refused this exact shape: the purchase **moves**
+  the `Photo` rows by rewriting their two parent links, so nothing is
+  reconstructed and nothing can be dropped. The fix is the same instinct
+  applied to the duplicate — carry the three fields across (or construct
+  through an initializer that cannot omit them) — with a test asserting the
+  copy's credit, which is what `015`'s G6 does for the move. No criterion or
+  plan section in `015` authorised touching it, and `CLAUDE.md` gives a
+  merged-code bug its own branch. Check `ItemListViewModel.duplicate(id:)` for
+  the same shape at the same time.
+- **Follow-up from `015` — the Wishlist unwind should read as one movement.**
+  Buying from a Sell Plan screen pops two screens, and they animate
+  **sequentially**: the wanted item's detail page is drawn fully on screen,
+  static, for **270–330 ms**, still reading WANTED, before it slides off.
+  Measured and filmed at `015`'s device pass, taken to a decision review and
+  **accepted for that spec** — criterion 8 is about surfaces and copies, and a
+  stack unwinding is not a surface. The cause is not a platform defect: the
+  detail screen's dismissal cannot be *requested* until its `.onAppear` fires,
+  and `.onAppear` fires as the screen comes on, so the serialisation is
+  entailed by the trigger's design. The fix direction, so the next spec does
+  not repeat the analysis: **own the Wishlist's route at the root** so a
+  purchase can pop to root in one movement. The tab is
+  `NavigationStack { WishlistView(…) }` with **no path binding** today, unlike
+  Items' `$router.itemsPath`, which is exactly why popping to root was not
+  available cheaply in `015`. It rewrites `015`'s G18, whose `dismiss()` leg
+  is deliberately scoped inside the `markBought` branch. Do it with whatever
+  next touches Wishlist navigation.
+- **Follow-up from `015` — a refused *sale* is still silent.**
+  `015` gave a refused **purchase** an alert on all three of its hosts, at the
+  person's instruction. The sale side still has the shape that was wrong:
+  `SellPlanViewModel.markSold` writes `saveFailureMessage` and **no view reads
+  it**, so a refused sale closes the sheet and says nothing. `015` could not
+  fix it — its Non-goals forbid touching the sold side, and sharing the
+  purchase's property would have surfaced a refused sale from the buy path.
+  The fix is `015`'s own pattern: an alert on the host's view (not on the
+  sheet's content, which is what keeps SwiftUI from dropping it), presented
+  off the existing property, with the binding's setter clearing it.
+- **Follow-up from `015` — a UI-test seed that produces a saved sell plan.**
+  `-seedSellPlan` seeds candidates but has **never** assigned
+  `plannedSaleItems`, so no UI test in this project has ever seen a saved
+  plan. Two things `015` shipped therefore have no UI-suite coverage: the
+  wanted page's "View your sell plan" / "<n> items set aside" state, and the
+  refusal alert, whose only automated coverage is a source scan that would
+  stay green if the alert were deleted and the string kept (the mechanism was
+  confirmed once by hand on the device). Needs a **second** seed argument
+  under `CLAUDE.md`'s two conditions — gated on the store the app actually
+  built being the in-memory one, and separate from `-uiTesting` so every
+  existing test keeps the starting state it was written against.
+- **Follow-up from `015` — audit `*WiringTests` for unscoped substring
+  checks.** Two shapes, both found in `015` and **both present in merged
+  code**. An identifier check written as `code.contains("sale.sheet.price")`
+  is satisfied by the longer literal `"sale.sheet.priceX"`, so renaming the
+  identifier leaves the guard green (`SaleFormWiringTests.theIdentifiersArePresent`
+  is a known instance; `015` caught its own copy before it landed and compares
+  whole string literals instead). And an alert-message check read over the
+  **whole file** is satisfied by a *neighbouring* alert's message closure —
+  `WishlistView` carries four alerts and `WishlistDetailView` two, and during
+  `015`'s mutation a `grep` confirmed the old leg would have stayed green on
+  exactly the mutation it was supposed to catch. The export, import and delete
+  alert checks were not looked at. Per `CLAUDE.md`'s audit-the-shape rule this
+  is the sweep the second finding asks for, and per its merged-code rule it is
+  a `fix/` branch, not a spec. One mechanical note for whoever does it: an
+  alert's `message:` is a **trailing** closure, so
+  `SourceScan.argumentLists(of: ".alert")` can never contain it — the
+  slice-and-scope shape in
+  `WishlistPurchaseWiringTests.everyPurchaseHostShowsTheRefusalAlert` is the
+  one that works.
+- **Follow-up from `015` — one shared field chrome for the three sheets.**
+  `PurchaseFormView` copies `SaleFormView`'s chrome, which copied
+  `ItemFormView`'s: the `PlateSurface` field plate, the label-plus-field
+  pairing, the rust invalid border, the paired price/date row and the
+  condition capsules now exist in three places. `015` Q8 chose the copy
+  deliberately — the fields differ, and its Non-goals forbade changing the
+  sale sheet — but three is the number at which a shared component stops being
+  speculative. The extraction is mechanical and wants its own diff; nothing in
+  the three sheets' behaviour should change, which makes it easy to verify and
+  easy to keep putting off.
 - **`007-auto-categorization`** — Suggest a category path from a photo
   instead of typing it. The category field being a plain string path
   (not a fixed enum) since `001` is what keeps this a pure addition.
@@ -287,7 +373,26 @@ actually useful once the app is in daily use.
   true the day the buy side lands. `006`'s open question (a plan whose
   candidates have all sold still showing the "Nothing to sell yet"
   empty state) is the same missing lifecycle seen from another angle.
-- **`015-mark-as-bought`** — the other half of the core loop, and the one
+
+  **Unblocked 2026-09-21: `015` shipped, and "active" now has a definition.**
+  A plan is active while its wanted entry is **not bought** —
+  `WishlistItem.boughtDate == nil`, the predicate five read sites already use
+  — and **completed** once it is, with `itemsSoldToward` kept and the unsold
+  candidates released at the purchase. So this screen can list active plans
+  and, if it wants, show completed ones as a record. Two things it inherits
+  with the definition, both named in `015`'s Non-goals as `009`'s to handle.
+  First, **a bought entry is invisible everywhere else in the app** — in no
+  list and in no export — so until this screen ships, its retained sell plan
+  has no surface at all and the unit tests are its only witness. Second, **a
+  purchase corrected by hand leaves an orphan**: the person deletes the item
+  and re-adds the want, which is a *new* entry, so the original marked-bought
+  row stays in the store unreachable and will surface here as a completed plan
+  for a purchase that never happened. This screen is the first place that can
+  either show it, so it can be dealt with, or sweep it; `015` deliberately did
+  neither, having nowhere to do it from.
+- **`015-mark-as-bought`** (**Complete 2026-09-21** — see
+  `specs/015-mark-as-bought/` for the full record) — the other half of the
+  core loop, and the one
   piece of it the app has never had. `CLAUDE.md`'s own description of Trove
   is "track what you own, track what you want to buy next, and use the gap
   between current value and original cost to plan sales that fund future
@@ -323,7 +428,24 @@ actually useful once the app is in daily use.
   finally settles `006`'s open question about a sell plan whose candidates
   have all sold — a plan gets an ending.
 
-  **`009-sell-plan-list` waits on this** — see its entry.
+  **`009-sell-plan-list` waited on this — it no longer does**; see its entry.
+
+  **How the three product questions above were answered** (spec session,
+  2026-09-19, and the walkthrough that followed). **No Bought side**: a bought
+  thing is an item, it lives in Items, and the Wishlist grows nothing —
+  `014`'s parity argument does not carry, because Owned and Sold are two
+  states of *one* row whereas a Bought side would be a second copy of a row
+  that now lives elsewhere. **No funding link on the new item**: the Sell Plan
+  is guidance, not a trade ledger, and `006`'s `itemsSoldToward` already
+  records what was sold toward the want — it is simply not *extended* onto the
+  item. So the third question ("what happens to a purchase the sales did not
+  cover") never arose. **No undo**, which was not one of the questions and
+  turned out to matter most: returning a sold item destroys nothing, but
+  un-buying would have to delete a row that by then may carry photos, a serial
+  number or notes added since. A purchase marked in error is corrected by
+  hand. Two consequences are accepted rather than solved, both `009`'s to
+  address: the corrected entry's original marked-bought row stays in the store
+  unreachable, and it will read as a completed plan once `009` has a screen.
 - **`016-collection-value-history`** — how the collection's value has moved
   over time. The app knows what you paid and what things are worth right
   now, and the gap between those two numbers is its entire framing — but

@@ -893,3 +893,238 @@ claims the suites cannot reach — the sheet's spoken names, the comparison line
 in place, the two pops, the credit on a moved photo on screen, the relaunch —
 are §9's device pass, and criterion 14 is ticked by inspection with that stated
 in the open.
+
+## As built
+
+Written at T013's close-out (2026-09-21), after every task and every review.
+This section is the record of what the plan above got right, what it got
+wrong, and where the build departed from it; the plan's own text is left as
+drafted — with the in-place corrections marked where they were made — so the
+two can be read against each other.
+
+Final counts: **1622 unit tests in 224 suites** (from 1553 at the branch
+point) and **25 UI tests**, the UI suite run twice back to back at each phase
+end. Thirteen tasks with **eight** sub-lettered additions (T006a from the Phase 1
+review, T011a from the Phase 2 review, T011b and T012a–c from the person's two
+pauses, T012d–e from the T012a–c review). **No `.pbxproj` edit anywhere in the
+spec** — the `ActionBuy` imageset joined the build by existing inside
+`Trove/Assets.xcassets/`, which settles that question for later asset work.
+
+### What the plan got right
+
+Most of its shape survived contact. The **one writer** (§3) held: three hosts,
+one store, callers save, and when the Phase 1 review found a real hole it was
+closable in that one function rather than in three. The **photo move** (Q6)
+was the right call for the reason given, and its row-count leg is what makes
+it checkable. The **exclusion rule at five read sites** (§4) missed nothing the
+suites could find, and the sixth site the review named was a documentation
+gap rather than a behavioural one. The **`006` reversal** (§8) was handled the
+way the plan said to handle it, and T009 went further than the plan asked by
+*demonstrating* the dodge rather than arguing it. The decision to make the
+sheet a **twin file** rather than a mode (Q8) cost nothing and kept the sale
+sheet untouched, as the Non-goals required.
+
+### Four things the plan said that are false, and are corrected in place above
+
+- **Q11's stated rationale was wrong** (found by the implementer at T004,
+  confirmed by the per-task review). `ListEmptyReason.reason` falls through to
+  `.nothingAdded` whenever nothing is narrowing the list, so a stale
+  `totalCount` alone does *not* produce a filter's empty state. The
+  requirement was right; only its reason was. The real one is that
+  `WishlistView` gates the search field, the chips and the sort control on
+  `totalCount > 0`.
+- **Q10's per-host ordering table was overtaken entirely** (T012b). Its
+  central choice — the Wishlist reporting into `loadFailureMessage` — could
+  not have worked at all once anything tried to *show* the message, because
+  `.sheet(item:, onDismiss: viewModel.load)` wipes that property before an
+  alert could read it. A message that cannot survive to be displayed is the
+  wrong property, whatever the ordering. All three hosts now have their own
+  `purchaseFailureMessage` and one ordering, which deletes the rule rather
+  than adjusting it.
+- **§7's `monoLabel` treatment for the comparison line was faithful to the
+  plan and wrong for the spec** (T011b). `monoLabel` uppercases and tracks, so
+  the line shipped as `$120 LESS THAN YOU ESTIMATED` in the identical
+  treatment as the `PURCHASE PRICE` label above it — a third field label, not
+  the "quiet supporting text" the spec's Design section asks for. Sentence
+  case now, at the person's call.
+- **§7's navigation title** was specified as the twin's and removed at the
+  walkthrough (T012a): it truncated to `Mark as bo…` on all three hosts beside
+  a confirm button saying the same words.
+
+One further sentence, in §1, was **wrong in the other direction**: it first
+said no "Superseded by" pointers were owed. The re-review caught it before
+implementation, T009 appended the pointer to `specs/006-mark-as-sold/plan.md`,
+and T013 verified it is there.
+
+### R1 and R2
+
+- **R1 — confirmed, and disclosed as the plan promised.** A bought entry is
+  not counted in Settings' wanted-items number, is not in the
+  export-everything wishlist file, and is **not** removed by "Delete all
+  wanted items". The person heard all three at the Phase 2 pause and did not
+  overturn any. Guards G10 and G11; the device pass read the files out of the
+  container and watched Delete-All's enablement follow.
+- **R2 — confirmed in its logic, and its cost measured and accepted.** Both
+  pops fire and in order (`sellPlan.dismiss` +52 ms,
+  `detail.onAppear hasBeenBought=true` +61 ms, `detail.dismiss` the same
+  frame), and it lands on the Wishlist. What the plan did not anticipate is
+  that SwiftUI plays them **sequentially**, so the wanted item's page sits
+  fully on screen, static, for 270–330 ms still reading WANTED. Filmed, taken
+  to a decision review, **accepted for `015`**, fix direction on `ROADMAP.md`.
+  The full analysis is in R2 above.
+  R2's **scope** was also corrected at the Phase 1 review: `.onAppear` covers
+  navigating back to a screen, not the entry changing underneath a screen
+  already in the foreground. That second window is closed in the one writer
+  instead (T006a), which is where it should have been from the start.
+
+### Q1–Q14 as shipped
+
+- **Q1–Q3 as written.** `boughtDate` declared with no initializer, `isBought`
+  beside it, `Purchase` and `PurchaseCopy` in their own files. One string in
+  the table has no source in spec or plan and was chosen by the implementer:
+  `boughtFromPlaceholder` mirrors `SaleCopy.soldAtPlaceholder` as "eBay,
+  Reverb, a friend…". `sheetTitle` was added as planned and **deleted at
+  T012a**.
+- **Q4 as written, with one thing the plan should have specified**:
+  `markBought` was **not idempotent**. Nothing in the store or in any host
+  checked `isBought`, so a second call inserted a second `Item` and
+  re-stamped the marker, destroying the first purchase's record — the
+  duplicate criterion 8 forbids, with no undo to correct it. Two real windows
+  reached it (a marker arriving from another device onto a foreground screen,
+  and the Sell Plan deliberately not reloading on success). Fixed in the one
+  writer with a **thrown** `PurchaseError.alreadyBought` — not a
+  `precondition`, which could only fail by trapping, the untestable shape
+  `CLAUDE.md` records from `002` T021 — guarded **before** the market clear so
+  a refusal writes nothing at all. Only the phase view could see this: T003's
+  review saw one function with one caller, and T006's hosts were written
+  against a store that looked safe.
+- **Q5–Q7 as written.** Thirteen fields carried or defaulted as listed;
+  photos moved, never rebuilt; the comparison silent below a dollar. Q7's
+  recorded consequence held exactly as predicted — a genuinely zero estimate
+  reads as no estimate — and one further fact came out of T002: **exact
+  equality is carried by the sub-dollar floor alone** (`abs(delta) >= 100`
+  covers delta 0), so if the floor is ever removed at the person's request,
+  criterion 6's equality case needs an explicit `deltaCents != 0` guard to
+  replace it.
+- **Q8 as written.** The sheet is `SaleFormView`'s twin file. The shared
+  field chrome the three sheets now copy is a `ROADMAP.md` follow-up, as the
+  plan said.
+- **Q9 as written**, and it needed its own guard for a reason worth keeping:
+  a twin file invites paste, so `theDatePickerIsUnbounded` exists because
+  pasting `in:` back from `SaleFormView` would undo the deliberate divergence
+  with nothing red. A **popover's bound** is a view-body fact no view-model
+  test can observe, which is why that scan is legitimate under the
+  constitution's source-scan rule while a scan of the view model's side would
+  not have been.
+- **Q10 overtaken** — see above.
+- **Q11 corrected in place** — see above. Its *requirement* shipped
+  unchanged.
+- **Q12 as written.** The market rows are cleared first, and a bought entry is
+  no refresh target. One site the plan's enumeration missed,
+  `MarketRefresher.currentTarget(for:)`, was found by the T004 review and
+  corrected in §4.
+- **Q13 as written**, re-verified against the finished tree at T013: a
+  `boughtDate = nil` added to a view model reddens both tests and names the
+  file; a `boughtDate == nil` **comparison** added to a view model leaves it
+  green. Its stated limit is in criterion 15's tick.
+- **Q14 as written**, except that the word it put on the Wishlist's swipe
+  button ended up on the **Sell Plan's bar button too** (T012a), which Q14 did
+  not anticipate — §8 carries the correction. No new colour measurement was
+  owed and none was taken.
+
+### Deviations from the plan's text
+
+- **The Sell Plan's action is a word, not a glyph** (T012a, the person's
+  decision). §8's own fallback, taken for the reason it named, with
+  `PurchaseCopy.swipeBuy` rather than a new "Bought" string.
+  `.navigationBarTitleDisplayMode(.inline)` was **kept** when the title went,
+  because dropping it too would leave the bar in large-title layout with empty
+  space where a title isn't — a different screen from the one the person
+  approved.
+- **A refused purchase now shows an alert on all three hosts** (T012b). The
+  Phase 2 review recorded the silence and recommended a roadmap entry; the
+  person overruled that at the walkthrough ("Do it now"). No plan section
+  called for it. `SellPlanViewModel` keeps `saveFailureMessage` untouched for
+  `markSold`: sharing it would have surfaced a refused **sale**, which this
+  spec's Non-goals forbid — the spec settled that, not the orchestrator.
+- **A saved sell plan now leaves a trace on the wanted item's page** (T012c).
+  This is **merged code from `001` changed inside `015` at the owner's
+  explicit instruction** — a scope addition, recorded as such rather than as
+  drift, with a "Superseded in part" pointer appended to `001`'s plan. The
+  trap was real and was held: `003` deliberately refused a target or a
+  progress figure on that button, and a **count** of what the person set aside
+  is allowed where "$840 of $3,900" is not.
+- **`WishlistDetailViewModel` reports `PurchaseCopy` rather than
+  `error.localizedDescription`** (T012b), so no raw system error string can
+  reach a Trove screen from this path.
+- **Two comment-only edits outside every task's file list**:
+  `CategoryPathHelper.allRecords()` and `WishlistFormViewModel.nextSortOrder()`
+  each carry §4's "unchanged, deliberately" note, because §4 required the note
+  at each unchanged site and the task's file list under-described it.
+- **Test files beyond the plan's list**: `PhotoOwnershipTests` gained a case
+  (a photo that changes parent — its invariant had never had one), and
+  `TabIconTests`' `ActionIconTests` suite extended to five glyphs.
+- **The UI test's Items-tab assertion is a `descendants(matching: .any)`
+  query**, not §9's `app.staticTexts`, because an **owned** row's combined
+  element surfaces as an `other` element while a **sold** row's surfaces as a
+  static text. Settled by dumping the accessibility tree, not by guessing; the
+  assertion itself is unchanged.
+
+### What is untested, said plainly
+
+- **Criterion 9's retained record has no witness but the unit tests.** Once
+  the entry leaves the Wishlist nothing in the app displays it, and by
+  criterion 13 it is in no export. `009` is the first spec with a surface for
+  it.
+- **T012c's new state has no UI-suite coverage at all.** `-seedSellPlan`
+  seeds candidates but has never assigned `plannedSaleItems`, so no UI test
+  has ever seen a saved plan. A second seed argument, under `CLAUDE.md`'s two
+  conditions, is on `ROADMAP.md`.
+- **T012b's refusal alert has no automated coverage beyond a source scan.**
+  T012d confirmed the mechanism by hand on the device — it fires on all three
+  hosts, OK dismisses it, a second refusal fires again, and store counts were
+  identical across four refusals, so "Nothing was changed" is true on the
+  device and not only in the rollback's intent. The scan would stay green if
+  the alert were deleted and the string kept; per `CLAUDE.md`, the honest
+  reading is that the alert is untested. Durable coverage means a UI test
+  driving a real refusal, which needs the seed above.
+- **The cross-device window could not be rebuilt on one simulator.** The
+  `alreadyBought` guard is proven by unit tests; that a marker arriving from
+  another device is *visible in time* is not, and is the person's two-device
+  step.
+- **Criterion 14 is an inspection**, and criterion 15's menu half is the diff.
+  Both say so in their ticks.
+- **Criterion 2's guard counts the symbol**, so a page button spelled with a
+  raw literal rather than `PurchaseCopy.markAsBought` would pass it.
+- **The wanted entry's page offers its menu rows over a missing entry**,
+  while the Sell Plan gates its button. No criterion requires the gate, §8
+  states the rule only for the Sell Plan, and the page's Edit and Delete rows
+  carry the identical exposure from `006` — so gating only the new row would
+  be inconsistent and gating all three is larger than this spec.
+
+### Three things learned that outlive this spec
+
+- **A fixture's value must differ from what a broken implementation would
+  produce.** Five instances of the same false-passing shape were found in this
+  spec, two of them by the implementer before reporting and one by a blocking
+  review finding: `desireToOwn: 3` equal to `desireToKeep`'s default, and
+  `currencyCode: "USD"`, which **both** initializers default to — so dropping
+  `currencyCode: wanted.currencyCode` from the store left the test green. The
+  rule that followed governed every later task: whenever a test asserts field
+  X is carried across, the fixture's X must differ from `Item.init`'s default
+  for X.
+- **`SourceScan.production` cuts a file at the first literal `#Preview`
+  *before* stripping comments**, so merely writing the word `#Preview` **inside
+  a doc comment** truncates that file to its header for every scan that reads
+  it. Found at T009, where it silently reddened `MenuPolicyTests` and
+  `SoldStateWiringTests` with no code change and pointed at the wrong file
+  entirely. Recorded here because the next person to document a scanned file
+  will hit it.
+- **An unscoped `contains` over an identifier or a whole file is a
+  false-pass waiting to happen.** `contains("purchase.sheet.price")` is
+  satisfied by `"purchase.sheet.priceX"` (caught at T007 before it landed;
+  **the same shape lives in merged `SaleFormWiringTests`**), and a whole-file
+  scan for an alert's message closure is satisfied by a *neighbouring*
+  alert's message (caught at T012e, where `grep` during the mutation confirmed
+  the old leg would have stayed green on exactly that mutation). Both are on
+  `ROADMAP.md` as an audit of every `*WiringTests`.

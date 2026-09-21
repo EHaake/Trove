@@ -1269,6 +1269,46 @@ four as questions, not facts.
   **Verify:** everything above committed and pushed; `scripts/verify.sh all`
   green with the final counts recorded here (unit **and** UI lines both
   captured).
+  **Done** (2026-09-21), documentation half. `scripts/verify.sh all` green:
+  **1622 tests in 224 suites** and `Executed 25 tests, with 0 failures (0
+  unexpected)`.
+  **The `006` pointer T009 appended is present** — `grep -c` over
+  `specs/006-mark-as-sold/plan.md` returns 1, six lines added, the shipped
+  claim untouched beside it.
+  **G14's two mutations re-run against the finished tree**, which is the
+  point of doing it here: T003 wrote `PurchaseUndoTests` before any view
+  existed, so "assigned exactly once across `Trove/`" was only ever proven
+  over a partial tree. Both reverted, hashes confirmed. Adding
+  `boughtDate = nil` to a view model → **red on all three legs, naming the
+  file** ("assigned 2 times, in [the store, `WishlistViewModel`]"). Adding a
+  `boughtDate == nil` **comparison** → **green**, so the lookahead still
+  tells a write from a read across the whole spec's code.
+  Criteria **1–11 and 13–15 ticked** with per-criterion citations. Criterion
+  14 ticked by inspection with the reason stated; criterion 15 ticked on
+  `PurchaseUndoTests` **plus the diff**, naming what G14 cannot see (an undo
+  written as delete-the-`Item`-and-reinsert) and citing `ItemDetailView` not
+  appearing in the diff at all and `DetailOverflowMenu` changed only in its
+  doc comment.
+  **Criterion 12 is left unticked as an honest partial, and that is a
+  deviation from the task line, taken deliberately.** The line said "criteria
+  1–15 ticked … criterion 12 an honest partial", which pull against each
+  other; house convention decides it — `014`'s close-out wrote "Criterion 12
+  is an honest partial and **stays unticked**", and `006` ticked its partials
+  only later, marked "(Was pending at the merge.)". **The two-device sync
+  check was not run: the person has not done it and no agent can.** A tick
+  would claim an observation nobody has made. Everything that *was* verified
+  is recorded in the tick text.
+  `plan.md` gained a 235-line **As built**; `design/tokens.md` gained the
+  swipe's third action and a `Mark as bought` section; `README.md`'s wishlist
+  bullet; `DECISIONS.md` a new section; `ROADMAP.md` the status row, the `009`
+  entry unblocked with "active" now defined, and **six follow-ups** — the
+  `fix/` for `duplicate(id:)` losing stock-photo credit, the Wishlist unwind
+  (R2, with the root-route fix direction), the still-silent refused **sale**,
+  a UI-test seed that produces a saved sell plan, the `*WiringTests`
+  substring/whole-file audit, and the shared field chrome (Q8).
+  **Recorded**: `design/tokens.md` carries a pre-existing stale note about a
+  DUPLICATE relabel two lines from what was edited — left alone, outside the
+  remit.
 
 ## Constitution changes since sign-off
 
@@ -1351,4 +1391,5 @@ orchestrator had to redo, and why) are recorded here too.
 | `general-purpose` (simulator tools) — T012d, the alert on the device | `opus` | 140k | Alert fires on all three hosts; "Nothing was changed" true on device; the SwiftUI trap does not bite because the alert sits on the host, not the sheet |
 | `sdd-implementer` — T012e (five second-look fixes) | `opus` | 106k | Done first pass; 3 mutations; found the old alert-message leg would have stayed green on its own mutation |
 | Orchestrator — B1, `plan.md` corrected in place | `opus` (session) | n/a | Q3, §6, §7 twice, §8 and the G18 row; plus a `Superseded in part` pointer appended to `001`'s entry-point rule |
+| `sdd-implementer` — T013 close-out (documentation half) | `opus` | 201k | Done first pass; `006` pointer confirmed; G14's two mutations re-run over the finished tree and both behaved; criterion 12 left an honest partial per house convention |
 | _rows added per dispatch as the spec runs_ | | | |
