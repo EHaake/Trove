@@ -407,7 +407,7 @@ actually useful once the app is in daily use.
   for a purchase that never happened. This screen is the first place that can
   either show it, so it can be dealt with, or sweep it; `015` deliberately did
   neither, having nowhere to do it from.
-- **`015-mark-as-bought`** (**Complete 2026-09-21** — see
+- **`015-mark-as-bought`** (**Shipped 2026-09-21** via [PR #29](https://github.com/EHaake/Trove/pull/29) — see
   `specs/015-mark-as-bought/` for the full record) — the other half of the
   core loop, and the one
   piece of it the app has never had. `CLAUDE.md`'s own description of Trove
