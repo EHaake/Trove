@@ -138,8 +138,8 @@ Three things this spec deliberately preserves:
 
 Every row carries (P2):
 
-- the wanted item's **thumbnail**, name and category, drawn the way the
-  wishlist's own rows draw them;
+- the wanted item's name and category, and on an **active** row its
+  **thumbnail**, drawn the way the wishlist's own rows draw them;
 - **what you have set aside** — a count, in the words the wanted item's page
   already uses, and absent when nothing is;
 - **what has sold toward it** — a count, and absent when nothing has;
@@ -150,7 +150,11 @@ Every row carries (P2):
   colour to attach to, and a bare colour carries nothing to VoiceOver.
 
 A **completed** row says the same things in the past tense and carries the
-**date bought**. Its covered marker still reads against the estimate, which
+**date bought** — and **no picture and no picture slot** (Decision 11). The
+wanted item's photos moved to the item it became at the purchase (`015`), so
+there is nothing left to draw; rather than a placeholder where a picture used
+to be, every row on the Completed side is the same text-only shape, so nothing
+ever visibly loses its image in place. Its covered marker still reads against the estimate, which
 is the only figure the entry holds: it keeps no link to what was actually paid
 (`015` Decision 2). What it does not carry is any figure comparing what was
 raised to what was paid — that is the arithmetic `003` refused and `015`
@@ -248,7 +252,10 @@ an undo: it removes the record of the plan, not the purchase.
   which opens the Plans tab on its Active side (Decision 4) — the cross-tab deep-link `001`
   already built and `006`'s Sold card already uses.
 - The card is **absent entirely** when there are no active plans, as the Sold
-  card is absent when nothing has sold (P6).
+  card is absent when nothing has sold (P6) — and absent on the Dashboard's
+  first-run screen, before you own anything, as every card is (Decision 12).
+  That screen's one job is to get the first item added; the Plans tab is in
+  the tab bar regardless.
 - It appears on the **Dashboard's root only**, not inside a category
   drill-down (P6). A plan is not a category's property — the gear sold toward
   it can come from anywhere in the collection — so a scoped count would be
@@ -322,9 +329,12 @@ was.
 - The **covered marker is quiet** — supporting text, not a badge competing
   with the name, and not coloured as gain or loss. It is an observation, the
   same register the comparison line on `015`'s sheet was corrected into.
-- **Rows keep the list-screen rules `001` set**: a thumbnail slot is always
-  reserved so the scroll keeps its rhythm, and the header stays fixed while
-  only the rows scroll.
+- **Rows keep the list-screen rules `001` set**: on the Active side a
+  thumbnail slot is always reserved so the scroll keeps its rhythm, and the
+  header stays fixed while only the rows scroll. The Completed side keeps the
+  same rhythm the other way round — **no** row there has a slot (Decision 11),
+  which is `001`'s reason (every row in one scroll the same shape) applied to a
+  side where no row has a picture to show.
 
 ## Acceptance criteria
 
@@ -345,9 +355,11 @@ was.
    launch.
 6. [ ] Each side offers its own sort options, applied to the rows on screen,
    with the most recent plan first by default.
-7. [ ] A row shows the wanted item's thumbnail, name and category, the count
-   set aside when there is one, the count sold toward it when there is one,
-   and nothing where a count would be zero.
+7. [ ] A row shows the wanted item's name and category, the count set aside
+   when there is one, the count sold toward it when there is one, and nothing
+   where a count would be zero. An active row shows its thumbnail (or the
+   reserved placeholder, as a wishlist row does); a completed row has no
+   picture and no picture slot.
 8. [ ] A row shows the covered marker exactly when the sales alone have
    reached the estimated cost — never with no estimate, and never counting
    what is merely set aside — and no row anywhere on this screen shows a money
@@ -374,7 +386,8 @@ was.
     the same way, as the three hosts `015` built; confirming moves the row to
     Completed, and cancelling changes nothing at all.
 15. [ ] The Dashboard shows a card counting active sell plans that opens the
-    Plans tab on Active, is absent when there are none, and does not appear inside a
+    Plans tab on Active; it is absent when there are none, absent on the
+    first-run Dashboard before anything is owned, and does not appear inside a
     category drill-down.
 16. [ ] Each of the four empty states says something true about what is
     missing, rather than a blank screen or the wrong diagnosis.
@@ -435,6 +448,24 @@ Made by the person, 2026-09-21, in this spec session:
     recorded here because it is what settles P8: a judgement built on prices
     actually received is a different claim from one built partly on estimates
     of what unsold gear might fetch.
+
+Made by the person, 2026-09-22, answering the two contradictions planning
+found between this spec and the code:
+
+11. **Completed rows have no picture slot at all.** Planning found a completed
+    row cannot show the wanted item's picture: `015` moves the photos to the
+    bought item, and keeps no link back. The planned answer was the empty
+    placeholder; the person rejected it — "if it goes from having an image to
+    not having an image and showing an empty placeholder, that's not good.
+    Either keep the image or remove the image placeholder entirely." Removing
+    it was chosen (the choice left to Claude Code) because keeping the image
+    cannot be done reliably: a plan completed before this spec has no way back
+    to its photos, and one after it would lose its picture again whenever the
+    bought item was sold or deleted — the same effect, deferred.
+12. **No Plans card on the first-run Dashboard**, "whatever is the most
+    streamlined and intuitive for the user" (the choice left to Claude Code):
+    the Sold card's rule, since that screen exists to get the first item
+    added and the tab bar already carries the Plans tab.
 
 ## Proposals (P-items)
 
@@ -592,3 +623,7 @@ did: every finding below follows from a decision the person had already made.
   words; "make a new plan later" was scoped to active plans, since a completed
   plan's entry cannot be planned again; deleting a wanted item's plan with it
   is stated.
+- **After planning** (2026-09-22): two things the plan could not build as the
+  spec read — a completed row's picture, and the Dashboard card before anything
+  is owned — went to the person rather than being settled in `plan.md`, and
+  came back as Decisions 11 and 12; criteria 7 and 15 carry them.

@@ -1,6 +1,6 @@
 # 009 — Sell Plan List — Technical Plan
 
-**Status**: Draft — pending sign-off
+**Status**: Signed off (2026-09-22) by the `skeptical-reviewer`; the person's approval of the spec-conformance summary pending
 
 Drafted by the `sdd-planner` (per `CLAUDE.md`'s model policy as amended
 2026-09-19: every role runs at `opus`, no dispatch carries a model override)
@@ -15,7 +15,8 @@ Revised 2026-09-22 after the `skeptical-reviewer`'s sign-off: blocking
 finding 1 (the carry-over fired on a failed import and in `.localOnly`) is
 fixed in Q2, Q3 and §4, with the derive-on-read alternative weighed there;
 the non-blocking findings are folded in where each lands. Finding 2 (R2, R4)
-is with the person and is untouched here.
+went to the person and came back 2026-09-22 as spec Decisions 11 and 12 —
+transcribed into R2, R4, §5, §11 and T005/T011 by the orchestrator.
 
 ## Context
 
@@ -66,15 +67,15 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   "Bought <date>" line, and the existing Sold section — each sale with its
   date and price, as today — or one quiet line when nothing sold toward it.
   Heard at the Phase 4 pause (it is first reachable there).
-- **R2 — A completed row's thumbnail is always the empty slot.** The spec
-  says every row carries "the wanted item's thumbnail". `015` Q6 **moves** an
-  entry's photos onto the item its purchase creates, and `015` Decision 2
-  keeps no link from the entry to that item, so a bought entry has no photos
-  to draw. The row keeps the reserved slot (`RowThumbnail`'s placeholder,
-  `001`'s rhythm rule); copying photos at the purchase or linking the item
-  would each change what buying does, which this spec's Non-goals forbid.
-  **This is the one place the spec and the code disagree**; it goes to the
-  person at the Phase 4 pause, not as a question the plan can answer.
+- **R2 — A completed row has no picture and no picture slot** (spec
+  Decision 11, the person's answer 2026-09-22 — superseding this plan's draft
+  reading, an always-empty placeholder, which the person rejected). `015` Q6
+  moves an entry's photos onto the bought item and keeps no link back, so a
+  bought entry has nothing to draw. `PlanRow` carries `showsThumbnail`, set by
+  the view model — true for an active row, false for a completed one — and
+  `PlanRowView` draws `RowThumbnail` only when it is true. An active row
+  without a photo still gets `RowThumbnail`'s placeholder (`001`'s rhythm
+  rule, within a side).
 - **R3 — Carried-over plans are dated when the carry-over ran**, not guessed
   from the wanted item's own date: the app does not know when a pre-`009`
   plan began, and a stored date should be a fact (the `015` Decision 2
@@ -82,7 +83,8 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   themselves by the wishlist's own order (the tie-break, Q9).
 - **R4 — The Dashboard card appears only where the Dashboard shows figures**,
   exactly as the Sold card does: with no owned items the Dashboard shows its
-  first-run state, and no card, even if a plan exists.
+  first-run state, and no card, even if a plan exists. Confirmed by the person
+  2026-09-22 as spec Decision 12 and written into criterion 15.
 - **R5 — Settings' "Delete all wanted items" takes active plans with their
   wanted items and leaves completed plans on the Completed side.** Deleting a
   wanted item takes its plan (spec, "Deleting a plan"), and a bought entry is
@@ -536,6 +538,7 @@ final class PlansViewModel {
     struct PlanRow: Identifiable {           // Q8: nothing to draw money from
         let id: UUID; let name: String; let categoryPath: String; let photos: [Photo]
         let lines: [String]; let boughtDate: Date?   // lines: SellPlanSummary.rowLines
+        let showsThumbnail: Bool                  // R2: set by the split, false on Completed
         var isCompleted: Bool { boughtDate != nil }
     }
 
@@ -577,7 +580,9 @@ been **sold** stays on Active (criterion 2 — mutation: `active` read as
 entry with no plan and a wanted entry with no plan are on neither side
 (criterion 3); an orphan — bought with a plan, its created `Item` deleted —
 is on Completed and `deletePlan` takes it off while the entry stays in the
-store (criterion 13, P4); each row's `lines` equal `SellPlanSummary.rowLines`
+store (criterion 13, P4); `showsThumbnail` is true on every active row and
+false on every completed one (criterion 7, Decision 11 — mutation: set it true
+throughout → red); each row's `lines` equal `SellPlanSummary.rowLines`
 for its entry, with no line for a zero count (criterion 7 — mutation: emit
 `setAside(0)` → red). G11 sorts, fixture
 chosen so every order differs from the others:
@@ -747,7 +752,8 @@ alert; `.onAppear` applies `router.wantsActivePlans` then loads;
 viewModel.completedImports)` and `.onChange(of: viewModel.settledCount)`;
 `.refreshable` with `RefreshPacing`.
 
-`PlanRowView` — `WishlistRow`'s head (`RowThumbnail`, name in `rowTitle`,
+`PlanRowView` — `WishlistRow`'s head (`RowThumbnail` **only when
+`row.showsThumbnail`** — no slot, no placeholder otherwise, R2 — name in `rowTitle`,
 category `monoLabel`, the stock-photo accessibility value) with
 `ForEach(row.lines)` stacked beneath in `secondary` on `textQuiet` (`015`
 T011b's house pairing). **The view decides nothing about which lines show**
@@ -882,7 +888,7 @@ cut after `git add -A`, and the PR marked ready.
 | G7 | `SellPlanStoreTests.carryOver`: six rows, all six end checked, a second run returns 0, the deleted plan never resurrected, dated `now` | the checked filter dropped (resurrection leg); sold-toward ignored (sold-only and bought legs); only planned rows stamped (**the all-six-checked leg** — the idempotency leg stays green, since a second run makes no plan either way); `createdAt` written (date leg) |
 | G8 | `SyncMonitorTests`: `onSettled` at init for `.ephemeral` only; on a successful import, before the bump; on a finished failed setup; **not** on a failed import after a good setup; never on export/in-flight; `settledCount` after each call | hook after the bump; fired on the `.unavailable` edge (the failed-import leg); fired at init in `.localOnly`; fired on export |
 | G9 | `UITestSeedTests`: `shouldSeedPlans` refuses a persistent store with every flag set; the seed's shape; one carry-over over it yields three active | gate reads the flag alone; seed row missing |
-| G10 | `PlansViewModelTests` membership: all-sold stays Active; bought moves; planless on neither; orphan shown and deletable; rows' `lines` | active from the selection; completed ignoring the plan; a zero count drawn |
+| G10 | `PlansViewModelTests` membership: all-sold stays Active; bought moves; planless on neither; orphan shown and deletable; rows' `lines`; `showsThumbnail` true on Active, false on Completed | active from the selection; completed ignoring the plan; a zero count drawn |
 | G11 | `PlansViewModelTests` sorts: seven orders over two fixtures; the tie both ways; per-side persistence; fresh defaults | a comparator dropped or reversed; bought date read as plan date; tie by name; one shared sort |
 | G12 | `PlansViewModelTests` empty reasons and precedence, including an awaiting row under a not-importing monitor | `stillSyncing` below another; `nothingWanted` for a planless wishlist; the awaiting check dropped |
 | G13 | four-host seed equality, refusal and the one-landing comparison; the Buy moves the row | `?? 0` in the fourth seed; the fourth host skipping the store or its save |

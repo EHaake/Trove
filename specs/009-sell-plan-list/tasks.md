@@ -1,6 +1,6 @@
 # 009 — Sell Plan List: Tasks
 
-**Status**: Draft — pending sign-off
+**Status**: Signed off (2026-09-22) by the `skeptical-reviewer`; the person's approval of the spec-conformance summary pending
 
 Drafted against the approved `spec.md` (Approved 2026-09-22) and the draft
 `plan.md` in this directory, for branch `009-sell-plan-list` off `main`
@@ -90,11 +90,10 @@ Handoff notes for the pause reports:
 - **Phase 4 — what can be tried**: the fourth tab, its two sides, sorting
   each side, a Buy swipe moving a plan to Completed, a delete swipe, opening a
   completed plan as a record, the Dashboard card taking you to Active. Put as
-  questions, not facts: **R1** (the record has no figures card), **R2** (a
-  completed row's picture is always the empty slot — the photo moved to the
-  bought item in `015`, and the spec's "every row carries the thumbnail"
-  can't be met there without changing what buying does), **R3** (carried-over
-  plans are dated at the update, so they sort together), **R4** (no card on an
+  questions, not facts: **R1** (the record has no figures card), **R2** is no
+  longer a question — the person decided it (spec Decision 11): say that
+  completed rows show no picture and no slot, and check it reads right, **R3** (carried-over
+  plans are dated at the update, so they sort together), **R4** (decided, Decision 12: no card on an
   empty Dashboard), **R5** (Delete all wanted items leaves completed plans),
   **R6** (no search, chips or summary line), **R7** (on iCloud, plans carry
   over only after the first successful sync of the launch — "Catching up"
@@ -240,7 +239,9 @@ Handoff notes for the pause reports:
   the two static comparators with `ManualOrderHelper.areInCustomOrder` as
   the fallback; the four empty reasons with `stillSyncing` first — chosen
   while importing **or while any row `awaitsCarryOver`** (plan Q10); each
-  row's `lines` from `SellPlanSummary.rowLines`; `settledCount` passed
+  row's `lines` from `SellPlanSummary.rowLines` and its `showsThumbnail`
+  (true on Active, false on Completed — spec Decision 11, plan R2);
+  `settledCount` passed
   through from the monitor; `markBought` (`WishlistViewModel.markBought`'s body over the looked-up
   entry, into its own `purchaseFailureMessage`); `deletePlan(id:)`. No
   SwiftUI import. Pattern: `ItemListViewModel` (sides, per-side sort,
@@ -395,7 +396,8 @@ Handoff notes for the pause reports:
   leading block outside the Active gate → red; the cancel closure emptied →
   red; a `formattedAsWholeCurrency` or a `.currency(` format added to the
   row → red; a `SellPlanCopy.setAside(` composed in `PlanRowView` instead of
-  drawing `row.lines` → red; a `SortDropdown` with
+  drawing `row.lines` → red; `RowThumbnail` drawn outside the
+  `row.showsThumbnail` gate → red; a `SortDropdown` with
   `isManualOrder: { _ in true }` → red; the `settledCount` reload dropped →
   red); `.onChange(of: viewModel.settledCount)` beside the
   `completedImports` reload; add
