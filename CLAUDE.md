@@ -265,7 +265,7 @@ tier distinct from the implementation tier any more** — the
 decision reviews and the pre-merge sweep) and the `sdd-implementer` all
 run at `opus`, which is what their definitions already default to, so
 **no dispatch carries a model override**. The session runs on
-`claude-opus-5`. Everything else below — the roles, the review cadence,
+`claude-opus-5-5`. Everything else below — the roles, the review cadence,
 the loop cap, the bundle discipline, the escape hatch — is unchanged,
 and the paragraphs that follow describe experiment 1 as it ran, which is
 the record this amendment supersedes rather than deletes. Two
@@ -292,7 +292,7 @@ Decided once, alongside the involvement level; the tier names change as models
 do, the roles don't.
 
 - **Tiers by name** *(as amended 2026-09-19: every tier is `opus`; the
-  session is `claude-opus-5`; the fallback session model stays
+  session is `claude-opus-5-5` (`claude-opus-5` until 2026-09-22); the fallback session model stays
   `claude-opus-4-8`, the full ID, since a previous-generation model has
   no short alias)*. As experiment 1 had them: top tier `fable`;
   implementation tier `opus`; session tier `fable` at medium effort —
@@ -302,7 +302,7 @@ do, the roles don't.
 - **The session runs at the session tier, at medium effort**, set in
   this repo's `.claude/settings.json` — written at project setup from
   the skill's `assets/settings-template.json` (since the 2026-09-19
-  amendment `"model": "claude-opus-5"`, `"effortLevel": "medium"`, and a
+  amendment `"model": "claude-opus-5-5"`, `"effortLevel": "medium"`, and a
   level under `"modelSettings"` for each tier's full model ID; it read
   `"claude-fable-5-1"` under experiment 1). If that file is missing or lacks these
   keys, recreate it from the template and commit it before dispatching
