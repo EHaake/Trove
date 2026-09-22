@@ -11,6 +11,12 @@ had to take a side on are under **Readings for sign-off**; none is a product
 fork, each is stated so the reviewer can overturn it, and each reaches the
 person in plain words at the pause where it can first be seen.
 
+Revised 2026-09-22 after the `skeptical-reviewer`'s sign-off: blocking
+finding 1 (the carry-over fired on a failed import and in `.localOnly`) is
+fixed in Q2, Q3 and §4, with the derive-on-read alternative weighed there;
+the non-blocking findings are folded in where each lands. Finding 2 (R2, R4)
+is with the person and is untouched here.
+
 ## Context
 
 Spec 009 makes a sell plan a **stored fact** on a wanted item (Decision 1),
@@ -84,11 +90,14 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
 - **R6 — The Plans tab has no search, no category chips, no header summary
   line and no "…"**: the spec lists none, exports are unchanged (P7), and
   Settings stays reachable from the other three tabs.
-- **R7 — On a device using iCloud, the carry-over waits for the first import
-  of the launch** (Q3). For those first seconds after updating, the Plans tab
-  says "Catching up with iCloud" rather than showing carried-over plans; the
-  wait is what stops a second device from resurrecting a plan deleted on the
-  first.
+- **R7 — On a device using iCloud, the carry-over waits for the first
+  successful import of the launch** (Q3), and it never runs on a launch where
+  iCloud failed to load. Until it runs, a Plans side with nothing on it says
+  "Catching up with iCloud" when there are plans still to carry, and a wanted
+  item with one already reads "View your sell plan" on its page. On a device
+  that stays offline this can last the whole offline session. The wait is
+  what stops a second device, working from an old copy, from bringing back a
+  plan that was deleted on the first.
 
 ## Proposed at planning (Q1–Q19) — approved on plan approval unless overturned
 
@@ -113,26 +122,56 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   - *Two devices both run it*: each writes the same two fields on the same
     unchecked rows; either write means "has a plan, checked". No duplicate
     can exist (a plan is not a row).
-  - *A device runs it before synced data arrives*: it doesn't, on iCloud
-    (Q3) — it waits for the first import to land. Rows arriving later, still
-    unchecked, are carried at the next settle.
+  - *A device runs it before synced data arrives*: it doesn't — on iCloud it
+    waits for a **successful** import (Q3), and a failed import never
+    triggers it. Rows arriving later, still unchecked, are carried at the
+    next successful import.
   - *A deleted plan*: delete leaves `sellPlanCheckedAt` set, so no device
     ever re-evaluates that row, whatever history it carries (G7).
-  **Residual, stated**: a device whose last import predates another device's
-  deletion *and* that runs the carry-over before importing is not possible on
-  iCloud under Q3; a device that is signed out (`.unavailable`) runs it on
-  what it has, and a row it carries there can meet a deletion made elsewhere
-  when sync resumes. Which write CloudKit keeps then, and whether an app
-  older than `009` editing a row preserves fields it doesn't know, are
-  **claims needing verification** — the person's two-device step (T015), the
-  same limit `015` inherited.
+  **Residual, stated — three windows remain where a write can land on an old
+  copy**, each handed to the person's two-device step (T015):
+  (1) a finished **failed setup** is taken as "signed out" (the signature
+  `SyncMonitor`'s T051 probe found) and runs the carry-over on local rows — if a signed-in device
+  launched offline reports the same event, it is indistinguishable, and
+  **unverified**; (2) a **multi-pass first import**: the hook fires after
+  the first successful pass, and a row whose newer state is still in a later
+  pass is carried from its old one; (3) whichever write CloudKit keeps when
+  such a carried row meets a deletion, and whether an app older than `009`
+  editing a row preserves fields it doesn't know. `.localOnly` is **not** a
+  window: the carry-over does not run there (Q3). These are the same class of
+  limit `015` inherited, and `DECISIONS.md` records "once, per row" with them
+  at close-out.
+
+  **Weighed and rejected as the mechanism: deriving the plan for unchecked
+  rows on read** (the sign-off's alternative). It removes every launch-time
+  write, so no stale write can happen at all — its real strength. But a
+  derived plan lives only as long as its evidence, and the evidence is
+  destroyed by at least seven writers in five files (`SellPlanViewModel.toggle`,
+  `ItemSaleStore.markSold` — which drops the sold item from **every** plan's
+  selection, not just the one it sold toward — `ItemSaleStore.returnToCollection`,
+  `WishlistPurchaseStore.markBought`, and every owned-item delete, where the
+  loss is the implicit `.nullify` cascade, including Settings' bulk delete).
+  Each would have to store the derived plan of every affected row first, or
+  criterion 2 breaks silently the moment the last ticked item goes; and the
+  only guard that could enumerate those writers is a source scan, the shape
+  `CLAUDE.md` says leaves the thing untested. **Kept from it, read-only**:
+  `WishlistItem.awaitsCarryOver` (§1) — the carry-over's own predicate — is
+  read in two places so the pending window is honest rather than wrong: an
+  empty Plans side says `stillSyncing` while any row awaits (criterion 16),
+  and the wanted item's page treats a waiting row as having a plan, storing
+  it when the person opens it (a person's own act, not a launch-time one).
 - **Q3. When the carry-over runs: `SyncMonitor.onSettled`.** A closure
-  `SyncMonitor` calls on the main actor **each time the store settles** — at
-  `init` when nothing is ever arriving (`.localOnly`, `.ephemeral`), on every
-  successful import, and at the moment `mayStillBeImporting` goes false (a
-  signed-out device's failed setup) — and **always before `completedImports`
-  moves**, so a screen reloading on that count (every list screen does)
-  reads what the carry-over wrote. Ordering by construction, not by the
+  `SyncMonitor` calls on the main actor **only when this device's copy is
+  known current or known to be the only copy**: on every **successful
+  import**; on a finished **failed setup event** (the signed-out signature);
+  and at `init` for `.ephemeral` (an in-memory store no other device can
+  touch). **Never** on a failed import, and **never in `.localOnly`** — that
+  mode is the synced store opened without its mirror for one launch, so a
+  write there would export next launch from a copy of unknown age; skipping
+  costs one launch. Always **before** `completedImports` moves, and followed
+  by a bump of a new `settledCount`, which the Dashboard and the Plans tab
+  also reload on — a failed setup moves no import count, so without it the
+  launch tab would keep a stale zero. Ordering by construction, not by the
   unspecified order of two `onChange` handlers. `TroveApp.init` passes
   `SellPlanStore.runCarryOver` over the main context; the UI-test seeds move
   above the `SyncMonitor` construction so an in-memory launch carries a
@@ -156,20 +195,30 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
       /// history gets a plan dated `now`; every unchecked entry is stamped
       /// checked. Returns how many plans it made. The caller saves.
       static func carryOver(in context: ModelContext, at now: Date) throws -> Int
-      /// `carryOver` and its save, rolling back on refusal — the closure
-      /// `SyncMonitor.onSettled` runs.
+      /// `carryOver`, then one save **only if `context.hasChanges`** — the
+      /// closure `SyncMonitor.onSettled` runs, on every settle. On a refused
+      /// save it rolls back, which discards *every* pending change on the
+      /// main context, not only its own (the house caveat; the app saves
+      /// each intent immediately, so there is normally nothing else).
       static func runCarryOver(in context: ModelContext, now: Date)
   }
   ```
 
   `create` and `delete` both stamp `sellPlanCheckedAt` when nil, so any
-  plan-state write settles the row. Views never name it (G17, G19).
-- **Q5. `SellPlanSummary` — one derivation of a plan's facts, three
-  readers.** `setAsideCount` (`plannedSaleItems.count`), `soldTowardCount`
-  (`itemsSoldToward.count`, the Sell Plan screen's own `soldCount` rule —
-  G4 asserts the two agree over the same entry), `isCovered` (Q6). Read by
-  the Plans rows, the wanted item's entry point (P9), and pinned against the
-  Sell Plan screen. No money field: it carries a Bool, never the sum (Q8).
+  plan-state write settles the row — for `delete` a defence rather than a
+  path normal use reaches, and G6 carries a leg for it (a delete on an
+  unchecked row leaves it checked, so a later carry-over cannot re-plan it).
+  Views never name the store (G17, G19).
+- **Q5. `SellPlanSummary` — one derivation of a plan's facts and its words,
+  three readers.** `setAsideCount` (`plannedSaleItems.count`),
+  `soldTowardCount` (`itemsSoldToward.count`), `isCovered` (Q6), and the two
+  pieces of copy built from them with `SellPlanCopy`: `rowLines(boughtDate:)`
+  — the row's lines, each present only when its count is non-zero — and
+  `entrySubtitle`, the wanted item's page's fallback (P9). The sold-price sum
+  is **one static helper**, `SellPlanSummary.soldCents(of:)`, which
+  `SellPlanViewModel.soldValueCents` now calls too, so the Sell Plan
+  screen's Sold figure and the covered rule cannot read different sums.
+  No money field is stored: it carries a Bool, never the sum (Q8).
 - **Q6. Covered is the sales alone against the estimate** (P8, Decision 10):
   `estimatedCostCents > 0 && soldCents >= estimatedCostCents`, where
   `soldCents` sums `sale?.priceCents` — the price recorded at the sale, never
@@ -184,7 +233,9 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   corrected in the same task. Settled strings in §3.
 - **Q8. The Plans rows are a value type with nothing to draw money from.**
   `PlansViewModel.PlanRow` holds `id`, `name`, `categoryPath`, `photos`,
-  `summary`, `boughtDate` — no `Cents` field. Criterion 8 is then guarded
+  `lines` (from `SellPlanSummary.rowLines`, so which counts show is a
+  view-model fact G10 reaches, not a branch in the view), `boughtDate` — no
+  `Cents` field. Criterion 8 is then guarded
   twice: structurally (the row cannot supply a figure) and by one source scan
   on the view (it draws no currency) — a view-body fact no view-model test
   reaches (G19).
@@ -201,7 +252,11 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   `ListEmptyReason` cases: that type is about narrowing a list, and this
   screen narrows nothing. `noPlans`, `nothingWanted`, `nothingCompleted`,
   `stillSyncing` — the last outranking the others, since each is a claim
-  about the whole collection (`SellPlanViewModel.poolEmptyReason`'s reasoning).
+  about the whole collection (`SellPlanViewModel.poolEmptyReason`'s
+  reasoning). `stillSyncing` is chosen while the monitor may still be
+  importing **or while any row `awaitsCarryOver`** (Q2): with the narrower
+  trigger, an offline signed-in device is not "importing" yet has plans still
+  to carry, and "No sell plans yet" would be the wrong diagnosis.
 - **Q11. The completed record is gated in the view model, not by the store's
   refusal.** `SellPlanViewModel` gains `isCompleted`, `offersPurchase`,
   `offersDelete`; `toggle` and `markSold` write nothing on a completed plan;
@@ -317,6 +372,15 @@ var sellPlanCreatedAt: Date?
 var sellPlanCheckedAt: Date?
 
 var hasSellPlan: Bool { sellPlanCreatedAt != nil }
+
+/// 009: an older row the carry-over has yet to reach that will become a plan
+/// when it does — unchecked, with a selection or a sold-toward history. **The
+/// carry-over's own predicate** (`SellPlanStore.carryOver` reads it), and
+/// read-only everywhere else (plan Q2): it never makes a plan by itself.
+var awaitsCarryOver: Bool {
+    sellPlanCheckedAt == nil
+        && (!(plannedSaleItems ?? []).isEmpty || !(itemsSoldToward ?? []).isEmpty)
+}
 ```
 
 Both declared **without an initializer** (the `boughtDate` precedent); `init`
@@ -343,18 +407,29 @@ struct SellPlanSummary: Equatable {
     let soldTowardCount: Int
     let isCovered: Bool
     init(_ wanted: WishlistItem)
+    /// Active: setAside(n) if n > 0, soldToward(n) if n > 0, covered if
+    /// covered. Completed: bought(on:), soldTowardPast(n) if n > 0, covered.
+    func rowLines(boughtDate: Date?) -> [String]
+    /// P9's fallback: setAside(n), else soldToward(n), else nothingSetAside.
+    var entrySubtitle: String { get }
+    static func soldCents(of sold: [Item]) -> Int      // sum of sale?.priceCents
     static func isCovered(soldCents: Int, estimatedCostCents: Int) -> Bool
 }
 ```
 
 `Trove/Models/SellPlanSummary.swift`, main-actor by default (it reads
-`@Model`s). **Testable claims** (G4): the covered cases — sales exactly at the
+`@Model`s). `SellPlanViewModel.soldValueCents` becomes
+`SellPlanSummary.soldCents(of: soldItems)` — one sum, two readers.
+**Testable claims** (G4): the covered cases — sales exactly at the
 estimate → covered; a dollar short → not; estimate 0 with sales → not; a
 selection worth more than the estimate over sales short of it → not, while
 `SellPlanViewModel.selectedValueMeetsCost` reads **true** on the same entry;
 an item whose `currentValueCents` exceeds the estimate but whose sale price
-does not → not (Decision 10). And agreement: `soldTowardCount` equals
-`SellPlanViewModel.soldCount` for the same entry.
+does not → not (Decision 10). Agreement over one entry: `soldTowardCount`
+equals `SellPlanViewModel.soldCount` and `soldCents` equals its
+`soldValueCents`. `rowLines`: zero counts produce **no line** on either side
+(criterion 7), a completed entry's first line is the bought date, `covered`
+last and only when covered; `entrySubtitle`'s three readings.
 
 ## 3. `SellPlanCopy` — the settled strings
 
@@ -397,8 +472,8 @@ Per Q2–Q4. `delete(planOf:at:)` sets `sellPlanCreatedAt = nil` and
 `plannedSaleItems = []`, stamps `sellPlanCheckedAt` if nil, and touches
 nothing else — no `Item`, no `itemsSoldToward`, not the entry. `carryOver`
 fetches `#Predicate<WishlistItem> { $0.sellPlanCheckedAt == nil }` and, per
-row: if `!(plannedSaleItems ?? []).isEmpty || !(itemsSoldToward ?? []).isEmpty`
-→ `sellPlanCreatedAt = now`; always `sellPlanCheckedAt = now`. A bought row
+row: if `awaitsCarryOver` → `sellPlanCreatedAt = now`; always
+`sellPlanCheckedAt = now`. A bought row
 qualifies by its sold-toward history alone, since `015` released its
 selection — the spec's rule falls out of the one predicate.
 
@@ -406,29 +481,38 @@ selection — the spec's rule falls out of the one predicate.
 construction compiles unchanged) and, in `record(_:)`:
 
 ```swift
-let wasWaiting = mayStillBeImporting
 phase = Self.phase(after: event, from: phase)
 let imported = event.kind == .importChanges && event.isFinished && event.succeeded
-if imported || (wasWaiting && !mayStillBeImporting) { onSettled?() }   // before the bump
-if imported { completedImports += 1 }
+let signedOut = event.kind == .setup && event.isFinished && !event.succeeded
+if imported || signedOut { settle() }            // never on a failed import
+if imported { completedImports += 1 }            // after the hook
+
+private func settle() { onSettled?(); settledCount += 1 }
 ```
 
-plus `onSettled?()` at the end of `init` when the mode is not `.cloudKit`.
-`TroveApp.init`: store → the UI-test seeds (moved up; they need only the
-store; T014 adds the third) → `SyncMonitor(mode:onSettled:)` with
-`{ SellPlanStore.runCarryOver(in: context, now: .now) }`.
+plus `settle()` at the end of `init` **for `.ephemeral` only** — not
+`.localOnly` (Q3). The trigger is an **event**, not the `.unavailable`
+edge: `phase(after:from:)` maps *any* finished failed event to
+`.unavailable`, a failed import included, which is exactly the stale-copy
+case (sign-off B1). `TroveApp.init`: store → the UI-test seeds (moved up;
+they need only the store; T014 adds the third) → `SyncMonitor(mode:onSettled:)`
+with `{ SellPlanStore.runCarryOver(in: context, now: .now) }`.
 
 **Testable claims.** G5 `create`; G6 `delete` — the entry, every `Item` and
 its sale fields, and `itemsSoldToward` identical on a second context, the
-plan and selection gone (criteria 10–12); G7 the carry-over — six fixture
+plan and selection gone (criteria 10–12), and a delete on an unchecked row
+leaving it checked; G7 the carry-over — six fixture
 rows (selection only; sold-toward only; bought with sold-toward; bought with
 neither; wanted with neither; **checked, planless, with sold-toward — a
 deleted plan**), the fifth and sixth stay planless, a second run returns 0,
 the date written is `now` and differs from the rows' `createdAt`; G8 the
-hook — fires once at `init` for `.localOnly`, not at `init` for `.cloudKit`,
-once on a successful import **with `completedImports` still at its old value
-inside the hook**, once on a failed setup's `.unavailable`, never on an
-export or an in-flight event.
+hook — fires once at `init` for `.ephemeral` and **never** at `init` for
+`.localOnly` or `.cloudKit`; once on a successful import **with
+`completedImports` still at its old value inside the hook**; once on a
+finished failed setup; **not** when setup succeeds and an import then
+finishes failed (the phase reads `.unavailable` and the hook stays silent);
+never on an export or an in-flight event; `settledCount` rises by one after
+each call.
 
 ## 5. `PlansViewModel`
 
@@ -441,7 +525,7 @@ final class PlansViewModel {
     enum EmptyReason: Equatable { case noPlans, nothingWanted, nothingCompleted, stillSyncing }
     struct PlanRow: Identifiable {           // Q8: nothing to draw money from
         let id: UUID; let name: String; let categoryPath: String; let photos: [Photo]
-        let summary: SellPlanSummary; let boughtDate: Date?
+        let lines: [String]; let boughtDate: Date?   // lines: SellPlanSummary.rowLines
         var isCompleted: Bool { boughtDate != nil }
     }
 
@@ -455,6 +539,7 @@ final class PlansViewModel {
     var visibleSortLabel: String { … }
     var purchaseFailureMessage: String?      // 015 T012b's shape, fourth host
     var completedImports: Int { syncMonitor.completedImports }
+    var settledCount: Int { syncMonitor.settledCount }   // reload on both (Q3)
 
     init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing, now: @escaping () -> Date = Date.init)
     func show(_ side: Side)                  // sets and reloads; clears nothing
@@ -468,8 +553,9 @@ final class PlansViewModel {
 ```
 
 `load()` fetches every `WishlistItem` once and splits (`015` Q11's shape):
-the planned ones into active and completed, and the count of unbought ones
-for `emptyReason`'s `noPlans`/`nothingWanted` choice; it keeps the entries by
+the planned ones into active and completed, the count of unbought ones for
+`emptyReason`'s `noPlans`/`nothingWanted` choice, and whether any row
+`awaitsCarryOver` (Q10's `stillSyncing`); it keeps the entries by
 id privately for the two intents. `markBought` is `WishlistViewModel`'s
 body over the looked-up entry — store, one save, `rollback()` → message →
 `load()` → false on refusal. `deletePlan` is `SellPlanStore.delete`, one save,
@@ -481,7 +567,9 @@ been **sold** stays on Active (criterion 2 — mutation: `active` read as
 entry with no plan and a wanted entry with no plan are on neither side
 (criterion 3); an orphan — bought with a plan, its created `Item` deleted —
 is on Completed and `deletePlan` takes it off while the entry stays in the
-store (criterion 13, P4); rows' counts and `isCompleted`. G11 sorts, fixture
+store (criterion 13, P4); each row's `lines` equal `SellPlanSummary.rowLines`
+for its entry, with no line for a zero count (criterion 7 — mutation: emit
+`setAside(0)` → red). G11 sorts, fixture
 chosen so every order differs from the others:
 
 | Active | plan created | wishlist position |
@@ -504,10 +592,16 @@ with one `sellPlanCreatedAt`, asked of the static comparator in both argument
 orders, fall the wishlist-order way and not the name way. Per-side state:
 set Active to Name, `show(.completed)`, set Oldest, `show(.active)` → Name
 still; a fresh view model is on Active with both defaults Newest (criteria
-5, 6). G12 the four empty reasons and `stillSyncing`'s precedence (criterion
-16). G13 the fourth purchase host: `015`'s
-`everyHostSeedsThePurchaseSheetIdentically` and `everyHostRefusesToBuyAnEntryTwice`
-extended to four hosts; confirming moves the row from `activeRows` to
+5, 6). G12 the four empty reasons and `stillSyncing`'s precedence
+(criterion 16), including a **not-importing** monitor over a store holding
+one row that `awaitsCarryOver` → `stillSyncing`, not `noPlans` (mutation:
+drop the awaiting check → red). G13 the fourth purchase host: `015`'s
+`everyHostSeedsThePurchaseSheetIdentically`, `everyHostRefusesToBuyAnEntryTwice`
+and the "one landing" test (the `Landing` comparison near
+`WishlistDetailViewModelTests.swift:1597`, which would catch
+`PlansViewModel.markBought` drifting from the body it copies) extended to
+four hosts — the Plans host's fixture entry needs a plan, since its subject
+comes from its rows; confirming moves the row from `activeRows` to
 `completedRows` (criterion 14).
 
 ## 6. `SellPlanViewModel` — the record and the delete
@@ -517,8 +611,10 @@ Adds `isCompleted` (`wishlistItem?.isBought == true`), `offersPurchase`
 (`wishlistItem?.hasSellPlan == true`), `boughtDate`, and
 `@discardableResult func deletePlan() -> Bool`. `toggle` and `markSold`
 return without writing when `isCompleted`; `load()` skips the owned fetch
-and leaves `candidates` empty for a completed plan. Everything else —
-ranking, figures, `markBought` — unchanged (the spec's Non-goals).
+and leaves `candidates` empty for a completed plan. `soldValueCents` reads
+`SellPlanSummary.soldCents(of:)` (Q5) — the same sum, from one place.
+Everything else — ranking, figures, `markBought` — unchanged (the spec's
+Non-goals).
 
 **Testable claims** (G14, `SellPlanViewModelTests`, second context):
 completed → `isCompleted`, `!offersPurchase`, `candidates` empty,
@@ -529,29 +625,37 @@ the item stays unsold; `deletePlan` on active and on completed leaves every
 
 ## 7. `WishlistDetailViewModel` — the entry point (P9)
 
-`hasSellPlan` reads `item?.hasSellPlan`; `plannedSaleCount` becomes
-`sellPlanSummary: SellPlanSummary?`, set in `load()`. Title: `viewPlan` with
-a plan, `createPlan` without. Subtitle: without a plan `noPlanSubtitle`;
-with one, `setAside(n)` when `n > 0`, else `soldToward(n)` when `n > 0`, else
-`nothingSetAside` — never "0 items". New intent
-`@discardableResult func openSellPlan() -> Bool`: with a plan, true; without,
-`SellPlanStore.create`, one save, true — or `rollback()` and false, and the
-view doesn't navigate. The view's button becomes
-`if viewModel.openSellPlan() { sellPlanRoute = … }`.
+`hasSellPlan` reads `item.hasSellPlan || item.awaitsCarryOver` — a row the
+carry-over has yet to reach already *has* a plan in the person's eyes (P10,
+Q2); `plannedSaleCount` becomes `sellPlanSummary: SellPlanSummary?`, set in
+`load()`. Title: `viewPlan` with a plan, `createPlan` without. Subtitle:
+without a plan `noPlanSubtitle`; with one, `sellPlanSummary.entrySubtitle`
+(Q5) — never "0 items". New intent
+`@discardableResult func openSellPlan() -> Bool`: with a stored plan, true;
+otherwise (no plan, or one awaiting the carry-over) `SellPlanStore.create`,
+one save, true — or `rollback()` and false, and the view doesn't navigate.
+The view's button becomes `if viewModel.openSellPlan() { sellPlanRoute = … }`.
+The type's header comment ("No ranking or Sell Plan logic lives here") is
+rewritten: the page now creates a plan, through `SellPlanStore`, and still
+computes no candidates.
 
-**Testable claims** (G16): the four readings, each fixture distinct (a plan
-with 2 set aside and 1 sold reads the set-aside line; 0 set aside and 1 sold
-reads "1 sold toward it"; neither reads the fallback; no plan but 2 selected
-— a pre-carry-over row — reads "Create a sell plan"); `openSellPlan` creates
-exactly once (a second call keeps the first date). The four T012c tests are
-rewritten to this rule (Q19).
+**Testable claims** (G16): the readings, each fixture distinct (a plan with
+2 set aside and 1 sold reads the set-aside line; 0 set aside and 1 sold reads
+"1 sold toward it"; neither reads the fallback; no plan and checked reads
+"Create a sell plan"; **unchecked with 2 selected** — awaiting the carry-over
+— reads "View your sell plan" / "2 items set aside", and `openSellPlan` stores
+its plan); `openSellPlan` creates exactly once (a second call keeps the first
+date). The four T012c tests are rewritten to this rule (Q19).
 
 ## 8. `DashboardViewModel` and `AppRouter`
 
 `DashboardViewModel.load()` adds `activePlanCount` via `fetchCount` over
 `#Predicate<WishlistItem> { $0.sellPlanCreatedAt != nil && $0.boughtDate == nil }`
 (zeroed in the catch), `showsPlansCard: Bool { scope.isEmpty && activePlanCount > 0 }`,
-and `plansLine` from `SellPlanCopy.activeCount`. `AppRouter` per Q17.
+`plansLine` from `SellPlanCopy.activeCount`, and `settledCount` passed
+through from the monitor so `DashboardView` reloads on it (Q3; sign-off
+finding 3 — the launch tab is the one showing when a signed-out device's
+carry-over lands). `AppRouter` per Q17.
 
 **Testable claims** (G15): the count excludes completed and planless
 entries; `showsPlansCard` false at 0 and false in any scope with plans
@@ -595,6 +699,10 @@ no `candidateList`, `SellPlanRow`, `figures(`, `saleCandidate`,
 `isMarkingBought` or `viewModel.toggle`; `soldSection` has one declaration
 and three hosts; the delete confirm dismisses only inside the `deletePlan()`
 branch; the file names no `SellPlanStore`. The record's *behaviour* is G14's.
+`MenuPolicyTests` is re-confirmed with a real `Menu` placed **in page
+content** — inside `record(for:)`, the location the rule ("bespoke in the
+page") exists for — not in the toolbar, where a red could be read as the
+file-level allowlist firing rather than the page rule (sign-off finding 10).
 
 ## 10. `SideSwitch` generic (shared)
 
@@ -624,15 +732,15 @@ stages `pendingDeletion`; the alert reads `SellPlanCopy` with
 onDismiss: viewModel.load)`, both closures nil-ing the state; the refusal
 alert; `.onAppear` applies `router.wantsActivePlans` then loads;
 `.onChange(of: router.wantsActivePlans)`; `.onChange(of:
-viewModel.completedImports)`; `.refreshable` with `RefreshPacing`.
+viewModel.completedImports)` and `.onChange(of: viewModel.settledCount)`;
+`.refreshable` with `RefreshPacing`.
 
 `PlanRowView` — `WishlistRow`'s head (`RowThumbnail`, name in `rowTitle`,
-category `monoLabel`, the stock-photo accessibility value) with, stacked
-beneath in `secondary` on `textQuiet` (`015` T011b's house pairing): on
-Active, `setAside` and `soldToward` each only when non-zero; on Completed,
-`bought(on:)` and `soldTowardPast` when non-zero; then `covered` when
-`summary.isCovered`. No trailing column, no gauge, no figure; `.extrudedPlate()`;
-one combined accessibility element.
+category `monoLabel`, the stock-photo accessibility value) with
+`ForEach(row.lines)` stacked beneath in `secondary` on `textQuiet` (`015`
+T011b's house pairing). **The view decides nothing about which lines show**
+— `SellPlanSummary.rowLines` did (Q5, G4, G10). No trailing column, no gauge,
+no figure; `.extrudedPlate()`; one combined accessibility element.
 
 `ContentView` gains the fourth `Tab(SellPlanCopy.tab, image: "TabPlans",
 value: .plans) { NavigationStack(path: $router.plansPath) { PlansView(…) } }`
@@ -645,12 +753,17 @@ gate only, names `Text(PurchaseCopy.swipeBuy)`, `Image("ActionBuy")`,
 the trailing block stages `pendingDeletion` and names no `PurchaseCopy`; one
 purchase sheet over `PurchaseFormView(` and `makePurchaseFormViewModel(for:`
 whose cancel closure clears the staging (the `015` T011a lesson); the file
-names no `formattedAsWholeCurrency`, no `Cents`, no `SellPlanStore`, no
-`WishlistPurchaseStore`; `SideSwitch` is called with `viewModel.show` and no
+names no `formattedAsWholeCurrency`, no `.currency(`, no `Cents`, no
+`SellPlanStore`, no `WishlistPurchaseStore`; `PlanRowView` draws
+`row.lines` and names no `SellPlanCopy` count function; `SideSwitch` is called with `viewModel.show` and no
 `$`; every `SortDropdown(` passes `isManualOrder: { _ in false }`.
 `PlansView.swift` joins `purchaseHosts` in `WishlistPurchaseWiringTests`, and
-`MenuPolicyTests` stays green unedited. G20: `TabIconTests` lists four names
-and four distinct marks.
+`MenuPolicyTests` stays green unedited. **Not guarded by any automated
+test, said plainly**: which clause each host passes to
+`deleteMessage(isCompleted:)` — the copy is G3's, the host's choice of
+`row.isCompleted` / `viewModel.isCompleted` is read at the device pass
+(T015), where both alerts' text is recorded. G20: `TabIconTests` lists four
+names and four distinct marks.
 
 ## 12. The Dashboard card
 
@@ -658,8 +771,9 @@ and four distinct marks.
 brass arrow and combined element, with `SellPlanCopy.cardHeader` over `line`
 in `monoValue`/`textPrimary`, hint `SellPlanCopy.cardHint`, identifier
 `dashboard.plansCard`. `DashboardView` composes it directly below the Sold
-card inside `if viewModel.showsPlansCard`, action `router.showActivePlans()`.
-**Testable claims** (G21): composed exactly once, inside that gate, calling
+card inside `if viewModel.showsPlansCard`, action `router.showActivePlans()`,
+and gains `.onChange(of: viewModel.settledCount) { viewModel.load() }` beside
+its existing `completedImports` reload (Q3). **Testable claims** (G21): composed exactly once, inside that gate, calling
 `router.showActivePlans()`. The count and scope rules are G15's.
 
 ## 13. UI tests and the device pass
@@ -719,7 +833,11 @@ relaunch: 0 plans made the second time) removed before the suites run;
 relaunch for persistence (criterion 17). **The person's steps**: VoiceOver
 over a row, the switch, the card and the Sell Plan's "…"; and, with two
 devices, a plan created, deleted and carried over on one seen correctly on
-the other (criterion 17's sync half, Q2's residual).
+the other (criterion 17's sync half) — including Q2's three windows: a
+signed-in device launched **offline** (does its setup finish failed, and so
+run the carry-over on an old copy?), a device returning after a long
+absence (a multi-pass import), and which write survives if a carried row
+meets a deletion made elsewhere.
 
 ## 14. Docs and close-out
 
@@ -731,8 +849,11 @@ two-device step; the Copy section's shapes replaced by the shipped strings
 the Plans screen, the card and the fourth tab icon; `README.md`;
 `specs/ROADMAP.md`'s `009` entry and status row (and the `015` follow-up for a
 seeded saved plan, now done); `DECISIONS.md` (a plan as a stored date; "once"
-per row and synced, and why not per device; the settle hook; R1–R7 as the
-person left them; the `015` reversals); the pointers from Context. Then
+per row and synced, why not per device, and **its limits** — Q2's three
+windows as the two-device step left them; derive-on-read weighed and
+rejected, and what was kept of it; the settle hook firing on events, never
+on a failed import or in `.localOnly`; R1–R7 as the person left them; the
+`015` reversals); the pointers from Context. Then
 the pre-merge `skeptical-reviewer` sweep over `git diff main...HEAD`, bundle
 cut after `git add -A`, and the PR marked ready.
 
@@ -743,22 +864,22 @@ cut after `git add -A`, and the PR marked ready.
 | G1 | `CloudKitSchemaTests` (and `TwoStoreContainerTests`) over the two fields | `@Attribute(.unique)` on `sellPlanCreatedAt` |
 | G2 | `ModelTests`: fresh entry planless and checked at init; a date makes `hasSellPlan` true | init stamp dropped; predicate inverted |
 | G3 | `SellPlanCopyTests`: every string by literal; plurals; the two delete messages differ in exactly one sentence | any word drifts; a shared sentence reworded on one side |
-| G4 | `SellPlanSummaryTests`: counts; covered at, below, zero estimate, selection-only, value-not-price; agreement with `SellPlanViewModel.soldCount` | `>` for `>=`; zero guard dropped; selection added; `currentValueCents` read |
+| G4 | `SellPlanSummaryTests`: counts; covered at, below, zero estimate, selection-only, value-not-price; `rowLines` with no zero-count line; `entrySubtitle`'s three readings; count **and sum** agreement with `SellPlanViewModel` | `>` for `>=`; zero guard dropped; selection added; `currentValueCents` read; a zero-count line emitted; `soldValueCents` summing on its own |
 | G5 | `SellPlanStoreTests.create`: date `now`, checked stamped, idempotent, refuses bought | date rewritten on a second call; a bought entry gains a plan |
-| G6 | `SellPlanStoreTests.delete`, second context: plan and selection gone; entry, every `Item`'s sale and value fields, and `itemsSoldToward` identical | sold-toward cleared; selection kept; an item unsold; the entry deleted |
-| G7 | `SellPlanStoreTests.carryOver`: six rows, idempotent, the deleted plan never resurrected, dated `now` | the checked filter dropped; sold-toward ignored; no-evidence rows left unstamped; `createdAt` written |
-| G8 | `SyncMonitorTests`: `onSettled` at init (non-CloudKit only), on import before the bump, on `.unavailable`, never on export/in-flight | hook after the bump; init call dropped; fired on export |
+| G6 | `SellPlanStoreTests.delete`, second context: plan and selection gone; entry, every `Item`'s sale and value fields, and `itemsSoldToward` identical; an unchecked row left checked | sold-toward cleared; selection kept; an item unsold; the entry deleted; the nil-stamp dropped |
+| G7 | `SellPlanStoreTests.carryOver`: six rows, all six end checked, a second run returns 0, the deleted plan never resurrected, dated `now` | the checked filter dropped (resurrection leg); sold-toward ignored (sold-only and bought legs); only planned rows stamped (**the all-six-checked leg** — the idempotency leg stays green, since a second run makes no plan either way); `createdAt` written (date leg) |
+| G8 | `SyncMonitorTests`: `onSettled` at init for `.ephemeral` only; on a successful import, before the bump; on a finished failed setup; **not** on a failed import after a good setup; never on export/in-flight; `settledCount` after each call | hook after the bump; fired on the `.unavailable` edge (the failed-import leg); fired at init in `.localOnly`; fired on export |
 | G9 | `UITestSeedTests`: `shouldSeedPlans` refuses a persistent store with every flag set; the seed's shape; one carry-over over it yields three active | gate reads the flag alone; seed row missing |
-| G10 | `PlansViewModelTests` membership: all-sold stays Active; bought moves; planless on neither; orphan shown and deletable | active from the selection; completed ignoring the plan |
+| G10 | `PlansViewModelTests` membership: all-sold stays Active; bought moves; planless on neither; orphan shown and deletable; rows' `lines` | active from the selection; completed ignoring the plan; a zero count drawn |
 | G11 | `PlansViewModelTests` sorts: seven orders over two fixtures; the tie both ways; per-side persistence; fresh defaults | a comparator dropped or reversed; bought date read as plan date; tie by name; one shared sort |
-| G12 | `PlansViewModelTests` empty reasons and precedence | `stillSyncing` below another; `nothingWanted` for a planless wishlist |
-| G13 | four-host seed equality and refusal; the Buy moves the row | `?? 0` in the fourth seed; the fourth host skipping the store |
+| G12 | `PlansViewModelTests` empty reasons and precedence, including an awaiting row under a not-importing monitor | `stillSyncing` below another; `nothingWanted` for a planless wishlist; the awaiting check dropped |
+| G13 | four-host seed equality, refusal and the one-landing comparison; the Buy moves the row | `?? 0` in the fourth seed; the fourth host skipping the store or its save |
 | G14 | `SellPlanViewModelTests` completed mode and `deletePlan` | toggle guard dropped; pool built for a bought entry |
 | G15 | `DashboardViewModelTests`, `AppRouterTests` | completed counted; card in a scope; flag not raised |
-| G16 | `WishlistDetailViewModelTests` entry point and `openSellPlan` | fallback order swapped; "0 items set aside"; plan re-created |
+| G16 | `WishlistDetailViewModelTests` entry point and `openSellPlan`, including a row awaiting the carry-over | fallback order swapped; "0 items set aside"; plan re-created; an awaiting row offered "Create" |
 | G17 | `SellPlanWiringTests` + rewritten `015` G18: Buy gate, delete gate, the record composes nothing that acts, `soldSection` ×3 hosts | Buy gated on `wishlistItem != nil`; a row or `toggle` in the record; dismiss outside `deletePlan()` |
 | G18 | `SideSwitch` label fit; `ItemListSidesWiringTests` | a half narrower than its label |
-| G19 | `PlansWiringTests`: swipes, sheet, cancel, no money, switch, no REORDER; `purchaseHosts` + `MenuPolicyTests` | Buy on Completed rows; cancel not clearing; a currency figure drawn |
+| G19 | `PlansWiringTests`: swipes, sheet, cancel, no money (`formattedAsWholeCurrency`, `.currency(`, `Cents`), rows draw `row.lines`, switch, no REORDER; `purchaseHosts` + `MenuPolicyTests` | Buy on Completed rows; cancel not clearing; a currency figure drawn; a count line composed in the view |
 | G20 | `TabIconTests`: `TabPlans` resolves, template, four distinct | template intent dropped; an existing svg copied |
 | G21 | `DashboardWiringTests`-style scan of `DashboardView` | card outside the gate; wrong action |
 | G22 | UI tests, §13, twice back to back | see §13 |

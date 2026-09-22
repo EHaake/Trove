@@ -80,7 +80,11 @@ Handoff notes for the pause reports:
   are still on the Items tab's Sold side, and creating a new plan shows them
   in its Sold section. **If the walkthrough store still holds `015`'s
   dataset**, its saved plan should read View your sell plan without having
-  been re-made (the carry-over). Readings to put as questions: the Sell
+  been re-made — on its page even before the carry-over runs, since a row
+  awaiting it already counts (plan Q2). The carry-over itself runs only after
+  a successful iCloud sync or on a signed-out device, never when iCloud
+  failed to load (plan Q3), so on a simulator without iCloud the orchestrator
+  should say which case it is in before the person looks. Readings to put as questions: the Sell
   Plan's Delete sits behind a "…" next to Buy (plan Q12); the fallback line
   "Nothing set aside yet" and the "<n> sold toward it" wording.
 - **Phase 4 — what can be tried**: the fourth tab, its two sides, sorting
@@ -92,8 +96,9 @@ Handoff notes for the pause reports:
   can't be met there without changing what buying does), **R3** (carried-over
   plans are dated at the update, so they sort together), **R4** (no card on an
   empty Dashboard), **R5** (Delete all wanted items leaves completed plans),
-  **R6** (no search, chips or summary line), **R7** (iCloud users see
-  "Catching up" for the first seconds after updating), the sort labels
+  **R6** (no search, chips or summary line), **R7** (on iCloud, plans carry
+  over only after the first successful sync of the launch — "Catching up"
+  until then, and for as long as a device stays offline), the sort labels
   ("Newest" on Completed means date bought), the past-tense line on completed
   rows, and the tab icon (Decision 8 — drawn to match, revisitable).
 
@@ -104,7 +109,9 @@ Handoff notes for the pause reports:
   `boughtDate` precedent) with plan §1's doc comments; `hasSellPlan` beside
   `isBought`; `init` gains `self.sellPlanCheckedAt = .now` and no parameter.
   Add a sentence to `CloudKitSchemaTests`' doc comment naming these as the
-  third thing it guards. Pattern: `boughtDate` and `isBought` in
+  third thing it guards. Also `awaitsCarryOver`, plan §1's computed
+  predicate, read-only (tested at T003, its first reader). Pattern:
+  `boughtDate` and `isBought` in
   `Trove/Models/WishlistItem.swift`. Tests (`ModelTests`): **G2** — a fresh
   entry reads `hasSellPlan == false` and a `sellPlanCheckedAt` at or after a
   clock read taken before `init`; one with a date reads true (mutations: drop
@@ -121,9 +128,13 @@ Handoff notes for the pause reports:
   Per plan §2, §3, Q5–Q7. New `Trove/Models/SellPlanCopy.swift`
   (`nonisolated enum`, no SwiftUI, every string in plan §3's table) and
   `Trove/Models/SellPlanSummary.swift` (`setAsideCount`, `soldTowardCount`,
-  `isCovered`, and the static `isCovered(soldCents:estimatedCostCents:)`).
-  Pattern: `Trove/Models/PurchaseCopy.swift` for the table and its test;
-  `SellPlanViewModel.soldItems`/`soldValueCents` for the sold-toward reading.
+  `isCovered`, `rowLines(boughtDate:)`, `entrySubtitle`, and the statics
+  `soldCents(of:)` and `isCovered(soldCents:estimatedCostCents:)`, per plan
+  §2). `SellPlanViewModel.soldValueCents` becomes
+  `SellPlanSummary.soldCents(of: soldItems)` in this task — one sum, two
+  readers (sign-off finding 7). Pattern: `Trove/Models/PurchaseCopy.swift`
+  for the table and its test; `SellPlanViewModel.soldItems`/`soldValueCents`
+  for the sold-toward reading.
   Tests: new `TroveTests/SellPlanCopyTests.swift` — **G3**: every string by
   literal, both plural forms of each counted string, and the two delete
   messages split into sentences with **exactly one** differing (mutation:
@@ -132,21 +143,28 @@ Handoff notes for the pause reports:
   plan §2, including the fixture where `SellPlanViewModel.selectedValueMeetsCost`
   is true and `isCovered` false, and the item whose `currentValueCents` exceeds
   the estimate while its sale price doesn't; `soldTowardCount ==
-  SellPlanViewModel.soldCount` over one entry (mutations: `>` for `>=`; drop
-  the zero-estimate guard; add the selection's value; read
-  `currentValueCents` — each red).
-  Files: the two new production files, the two new test files.
+  SellPlanViewModel.soldCount` and `soldCents == soldValueCents` over one
+  entry; `rowLines` on both sides with each count at 0 and non-zero — no
+  line for a zero (criterion 7) — the bought date first on Completed, Covered
+  last and only when covered; `entrySubtitle`'s three readings (mutations:
+  `>` for `>=`; drop the zero-estimate guard; add the selection's value;
+  read `currentValueCents`; emit `setAside(0)`; swap the subtitle's
+  fallbacks — each red).
+  Files: the two new production files, the two new test files,
+  `Trove/ViewModels/SellPlanViewModel.swift` (`soldValueCents` only).
   **Verify:** `scripts/verify.sh` green, both new suites **in the count**;
   mutations recorded.
 
 - [ ] **T003 — `SellPlanStore` — create, delete, carry-over. `review: per-task`.**
   Per plan §4, Q2, Q4. New `Trove/Models/SellPlanStore.swift` with the four
   functions plan Q4 declares, callers save except `runCarryOver`
-  (`carryOver` + one save, `rollback()` on refusal). `create` refuses a bought
+  (`carryOver`, then one save **only if `context.hasChanges`**, `rollback()`
+  on refusal, its doc comment saying the rollback discards every pending
+  change on the main context). `create` refuses a bought
   entry and keeps an existing date; `delete` clears `sellPlanCreatedAt` and
   `plannedSaleItems` **and nothing else**; both stamp `sellPlanCheckedAt` when
   nil; `carryOver` over `#Predicate<WishlistItem> { $0.sellPlanCheckedAt == nil }`
-  exactly as plan §4 says. Pattern: `Trove/Models/ItemSaleStore.swift` and
+  planning each row that `awaitsCarryOver`, exactly as plan §4 says. Pattern: `Trove/Models/ItemSaleStore.swift` and
   `WishlistPurchaseStore.swift` (the enum, the contract, "callers save" in
   their words); no view ever names `SellPlanStore`. Tests: new
   `TroveTests/SellPlanStoreTests.swift`, every
@@ -159,37 +177,51 @@ Handoff notes for the pause reports:
   plan and selection gone; the entry still present; `itemsSoldToward` the
   same ids in the same number; every `Item` in the store with identical
   `soldDate`, `salePriceCents`, `currentValueCents`, `desireToKeep` and
-  count (mutations: clear `itemsSoldToward` → red; keep the selection → red;
-  clear one item's sale → red; delete the entry → red);
+  count; a delete on an **unchecked** row leaves it checked, so a following
+  `carryOver` makes no plan of it (mutations: clear `itemsSoldToward` → red;
+  keep the selection → red; clear one item's sale → red; delete the entry →
+  red; drop delete's nil-stamp → the unchecked leg red);
   **G7** `carryOver`, the six rows of plan §4 in one store: the first three
   get a plan dated `now`, the last three stay planless, all six end checked;
   a second run returns 0 and changes nothing; **the checked, planless row
   with sold-toward history is never given a plan** (criterion 12's "does not
   come back") (mutations: drop the checked predicate → the resurrection leg
   red; count only the selection → the sold-toward-only and bought legs red;
-  stamp only rows given a plan → the idempotency leg red; write the row's
-  `createdAt` → the date leg red).
+  stamp only rows given a plan → **the all-six-checked leg** red — the
+  idempotency leg stays green under it, since a second run makes no plan
+  either way (sign-off finding 5); write the row's `createdAt` → the date
+  leg red). Plus `awaitsCarryOver`'s own cases on `WishlistItem` (selection;
+  sold-toward; neither; checked) — the one predicate `carryOver` and the
+  pending displays share.
   Files: `Trove/Models/SellPlanStore.swift` (new),
   `TroveTests/SellPlanStoreTests.swift` (new).
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every
   mutation recorded; the new suite in the count.
 
 - [ ] **T004 — `SyncMonitor.onSettled` and the carry-over at launch. `review: per-task`.**
-  Per plan §4 and Q3. `SyncMonitor.init(mode:onSettled:)` (default nil), the
-  hook called at the end of `init` for any mode but `.cloudKit`, and in
-  `record(_:)` exactly as plan §4's snippet — **before** `completedImports`
-  moves. `TroveApp.init`: the two `UITestSeed` blocks move **above** the
+  Per plan §4 and Q3 (revised at sign-off, finding B1). `SyncMonitor.init(mode:onSettled:)`
+  (default nil) and `private(set) var settledCount`; `settle()` (hook, then
+  the count) called at the end of `init` **for `.ephemeral` only** — never
+  `.localOnly` — and in `record(_:)` exactly as plan §4's snippet: on a
+  successful import, or a finished **failed setup event**, **never** on a
+  failed import, and **before** `completedImports` moves. The trigger is
+  those two events, not the `.unavailable` edge — `phase(after:from:)` maps
+  a failed import to `.unavailable` too. `TroveApp.init`: the two `UITestSeed` blocks move **above** the
   `SyncMonitor` construction (they need only the store), and the monitor is built with
   `{ SellPlanStore.runCarryOver(in: context, now: .now) }` over a local
   `context = store.container.mainContext`. Doc comments say why the seeds
   moved. Pattern: `SyncMonitor.record` itself; `TroveApp.init`'s existing
-  structure. Tests (`SyncMonitorTests`): **G8** — a `.localOnly` monitor calls
-  its hook once at init; a `.cloudKit` one doesn't; recording a successful
-  import-finished event calls it once **and the hook reads `completedImports`
-  at its old value**; a failed setup's move to `.unavailable` calls it once;
-  an export event and an in-flight import call it never (mutations: call the
-  hook after the bump → the ordering leg red; drop the init call → red; fire
-  on exports → red). The launch wiring itself is covered end to end by T014's
+  structure. Tests (`SyncMonitorTests`): **G8** — an `.ephemeral` monitor
+  calls its hook once at init; `.localOnly` and `.cloudKit` ones don't;
+  recording a successful import-finished event calls it once **and the hook
+  reads `completedImports` at its old value**; a finished failed setup calls
+  it once; **a successful setup followed by a finished failed import calls it
+  never** (the phase reads `.unavailable`); an export event and an in-flight
+  import call it never; `settledCount` rises by one after each call and not
+  otherwise (mutations: call the hook after the bump → the ordering leg red;
+  trigger on the `wasWaiting && !mayStillBeImporting` edge → **the
+  failed-import leg red**; fire at init in `.localOnly` → red; drop the
+  `.ephemeral` init call → red; fire on exports → red). The launch wiring itself is covered end to end by T014's
   first UI test, not by a scan — say so in the Done note.
   Files: `Trove/App/SyncMonitor.swift`, `Trove/App/TroveApp.swift`,
   `TroveTests/SyncMonitorTests.swift`.
@@ -206,8 +238,10 @@ Handoff notes for the pause reports:
   exactly as plan §5 declares it: one fetch split into active/completed rows
   and the unbought count; `show(_:)` sets and reloads and clears nothing;
   the two static comparators with `ManualOrderHelper.areInCustomOrder` as
-  the fallback; the four empty reasons with `stillSyncing` first;
-  `markBought` (`WishlistViewModel.markBought`'s body over the looked-up
+  the fallback; the four empty reasons with `stillSyncing` first — chosen
+  while importing **or while any row `awaitsCarryOver`** (plan Q10); each
+  row's `lines` from `SellPlanSummary.rowLines`; `settledCount` passed
+  through from the monitor; `markBought` (`WishlistViewModel.markBought`'s body over the looked-up
   entry, into its own `purchaseFailureMessage`); `deletePlan(id:)`. No
   SwiftUI import. Pattern: `ItemListViewModel` (sides, per-side sort,
   `show`, `areInSoldOrder`), `WishlistViewModel` (`markBought`,
@@ -216,17 +250,23 @@ Handoff notes for the pause reports:
   (criteria 2, 3, 13); **G11** the two sort fixtures of plan §5, the tie
   asked of the static comparator in both argument orders, per-side
   persistence across `show`, a fresh view model on Active with both defaults
-  Newest (criteria 5, 6); **G12** the four empty reasons and the precedence
-  (criterion 16); rows carry the summary's counts (criterion 7). **G13** in
-  `WishlistDetailViewModelTests`: extend
-  `everyHostSeedsThePurchaseSheetIdentically` and
-  `everyHostRefusesToBuyAnEntryTwice` to the fourth host, and add that a
-  confirmed purchase moves the row from `activeRows` to `completedRows`
+  Newest (criteria 5, 6); **G12** the four empty reasons and the precedence,
+  including a not-importing monitor over a store with one row awaiting the
+  carry-over → `stillSyncing` (criterion 16); rows' `lines` equal
+  `rowLines` for their entries, with no zero-count line (criterion 7).
+  **G13** in `WishlistDetailViewModelTests`: extend
+  `everyHostSeedsThePurchaseSheetIdentically`,
+  `everyHostRefusesToBuyAnEntryTwice` **and the one-landing comparison** (the
+  `Landing` struct near line 1597, which catches a host whose `markBought`
+  drifts from the others) to the fourth host — its fixture entry needs a
+  plan, since the Plans host takes its subject from its rows — and add that
+  a confirmed purchase moves the row from `activeRows` to `completedRows`
   while a purchase from each of the four hosts leaves a planless entry
   planless (criteria 3, 14). Mutations: `active` read from the selection; a
   comparator reversed; bought date read as plan date; tie by name; one
-  shared sort for both sides; `stillSyncing` below `noPlans`; `?? 0` in the
-  fourth seed — each red.
+  shared sort for both sides; `stillSyncing` below `noPlans`; the awaiting
+  check dropped; `?? 0` in the fourth seed; the fourth host skipping its
+  save → the landing leg — each red.
   Files: `Trove/ViewModels/PlansViewModel.swift` (new),
   `TroveTests/PlansViewModelTests.swift` (new),
   `TroveTests/WishlistDetailViewModelTests.swift`.
@@ -249,7 +289,9 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
 - [ ] **T007 — `DashboardViewModel`'s active count, and the router's fourth tab.**
-  Per plan §8 and Q17. `activePlanCount`, `showsPlansCard`, `plansLine`;
+  Per plan §8 and Q17. `activePlanCount`, `showsPlansCard`, `plansLine`,
+  `settledCount` passed through from the monitor (a test: recording a failed
+  setup on the view model's monitor moves it);
   `AppRouter.Tab.plans` (fourth), `plansPath: [UUID]`, `wantsActivePlans`,
   `showActivePlans()`, `clearPlansRequest()`. Pattern: `hasSales`/`soldLine`
   in `DashboardViewModel`; `showSoldItems`/`wantsAddItemForm` in
@@ -268,9 +310,12 @@ Handoff notes for the pause reports:
 
 - [ ] **T008 — The wanted item's entry point (P9), created at the tap.**
   Per plan §7 and Q7, Q19. `WishlistDetailViewModel`: `hasSellPlan` from the
-  stored plan, `sellPlanSummary` replacing `plannedSaleCount`, the title and
-  subtitle from `SellPlanCopy` with plan §7's fallback order, and
-  `openSellPlan()`. `WishlistDetailView.findItemsToSell`'s action becomes
+  stored plan **or** `awaitsCarryOver`, `sellPlanSummary` replacing
+  `plannedSaleCount`, the title from `SellPlanCopy` and the subtitle from
+  `sellPlanSummary.entrySubtitle`, and `openSellPlan()` (which stores an
+  awaiting row's plan). The type's header comment ("No ranking or Sell Plan
+  logic lives here") is rewritten to say the page now creates a plan through
+  `SellPlanStore` and still computes no candidates. `WishlistDetailView.findItemsToSell`'s action becomes
   `if viewModel.openSellPlan() { sellPlanRoute = … }` and nothing else in the
   view changes. `PurchaseCopy`'s doc comment stops saying the entry-point
   strings live inline. **Rewrite, don't loosen**, the four T012c tests
@@ -281,7 +326,8 @@ Handoff notes for the pause reports:
   is the only change. Pattern: the existing T012c members. Tests: **G16** per
   plan §7 (mutations: swap the set-aside and sold fallbacks → red; return
   "0 items set aside" → red; re-create on a second `openSellPlan` → the
-  date leg red).
+  date leg red; drop `awaitsCarryOver` from `hasSellPlan` → the awaiting row
+  reads "Create a sell plan" → red).
   Files: `Trove/ViewModels/WishlistDetailViewModel.swift`,
   `Trove/Views/Wishlist/WishlistDetailView.swift`,
   `Trove/Models/PurchaseCopy.swift` (comment), `TroveTests/WishlistDetailViewModelTests.swift`,
@@ -306,8 +352,8 @@ Handoff notes for the pause reports:
   §9 (mutations: `viewModel.toggle` or `SellPlanRow(` put into `record(for:)`
   → red; `dismiss()` outside the `deletePlan()` branch → red; the "…" given a
   `Button` → red). `MenuPolicyTests` green unedited (`DetailOverflowMenu(` is
-  not a system menu; confirm with a real `Menu` added to `SellPlanView` → red,
-  reverted). `SellPlanFramingTests` green unedited.
+  not a system menu); confirm with a real `Menu` added **in page content,
+  inside `record(for:)`** — not the toolbar — → red, reverted. `SellPlanFramingTests` green unedited.
   Files: `Trove/Views/Wishlist/SellPlanView.swift`,
   `Trove/Views/Shared/DetailOverflowMenu.swift`,
   `TroveTests/SellPlanWiringTests.swift`,
@@ -346,11 +392,17 @@ Handoff notes for the pause reports:
   and the request applied on appear. Tests:
   `TroveTests/PlansWiringTests.swift` (T010 made it) — **G19** per plan §11 (mutations: the
   leading block outside the Active gate → red; the cancel closure emptied →
-  red; a `formattedAsWholeCurrency` added to the row → red; a `SortDropdown`
-  with `isManualOrder: { _ in true }` → red); add
+  red; a `formattedAsWholeCurrency` or a `.currency(` format added to the
+  row → red; a `SellPlanCopy.setAside(` composed in `PlanRowView` instead of
+  drawing `row.lines` → red; a `SortDropdown` with
+  `isManualOrder: { _ in true }` → red; the `settledCount` reload dropped →
+  red); `.onChange(of: viewModel.settledCount)` beside the
+  `completedImports` reload; add
   `"Trove/Views/Plans/PlansView.swift"` to `purchaseHosts` in
   `WishlistPurchaseWiringTests` (the refusal alert); `MenuPolicyTests` green
-  unedited. **Flag if** the new folder is not in the build.
+  unedited. **Flag if** the new folder is not in the build. Say in the Done
+  note that which clause each host passes to `deleteMessage(isCompleted:)`
+  is guarded by no automated test and is read at T015 (plan §11).
   Files: `Trove/Views/Plans/PlansView.swift` (new),
   `TroveTests/PlansWiringTests.swift`, `TroveTests/WishlistPurchaseWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
@@ -373,11 +425,15 @@ Handoff notes for the pause reports:
 - [ ] **T013 — The Dashboard card.**
   Per plan §12 and Q16. New `Trove/Views/Dashboard/PlansCard.swift`;
   `DashboardView` composes it below the Sold card inside
-  `if viewModel.showsPlansCard`, action `router.showActivePlans()`. Pattern:
+  `if viewModel.showsPlansCard`, action `router.showActivePlans()`, and
+  reloads on `viewModel.settledCount` beside `completedImports` (plan Q3 —
+  sign-off finding 3: the launch tab must pick up a carry-over that landed
+  on a failed setup, which moves no import count). Pattern:
   `Trove/Views/Dashboard/SoldCard.swift` for the chrome; the Sold card's
   host block for placement. Tests: **G21** in `DashboardWiringTests` (one
   composition, inside the gate, the right action — mutations: move it out of
-  the gate → red; call `showSoldItems()` → red).
+  the gate → red; call `showSoldItems()` → red; drop the `settledCount`
+  reload → red).
   Files: `Trove/Views/Dashboard/PlansCard.swift` (new),
   `Trove/Views/Dashboard/DashboardView.swift`, `TroveTests/DashboardWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
@@ -426,8 +482,14 @@ Handoff notes for the pause reports:
   the footprint, else returned for a decision review; each fix a
   sub-lettered task. **[person]** Accessibility Inspector over the same
   elements; with two devices, a plan created, sold through, deleted and
-  carried over on one, seen correctly on the other (criterion 17's sync half,
-  plan Q2's residual).
+  carried over on one, seen correctly on the other (criterion 17's sync
+  half) — and plan Q2's three windows, each recorded as observed or not
+  reached: a signed-in device launched **offline** (does setup finish
+  failed and run the carry-over on an old copy?), a device returning after a
+  long absence (a multi-pass import), and which write survives when a carried
+  row meets a deletion made elsewhere. Also on one device, offline: an empty
+  Plans side says "Catching up with iCloud" while a plan awaits the
+  carry-over, not "No sell plans yet".
   **Verify:** the record in the Done note — the upgrade's result per entry,
   the probe counts, the measurements; `scripts/verify.sh all` green twice.
 
@@ -439,7 +501,9 @@ Handoff notes for the pause reports:
   `014` and `015` left theirs. The Copy section's shapes replaced by the
   shipped strings; P-items → decisions; `plan.md` gains **As built**;
   `design/tokens.md`, `README.md`, `specs/ROADMAP.md` (`009` entry and
-  status row; the `015` seeded-plan follow-up closed), `DECISIONS.md`; the
+  status row; the `015` seeded-plan follow-up closed), `DECISIONS.md` (plan
+  §14's list, including "once, per row" **with its limits** as T015's
+  two-device step left them, and derive-on-read weighed and rejected); the
   pointers of plan Context appended in place (`grep -c` each, the `014`
   T001 shape). Re-run G7's resurrection mutation against the finished tree
   (T003 wrote it before any host existed). Then the pre-merge
@@ -463,4 +527,6 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | Task / invocation | Tier | Tokens | Outcome / miss reason |
 |---|---|---|---|
 | Spec session (this spec's `spec.md`, drafting, review pass and approval) | `opus` (raised to high; moved to Opus 5.5 on 2026-09-22) | orchestrating seat, not measured separately | Draft 2026-09-21, approved 2026-09-22 with Decisions 1–10; nothing left open |
-| `sdd-planner` — plan.md and tasks.md (draft) | `opus` | _to fill from the dispatch's return_ | 16 tasks, 5 phases, 23 guards; no product question returned; one spec/code inconsistency reported (plan R2) |
+| `sdd-planner` — plan.md and tasks.md (draft) | `opus` | ~380k (budget counter, cache re-reads included) | 16 tasks, 5 phases, 23 guards; no product question returned; one spec/code inconsistency reported (plan R2) |
+| `skeptical-reviewer` — plan/tasks sign-off | `opus` | _to fill_ | B1 (carry-over fired on a failed import and in `.localOnly`); finding 2 (R2, R4) a product question, sent to the person; 10 non-blocking |
+| `sdd-planner` — sign-off fix pass (same agent resumed) | `opus` | ~65k (budget counter) | B1 fixed: event-based trigger, `.localOnly` skipped, `settledCount`, `awaitsCarryOver` read-only for the pending window; derive-on-read weighed and rejected in Q2; findings 3–12 applied, none declined; R2/R4 and `spec.md` untouched |
