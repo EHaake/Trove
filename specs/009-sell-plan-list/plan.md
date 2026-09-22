@@ -94,7 +94,12 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   successful import of the launch** (Q3), and it never runs on a launch where
   iCloud failed to load. Until it runs, a Plans side with nothing on it says
   "Catching up with iCloud" when there are plans still to carry, and a wanted
-  item with one already reads "View your sell plan" on its page. On a device
+  item whose plan is still waiting reads "Create a sell plan" on its page —
+  tapping it creates the plan then and there, as the person's own act (Q2).
+  One accepted wrinkle: on a `.localOnly` launch (iCloud failed to load for
+  that launch) the same "Catching up with iCloud" line can appear, although
+  nothing is syncing; it lasts that one launch, only on stores from before
+  this spec. On a device
   that stays offline this can last the whole offline session. The wait is
   what stops a second device, working from an old copy, from bringing back a
   plan that was deleted on the first.
@@ -156,10 +161,15 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   only guard that could enumerate those writers is a source scan, the shape
   `CLAUDE.md` says leaves the thing untested. **Kept from it, read-only**:
   `WishlistItem.awaitsCarryOver` (§1) — the carry-over's own predicate — is
-  read in two places so the pending window is honest rather than wrong: an
-  empty Plans side says `stillSyncing` while any row awaits (criterion 16),
-  and the wanted item's page treats a waiting row as having a plan, storing
-  it when the person opens it (a person's own act, not a launch-time one).
+  read in **one** place so the pending window is honest rather than wrong: an
+  empty Plans side says `stillSyncing` while any row awaits (criterion 16).
+  **The wanted item's page does not read it** (orchestrator fix after the
+  sign-off re-review, 2026-09-22): the draft had the page treat a waiting row
+  as having a plan and store it when the person tapped **View** — which, on a
+  device whose import failed, is the same stale-copy write this trigger
+  exists to prevent, moved from launch to a tap, and on a button the person
+  pressed to look rather than to create. A waiting row reads **Create a sell
+  plan** instead; the only write the page can make is an explicit create.
 - **Q3. When the carry-over runs: `SyncMonitor.onSettled`.** A closure
   `SyncMonitor` calls on the main actor **only when this device's copy is
   known current or known to be the only copy**: on every **successful
@@ -625,14 +635,16 @@ the item stays unsold; `deletePlan` on active and on completed leaves every
 
 ## 7. `WishlistDetailViewModel` — the entry point (P9)
 
-`hasSellPlan` reads `item.hasSellPlan || item.awaitsCarryOver` — a row the
-carry-over has yet to reach already *has* a plan in the person's eyes (P10,
-Q2); `plannedSaleCount` becomes `sellPlanSummary: SellPlanSummary?`, set in
+`hasSellPlan` reads the stored plan only, `item.hasSellPlan` — **not**
+`awaitsCarryOver` (Q2: a row the carry-over has yet to reach reads "Create a
+sell plan", so a tap can never write a plan from a stale copy on a button
+pressed only to look); `plannedSaleCount` becomes `sellPlanSummary: SellPlanSummary?`, set in
 `load()`. Title: `viewPlan` with a plan, `createPlan` without. Subtitle:
 without a plan `noPlanSubtitle`; with one, `sellPlanSummary.entrySubtitle`
 (Q5) — never "0 items". New intent
 `@discardableResult func openSellPlan() -> Bool`: with a stored plan, true;
-otherwise (no plan, or one awaiting the carry-over) `SellPlanStore.create`,
+otherwise `SellPlanStore.create` (an explicit create, whether or not the row
+awaits the carry-over),
 one save, true — or `rollback()` and false, and the view doesn't navigate.
 The view's button becomes `if viewModel.openSellPlan() { sellPlanRoute = … }`.
 The type's header comment ("No ranking or Sell Plan logic lives here") is
@@ -643,8 +655,8 @@ computes no candidates.
 2 set aside and 1 sold reads the set-aside line; 0 set aside and 1 sold reads
 "1 sold toward it"; neither reads the fallback; no plan and checked reads
 "Create a sell plan"; **unchecked with 2 selected** — awaiting the carry-over
-— reads "View your sell plan" / "2 items set aside", and `openSellPlan` stores
-its plan); `openSellPlan` creates exactly once (a second call keeps the first
+— reads "Create a sell plan" and the no-plan subtitle, and `openSellPlan` on
+it creates the plan); `openSellPlan` creates exactly once (a second call keeps the first
 date). The four T012c tests are rewritten to this rule (Q19).
 
 ## 8. `DashboardViewModel` and `AppRouter`

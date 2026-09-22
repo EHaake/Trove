@@ -310,10 +310,11 @@ Handoff notes for the pause reports:
 
 - [ ] **T008 — The wanted item's entry point (P9), created at the tap.**
   Per plan §7 and Q7, Q19. `WishlistDetailViewModel`: `hasSellPlan` from the
-  stored plan **or** `awaitsCarryOver`, `sellPlanSummary` replacing
+  stored plan **only** — never `awaitsCarryOver` (plan Q2, the orchestrator's
+  fix after the sign-off re-review), `sellPlanSummary` replacing
   `plannedSaleCount`, the title from `SellPlanCopy` and the subtitle from
-  `sellPlanSummary.entrySubtitle`, and `openSellPlan()` (which stores an
-  awaiting row's plan). The type's header comment ("No ranking or Sell Plan
+  `sellPlanSummary.entrySubtitle`, and `openSellPlan()` (which creates the plan on
+  any row without a stored one — an explicit create, awaiting or not). The type's header comment ("No ranking or Sell Plan
   logic lives here") is rewritten to say the page now creates a plan through
   `SellPlanStore` and still computes no candidates. `WishlistDetailView.findItemsToSell`'s action becomes
   `if viewModel.openSellPlan() { sellPlanRoute = … }` and nothing else in the
@@ -326,8 +327,8 @@ Handoff notes for the pause reports:
   is the only change. Pattern: the existing T012c members. Tests: **G16** per
   plan §7 (mutations: swap the set-aside and sold fallbacks → red; return
   "0 items set aside" → red; re-create on a second `openSellPlan` → the
-  date leg red; drop `awaitsCarryOver` from `hasSellPlan` → the awaiting row
-  reads "Create a sell plan" → red).
+  date leg red; add `|| awaitsCarryOver` to `hasSellPlan` → the awaiting row
+  reads "View your sell plan" → red).
   Files: `Trove/ViewModels/WishlistDetailViewModel.swift`,
   `Trove/Views/Wishlist/WishlistDetailView.swift`,
   `Trove/Models/PurchaseCopy.swift` (comment), `TroveTests/WishlistDetailViewModelTests.swift`,
@@ -528,5 +529,7 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 |---|---|---|---|
 | Spec session (this spec's `spec.md`, drafting, review pass and approval) | `opus` (raised to high; moved to Opus 5.5 on 2026-09-22) | orchestrating seat, not measured separately | Draft 2026-09-21, approved 2026-09-22 with Decisions 1–10; nothing left open |
 | `sdd-planner` — plan.md and tasks.md (draft) | `opus` | ~380k (budget counter, cache re-reads included) | 16 tasks, 5 phases, 23 guards; no product question returned; one spec/code inconsistency reported (plan R2) |
-| `skeptical-reviewer` — plan/tasks sign-off | `opus` | _to fill_ | B1 (carry-over fired on a failed import and in `.localOnly`); finding 2 (R2, R4) a product question, sent to the person; 10 non-blocking |
+| `skeptical-reviewer` — plan/tasks sign-off | `opus` | ~153k (harness) | B1 (carry-over fired on a failed import and in `.localOnly`); finding 2 (R2, R4) a product question, sent to the person; 10 non-blocking |
 | `sdd-planner` — sign-off fix pass (same agent resumed) | `opus` | ~65k (budget counter) | B1 fixed: event-based trigger, `.localOnly` skipped, `settledCount`, `awaitsCarryOver` read-only for the pending window; derive-on-read weighed and rejected in Q2; findings 3–12 applied, none declined; R2/R4 and `spec.md` untouched |
+| `skeptical-reviewer` — sign-off re-review | `opus` | ~61k (harness) | Findings 1, 3–12 all FIXED; one NEW blocking: the page's `hasSellPlan` reading `awaitsCarryOver` let a tap on **View** write a plan from a stale copy (B1's path moved from launch to a tap); one non-blocking (`.localOnly` shows "Catching up with iCloud") |
+| Orchestrator — direct fix (loop cap reached) | `claude-opus-5-5` session | — | Took the reviewer's option (b): the page reads the stored plan only, a waiting row reads "Create a sell plan"; plan Q2, R7, §7 and T008/G16 amended; the `.localOnly` wrinkle noted beside R7 as accepted |
