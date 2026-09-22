@@ -1,6 +1,6 @@
 # 009 — Sell Plan List — Technical Plan
 
-**Status**: Signed off (2026-09-22) by the `skeptical-reviewer`; the person's approval of the spec-conformance summary pending
+**Status**: Signed off (2026-09-22) by the `skeptical-reviewer`; the spec-conformance summary approved by the person on 2026-09-22
 
 Drafted by the `sdd-planner` (per `CLAUDE.md`'s model policy as amended
 2026-09-19: every role runs at `opus`, no dispatch carries a model override)

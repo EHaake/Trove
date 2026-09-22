@@ -1,6 +1,6 @@
 # 009 — Sell Plan List: Tasks
 
-**Status**: Signed off (2026-09-22) by the `skeptical-reviewer`; the person's approval of the spec-conformance summary pending
+**Status**: Signed off (2026-09-22) by the `skeptical-reviewer`; the spec-conformance summary approved by the person on 2026-09-22
 
 Drafted against the approved `spec.md` (Approved 2026-09-22) and the draft
 `plan.md` in this directory, for branch `009-sell-plan-list` off `main`
