@@ -285,7 +285,7 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   **Amended 2026-09-23 at the person's Phase 3 walkthrough:** a "…" holding
   one row read as a menu with nothing in it, and Buy grouped beside it
   looked odd. The plan's own screen shows **Delete as its own toolbar
-  button**, red (destructive role), physically separate from Buy — no "…"
+  button**, in rust (`accentRustText`, §9a), physically separate from Buy — no "…"
   and no `DetailOverflowMenu` on this screen, so its delete-only
   initializer is withdrawn. Still two taps: the button opens the same
   alert. Nothing else is planned for the menu (reopening a completed
@@ -732,6 +732,52 @@ branch; the file names no `SellPlanStore`. The record's *behaviour* is G14's.
 content** — inside `record(for:)`, the location the rule ("bespoke in the
 page") exists for — not in the toolbar, where a red could be read as the
 file-level allowlist firing rather than the page rule (sign-off finding 10).
+
+### 9a. Destructive actions are drawn in rust — T009d (decided 2026-09-23, decision review)
+
+At the person's instruction ("the Delete button needs to be red … implemented
+as standards across the app"). A destructive action is any control with
+`ButtonRole.destructive`. **Where the app draws the control, the colour goes on
+the control itself; where the system draws it, the role alone does it.** The
+Sell Plan's toolbar Delete gets `.tint(theme.colors.accentRustText)` (a word,
+so the text token; `.foregroundStyle` on the label if the device check shows
+`.tint` loses to `ContentView`'s brass cascade on the glass toolbar). **No
+shared modifier** (swipes need the fill token, words the text token, and
+Settings colours its label through `SettingsActionRow.color` — a shared
+modifier would be a parameter plus a rewrite of merged screens, against the
+spec's "no new component"); **rust, not system red** (tokens.md's swipe rule
+and the spec's "no new colour" settle it; the person is told plainly at the
+pause that "red" means the app's rust, and the alert's Delete stays system
+red). Rejected: cutting the brass tint at the root (brings system red onto
+every app-drawn control).
+
+**Guard — `DestructiveColourPolicyTests`** (a view-body fact no view model can
+see, `MenuPolicyTests`' shape): over `Trove/Views` and `Trove/App` through
+`SourceScan.production`, every `\.destructive\b` is classified by its
+enclosing brackets (one scan per file, a bracket stack that skips string
+literals): inside `alert`, `confirmationDialog`, `contextMenu` or `Menu` →
+system-drawn, exempt; otherwise the nearest enclosing call must be `Button`
+(else fail "unclassified destructive site"), and that Button's extent — its
+parentheses, trailing closures and modifier chain — must contain `accentRust`.
+One exemption, `SettingsView.swift` (colour via `SettingsActionRow.color`),
+itself pinned: the file must still read `isDestructive ?
+theme.colors.accentRustText`. Anchors `#require`d: the file floor; an empty
+bracket stack at each file's end; at least 13 sites, ≥ 8 system-drawn, ≥ 5
+app-drawn. Mutations that must go red: the tree before the fix (naming
+SellPlanView only); the Items owned-row swipe's `.tint` removed; the fix's
+`.tint` moved onto Buy; the fix commented out; the Delete re-spelled
+`Button(SellPlanCopy.deleteConfirm, role: .destructive)` uncoloured; the role
+spelled `ButtonRole.destructive`; Settings' destructive colour made brass. It
+must not fire on the seven alert buttons, DetailOverflowMenu's row, or
+comments. It proves the colour is named on the control, not that it renders —
+the device check (a screenshot sampled in both appearances against
+`#B8674F`/`#8E3A24` and brass) is the rendering half. It does not reach a
+destructive action without the role (MarketSection's "Remove match" is rust
+by hand), nor which rust token a site used.
+
+Written as `design/tokens.md`'s **Destructive actions** section and a
+`CLAUDE.md` line in its own commit. Q12's and the toolbar comment's "in red"
+read "in rust (`accentRustText`)".
 
 ## 10. `SideSwitch` generic (shared)
 
