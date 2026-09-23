@@ -552,8 +552,13 @@ final class PlansViewModel {
     }
 
     private(set) var side: Side = .active    // every launch opens on Active
-    var activeSortOrder: ActiveSortOrder = .newest
-    var completedSortOrder: CompletedSortOrder = .newest
+    private(set) var activeSortOrder: ActiveSortOrder = .newest
+    private(set) var completedSortOrder: CompletedSortOrder = .newest
+    // Phase 4 review: intents, not raw setters — each sets its side's order
+    // and reloads, so a sort change is a view-model behaviour the suite
+    // reaches (the view's `set…; load()` pair was untestable on Completed).
+    func setActiveSort(_ order: ActiveSortOrder)
+    func setCompletedSort(_ order: CompletedSortOrder)
     private(set) var activeRows: [PlanRow] = []
     private(set) var completedRows: [PlanRow] = []
     var rows: [PlanRow] { side == .active ? activeRows : completedRows }
@@ -891,8 +896,8 @@ UI tests (`TroveUITests`, all on `-uiTesting -seedPlans`):
   the alert's title, Delete → gone; Wishlist lists Vox, whose page offers
   "Create a sell plan"; Items' Sold side still lists Blues Junior.
 - `testACompletedPlanOpensAsARecord` — Hasselblad: no `purchase.sellPlan`, no
-  "Sell candidates", the NT1-A sold row present, "Bought" present, the "…"
-  offering Delete.
+  "Sell candidates", the NT1-A sold row present, "Bought" present, the bar's Delete
+  (T009b; Q12 as amended) and nothing else but Back.
 - `testTheDashboardCardOpensThePlansTabOnActive` — leave Plans on Completed;
   Overview's card reads "3 active sell plans"; tap → Plans, switch value
   Active.
@@ -916,7 +921,7 @@ text, the Dashboard card; a **file probe** in `SellPlanStore.delete` and
 `carryOver` (delete: swipe-cancel 0, alert-Keep 0, Delete 1; carry-over on
 relaunch: 0 plans made the second time) removed before the suites run;
 relaunch for persistence (criterion 17). **The person's steps**: VoiceOver
-over a row, the switch, the card and the Sell Plan's "…"; and, with two
+over a row, the switch, the card and the Sell Plan's Delete; and, with two
 devices, a plan created, deleted and carried over on one seen correctly on
 the other (criterion 17's sync half) — including Q2's three windows: a
 signed-in device launched **offline** (does its setup finish failed, and so
