@@ -777,6 +777,12 @@ struct SellPlanRow: View {
         }
         .padding(theme.metrics.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
+        // After the padding and the full-width frame, so the whole upper half
+        // toggles: a `.plain` button hit-tests only what it draws, and without
+        // this the padding, the spacer's gap and the space under short text
+        // took no tap (009 T009c). It ends where the card's frame ends, at the
+        // strip's hairline, so it never reaches into Mark as sold… below.
+        .contentShape(Rectangle())
     }
 
     /// The Design pass's footer strip: a hairline across the card, 40 pt of

@@ -1679,6 +1679,103 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(soldEntry.label.contains("$640"), "the Sold section's row reads \"\(soldEntry.label)\"")
     }
 
+    /// `009` T009c, the person's walkthrough: tapping *anywhere* on a Sell
+    /// Plan candidate's card toggles it, not only its checkbox or its text —
+    /// and the Mark as sold… strip under it stays a target of its own (`006`
+    /// spec Decision 4).
+    ///
+    /// Hit-testing is only visible here: the unit suite can't see which view
+    /// a tap lands on. The card is tapped in its bottom padding band, which is
+    /// empty whatever the row says: the point is read off the *strip's* frame
+    /// — its horizontal middle, half of `cardPadding` (16 pt, `ThemeMetrics`)
+    /// above its top edge, which is where the card ends. Not off the card
+    /// button's own frame: that one follows the fix under test (without the
+    /// content shape it shrinks to what the card draws, measured 348 pt wide
+    /// against 380), and a point derived from it would move with the thing it
+    /// is checking. The strip's frame doesn't depend on the card at all. The
+    /// strip itself is tapped at its leading tenth, where the right-aligned
+    /// label never reaches. Selection is read from the card's `isSelected`
+    /// trait, which the row adds from the same `isSelected` it draws.
+    ///
+    /// Its mutation: removing the card's `.contentShape(Rectangle())` in
+    /// `SellPlanRow` must turn the first toggle assertion red — a `.plain`
+    /// button hit-tests only what it draws.
+    @MainActor
+    func testTappingAnEmptyPartOfASellPlanCardTogglesItAndTheStripStaysApart() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSellPlan"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Wishlist"].tap()
+        openDetail(in: app, named: "Summicron 35mm f/2")
+        let findItemsToSell = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Create a sell plan"))
+            .firstMatch
+        XCTAssertTrue(findItemsToSell.waitForExistence(timeout: 5), "the wishlist detail must offer a way into the Sell Plan")
+        scrollUntilHittable(findItemsToSell, in: app)
+        findItemsToSell.tap()
+
+        let card = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Blues Junior"))
+            .firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 5), "the seeded plan must offer the Blues Junior as a candidate")
+
+        // The strip under this card: the first that starts below its top.
+        let strip = app.buttons
+            .matching(identifier: "sellPlan.row.markAsSold")
+            .allElementsBoundByIndex
+            .filter { $0.frame.minY > card.frame.minY }
+            .min { $0.frame.minY < $1.frame.minY }
+        guard let markAsSold = strip else {
+            return XCTFail("the Blues Junior's row must offer Mark as sold…")
+        }
+        scrollUntilHittable(markAsSold, in: app)
+
+        let startedSelected = card.isSelected
+        let paddingBand = markAsSold.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: markAsSold.frame.width / 2, dy: -8))
+        let price = app.textFields["sale.sheet.price"]
+
+        // First tap on empty card: the selection flips, and no sheet opens.
+        paddingBand.tap()
+        let flipped = expectation(
+            for: NSPredicate(format: "isSelected == %@", NSNumber(value: !startedSelected)),
+            evaluatedWith: card
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [flipped], timeout: 5),
+            .completed,
+            "tapping the card's empty padding must toggle it — it still reads isSelected \(card.isSelected)"
+        )
+        XCTAssertFalse(price.exists, "a tap on the card must not open the sale sheet")
+
+        // Second tap at the same point: back to where it started.
+        paddingBand.tap()
+        let restored = expectation(
+            for: NSPredicate(format: "isSelected == %@", NSNumber(value: startedSelected)),
+            evaluatedWith: card
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [restored], timeout: 5),
+            .completed,
+            "a second tap at the same empty point must toggle it back — it reads isSelected \(card.isSelected)"
+        )
+
+        // The strip's own empty space opens the sheet and leaves the card be.
+        markAsSold.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: markAsSold.frame.width / 10, dy: markAsSold.frame.height / 2))
+            .tap()
+        XCTAssertTrue(price.waitForExistence(timeout: 5), "tapping the strip's empty space must open the sale sheet")
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(price.waitForNonExistence(timeout: 5), "Cancel should close the sale sheet")
+        XCTAssertEqual(
+            card.isSelected,
+            startedSelected,
+            "a tap on the Mark as sold… strip must not toggle the card above it"
+        )
+    }
+
     /// The Sold side's row for one item — the `.combine`d element whose label
     /// is the whole announcement ("Telecaster, Sold Sep 11, 2026, $1,250,
     /// Gain $350 vs paid"), not the plain name inside it. The comma is what
