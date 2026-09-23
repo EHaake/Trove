@@ -295,7 +295,7 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
   **Done:** 2026-09-22. `isCompleted`, `offersPurchase`, `offersDelete`, `boughtDate`, `deletePlan()`; `toggle`/`markSold` write nothing on a completed plan; `load()` builds no pool for one. New suite `SellPlanRecordTests` (8), second-context reads. Mutations, each red: `toggle` guard dropped; pool built for a bought entry (`candidates` leg); `deletePlan` clearing `itemsSoldToward` (both delete legs, 5 issues). Choices for the phase review: a refused delete reports in the shared `saveFailureMessage`; `deletePlan` reloads on success like `markSold`. `scripts/verify.sh`: 1694 tests in 230 suites passed.
-- [ ] **T007 — `DashboardViewModel`'s active count, and the router's fourth tab.**
+- [x] **T007 — `DashboardViewModel`'s active count, and the router's fourth tab.**
   Per plan §8 and Q17. `activePlanCount`, `showsPlansCard`, `plansLine`,
   `settledCount` passed through from the monitor (a test: recording a failed
   setup on the view model's monitor moves it);
@@ -311,6 +311,7 @@ Handoff notes for the pause reports:
   `Trove/ViewModels/AppRouter.swift`, `TroveTests/DashboardViewModelTests.swift`,
   `TroveTests/AppRouterTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done:** 2026-09-22. `DashboardViewModel.activePlanCount` (whole store, per §8), `showsPlansCard`, `plansLine`, `settledCount`; `AppRouter.Tab.plans` (fourth), `plansPath`, `wantsActivePlans`, `showActivePlans()`, `clearPlansRequest()`. New suite `DashboardPlansCardTests` (4) and 4 `AppRouterTests`. Mutations, each red: `boughtDate == nil` dropped (5 issues); `scope.isEmpty` dropped (the scope leg); and `wantsActivePlans = true` dropped (the flag leg). No switch over `AppRouter.Tab` needed a case. R4's no-card-on-an-empty-Dashboard is the view's to apply at T013, as the Sold card's is. `scripts/verify.sh`: 1702 tests in 231 suites passed.
   **Phase 2 closes here — `walkthrough: none`; after its review, run on.**
 
 ## Phase 3 — The wanted item's page and the Sell Plan screen · walkthrough: yes — on a wanted item, Create a sell plan makes the plan at the tap; backing out reads View your sell plan / Nothing set aside yet; selling everything set aside leaves it View your sell plan with "<n> sold toward it"; the plan's "…" deletes it after an alert, the page offers Create again, and the sales stay on the Items tab's Sold side
@@ -550,3 +551,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | Phase 1 — `skeptical-reviewer` phase review | `opus` | ~91k (harness) | Signed off; 0 blocking, 5 non-blocking, carried forward: T005 (a completed row's lines begin with Bought), T008 (inline strings out, `PurchaseCopy` comment), T014 (Fuji test red for both launch-wiring mutations), T015 (probe in the hook on an upgrade launch), sweep (`runCarryOver` saves/rolls back the whole main context on every import — plan Q4 as written). UI suite at `851b210`: 25 tests, 0 failures |
 | T005 — `sdd-implementer` | `opus` | ~140k (harness) | Done first pass; no miss. Noted: the `aRefusedPurchaseRollsBackAndReportsInItsHostsOwnProperty` scan still names three hosts |
 | T006 — `sdd-implementer` | `opus` | ~83k (harness) | Done first pass; no miss |
+| T007 — `sdd-implementer` | `opus` | ~63k (harness) | Done first pass; no miss |
