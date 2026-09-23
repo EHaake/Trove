@@ -2021,6 +2021,10 @@ final class TroveUITests: XCTestCase {
         let hasselblad = planRow(in: app, named: "Hasselblad 80mm")
         XCTAssertTrue(hasselblad.waitForExistence(timeout: 5), "Completed must list the bought plan")
         XCTAssertTrue(hasselblad.label.contains("Bought"), "the Hasselblad's row reads \"\(hasselblad.label)\"")
+        XCTAssertFalse(
+            hasselblad.label.contains("Covered"),
+            "$300 sold toward a $950 estimate is not covered — the row reads \"\(hasselblad.label)\""
+        )
         XCTAssertFalse(app.staticTexts["Nikon FM2"].exists, "a bought item with no plan is not a completed plan")
         XCTAssertFalse(app.staticTexts["Vox AC15"].exists, "an active plan is not on Completed")
 
@@ -2172,7 +2176,12 @@ final class TroveUITests: XCTestCase {
             app.staticTexts.matching(NSPredicate(format: "label ==[c] %@", "Sell candidates")).firstMatch.exists,
             "a bought plan offers no candidates"
         )
-        XCTAssertTrue(app.navigationBars.buttons["Delete"].exists, "the record's one action is Delete")
+        // The bar holds Back and Delete and nothing else — no Buy on a plan
+        // whose item is already bought (plan §13 as amended; Q12).
+        let bar = app.navigationBars["Sell plan"]
+        XCTAssertTrue(bar.exists, "the record keeps the Sell plan bar")
+        let barButtons = bar.buttons.allElementsBoundByIndex.map(\.label).sorted()
+        XCTAssertEqual(barButtons, ["Back", "Delete"], "the record's bar must offer only Back and Delete — it offers \(barButtons)")
     }
 
     /// Criterion 15: the Dashboard's card counts the active plans and opens

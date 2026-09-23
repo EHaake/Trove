@@ -287,8 +287,7 @@ struct PlansViewModelTests {
             (.wishlistOrder, ["Bravo", "Charlie", "Alpha"]),
         ]
         for (order, names) in expected {
-            viewModel.activeSortOrder = order
-            viewModel.load()
+            viewModel.setActiveSort(order)
             #expect(viewModel.activeRows.map(\.name) == names, "\(order)")
         }
     }
@@ -309,10 +308,44 @@ struct PlansViewModelTests {
             (.name, ["Delta", "Echo", "Foxtrot"]),
         ]
         for (order, names) in expected {
-            viewModel.completedSortOrder = order
-            viewModel.load()
+            viewModel.setCompletedSort(order)
             #expect(viewModel.completedRows.map(\.name) == names, "\(order)")
         }
+    }
+
+    /// Plan §5 as amended: a sort change on the Active side is an intent that
+    /// reloads — the rows follow it with no `load()` from the caller, which is
+    /// what the view's dropdown relies on.
+    ///
+    /// Mutation: drop `load()` from `setActiveSort` → red.
+    @Test func settingTheActiveSortReordersTheRowsOnScreen() throws {
+        let context = try makeInMemoryContext()
+        try activeFixture(into: context)
+        let viewModel = PlansViewModel(modelContext: context, now: { self.now })
+        viewModel.load()
+        try #require(viewModel.rows.map(\.name) == ["Charlie", "Alpha", "Bravo"])
+
+        viewModel.setActiveSort(.name)
+
+        #expect(viewModel.activeSortOrder == .name)
+        #expect(viewModel.rows.map(\.name) == ["Alpha", "Bravo", "Charlie"], "the Active rows must re-sort on the intent alone")
+    }
+
+    /// The Completed side's twin — the reload the Plans UI tests cannot reach,
+    /// since the seeded collection has one completed plan.
+    ///
+    /// Mutation: drop `load()` from `setCompletedSort` → red.
+    @Test func settingTheCompletedSortReordersTheRowsOnScreen() throws {
+        let context = try makeInMemoryContext()
+        try completedFixture(into: context)
+        let viewModel = PlansViewModel(modelContext: context, now: { self.now })
+        viewModel.show(.completed)
+        try #require(viewModel.rows.map(\.name) == ["Foxtrot", "Delta", "Echo"])
+
+        viewModel.setCompletedSort(.name)
+
+        #expect(viewModel.completedSortOrder == .name)
+        #expect(viewModel.rows.map(\.name) == ["Delta", "Echo", "Foxtrot"], "the Completed rows must re-sort on the intent alone")
     }
 
     /// Q9: two plans sharing a date — R3's carried-over plans above all — fall
@@ -352,9 +385,9 @@ struct PlansViewModelTests {
         let viewModel = PlansViewModel(modelContext: context, now: { self.now })
         viewModel.load()
 
-        viewModel.activeSortOrder = .name
+        viewModel.setActiveSort(.name)
         viewModel.show(.completed)
-        viewModel.completedSortOrder = .oldest
+        viewModel.setCompletedSort(.oldest)
         viewModel.show(.active)
 
         #expect(viewModel.activeSortOrder == .name)

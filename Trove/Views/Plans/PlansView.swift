@@ -171,11 +171,9 @@ struct PlansView: View {
                         label: \.label,
                         isManualOrder: { _ in false }
                     ) { option in
-                        // The row has already closed the dropdown. The rows
-                        // don't re-sort on their own, so the new order is
-                        // read by a load.
-                        viewModel.activeSortOrder = option
-                        viewModel.load()
+                        // The row has already closed the dropdown. The intent
+                        // sets this side's order and reloads the rows.
+                        viewModel.setActiveSort(option)
                     }
                 case .completed:
                     SortDropdown(
@@ -184,8 +182,7 @@ struct PlansView: View {
                         label: \.label,
                         isManualOrder: { _ in false }
                     ) { option in
-                        viewModel.completedSortOrder = option
-                        viewModel.load()
+                        viewModel.setCompletedSort(option)
                     }
                 }
             }

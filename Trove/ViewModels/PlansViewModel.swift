@@ -93,8 +93,11 @@ final class PlansViewModel {
     /// Read-only from outside: `show(_:)` is the only way it changes, because
     /// changing side also reloads.
     private(set) var side: Side = .active
-    var activeSortOrder: ActiveSortOrder = .newest
-    var completedSortOrder: CompletedSortOrder = .newest
+    /// Read-only from outside, like `side`: `setActiveSort(_:)` and
+    /// `setCompletedSort(_:)` are the only ways they change, because changing
+    /// an order also reloads (plan §5, as amended at Phase 4's review).
+    private(set) var activeSortOrder: ActiveSortOrder = .newest
+    private(set) var completedSortOrder: CompletedSortOrder = .newest
     private(set) var activeRows: [PlanRow] = []
     private(set) var completedRows: [PlanRow] = []
 
@@ -168,6 +171,20 @@ final class PlansViewModel {
     /// side's sort survives a visit to the other.
     func show(_ side: Side) {
         self.side = side
+        load()
+    }
+
+    /// Sets the Active side's order and reloads, so the rows on screen follow
+    /// it. The Completed side's order is untouched.
+    func setActiveSort(_ order: ActiveSortOrder) {
+        activeSortOrder = order
+        load()
+    }
+
+    /// Sets the Completed side's order and reloads. The Active side's order
+    /// is untouched.
+    func setCompletedSort(_ order: CompletedSortOrder) {
+        completedSortOrder = order
         load()
     }
 

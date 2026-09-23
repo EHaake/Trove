@@ -50,9 +50,9 @@ struct DestructiveColourPolicyTests {
         var system = 0
         var appDrawn = 0
         var settingsExempted = 0
-        var filesWithSite = 0
         var balanceChecked = 0
         var unbalanced: [String] = []
+        var miscounted: [String] = []
         var offenders: [String] = []
         let destructive = try Regex(#"\.destructive\b"#)
 
@@ -60,7 +60,14 @@ struct DestructiveColourPolicyTests {
             let text = try SourceScan.production(file)
             let code = Array(text)
             let scan = Self.scan(code)
-            if text.contains(destructive) { filesWithSite += 1 }
+            // Exact, per file: every `.destructive` in the production text is
+            // a site the scan classified. No production string literal holds
+            // the word, so the regex's count and the scan's must agree — a
+            // site the bracket pass skipped shows up here, named.
+            let written = text.matches(of: destructive).count
+            if scan.sites.count != written {
+                miscounted.append("\(file): \(scan.sites.count) classified of \(written)")
+            }
             if !scan.sites.isEmpty {
                 balanceChecked += 1
                 if !scan.balanced { unbalanced.append(file) }
@@ -92,14 +99,14 @@ struct DestructiveColourPolicyTests {
         #expect(unbalanced.isEmpty, "the bracket stack did not end empty — the scan misread \(unbalanced)")
         #expect(offenders.isEmpty, "\(offenders)")
 
-        try #require(
-            balanceChecked == filesWithSite,
-            "\(filesWithSite) files hold a `.destructive`, but the scan found sites in \(balanceChecked)"
-        )
-        try #require(balanceChecked >= 8, "only \(balanceChecked) files hold a destructive site")
-        try #require(total >= 13, "found only \(total) destructive sites — the scan is missing some")
-        try #require(system >= 8, "found only \(system) system-drawn destructive sites")
-        try #require(appDrawn >= 5, "found only \(appDrawn) app-drawn destructive sites")
+        #expect(miscounted.isEmpty, "the scan did not classify every `.destructive` in \(miscounted)")
+
+        // A backstop behind the exact check, at today's counts: the file
+        // listing itself shrinking would pass the per-file check vacuously.
+        try #require(balanceChecked >= 9, "only \(balanceChecked) files hold a destructive site")
+        try #require(total >= 15, "found only \(total) destructive sites — the scan is missing some")
+        try #require(system >= 9, "found only \(system) system-drawn destructive sites")
+        try #require(appDrawn >= 6, "found only \(appDrawn) app-drawn destructive sites")
 
         // The exemption is only honest while Settings still colours its
         // destructive rows rust on its own, and still has one to colour.
@@ -158,7 +165,9 @@ struct DestructiveColourPolicyTests {
             }
             i += 1
         }
-        result.balanced = stack.isEmpty
+        // Both halves: a crossed pair that nets to zero leaves the stack
+        // empty, and must not wash out the mismatch recorded above.
+        result.balanced = result.balanced && stack.isEmpty
         return result
     }
 
