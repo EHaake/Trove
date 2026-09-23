@@ -500,10 +500,21 @@ struct WishlistPurchaseWiringTests {
 
     /// G18, criterion 3: the plan offers **Mark as bought…** from one bar
     /// button in its top-right corner, and only while the entry the plan
-    /// belongs to is still there — the screen draws `missingItem` when it has
-    /// gone, and an ungated button would be tappable over no subject. The
-    /// gate's span is what the button is required to sit *inside*, so a button
-    /// moved out of it fails here rather than passing on the words alone.
+    /// belongs to is still there and still wanted — the screen draws
+    /// `missingItem` when it has gone, and an ungated button would be tappable
+    /// over no subject. The gate's span is what the button is required to sit
+    /// *inside*, so a button moved out of it fails here rather than passing on
+    /// the words alone.
+    ///
+    /// **Rewritten in `009` (plan Q11, Q19), to the rule rather than loosened
+    /// to it.** The gate was `viewModel.wishlistItem != nil`, which a bought
+    /// entry passes: `009` opens a completed plan as a record, and a Buy there
+    /// would offer a second purchase of something already bought. The gate is
+    /// now the view model's `offersPurchase`, required whole (`{` and all, so
+    /// `offersPurchase && …` or a longer name doesn't satisfy it) and exactly
+    /// once in the file. Recorded at `009` T009: with the button gated back on
+    /// `wishlistItem != nil`, the guard as `015` wrote it stayed green and this
+    /// one goes red.
     ///
     /// The button reads the **word** "Buy" (`PurchaseCopy.swipeBuy`), not a
     /// glyph — T012a, the person's decision at the device pass: a bare outline
@@ -513,8 +524,9 @@ struct WishlistPurchaseWiringTests {
     /// the rule, both halves — the word present and no glyph at all — rather
     /// than loosened to tolerate either spelling.
     ///
-    /// Mutations: drop the gate → no `viewModel.wishlistItem != nil` span →
-    /// red; move the button out of the gate → the span is empty of it → red;
+    /// Mutations: gate the button on `viewModel.wishlistItem != nil` again →
+    /// no `offersPurchase` span → red; drop the gate → red; move the button
+    /// out of the gate → the span is empty of it → red;
     /// drop the identifier T012 drives it by → red; put `Image(systemName:
     /// "bag")` back in place of the word → both new legs red.
     @Test func theSellPlanOffersMarkAsBoughtOnlyWhileItsEntryIsStillThere() throws {
@@ -530,10 +542,19 @@ struct WishlistPurchaseWiringTests {
         try #require(toolbars.count == 1, "the plan carries \(toolbars.count) toolbars, expected exactly 1")
         let toolbar = try #require(toolbars.first)
 
-        let gates = SourceScan.closureBodies(after: "if viewModel.wishlistItem != nil", in: toolbar)
+        // Whole, `{` included: `closureBodies` opens at the first brace after
+        // its marker, so the marker alone would also take `offersPurchase &&
+        // somethingElse {`. Counted over the file, so a second gate anywhere
+        // — around a second button — fails too.
+        let wholeGates = code.ranges(of: "if viewModel.offersPurchase {").count
+        try #require(
+            wholeGates == 1,
+            "the plan carries \(wholeGates) `if viewModel.offersPurchase {` gates, expected exactly 1 — Buy is offered only on an active plan whose entry is still there (009 plan Q11)"
+        )
+        let gates = SourceScan.closureBodies(after: "if viewModel.offersPurchase", in: toolbar)
         try #require(
             gates.count == 1,
-            "the plan's toolbar carries \(gates.count) `viewModel.wishlistItem != nil` gates, expected exactly 1 — an ungated button would confirm a purchase of nothing when the entry has gone"
+            "the plan's toolbar carries \(gates.count) `viewModel.offersPurchase` gates, expected exactly 1 — an ungated button would confirm a purchase of nothing when the entry has gone, or a second one of an entry already bought"
         )
         let gate = try #require(gates.first)
 

@@ -27,6 +27,12 @@ import SwiftUI
 /// side, never subtracted from the cost (Decision 5). The sold items are listed
 /// under the candidates so the plan reads as a record of what was actually done
 /// toward it (P15).
+///
+/// **009 gives a bought plan a second face** (plan §9, R1): once its wanted
+/// item has been bought the screen reads as a record — the heading, the date
+/// it was bought, and what sold toward it — with no figures, no candidates
+/// and nothing that acts. The one thing either face can still do is delete
+/// the plan, from a "…" holding Delete alone.
 struct SellPlanView: View {
     @State private var viewModel: SellPlanViewModel
     /// Whether the purchase sheet is up (015 plan §8). A flag rather than the
@@ -34,6 +40,9 @@ struct SellPlanView: View {
     /// entry's page holds one too: this screen has one subject, so there is
     /// nothing to choose between.
     @State private var isMarkingBought = false
+    /// Whether the delete confirmation is up — `WishlistDetailView`'s flag,
+    /// for the same one-subject reason.
+    @State private var isConfirmingDelete = false
 
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -53,7 +62,11 @@ struct SellPlanView: View {
             theme.colors.background.ignoresSafeArea()
 
             if let wanted = viewModel.wishlistItem {
-                content(for: wanted)
+                if viewModel.isCompleted {
+                    record(for: wanted)
+                } else {
+                    content(for: wanted)
+                }
             } else if viewModel.hasLoaded {
                 missingItem
             }
@@ -62,14 +75,16 @@ struct SellPlanView: View {
         .navigationBarTitleDisplayMode(.inline)
         // 015 (plan §8, criterion 3): Mark as bought… for the wanted item this
         // plan belongs to, as a bar button rather than a menu — this screen has
-        // no Edit or Delete for it to sit beside, and a one-row menu is a menu
-        // for nothing. It lands in the same top-right corner the wanted entry's
-        // "…" occupies, so "the action is top-right" is true on both screens.
+        // no Edit for it to sit beside, and a menu of Buy and Delete would put
+        // the screen's one forward action behind a tap. It lands in the same
+        // top-right corner the wanted entry's "…" occupies, so "the action is
+        // top-right" is true on both screens.
         //
-        // The gate is not decoration: this screen already draws `missingItem`
-        // when its entry has gone (deleted on another device), and an ungated
-        // button there would be tappable over no subject and would confirm a
-        // purchase of nothing.
+        // The gate is not decoration, and since 009 it is the view model's
+        // `offersPurchase` (plan Q11): this screen draws `missingItem` when its
+        // entry has gone (deleted on another device), and the record when it
+        // has already been bought — an ungated button would confirm a purchase
+        // of nothing in the first case and a second purchase in the other.
         //
         // The button wears the word, not a glyph (T012a, the person's decision
         // at the device pass): a bare outline bag alone in a toolbar reads as
@@ -81,7 +96,7 @@ struct SellPlanView: View {
         // would be a second short form for the same thing. The spoken name
         // stays the full `markAsBought`, as it does on the swipe.
         .toolbar {
-            if viewModel.wishlistItem != nil {
+            if viewModel.offersPurchase {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         isMarkingBought = true
@@ -90,6 +105,15 @@ struct SellPlanView: View {
                     }
                     .accessibilityLabel(PurchaseCopy.markAsBought)
                     .accessibilityIdentifier("purchase.sellPlan")
+                }
+            }
+            // 009 (plan Q12): deleting the plan, from a "…" holding Delete
+            // alone, so it keeps the second tap every other detail page's
+            // Delete has. Offered on both faces — active beside Buy, and on
+            // the record, where it is the only thing left to do.
+            if viewModel.offersDelete {
+                ToolbarItem(placement: .topBarTrailing) {
+                    DetailOverflowMenu(noun: SellPlanCopy.overflowNoun, delete: { isConfirmingDelete = true })
                 }
             }
         }
@@ -155,12 +179,28 @@ struct SellPlanView: View {
         } message: {
             Text(viewModel.purchaseFailureMessage ?? PurchaseCopy.failureMessage)
         }
+        // 009: an alert rather than a confirmation dialog, for the reason the
+        // wanted entry's page gives — from a toolbar button the dialog renders
+        // as a popover that drops the cancel button. A delete that took pops
+        // the screen, since the plan it showed is gone; a refused one rolls
+        // back and leaves it standing (plan §5), exactly as it was.
+        .alert(
+            SellPlanCopy.deleteTitle(for: viewModel.wishlistItem?.name ?? "this item"),
+            isPresented: $isConfirmingDelete
+        ) {
+            Button(SellPlanCopy.deleteConfirm, role: .destructive) {
+                if viewModel.deletePlan() { dismiss() }
+            }
+            Button(SellPlanCopy.deleteCancel, role: .cancel) {}
+        } message: {
+            Text(SellPlanCopy.deleteMessage(isCompleted: viewModel.isCompleted))
+        }
     }
 
     private func content(for wanted: WishlistItem) -> some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: theme.metrics.sectionGap) {
-                heading(for: wanted)
+                heading("Wanted", for: wanted)
                 figures(for: wanted)
                 sectionHeader
             }
@@ -177,15 +217,57 @@ struct SellPlanView: View {
         }
     }
 
-    private func heading(for wanted: WishlistItem) -> some View {
+    /// The mono line over the name: the plan's state, then the wanted item's
+    /// category. One shape for both faces — "Wanted" on an active plan,
+    /// `SellPlanCopy.completed` on the record.
+    private func heading(_ state: String, for wanted: WishlistItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text((["Wanted"] + CategoryPathHelper.trailingSegments(of: wanted.categoryPath, limit: 1))
+            Text(([state] + CategoryPathHelper.trailingSegments(of: wanted.categoryPath, limit: 1))
                 .joined(separator: " · "))
                 .monoLabel()
             Text(wanted.name)
                 .font(theme.typography.heroFigureSecondary)
                 .foregroundStyle(theme.colors.textPrimary)
                 .lineLimit(2)
+        }
+    }
+
+    // MARK: - The record (009)
+
+    /// A bought plan, read as a record (plan §9, R1): the heading, the day it
+    /// was bought, and what sold toward it — each sale with its date and
+    /// price, from the same `soldSection` the active face lists — or one quiet
+    /// line when nothing did. No figures card: its first cell is Selected,
+    /// which reads "$0 · 0 of 0 items" once the purchase has released the
+    /// selection. No candidates and no rows, so nothing here can act; the
+    /// view model refuses the writes as well (plan Q11), and deleting from
+    /// the "…" is the only thing left to do.
+    private func record(for wanted: WishlistItem) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 10) {
+                    heading(SellPlanCopy.completed, for: wanted)
+
+                    if let boughtOn = viewModel.boughtDate {
+                        Text(SellPlanCopy.bought(on: boughtOn))
+                            .monoLabel(color: theme.colors.textQuiet)
+                    }
+                }
+                .padding(.horizontal, theme.metrics.screenGutter)
+                .padding(.top, theme.metrics.sectionGap)
+
+                if viewModel.hasSales {
+                    soldSection
+                } else {
+                    Text(SellPlanCopy.nothingSoldToward)
+                        .font(theme.typography.body)
+                        .foregroundStyle(theme.colors.textQuiet)
+                        .padding(.top, theme.metrics.sectionGap)
+                        .padding(.horizontal, theme.metrics.screenGutter)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, theme.metrics.sectionGap)
         }
     }
 
@@ -412,7 +494,8 @@ struct SellPlanView: View {
     ///
     /// Composed by both halves of `content(for:)` — the candidate list and
     /// `emptyPlan(_:)` — because selling the last candidate must not take the
-    /// record with it (spec Decision 14).
+    /// record with it (spec Decision 14), and since 009 by `record(for:)`,
+    /// where it is most of what a bought plan shows.
     private var soldSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(SaleCopy.sellPlanSectionTitle).monoLabel()

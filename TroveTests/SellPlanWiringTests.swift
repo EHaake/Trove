@@ -47,6 +47,25 @@ struct SellPlanWiringTests {
         return try #require(branches.first)
     }
 
+    /// The body of `record(for:)`, the bought plan's face (009 plan §9) —
+    /// `#require`d to be declared exactly once, so no leg below reads an
+    /// empty string.
+    private func recordBody() throws -> String {
+        let code = try SourceScan.production(Self.screen)
+        let bodies = SourceScan.closureBodies(
+            after: "private func record(for wanted: WishlistItem) -> some View",
+            in: code
+        )
+        try #require(bodies.count == 1, "the screen declares \(bodies.count) record(for:) bodies, expected exactly 1")
+        return try #require(bodies.first)
+    }
+
+    /// A span with its surrounding whitespace dropped, so a whole-literal
+    /// comparison reads the code rather than its indentation.
+    private func trimmed(_ span: String) -> String {
+        span.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     // MARK: - The third figure (criterion 10, Decision 5)
 
     /// The Sold cell is drawn, it is drawn inside the `hasSales` branch, and
@@ -116,11 +135,16 @@ struct SellPlanWiringTests {
     /// The same section under the other half of `content(for:)`: selling the
     /// last candidate empties the pool, and the plan still lists what was sold
     /// toward it (spec Decision 14). One `soldSection`, hosted once per
-    /// branch, gated on `hasSales` in both — three mentions in the file, a
-    /// declaration and a host each side.
+    /// branch, gated on `hasSales` in both.
+    ///
+    /// **009 adds a third host** (plan §9, Q19): a bought plan's record is
+    /// the same section, gated the same way, so the count moves from three to
+    /// four — one declaration and three hosts — and the record's branch is
+    /// required to be the section and nothing else.
     ///
     /// Mutation: drop `soldSection` from the empty branch, or send
-    /// `content(for:)` straight back to `emptyState(reason)` → red.
+    /// `content(for:)` straight back to `emptyState(reason)` → red. 009:
+    /// drop it from the record → red.
     @Test func theSoldSectionIsHostedUnderTheEmptyStateToo() throws {
         let code = try SourceScan.production(Self.screen)
 
@@ -152,12 +176,21 @@ struct SellPlanWiringTests {
             "an emptied plan drops the sales already made toward it — they stay listed (Decision 14)"
         )
 
-        // One section, two hosts: its own declaration plus one mention in
-        // each branch. A second copy of the rows, or a host that quietly
-        // stopped composing it, moves this count.
+        // 009: the record is the third host, inside its own `hasSales`
+        // branch and as the whole of it.
+        let record = try recordBody()
+        let recorded = try hasSalesBranch(in: record, describing: "record(for:)")
         #expect(
-            code.ranges(of: "soldSection").count == 3,
-            "soldSection is named \(code.ranges(of: "soldSection").count) times — expected one declaration and one host per branch"
+            trimmed(recorded) == "soldSection",
+            "a bought plan's record doesn't host the Sold section as the whole of its hasSales branch:\n\(recorded)"
+        )
+
+        // One section, three hosts: its own declaration plus one mention in
+        // each. A second copy of the rows, or a host that quietly stopped
+        // composing it, moves this count.
+        #expect(
+            code.ranges(of: "soldSection").count == 4,
+            "soldSection is named \(code.ranges(of: "soldSection").count) times — expected one declaration and three hosts"
         )
     }
 
@@ -347,6 +380,153 @@ struct SellPlanWiringTests {
         #expect(
             sold.isEmpty,
             "the screen types a sale's words inline instead of reading SaleCopy: \(sold.joined(separator: " | "))"
+        )
+    }
+
+    // MARK: - The record and the delete (009, G17)
+
+    /// A bought plan opens as a record (criterion 9, plan §9): the body
+    /// branches on `isCompleted` to `record(for:)`, which draws the heading,
+    /// the day it was bought and what sold toward it — and names nothing
+    /// that selects, sells or buys. Its *behaviour* — the view model
+    /// refusing those writes — is `SellPlanViewModelTests`' (G14); this is
+    /// the face.
+    ///
+    /// Mutations: put `viewModel.toggle` or a `SellPlanRow(` into the record
+    /// → red; send the `isCompleted` branch to `content(for:)` → red.
+    @Test func aBoughtPlanOpensAsARecordThatComposesNothingThatActs() throws {
+        let code = try SourceScan.production(Self.screen)
+
+        let wholeBranches = code.ranges(of: "if viewModel.isCompleted {").count
+        try #require(
+            wholeBranches == 1,
+            "the screen carries \(wholeBranches) `if viewModel.isCompleted {` branches, expected exactly 1"
+        )
+        let branches = SourceScan.closureBodies(after: "if viewModel.isCompleted", in: code)
+        let branch = try #require(branches.first)
+        #expect(
+            trimmed(branch) == "record(for: wanted)",
+            "a bought plan opens as something other than its record:\n\(branch)"
+        )
+        #expect(
+            code.ranges(of: "record(for: wanted)").count == 1,
+            "the record is composed \(code.ranges(of: "record(for: wanted)").count) times, expected exactly once"
+        )
+
+        let record = try recordBody()
+
+        // The control: the record is really the bought plan's face.
+        #expect(record.contains("heading(SellPlanCopy.completed, for: wanted)"), "the record isn't headed Completed — wrong target?")
+        #expect(record.contains("Text(SellPlanCopy.bought(on: boughtOn))"), "the record doesn't say when it was bought")
+        #expect(
+            record.contains("Text(SellPlanCopy.nothingSoldToward)"),
+            "a record with no sales says nothing at all, rather than that nothing was sold toward it"
+        )
+
+        for acting in ["candidateList", "SellPlanRow", "figures(", "saleCandidate", "isMarkingBought", "viewModel.toggle"] {
+            #expect(
+                !record.contains(acting),
+                "the record composes `\(acting)` — a bought plan offers no candidate, no selection, no sale and no purchase (criterion 9)"
+            )
+        }
+    }
+
+    /// The "…" holds Delete alone and is offered only while there is a plan
+    /// to delete (plan Q12): one `DetailOverflowMenu`, through its
+    /// delete-only initializer, inside the toolbar's `offersDelete` gate —
+    /// required whole — and no button of its own beside it, so Delete keeps
+    /// its second tap.
+    ///
+    /// Mutations: give the gate a `Button` → red; move the "…" out of the
+    /// gate, or build it through an Edit initializer → red.
+    @Test func theDeleteIsAnOverflowOfDeleteAloneOfferedOnlyWhileThereIsAPlan() throws {
+        let code = try SourceScan.production(Self.screen)
+
+        let toolbars = SourceScan.closureBodies(after: ".toolbar", in: code)
+        try #require(toolbars.count == 1, "the plan carries \(toolbars.count) toolbars, expected exactly 1")
+        let toolbar = try #require(toolbars.first)
+
+        let wholeGates = code.ranges(of: "if viewModel.offersDelete {").count
+        try #require(
+            wholeGates == 1,
+            "the plan carries \(wholeGates) `if viewModel.offersDelete {` gates, expected exactly 1"
+        )
+        let gates = SourceScan.closureBodies(after: "if viewModel.offersDelete", in: toolbar)
+        try #require(gates.count == 1, "the toolbar carries \(gates.count) `offersDelete` gates, expected exactly 1")
+        let gate = try #require(gates.first)
+
+        #expect(
+            gate.contains("ToolbarItem(placement: .topBarTrailing)"),
+            "the \u{2026} isn't a top-right bar item:\n\(gate)"
+        )
+
+        let everywhere = SourceScan.argumentLists(of: "DetailOverflowMenu", in: code)
+        try #require(everywhere.count == 1, "the plan builds \(everywhere.count) overflow menus, expected exactly 1")
+        let menus = SourceScan.argumentLists(of: "DetailOverflowMenu", in: gate)
+        try #require(menus.count == 1, "the overflow menu isn't inside the offersDelete gate")
+        #expect(
+            trimmed(menus[0]) == "noun: SellPlanCopy.overflowNoun, delete: { isConfirmingDelete = true }",
+            "the \u{2026} is something other than Delete alone, raising the confirmation:\n\(menus[0])"
+        )
+
+        #expect(
+            !gate.contains("Button"),
+            "the delete gate holds a button of its own — Delete sits behind the \u{2026}, with its second tap:\n\(gate)"
+        )
+    }
+
+    /// Both sides say what will happen before it happens (criterion 11), in
+    /// `SellPlanCopy`'s words, and confirming pops the screen only when the
+    /// delete took — a refused save rolls back and leaves the screen correct
+    /// where it stands. The destructive action is compared whole, so a
+    /// `dismiss()` anywhere else in it fails.
+    ///
+    /// Mutations: dismiss outside the `deletePlan()` branch → red; read the
+    /// store from the view → red.
+    @Test func confirmingTheDeletePopsTheScreenOnlyOnceItTook() throws {
+        let code = try SourceScan.production(Self.screen)
+
+        let alerts = SourceScan.argumentLists(of: ".alert", in: code)
+            .filter { $0.contains("isPresented: $isConfirmingDelete") }
+        try #require(alerts.count == 1, "the plan carries \(alerts.count) delete alerts, expected exactly 1")
+        #expect(
+            alerts[0].contains("SellPlanCopy.deleteTitle(for: viewModel.wishlistItem?.name"),
+            "the alert's title isn't SellPlanCopy's:\n\(alerts[0])"
+        )
+
+        let actionLists = SourceScan.closureBodies(after: "isPresented: $isConfirmingDelete", in: code)
+        try #require(actionLists.count == 1, "found \(actionLists.count) delete alert action lists, expected exactly 1")
+        let actions = try #require(actionLists.first)
+
+        let confirms = SourceScan.closureBodies(
+            after: "Button(SellPlanCopy.deleteConfirm, role: .destructive)",
+            in: actions
+        )
+        try #require(confirms.count == 1, "the alert carries \(confirms.count) destructive Delete buttons, expected exactly 1")
+        #expect(
+            trimmed(confirms[0]) == "if viewModel.deletePlan() { dismiss() }",
+            "confirming does something other than delete and pop only once it took:\n\(confirms[0])"
+        )
+        #expect(
+            actions.contains("Button(SellPlanCopy.deleteCancel, role: .cancel) {}"),
+            "the alert has no way out that keeps the plan:\n\(actions)"
+        )
+
+        let messages = SourceScan.closureBodies(after: "message:", in: code)
+            .filter { $0.contains("SellPlanCopy.deleteMessage") }
+        try #require(messages.count == 1, "found \(messages.count) delete messages, expected exactly 1")
+        #expect(
+            trimmed(messages[0]) == "Text(SellPlanCopy.deleteMessage(isCompleted: viewModel.isCompleted))",
+            "the message doesn't say which side's plan is going:\n\(messages[0])"
+        )
+
+        #expect(
+            code.ranges(of: "viewModel.deletePlan()").count == 1,
+            "the plan is deleted from \(code.ranges(of: "viewModel.deletePlan()").count) places, expected exactly 1"
+        )
+        #expect(
+            !code.contains("SellPlanStore"),
+            "the screen names the plan store directly — the write belongs behind the view model"
         )
     }
 }
