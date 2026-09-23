@@ -73,12 +73,25 @@ final class SyncMonitor {
     /// is what was meant all along.
     @ObservationIgnored private nonisolated(unsafe) var observer: (any NSObjectProtocol)?
 
-    /// - Parameter mode: anything but `.cloudKit` starts (and stays)
-    ///   `.unavailable` — there's no mirror, so nothing is in flight and an
-    ///   empty collection is the whole truth. This is what saves every caller
-    ///   from having to check the mode itself.
-    init(mode: StorageMode) {
+    /// Called on the main actor whenever this device's copy is known current
+    /// or known to be the only copy (`009`, plan Q3) — the sell plan's
+    /// carry-over runs here. A `let`, so observation ignores it.
+    private let onSettled: (() -> Void)?
+
+    /// - Parameters:
+    ///   - mode: anything but `.cloudKit` starts (and stays) `.unavailable` —
+    ///     there's no mirror, so nothing is in flight and an empty collection
+    ///     is the whole truth. This is what saves every caller from having to
+    ///     check the mode itself.
+    ///   - onSettled: called once here for `.ephemeral` — an in-memory store no
+    ///     other device can touch — and **never** here for `.localOnly`: that
+    ///     is the synced store opened without its mirror for one launch, so a
+    ///     write made now would export next launch from a copy of unknown age.
+    ///     Skipping costs one launch. After that, see `record(_:)`.
+    init(mode: StorageMode, onSettled: (() -> Void)? = nil) {
+        self.onSettled = onSettled
         phase = mode == .cloudKit ? .unknown : .unavailable
+        if mode == .ephemeral { settle() }
         guard mode == .cloudKit else { return }
 
         observer = NotificationCenter.default.addObserver(
@@ -108,11 +121,37 @@ final class SyncMonitor {
     /// several passes, and "it'll appear here as it arrives" should mean it.
     private(set) var completedImports = 0
 
+    /// How many times `onSettled` has run — bumped right after each call.
+    ///
+    /// The Dashboard and the Plans tab reload on this as well as on
+    /// `completedImports`, because a failed setup settles without moving the
+    /// import count: without it, the launch tab would keep a stale zero.
+    private(set) var settledCount = 0
+
+    /// The hook fires on two **events**, not on the `.unavailable` edge:
+    /// `phase(after:from:)` maps *any* finished failure to `.unavailable`, a
+    /// failed import included — and a failed import is exactly the case where
+    /// this device's copy may be stale, so it must never settle.
+    ///
+    /// - A successful import: the copy is current.
+    /// - A finished failed setup: the signed-out signature T051 recorded, where
+    ///   no import ever follows, so this device's copy is the only one.
+    ///
+    /// The hook runs **before** `completedImports` moves, by construction
+    /// rather than by the unspecified order of two `onChange` handlers, so a
+    /// screen refetching on the bump already sees what the hook wrote.
     func record(_ event: SyncEvent) {
         phase = Self.phase(after: event, from: phase)
-        if event.kind == .importChanges, event.isFinished, event.succeeded {
-            completedImports += 1
-        }
+        let imported = event.kind == .importChanges && event.isFinished && event.succeeded
+        let signedOut = event.kind == .setup && event.isFinished && !event.succeeded
+        if imported || signedOut { settle() }            // never on a failed import
+        if imported { completedImports += 1 }            // after the hook
+    }
+
+    /// The hook, then the count.
+    private func settle() {
+        onSettled?()
+        settledCount += 1
     }
 
     /// What the four empty-state call sites actually ask. `.unknown` counts:

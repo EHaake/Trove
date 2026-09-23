@@ -244,6 +244,30 @@ struct UITestSeedTests {
         #expect(seeded.wishlistItem.itemsSoldToward?.count == 1)
     }
 
+    // MARK: - 009, the carry-over at a seeded launch
+
+    /// An in-memory launch now runs the sell plan's carry-over the moment its
+    /// monitor is built, after the seeds. Every row the existing seeds write
+    /// goes through `WishlistItem.init`, which stamps it checked, so the
+    /// carry-over must find nothing to do — the starting states every earlier
+    /// UI test was written against stay as they were. The sold seed's wanted
+    /// item has a sold-toward history, so an unchecked one would be carried.
+    @Test func theExistingSeedsLeaveTheCarryOverNothingToDo() throws {
+        let store = try TroveStore.make(isUITesting: true)
+        try #require(store.mode == .ephemeral)
+
+        let seeding = ModelContext(store.container)
+        try UITestSeed.sellPlan(into: seeding, now: now)
+        try UITestSeed.sold(into: seeding, now: now)
+
+        let context = ModelContext(store.container)
+        let wanted = try context.fetch(FetchDescriptor<WishlistItem>())
+        try #require(wanted.count == 2)
+        try #require(wanted.contains { !($0.itemsSoldToward ?? []).isEmpty }, "a row the carry-over would take if it were unchecked")
+
+        #expect(try SellPlanStore.carryOver(in: context, at: now) == 0)
+    }
+
     // MARK: - Private
 
     /// The seed run into a context over the container the app itself builds

@@ -200,7 +200,7 @@ Handoff notes for the pause reports:
   mutation recorded; the new suite in the count.
 
   **Done:** 2026-09-22. `SellPlanStore` (create, delete, carryOver, runCarryOver) and `SellPlanStoreTests` (16, every persisted read on a second context). Mutations, each red: second create rewrites the date; bought guard dropped; `itemsSoldToward` cleared; selection kept (active leg — the completed leg can't see it, the purchase already emptied the selection); one item's sale cleared; entry deleted; delete's nil-stamp dropped (unchecked leg only); checked filter dropped from the fetch (resurrection leg's checked-date line, idempotency, unchecked-delete — its plan-nil line stays green because `awaitsCarryOver` re-checks, and goes red when both layers go); count only the selection; stamp only planned rows (all-six-checked leg only, idempotency green as predicted); `createdAt` written; `runCarryOver`'s save removed. After the per-task review: create/delete stamping unconditionally → red (the "only when nil" legs). Untested: `runCarryOver`'s `hasChanges` condition and its rollback branch — left for the sweep. Orchestrator re-run of `scripts/verify.sh`: 1660 tests in 228 suites passed.
-- [ ] **T004 — `SyncMonitor.onSettled` and the carry-over at launch. `review: per-task`.**
+- [x] **T004 — `SyncMonitor.onSettled` and the carry-over at launch. `review: per-task`.**
   Per plan §4 and Q3 (revised at sign-off, finding B1). `SyncMonitor.init(mode:onSettled:)`
   (default nil) and `private(set) var settledCount`; `settle()` (hook, then
   the count) called at the end of `init` **for `.ephemeral` only** — never
@@ -231,6 +231,7 @@ Handoff notes for the pause reports:
   `scripts/verify.sh ui` once, green with the same count as before the task
   (the seeds moved; every existing UI test must still start from its own
   state); mutations recorded.
+  **Done:** 2026-09-22. `SyncMonitor.init(mode:onSettled:)`, `settledCount`, `settle()` at init for `.ephemeral` only and in `record(_:)` per plan §4; `TroveApp.init` moves both seeds above the monitor and passes `SellPlanStore.runCarryOver` over the main context. Seven G8 tests plus one in `UITestSeedTests`. Mutations, each red: hook after the `completedImports` bump (ordering leg); trigger on the `wasWaiting && !mayStillBeImporting` edge (failed-import leg, and the second-import leg); fire at init in `.localOnly` (both parameterized cases); `.ephemeral` init call dropped; fire on exports; after review, bump `settledCount` before the hook (failed-setup and import legs); `WishlistItem.init` not stamping → `theExistingSeedsLeaveTheCarryOverNothingToDo` red (today's seeds leave the launch carry-over nothing to do). The launch wiring — the seeds above the monitor, and the monitor running `SellPlanStore.runCarryOver` over the main context — has no test in this task; T014's first UI test covers it end to end by launching with a seeded pre-009 row and seeing it arrive as a plan, not by a source scan. Orchestrator re-run of `scripts/verify.sh`: 1667 tests in 228 suites passed; `scripts/verify.sh ui`: 25 tests, 0 failures (baseline 25).
   **Phase 1 closes here — `walkthrough: none`; after its review, run on.**
 
 ## Phase 2 — View models · walkthrough: none — the view models the screens will read; no view calls any new member yet, and the router's new tab has no entry in the tab bar until Phase 4
@@ -542,3 +543,5 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T002 — `sdd-implementer` | `opus` | ~71k (harness) | Done first pass; no miss |
 | T003 — `sdd-implementer` | `opus` | ~80k + ~86k follow-up (harness) | Done first pass; review follow-ups applied by the same agent |
 | T003 — `skeptical-reviewer` per-task | `opus` | ~48k (harness) | Signed off; 0 blocking, 5 non-blocking (4 applied: only-when-nil stamps tested, two vacuous `!= createdAt` asserts made fixture checks, two doc comments); `runCarryOver`'s untested branches carried to the sweep |
+| T004 — `sdd-implementer` | `opus` | ~64k + ~75k follow-up (harness) | Done first pass; review follow-ups applied by the same agent. Red-run helper widened for parameterized test names |
+| T004 — `skeptical-reviewer` per-task | `opus` | ~47k (harness) | Signed off; 0 blocking, 3 non-blocking: 2 applied (hook-before-`settledCount` pinned; seeds-leave-nothing test); 3rd — does a signed-in device launched offline finish setup *failed* and so run the carry-over on a stale copy? — already T015's person step; carried to the sweep |

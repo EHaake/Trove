@@ -30,10 +30,53 @@ struct TroveApp: App {
             // worth testing, and a `ModelContainer` built inline in an `App`
             // initialiser can't be.
             store = try TroveStore.make(isUITesting: Self.isUITesting)
+            // 009: the UI-test seeds run here, above the monitor, rather than
+            // at the end of this initialiser. They need only the store, and an
+            // in-memory monitor settles — runs the sell plan's carry-over — the
+            // moment it is built, so a seed written after it would miss the one
+            // carry-over its launch gets. Seeded first, an in-memory launch
+            // carries a seeded pre-009 row exactly as an upgrade would (plan
+            // Q3, Q18).
+            // 003: the Sell Plan's seeded market history, for the one UI test
+            // that needs a rising, a flat, a neutral and a falling candidate.
+            // Gated on the store that was actually built being the in-memory
+            // one — not on a second read of the launch argument above — so it
+            // can only ever add rows to a test launch's own stores.
+            if UITestSeed.shouldSeed(mode: store.mode, arguments: ProcessInfo.processInfo.arguments) {
+                // Loud on purpose, and reachable only on a test launch: a seed
+                // that half-wrote would leave the test asserting against a
+                // collection nobody described.
+                do {
+                    try UITestSeed.sellPlan(into: store.container.mainContext, now: .now)
+                } catch {
+                    fatalError("Could not seed the UI test's collection: \(error)")
+                }
+            }
+            // 006: the sold collection, for the UI test that reads the
+            // Dashboard's Sold card and the Items tab's Sold side. Its own
+            // argument and its own guard, gated the same structural way on
+            // the store that was actually built — so `-uiTesting` alone, and
+            // `-seedSellPlan`, keep the starting states every UI test before
+            // this one was written against (plan Q10).
+            if UITestSeed.shouldSeedSold(mode: store.mode, arguments: ProcessInfo.processInfo.arguments) {
+                do {
+                    try UITestSeed.sold(into: store.container.mainContext, now: .now)
+                } catch {
+                    fatalError("Could not seed the UI test's sold collection: \(error)")
+                }
+            }
             // Built from the mode rather than independently: a store with no
             // CloudKit mirror has nothing to wait for, and the monitor is
             // what keeps every empty state from having to know that.
-            syncMonitor = SyncMonitor(mode: store.mode)
+            //
+            // 009: the monitor also decides when this device's copy is safe
+            // to run the sell plan's carry-over against — at once for the
+            // in-memory store, on a successful import or a signed-out setup
+            // for the synced one, never on a local-only launch (plan Q3).
+            let context = store.container.mainContext
+            syncMonitor = SyncMonitor(mode: store.mode) {
+                SellPlanStore.runCarryOver(in: context, now: .now)
+            }
             // The appearance choice lives in `UserDefaults`, read synchronously
             // so the first frame draws in the right palette. Under the in-memory
             // (`.ephemeral`) store a UI-test launch built, it reads from a
@@ -66,34 +109,6 @@ struct TroveApp: App {
             // independent of the seed's own argument (it applies to all
             // UI-test launches, not just seeded ones).
             UserDefaultsPhotoNoticeStore.resetForUITesting(mode: store.mode)
-            // 003: the Sell Plan's seeded market history, for the one UI test
-            // that needs a rising, a flat, a neutral and a falling candidate.
-            // Gated on the store that was actually built being the in-memory
-            // one — not on a second read of the launch argument above — so it
-            // can only ever add rows to a test launch's own stores.
-            if UITestSeed.shouldSeed(mode: store.mode, arguments: ProcessInfo.processInfo.arguments) {
-                // Loud on purpose, and reachable only on a test launch: a seed
-                // that half-wrote would leave the test asserting against a
-                // collection nobody described.
-                do {
-                    try UITestSeed.sellPlan(into: store.container.mainContext, now: .now)
-                } catch {
-                    fatalError("Could not seed the UI test's collection: \(error)")
-                }
-            }
-            // 006: the sold collection, for the UI test that reads the
-            // Dashboard's Sold card and the Items tab's Sold side. Its own
-            // argument and its own guard, gated the same structural way on
-            // the store that was actually built — so `-uiTesting` alone, and
-            // `-seedSellPlan`, keep the starting states every UI test before
-            // this one was written against (plan Q10).
-            if UITestSeed.shouldSeedSold(mode: store.mode, arguments: ProcessInfo.processInfo.arguments) {
-                do {
-                    try UITestSeed.sold(into: store.container.mainContext, now: .now)
-                } catch {
-                    fatalError("Could not seed the UI test's sold collection: \(error)")
-                }
-            }
         } catch {
             // Reachable only once the CloudKit configuration has already
             // failed and been retried without it, so the remaining causes are

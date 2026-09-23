@@ -149,4 +149,120 @@ struct SyncMonitorTests {
             #expect(SyncMonitor.phase(after: event, from: startingFrom) == startingFrom, "\(event)")
         }
     }
+
+    // MARK: - When this device's copy is safe to write from (009, G8)
+
+    /// An in-memory store is the only copy there is, so it settles at once.
+    @Test func anInMemoryStoreSettlesOnceAtLaunch() {
+        let probe = SettleProbe()
+        let monitor = SyncMonitor(mode: .ephemeral, onSettled: probe.hook)
+
+        #expect(probe.calls == 1)
+        #expect(monitor.settledCount == 1)
+    }
+
+    /// `.localOnly` is the synced store opened without its mirror for one
+    /// launch — a copy of unknown age — and `.cloudKit` hasn't heard anything
+    /// yet. Neither may settle before an event says so.
+    @Test(arguments: [StorageMode.localOnly, .cloudKit])
+    func aStoreThatMayBeStaleDoesNotSettleAtLaunch(mode: StorageMode) {
+        let probe = SettleProbe()
+        let monitor = SyncMonitor(mode: mode, onSettled: probe.hook)
+
+        #expect(probe.calls == 0)
+        #expect(monitor.settledCount == 0)
+    }
+
+    /// Each landed import settles once, and the hook sees the import count
+    /// before it moves — so a screen refetching on the bump already sees what
+    /// the hook wrote.
+    @Test func aSuccessfulImportSettlesBeforeItIsCounted() {
+        let probe = SettleProbe()
+        let monitor = SyncMonitor(mode: .cloudKit, onSettled: probe.hook)
+        probe.monitor = monitor
+
+        monitor.record(finished(.importChanges, succeeded: true))
+        #expect(probe.importCountsSeen == [0])
+        #expect(probe.settledCountsSeen == [0])
+        #expect(monitor.completedImports == 1)
+        #expect(monitor.settledCount == 1)
+
+        monitor.record(finished(.importChanges, succeeded: true))
+        #expect(probe.importCountsSeen == [0, 1])
+        #expect(probe.settledCountsSeen == [0, 1], "the hook runs before settledCount moves")
+        #expect(monitor.completedImports == 2)
+        #expect(monitor.settledCount == 2)
+    }
+
+    /// The signed-out signature: no import will ever follow, so this device's
+    /// copy is the only one — and a failed setup moves no import count, which
+    /// is why `settledCount` exists.
+    @Test func aFinishedFailedSetupSettlesOnce() {
+        let probe = SettleProbe()
+        let monitor = SyncMonitor(mode: .cloudKit, onSettled: probe.hook)
+        probe.monitor = monitor
+
+        monitor.record(started(.setup))
+        monitor.record(finished(.setup, succeeded: false))
+
+        #expect(probe.calls == 1)
+        #expect(probe.settledCountsSeen == [0], "the hook runs before settledCount moves")
+        #expect(monitor.settledCount == 1)
+        #expect(monitor.completedImports == 0)
+    }
+
+    /// The stale-copy case. The phase reads `.unavailable` exactly as it does
+    /// for a signed-out device, which is why the trigger is the event and not
+    /// that edge: a copy that failed to import may be missing a deletion made
+    /// on another device.
+    @Test func aFailedImportAfterAGoodSetupNeverSettles() {
+        let probe = SettleProbe()
+        let monitor = SyncMonitor(mode: .cloudKit, onSettled: probe.hook)
+
+        monitor.record(started(.setup))
+        monitor.record(finished(.setup, succeeded: true))
+        monitor.record(started(.importChanges))
+        monitor.record(finished(.importChanges, succeeded: false))
+
+        #expect(monitor.phase == .unavailable)
+        #expect(probe.calls == 0)
+        #expect(monitor.settledCount == 0)
+    }
+
+    /// Exports are this device's own changes going out, and an in-flight
+    /// event has finished nothing.
+    @Test func exportsAndInFlightEventsNeverSettle() {
+        let probe = SettleProbe()
+        let monitor = SyncMonitor(mode: .cloudKit, onSettled: probe.hook)
+
+        for event in [
+            started(.exportChanges),
+            finished(.exportChanges, succeeded: true),
+            finished(.exportChanges, succeeded: false),
+            started(.setup),
+            started(.importChanges),
+        ] {
+            monitor.record(event)
+        }
+
+        #expect(probe.calls == 0)
+        #expect(monitor.settledCount == 0)
+    }
+}
+
+/// Counts calls to `onSettled`, and records what the monitor's import count
+/// and settle count read at each one — both must still hold their old values
+/// inside the hook. `weak`, because the monitor holds the hook that holds
+/// this.
+private final class SettleProbe {
+    weak var monitor: SyncMonitor?
+    private(set) var importCountsSeen: [Int] = []
+    private(set) var settledCountsSeen: [Int] = []
+
+    var calls: Int { importCountsSeen.count }
+
+    func hook() {
+        importCountsSeen.append(monitor?.completedImports ?? -1)
+        settledCountsSeen.append(monitor?.settledCount ?? -1)
+    }
 }
