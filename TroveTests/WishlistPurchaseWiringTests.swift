@@ -17,11 +17,12 @@ struct WishlistPurchaseWiringTests {
     private nonisolated static let list = "Trove/Views/Wishlist/WishlistView.swift"
     private nonisolated static let detail = "Trove/Views/Wishlist/WishlistDetailView.swift"
     private nonisolated static let plan = "Trove/Views/Wishlist/SellPlanView.swift"
+    private nonisolated static let plans = "Trove/Views/Plans/PlansView.swift"
 
-    /// The three screens that can mark an entry bought. Not the sheet: it
-    /// hands a `Purchase` to its host and learns nothing about what became
-    /// of it.
-    private nonisolated static let purchaseHosts = [list, detail, plan]
+    /// The four screens that can mark an entry bought — the Plans tab the
+    /// fourth since 009 (Q13). Not the sheet: it hands a `Purchase` to its
+    /// host and learns nothing about what became of it.
+    private nonisolated static let purchaseHosts = [list, detail, plan, plans]
 
     /// The spec's field order, twice over: the five elements are *declared* in
     /// that order, and the sheet's one column *composes* them in that order —

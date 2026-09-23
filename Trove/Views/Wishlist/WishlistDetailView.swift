@@ -418,10 +418,12 @@ struct WishlistDetailView: View {
 
     // MARK: - Sell Plan
 
-    /// The one action on this screen, and deliberately the only route to the
-    /// Sell Plan anywhere — spec.md is explicit that it's reached from this
-    /// screen and not from the list rows. A row shortcut was built at T036/T041
-    /// and removed after review; `WishlistView` documents its absence.
+    /// The one action on this screen, and deliberately the wishlist's only
+    /// route to the Sell Plan — spec.md is explicit that it's reached from
+    /// this screen and not from the wishlist's rows. A row shortcut was built
+    /// at T036/T041 and removed after review; `WishlistView` documents its
+    /// absence. Since 009 the Plans tab's rows open a plan too, which is the
+    /// other route and the only one outside the wishlist.
     ///
     /// A single button rather than the plan rendered inline: plan.md is
     /// explicit that showing it automatically would overstate what it currently

@@ -430,7 +430,7 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green; the measured width in the Done note.
 
   **Done:** 2026-09-23. `SideSwitch<Side: Hashable>` with `SideSwitchMetrics` (halfWidth 62, height 32, slideDuration 0.2, `labelFont(isActive:)`); the Items `init(side:select:)` keeps every word, identifier and measurement; the Plans one uses `SellPlanCopy` labels, `plans.sideSwitch`, and a **69 pt** half — measured: at 11 pt mono Owned 33, Sold 27, Active 40, Completed 60 pt (regular and medium equal); 62 pt cannot hold Completed with 4 pt each side, 69 is the narrowest whole point that can. `ItemListView.swift` unchanged; `ItemListSidesWiringTests` follows the constant (value and scan text). New `PlansWiringTests.everyLabelOfBothSwitchesFitsItsHalf` (G18). Mutation: Plans' half at 50 pt → red (Completed, both weights). `scripts/verify.sh`: 1710 tests in 233 suites passed.
-- [ ] **T011 — `PlansView`.**
+- [x] **T011 — `PlansView`.**
   Per plan §11, Q8, Q12, Q13. New `Trove/Views/Plans/PlansView.swift` with its
   private `PlanRowView`, exactly as plan §11 describes. Not yet in the tab bar
   (T012). Pattern: `Trove/Views/Wishlist/WishlistView.swift` for the file
@@ -456,6 +456,7 @@ Handoff notes for the pause reports:
   `TroveTests/PlansWiringTests.swift`, `TroveTests/WishlistPurchaseWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
+  **Done:** 2026-09-23. `Trove/Views/Plans/PlansView.swift` (built from the new folder with no `.pbxproj` edit) and its private `PlanRowView`, per plan §11: header with the Plans `SideSwitch` and a per-side sort badge, the `List` with Buy as the leading swipe on Active rows only and a rust delete swipe on both sides, the purchase sheet, the refusal and delete alerts, `.refreshable`, reloads on `completedImports` and `settledCount`, the router request applied on appear; whole-row tap target (`.contentShape`). Eight G19 legs in `PlansWiringTests`; the Plans host added to `purchaseHosts`; `findItemsToSell`'s "only route" comment corrected. Mutations, each red: Buy outside the Active gate; cancel closure emptied; `formattedAsWholeCurrency` and `.currency(` in the row; `SellPlanCopy.setAside(` in place of `row.lines`; `RowThumbnail` outside its gate; `isManualOrder: { _ in true }`; the `settledCount` reload dropped; plus the delete swipe's rust tint removed → `DestructiveColourPolicyTests` red naming `PlansView.swift:251` (now 15 sites, 9 system-drawn, 6 app-drawn). Which clause each host passes to `SellPlanCopy.deleteMessage(isCompleted:)` is guarded by no automated test and is read at T015 (plan §11); this screen passes `row.isCompleted`. The sort-change reload has no unit test. `scripts/verify.sh`: 1718 tests in 233 suites passed.
 - [ ] **T012 — The fourth tab and its icon.**
   Per plan §11, Q15, Q17. `design/icons/tab-plans.svg` as plan Q15 draws it,
   copied into `Trove/Assets.xcassets/TabPlans.imageset/` with
@@ -606,3 +607,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T009d — device check (`general-purpose`, simulator tools) | `opus` | ~141k (harness) | The Delete word samples exactly `accentRustText` (#B8674F dark, #8E3A24 light) and Buy exactly brass, on iOS 27.0 and 26.5 — `.tint` wins over the cascade; Buy and Delete are separate capsules (~11 pt gap). The lone Delete on a completed plan (stray gap?) unreachable before the Plans tab — carried to T015 |
 | Phase 3 — the person's walkthrough | — | — | Attested 2026-09-23 on the right build ("Looks good. Continue"), after two findings (T009a→T009c, T009b) and one standard (T009d). UI suite at `756edc7`: 26 tests, 0 failures (T009c's test added). T009b–T009d had no phase review of their own; they ride in Phase 4's review bundle |
 | T010 — `sdd-implementer` | `opus` | ~58k (harness) | Done first pass; no miss |
+| T011 — `sdd-implementer` | `opus` | ~124k (harness) | Done first pass; no miss. Chose the empty states' marks (TabPlans, TabWishlist, iCloud) — for the phase review |

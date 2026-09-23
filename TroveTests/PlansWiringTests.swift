@@ -5,7 +5,8 @@ import Testing
 @testable import Trove
 
 /// How the Plans tab is wired (spec `009`). T010 opens it with G18; T011
-/// extends it.
+/// adds G19, the screen's view-body facts, as source scans that each
+/// `#require` their anchor.
 @Suite("Plans wiring")
 @MainActor
 struct PlansWiringTests {
@@ -44,6 +45,195 @@ struct PlansWiringTests {
                 }
             }
         }
+    }
+
+    // MARK: - The screen (plan §11, G19)
+
+    private static let view = "Trove/Views/Plans/PlansView.swift"
+
+    /// G19, Q13: Buy from a row is the leading swipe on Active rows only.
+    /// The whole leading block must be one `if viewModel.side == .active`
+    /// and nothing else — compared whole, so a button moved outside the gate
+    /// (a completed row offering Buy) or an `else` beside it fails — and the
+    /// gated button is the Wishlist's Buy: its word, its glyph, the menu row's
+    /// spoken name, and the staging it writes.
+    ///
+    /// Mutation (T011): the Buy button moved outside the gate → red.
+    @Test func theBuySwipeIsTheLeadingBlockOnActiveRowsOnly() throws {
+        let code = try SourceScan.production(Self.view)
+
+        let blocks = SourceScan.closureBodies(after: ".swipeActions(edge: .leading)", in: code)
+        try #require(blocks.count == 1, "the plan rows carry \(blocks.count) leading swipe blocks, expected exactly 1")
+        let leading = blocks[0].trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let gate = "if viewModel.side == .active"
+        let gated = SourceScan.closureBodies(after: gate, in: leading)
+        try #require(gated.count == 1, "the leading swipe holds \(gated.count) Active gates, expected exactly 1: \(leading)")
+        #expect(
+            leading == "\(gate) {\(gated[0])}",
+            "the leading swipe composes something outside its Active gate — a completed row would offer it (Q13): \(leading)"
+        )
+
+        let buy = gated[0]
+        #expect(buy.contains("Text(PurchaseCopy.swipeBuy)"), "the Buy button doesn't read the swipe's own word: \(buy)")
+        #expect(buy.contains("Image(\"ActionBuy\")"), "the Buy button wears no bag glyph: \(buy)")
+        #expect(
+            buy.contains(".accessibilityLabel(PurchaseCopy.markAsBought)"),
+            "the Buy button doesn't say the menu row's own name to VoiceOver: \(buy)"
+        )
+        #expect(buy.contains("planBeingBought = row"), "the Buy button doesn't stage the row for the purchase sheet: \(buy)")
+    }
+
+    /// G19, Q12: the trailing swipe stages the row for the delete alert and
+    /// names nothing about buying.
+    @Test func theTrailingSwipeStagesTheDeletionAndNamesNoPurchase() throws {
+        let code = try SourceScan.production(Self.view)
+
+        let blocks = SourceScan.closureBodies(after: ".swipeActions(edge: .trailing)", in: code)
+        try #require(blocks.count == 1, "the plan rows carry \(blocks.count) trailing swipe blocks, expected exactly 1")
+        let trailing = blocks[0]
+
+        #expect(trailing.contains("pendingDeletion = row"), "the trailing swipe doesn't stage the row for the delete alert: \(trailing)")
+        #expect(!trailing.contains("PurchaseCopy"), "the trailing swipe names PurchaseCopy — buying is the leading swipe's: \(trailing)")
+    }
+
+    /// G19, criterion 14: one purchase sheet over the staged row, seeded by
+    /// the view model's factory, confirming through `markBought` — and a
+    /// cancel closure that clears the staging, read as that closure alone
+    /// (the `015` T011a lesson: a count over the whole sheet is satisfied by
+    /// the confirm closure's line while cancel does nothing).
+    ///
+    /// Mutation (T011): the cancel closure emptied → red.
+    @Test func thePurchaseSheetIsHostedOnceAndCancelClearsTheStaging() throws {
+        let code = try SourceScan.production(Self.view)
+
+        let marker = ".sheet(item: $planBeingBought, onDismiss: viewModel.load)"
+        #expect(
+            code.ranges(of: ".sheet(item: $planBeingBought").count == 1,
+            "the screen presents \(code.ranges(of: ".sheet(item: $planBeingBought").count) purchase sheets, expected exactly 1"
+        )
+        let bodies = SourceScan.closureBodies(after: marker, in: code)
+        try #require(bodies.count == 1, "no `\(marker)` — the sheet must re-read the rows on dismiss, which moves a bought row to Completed")
+        let sheet = bodies[0]
+
+        #expect(sheet.contains("PurchaseFormView("), "the sheet composes something other than the shared purchase form: \(sheet)")
+        #expect(
+            sheet.contains("viewModel.makePurchaseFormViewModel(for: row)"),
+            "the sheet seeds its own form instead of the view model's: \(sheet)"
+        )
+        #expect(sheet.contains("viewModel.markBought(row, purchase: purchase)"), "the sheet confirms into something other than `markBought`: \(sheet)")
+
+        let confirm = try #require(SourceScan.closureBodies(after: "confirm:", in: sheet).first, "the sheet has no confirm closure: \(sheet)")
+        #expect(confirm.contains("planBeingBought = nil"), "confirming leaves the sheet staged: \(confirm)")
+
+        let cancel = try #require(SourceScan.closureBodies(after: "cancel:", in: sheet).first, "the sheet has no cancel closure: \(sheet)")
+        #expect(
+            cancel.trimmingCharacters(in: .whitespacesAndNewlines) == "planBeingBought = nil",
+            "cancelling doesn't clear the staging, so the sheet stays up (criterion 14): {\(cancel)}"
+        )
+    }
+
+    /// G19, criterion 8 and Q8: the screen draws no money. The row value
+    /// cannot supply a figure; this is the view-body half — no currency
+    /// formatter, no `Cents` field, and no store reached past the view model.
+    ///
+    /// Mutation (T011): `formattedAsWholeCurrency` added to the row → red;
+    /// a `.currency(` format added → red.
+    @Test func theScreenDrawsNoMoneyAndReachesNoStore() throws {
+        let code = try SourceScan.production(Self.view)
+        try #require(code.contains("struct PlanRowView"), "the scan read no PlanRowView — wrong file?")
+
+        for forbidden in ["formattedAsWholeCurrency", ".currency(", "Cents", "SellPlanStore", "WishlistPurchaseStore"] {
+            #expect(!code.contains(forbidden), "PlansView.swift names `\(forbidden)` — a Plans row shows no money, and writes go through the view model (criterion 8)")
+        }
+    }
+
+    /// G19, Q5 and R2: the row draws the view model's lines and composes none
+    /// of its own, and draws `RowThumbnail` only inside the
+    /// `row.showsThumbnail` gate — the file's one thumbnail.
+    ///
+    /// Mutations (T011): a `SellPlanCopy.setAside(` composed in the row → red;
+    /// `RowThumbnail` drawn outside the gate → red.
+    @Test func theRowDrawsItsLinesAndGatesItsThumbnail() throws {
+        let code = try SourceScan.production(Self.view)
+        let start = try #require(code.range(of: "private struct PlanRowView"), "no PlanRowView in \(Self.view)")
+        let rowCode = String(code[start.lowerBound...])
+
+        #expect(rowCode.contains("ForEach(row.lines"), "the row doesn't draw `row.lines` — which counts show is the view model's call (Q5)")
+        for member in [
+            "SellPlanCopy.setAside(",
+            "SellPlanCopy.soldToward(",
+            "SellPlanCopy.soldTowardPast(",
+            "SellPlanCopy.nothingSetAside",
+            "SellPlanCopy.covered",
+            "SellPlanCopy.bought(",
+        ] {
+            #expect(!rowCode.contains(member), "PlanRowView composes `\(member)` itself instead of drawing `row.lines` (Q5)")
+        }
+
+        #expect(
+            code.ranges(of: "RowThumbnail(").count == 1,
+            "PlansView.swift draws \(code.ranges(of: "RowThumbnail(").count) thumbnails, expected exactly 1"
+        )
+        let gated = SourceScan.closureBodies(after: "if row.showsThumbnail", in: rowCode)
+        try #require(gated.count == 1, "the row has \(gated.count) thumbnail gates, expected exactly 1")
+        #expect(
+            gated[0].trimmingCharacters(in: .whitespacesAndNewlines) == "RowThumbnail(photos: row.photos)",
+            "the thumbnail gate holds something other than the thumbnail — a completed row has no picture and no slot (R2): {\(gated[0])}"
+        )
+    }
+
+    /// G19, criterion 5: the switch reports through `show(_:)` and is never
+    /// bound (no `$` projection in its arguments), so changing side reloads and clears nothing.
+    @Test func theSideSwitchReportsThroughShow() throws {
+        let code = try SourceScan.production(Self.view)
+
+        let calls = SourceScan.argumentLists(of: "SideSwitch", in: code)
+        try #require(calls.count == 1, "the screen builds \(calls.count) side switches, expected exactly 1")
+        #expect(calls[0].contains("viewModel.show"), "the switch doesn't report through `viewModel.show`: \(calls[0])")
+        // A `$` projection, not the closure's own `$0`.
+        let projection = try Regex(#"\$[A-Za-z_]"#)
+        #expect(
+            !calls[0].contains(projection),
+            "the switch is bound — a side change must go through `show(_:)`: \(calls[0])"
+        )
+    }
+
+    /// G19, P5: neither side's Sort By offers a manual order, so no row is
+    /// tagged REORDER. Both dropdowns are required, one per side.
+    ///
+    /// Mutation (T011): a `SortDropdown` with `isManualOrder: { _ in true }`
+    /// → red.
+    @Test func noSortDropdownOffersAManualOrder() throws {
+        let code = try SourceScan.production(Self.view)
+
+        let dropdowns = SourceScan.argumentLists(of: "SortDropdown", in: code)
+        try #require(dropdowns.count == 2, "the screen builds \(dropdowns.count) sort dropdowns, expected 2 — one per side")
+        for dropdown in dropdowns {
+            #expect(
+                dropdown.contains("isManualOrder: { _ in false }"),
+                "a Plans sort dropdown can tag an option REORDER — a plan list has no manual order (P5): \(dropdown)"
+            )
+        }
+    }
+
+    /// Plan Q3 and §11: the screen reloads when an import lands and when the
+    /// carry-over has run — the second is how carried-over plans appear on a
+    /// screen already open. The view model's counters are its own tests';
+    /// the subscription is a view-body fact.
+    ///
+    /// Mutation (T011): the `settledCount` reload dropped → red.
+    @Test func theScreenReloadsOnImportsAndOnTheCarryOver() throws {
+        let code = try SourceScan.production(Self.view)
+
+        #expect(
+            code.contains(".onChange(of: viewModel.completedImports) { viewModel.load() }"),
+            "the screen doesn't reload when an import lands"
+        )
+        #expect(
+            code.contains(".onChange(of: viewModel.settledCount) { viewModel.load() }"),
+            "the screen doesn't reload when the carry-over has run, so carried-over plans wait for the next visit"
+        )
     }
 
     // MARK: - The instrument
