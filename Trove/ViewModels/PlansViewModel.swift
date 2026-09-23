@@ -187,7 +187,9 @@ final class PlansViewModel {
 
         unboughtCount = all.count(where: { !$0.isBought })
         anyAwaitsCarryOver = all.contains(where: \.awaitsCarryOver)
-        entries = Dictionary(uniqueKeysWithValues: planned.map { ($0.id, $0) })
+        // Not `uniqueKeysWithValues`, which traps: nothing in a CloudKit
+        // schema can enforce a unique id, so a duplicate keeps the first.
+        entries = Dictionary(planned.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
         activeRows = active
             .sorted { Self.areInActiveOrder($0, $1, under: activeSortOrder) }

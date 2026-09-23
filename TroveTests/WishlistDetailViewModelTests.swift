@@ -1862,6 +1862,13 @@ struct WishlistPurchaseHostTests {
     /// reload → red; clear `purchaseFailureMessage` in any host's `load()`
     /// → red; report into the property beside it → red (here and, for the
     /// message itself, behaviourally below).
+    ///
+    /// The Plans tab (009), the fourth host, is deliberately not listed: its
+    /// property, its message, the message surviving its reload and its one
+    /// save through the one writer are all asserted behaviourally by the
+    /// four-host tests in this suite, and `CLAUDE.md`'s 2026-09-19 rule keeps
+    /// a scan off a behaviour a view-model test reaches. What that leaves
+    /// untested is its `rollback()` on a real save failure.
     @Test func aRefusedPurchaseRollsBackAndReportsInItsHostsOwnProperty() throws {
         // (file, signature, the properties this host must leave alone)
         let intents: [(String, String, [String])] = [
@@ -2072,9 +2079,13 @@ struct WishlistPurchaseHostTests {
     /// so the property has to survive the reload without surviving the
     /// intent.
     ///
+    /// The Plans tab (009) is the other host that stays on screen after a
+    /// refusal with a different row to buy next, so it gets the same check.
+    ///
     /// Mutation: drop `purchaseFailureMessage = nil` from the top of
-    /// `WishlistViewModel.markBought` → the second purchase succeeds with
-    /// the first one's alert still pending, and this goes red.
+    /// `WishlistViewModel.markBought` or `PlansViewModel.markBought` → the
+    /// second purchase succeeds with the first one's alert still pending,
+    /// and this goes red.
     @Test func aSecondPurchaseAfterARefusedOneClearsTheMessage() throws {
         let container = try makeInMemoryContainer()
         let context = ModelContext(container)
@@ -2103,6 +2114,29 @@ struct WishlistPurchaseHostTests {
         let elsewhere = ModelContext(container)
         let items = try elsewhere.fetch(FetchDescriptor<Item>())
         #expect(items.map(\.name).sorted() == ["Summicron 35mm f/2", "Vox AC15 Custom"], "the refusal wrote nothing; the purchase after it did")
+
+        // The same sequence on the Plans tab, in a store of its own.
+        let plansContainer = try makeInMemoryContainer()
+        let plansContext = ModelContext(plansContainer)
+        let plannedElsewhere = insertWanted("Summicron 35mm f/2", costCents: 240_000, into: plansContext)
+        let plannedHere = insertWanted("Vox AC15 Custom", category: "Music/Amps", costCents: 90_000, into: plansContext)
+        SellPlanStore.create(for: plannedElsewhere, at: plannedOn)
+        SellPlanStore.create(for: plannedHere, at: plannedOn)
+        try plansContext.save()
+
+        let plans = PlansViewModel(modelContext: plansContext, now: { self.now })
+        plans.load()
+        let refusedRow = try #require(plans.activeRows.first { $0.name == "Summicron 35mm f/2" })
+
+        try WishlistPurchaseStore.markBought(plannedElsewhere, purchase: purchase, at: boughtOn, in: plansContext)
+        try plansContext.save()
+
+        #expect(plans.markBought(refusedRow, purchase: purchase) == false)
+        #expect(plans.purchaseFailureMessage == PurchaseCopy.alreadyBought, "the Plans tab's refusal")
+
+        let stillActive = try #require(plans.activeRows.first { $0.name == "Vox AC15 Custom" })
+        #expect(plans.markBought(stillActive, purchase: purchase))
+        #expect(plans.purchaseFailureMessage == nil, "the Plans tab leaves no alert pending either")
     }
 
     // MARK: G19 — the page gets out of the way

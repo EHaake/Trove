@@ -10,8 +10,11 @@ import Testing
 /// `WishlistPurchaseHostTests`.
 ///
 /// Every date here is distinct from every other a broken implementation could
-/// read instead: plan dates never coincide with bought dates, and neither with
-/// `createdAt` or the view model's clock.
+/// read instead: plan dates never coincide with bought dates or the view
+/// model's clock. `createdAt` is the real clock at insert, which the pinned
+/// dates cannot equal — so each sort fixture inserts its rows in an order that
+/// matches none of the orders it checks, and a sort reading `createdAt` goes
+/// red rather than landing on the expected order by insertion.
 @Suite("PlansViewModel")
 struct PlansViewModelTests {
     private let base = Date(timeIntervalSince1970: 1_750_000_000)
@@ -246,19 +249,23 @@ struct PlansViewModelTests {
     // MARK: - G11 sorts
 
     /// Plan §5's Active fixture, chosen so every order differs from the others.
+    /// Inserted Alpha, Charlie, Bravo — an order none of the four sorts
+    /// produces — so `createdAt` read in place of the plan date goes red.
     private func activeFixture(into context: ModelContext) throws {
-        wanted("Bravo", position: 0, planned: day(1), into: context)
         wanted("Alpha", position: 2, planned: day(2), into: context)
         wanted("Charlie", position: 1, planned: day(3), into: context)
+        wanted("Bravo", position: 0, planned: day(1), into: context)
         try context.save()
     }
 
     /// Plan §5's Completed fixture: bought dates and plan dates in different
-    /// orders, so sorting by the plan date reads E, F, D and goes red.
+    /// orders, so sorting by the plan date reads E, F, D and goes red. The
+    /// wishlist positions read D, F, E — none of the side's three orders — so
+    /// an order that abstained and left the tie-break to decide goes red too.
     private func completedFixture(into context: ModelContext) throws {
         let delta = wanted("Delta", position: 0, planned: day(1), into: context)
-        let echo = wanted("Echo", position: 1, planned: day(3), into: context)
-        let foxtrot = wanted("Foxtrot", position: 2, planned: day(2), into: context)
+        let echo = wanted("Echo", position: 2, planned: day(3), into: context)
+        let foxtrot = wanted("Foxtrot", position: 1, planned: day(2), into: context)
         try buy(delta, on: day(5), in: context)
         try buy(echo, on: day(4), in: context)
         try buy(foxtrot, on: day(6), in: context)
@@ -464,17 +471,20 @@ struct PlansViewModelTests {
     }
 
     /// Q3: the two counts the screen reloads on come straight from the
-    /// monitor.
-    @Test func settledCountAndCompletedImportsPassThroughFromTheMonitor() throws {
+    /// monitor, and follow it as it moves.
+    ///
+    /// Mutation: either pass-through hardcoded to 0 → red.
+    @Test func settledCountAndCompletedImportsFollowTheMonitor() throws {
         let context = try makeInMemoryContext()
-        let settled = SyncMonitor(mode: .ephemeral)
-        #expect(settled.settledCount == 1, "an in-memory store settles once at init")
+        let monitor = SyncMonitor(mode: .cloudKit)
+        let viewModel = PlansViewModel(modelContext: context, syncMonitor: monitor, now: { self.now })
+        #expect(viewModel.settledCount == 0)
+        #expect(viewModel.completedImports == 0)
 
-        let viewModel = PlansViewModel(modelContext: context, syncMonitor: settled, now: { self.now })
-        #expect(viewModel.settledCount == 1)
-        #expect(viewModel.completedImports == settled.completedImports)
+        monitor.record(SyncEvent(kind: .importChanges, isFinished: false, succeeded: false))
+        monitor.record(SyncEvent(kind: .importChanges, isFinished: true, succeeded: true))
 
-        let unsettled = PlansViewModel(modelContext: context, now: { self.now })
-        #expect(unsettled.settledCount == 0)
+        #expect(viewModel.settledCount == 1, "a successful import settles")
+        #expect(viewModel.completedImports == 1, "and moves the import count")
     }
 }

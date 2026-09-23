@@ -560,7 +560,10 @@ final class SellPlanViewModel {
     /// `SellPlanStore` is the one writer (009 plan Q4) and callers save — the
     /// `markSold(_:sale:)` shape beside it, one intent, one immediate save,
     /// and a reload so the screen shows what is stored. Returns false, writing
-    /// nothing, with no plan loaded, and on a refused save, which rolls back.
+    /// nothing, with no plan loaded. A refused save is rolled back and
+    /// reloaded, so the plan shows as it is still stored — and is silent on
+    /// screen, as every delete in the app is (009 plan §5): no view reads the
+    /// `saveFailureMessage` it leaves behind.
     @discardableResult
     func deletePlan() -> Bool {
         saveFailureMessage = nil
