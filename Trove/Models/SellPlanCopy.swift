@@ -61,10 +61,6 @@ nonisolated enum SellPlanCopy {
 
     // MARK: - Deleting a plan
 
-    /// The noun the overflow's spoken label names ("More actions for this
-    /// sell plan").
-    static let overflowNoun = "sell plan"
-
     static func deleteTitle(for name: String) -> String {
         "Delete the sell plan for \(name)?"
     }

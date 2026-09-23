@@ -381,13 +381,14 @@ Handoff notes for the pause reports:
   `sdd-implementer` — find the cause (instrumented, not inferred), whether
   it predates `009`, and fix it if routine and inside the footprint; else
   return options for a decision review.
-- [ ] **T009b — Walkthrough decision: Delete is its own button, separate from Buy.**
+- [x] **T009b — Walkthrough decision: Delete is its own button, separate from Buy.**
   Per plan Q12 as amended 2026-09-23. The Sell Plan's toolbar shows Buy and
   a red Delete as two separate buttons (Delete alone on a completed plan);
   no "…" on this screen; `DetailOverflowMenu`'s delete-only initializer
   withdrawn. The G17 delete-gate leg is rewritten to the new shape and
   mutation-checked; the alert and `dismiss()`-only-when-it-took are
   unchanged.
+  **Done:** 2026-09-23. Inside the `offersDelete` gate, a `ToolbarSpacer(.fixed)` then a `Button(role: .destructive)` labelled `SellPlanCopy.deleteConfirm` raising `isConfirmingDelete`; alert and `dismiss()` unchanged. `DetailOverflowMenu` restored to its pre-T009 content; `SellPlanCopy.overflowNoun` removed with its check; plan §3 table and §9 sketch updated. Guard rewritten as `theDeleteIsARedButtonOfItsOwnApartFromBuyOfferedOnlyWhileThereIsAPlan`. Mutations, each red: Delete wrapped in a planted `Menu`; Delete in a `DetailOverflowMenu` (via the Edit initializer); spacer removed; spacer after Delete; Delete ungated (`wishlistItem != nil`); `role: .destructive` dropped. `MenuPolicyTests` unedited, green. For the device pass: that the role alone draws it red in the bar, and no stray gap before a lone Delete on a completed plan. `scripts/verify.sh`: 1708 tests in 231 suites passed.
 
 ## Phase 4 — The Plans tab and the Dashboard card · walkthrough: yes — a fourth tab, Plans, opening on Active: rows with picture, name, category, what is set aside, what sold toward it and a quiet "Covered"; its own sort on each side; swipe right on an Active row to Buy and watch it move to Completed; swipe left to delete; a Completed row opens as a record with the date bought and no actions but Delete; the Overview's "<n> active sell plans" card lands on Active
 
@@ -576,3 +577,5 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T009 — `sdd-implementer` | `opus` | ~95k (harness) | Done first pass; no miss |
 | Phase 3 — `skeptical-reviewer` phase review | `opus` | ~73k (harness) | Signed off; 0 blocking, 7 non-blocking: 1, 2, 3, 5, 6 applied (a UI leg proves the page's tap creates the plan — red when the view skips `openSellPlan()`; the record's "nothing that acts" list widened to generic controls and to `soldSection`/`soldRow`; the page's title and subtitle read one source; the alert's fallback name into `SellPlanCopy`; a comment); 4 transcribed into plan §7 (an explicit create on a waiting row keeps its selection); 7 — `openSellPlan`'s save-failure rollback untested — to the sweep |
 | Phase 3 — follow-ups (`sdd-implementer`, T009's agent resumed) | `opus` | ~122k (harness, cumulative) | All applied; each new guard mutation red; 1708 unit tests green | UI suite at `fa3b501`: 25 tests, 0 failures |
+| T009a — `sdd-implementer` diagnosis | `opus` | ~164k (harness) | Not reproduced: 15 injected-touch trials on two runtimes, 4 and 12 candidates — every tap registers from ~0.07 s; `load()` 2–14 ms; no rebuild under the finger. Suspect: the iCloud export/import after Create's save (new with 009, Create path only), untestable on a signed-out simulator. Probe patch kept in the session scratchpad; next step a hand pass on the person's signed-in simulator. Noted: `SellPlanViewModel.init` runs ~7 times per push (discarded by `State(initialValue:)`) |
+| T009b — `sdd-implementer` | `opus` | ~93k (harness, incl. a follow-up) | Done first pass; no miss |

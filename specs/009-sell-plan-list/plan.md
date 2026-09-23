@@ -469,7 +469,7 @@ last and only when covered; `entrySubtitle`'s three readings.
 | `covered` | `Covered` |
 | `bought(on:)` | `Bought <date, .abbreviated>` |
 | `nothingSoldToward` | `Nothing was sold toward it.` |
-| `overflowNoun` | `sell plan` (→ "More actions for this sell plan") |
+| ~~`overflowNoun`~~ | withdrawn at T009b (Q12 amended 2026-09-23) — Delete is its own button, labelled `deleteConfirm` |
 | `deleteTitle(for:)` | `Delete the sell plan for <name>?` |
 | `deleteMessage(isCompleted:)` | `Nothing you own or sold is touched, and <clause>. What sold toward it stays on the record. This can't be undone.` — clause `it stays on your wishlist` / `the item you bought stays in your collection` |
 | `deleteConfirm`, `deleteCancel` | `Delete`, `Keep` |
@@ -704,8 +704,10 @@ The toolbar:
         ToolbarItem(placement: .topBarTrailing) { /* 015's Buy button, unchanged */ }
     }
     if viewModel.offersDelete {
+        // T009b (Q12 amended 2026-09-23): its own red button, apart from Buy
+        ToolbarSpacer(.fixed, placement: .topBarTrailing)
         ToolbarItem(placement: .topBarTrailing) {
-            DetailOverflowMenu(noun: SellPlanCopy.overflowNoun, delete: { isConfirmingDelete = true })
+            Button(role: .destructive) { isConfirmingDelete = true } label: { Text(SellPlanCopy.deleteConfirm) }
         }
     }
 }

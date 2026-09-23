@@ -449,15 +449,22 @@ struct SellPlanWiringTests {
         }
     }
 
-    /// The "…" holds Delete alone and is offered only while there is a plan
-    /// to delete (plan Q12): one `DetailOverflowMenu`, through its
-    /// delete-only initializer, inside the toolbar's `offersDelete` gate —
-    /// required whole — and no button of its own beside it, so Delete keeps
-    /// its second tap.
+    /// Delete is a red bar button of its own, offered only while there is a
+    /// plan to delete, and set apart from Buy (plan Q12 as amended at the
+    /// Phase 3 walkthrough): inside the toolbar's `offersDelete` gate —
+    /// required whole — a fixed `ToolbarSpacer` and then one top-right item
+    /// holding one `.destructive` button, whose whole action is raising the
+    /// confirmation, so Delete still takes its second tap. The spacer is
+    /// what splits the shared glass capsule iOS 26 draws around adjacent bar
+    /// items; it is required to sit ahead of the item, between it and Buy.
+    /// And no "…" anywhere on the screen: no `DetailOverflowMenu` and no
+    /// system `Menu`, since a menu of one row read as a menu with nothing in
+    /// it.
     ///
-    /// Mutations: give the gate a `Button` → red; move the "…" out of the
-    /// gate, or build it through an Edit initializer → red.
-    @Test func theDeleteIsAnOverflowOfDeleteAloneOfferedOnlyWhileThereIsAPlan() throws {
+    /// Mutations: put the Delete back into a "…" → red; drop the spacer, or
+    /// move it after the item → red; move the button out of the gate → red;
+    /// drop `.destructive` → red.
+    @Test func theDeleteIsARedButtonOfItsOwnApartFromBuyOfferedOnlyWhileThereIsAPlan() throws {
         let code = try SourceScan.production(Self.screen)
 
         let toolbars = SourceScan.closureBodies(after: ".toolbar", in: code)
@@ -473,24 +480,41 @@ struct SellPlanWiringTests {
         try #require(gates.count == 1, "the toolbar carries \(gates.count) `offersDelete` gates, expected exactly 1")
         let gate = try #require(gates.first)
 
+        // The separation: the spacer, whole, ahead of the item.
+        let spacer = try #require(
+            gate.range(of: "ToolbarSpacer(.fixed, placement: .topBarTrailing)"),
+            "nothing sets Delete apart from Buy \u{2014} adjacent bar items share one glass capsule:\n\(gate)"
+        )
+        let item = try #require(
+            gate.range(of: "ToolbarItem(placement: .topBarTrailing)"),
+            "Delete isn't a top-right bar item:\n\(gate)"
+        )
         #expect(
-            gate.contains("ToolbarItem(placement: .topBarTrailing)"),
-            "the \u{2026} isn't a top-right bar item:\n\(gate)"
+            spacer.upperBound <= item.lowerBound,
+            "the spacer sits after Delete rather than between it and Buy:\n\(gate)"
         )
 
-        let everywhere = SourceScan.argumentLists(of: "DetailOverflowMenu", in: code)
-        try #require(everywhere.count == 1, "the plan builds \(everywhere.count) overflow menus, expected exactly 1")
-        let menus = SourceScan.argumentLists(of: "DetailOverflowMenu", in: gate)
-        try #require(menus.count == 1, "the overflow menu isn't inside the offersDelete gate")
+        // One button, red, whose whole action raises the confirmation.
+        let deletes = code.ranges(of: "Button(role: .destructive)").count
+        try #require(deletes == 1, "the plan carries \(deletes) `Button(role: .destructive)` buttons, expected exactly 1")
+        let buttons = SourceScan.closureBodies(after: "Button(role: .destructive)", in: gate)
+        try #require(buttons.count == 1, "the red Delete isn't inside the offersDelete gate:\n\(gate)")
         #expect(
-            trimmed(menus[0]) == "noun: SellPlanCopy.overflowNoun, delete: { isConfirmingDelete = true }",
-            "the \u{2026} is something other than Delete alone, raising the confirmation:\n\(menus[0])"
+            trimmed(buttons[0]) == "isConfirmingDelete = true",
+            "Delete does something other than raise the confirmation \u{2014} it keeps its second tap:\n\(buttons[0])"
+        )
+        #expect(
+            gate.contains("Text(SellPlanCopy.deleteConfirm)"),
+            "the button doesn't wear SellPlanCopy's word Delete:\n\(gate)"
         )
 
+        // No "…" on this screen at all.
         #expect(
-            !gate.contains("Button"),
-            "the delete gate holds a button of its own — Delete sits behind the \u{2026}, with its second tap:\n\(gate)"
+            !code.contains("DetailOverflowMenu"),
+            "the plan builds a \u{2026} again \u{2014} Delete is a button of its own"
         )
+        let systemMenu = try Regex(#"(?:^|[^A-Za-z0-9_])Menu\s*[({]"#)
+        #expect(!code.contains(systemMenu), "the plan builds a menu again \u{2014} Delete is a button of its own")
     }
 
     /// Both sides say what will happen before it happens (criterion 11), in

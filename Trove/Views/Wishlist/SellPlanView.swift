@@ -32,7 +32,7 @@ import SwiftUI
 /// item has been bought the screen reads as a record — the heading, the date
 /// it was bought, and what sold toward it — with no figures, no candidates
 /// and nothing that acts. The one thing either face can still do is delete
-/// the plan, from a "…" holding Delete alone.
+/// the plan, from a Delete button of its own in the bar.
 struct SellPlanView: View {
     @State private var viewModel: SellPlanViewModel
     /// Whether the purchase sheet is up (015 plan §8). A flag rather than the
@@ -107,13 +107,24 @@ struct SellPlanView: View {
                     .accessibilityIdentifier("purchase.sellPlan")
                 }
             }
-            // 009 (plan Q12): deleting the plan, from a "…" holding Delete
-            // alone, so it keeps the second tap every other detail page's
-            // Delete has. Offered on both faces — active beside Buy, and on
-            // the record, where it is the only thing left to do.
+            // 009 (plan Q12, as amended at the Phase 3 walkthrough): deleting
+            // the plan is a bar button of its own, the word Delete in red —
+            // not a "…", which holding one row read as a menu with nothing in
+            // it. Still two taps: the button only raises the alert below.
+            // Offered on both faces — on an active plan after Buy, and on the
+            // record, where it is the only thing left to do.
+            //
+            // The fixed spacer ahead of it is what keeps it physically apart
+            // from Buy: iOS 26 draws adjacent bar items in one shared glass
+            // capsule, and a spacer between them splits it in two.
             if viewModel.offersDelete {
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 ToolbarItem(placement: .topBarTrailing) {
-                    DetailOverflowMenu(noun: SellPlanCopy.overflowNoun, delete: { isConfirmingDelete = true })
+                    Button(role: .destructive) {
+                        isConfirmingDelete = true
+                    } label: {
+                        Text(SellPlanCopy.deleteConfirm)
+                    }
                 }
             }
         }
@@ -240,8 +251,8 @@ struct SellPlanView: View {
     /// line when nothing did. No figures card: its first cell is Selected,
     /// which reads "$0 · 0 of 0 items" once the purchase has released the
     /// selection. No candidates and no rows, so nothing here can act; the
-    /// view model refuses the writes as well (plan Q11), and deleting from
-    /// the "…" is the only thing left to do.
+    /// view model refuses the writes as well (plan Q11), and the bar's Delete
+    /// is the only thing left to do.
     private func record(for wanted: WishlistItem) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {

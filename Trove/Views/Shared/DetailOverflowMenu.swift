@@ -37,18 +37,11 @@ import SwiftUI
 /// through the same `(noun:edit:middle:delete:)` initializer, so both detail
 /// screens now build their rows themselves and the sentence above holds only
 /// as history (`specs/006-mark-as-sold/plan.md` carries the pointer). The
-/// `(noun:edit:delete:)` initializer stays all the same, and is not dead: the preview
+/// two-argument initializer stays all the same, and is not dead: the preview
 /// at the foot of this file calls it, and a preview is invisible to the
 /// source scans that read this file (they stop at it), so a scan reporting
 /// the initializer unused would be wrong — removing it is no part of what
 /// `015` set out to do, and would break that preview.
-///
-/// **`009` adds a third shape, Delete alone** (plan Q12): `(noun:delete:)`,
-/// with no Edit row, for the Sell Plan screen. A plan has nothing to edit —
-/// its selection is made on the page itself — but deleting one should still
-/// take the second tap every other detail page's Delete takes, rather than
-/// sitting bare in the bar a thumb-width from Buy. So `edit` is optional, and
-/// only this initializer leaves it out; the other two still always draw it.
 struct DetailOverflowMenu: View {
     /// One row of the menu: what it says, the SF Symbol beside it, and what
     /// it does. Delete is not a `Row` — its `.destructive` role and its word
@@ -62,8 +55,7 @@ struct DetailOverflowMenu: View {
     /// What the menu acts on, for VoiceOver — "item", "wanted item". Reads as
     /// "More actions for this item".
     let noun: String
-    /// Edit, or nothing — nothing only from `(noun:delete:)`.
-    let edit: Row?
+    let edit: Row
     /// The row between Edit and Delete, or nothing.
     var middle: Row?
     let delete: () -> Void
@@ -85,21 +77,11 @@ struct DetailOverflowMenu: View {
         self.delete = delete
     }
 
-    /// Delete alone, for a screen with nothing to edit (`009`, the Sell Plan).
-    init(noun: String, delete: @escaping () -> Void) {
-        self.noun = noun
-        self.edit = nil
-        self.middle = nil
-        self.delete = delete
-    }
-
     @Environment(\.theme) private var theme
 
     var body: some View {
         Menu {
-            if let edit {
-                Button(edit.title, systemImage: edit.systemImage, action: edit.action)
-            }
+            Button(edit.title, systemImage: edit.systemImage, action: edit.action)
             if let middle {
                 Button(middle.title, systemImage: middle.systemImage, action: middle.action)
             }
