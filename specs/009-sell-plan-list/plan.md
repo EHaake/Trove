@@ -762,12 +762,21 @@ parentheses, trailing closures and modifier chain — must contain `accentRust`.
 One exemption, `SettingsView.swift` (colour via `SettingsActionRow.color`),
 itself pinned: the file must still read `isDestructive ?
 theme.colors.accentRustText`. Anchors `#require`d: the file floor; an empty
-bracket stack at each file's end; at least 13 sites, ≥ 8 system-drawn, ≥ 5
+bracket stack at the end of every file that holds a destructive site (ruled
+at a follow-up review: `SourceScan.stripComments` cuts `//` inside string
+literals — URL literals on 8 lines — so a file with a URL unbalances for
+reasons unrelated to colour; files with no site aren't balance-checked, the
+number checked must equal the number with a site and be ≥ 8, and no file is
+exempted by name; the helper's stale "no source has one" comment is
+corrected, its behaviour unchanged); at least 13 sites, ≥ 8 system-drawn, ≥ 5
 app-drawn. Mutations that must go red: the tree before the fix (naming
 SellPlanView only); the Items owned-row swipe's `.tint` removed; the fix's
 `.tint` moved onto Buy; the fix commented out; the Delete re-spelled
 `Button(SellPlanCopy.deleteConfirm, role: .destructive)` uncoloured; the role
-spelled `ButtonRole.destructive`; Settings' destructive colour made brass. It
+spelled `ButtonRole.destructive` on an uncoloured site (the failure must name
+the site, app-drawn count 6); Settings' destructive colour made brass; a URL
+literal added to `SellPlanView.swift` (the balance anchor red, naming it).
+Every mutation's failure must name what was broken. It
 must not fire on the seven alert buttons, DetailOverflowMenu's row, or
 comments. It proves the colour is named on the control, not that it renders —
 the device check (a screenshot sampled in both appearances against
