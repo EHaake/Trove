@@ -374,7 +374,7 @@ Handoff notes for the pause reports:
   **Phase 3 closes here — pause for the person** (what to try is in the
   handoff note above).
 
-- [ ] **T009a — Walkthrough finding: taps on the Sell Plan are ignored for a moment after it opens.**
+- [x] **T009a — Walkthrough finding: taps on the Sell Plan are ignored for a moment after it opens.**
   Reported at the Phase 3 walkthrough (2026-09-23): arriving on a Sell Plan
   and immediately tapping a candidate to set it aside or release it does
   nothing for a short while; after that, taps work. Diagnosis bundle to the
@@ -389,6 +389,24 @@ Handoff notes for the pause reports:
   mutation-checked; the alert and `dismiss()`-only-when-it-took are
   unchanged.
   **Done:** 2026-09-23. Inside the `offersDelete` gate, a `ToolbarSpacer(.fixed)` then a `Button(role: .destructive)` labelled `SellPlanCopy.deleteConfirm` raising `isConfirmingDelete`; alert and `dismiss()` unchanged. `DetailOverflowMenu` restored to its pre-T009 content; `SellPlanCopy.overflowNoun` removed with its check; plan §3 table and §9 sketch updated. Guard rewritten as `theDeleteIsARedButtonOfItsOwnApartFromBuyOfferedOnlyWhileThereIsAPlan`. Mutations, each red: Delete wrapped in a planted `Menu`; Delete in a `DetailOverflowMenu` (via the Edit initializer); spacer removed; spacer after Delete; Delete ungated (`wishlistItem != nil`); `role: .destructive` dropped. `MenuPolicyTests` unedited, green. For the device pass: that the role alone draws it red in the bar, and no stray gap before a lone Delete on a completed plan. `scripts/verify.sh`: 1708 tests in 231 suites passed.
+  **Done:** 2026-09-23 — not a delay. The person's second walkthrough (on the right build; the first two installs put a stale 17 September build on the simulator — an orchestrator error, see the device-pass memory) found the real cause: taps on the empty parts of a candidate's card do nothing; only the checkbox and the drawn text, figure and dial toggle. The diagnosis's injected taps all landed on drawn content, which is why it could not reproduce. Carried into T009c.
+
+- [ ] **T009c — Walkthrough finding: tapping anywhere on a candidate's card toggles it.**
+  The person, 2026-09-23: only the checkbox and the text, price and desire
+  gauge toggle; tapping an empty part of the card does nothing — make it
+  consistent. The card's upper half (everything above 006's Mark as sold…
+  strip, which stays its own target — 006 Decision 4) toggles wherever it
+  is tapped. Predates `009` (`SellPlanRow`, 003/006). Guard: a UI test that
+  taps an empty point of the card and sees the selection change.
+- [ ] **T009d — The person's standard: a destructive action is always drawn red.**
+  The person, 2026-09-23: "the Delete button needs to be red to indicate a
+  destructive action. This needs to be implemented as standards across the
+  app so that I don't have to manually point it out every time." The
+  Sell Plan's toolbar Delete draws in the app's brass tint (ContentView's
+  `.tint` overrides the role's red), unlike every other Delete. Fix it, make
+  the rule a written standard (`design/tokens.md`, and `CLAUDE.md` in its own
+  commit), and guard it so a new destructive control that isn't red goes
+  red in the suite. Shape by decision review.
 
 ## Phase 4 — The Plans tab and the Dashboard card · walkthrough: yes — a fourth tab, Plans, opening on Active: rows with picture, name, category, what is set aside, what sold toward it and a quiet "Covered"; its own sort on each side; swipe right on an Active row to Buy and watch it move to Completed; swipe left to delete; a Completed row opens as a record with the date bought and no actions but Delete; the Overview's "<n> active sell plans" card lands on Active
 
