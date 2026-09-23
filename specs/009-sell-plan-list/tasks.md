@@ -124,7 +124,7 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green; both mutations recorded verbatim.
 
   **Done:** 2026-09-22. Both fields and `hasSellPlan`/`awaitsCarryOver` on `WishlistItem`; new suite `WishlistSellPlanFieldTests` (2). Mutations: init stamp dropped → `aFreshEntryIsPlanlessAndChecked` red (2 tests, 1 issue); predicate inverted → both red; `@Attribute(.unique)` on `sellPlanCreatedAt` → `CloudKitSchemaTests.schemaMeetsCloudKitRequirements` and `TwoStoreContainerTests.theProductionPairingLoadsAndSplits` red (134060). `ExportSchemaTests`/`ImportSchemaTests` green unedited. `scripts/verify.sh`: 1624 tests in 225 suites passed. Implementer found red xcodebuild runs hang after the count line.
-- [ ] **T002 — `SellPlanCopy` and `SellPlanSummary`.**
+- [x] **T002 — `SellPlanCopy` and `SellPlanSummary`.**
   Per plan §2, §3, Q5–Q7. New `Trove/Models/SellPlanCopy.swift`
   (`nonisolated enum`, no SwiftUI, every string in plan §3's table) and
   `Trove/Models/SellPlanSummary.swift` (`setAsideCount`, `soldTowardCount`,
@@ -155,6 +155,7 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green, both new suites **in the count**;
   mutations recorded.
 
+  **Done:** 2026-09-22. `SellPlanCopy` (9 tests) and `SellPlanSummary` (11 tests); `soldValueCents` now `SellPlanSummary.soldCents(of:)`. Mutations, each red: `>` for `>=` (2 issues); zero-estimate guard dropped (1); selection's value added (1); `currentValueCents` summed (3); `setAside(0)` emitted (2); subtitle fallbacks swapped both ways (1, 2); a shared delete sentence reworded in one branch (2 — and with the literal test also edited to match, the one-sentence-differs test alone still red). `scripts/verify.sh`: 1644 tests in 227 suites passed. The inline entry-point strings in `WishlistDetailViewModel` stay until T008, which rewires them.
 - [ ] **T003 — `SellPlanStore` — create, delete, carry-over. `review: per-task`.**
   Per plan §4, Q2, Q4. New `Trove/Models/SellPlanStore.swift` with the four
   functions plan Q4 declares, callers save except `runCarryOver`
@@ -537,3 +538,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | `skeptical-reviewer` — sign-off re-review | `opus` | ~61k (harness) | Findings 1, 3–12 all FIXED; one NEW blocking: the page's `hasSellPlan` reading `awaitsCarryOver` let a tap on **View** write a plan from a stale copy (B1's path moved from launch to a tap); one non-blocking (`.localOnly` shows "Catching up with iCloud") |
 | Orchestrator — direct fix (loop cap reached) | `claude-opus-5-5` session | — | Took the reviewer's option (b): the page reads the stored plan only, a waiting row reads "Create a sell plan"; plan Q2, R7, §7 and T008/G16 amended; the `.localOnly` wrinkle noted beside R7 as accepted |
 | T001 — `sdd-implementer` | `opus` | ~51k (harness) | Done first pass; no miss. Found: a red run hangs after its count line; verify.sh takes one selector |
+| T002 — `sdd-implementer` | `opus` | ~71k (harness) | Done first pass; no miss |

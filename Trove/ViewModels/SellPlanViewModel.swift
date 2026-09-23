@@ -151,9 +151,11 @@ final class SellPlanViewModel {
 
     /// What those sales actually brought in: `salePriceCents`, the figure the
     /// person recorded, never a current value — the sale is settled and the
-    /// market has nothing left to say about it.
+    /// market has nothing left to say about it. `SellPlanSummary.soldCents`
+    /// is the one sum, so this figure and the Plans rows' covered marker
+    /// cannot read different ones (009 plan Q5).
     var soldValueCents: Int {
-        soldItems.compactMap { $0.sale?.priceCents }.reduce(0, +)
+        SellPlanSummary.soldCents(of: soldItems)
     }
 
     /// Whether the screen carries the third figure and the Sold section at
