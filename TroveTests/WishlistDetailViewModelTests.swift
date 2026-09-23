@@ -1484,10 +1484,17 @@ private struct MarketTestFailure: Error, CustomStringConvertible {
 /// guards sit together in one suite rather than one per host file, because
 /// every claim here is a claim about the three agreeing: split across three
 /// files, each half would pass on its own while the pair disagreed.
-@Suite("Marking a wanted entry bought — the three hosts")
+///
+/// 009 (plan §5, G13) adds a fourth host, the Plans tab's active rows. It
+/// takes its subject from its rows, so every fixture entry below that it
+/// buys carries a plan.
+@Suite("Marking a wanted entry bought — the four hosts")
 struct WishlistPurchaseHostTests {
     private let now = Date(timeIntervalSince1970: 1_783_000_000)
     private let boughtOn = Date(timeIntervalSince1970: 1_781_234_567)
+    /// The fixture plans' date — distinct from `now` and `boughtOn`, so a host
+    /// that re-stamped the plan at purchase would show.
+    private let plannedOn = Date(timeIntervalSince1970: 1_779_876_543)
 
     /// A wanted entry carrying something in every field the purchase moves
     /// across, so the landing comparison below can tell a host that dropped
@@ -1540,10 +1547,15 @@ struct WishlistPurchaseHostTests {
         let context = try makeInMemoryContext()
         let estimated = insertWanted("Summicron 35mm f/2", costCents: 240_000, into: context)
         let unestimated = insertWanted("Vox AC15 Custom", category: "Music/Amps", costCents: 0, into: context)
+        // The Plans tab's subject is a row, and only a planned entry is one.
+        SellPlanStore.create(for: estimated, at: plannedOn)
+        SellPlanStore.create(for: unestimated, at: plannedOn)
         try context.save()
 
         let list = WishlistViewModel(modelContext: context, now: { self.now })
         list.load()
+        let plans = PlansViewModel(modelContext: context, now: { self.now })
+        plans.load()
 
         for subject in [estimated, unestimated] {
             let page = WishlistDetailViewModel(modelContext: context, itemID: subject.id, now: { self.now })
@@ -1560,6 +1572,12 @@ struct WishlistPurchaseHostTests {
             plan.load()
             let fromPlan = plan.makePurchaseFormViewModel()
 
+            let planRow = try #require(
+                plans.activeRows.first { $0.id == subject.id },
+                "\(subject.name) must be an active Plans row for the comparison to mean anything"
+            )
+            let fromPlans = plans.makePurchaseFormViewModel(for: planRow)
+
             // The comparison is over what a host can actually influence. All
             // three return the one `PurchaseFormViewModel`, whose `title` and
             // `confirmLabel` are get-only constants — comparing those across
@@ -1568,7 +1586,7 @@ struct WishlistPurchaseHostTests {
             // to pin. `location` and `condition` are `var`s a host could set
             // after construction, which is a divergence criterion 4 forbids,
             // so they stay.
-            for (host, form) in [("the list", fromList), ("the plan", fromPlan)] {
+            for (host, form) in [("the list", fromList), ("the plan", fromPlan), ("the Plans tab", fromPlans)] {
                 #expect(fromPage.price == form.price, "\(subject.name): the page and \(host) seed the same price")
                 #expect(fromPage.date == form.date, "\(subject.name): the page and \(host) seed the same date")
                 #expect(fromPage.location == form.location)
@@ -1621,6 +1639,9 @@ struct WishlistPurchaseHostTests {
         var boughtDate: Date?
         var wishlistPhotoCount: Int
         var plannedSaleCount: Int
+        /// 009, criterion 3: the plan survives the purchase whichever host
+        /// made it — that is what puts it on the Completed side.
+        var sellPlanCreatedAt: Date?
 
         var description: String { "\(name) @ \(purchasePriceCents), bought \(String(describing: boughtDate))" }
     }
@@ -1655,7 +1676,8 @@ struct WishlistPurchaseHostTests {
             itemPhotoSortOrders: PhotoSelection.inDisplayOrder(item.photos ?? []).map(\.sortOrder),
             boughtDate: wanted.boughtDate,
             wishlistPhotoCount: (wanted.photos ?? []).count,
-            plannedSaleCount: (wanted.plannedSaleItems ?? []).count
+            plannedSaleCount: (wanted.plannedSaleItems ?? []).count,
+            sellPlanCreatedAt: wanted.sellPlanCreatedAt
         )
     }
 
@@ -1680,6 +1702,9 @@ struct WishlistPurchaseHostTests {
         )
         context.insert(candidate)
         wanted.plannedSaleItems = [candidate]
+        // 009: a plan on every host's fixture, since the fourth host can only
+        // buy a planned entry and the comparison needs one fixture for all.
+        SellPlanStore.create(for: wanted, at: plannedOn)
         try context.save()
         return (container, context, wanted)
     }
@@ -1705,11 +1730,22 @@ struct WishlistPurchaseHostTests {
         plan.load()
         #expect(plan.markBought(purchase: purchase))
 
+        // 009, criterion 14: confirming moves the row from Active to Completed.
+        let viaPlans = try seedWorld()
+        let plans = PlansViewModel(modelContext: viaPlans.context, now: { self.now })
+        plans.load()
+        let planRow = try #require(plans.activeRows.first)
+        #expect(plans.markBought(planRow, purchase: purchase))
+        #expect(plans.activeRows.isEmpty, "the bought plan leaves Active")
+        #expect(plans.completedRows.map(\.id) == [viaPlans.wanted.id], "and lands on Completed")
+
         let fromList = try landing(in: viaList.container)
         let fromPage = try landing(in: viaPage.container)
         let fromPlan = try landing(in: viaPlan.container)
+        let fromPlans = try landing(in: viaPlans.container)
         #expect(fromList == fromPage, "the Wishlist row and the page must leave the same thing")
         #expect(fromList == fromPlan, "the Wishlist row and the Sell Plan must leave the same thing")
+        #expect(fromList == fromPlans, "the Wishlist row and the Plans tab must leave the same thing")
 
         // Pinned, so three hosts landing the same wrong thing still fails.
         // Each value differs from the default and from the neighbouring field
@@ -1730,6 +1766,67 @@ struct WishlistPurchaseHostTests {
         #expect(fromList.itemPhotoSortOrders == [0, 1], "both photos moved across, renumbered from zero")
         #expect(fromList.wishlistPhotoCount == 0, "moved, never copied")
         #expect(fromList.plannedSaleCount == 0, "P6: nothing is earmarked toward a purchase that has happened")
+        #expect(fromList.sellPlanCreatedAt == plannedOn, "the plan survives the purchase, on its own date")
+    }
+
+    /// 009, criterion 3: a purchase through any host leaves a planless entry
+    /// planless — no host makes a plan by buying — so it shows on neither
+    /// side of the Plans tab. The Plans tab cannot reach a planless entry at
+    /// all: handed a row for one, it refuses, says so, and writes nothing.
+    @Test func aPurchaseThroughAnyHostLeavesAPlanlessEntryPlanless() throws {
+        func planlessWorld() throws -> (container: ModelContainer, context: ModelContext, wanted: WishlistItem) {
+            let container = try makeInMemoryContainer()
+            let context = ModelContext(container)
+            let wanted = insertWanted("Summicron 35mm f/2", costCents: 240_000, into: context)
+            try context.save()
+            return (container, context, wanted)
+        }
+
+        let viaList = try planlessWorld()
+        let list = WishlistViewModel(modelContext: viaList.context, now: { self.now })
+        list.load()
+        #expect(list.markBought(try #require(list.items.first), purchase: purchase))
+
+        let viaPage = try planlessWorld()
+        let page = WishlistDetailViewModel(modelContext: viaPage.context, itemID: viaPage.wanted.id, now: { self.now })
+        page.load()
+        #expect(page.markBought(purchase: purchase))
+
+        let viaPlan = try planlessWorld()
+        let plan = SellPlanViewModel(modelContext: viaPlan.context, wishlistItemID: viaPlan.wanted.id, now: { self.now })
+        plan.load()
+        #expect(plan.markBought(purchase: purchase))
+
+        for (host, world) in [("the list", viaList), ("the page", viaPage), ("the plan", viaPlan)] {
+            let elsewhere = ModelContext(world.container)
+            let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+            #expect(entry.boughtDate == now, "\(host): the purchase reached the store")
+            #expect(entry.sellPlanCreatedAt == nil, "\(host): buying made no plan")
+            let tab = PlansViewModel(modelContext: elsewhere, now: { self.now })
+            tab.load()
+            #expect(tab.activeRows.isEmpty && tab.completedRows.isEmpty, "\(host): on neither side")
+        }
+
+        let viaPlans = try planlessWorld()
+        let plans = PlansViewModel(modelContext: viaPlans.context, now: { self.now })
+        plans.load()
+        #expect(plans.activeRows.isEmpty, "a planless entry is no Plans row")
+        let stray = PlansViewModel.PlanRow(
+            id: viaPlans.wanted.id,
+            name: viaPlans.wanted.name,
+            categoryPath: viaPlans.wanted.categoryPath,
+            photos: [],
+            lines: [],
+            boughtDate: nil,
+            showsThumbnail: true
+        )
+        #expect(plans.markBought(stray, purchase: purchase) == false)
+        #expect(plans.purchaseFailureMessage == PurchaseCopy.failureMessage, "a refusal is never silent")
+        let elsewhere = ModelContext(viaPlans.container)
+        #expect(try elsewhere.fetch(FetchDescriptor<Item>()).isEmpty, "the Plans tab wrote no item")
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(entry.boughtDate == nil)
+        #expect(entry.sellPlanCreatedAt == nil)
     }
 
     // MARK: G13 — the refused save
@@ -1912,6 +2009,7 @@ struct WishlistPurchaseHostTests {
         let container = try makeInMemoryContainer()
         let context = ModelContext(container)
         let wanted = insertWanted("Summicron 35mm f/2", costCents: 240_000, into: context)
+        SellPlanStore.create(for: wanted, at: plannedOn)
         try context.save()
 
         // A day on from the first purchase, so a host that re-stamped the
@@ -1929,6 +2027,9 @@ struct WishlistPurchaseHostTests {
         page.load()
         let plan = SellPlanViewModel(modelContext: context, wishlistItemID: wanted.id, now: { later })
         plan.load()
+        let plans = PlansViewModel(modelContext: context, now: { later })
+        plans.load()
+        let planRow = try #require(plans.activeRows.first)
 
         try WishlistPurchaseStore.markBought(wanted, purchase: purchase, at: now, in: context)
         try context.save()
@@ -1952,12 +2053,15 @@ struct WishlistPurchaseHostTests {
             "and never in markSold's, which its purchase alert would then read — a refused sale surfacing as a refused purchase"
         )
 
+        #expect(plans.markBought(planRow, purchase: second) == false)
+        #expect(plans.purchaseFailureMessage == PurchaseCopy.alreadyBought, "the Plans tab says it too, in its own property")
+
         let elsewhere = ModelContext(container)
         let items = try elsewhere.fetch(FetchDescriptor<Item>())
-        #expect(items.count == 1, "three refused taps leave the one item the first purchase made")
+        #expect(items.count == 1, "four refused taps leave the one item the first purchase made")
         #expect(items.map(\.purchasePriceCents) == [219_500], "at the first purchase's price, not the second's")
         let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
-        #expect(entry.boughtDate == now, "and the original marker, three times over")
+        #expect(entry.boughtDate == now, "and the original marker, four times over")
     }
 
     /// The other half of T012b's message rule, and the reason every host
