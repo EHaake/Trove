@@ -156,7 +156,7 @@ Handoff notes for the pause reports:
   mutations recorded.
 
   **Done:** 2026-09-22. `SellPlanCopy` (9 tests) and `SellPlanSummary` (11 tests); `soldValueCents` now `SellPlanSummary.soldCents(of:)`. Mutations, each red: `>` for `>=` (2 issues); zero-estimate guard dropped (1); selection's value added (1); `currentValueCents` summed (3); `setAside(0)` emitted (2); subtitle fallbacks swapped both ways (1, 2); a shared delete sentence reworded in one branch (2 — and with the literal test also edited to match, the one-sentence-differs test alone still red). `scripts/verify.sh`: 1644 tests in 227 suites passed. The inline entry-point strings in `WishlistDetailViewModel` stay until T008, which rewires them.
-- [ ] **T003 — `SellPlanStore` — create, delete, carry-over. `review: per-task`.**
+- [x] **T003 — `SellPlanStore` — create, delete, carry-over. `review: per-task`.**
   Per plan §4, Q2, Q4. New `Trove/Models/SellPlanStore.swift` with the four
   functions plan Q4 declares, callers save except `runCarryOver`
   (`carryOver`, then one save **only if `context.hasChanges`**, `rollback()`
@@ -199,6 +199,7 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every
   mutation recorded; the new suite in the count.
 
+  **Done:** 2026-09-22. `SellPlanStore` (create, delete, carryOver, runCarryOver) and `SellPlanStoreTests` (16, every persisted read on a second context). Mutations, each red: second create rewrites the date; bought guard dropped; `itemsSoldToward` cleared; selection kept (active leg — the completed leg can't see it, the purchase already emptied the selection); one item's sale cleared; entry deleted; delete's nil-stamp dropped (unchecked leg only); checked filter dropped from the fetch (resurrection leg's checked-date line, idempotency, unchecked-delete — its plan-nil line stays green because `awaitsCarryOver` re-checks, and goes red when both layers go); count only the selection; stamp only planned rows (all-six-checked leg only, idempotency green as predicted); `createdAt` written; `runCarryOver`'s save removed. After the per-task review: create/delete stamping unconditionally → red (the "only when nil" legs). Untested: `runCarryOver`'s `hasChanges` condition and its rollback branch — left for the sweep. Orchestrator re-run of `scripts/verify.sh`: 1660 tests in 228 suites passed.
 - [ ] **T004 — `SyncMonitor.onSettled` and the carry-over at launch. `review: per-task`.**
   Per plan §4 and Q3 (revised at sign-off, finding B1). `SyncMonitor.init(mode:onSettled:)`
   (default nil) and `private(set) var settledCount`; `settle()` (hook, then
@@ -539,3 +540,5 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | Orchestrator — direct fix (loop cap reached) | `claude-opus-5-5` session | — | Took the reviewer's option (b): the page reads the stored plan only, a waiting row reads "Create a sell plan"; plan Q2, R7, §7 and T008/G16 amended; the `.localOnly` wrinkle noted beside R7 as accepted |
 | T001 — `sdd-implementer` | `opus` | ~51k (harness) | Done first pass; no miss. Found: a red run hangs after its count line; verify.sh takes one selector |
 | T002 — `sdd-implementer` | `opus` | ~71k (harness) | Done first pass; no miss |
+| T003 — `sdd-implementer` | `opus` | ~80k + ~86k follow-up (harness) | Done first pass; review follow-ups applied by the same agent |
+| T003 — `skeptical-reviewer` per-task | `opus` | ~48k (harness) | Signed off; 0 blocking, 5 non-blocking (4 applied: only-when-nil stamps tested, two vacuous `!= createdAt` asserts made fixture checks, two doc comments); `runCarryOver`'s untested branches carried to the sweep |
