@@ -268,7 +268,140 @@ struct UITestSeedTests {
         #expect(try SellPlanStore.carryOver(in: context, at: now) == 0)
     }
 
+    // MARK: - 009, the Plans seed (G9)
+
+    /// The Plans seed's own gate, mirrored from the other two: its argument
+    /// alone isn't enough against a store on disk, and neither `-uiTesting`
+    /// nor either other seed's argument fires it. Mutation: gate on the
+    /// arguments alone, and the two persistent modes go red.
+    @Test func thePlansSeedTakesTheInMemoryStoreAndItsOwnArgument() {
+        let every = ["-uiTesting", UITestSeed.argument, UITestSeed.soldArgument, UITestSeed.plansArgument]
+
+        #expect(UITestSeed.shouldSeedPlans(mode: .ephemeral, arguments: ["-uiTesting", UITestSeed.plansArgument]))
+
+        #expect(
+            !UITestSeed.shouldSeedPlans(mode: .cloudKit, arguments: every),
+            "a synced store would be seeded with test data"
+        )
+        #expect(
+            !UITestSeed.shouldSeedPlans(mode: .localOnly, arguments: every),
+            "an on-disk store would be seeded with test data"
+        )
+        #expect(
+            !UITestSeed.shouldSeedPlans(mode: .ephemeral, arguments: ["-uiTesting"]),
+            "-uiTesting alone must keep starting from an empty collection"
+        )
+        #expect(
+            !UITestSeed.shouldSeedPlans(mode: .ephemeral, arguments: ["-uiTesting", UITestSeed.argument, UITestSeed.soldArgument]),
+            "the other seeds' arguments must not also seed the Plans collection"
+        )
+        #expect(
+            !UITestSeed.shouldSeed(mode: .ephemeral, arguments: ["-uiTesting", UITestSeed.plansArgument]),
+            "the Plans argument must not also seed the Sell Plan collection"
+        )
+        #expect(
+            !UITestSeed.shouldSeedSold(mode: .ephemeral, arguments: ["-uiTesting", UITestSeed.plansArgument]),
+            "the Plans argument must not also seed the sold collection"
+        )
+    }
+
+    /// What the Plans seed leaves in the store, read back on a second
+    /// context: the six wanted items in the shapes plan §13 names, and the
+    /// Fuji row the one left unchecked. Mutation: drop any row, or the Fuji
+    /// row's cleared stamp, and this goes red.
+    @Test func thePlansSeedWritesSixWantedItemsInTheirShapes() throws {
+        let context = try seedPlans()
+        let wanted = try context.fetch(FetchDescriptor<WishlistItem>())
+        let byName = Dictionary(uniqueKeysWithValues: wanted.map { ($0.name, $0) })
+        try #require(
+            Set(byName.keys) == ["Summicron 35mm f/2", "Vox AC15", "Hasselblad 80mm", "Rode NT5", "Nikon FM2", "Fuji X100V"],
+            "the seed's wanted items are \(byName.keys.sorted())"
+        )
+        let summicron = try #require(byName["Summicron 35mm f/2"])
+        let vox = try #require(byName["Vox AC15"])
+        let hasselblad = try #require(byName["Hasselblad 80mm"])
+        let rode = try #require(byName["Rode NT5"])
+        let nikon = try #require(byName["Nikon FM2"])
+        let fuji = try #require(byName["Fuji X100V"])
+
+        // Summicron: planned three days back, the Telecaster set aside.
+        #expect(summicron.sellPlanCreatedAt == now - 3 * day)
+        #expect((summicron.plannedSaleItems ?? []).map(\.name) == ["Telecaster"])
+        #expect(!summicron.isBought)
+
+        // Vox: planned two days back, its one candidate sold toward it for
+        // more than the estimate — so the selection is empty and it is
+        // covered.
+        #expect(vox.sellPlanCreatedAt == now - 2 * day)
+        #expect((vox.plannedSaleItems ?? []).isEmpty, "the sale must have emptied the Vox's selection")
+        #expect((vox.itemsSoldToward ?? []).map(\.name) == ["Blues Junior"])
+        #expect(vox.itemsSoldToward?.first?.sale?.priceCents == 110_000)
+        #expect(SellPlanSummary.isCovered(soldCents: 110_000, estimatedCostCents: vox.estimatedCostCents))
+
+        // Hasselblad: planned, sold toward, bought — and not covered.
+        #expect(hasselblad.sellPlanCreatedAt == now - 5 * day)
+        #expect(hasselblad.boughtDate == now - 1 * day)
+        #expect((hasselblad.itemsSoldToward ?? []).map(\.name) == ["NT1-A"])
+        #expect(!SellPlanSummary.isCovered(soldCents: 30_000, estimatedCostCents: hasselblad.estimatedCostCents))
+
+        // Rode and Nikon: no plan, one wanted and one bought.
+        #expect(!rode.hasSellPlan && !rode.isBought)
+        #expect(!nikon.hasSellPlan && nikon.isBought)
+
+        // Fuji: the legacy shape — a selection, no plan, never checked.
+        #expect(fuji.sellPlanCheckedAt == nil, "the Fuji row must be the one no 009 writer checked")
+        #expect(!fuji.hasSellPlan)
+        #expect(fuji.awaitsCarryOver)
+        #expect(
+            wanted.filter { $0.sellPlanCheckedAt == nil }.map(\.name) == ["Fuji X100V"],
+            "every other row went through a writer, which checks it"
+        )
+
+        // What is owned: the Telecaster at $600 and desire 2, the Leica at
+        // desire 5, and the two purchases.
+        let owned = try context.fetch(FetchDescriptor<Item>()).filter { !$0.isSold }
+        #expect(Set(owned.map(\.name)) == ["Telecaster", "Leica M6", "Hasselblad 80mm", "Nikon FM2"])
+        let telecaster = try #require(owned.first { $0.name == "Telecaster" })
+        #expect(telecaster.currentValueCents == 60_000)
+        #expect(telecaster.desireToKeep == 2)
+        #expect(owned.first { $0.name == "Leica M6" }?.desireToKeep == 5)
+    }
+
+    /// One carry-over over the seed — what the launch runs — leaves three
+    /// plans Active, one Completed and two wanted items on neither side,
+    /// read back on a third context after the save. Mutations: the gate
+    /// reading the flag alone is the test above's; a seed row missing, or
+    /// the Fuji row left checked, moves these counts.
+    @Test func oneCarryOverOverThePlansSeedLeavesThreeActiveOneCompletedTwoPlanless() throws {
+        let store = try TroveStore.make(isUITesting: true)
+        try #require(store.mode == .ephemeral)
+        try UITestSeed.plans(into: ModelContext(store.container), now: now)
+
+        let carrying = ModelContext(store.container)
+        #expect(try SellPlanStore.carryOver(in: carrying, at: now) == 1, "the Fuji row is the one the carry-over plans")
+        try carrying.save()
+
+        let wanted = try ModelContext(store.container).fetch(FetchDescriptor<WishlistItem>())
+        let active = wanted.filter { $0.hasSellPlan && !$0.isBought }.map(\.name).sorted()
+        let completed = wanted.filter { $0.hasSellPlan && $0.isBought }.map(\.name)
+        let planless = wanted.filter { !$0.hasSellPlan }.map(\.name).sorted()
+        #expect(active == ["Fuji X100V", "Summicron 35mm f/2", "Vox AC15"])
+        #expect(completed == ["Hasselblad 80mm"])
+        #expect(planless == ["Nikon FM2", "Rode NT5"])
+        #expect(wanted.first { $0.name == "Fuji X100V" }?.sellPlanCreatedAt == now, "the carried plan is dated at the carry-over")
+    }
+
     // MARK: - Private
+
+    /// The Plans seed through the container the app builds for a UI test
+    /// launch, handed back as a *second* context for the reason `seed()`
+    /// gives.
+    private func seedPlans() throws -> ModelContext {
+        let store = try TroveStore.make(isUITesting: true)
+        try #require(store.mode == .ephemeral)
+        try UITestSeed.plans(into: ModelContext(store.container), now: now)
+        return ModelContext(store.container)
+    }
 
     /// The seed run into a context over the container the app itself builds
     /// for a UI test launch — `TroveStore.make`, not a hand-rolled pair.

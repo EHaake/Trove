@@ -65,6 +65,18 @@ struct TroveApp: App {
                     fatalError("Could not seed the UI test's sold collection: \(error)")
                 }
             }
+            // 009: the Plans collection, for the Plans tab's UI tests. Its own
+            // argument and its own guard, gated on the store that was
+            // actually built, like the two above — and above the monitor with
+            // them, since its Fuji row is the one only the launch's
+            // carry-over turns into a plan (plan Q18).
+            if UITestSeed.shouldSeedPlans(mode: store.mode, arguments: ProcessInfo.processInfo.arguments) {
+                do {
+                    try UITestSeed.plans(into: store.container.mainContext, now: .now)
+                } catch {
+                    fatalError("Could not seed the UI test's plans collection: \(error)")
+                }
+            }
             // Built from the mode rather than independently: a store with no
             // CloudKit mirror has nothing to wait for, and the monitor is
             // what keeps every empty state from having to know that.

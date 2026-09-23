@@ -490,7 +490,7 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
   **Done:** 2026-09-23. New `PlansCard` (SoldCard's chrome: `.extrudedPlate()` inside the button, so the whole card acts); `DashboardView` composes it below the Sold card inside `if viewModel.showsPlansCard`, action `router.showActivePlans()`, and reloads on `settledCount` beside `completedImports`. R4 (no card on an empty Dashboard) holds the way the Sold card's does: both live in the scrolling branch `body` builds only when `!viewModel.isEmpty`. G21, three tests in `DashboardWiringTests`. Mutations, each red: card out of the gate; `showSoldItems()`; the `settledCount` reload dropped; the card moved above the empty/scroll split; a second card in the empty branch. `scripts/verify.sh`: 1721 tests in 233 suites passed.
-- [ ] **T014 — The `-seedPlans` seed and the UI tests, run twice.**
+- [x] **T014 — The `-seedPlans` seed and the UI tests, run twice.**
   Per plan §13 and Q18. `UITestSeed.plansArgument = "-seedPlans"`,
   `shouldSeedPlans(mode:arguments:)` gated on `.ephemeral`, and
   `plans(into:now:)` with plan §13's collection, written through
@@ -510,6 +510,7 @@ Handoff notes for the pause reports:
   `TroveTests/UITestSeedTests.swift`, `TroveUITests/TroveUITests.swift`.
   **Verify:** `scripts/verify.sh` green; `scripts/verify.sh ui` green twice,
   both counts in the Done note; mutations recorded.
+  **Done:** 2026-09-23. `UITestSeed.plansArgument` / `shouldSeedPlans(mode:arguments:)` (`.ephemeral` only) / `plans(into:now:)` with plan §13's collection, written through the three stores — the Fuji row's `sellPlanCheckedAt` set nil (the one row no writer made); its block in `TroveApp.init` above the monitor. G9: three tests in `UITestSeedTests`. G22: plan §13's seven UI tests (partial-drag swipes; the completed record's Delete asserted as the bar button T009b made it). Mutations, each red on a named assertion: seed gated on the argument only; Fuji's nil line removed; a seed row missing; **the `onSettled` closure dropped, and the seeds moved below the monitor — both turn the Fuji leg red (the launch wiring's only automated coverage)**; the Active swipe wired to `pendingDeletion`; the card calling `showSoldItems()`; plus the Active sort's `load()` removed → the sort test red. The Completed side's sort-change reload has no test (one completed row in the seed). `scripts/verify.sh`: 1724 tests in 233 suites passed; `scripts/verify.sh ui` twice back to back: 33 tests, 0 failures, both runs.
   **Phase 4 closes here — pause for the person** (what to try, and the
   readings to put as questions, are in the handoff note above).
 
@@ -612,3 +613,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T011 — `sdd-implementer` | `opus` | ~124k (harness) | Done first pass; no miss. Chose the empty states' marks (TabPlans, TabWishlist, iCloud) — for the phase review |
 | T012 — `sdd-implementer` | `opus` | ~45k (harness) | Done first pass; no miss |
 | T013 — `sdd-implementer` | `opus` | ~61k (harness) | Done first pass; no miss |
+| T014 — `sdd-implementer` | `opus` | ~136k (harness) | Done first pass; no miss. A full UI run now ~11.7 min (33 tests) — run it in the background |
