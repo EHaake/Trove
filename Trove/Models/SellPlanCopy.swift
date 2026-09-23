@@ -69,6 +69,11 @@ nonisolated enum SellPlanCopy {
         "Delete the sell plan for \(name)?"
     }
 
+    /// What the title names when the screen has no wanted item to read a name
+    /// from — the same words the wanted entry's own delete alert falls back
+    /// to.
+    static let deleteTitleFallbackName = "this item"
+
     /// One sentence frame with one varying clause (plan §3) — so the two
     /// sides cannot drift apart the way `WishlistDeleteCopy`'s did.
     static func deleteMessage(isCompleted: Bool) -> String {

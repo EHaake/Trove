@@ -37,7 +37,7 @@ import SwiftUI
 /// through the same `(noun:edit:middle:delete:)` initializer, so both detail
 /// screens now build their rows themselves and the sentence above holds only
 /// as history (`specs/006-mark-as-sold/plan.md` carries the pointer). The
-/// two-argument initializer stays all the same, and is not dead: the preview
+/// `(noun:edit:delete:)` initializer stays all the same, and is not dead: the preview
 /// at the foot of this file calls it, and a preview is invisible to the
 /// source scans that read this file (they stop at it), so a scan reporting
 /// the initializer unused would be wrong — removing it is no part of what

@@ -392,8 +392,9 @@ struct SellPlanWiringTests {
     /// refusing those writes — is `SellPlanViewModelTests`' (G14); this is
     /// the face.
     ///
-    /// Mutations: put `viewModel.toggle` or a `SellPlanRow(` into the record
-    /// → red; send the `isCompleted` branch to `content(for:)` → red.
+    /// Mutations: put `viewModel.toggle`, a `SellPlanRow(` or a `Button(`
+    /// into the record → red; put an `.onTapGesture` on `soldRow(_:)` → red;
+    /// send the `isCompleted` branch to `content(for:)` → red.
     @Test func aBoughtPlanOpensAsARecordThatComposesNothingThatActs() throws {
         let code = try SourceScan.production(Self.screen)
 
@@ -423,11 +424,28 @@ struct SellPlanWiringTests {
             "a record with no sales says nothing at all, rather than that nothing was sold toward it"
         )
 
-        for acting in ["candidateList", "SellPlanRow", "figures(", "saleCandidate", "isMarkingBought", "viewModel.toggle"] {
-            #expect(
-                !record.contains(acting),
-                "the record composes `\(acting)` — a bought plan offers no candidate, no selection, no sale and no purchase (criterion 9)"
-            )
+        // The record hosts `soldSection`, which draws `soldRow(_:)` — so what
+        // the record composes is all three bodies, and a control added to
+        // either of the other two lands on the record as surely as one added
+        // to it directly. Each anchor is required once before it is read.
+        let sections = SourceScan.closureBodies(after: "private var soldSection: some View", in: code)
+        try #require(sections.count == 1, "the screen declares \(sections.count) soldSection bodies, expected exactly 1")
+        let section = try #require(sections.first)
+        let rows = SourceScan.closureBodies(after: "private func soldRow(_ item: Item) -> some View", in: code)
+        try #require(rows.count == 1, "the screen declares \(rows.count) soldRow(_:) bodies, expected exactly 1")
+        let row = try #require(rows.first)
+
+        let acting = [
+            "candidateList", "SellPlanRow", "figures(", "saleCandidate", "isMarkingBought", "viewModel.toggle",
+            "Button(", "NavigationLink", ".swipeActions", ".onTapGesture", "markSold",
+        ]
+        for (name, body) in [("record(for:)", record), ("soldSection", section), ("soldRow(_:)", row)] {
+            for control in acting {
+                #expect(
+                    !body.contains(control),
+                    "\(name) composes `\(control)` — a bought plan offers no candidate, no selection, no sale and no purchase, and nothing else that acts (criterion 9)"
+                )
+            }
         }
     }
 

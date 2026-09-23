@@ -702,6 +702,21 @@ final class TroveUITests: XCTestCase {
         // one element and `sellPlan.market` to *two per matched row* (six),
         // so both stay addressable but the market identifier is no count of
         // market lines. Nothing above depends on either.
+
+        // 009 P9: the tap on "Create a sell plan" created the plan, so the
+        // page it came from now offers to view it. Read on the way back, not
+        // off the view model — the view's action is what's under test: if it
+        // navigated without calling `openSellPlan()`, the Sell Plan above
+        // would still open and rank, and only this line would notice that no
+        // plan was ever stored.
+        app.buttons["Back"].tap()
+        let viewPlan = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "View your sell plan"))
+            .firstMatch
+        XCTAssertTrue(
+            viewPlan.waitForExistence(timeout: 5),
+            "back on the wanted item's page, the entry point must read View your sell plan — the tap creates the plan"
+        )
     }
 
     // MARK: - 005 Stock photos (offline states only)

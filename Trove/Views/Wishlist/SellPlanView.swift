@@ -185,7 +185,7 @@ struct SellPlanView: View {
         // the screen, since the plan it showed is gone; a refused one rolls
         // back and leaves it standing (plan §5), exactly as it was.
         .alert(
-            SellPlanCopy.deleteTitle(for: viewModel.wishlistItem?.name ?? "this item"),
+            SellPlanCopy.deleteTitle(for: viewModel.wishlistItem?.name ?? SellPlanCopy.deleteTitleFallbackName),
             isPresented: $isConfirmingDelete
         ) {
             Button(SellPlanCopy.deleteConfirm, role: .destructive) {

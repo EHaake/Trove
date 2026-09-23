@@ -54,6 +54,7 @@ struct SellPlanCopyTests {
     @Test func theDeleteConfirmationsWords() {
         #expect(SellPlanCopy.overflowNoun == "sell plan")
         #expect(SellPlanCopy.deleteTitle(for: "Summicron 35mm f/2") == "Delete the sell plan for Summicron 35mm f/2?")
+        #expect(SellPlanCopy.deleteTitleFallbackName == "this item")
         #expect(SellPlanCopy.deleteConfirm == "Delete")
         #expect(SellPlanCopy.deleteCancel == "Keep")
         #expect(SellPlanCopy.deleteMessage(isCompleted: false)

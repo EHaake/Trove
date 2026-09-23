@@ -210,7 +210,12 @@ final class WishlistDetailViewModel {
     /// to reach reads "Create a sell plan", so the plan it would have become is
     /// made by the person's own tap rather than by a button pressed only to
     /// look.
-    var hasSellPlan: Bool { item?.hasSellPlan == true }
+    ///
+    /// Read off `sellPlanSummary` rather than the live model, so the title and
+    /// the subtitle come from the one snapshot `load()` takes and can never
+    /// disagree between loads. The stored-plan-only rule is `load()`'s: the
+    /// summary is built for a stored plan and for nothing else.
+    var hasSellPlan: Bool { sellPlanSummary != nil }
 
     /// The entry point's first line: create a plan when there is none, view it
     /// once one exists. Both from `SellPlanCopy`, this spec's one string table
@@ -232,7 +237,7 @@ final class WishlistDetailViewModel {
     /// set aside, else what was sold toward it, else that nothing is set aside
     /// yet — and so never "0 items set aside".
     var sellPlanEntrySubtitle: String {
-        guard hasSellPlan, let sellPlanSummary else {
+        guard let sellPlanSummary else {
             // True today: `SellPlanViewModel.rank` really does put the
             // least-wanted gear first.
             return SellPlanCopy.noPlanSubtitle

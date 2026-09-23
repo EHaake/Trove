@@ -649,7 +649,8 @@ without a plan `noPlanSubtitle`; with one, `sellPlanSummary.entrySubtitle`
 (Q5) — never "0 items". New intent
 `@discardableResult func openSellPlan() -> Bool`: with a stored plan, true;
 otherwise `SellPlanStore.create` (an explicit create, whether or not the row
-awaits the carry-over),
+awaits the carry-over — and on a waiting row it keeps that row's existing
+selection, as the carry-over would; added at Phase 3's review),
 one save, true — or `rollback()` and false, and the view doesn't navigate.
 The view's button becomes `if viewModel.openSellPlan() { sellPlanRoute = … }`.
 The type's header comment ("No ranking or Sell Plan logic lives here") is
