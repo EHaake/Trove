@@ -630,7 +630,7 @@ final class TroveUITests: XCTestCase {
         // given one for a test's sake, so it's matched on the first thing it
         // says — the subtitle follows in the same combined label.
         let findItemsToSell = app.buttons
-            .matching(NSPredicate(format: "label BEGINSWITH %@", "Find items to sell"))
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Create a sell plan"))
             .firstMatch
         XCTAssertTrue(
             findItemsToSell.waitForExistence(timeout: 5),
@@ -1586,7 +1586,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Wishlist"].tap()
         openDetail(in: app, named: "Summicron 35mm f/2")
         let findItemsToSell = app.buttons
-            .matching(NSPredicate(format: "label BEGINSWITH %@", "Find items to sell"))
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Create a sell plan"))
             .firstMatch
         XCTAssertTrue(findItemsToSell.waitForExistence(timeout: 5), "the wishlist detail must offer a way into the Sell Plan")
         scrollUntilHittable(findItemsToSell, in: app)

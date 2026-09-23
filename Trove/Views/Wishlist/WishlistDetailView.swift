@@ -425,20 +425,23 @@ struct WishlistDetailView: View {
     ///
     /// A single button rather than the plan rendered inline: plan.md is
     /// explicit that showing it automatically would overstate what it currently
-    /// does. The label names the task ("find items to sell"), not a target —
-    /// nothing here says how much is needed or how close the user is.
+    /// does. The label names the task, not a target — nothing here says how
+    /// much is needed or how close the user is.
     ///
-    /// 015 T012c gives it a second reading, at the person's instruction: once
-    /// a plan is saved it says "View your sell plan" over a count of what is
-    /// set aside, because leaving a plan and coming back showed no sign the
-    /// selection had been kept. **The rule above is unchanged, not relaxed** —
-    /// a count is a fact about what the person themselves chose, while a
-    /// figure like "$840 of $3,900" is a target and a completion figure, which
-    /// is the thing that was refused. Both lines come from the view model, so
-    /// which one shows is a behaviour `WishlistDetailViewModelTests` reaches.
+    /// Since 009 the label reads `SellPlanCopy.createPlan` when the entry has
+    /// no stored plan and `SellPlanCopy.viewPlan` once it has one, over a
+    /// count of what is set aside or was sold toward it. The tap creates the
+    /// plan through the view model's `openSellPlan()` and navigates only when
+    /// that returns true. **The rule above is unchanged, not relaxed** — a
+    /// count is a fact about what the person themselves chose, while a figure
+    /// like "$840 of $3,900" is a target and a completion figure, which is the
+    /// thing that was refused. Both lines come from the view model, so which
+    /// one shows is a behaviour `WishlistDetailViewModelTests` reaches.
     private func findItemsToSell(for item: WishlistItem) -> some View {
         Button {
-            sellPlanRoute = SellPlanRoute(wishlistItemID: item.id)
+            if viewModel.openSellPlan() {
+                sellPlanRoute = SellPlanRoute(wishlistItemID: item.id)
+            }
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {

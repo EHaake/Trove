@@ -10,13 +10,16 @@ import SwiftData
 /// Looking it up by id surfaces that as `item == nil`, which the view can
 /// handle, rather than as a stale reference.
 ///
-/// **No ranking or Sell Plan logic lives here.** `plannedSaleItems` belongs to
-/// `SellPlanViewModel`, one screen further in — plan.md is explicit that the
-/// plan is reached by a deliberate tap rather than shown alongside the item, and
-/// a detail model that quietly computed candidates would undo that by making
-/// them available to render here. Since 015 T012c it reads the relationship's
-/// *size* — `plannedSaleCount`, for the entry point's label — which is how
-/// many items the person set aside, never which ones or in what order.
+/// **No ranking lives here, and the only Sell Plan write is creating one.**
+/// `plannedSaleItems` belongs to `SellPlanViewModel`, one screen further in —
+/// plan.md is explicit that the plan is reached by a deliberate tap rather
+/// than shown alongside the item, and a detail model that quietly computed
+/// candidates would undo that by making them available to render here. Since
+/// 009 the tap itself creates the plan (`openSellPlan()`), through
+/// `SellPlanStore` — the one writer of plan state — and the page reads the
+/// plan's counts through `SellPlanSummary` for the entry point's label: how
+/// many items are set aside or were sold toward it, never which ones or in
+/// what order. It still computes no candidates.
 @Observable
 final class WishlistDetailViewModel {
     private(set) var item: WishlistItem?
@@ -38,20 +41,15 @@ final class WishlistDetailViewModel {
     /// Distinguishes "not loaded yet" from "loaded, and it's gone".
     private(set) var hasLoaded = false
 
-    /// How many owned items this entry has set aside on its Sell Plan (015
-    /// T012c). Set by `load()` from the fetched entry, exactly as
-    /// `hasBeenBought` is, and 0 when nothing is loaded.
+    /// The stored plan's counts, for the entry point's second line (009 plan
+    /// §7). Set by `load()` from the fetched entry, exactly as `hasBeenBought`
+    /// is, and nil when nothing is loaded or the entry has no stored plan.
     ///
-    /// This is the relationship's *size*, never its contents or its order —
-    /// the boundary this type's own doc comment draws. **It is held here, in
-    /// the code, and by no test** (corrected at T012e): there is nothing for
-    /// a test to observe, because the only way to break the boundary is to
-    /// expose the items themselves and no test can assert the absence of a
-    /// property that was never written. `loadingDoesNotTouchTheSellPlan`
-    /// pins the neighbouring fact — that loading leaves the relationship and
-    /// its items alone — and would stay green if this property handed back
-    /// the whole `plannedSaleItems` array.
-    private(set) var plannedSaleCount = 0
+    /// Counts only, never the items themselves or their order — the boundary
+    /// this type's own doc comment draws. `loadingDoesNotTouchTheSellPlan`
+    /// pins the neighbouring fact, that loading leaves the relationship and
+    /// its items alone.
+    private(set) var sellPlanSummary: SellPlanSummary?
 
     private let modelContext: ModelContext
     private let itemID: UUID
@@ -84,7 +82,7 @@ final class WishlistDetailViewModel {
         descriptor.fetchLimit = 1
         item = try? modelContext.fetch(descriptor).first
         hasBeenBought = item?.isBought == true
-        plannedSaleCount = item?.plannedSaleItems?.count ?? 0
+        sellPlanSummary = item.flatMap { $0.hasSellPlan ? SellPlanSummary($0) : nil }
         hasLoaded = true
         loadMarket()
     }
@@ -205,18 +203,20 @@ final class WishlistDetailViewModel {
         item?.notes?.isEmpty == false
     }
 
-    // MARK: - The Sell Plan entry point (015 T012c)
+    // MARK: - The Sell Plan entry point (015 T012c, 009)
 
-    /// Whether this entry already has a saved Sell Plan — the person's
-    /// decision at `015`'s walkthrough: leaving a plan and coming back left
-    /// the page saying "Find items to sell", with nothing to show the
-    /// selection had been kept.
-    var hasSellPlan: Bool { plannedSaleCount > 0 }
+    /// Whether this entry has a stored Sell Plan — the stored plan **only**
+    /// (009 plan §7, Q2), never `awaitsCarryOver`: a row the carry-over has yet
+    /// to reach reads "Create a sell plan", so the plan it would have become is
+    /// made by the person's own tap rather than by a button pressed only to
+    /// look.
+    var hasSellPlan: Bool { item?.hasSellPlan == true }
 
-    /// The entry point's first line: the task when there's no plan, the plan
-    /// itself once one exists.
+    /// The entry point's first line: create a plan when there is none, view it
+    /// once one exists. Both from `SellPlanCopy`, this spec's one string table
+    /// (plan Q7).
     var sellPlanEntryTitle: String {
-        hasSellPlan ? "View your sell plan" : "Find items to sell"
+        hasSellPlan ? SellPlanCopy.viewPlan : SellPlanCopy.createPlan
     }
 
     /// The entry point's second line.
@@ -225,23 +225,44 @@ final class WishlistDetailViewModel {
     /// doc comment in `WishlistDetailView` records `003`'s rule: this label
     /// names the task, *not a target* — nothing here says how much is needed
     /// or how close the person is. That rule still binds. A count is a fact
-    /// about what the person themselves set aside; "$840 of $3,900" is a
-    /// target and a completion figure, and it is exactly what was refused.
-    /// So this line may say how many items are on the plan and must never
-    /// say money or progress.
+    /// about what the person themselves set aside or sold; "$840 of $3,900" is
+    /// a target and a completion figure, and it is exactly what was refused.
     ///
-    /// Pluralised inline with a ternary because the app has no
-    /// pluralisation helper — the shape `SaleCopy.sellPlanSoldCaption` and
-    /// the dashboard's own captions already use.
+    /// With a plan it is `SellPlanSummary.entrySubtitle` (plan Q5) — what is
+    /// set aside, else what was sold toward it, else that nothing is set aside
+    /// yet — and so never "0 items set aside".
     var sellPlanEntrySubtitle: String {
-        guard hasSellPlan else {
+        guard hasSellPlan, let sellPlanSummary else {
             // True today: `SellPlanViewModel.rank` really does put the
-            // least-wanted gear first. Design's own subtitle, kept because it
-            // describes the ranking that exists rather than a target the app
-            // doesn't compute.
-            return "Browse your lowest desire-to-keep items"
+            // least-wanted gear first.
+            return SellPlanCopy.noPlanSubtitle
         }
-        return "\(plannedSaleCount) \(plannedSaleCount == 1 ? "item" : "items") set aside"
+        return sellPlanSummary.entrySubtitle
+    }
+
+    /// The entry point's tap (009 P9): with a stored plan, true; otherwise the
+    /// plan is created here, through `SellPlanStore.create` — an explicit
+    /// create whether or not the row awaits the carry-over — in one save, and
+    /// the page reloads so its label reads the plan.
+    ///
+    /// False, and the view doesn't navigate, when there is no entry, when the
+    /// store refuses (a bought entry), or when the save is refused — which
+    /// rolls back, the `markBought` recovery, so no half-made plan is left on
+    /// the shared context.
+    @discardableResult
+    func openSellPlan() -> Bool {
+        guard let item else { return false }
+        if item.hasSellPlan { return true }
+        guard SellPlanStore.create(for: item, at: now()) else { return false }
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            load()
+            return false
+        }
+        load()
+        return true
     }
 
     // MARK: - Market (002)

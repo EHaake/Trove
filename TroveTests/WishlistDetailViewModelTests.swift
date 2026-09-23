@@ -309,94 +309,183 @@ struct WishlistDetailViewModelTests {
         #expect(try context.fetch(FetchDescriptor<Item>()).count == 1)
     }
 
-    // MARK: - The Sell Plan entry point (015 T012c)
+    // MARK: - The Sell Plan entry point (015 T012c, rewritten by 009 T008)
 
-    /// Nothing set aside: the button still names the task, in design's own
-    /// words. The control for the three tests below it.
-    @Test func theSellPlanEntryOffersTheSearchWhenNothingIsSetAside() throws {
+    /// 009 plan Q19: these four were `015` T012c's tests, which read "a plan"
+    /// as "something set aside". The plan is a stored date now, so each is
+    /// rewritten to that rule rather than loosened. The mutation the old four
+    /// passed and these fail: a plan with nothing set aside reading "Find
+    /// items to sell" — the old fourth test asserted exactly that reading.
+
+    /// A pinned past instant, distinct from `sellPlanCheckedAt`'s `.now`
+    /// default, so a date written by the wrong call cannot match by accident.
+    private let planCreatedAt = Date(timeIntervalSince1970: 1_700_000_000)
+
+    /// An owned item, inserted, for a selection or a sold-toward record.
+    private func owned(_ name: String, in context: ModelContext) -> Item {
+        let item = Item(name: name, categoryPath: "Music/Guitars", currentValueCents: 84_000)
+        context.insert(item)
+        return item
+    }
+
+    /// No stored plan, and the row is checked: the entry point offers to
+    /// create one, over the ranking's own subtitle. The control for the
+    /// readings below.
+    @Test func theSellPlanEntryOffersToCreateAPlanWhenThereIsNone() throws {
         let context = try makeInMemoryContext()
         let wanted = insert(into: context)
         try context.save()
+        #expect(wanted.sellPlanCheckedAt != nil, "the fixture must be checked")
 
         let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id)
         viewModel.load()
 
         #expect(viewModel.hasSellPlan == false)
-        #expect(viewModel.plannedSaleCount == 0)
-        #expect(viewModel.sellPlanEntryTitle == "Find items to sell")
+        #expect(viewModel.sellPlanSummary == nil)
+        #expect(viewModel.sellPlanEntryTitle == "Create a sell plan")
         #expect(viewModel.sellPlanEntrySubtitle == "Browse your lowest desire-to-keep items")
     }
 
-    /// The person's decision at 015's walkthrough: a saved plan has to leave
-    /// a trace on the page it was made from, which before this said "Find
-    /// items to sell" whether or not anything had been chosen.
-    ///
-    /// The subtitle is a **count and nothing else**, deliberately — the
-    /// entry point's rule (003, and the button's own doc comment) is that it
-    /// names the task, not a target. Both items here carry a value, so a
-    /// subtitle that had grown a money figure or a "$840 of $3,900" progress
-    /// line would have one to show, and this equality refuses it.
-    @Test func theSellPlanEntryNamesTheSavedPlanAndCountsWhatIsSetAside() throws {
+    /// A plan with 2 set aside **and** 1 sold toward it reads the set-aside
+    /// line: set-aside comes first (plan Q5). Both counts are non-zero and
+    /// different, so swapping the fallbacks reads "1 sold toward it" and
+    /// fails. Every item carries a value, so a subtitle that had grown a money
+    /// figure or a progress line would have one to show, and this equality
+    /// refuses it — the entry point names the task, never a target (003).
+    @Test func theSellPlanEntryNamesThePlanAndCountsWhatIsSetAside() throws {
         let context = try makeInMemoryContext()
         let wanted = insert(into: context)
-        let first = Item(name: "Fender Telecaster", categoryPath: "Music/Guitars", currentValueCents: 84_000)
-        let second = Item(name: "Vox AC15", categoryPath: "Music/Amps", currentValueCents: 60_000)
-        context.insert(first)
-        context.insert(second)
-        wanted.plannedSaleItems = [first, second]
+        wanted.plannedSaleItems = [owned("Fender Telecaster", in: context), owned("Vox AC15", in: context)]
+        wanted.itemsSoldToward = [owned("Boss DD-3", in: context)]
+        wanted.sellPlanCreatedAt = planCreatedAt
         try context.save()
 
         let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id)
         viewModel.load()
 
         #expect(viewModel.hasSellPlan)
-        #expect(viewModel.plannedSaleCount == 2)
         #expect(viewModel.sellPlanEntryTitle == "View your sell plan")
         #expect(viewModel.sellPlanEntrySubtitle == "2 items set aside")
     }
 
-    /// One item is "1 item", not "1 items" — pluralised inline, the shape
-    /// `SaleCopy.sellPlanSoldCaption` uses, since the app has no
-    /// pluralisation helper.
-    @Test func theSellPlanEntryReadsSingularForOneItemSetAside() throws {
+    /// Nothing set aside, 1 sold toward it: the second fallback — the case
+    /// `015`'s sweep found reading as no plan at all (criterion 2).
+    @Test func theSellPlanEntryFallsBackToWhatWasSoldTowardIt() throws {
         let context = try makeInMemoryContext()
         let wanted = insert(into: context)
-        let owned = Item(name: "Fender Telecaster", categoryPath: "Music/Guitars")
-        context.insert(owned)
-        wanted.plannedSaleItems = [owned]
+        wanted.itemsSoldToward = [owned("Boss DD-3", in: context)]
+        wanted.sellPlanCreatedAt = planCreatedAt
         try context.save()
 
         let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id)
         viewModel.load()
 
-        #expect(viewModel.plannedSaleCount == 1)
-        #expect(viewModel.sellPlanEntrySubtitle == "1 item set aside")
+        #expect(viewModel.hasSellPlan)
+        #expect(viewModel.sellPlanEntryTitle == "View your sell plan")
+        #expect(viewModel.sellPlanEntrySubtitle == "1 sold toward it")
     }
 
-    /// Derived on every `load()`, not once: a plan emptied elsewhere — the
-    /// Sell Plan itself, or a purchase releasing it — puts the search copy
-    /// back the next time this screen loads, rather than leaving the page
-    /// pointing at a plan that no longer holds anything.
-    @Test func theSellPlanEntryGoesBackToTheSearchWhenThePlanIsReleased() throws {
+    /// Derived on every `load()`, not once — and a plan whose selection is
+    /// released elsewhere is still a plan: it reads "View your sell plan" over
+    /// "Nothing set aside yet", never "0 items set aside" (criterion 1) and
+    /// never the create copy (the old reading this test used to assert).
+    @Test func theSellPlanEntryKeepsThePlanWhenItsSelectionIsReleased() throws {
         let context = try makeInMemoryContext()
         let wanted = insert(into: context)
-        let owned = Item(name: "Fender Telecaster", categoryPath: "Music/Guitars")
-        context.insert(owned)
-        wanted.plannedSaleItems = [owned]
+        wanted.plannedSaleItems = [owned("Fender Telecaster", in: context)]
+        wanted.sellPlanCreatedAt = planCreatedAt
         try context.save()
 
         let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id)
         viewModel.load()
-        #expect(viewModel.sellPlanEntryTitle == "View your sell plan")
+        #expect(viewModel.sellPlanEntrySubtitle == "1 item set aside")
 
         wanted.plannedSaleItems = []
         try context.save()
         viewModel.load()
 
+        #expect(viewModel.hasSellPlan)
+        #expect(viewModel.sellPlanEntryTitle == "View your sell plan")
+        #expect(viewModel.sellPlanEntrySubtitle == "Nothing set aside yet")
+    }
+
+    /// Plan Q2: a row the carry-over has yet to reach — unchecked, 2 set aside
+    /// — has no stored plan, so it reads the create copy, and the tap creates
+    /// the plan explicitly, dated by this screen's clock and settling the row.
+    /// Read back on a second context: the save is the claim.
+    @Test func aRowAwaitingTheCarryOverOffersCreateAndTheTapCreatesThePlan() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let wanted = insert(into: context)
+        wanted.plannedSaleItems = [owned("Fender Telecaster", in: context), owned("Vox AC15", in: context)]
+        wanted.sellPlanCheckedAt = nil
+        try context.save()
+        #expect(wanted.awaitsCarryOver, "the fixture must await the carry-over")
+
+        let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id, now: { self.planCreatedAt })
+        viewModel.load()
+
         #expect(viewModel.hasSellPlan == false)
-        #expect(viewModel.plannedSaleCount == 0)
-        #expect(viewModel.sellPlanEntryTitle == "Find items to sell")
+        #expect(viewModel.sellPlanEntryTitle == "Create a sell plan")
         #expect(viewModel.sellPlanEntrySubtitle == "Browse your lowest desire-to-keep items")
+
+        #expect(viewModel.openSellPlan())
+
+        let id = wanted.id
+        let stored = try #require(try ModelContext(container).fetch(
+            FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.id == id })
+        ).first)
+        #expect(stored.sellPlanCreatedAt == planCreatedAt)
+        #expect(stored.sellPlanCheckedAt == planCreatedAt)
+        #expect(viewModel.sellPlanEntryTitle == "View your sell plan")
+        #expect(viewModel.sellPlanEntrySubtitle == "2 items set aside")
+    }
+
+    /// The plan exists from the first tap and a second tap only opens it: the
+    /// clock has moved on by the second call, so re-creating would re-date the
+    /// plan. Read back on a second context.
+    @Test func openingTheSellPlanCreatesItExactlyOnce() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let wanted = insert(into: context)
+        try context.save()
+
+        var clock = planCreatedAt
+        let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id, now: { clock })
+        viewModel.load()
+
+        #expect(viewModel.openSellPlan())
+        clock = planCreatedAt.addingTimeInterval(86_400)
+        #expect(viewModel.openSellPlan())
+
+        let id = wanted.id
+        let stored = try #require(try ModelContext(container).fetch(
+            FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.id == id })
+        ).first)
+        #expect(stored.sellPlanCreatedAt == planCreatedAt)
+        #expect(viewModel.sellPlanEntryTitle == "View your sell plan")
+        #expect(viewModel.sellPlanEntrySubtitle == "Nothing set aside yet")
+    }
+
+    /// A bought entry gets no plan: `SellPlanStore.create` refuses it, and the
+    /// tap returns false so the view doesn't navigate.
+    @Test func openingTheSellPlanOnABoughtEntryCreatesNothing() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let wanted = insert(into: context)
+        wanted.boughtDate = planCreatedAt
+        try context.save()
+
+        let viewModel = WishlistDetailViewModel(modelContext: context, itemID: wanted.id, now: { self.planCreatedAt })
+        viewModel.load()
+
+        #expect(viewModel.openSellPlan() == false)
+
+        let id = wanted.id
+        let stored = try #require(try ModelContext(container).fetch(
+            FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.id == id })
+        ).first)
+        #expect(stored.sellPlanCreatedAt == nil)
     }
 
     /// 002/T006c: the device's market rows for the item — figure, history,

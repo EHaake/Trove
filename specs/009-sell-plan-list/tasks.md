@@ -316,7 +316,7 @@ Handoff notes for the pause reports:
 
 ## Phase 3 — The wanted item's page and the Sell Plan screen · walkthrough: yes — on a wanted item, Create a sell plan makes the plan at the tap; backing out reads View your sell plan / Nothing set aside yet; selling everything set aside leaves it View your sell plan with "<n> sold toward it"; the plan's "…" deletes it after an alert, the page offers Create again, and the sales stay on the Items tab's Sold side
 
-- [ ] **T008 — The wanted item's entry point (P9), created at the tap.**
+- [x] **T008 — The wanted item's entry point (P9), created at the tap.**
   Per plan §7 and Q7, Q19. `WishlistDetailViewModel`: `hasSellPlan` from the
   stored plan **only** — never `awaitsCarryOver` (plan Q2, the orchestrator's
   fix after the sign-off re-review), `sellPlanSummary` replacing
@@ -343,6 +343,7 @@ Handoff notes for the pause reports:
   `TroveUITests/TroveUITests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
+  **Done:** 2026-09-22. `WishlistDetailViewModel`: `hasSellPlan` from the stored plan only; `sellPlanSummary` replaces `plannedSaleCount`; title from `SellPlanCopy`, subtitle from `entrySubtitle` (inline strings gone); `openSellPlan()` creates at the tap, saves once, reloads. The view's action is the one-line change; `PurchaseCopy`/`PurchaseCopyTests` and `findItemsToSell` comments corrected. The four T012c tests rewritten, three added. Old-test mutation — a plan with nothing set aside reading as no plan, which the old four passed — now red (8 issues). G16 mutations, each red: fallbacks swapped; "0 items set aside"; re-create on a second tap (date leg); `|| awaitsCarryOver` in `hasSellPlan`. `openSellPlan`'s save-failure rollback untested. `scripts/verify.sh`: 1705 tests in 231 suites passed; the two `-seedSellPlan` UI tests, run alone, pass with "Create a sell plan".
 - [ ] **T009 — The Sell Plan screen: the completed record, the "…" delete, and `DetailOverflowMenu`'s delete-only form.**
   Per plan §9, Q11, Q12, Q19. `DetailOverflowMenu`: `edit` becomes `Row?`, a
   new `init(noun:delete:)`, `if let edit` in the body; its doc comment gains
@@ -555,3 +556,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | Phase 2 — `skeptical-reviewer` phase review | `opus` | ~111k (harness) | 1 BLOCKING: the Completed fixture's wishlist order matched its name order, so dropping the Name comparator stayed green; 9 non-blocking (2, 3, 4, 5, 8, 9 applied; 7 ruled by plan §5 — deletes are silent, doc comment corrected; 6 — a failed Plans fetch reads "Nothing on your wishlist" — and 10 carried to the sweep and the view tasks). UI suite at `6a9d101`: 25 tests, 0 failures |
 | Phase 2 — fixes (`sdd-implementer`, T005's agent resumed) | `opus` | ~160k (harness, cumulative) | All applied; every new mutation red; the Plans host's `rollback()` on a real save failure (markBought, deletePlan) recorded untested |
 | Phase 2 — `skeptical-reviewer` re-review | `opus` | ~120k (harness, cumulative) | Signed off; all FIXED. NEW non-blocking, to the sweep: the test file header overstates the Completed fixture's insert order; the scan's doc says "one save" where the tests show "a save", and should name `deletePlan`'s rollback as untested too; optional: run tie-by-name on `areInCompletedOrder` |
+| T008 — `sdd-implementer` | `opus` | ~77k (harness, incl. a comment follow-up) | Done first pass; no miss |

@@ -8,10 +8,10 @@ import Testing
 /// apart — which are the readings criterion 6 turns on.
 ///
 /// Not all of spec 015's Copy section, since T012c: the Sell Plan entry
-/// point's four strings live inline in
-/// `WishlistDetailViewModel.sellPlanEntryTitle` and `.sellPlanEntrySubtitle`,
-/// because which of them a person sees is a branch rather than a fixed label.
-/// They are covered where the branch is, by `WishlistDetailViewModelTests`,
+/// point's strings live in `SellPlanCopy` since 009 (plan Q7), and which of
+/// them a person sees is a branch in
+/// `WishlistDetailViewModel.sellPlanEntryTitle` and `.sellPlanEntrySubtitle`.
+/// The branch is covered where it is, by `WishlistDetailViewModelTests`,
 /// which is the behavioural reach a literal pinned here would not have.
 @Suite("Purchase copy")
 struct PurchaseCopyTests {
