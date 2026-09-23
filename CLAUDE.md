@@ -20,6 +20,12 @@ replacement for it, and never a sold price, because no source offers
 one to a non-partner app; eBay is its own follow-up spec with
 prerequisites of its own (amended 2026-09-03, spec `002` Decision 19).
 
+**A destructive action is always drawn in rust** (amended 2026-09-23, at
+the person's instruction, `009`): coloured on the control itself wherever
+the app draws it, since the root brass tint overrides the role's red; the
+role alone where the system draws it. `design/tokens.md`'s "Destructive
+actions" is the rule, `DestructiveColourPolicyTests` the guard.
+
 ## Platform
 
 - **Target**: iOS 26.0+ only. No back-compat shims, no `@available` branching
