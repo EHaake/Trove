@@ -47,6 +47,19 @@ final class WishlistItem {
     /// `PurchaseUndoTests`).
     var boughtDate: Date?
 
+    /// 009: when this wanted item's sell plan was created, or nil when it has
+    /// none. **The one plan predicate** — a plan is a stored fact, never
+    /// inferred from the selection (spec Decision 1). Written only by
+    /// `SellPlanStore`.
+    var sellPlanCreatedAt: Date?
+
+    /// 009: when this entry's plan state became stored rather than inferred —
+    /// stamped at `init` for every entry made from 009 on, and by the one-time
+    /// carry-over (spec P10) for older ones. Nil only on a row an app older than
+    /// 009 wrote and no 009 device has checked yet. Synced, so "once" travels
+    /// with the row (plan Q2).
+    var sellPlanCheckedAt: Date?
+
     var createdAt: Date = Date.now
 
     /// Optional for the same CloudKit reason as `Item.photos` — read it as
@@ -92,6 +105,17 @@ final class WishlistItem {
     /// so they spell out `boughtDate == nil` themselves (plan Q1).
     var isBought: Bool { boughtDate != nil }
 
+    var hasSellPlan: Bool { sellPlanCreatedAt != nil }
+
+    /// 009: an older row the carry-over has yet to reach that will become a plan
+    /// when it does — unchecked, with a selection or a sold-toward history. **The
+    /// carry-over's own predicate** (`SellPlanStore.carryOver` reads it), and
+    /// read-only everywhere else (plan Q2): it never makes a plan by itself.
+    var awaitsCarryOver: Bool {
+        sellPlanCheckedAt == nil
+            && (!(plannedSaleItems ?? []).isEmpty || !(itemsSoldToward ?? []).isEmpty)
+    }
+
     init(
         name: String = "",
         categoryPath: String = "",
@@ -117,5 +141,6 @@ final class WishlistItem {
         self.reverbProductID = reverbProductID
         self.year = year
         self.createdAt = .now
+        self.sellPlanCheckedAt = .now
     }
 }

@@ -103,7 +103,7 @@ Handoff notes for the pause reports:
 
 ## Phase 1 — Foundations: the plan, its writer, its carry-over (**foundational**) · walkthrough: none — adds two stored dates, a copy table, a summary type, the plan writer and a launch hook; no screen reads any of them yet
 
-- [ ] **T001 — `WishlistItem.sellPlanCreatedAt`, `sellPlanCheckedAt`, `hasSellPlan`, and the CloudKit claim.**
+- [x] **T001 — `WishlistItem.sellPlanCreatedAt`, `sellPlanCheckedAt`, `hasSellPlan`, and the CloudKit claim.**
   Per plan §1, Q1, Q2. Both fields declared **without an initializer** (the
   `boughtDate` precedent) with plan §1's doc comments; `hasSellPlan` beside
   `isBought`; `init` gains `self.sellPlanCheckedAt = .now` and no parameter.
@@ -123,6 +123,7 @@ Handoff notes for the pause reports:
   `TroveTests/CloudKitSchemaTests.swift` (comment).
   **Verify:** `scripts/verify.sh` green; both mutations recorded verbatim.
 
+  **Done:** 2026-09-22. Both fields and `hasSellPlan`/`awaitsCarryOver` on `WishlistItem`; new suite `WishlistSellPlanFieldTests` (2). Mutations: init stamp dropped → `aFreshEntryIsPlanlessAndChecked` red (2 tests, 1 issue); predicate inverted → both red; `@Attribute(.unique)` on `sellPlanCreatedAt` → `CloudKitSchemaTests.schemaMeetsCloudKitRequirements` and `TwoStoreContainerTests.theProductionPairingLoadsAndSplits` red (134060). `ExportSchemaTests`/`ImportSchemaTests` green unedited. `scripts/verify.sh`: 1624 tests in 225 suites passed. Implementer found red xcodebuild runs hang after the count line.
 - [ ] **T002 — `SellPlanCopy` and `SellPlanSummary`.**
   Per plan §2, §3, Q5–Q7. New `Trove/Models/SellPlanCopy.swift`
   (`nonisolated enum`, no SwiftUI, every string in plan §3's table) and
@@ -535,3 +536,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | `sdd-planner` — sign-off fix pass (same agent resumed) | `opus` | ~65k (budget counter) | B1 fixed: event-based trigger, `.localOnly` skipped, `settledCount`, `awaitsCarryOver` read-only for the pending window; derive-on-read weighed and rejected in Q2; findings 3–12 applied, none declined; R2/R4 and `spec.md` untouched |
 | `skeptical-reviewer` — sign-off re-review | `opus` | ~61k (harness) | Findings 1, 3–12 all FIXED; one NEW blocking: the page's `hasSellPlan` reading `awaitsCarryOver` let a tap on **View** write a plan from a stale copy (B1's path moved from launch to a tap); one non-blocking (`.localOnly` shows "Catching up with iCloud") |
 | Orchestrator — direct fix (loop cap reached) | `claude-opus-5-5` session | — | Took the reviewer's option (b): the page reads the stored plan only, a waiting row reads "Create a sell plan"; plan Q2, R7, §7 and T008/G16 amended; the `.localOnly` wrinkle noted beside R7 as accepted |
+| T001 — `sdd-implementer` | `opus` | ~51k (harness) | Done first pass; no miss. Found: a red run hangs after its count line; verify.sh takes one selector |

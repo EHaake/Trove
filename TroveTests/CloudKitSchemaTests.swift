@@ -25,6 +25,11 @@ import Testing
 /// field, and T001 proved the claim is checked here rather than merely
 /// asserted — declaring it `@Attribute(.unique) var boughtDate: Date?` turns
 /// this test red.
+///
+/// The third is `009`'s `WishlistItem.sellPlanCreatedAt` and
+/// `sellPlanCheckedAt`: both optional, neither unique, additive to the same
+/// store — and T001 proved it the same way, declaring
+/// `@Attribute(.unique) var sellPlanCreatedAt: Date?` turns this test red.
 @Suite("CloudKit schema compatibility")
 struct CloudKitSchemaTests {
     @Test func schemaMeetsCloudKitRequirements() throws {
