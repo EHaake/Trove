@@ -473,7 +473,7 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
   **Done:** 2026-09-23. `design/icons/tab-plans.svg` per Q15 — a faint square, an arrow (0.7 opacity, the wishlist mark's middle step) and a solid square, in the house style — copied into `TabPlans.imageset` with `TabWishlist`'s `Contents.json` (template, vector preserved; built without a `.pbxproj` edit). `ContentView`'s fourth `Tab` bound to `$router.plansPath`; its "Three, not four" paragraph replaced. G20: `TabIconTests.assetNames` gains `TabPlans`; `theFourIconsAreFourDifferentMarks`. Mutations, each red: template intent dropped (the TabPlans case); `tab-wishlist.svg`'s bytes copied in (the distinctness leg alone). `scripts/verify.sh`: 1718 tests passed; `scripts/verify.sh ui`: 26 tests, 0 failures.
-- [ ] **T013 — The Dashboard card.**
+- [x] **T013 — The Dashboard card.**
   Per plan §12 and Q16. New `Trove/Views/Dashboard/PlansCard.swift`;
   `DashboardView` composes it below the Sold card inside
   `if viewModel.showsPlansCard`, action `router.showActivePlans()`, and
@@ -489,6 +489,7 @@ Handoff notes for the pause reports:
   `Trove/Views/Dashboard/DashboardView.swift`, `TroveTests/DashboardWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
+  **Done:** 2026-09-23. New `PlansCard` (SoldCard's chrome: `.extrudedPlate()` inside the button, so the whole card acts); `DashboardView` composes it below the Sold card inside `if viewModel.showsPlansCard`, action `router.showActivePlans()`, and reloads on `settledCount` beside `completedImports`. R4 (no card on an empty Dashboard) holds the way the Sold card's does: both live in the scrolling branch `body` builds only when `!viewModel.isEmpty`. G21, three tests in `DashboardWiringTests`. Mutations, each red: card out of the gate; `showSoldItems()`; the `settledCount` reload dropped; the card moved above the empty/scroll split; a second card in the empty branch. `scripts/verify.sh`: 1721 tests in 233 suites passed.
 - [ ] **T014 — The `-seedPlans` seed and the UI tests, run twice.**
   Per plan §13 and Q18. `UITestSeed.plansArgument = "-seedPlans"`,
   `shouldSeedPlans(mode:arguments:)` gated on `.ephemeral`, and
@@ -610,3 +611,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T010 — `sdd-implementer` | `opus` | ~58k (harness) | Done first pass; no miss |
 | T011 — `sdd-implementer` | `opus` | ~124k (harness) | Done first pass; no miss. Chose the empty states' marks (TabPlans, TabWishlist, iCloud) — for the phase review |
 | T012 — `sdd-implementer` | `opus` | ~45k (harness) | Done first pass; no miss |
+| T013 — `sdd-implementer` | `opus` | ~61k (harness) | Done first pass; no miss |
