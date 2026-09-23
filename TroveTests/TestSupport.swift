@@ -488,8 +488,11 @@ enum SourceScan {
     }
 
     /// Drops `//` line comments and `/* */` blocks. Deliberately naive about
-    /// `//` inside string literals — no source in this project has one, and a
-    /// scan that quietly over-matched would be worse than one that over-strips.
+    /// `//` inside string literals. URL literals do contain it (8 lines at
+    /// 2026-09-23, e.g. `UITestSeed.swift:260`), and the rest of such a line is
+    /// cut. That's the safe direction for scans that check something is
+    /// present (hidden text can only turn them red), and a blind spot for
+    /// scans that check something is absent, on those lines only.
     static func stripComments(_ source: String) -> String {
         var output = ""
         var index = source.startIndex

@@ -337,6 +337,17 @@ is **outdated**, confirmed at review: the on-screen string stays "Copy"
 per plan.md's Resolved decisions. The export was not edited; this note
 is the flag.
 
+### Destructive actions (`009`, 2026-09-23)
+
+Any control with `role: .destructive` is drawn in rust, wherever it appears.
+
+| Drawn by | How it gets rust |
+|---|---|
+| The app: toolbar buttons, swipe actions, rows | Coloured on the control itself: `accentRust` where rust fills or tints a shape (the swipe background), `accentRustText` where rust is the word. The role alone draws **brass** here, because `ContentView`'s brass `.tint` cascades over the role's red. |
+| The system: alert buttons, the detail "…" menu's Delete | The role alone. The system draws its own red, and nothing is added. |
+
+Guarded by `DestructiveColourPolicyTests`.
+
 ### Item detail (`010` refresh, 2026-08-29)
 
 Source: `Trove Item Detail.dc.html`. Adopted selectively — the mock's

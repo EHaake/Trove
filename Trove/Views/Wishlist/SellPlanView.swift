@@ -108,9 +108,10 @@ struct SellPlanView: View {
                 }
             }
             // 009 (plan Q12, as amended at the Phase 3 walkthrough): deleting
-            // the plan is a bar button of its own, the word Delete in red —
-            // not a "…", which holding one row read as a menu with nothing in
-            // it. Still two taps: the button only raises the alert below.
+            // the plan is a bar button of its own, the word Delete in rust
+            // (`accentRustText`) — not a "…", which holding one row read as a
+            // menu with nothing in it. Still two taps: the button only raises
+            // the alert below.
             // Offered on both faces — on an active plan after Buy, and on the
             // record, where it is the only thing left to do.
             //
@@ -125,6 +126,10 @@ struct SellPlanView: View {
                     } label: {
                         Text(SellPlanCopy.deleteConfirm)
                     }
+                    // Explicit, not redundant: ContentView's brass .tint
+                    // cascades over the destructive role's red on a control
+                    // the app draws — tokens.md, "Destructive actions".
+                    .tint(theme.colors.accentRustText)
                 }
             }
         }

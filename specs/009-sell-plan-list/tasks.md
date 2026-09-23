@@ -399,7 +399,7 @@ Handoff notes for the pause reports:
   is tapped. Predates `009` (`SellPlanRow`, 003/006). Guard: a UI test that
   taps an empty point of the card and sees the selection change.
   **Done:** 2026-09-23. Cause as suspected: a `.plain` button hit-tests only what it draws, and `SellPlanRow.card` had no content shape. `.contentShape(Rectangle())` added last on `card` (covers its padding and full width, stops at the strip's hairline). New UI test `testTappingAnEmptyPartOfASellPlanCardTogglesItAndTheStripStaysApart`: a tap in the card's bottom padding, placed from the strip's frame (the card's own frame shrinks without the fix, so measuring from it would have agreed with itself), flips `isSelected` and back and opens no sheet; a tap on the strip opens the sale sheet and leaves the selection. Mutation: shape removed → red (2 failures — and the tap near the strip opened the *sale sheet*: without a shape, SwiftUI gave the empty-space touch to the neighbouring button). Audit for the person, not fixed: the Dashboard's "N items not yet valued" callout has the same shape (`DashboardView.swift:382–416`); the unselected category chips (`WishlistView.swift:521`, `ItemListView.swift:877`) may not take taps in their padding. `scripts/verify.sh`: 1708 tests passed; the new UI test green alone.
-- [ ] **T009d — The person's standard: a destructive action is always drawn red.**
+- [x] **T009d — The person's standard: a destructive action is always drawn red.**
   The person, 2026-09-23: "the Delete button needs to be red to indicate a
   destructive action. This needs to be implemented as standards across the
   app so that I don't have to manually point it out every time." The
@@ -409,6 +409,7 @@ Handoff notes for the pause reports:
   commit), and guard it so a new destructive control that isn't red goes
   red in the suite. Shape by decision review.
 
+  **Done:** 2026-09-23. Per plan §9a (decision review, plus a follow-up ruling on the balance anchor). The Sell Plan's toolbar Delete gets `.tint(theme.colors.accentRustText)`; `design/tokens.md` gains **Destructive actions**; `SourceScan.stripComments`' stale comment corrected (behaviour unchanged); new `DestructiveColourPolicyTests` classifies every `.destructive` by its enclosing call — 13 sites, 8 system-drawn, 5 app-drawn, 8 of 8 site-holding files balance-checked. Mutations, each red with the failure naming what was broken: the tree before the fix (SellPlanView:124 only); the Items owned-row swipe's `.tint` removed (ItemListView:475); the fix moved onto Buy; the fix commented out; Delete re-spelled in the title form uncoloured; `ButtonRole.destructive` on an uncoloured Buy (14 sites, 6 app-drawn); Settings' destructive colour brass (the exemption's pin); a URL literal in SellPlanView (balance anchor, naming the file). `scripts/verify.sh`: 1709 tests in 232 suites passed. The rendering half — does `.tint` beat the brass cascade on the glass toolbar — is the device check that follows.
 ## Phase 4 — The Plans tab and the Dashboard card · walkthrough: yes — a fourth tab, Plans, opening on Active: rows with picture, name, category, what is set aside, what sold toward it and a quiet "Covered"; its own sort on each side; swipe right on an Active row to Buy and watch it move to Completed; swipe left to delete; a Completed row opens as a record with the date bought and no actions but Delete; the Overview's "<n> active sell plans" card lands on Active
 
 - [ ] **T010 — `SideSwitch` for two screens.**
@@ -600,3 +601,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T009b — `sdd-implementer` | `opus` | ~93k (harness, incl. a follow-up) | Done first pass; no miss |
 | T009c — `sdd-implementer` | `opus` | ~75k (harness) | Done first pass; no miss |
 | T009d — `skeptical-reviewer` decision review | `opus` | ~71k (harness) | Option A tightened: colour on the control where the app draws it, role alone where the system does; rust; no shared modifier; `DestructiveColourPolicyTests` classified by enclosing call; device check for the rendering half. Transcribed as plan §9a |
+| T009d — `sdd-implementer` | `opus` | ~85k (harness, incl. the ruling round) | Stopped once on a judgement (the balance anchor vs `stripComments` cutting URL literals) — ruled C at a follow-up decision review (~80k, cumulative); then done |
