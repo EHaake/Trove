@@ -279,7 +279,7 @@ Handoff notes for the pause reports:
   mutations recorded.
 
   **Done:** 2026-09-22. `PlansViewModel` per plan §5; `PlansViewModelTests` (18); the four-host seed, landing and refusal tests extend to the Plans host, plus `aPurchaseThroughAnyHostLeavesAPlanlessEntryPlanless`. Mutations, each red: `active` from the selection (12 issues); date comparator reversed; bought date as plan date; tie by name; one shared sort; `stillSyncing` below `noPlans`; awaiting check dropped; `?? 0` in the fourth seed; the fourth host skipping its save (landing leg); `rowLines(boughtDate: nil)` (the Phase 1 review's Bought leg); completed read as `isBought` alone (planless and orphan legs); `showsThumbnail` true on Completed. Choices the plan left open, for the phase review: a row whose entry is gone refuses `markBought` with `PurchaseCopy.failureMessage`; `deletePlan` returns false silently; a fetch failure empties the rows (no message property in §5); `stillSyncing` applies on both sides. `scripts/verify.sh`: 1686 tests in 229 suites passed.
-- [ ] **T006 — `SellPlanViewModel`: the completed record and `deletePlan`.**
+- [x] **T006 — `SellPlanViewModel`: the completed record and `deletePlan`.**
   Per plan §6 and Q11. `isCompleted`, `offersPurchase`, `offersDelete`,
   `boughtDate`, `deletePlan()`; `toggle` and `markSold` write nothing on a
   completed plan; `load()` builds no pool for one. Nothing else in the file
@@ -294,6 +294,7 @@ Handoff notes for the pause reports:
   `TroveTests/SellPlanViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
+  **Done:** 2026-09-22. `isCompleted`, `offersPurchase`, `offersDelete`, `boughtDate`, `deletePlan()`; `toggle`/`markSold` write nothing on a completed plan; `load()` builds no pool for one. New suite `SellPlanRecordTests` (8), second-context reads. Mutations, each red: `toggle` guard dropped; pool built for a bought entry (`candidates` leg); `deletePlan` clearing `itemsSoldToward` (both delete legs, 5 issues). Choices for the phase review: a refused delete reports in the shared `saveFailureMessage`; `deletePlan` reloads on success like `markSold`. `scripts/verify.sh`: 1694 tests in 230 suites passed.
 - [ ] **T007 — `DashboardViewModel`'s active count, and the router's fourth tab.**
   Per plan §8 and Q17. `activePlanCount`, `showsPlansCard`, `plansLine`,
   `settledCount` passed through from the monitor (a test: recording a failed
@@ -548,3 +549,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T004 — `skeptical-reviewer` per-task | `opus` | ~47k (harness) | Signed off; 0 blocking, 3 non-blocking: 2 applied (hook-before-`settledCount` pinned; seeds-leave-nothing test); 3rd — does a signed-in device launched offline finish setup *failed* and so run the carry-over on a stale copy? — already T015's person step; carried to the sweep |
 | Phase 1 — `skeptical-reviewer` phase review | `opus` | ~91k (harness) | Signed off; 0 blocking, 5 non-blocking, carried forward: T005 (a completed row's lines begin with Bought), T008 (inline strings out, `PurchaseCopy` comment), T014 (Fuji test red for both launch-wiring mutations), T015 (probe in the hook on an upgrade launch), sweep (`runCarryOver` saves/rolls back the whole main context on every import — plan Q4 as written). UI suite at `851b210`: 25 tests, 0 failures |
 | T005 — `sdd-implementer` | `opus` | ~140k (harness) | Done first pass; no miss. Noted: the `aRefusedPurchaseRollsBackAndReportsInItsHostsOwnProperty` scan still names three hosts |
+| T006 — `sdd-implementer` | `opus` | ~83k (harness) | Done first pass; no miss |
