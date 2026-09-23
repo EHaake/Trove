@@ -412,7 +412,7 @@ Handoff notes for the pause reports:
   **Done:** 2026-09-23. Per plan §9a (decision review, plus a follow-up ruling on the balance anchor). The Sell Plan's toolbar Delete gets `.tint(theme.colors.accentRustText)`; `design/tokens.md` gains **Destructive actions**; `SourceScan.stripComments`' stale comment corrected (behaviour unchanged); new `DestructiveColourPolicyTests` classifies every `.destructive` by its enclosing call — 13 sites, 8 system-drawn, 5 app-drawn, 8 of 8 site-holding files balance-checked. Mutations, each red with the failure naming what was broken: the tree before the fix (SellPlanView:124 only); the Items owned-row swipe's `.tint` removed (ItemListView:475); the fix moved onto Buy; the fix commented out; Delete re-spelled in the title form uncoloured; `ButtonRole.destructive` on an uncoloured Buy (14 sites, 6 app-drawn); Settings' destructive colour brass (the exemption's pin); a URL literal in SellPlanView (balance anchor, naming the file). `scripts/verify.sh`: 1709 tests in 232 suites passed. The rendering half — does `.tint` beat the brass cascade on the glass toolbar — is the device check that follows.
 ## Phase 4 — The Plans tab and the Dashboard card · walkthrough: yes — a fourth tab, Plans, opening on Active: rows with picture, name, category, what is set aside, what sold toward it and a quiet "Covered"; its own sort on each side; swipe right on an Active row to Buy and watch it move to Completed; swipe left to delete; a Completed row opens as a record with the date bought and no actions but Delete; the Overview's "<n> active sell plans" card lands on Active
 
-- [ ] **T010 — `SideSwitch` for two screens.**
+- [x] **T010 — `SideSwitch` for two screens.**
   Per plan §10 and Q14. Generic over `Side`, the constants into
   `SideSwitchMetrics`, the Items constrained `init(side:select:)` keeping
   every word, identifier and measurement it has today, and the Plans one with
@@ -429,6 +429,7 @@ Handoff notes for the pause reports:
   (new here, holding G18; T011 extends it).
   **Verify:** `scripts/verify.sh` green; the measured width in the Done note.
 
+  **Done:** 2026-09-23. `SideSwitch<Side: Hashable>` with `SideSwitchMetrics` (halfWidth 62, height 32, slideDuration 0.2, `labelFont(isActive:)`); the Items `init(side:select:)` keeps every word, identifier and measurement; the Plans one uses `SellPlanCopy` labels, `plans.sideSwitch`, and a **69 pt** half — measured: at 11 pt mono Owned 33, Sold 27, Active 40, Completed 60 pt (regular and medium equal); 62 pt cannot hold Completed with 4 pt each side, 69 is the narrowest whole point that can. `ItemListView.swift` unchanged; `ItemListSidesWiringTests` follows the constant (value and scan text). New `PlansWiringTests.everyLabelOfBothSwitchesFitsItsHalf` (G18). Mutation: Plans' half at 50 pt → red (Completed, both weights). `scripts/verify.sh`: 1710 tests in 233 suites passed.
 - [ ] **T011 — `PlansView`.**
   Per plan §11, Q8, Q12, Q13. New `Trove/Views/Plans/PlansView.swift` with its
   private `PlanRowView`, exactly as plan §11 describes. Not yet in the tab bar
@@ -604,3 +605,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T009d — `sdd-implementer` | `opus` | ~85k (harness, incl. the ruling round) | Stopped once on a judgement (the balance anchor vs `stripComments` cutting URL literals) — ruled C at a follow-up decision review (~80k, cumulative); then done |
 | T009d — device check (`general-purpose`, simulator tools) | `opus` | ~141k (harness) | The Delete word samples exactly `accentRustText` (#B8674F dark, #8E3A24 light) and Buy exactly brass, on iOS 27.0 and 26.5 — `.tint` wins over the cascade; Buy and Delete are separate capsules (~11 pt gap). The lone Delete on a completed plan (stray gap?) unreachable before the Plans tab — carried to T015 |
 | Phase 3 — the person's walkthrough | — | — | Attested 2026-09-23 on the right build ("Looks good. Continue"), after two findings (T009a→T009c, T009b) and one standard (T009d). UI suite at `756edc7`: 26 tests, 0 failures (T009c's test added). T009b–T009d had no phase review of their own; they ride in Phase 4's review bundle |
+| T010 — `sdd-implementer` | `opus` | ~58k (harness) | Done first pass; no miss |
