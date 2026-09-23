@@ -457,7 +457,7 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
   **Done:** 2026-09-23. `Trove/Views/Plans/PlansView.swift` (built from the new folder with no `.pbxproj` edit) and its private `PlanRowView`, per plan §11: header with the Plans `SideSwitch` and a per-side sort badge, the `List` with Buy as the leading swipe on Active rows only and a rust delete swipe on both sides, the purchase sheet, the refusal and delete alerts, `.refreshable`, reloads on `completedImports` and `settledCount`, the router request applied on appear; whole-row tap target (`.contentShape`). Eight G19 legs in `PlansWiringTests`; the Plans host added to `purchaseHosts`; `findItemsToSell`'s "only route" comment corrected. Mutations, each red: Buy outside the Active gate; cancel closure emptied; `formattedAsWholeCurrency` and `.currency(` in the row; `SellPlanCopy.setAside(` in place of `row.lines`; `RowThumbnail` outside its gate; `isManualOrder: { _ in true }`; the `settledCount` reload dropped; plus the delete swipe's rust tint removed → `DestructiveColourPolicyTests` red naming `PlansView.swift:251` (now 15 sites, 9 system-drawn, 6 app-drawn). Which clause each host passes to `SellPlanCopy.deleteMessage(isCompleted:)` is guarded by no automated test and is read at T015 (plan §11); this screen passes `row.isCompleted`. The sort-change reload has no unit test. `scripts/verify.sh`: 1718 tests in 233 suites passed.
-- [ ] **T012 — The fourth tab and its icon.**
+- [x] **T012 — The fourth tab and its icon.**
   Per plan §11, Q15, Q17. `design/icons/tab-plans.svg` as plan Q15 draws it,
   copied into `Trove/Assets.xcassets/TabPlans.imageset/` with
   `TabWishlist`'s `Contents.json` (template, vector preserved);
@@ -472,6 +472,7 @@ Handoff notes for the pause reports:
   `Trove/App/ContentView.swift`, `TroveTests/TabIconTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
+  **Done:** 2026-09-23. `design/icons/tab-plans.svg` per Q15 — a faint square, an arrow (0.7 opacity, the wishlist mark's middle step) and a solid square, in the house style — copied into `TabPlans.imageset` with `TabWishlist`'s `Contents.json` (template, vector preserved; built without a `.pbxproj` edit). `ContentView`'s fourth `Tab` bound to `$router.plansPath`; its "Three, not four" paragraph replaced. G20: `TabIconTests.assetNames` gains `TabPlans`; `theFourIconsAreFourDifferentMarks`. Mutations, each red: template intent dropped (the TabPlans case); `tab-wishlist.svg`'s bytes copied in (the distinctness leg alone). `scripts/verify.sh`: 1718 tests passed; `scripts/verify.sh ui`: 26 tests, 0 failures.
 - [ ] **T013 — The Dashboard card.**
   Per plan §12 and Q16. New `Trove/Views/Dashboard/PlansCard.swift`;
   `DashboardView` composes it below the Sold card inside
@@ -608,3 +609,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | Phase 3 — the person's walkthrough | — | — | Attested 2026-09-23 on the right build ("Looks good. Continue"), after two findings (T009a→T009c, T009b) and one standard (T009d). UI suite at `756edc7`: 26 tests, 0 failures (T009c's test added). T009b–T009d had no phase review of their own; they ride in Phase 4's review bundle |
 | T010 — `sdd-implementer` | `opus` | ~58k (harness) | Done first pass; no miss |
 | T011 — `sdd-implementer` | `opus` | ~124k (harness) | Done first pass; no miss. Chose the empty states' marks (TabPlans, TabWishlist, iCloud) — for the phase review |
+| T012 — `sdd-implementer` | `opus` | ~45k (harness) | Done first pass; no miss |

@@ -7,7 +7,7 @@ import UIKit
 /// `FontRegistrationTests`, so the same treatment.
 ///
 /// Two ways to lose them without a compiler error. Misname an asset and
-/// `Tab(_:image:value:)` draws an empty slot: three unlabelled gaps in the bar,
+/// `Tab(_:image:value:)` draws an empty slot: an unlabelled gap in the bar,
 /// no warning. Lose the template intent and the glyph renders in the black it
 /// was authored in — invisible against `background`, and identical to the
 /// misnamed case at a glance.
@@ -23,7 +23,7 @@ struct TabIconTests {
     ///
     /// `nonisolated` because `@Test(arguments:)` evaluates its arguments
     /// outside the actor, and this target defaults to `MainActor` isolation.
-    private nonisolated static let assetNames = ["TabDashboard", "TabItems", "TabWishlist"]
+    private nonisolated static let assetNames = ["TabDashboard", "TabItems", "TabWishlist", "TabPlans"]
 
     private func icon(_ name: String) -> UIImage? {
         UIImage(named: name, in: .main, with: nil)
@@ -53,11 +53,11 @@ struct TabIconTests {
         )
     }
 
-    /// Three distinct marks, not one asset wired up three times. Catches a
-    /// copy-paste in `Contents.json` that the two checks above can't see —
-    /// each would resolve, each would be a template, and the bar would show
-    /// the same glyph three times.
-    @Test func theThreeIconsAreThreeDifferentMarks() throws {
+    /// Four distinct marks, not one asset wired up twice. Catches a
+    /// copy-paste in `Contents.json`, or in the `.svg` beside it, that the two
+    /// checks above can't see — each would resolve, each would be a template,
+    /// and the bar would show the same glyph in two slots.
+    @Test func theFourIconsAreFourDifferentMarks() throws {
         let data = try Self.assetNames.map { name in
             let image = try #require(icon(name), "No asset named \"\(name)\"")
             return try #require(image.pngData(), "\(name) has no raster representation")
