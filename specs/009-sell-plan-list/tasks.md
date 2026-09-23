@@ -374,6 +374,21 @@ Handoff notes for the pause reports:
   **Phase 3 closes here — pause for the person** (what to try is in the
   handoff note above).
 
+- [ ] **T009a — Walkthrough finding: taps on the Sell Plan are ignored for a moment after it opens.**
+  Reported at the Phase 3 walkthrough (2026-09-23): arriving on a Sell Plan
+  and immediately tapping a candidate to set it aside or release it does
+  nothing for a short while; after that, taps work. Diagnosis bundle to the
+  `sdd-implementer` — find the cause (instrumented, not inferred), whether
+  it predates `009`, and fix it if routine and inside the footprint; else
+  return options for a decision review.
+- [ ] **T009b — Walkthrough decision: Delete is its own button, separate from Buy.**
+  Per plan Q12 as amended 2026-09-23. The Sell Plan's toolbar shows Buy and
+  a red Delete as two separate buttons (Delete alone on a completed plan);
+  no "…" on this screen; `DetailOverflowMenu`'s delete-only initializer
+  withdrawn. The G17 delete-gate leg is rewritten to the new shape and
+  mutation-checked; the alert and `dismiss()`-only-when-it-took are
+  unchanged.
+
 ## Phase 4 — The Plans tab and the Dashboard card · walkthrough: yes — a fourth tab, Plans, opening on Active: rows with picture, name, category, what is set aside, what sold toward it and a quiet "Covered"; its own sort on each side; swipe right on an Active row to Buy and watch it move to Completed; swipe left to delete; a Completed row opens as a record with the date bought and no actions but Delete; the Overview's "<n> active sell plans" card lands on Active
 
 - [ ] **T010 — `SideSwitch` for two screens.**

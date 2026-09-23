@@ -282,6 +282,15 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   nothing to edit, and Delete keeps the second tap every other detail page's
   Delete has. On an active plan the "…" sits beside Buy. Both hosts use the
   existing alert idiom and `SellPlanCopy`'s one-clause message.
+  **Amended 2026-09-23 at the person's Phase 3 walkthrough:** a "…" holding
+  one row read as a menu with nothing in it, and Buy grouped beside it
+  looked odd. The plan's own screen shows **Delete as its own toolbar
+  button**, red (destructive role), physically separate from Buy — no "…"
+  and no `DetailOverflowMenu` on this screen, so its delete-only
+  initializer is withdrawn. Still two taps: the button opens the same
+  alert. Nothing else is planned for the menu (reopening a completed
+  plan is a spec Non-goal), so there is nothing to group. The row swipes
+  are unchanged. Task T009b.
 - **Q13. Buy from a row is the leading swipe on Active rows only**, `015`'s
   Wishlist shape exactly (`Buy` + `ActionBuy`, `accentBrassMid`, spoken
   `PurchaseCopy.markAsBought`), hosted `.sheet(item:)` over the staged row,
