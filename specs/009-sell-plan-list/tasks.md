@@ -782,12 +782,13 @@ Settings row it leads to; the UI tests last, against the final layout.
   `specs/ROADMAP.md` as a follow-up — the person's answer.
 
   **Done:** 2026-09-23. Delete All Items (several): "Their photos go too. Every sell plan loses its items, and completed plans lose their pictures." The person chose (a) for a single item: `ItemDeleteCopy.message(isSold:picturesACompletedPlan:)` adds "…and the completed plan it was bought for loses its picture" (owned) / "Its photos go too, and the completed plan it was bought for loses its picture." (sold) only when `item.boughtFromWishlistItem != nil`; flag off reads byte for byte as before. `DeleteAllCopy`'s one-item text takes the same flag, so `aListOfOneReadsLikeTheSingleItemAlert` keeps its exact equality over both values. The item page, the Items list and Settings' only-item case each take the flag from their view model. Mutations, each red: the clause removed (owned; sold); Delete All ignoring the flag; each of the three view models hardcoding false. No UI test goes through an item's delete alert (the wording has no on-screen check). `scripts/verify.sh`: 1746 tests in 234 suites passed.
-- [ ] **T021b — The Plans tab icon redrawn as the tipped scale (spec Amendment A, Decision 19).**
+- [x] **T021b — The Plans tab icon redrawn as the tipped scale (spec Amendment A, Decision 19).**
   `design/icons/tab-plans.svg` and `TabPlans.imageset/tab-plans.svg` become
   candidate H (the drawing is in the bundle); `TabIconTests` green unedited —
   G20's template and four-distinct legs re-run as mutations; `design/tokens.md`'s
   tab-icon line describes the new mark.
 
+  **Done:** 2026-09-23. `tab-plans.svg` (design and imageset, byte-identical) is candidate H, the tipped scale: a beam on a post, a faint block (set aside) on its low end, a solid one (wanted) on its high end. `TabIconTests` green unedited; G20 re-run — template intent dropped (the TabPlans case red), `tab-wishlist.svg`'s bytes copied (the distinctness leg alone red). Measured at 25 pt @3x (the device pass's method, checked against the old mark): ink box 21.0 × 18.0 pt, 1,166 ink px, beside Overview 1,202, Items 1,922, Wishlist 1,661 — the old mark was 19.0 × 7.0 pt, 966 px. `design/tokens.md`, `ContentView`'s comment and plan Q15 (pointer) updated. `scripts/verify.sh`: 1746 tests in 234 suites passed.
 ## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; the person's own checks (VoiceOver, two devices) are named in T015 as their steps rather than a phase walkthrough, and nothing new is built
 
 - [ ] **T015 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver, two devices]**
@@ -941,3 +942,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | Phase 4A — the person's walkthrough | — | — | Attested 2026-09-23 ("Everything else looks good"); RA3 kept (exports follow-up on the roadmap); RA4 → T021a |
 | T015 — device pass (`general-purpose`, simulator tools) | `opus` | ~350k (harness) | Every reachable check passed; no finding blocks; spoken names and iCloud steps to the person |
 | T015 — `scripts/verify.sh all` twice at `6fdfa97` | — | — | Both runs: 1746 unit tests, 36 UI tests, 0 failures |
+| T021b — `sdd-implementer` | `opus` | ~59k (harness) | Done first pass; no miss |

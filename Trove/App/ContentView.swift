@@ -22,10 +22,11 @@ struct ContentView: View {
     var body: some View {
         // Design's four marks, not SF Symbols: a tachometer for the dashboard,
         // a 2×2 grid for items, three ramping bars for the wishlist that
-        // echo `DesireGauge` on purpose, and for plans a faint square joined by
-        // an arrow to a solid one — gear funding a want. Each is a single
-        // template-rendered glyph, so the tint below draws both states and
-        // there's no separate selected variant to keep in step with this one.
+        // echo `DesireGauge` on purpose, and for plans a tipped scale — a faint
+        // block on the low end (what's set aside) and a solid one on the high
+        // end (what's wanted). Each is a single template-rendered glyph, so
+        // the tint below draws both states and there's no separate selected
+        // variant to keep in step with this one.
         TabView(selection: $router.selectedTab) {
             Tab("Overview", image: "TabDashboard", value: AppRouter.Tab.overview) {
                 NavigationStack { DashboardView(modelContext: modelContext, syncMonitor: syncMonitor) }

@@ -756,8 +756,8 @@ those pieces were put together and the measurements the device pass took
 | Property | Value |
 |---|---|
 | **Tab icon** | |
-| Mark | `TabPlans` — `design/icons/tab-plans.svg`, in the tab set's language (24 viewBox, flat `#000` fills, the `scale(1.2)` group): a square at 0.45 opacity, an arrow at 0.7 (the wishlist mark's middle step) and a solid square, meaning gear funding a want. Template, vector preserved |
-| Weight | **Observed at the device pass to carry about half the visual weight of the other three** (an 18.5 × 6.7 pt mark). Drawn as planned, and open to revision like any drawn-to-match icon |
+| Mark | `TabPlans` — `design/icons/tab-plans.svg`, in the tab set's language (24 viewBox, flat `#000` fills, the `scale(1.2)` group, round-capped `1.5` strokes): a tipped scale — a post on a base carrying a beam that rises to the right, a block at 0.45 opacity on the low end and a solid block on the high end, the wishlist mark's two end shades. The faint block is what's set aside, the solid one what's wanted. Redrawn at spec Decision 19 (T021b), replacing the first mark (a faint square, an arrow and a solid square). Template, vector preserved |
+| Weight | The first mark was **observed at the device pass to carry about half the visual weight of the other three** (an 18.5 × 6.7 pt mark, about 900 ink px), which is why it was redrawn. The tipped scale, rendered at 25 pt @3x with the other three: 21.0 × 18.0 pt, 1,166 ink px, against Overview 21.0 × 17.3 pt / 1,202, Items 19.0 × 19.0 / 1,922 and Wishlist 18.7 × 17.0 / 1,661 (T021b, from the SVGs, not a device screenshot) |
 | **Plans screen header** | |
 | Title | "Plans" in `screenTitle`, fixed while only the rows scroll (`001`'s list rule) |
 | Trailing | `WishlistView`'s `HStack(spacing: 8)`: the Sort badge while the side has rows, then the **"…"** (`OverflowBadge`, `moreActions.plans`) **always**, over an empty side too, since Settings is never gated (spec Decision 17). Its dropdown holds one row, **Settings**. Both badges are one height, so the header is too |

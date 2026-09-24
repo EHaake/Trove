@@ -319,6 +319,10 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   two squares, the left at 0.45 opacity and the right solid, joined by a
   right-pointing arrow — gear funding a want. Template, vector preserved.
   Revisitable; the device pass looks at it in both appearances.
+  *(Redrawn at T021b — spec Amendment A, Decision 19: the person chose a
+  tipped scale after the device pass measured this mark at about half the
+  other icons' weight; `design/tokens.md` holds the new mark and its
+  measurements.)*
 - **Q16. The Dashboard card copies the Sold card's chrome into `PlansCard`**
   rather than generalizing `SoldCard`: the Sold card's delta line, colour
   rule and attributed figures are `006`-guarded, and this card needs a
