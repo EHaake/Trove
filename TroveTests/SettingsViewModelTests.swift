@@ -1351,3 +1351,255 @@ struct SettingsBoughtExclusionTests {
         #expect(targets.map(\.productID) == [42, 7], "the purchase's item carries the match, as an owned target")
     }
 }
+
+// MARK: - 009 Amendment A: G35, Delete all sell plans
+
+/// G35 (009 Amendment A, plan QA4 and RA2(b); criteria 22 and 10–12). One
+/// store holding every kind of row the gesture must tell apart: an active
+/// plan, a completed plan, a stored plan whose row the carry-over has not
+/// reached (the defence path `SellPlanStore.delete` documents), a row still
+/// awaiting the carry-over, and two planless entries — one wanted, one bought.
+///
+/// Every persisted read is on a **second** `ModelContext`: a same-context
+/// refetch hands back unsaved changes and would pass with the save removed.
+/// The injected instant is in the past and distinct from every stamp in the
+/// fixture, so a stamp written from anything but the view model's clock is
+/// caught; every sale price differs from its item's current value.
+@Suite("SettingsViewModel — Delete all sell plans")
+struct SettingsDeleteAllSellPlansTests {
+    private let earlier = Date(timeIntervalSince1970: 1_760_000_000)
+    private let soldOn = Date(timeIntervalSince1970: 1_770_000_000)
+    private let now = Date(timeIntervalSince1970: 1_780_000_000)
+    private let later = Date(timeIntervalSince1970: 1_790_000_000)
+
+    /// The four rows the delete clears — three stored plans and the row
+    /// awaiting the carry-over (RA2(b)).
+    private static let removed = ["Rickenbacker 330", "Gretsch White Falcon", "Danelectro 59", "Gibson ES-335"]
+    private static let planless = ["Vox AC15", "Fender Twin"]
+
+    private func sale(_ priceCents: Int) -> Sale {
+        Sale(date: soldOn, priceCents: priceCents, location: "Reverb", note: nil)
+    }
+
+    private func viewModel(_ context: ModelContext) -> SettingsViewModel {
+        SettingsViewModel(modelContext: context, now: { now })
+    }
+
+    private func entry(_ name: String, in context: ModelContext) throws -> WishlistItem {
+        try #require(try context.fetch(FetchDescriptor<WishlistItem>()).first { $0.name == name }, "no entry \(name)")
+    }
+
+    /// Every sale and value field criterion 10 names, per item — G6's shape.
+    private struct ItemState: Equatable {
+        let id: UUID
+        let soldDate: Date?
+        let salePriceCents: Int?
+        let currentValueCents: Int?
+        let desireToKeep: Int
+    }
+
+    private func itemStates(in context: ModelContext) throws -> [ItemState] {
+        try context.fetch(FetchDescriptor<Item>())
+            .map { ItemState(id: $0.id, soldDate: $0.soldDate, salePriceCents: $0.salePriceCents,
+                             currentValueCents: $0.currentValueCents, desireToKeep: $0.desireToKeep) }
+            .sorted { $0.id.uuidString < $1.id.uuidString }
+    }
+
+    /// What of an entry the delete must leave alone.
+    private struct EntryState: Equatable {
+        let id: UUID
+        let checkedAt: Date?
+        let soldToward: [UUID]
+        let boughtDate: Date?
+        let boughtItemID: UUID?
+    }
+
+    private func entryStates(in context: ModelContext) throws -> [String: EntryState] {
+        Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<WishlistItem>()).map {
+            ($0.name, EntryState(
+                id: $0.id,
+                checkedAt: $0.sellPlanCheckedAt,
+                soldToward: ($0.itemsSoldToward ?? []).map(\.id).sorted { $0.uuidString < $1.uuidString },
+                boughtDate: $0.boughtDate,
+                boughtItemID: $0.boughtItem?.id
+            ))
+        })
+    }
+
+    /// A plan made the way the app makes one, checked at `earlier` first so
+    /// `create` leaves that stamp (it stamps only when nil).
+    private func planned(_ name: String, in context: ModelContext) -> WishlistItem {
+        let row = WishlistItem(name: name)
+        context.insert(row)
+        row.sellPlanCheckedAt = earlier
+        SellPlanStore.create(for: row, at: earlier)
+        return row
+    }
+
+    private func planlessOnly(in context: ModelContext) throws {
+        let wanted = WishlistItem(name: "Vox AC15", estimatedCostCents: 80_000)
+        let boughtPlanless = WishlistItem(name: "Fender Twin", estimatedCostCents: 180_000)
+        context.insert(wanted)
+        context.insert(boughtPlanless)
+        try WishlistPurchaseStore.markBought(
+            boughtPlanless, purchase: Purchase(date: soldOn, priceCents: 175_000, location: "Reverb", condition: .good),
+            at: soldOn, in: context)
+        try context.save()
+    }
+
+    private func seed(in context: ModelContext) throws {
+        let telecaster = Item(name: "Telecaster", purchasePriceCents: 100_000, currentValueCents: 120_000, desireToKeep: 2)
+        let jazzmaster = Item(name: "Jazzmaster", purchasePriceCents: 90_000, currentValueCents: 95_000, desireToKeep: 5)
+        let bluesJunior = Item(name: "Blues Junior", purchasePriceCents: 60_000, currentValueCents: 55_000, desireToKeep: 1)
+        let rat = Item(name: "ProCo RAT", purchasePriceCents: 8_000, currentValueCents: 7_000, desireToKeep: 3)
+        let bigMuff = Item(name: "Big Muff", purchasePriceCents: 9_000, currentValueCents: 6_500, desireToKeep: 4)
+        for item in [telecaster, jazzmaster, bluesJunior, rat, bigMuff] { context.insert(item) }
+
+        // Active: a selection and a sale toward it.
+        let active = planned("Rickenbacker 330", in: context)
+        active.plannedSaleItems = [telecaster]
+        try ItemSaleStore.markSold(bluesJunior, sale: sale(70_000), toward: active, at: soldOn, in: context)
+
+        // Completed: a sale toward it, then bought — the purchase records its item.
+        let completed = planned("Gretsch White Falcon", in: context)
+        try ItemSaleStore.markSold(rat, sale: sale(11_000), toward: completed, at: soldOn, in: context)
+        try WishlistPurchaseStore.markBought(
+            completed, purchase: Purchase(date: soldOn, priceCents: 340_000, location: "Reverb", condition: .excellent),
+            at: soldOn, in: context)
+
+        // A stored plan the carry-over has not reached, with a sale toward it:
+        // only `delete`'s nil-stamp keeps the carry-over from re-planning it.
+        let unchecked = planned("Danelectro 59", in: context)
+        try ItemSaleStore.markSold(bigMuff, sale: sale(12_000), toward: unchecked, at: soldOn, in: context)
+        unchecked.sellPlanCheckedAt = nil
+
+        // Awaiting the carry-over: no stored plan, a selection, unchecked.
+        let awaiting = WishlistItem(name: "Gibson ES-335", plannedSaleItems: [jazzmaster])
+        context.insert(awaiting)
+        awaiting.sellPlanCheckedAt = nil
+
+        try context.save()
+        try planlessOnly(in: context)
+    }
+
+    // MARK: - The count (RA2(b))
+
+    @Test func theCountIsTheStoredPlansAndTheRowAwaitingTheCarryOver() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        try seed(in: context)
+        let fixture = ModelContext(container)
+        #expect(try entry("Gibson ES-335", in: fixture).awaitsCarryOver, "fixture: the Gibson awaits the carry-over")
+        #expect(try entry("Danelectro 59", in: fixture).sellPlanCheckedAt == nil, "fixture: the Danelectro is unchecked")
+        #expect(try entry("Gretsch White Falcon", in: fixture).isBought, "fixture: the Gretsch is completed")
+
+        let viewModel = viewModel(context)
+        viewModel.load()
+
+        #expect(viewModel.planCount == 4, "three stored plans and the row awaiting the carry-over")
+        #expect(viewModel.canDeleteSellPlans)
+        viewModel.requestDeleteAll(.sellPlans)
+        #expect(viewModel.alert == .confirmDelete(.sellPlans, count: 4))
+        #expect(viewModel.alertTitle == "Delete all 4 sell plans?")
+    }
+
+    @Test func withNoPlansTheRowIsDimmedAndTheRequestStagesNothing() throws {
+        let context = try makeInMemoryContext()
+        try planlessOnly(in: context)
+        let viewModel = viewModel(context)
+        viewModel.load()
+
+        #expect(viewModel.planCount == 0, "a planless entry, wanted or bought, is not a plan")
+        #expect(!viewModel.canDeleteSellPlans)
+        viewModel.requestDeleteAll(.sellPlans)
+        #expect(viewModel.alert == nil)
+    }
+
+    /// The alert's number is the store's now: a plan arriving after the
+    /// screen loaded, through a second context, is counted.
+    @Test func theRequestReCountsAPlanThatArrivedAfterLoad() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        try seed(in: context)
+        let viewModel = viewModel(context)
+        viewModel.load()
+        try #require(viewModel.planCount == 4)
+
+        let elsewhere = ModelContext(container)
+        _ = planned("Arrived from iCloud", in: elsewhere)
+        try elsewhere.save()
+
+        viewModel.requestDeleteAll(.sellPlans)
+
+        #expect(viewModel.alert == .confirmDelete(.sellPlans, count: 5))
+    }
+
+    // MARK: - The delete (criteria 10–12, 22)
+
+    @Test func confirmRemovesEveryPlanAndNothingElse() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        try seed(in: context)
+        let before = ModelContext(container)
+        let itemsBefore = try itemStates(in: before)
+        let entriesBefore = try entryStates(in: before)
+        try #require(itemsBefore.count == 7, "five owned items and the two purchases")
+        try #require(entriesBefore.count == 6)
+        try #require(entriesBefore["Gretsch White Falcon"]?.boughtItemID != nil, "fixture: the purchase recorded its item")
+        let viewModel = viewModel(context)
+        viewModel.load()
+        viewModel.requestDeleteAll(.sellPlans)
+
+        await viewModel.confirmDeleteAll(.sellPlans)?.value
+
+        let after = ModelContext(container)
+        #expect(try after.fetchCount(FetchDescriptor<WishlistItem>()) == 6, "every entry stays")
+        #expect(try itemStates(in: after) == itemsBefore, "no item is created, removed, unsold, repriced or re-rated")
+        let entriesAfter = try entryStates(in: after)
+        for name in Self.removed {
+            let stored = try entry(name, in: after)
+            let was = try #require(entriesBefore[name])
+            let current = try #require(entriesAfter[name])
+            #expect(stored.sellPlanCreatedAt == nil, "\(name): the plan is gone")
+            #expect((stored.plannedSaleItems ?? []).isEmpty, "\(name): the selection is gone")
+            #expect(current.soldToward == was.soldToward, "\(name): the sold-toward record changed")
+            #expect(current.boughtDate == was.boughtDate && current.boughtItemID == was.boughtItemID,
+                    "\(name): the purchase record changed")
+            #expect(current.checkedAt == (was.checkedAt ?? now), "\(name): the row does not end checked by the delete")
+        }
+        #expect(entriesBefore["Rickenbacker 330"]?.soldToward.isEmpty == false, "fixture: sales toward the plans")
+        for name in Self.planless {
+            #expect(entriesAfter[name] == entriesBefore[name], "\(name) was touched")
+            #expect(try entry(name, in: after).sellPlanCreatedAt == nil)
+        }
+        #expect(viewModel.planCount == 0)
+        #expect(viewModel.alert == nil)
+
+        // Criterion 12: a deleted plan does not come back on its own.
+        let carrying = ModelContext(container)
+        _ = try SellPlanStore.carryOver(in: carrying, at: later)
+        try carrying.save()
+        let settled = ModelContext(container)
+        for name in Self.removed {
+            #expect(try entry(name, in: settled).sellPlanCreatedAt == nil, "\(name): the carry-over brought the plan back")
+        }
+    }
+
+    @Test func activityIsSetSynchronouslyAndASecondActionIsRefused() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        try seed(in: context)
+        let viewModel = viewModel(context)
+        viewModel.load()
+
+        let first = viewModel.confirmDeleteAll(.sellPlans)
+        #expect(viewModel.activity == .deleteSellPlans)
+        #expect(viewModel.isBusy)
+        #expect(viewModel.confirmDeleteAll(.items) == nil)
+
+        await first?.value
+
+        #expect(viewModel.activity == nil)
+        #expect(try ModelContext(container).fetchCount(FetchDescriptor<Item>()) == 7, "the refused second action must not have run")
+    }
+}

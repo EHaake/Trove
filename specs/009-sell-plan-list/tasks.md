@@ -697,7 +697,7 @@ Settings row it leads to; the UI tests last, against the final layout.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
   **Done:** 2026-09-23. `PlansView`'s header holds the sort badge (when the side has rows) and an `OverflowBadge` always, anchored `.overflow`, identifier `moreActions.plans`, whose dropdown's one row opens Settings; the Settings sheet copied from `DashboardView` with `onDismiss: viewModel.load`. G32 — `PlansView.swift` in `settingsHosts`; new `everyTabsRootReachesSettings` derives each tab's root from `ContentView`, requires as many as `AppRouter.Tab.allCases`, and requires each to host the badge and a dropdown that raises the sheet. G33 — Plans' badges' identifiers and hints. Mutations, each red: the badge replaced by a `Button`; the sheet without its reload; Plans out of `settingsHosts`; the Plans root swapped for `SellPlanView` (6 issues); the row toggling instead of raising; the identifier removed. The preview injects `AppearanceStore`. `scripts/verify.sh`: 1734 tests in 233 suites passed.
-- [ ] **T020 — "Delete All Sell Plans…" in Settings.**
+- [x] **T020 — "Delete All Sell Plans…" in Settings.**
   Per plan QA4, RA2 (**build to RA2 as written unless the person has
   answered otherwise by dispatch** — if they have, the orchestrator
   transcribes the answer into plan RA2 first). `DeleteAllCopy`:
@@ -752,6 +752,7 @@ Settings row it leads to; the UI tests last, against the final layout.
   `TroveTests/SettingsWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
+  **Done:** 2026-09-23. `DeleteTarget.sellPlans` (with `CaseIterable`) and its copy — "Delete your only sell plan?" / "Delete all 4 sell plans?", the message naming the plans in its iCloud sentence; `SettingsViewModel.planCount`, `canDeleteSellPlans`, `Activity.deleteSellPlans`, the `.sellPlans` delete through `SellPlanStore.delete` in the existing one-save/rollback envelope, counted and deleted by one `plannedRows()` on RA2(b)'s path (stored plans plus rows awaiting the carry-over); a third rust row under Delete. Stale comments corrected. G34 (three copy tests), G35 (new suite `SettingsDeleteAllSellPlansTests`, 5, second context, count 4), G36 (exact counts 3/3/8). Mutations, each red: entries deleted instead of plans; completed plans skipped; `itemsSoldToward` cleared; the save dropped; `planCount` counting every entry; `SellPlanStore.delete`'s nil-stamp dropped (the unchecked plan re-planned); a copy sentence reworded; the iCloud sentence in `.localOnly`; `isDestructive`, the hint, and the busy gate each removed. The refused-save rollback is untested, as for every Delete All. `scripts/verify.sh`: 1742 tests in 234 suites passed.
 - [ ] **T021 — Amendment A's UI tests, and the suite twice.**
   Per plan QA6. `testEveryTabsRootReachesSettings` (`-uiTesting`) and
   `testDeletingAllSellPlansLeavesEverythingElse` (`-uiTesting -seedPlans`),
@@ -915,3 +916,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T017 — `skeptical-reviewer` per-task | `opus` | ~73k (harness) | Signed off; 0 blocking, 6 non-blocking: the never-red `soldTowardWishlistItem` leg mutation-proved; QA1's mis-pairing premise corrected in plan.md; G39 split; "three hosts" → four; the doc naming `PlansViewModel` as reader confirmed at T018 |
 | T018 — `sdd-implementer` | `opus` | ~75k (harness) | Done first pass; no miss |
 | T019 — `sdd-implementer` | `opus` | ~81k (harness) | Done first pass; no miss |
+| T020 — `sdd-implementer` | `opus` | ~122k (harness) | Done first pass; no miss. Noted: `DestructiveColourPolicyTests` checks its counts as floors — plan wording saying "exact" there is inaccurate |

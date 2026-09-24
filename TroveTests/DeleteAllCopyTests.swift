@@ -41,7 +41,7 @@ struct DeleteAllCopyTests {
     /// is configured for iCloud, and absent for both other modes — a
     /// local-only fallback syncs nothing whether or not you're signed in.
     @Test func theICloudSentenceFollowsTheStorageMode() {
-        for target in [DeleteTarget.items, .wishlist] {
+        for target in DeleteTarget.allCases {
             for count in [1, 5] {
                 let syncing = DeleteAllCopy.message(for: target, count: count, mode: .cloudKit)
                 #expect(syncing.contains("If you're signed in to iCloud"), "\(target) ×\(count)")
@@ -87,8 +87,49 @@ struct DeleteAllCopyTests {
         #expect(DeleteAllCopy.message(for: .wishlist, count: 1, mode: .localOnly) == WishlistDeleteCopy.message)
     }
 
+    // MARK: - 009 Amendment A: G34, the sell plans
+
+    /// G34 (plan QA4). The third target's titles, plural and singular.
+    @Test func theSellPlansTitlesCountAndPluralize() {
+        #expect(DeleteAllCopy.title(count: 4, target: .sellPlans) == "Delete all 4 sell plans?")
+        #expect(DeleteAllCopy.title(count: 1, target: .sellPlans) == "Delete your only sell plan?")
+    }
+
+    /// G34. Both messages whole, in both storage modes. The iCloud sentence
+    /// names **the plans** — a bare "they're" after "What sold toward them"
+    /// would read as the sales.
+    @Test func theSellPlansMessagesNameWhatStaysWhenSyncing() {
+        #expect(
+            DeleteAllCopy.message(for: .sellPlans, count: 4, mode: .cloudKit)
+                == "Nothing you own or sold is touched, and everything on your wishlist stays there. "
+                + "What sold toward them stays on the record. "
+                + "If you're signed in to iCloud, the plans are removed from your other devices as well. "
+                + "This can't be undone."
+        )
+        #expect(
+            DeleteAllCopy.message(for: .sellPlans, count: 1, mode: .cloudKit)
+                == "Nothing you own or sold is touched, and everything on your wishlist stays there. "
+                + "What sold toward it stays on the record. "
+                + "If you're signed in to iCloud, the plan is removed from your other devices as well. "
+                + "This can't be undone."
+        )
+    }
+
+    @Test func theSellPlansMessagesOnALocalOnlyStoreLeaveICloudOut() {
+        #expect(
+            DeleteAllCopy.message(for: .sellPlans, count: 4, mode: .localOnly)
+                == "Nothing you own or sold is touched, and everything on your wishlist stays there. "
+                + "What sold toward them stays on the record. This can't be undone."
+        )
+        #expect(
+            DeleteAllCopy.message(for: .sellPlans, count: 1, mode: .localOnly)
+                == "Nothing you own or sold is touched, and everything on your wishlist stays there. "
+                + "What sold toward it stays on the record. This can't be undone."
+        )
+    }
+
     @Test func everyMessageEndsWithNoUndo() {
-        for target in [DeleteTarget.items, .wishlist] {
+        for target in DeleteTarget.allCases {
             for count in [1, 2] {
                 for mode in [StorageMode.cloudKit, .localOnly, .ephemeral] {
                     #expect(

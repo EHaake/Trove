@@ -79,14 +79,15 @@ struct SettingsWiringTests {
     }
 
     /// Criterion 18 rests on explicit hints — the role alone announces
-    /// nothing outside alerts and menus. Pinned at both ends: the two
-    /// call sites pass a hint, *and* the row applies it — the
+    /// nothing outside alerts and menus. Pinned at both ends: the three
+    /// call sites pass a hint (the third, sell plans, from 009 Amendment A's
+    /// G36 — an exact count, never `>=`), *and* the row applies it — the
     /// declaration-vs-composition family the section-order scan fell
     /// into, caught here by the pre-merge sweep instead.
-    @Test func bothDeleteRowsCarryAnAccessibilityHintAndTheRowAppliesIt() throws {
+    @Test func everyDeleteRowCarriesAnAccessibilityHintAndTheRowAppliesIt() throws {
         let code = try SourceScan.production(Self.settingsView)
-        #expect(code.ranges(of: "isDestructive: true").count == 2, "expected exactly two destructive rows")
-        #expect(code.ranges(of: "accessibilityHint: \"").count == 2, "both destructive rows must pass a hint")
+        #expect(code.ranges(of: "isDestructive: true").count == 3, "expected exactly three destructive rows")
+        #expect(code.ranges(of: "accessibilityHint: \"").count == 3, "every destructive row must pass a hint")
         #expect(
             code.contains(".accessibilityHint(accessibilityHint"),
             "SettingsActionRow no longer applies the hint it's given"
@@ -104,7 +105,7 @@ struct SettingsWiringTests {
     @Test func everyActionRowGatesOnBusyAndReadsItsOwnActivity() throws {
         let code = try SourceScan.production(Self.settingsView)
         let rows = SourceScan.argumentLists(of: "SettingsActionRow", in: code)
-        #expect(rows.count == 7, "expected seven action rows, found \(rows.count)")
+        #expect(rows.count == 8, "expected eight action rows, found \(rows.count)")
         for row in rows {
             #expect(row.contains("!viewModel.isBusy"), "a row doesn't disable while busy: \(row.prefix(48))")
             #expect(
