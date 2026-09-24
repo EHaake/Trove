@@ -90,8 +90,9 @@ Handoff notes for the pause reports:
   are still on the Items tab's Sold side, and creating a new plan shows them
   in its Sold section. **If the walkthrough store still holds `015`'s
   dataset**, its saved plan should read View your sell plan without having
-  been re-made — on its page even before the carry-over runs, since a row
-  awaiting it already counts (plan Q2). The carry-over itself runs only after
+  been re-made once the carry-over has run *(superseded: after the sign-off
+  re-review a row awaiting the carry-over reads "Create a sell plan" — plan
+  Q2, §7)*. The carry-over itself runs only after
   a successful iCloud sync or on a signed-out device, never when iCloud
   failed to load (plan Q3), so on a simulator without iCloud the orchestrator
   should say which case it is in before the person looks. Readings to put as questions: the Sell
@@ -126,8 +127,8 @@ Handoff notes for the pause reports:
   on your wishlist stays there. What sold toward them stays on the record.
   If you're signed in to iCloud, the plans are removed from your other
   devices as well. This can't be undone.";
-  **RA2** unless the person has already answered it (a wanted item whose old
-  plan is still waiting for iCloud to catch up is not counted or removed);
+  **RA2** — answered (b) by the person on 2026-09-23: a wanted item whose old
+  plan is still waiting for iCloud to catch up *is* counted and removed;
   **RA3** (the "Export first if you want a copy." line stays under the new
   row, though plans are in no export); **RA4** (Delete All Items now also
   turns completed plans' pictures into placeholders).
