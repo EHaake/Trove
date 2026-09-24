@@ -378,7 +378,7 @@ shape the Draft asserted, the reason is beside it.
   on drops it, and the completed plan it was bought for loses its
   picture."** (owned) / **"Its photos go too, and the completed plan it was
   bought for loses its picture."** (sold). Only when that entry **still holds
-  a plan**, active or completed: a purchase made with no plan never shows the
+  a plan** (a bought entry's plan is always a completed one): a purchase made with no plan never shows the
   clause, and deleting the plan removes it, since in either case no Plans row
   would lose a picture (corrected at the pre-merge sweep). Otherwise the text
   is exactly what it was.

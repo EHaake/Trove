@@ -795,7 +795,7 @@ Settings row it leads to; the UI tests last, against the final layout.
   **Done:** 2026-09-23. `tab-plans.svg` (design and imageset, byte-identical) is candidate H, the tipped scale: a beam on a post, a faint block (set aside) on its low end, a solid one (wanted) on its high end. `TabIconTests` green unedited; G20 re-run — template intent dropped (the TabPlans case red), `tab-wishlist.svg`'s bytes copied (the distinctness leg alone red). Measured at 25 pt @3x (the device pass's method, checked against the old mark): ink box 21.0 × 18.0 pt, 1,166 ink px, beside Overview 1,202, Items 1,922, Wishlist 1,661 — the old mark was 19.0 × 7.0 pt, 966 px. `design/tokens.md`, `ContentView`'s comment and plan Q15 (pointer) updated. `scripts/verify.sh`: 1746 tests in 234 suites passed.
 ## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; the person's own checks (VoiceOver, two devices) are named in T015 as their steps rather than a phase walkthrough, and nothing new is built
 
-- [ ] **T015 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver, two devices]**
+- [x] **T015 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver, two devices]**
   Per plan §13 and every criterion. **Upgrade in place first**: build and
   install `main`, create wanted items with a selection, with a sale toward
   them, one bought with a sale, one bought with neither, one with nothing;
@@ -849,7 +849,8 @@ Settings row it leads to; the UI tests last, against the final layout.
   samples; `scripts/verify.sh all` green twice.
 
   **Device pass (agent), 2026-09-23 — the person's steps pending.** Spares only (C5329D37 iOS 27, F0A13FFC iOS 26.5), neither signed into iCloud, so every carry-over ran the signed-out path. **Upgrade from `main`** (F0A13FFC): a selection → Active "1 item set aside"; a sale toward it → Active "1 sold toward it"; bought with a sale → Completed, "Bought … · 1 was sold toward it", placeholder; bought with neither → neither; nothing → neither; card "2 active sell plans". **Upgrade from the Phase 4 build** (`9f95b0f`, C5329D37): a completed plan bought before the link shows the placeholder in its new slot. **Probe** (in the hook, `carryOver`, `delete`): the upgrade launch made 3 plans of 5 unchecked rows; every relaunch 0, including after Delete all; swipe opened/closed 0, alert Keep 0, Delete 1; Sell Plan Keep 0; Delete all Keep 0, Delete All 4; deleting the bought item 0. Probes removed, tree byte-identical. **Checks passed**: every Plans screen, the card and the record in both appearances; the switch's top at 134.67 pt in every state, both devices (read from pixels — `inspect` unavailable); "Completed" whole in its 69 pt half (5.3 / 6.0 pt either side); Buy and Delete separate, Delete exactly `accentRustText`; the lone Delete on a record has no stray gap; an active row opens the live Sell Plan; both delete alerts' text; the wanted item and its sales survive a plan's delete; Covered appears with no money on the row; relaunch persistence; the card lands on Active; the picture's four states (older → placeholder, bought → photo, sold → photo, deleted → placeholder and the row stays); the Plans "…" with one Settings row over full and empty sides; Settings from all four tabs; the Delete-all-sell-plans row rust and dimmed with none, its alert text, and the outcome; T021a's two single-item texts and Delete All Items' plural; tap targets (card padding, the callout, a chip's padding); the swipe's rust fill. **Observation for the person**: the Plans tab icon carries about half the visual weight of the other three (18.5 × 6.7 pt mark; drawn as planned). Screenshots in the session scratchpad `devpass/`.
-- [ ] **T016 — Close-out.**
+  **Done:** 2026-09-23. The agent's device pass above, plus the person: Accessibility Inspector and VoiceOver done ("All voiceover labels are as expected"). Every two-device, offline and signed-in step deliberately **untested** at the person's word ("I can't do the sync tests yet … mark it as untested"), gathered with every other spec's in `specs/SYNC-CHECKS.md` for one later pass; criteria 17, 20 and 22 stay unticked on it.
+- [x] **T016 — Close-out.**
   Per plan §14 and Amendment A's close-out additions. Criteria **1–23**
   ticked in `spec.md` with per-criterion citations — criterion 7 as
   criterion 20 revised it, criterion 23 by G24 and G38, criteria 20 and 22's
@@ -881,6 +882,7 @@ Settings row it leads to; the UI tests last, against the final layout.
   (pointer, if it carries the "three tabs" rule).
   **Verify:** everything committed and pushed; `scripts/verify.sh all` green
   with both count lines recorded here.
+  **Done:** 2026-09-23. Criteria 1–23 closed with citations (17, 20, 22 unticked: sync untested); As built, DECISIONS, ROADMAP, README, tokens.md, the 001/015 pointers and `specs/SYNC-CHECKS.md`; the G7 resurrection mutation re-run on the finished tree (red where T003 saw it; both layers dropped → 7 tests red incl. the Delete-all host's leg). Pre-merge sweep: 1 blocking (these ticks) and one copy defect (the T021a clause shown for purchases with no plan — fixed at `ce8fb6c`); signed off at re-review. **`scripts/verify.sh all` at `ce8fb6c`: 1746 tests in 234 suites passed; Executed 36 tests, with 0 failures.**
 
 ## Tier log
 
@@ -947,3 +949,5 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T015 — device pass (`general-purpose`, simulator tools) | `opus` | ~350k (harness) | Every reachable check passed; no finding blocks; spoken names and iCloud steps to the person |
 | T015 — `scripts/verify.sh all` twice at `6fdfa97` | — | — | Both runs: 1746 unit tests, 36 UI tests, 0 failures |
 | T021b — `sdd-implementer` | `opus` | ~59k (harness) | Done first pass; no miss |
+| Pre-merge sweep — `skeptical-reviewer` | `opus` | ~301k + ~317k re-review (harness, cumulative) | 1 BLOCKING (T015/T016 unticked, `verify.sh all` at the final HEAD); the T021a clause shown for planless purchases (fixed, `ce8fb6c`); document drift fixed (`f727a0f`); signed off at re-review |
+| Close-out (`sdd-implementer`, T016) | `opus` | ~361k (harness, cumulative over three rounds) | Documents, SYNC-CHECKS, sweep doc fixes |
