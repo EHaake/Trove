@@ -741,7 +741,43 @@ from its twin — both settled by the person at a pause, not by a pass.
 | Comparison line | `theme.typography.secondary` on `textQuiet`, sentence case, no colour branch, no arrow, no figure treatment — "$120 less than you estimated". **Corrected at the Phase 2 pause** (`015` T011b): the plan specified `monoLabel`, which uppercases and tracks, so it shipped reading `$120 LESS THAN YOU ESTIMATED` in the identical treatment as the `PURCHASE PRICE` label above it. The app has no shared modifier for quiet prose — the explicit `secondary` + `textQuiet` pair is used at 28 call sites |
 | Invalid | `1px accentRust` border on the blank price, no message — the sale sheet's |
 | **Sell Plan bar button** | |
-| Action | `Text(PurchaseCopy.swipeBuy)` — the word **Buy** — at `.topBarTrailing`, in the corner the wanted page's "…" occupies, gated on the plan still having an entry. A bar button rather than a menu: a one-row menu is a menu for nothing. **It was a bare SF `bag` glyph until the device pass** (`015` T012a), which read as *cart* on the one screen whose subject is selling |
+| Action | `Text(PurchaseCopy.swipeBuy)` — the word **Buy** — at `.topBarTrailing`, in the corner the wanted page's "…" occupies, gated on the plan still having an entry. A bar button rather than a menu: a one-row menu is a menu for nothing. **It was a bare SF `bag` glyph until the device pass** (`015` T012a), which read as *cart* on the one screen whose subject is selling. *Since `009`: gated on `offersPurchase` (not on a completed plan's record), and joined by a rust **Delete** of its own — see* Sell plan list *below* |
+
+### Sell plan list (`009`)
+
+**No design pass** (spec Decision 8). `009` added no colour and no
+component: the Plans tab puts together the two-sided list screen (`014`), the
+wishlist row's head, the sort badge, the "…" and its shared dropdown (`013`),
+the swipe actions (`015`), the delete confirmation (`010`), the purchase sheet
+(`015`), and the Dashboard card's chrome (`006`). What it records here is how
+those pieces were put together and the measurements the device pass took
+(T015, 2026-09-23).
+
+| Property | Value |
+|---|---|
+| **Tab icon** | |
+| Mark | `TabPlans` — `design/icons/tab-plans.svg`, in the tab set's language (24 viewBox, flat `#000` fills, the `scale(1.2)` group): a square at 0.45 opacity, an arrow at 0.7 (the wishlist mark's middle step) and a solid square, meaning gear funding a want. Template, vector preserved |
+| Weight | **Observed at the device pass to carry about half the visual weight of the other three** (an 18.5 × 6.7 pt mark). Drawn as planned, and open to revision like any drawn-to-match icon |
+| **Plans screen header** | |
+| Title | "Plans" in `screenTitle`, fixed while only the rows scroll (`001`'s list rule) |
+| Trailing | `WishlistView`'s `HStack(spacing: 8)`: the Sort badge while the side has rows, then the **"…"** (`OverflowBadge`, `moreActions.plans`) **always**, over an empty side too, since Settings is never gated (spec Decision 17). Its dropdown holds one row, **Settings**. Both badges are one height, so the header is too |
+| Side switch | The Owned/Sold switch's shape, labelled **Active** / **Completed**, with a **69 pt** half, not 62. "Completed" measures 60 pt at 11 pt mono, and 69 is the narrowest whole point that keeps 4 pt either side (measured 5.3 / 6.0 on the device) |
+| Switch top | **134.67 pt** in every state (Active or Completed, empty or full, with the "…" alone or beside Sort) on both simulators. Read from pixels |
+| **Row** | |
+| Head | `WishlistRow`'s: `RowThumbnail` then name in `rowTitle` / `textPrimary`, category in `monoLabel`, with `rowContentGap` and `rowPadding`, and `.extrudedPlate()` |
+| Picture | **A slot on every row, on both sides** (spec Decision 16, revising Decision 11). An Active row draws the wanted item's photos. A Completed row draws the photos of the item the purchase created, and the placeholder when the purchase recorded none (it came before the record existed) or that item has since been deleted. It never falls back to the wanted entry's own photos |
+| Lines | `SellPlanSummary.rowLines`, stacked under the category in `secondary` on `textQuiet` (`015` T011b's pairing for quiet prose): on Active, set-aside count, then sold count, then **Covered**; on Completed, the bought date, the past-tense sold count, then **Covered**. A zero count gets no line. **No money figure, no gauge, no trailing column** (spec Decision 5) |
+| Covered | A word in the same quiet treatment as the other lines, never a badge and never moss. It is an observation, not a gain |
+| Tap | The whole plate (`.contentShape`), per *Tap targets* above |
+| Swipes | Leading, **Active rows only**: **Buy** — `accentBrassMid`, `ActionBuy`, spoken "Mark as bought…", the Wishlist's middle action exactly. Trailing, both sides: **Delete** on the `accentRust` fill. Completed rows have no leading swipe |
+| **Empty states** | `EmptyStateView`, no action. Marks: `TabPlans` for no plans and for nothing completed, `TabWishlist` for nothing wanted, and the app's iCloud mark for still syncing |
+| **Dashboard card** | `SoldCard`'s chrome, copied: plated, `cardPadding`, the whole card is the button. "SELL PLANS" in `monoLabel`, the count line in `monoValue` / `textPrimary` `6` below it, and a brass `arrow.right` trailing. Below the Sold card, on the root Dashboard only, and absent on the first-run screen |
+| **Sell Plan bar** | |
+| Active plan | **Buy** (brass, the word) and **Delete** (`accentRustText`, the word) as **two separate buttons**, with a `ToolbarSpacer(.fixed)` between them. Measured on the device: Delete samples exactly `#B8674F` dark / `#8E3A24` light, Buy exactly brass, and the two glass capsules sit ~11 pt apart (spec Decisions 13, 14) |
+| Completed plan | **Delete alone**, with no stray gap before it |
+| **Completed plan's record** | The active heading's shape with **Completed** as its state word, then "Bought <date>" quietly beneath, then `006`'s Sold section or "Nothing was sold toward it.", in a `ScrollView`. No figures card (R1), no candidates |
+| **Settings** | |
+| Delete All Sell Plans… | The third row under Delete, above the unchanged footer. Rust through `SettingsActionRow(isDestructive: true)`, sampled `accentRustText` in both appearances, and dimmed with no plans |
 
 
 ## Corner radii

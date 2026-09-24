@@ -1379,3 +1379,206 @@ every new scan `#require`s its anchor.
   **Delete all sell plans** (through the one writer; RA2 as the person
   answers it); `specs/ROADMAP.md` gains the settings-sheet extraction line
   (QA3); the pointers named at the top of this section.
+
+---
+
+## As built
+
+Written at T016's close-out (2026-09-23), after every task and every review
+but before the pre-merge sweep. It covers the plan and **Amendment A**
+together. The plan's text above is left as drafted, with the in-place
+corrections marked where they were made, so the two can be read against each
+other.
+
+Final counts: **1746 unit tests in 234 suites** (from 1622 in 224 at the
+branch point) and **36 UI tests** (from 25). Both suites ran twice back to
+back at `6fdfa97` for T015, and the UI suite twice at each phase end. Twenty-one
+planned tasks (T001–T016, and Amendment A's T017–T021) plus **six**
+sub-lettered additions: T009a–T009d from the Phase 3 walkthrough, T014a from
+the Phase 4 walkthrough, and T021a from the Phase 4A walkthrough. **No
+`.pbxproj` edit anywhere in the spec.** The new `Views/Plans/` folder and the
+`TabPlans` imageset joined the build by existing.
+
+### What the plan got right
+
+- **The plan as one stored date** (Q1). Every reader asks one question,
+  `hasSellPlan`, and "active" / "completed" fall out of it and `015`'s
+  marker with no third state. The four hosts, the Dashboard count, the
+  Settings count and the carry-over all read the same predicate.
+- **"Once", recorded on the row** (Q2). No test or walkthrough found a
+  resurrection. G7's resurrection mutation was **re-run against the finished
+  tree at T016**, since T003 wrote it before any host existed. Two runs of
+  the whole unit suite:
+  - **The fetch's checked filter dropped** (T003's own mutation): 3 tests
+    red, 3 issues, all in `SellPlanStoreTests` (`theCarryOverNeverResurrectsADeletedPlan`
+    at :300, `aSecondCarryOverMakesNoPlanAndChangesNothing` at :328, and
+    `deletingOnAnUncheckedRowLeavesItCheckedSoTheCarryOverMakesNoPlan` at
+    :223). That is the same set as at T003, and nothing the hosts added went
+    red, because `awaitsCarryOver`'s own check still keeps the plan away.
+  - **Both layers dropped**, an actual resurrection in which every row with
+    a history is planned whether checked or not: 7 tests in three suites red,
+    13 issues. It now includes the Delete-all host
+    (`SettingsDeleteAllSellPlansTests.confirmRemovesEveryPlanAndNothingElse`,
+    `SettingsViewModelTests.swift:1620`) and both seed tests
+    (`oneCarryOverOverThePlansSeedLeavesThreeActiveOneCompletedTwoPlanless`,
+    `theExistingSeedsLeaveTheCarryOverNothingToDo`).
+  - The tree was restored from a saved copy and confirmed byte-identical
+    after each run.
+
+  The single-delete hosts (`PlansViewModel.deletePlan`,
+  `SellPlanViewModel.deletePlan`) have no test that runs a carry-over after
+  the delete. They reach the store through the same `SellPlanStore.delete`,
+  and G6's unchecked leg covers that.
+- **The event-based settle hook** (Q3, after sign-off finding B1). It fires
+  on a successful import, a finished failed setup, or an in-memory launch,
+  never on a failed import and never in `.localOnly`. On the device's
+  signed-out simulators it fired once per launch, and the probe counted 3
+  plans made on the upgrade launch and 0 on every relaunch after.
+- **One writer, callers save** (Q4). Delete all sell plans (Amendment A)
+  needed no new write path: it loops the same `SellPlanStore.delete`, so
+  "criteria 10–12 hold for every plan it removed" is true by construction,
+  and G35 checks it anyway.
+- **One summary, three readers** (Q5). The row, the wanted item's page and
+  the Sell Plan's Sold figure read one sum. G4's agreement leg is what would
+  catch them drifting apart.
+- **The upgrade in place** (§1, §13). The claim that a pre-`009` row reads
+  as unchecked held on a real migrated store. So did Amendment A's pair,
+  migrating over this branch's own Phase 4 build.
+
+### Things the plan said that turned out false, corrected in place above
+
+- **Q14's 62 pt half.** "Completed" measured 60 pt at 11 pt mono, so the
+  Plans half is **69 pt**, the narrowest whole point with 4 pt either side
+  (T010). The device measured 5.3 / 6.0 pt.
+- **Q12's one-row "…" on the Sell Plan.** The person withdrew it at the
+  Phase 3 walkthrough because a menu holding one row reads as a menu with
+  nothing in it. Delete became its own bar button, in rust, apart from Buy
+  (T009b, T009d; spec Decisions 13 and 14). So the Context section's
+  "reversal" of `015` §8 never shipped. `015`'s "a one-row menu is a menu
+  for nothing" stands, and its pointer says so.
+- **R2 and R6** were revised by the person (spec Decisions 16 and 17), and
+  both carry pointers above.
+- **QA1's mis-pairing premise** (T017). The plan feared that without
+  `inverse:` SwiftData would pair `boughtItem` with
+  `soldTowardWishlistItem` and still validate. Measured: it made two one-way
+  links instead, and the CloudKit tests went red. The `soldTowardWishlistItem`
+  leg is proved by its own mutation. Corrected in QA1.
+- **§9a's and QA4's "exact" counts for `DestructiveColourPolicyTests`**
+  (T020's note). The totals (15 sites, 9 system-drawn, 6 app-drawn) are
+  checked as **floors**. What is exact is the per-file classification: every
+  `.destructive` in a file must be classified. The Phase 4 review's fix made
+  that per-file count exact. The plan's "counts stay 15/9/6" is true of the
+  tree, not a property the test asserts.
+- **§13's record test and VoiceOver step** still said "…" after T009b. They
+  were corrected at the Phase 4 review.
+
+### The readings as the person left them
+
+- **R1** (a completed plan's record has no figures card), **R3**
+  (carried-over plans are dated at the update, so they sort together),
+  **R4** (no card on the first-run Dashboard, spec Decision 12), **R5**
+  (Delete all wanted items leaves completed plans), and **R7** (on iCloud, the
+  carry-over waits for the first successful import, and an empty side says
+  "Catching up with iCloud" until then). Each was put to the person as a
+  question at the Phase 4 pause, and none was overturned. R7's `.localOnly`
+  wrinkle is accepted as written.
+- **R2**: overturned by Decision 16 (completed rows show the bought item's
+  picture). **R6**: its "…" half overturned by Decision 17. There is still
+  no search, no chips and no summary line.
+- **RA1** as written. **RA2** answered **(b)** by the person: Delete all
+  sell plans also clears rows still awaiting the carry-over, so no plan comes
+  back on its own. **RA3** kept: the footer stays, and sell plans in the
+  exports went to `ROADMAP.md`. **RA4** became T021a: Delete All Items, and
+  deleting a bought item, now say that a completed plan loses its picture.
+
+### Deviations from the plan's text
+
+- **T014a rode this branch at the person's "Fix it now"** rather than a
+  `fix/` branch. This is merged code outside `009`'s footprint: eight
+  content shapes on cards, chips and buttons across the app, a UI test, and
+  a **Tap targets** standard in `design/tokens.md`. It is a deliberate
+  deviation from `CLAUDE.md`'s git conventions, recorded in `tasks.md`.
+  **Its code landed early in `6f1b591`, the spec Amendment A commit, by an
+  orchestrator miss.** That commit was made with `git commit -a` while
+  T014a's implementer was mid-task, so it swept unfinished code (eight
+  content shapes, two UI tests, two debug prints) into a commit about prose.
+  It was not rewritten, since that would need a force-push. T014a's own
+  commit (`33919ec`) carries the corrections and names it. The rule
+  recorded: while an agent works, commit named paths only.
+- **T009c and T009d changed merged code too.** T009c gave `SellPlanRow`'s
+  card a whole-box tap target, a defect from `003`/`006` found at the Phase 3
+  walkthrough. T009d made "a destructive action is always rust" an app-wide
+  standard, with a `CLAUDE.md` amendment in its own commit (`b42c70c`), a
+  `design/tokens.md` section, and a guard over every destructive site in
+  `Trove/Views` and `Trove/App`.
+- **T021a reached beyond Amendment A's file list.** It touched
+  `ItemDeleteCopy`, `ItemDetailViewModel`, `ItemListViewModel`,
+  `ItemDetailView` and `ItemListView`, because the person chose to say the
+  picture clause on the single-item alerts too (option (a)), and those are
+  the alerts' own hosts.
+- **The Plans view model's sort orders became intents**
+  (`setActiveSort` / `setCompletedSort`, Phase 4 review). With them, the
+  Completed side's reorder is unit-tested, not left to a view-body pair.
+- **The empty "still syncing" headline is typed inline** in `PlansView`, as
+  it is on the four other list screens. It is the app's shared wording, not
+  a `SellPlanCopy` string.
+
+### What is untested, said plainly
+
+- **Every sync step.** This covers criterion 17's sync half, 20's (a
+  purchase's picture on the other device) and 22's (Delete all on one device
+  clearing the other); RA2's window; the offline "Catching up with iCloud"
+  while a plan awaits the carry-over; and Q2's three windows: a signed-in
+  device launched offline (does setup finish failed and run the carry-over
+  on an old copy?), a multi-pass first import, and which write survives when
+  a carried row meets a deletion made elsewhere. The person cannot run these
+  yet, and no agent can. They are gathered in `specs/SYNC-CHECKS.md` for one
+  later pass, and criteria 17, 20 and 22 stay unticked until then. The
+  person's Accessibility Inspector and VoiceOver pass **is** done
+  (2026-09-23: "All voiceover labels are as expected").
+- **The rollback branches.** `runCarryOver`'s `hasChanges` condition and its
+  rollback; `openSellPlan`'s save-failure rollback; the Plans host's
+  `rollback()` on a real save failure in `markBought` and `deletePlan`;
+  and Delete all sell plans' refused save, as for every Delete All.
+- **Which clause each host passes to `deleteMessage(isCompleted:)`.** The
+  copy is G3's. The choice was read on the device (T015), on both sides.
+- **A second plan reading its history.** No test deletes a plan, creates a
+  new one for the same want, and reads the new one's Sold section. G6 keeps
+  the record by id, and the Sold section's reader is `006`'s, unchanged. The
+  person walked it at the Phase 3 pause.
+- **Criterion 8's money half is a spelling scan.** A figure formatted some
+  other way would pass it, and since QA2 a row's `Photo` can reach an
+  `Item`'s prices.
+- **Criterion 19 is an inspection** of the diff, for the reason its tick
+  gives.
+- **T021a's wording has no on-screen check.** No UI test goes through an
+  item's delete alert.
+- **Two scans the Phase 4A review found narrower than they read**, carried
+  to the sweep: G31 cannot see a gate spelled any way other than an `if`,
+  and the every-tab guard's `isShowingSettings = true` match is not scoped
+  to the `.overflow` case.
+
+### Things learned that outlive this spec
+
+- **"Once" has to travel with the data it is about.** A per-device flag
+  would have let a second device, updated later, carry over rows whose plans
+  the first had already deleted. Stamping the row makes "already looked at
+  this" sync with the row, and a deletion leaves the stamp. The general form:
+  when a one-time migration's effect can be undone by the person, record
+  that it ran **on the record**, not on the device.
+- **Trigger on events, not on a phase edge.** `SyncMonitor.phase` maps any
+  finished failed event to `.unavailable`, a failed import included, which
+  is exactly the stale-copy case. Hooking the edge would have run the
+  carry-over on it. The sign-off review caught this (B1), and G8's
+  failed-import leg holds it.
+- **An equality leg across hosts needs an absolute leg beside it** (G28).
+  "Every host lands the same thing" stays green when every host fails in the
+  same way. That was measured, not argued: with the record's assignment
+  dropped, all four equality legs passed while the per-host leg went red
+  four times.
+- **Don't measure a tap-target fix from the element you're fixing** (T009c).
+  Without the fix the card's own frame shrinks, so a tap placed from it
+  would have agreed with itself. The test places its tap from the strip's
+  frame instead. The chip test in T014a had the opposite problem: no
+  mutation could turn it red, so it was deleted per `CLAUDE.md`.
+- **Commit named paths while an agent is working** (`6f1b591`).

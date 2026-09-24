@@ -35,6 +35,7 @@ own.
 | `006-mark-as-sold` | **Shipped** — merged to `main` 2026-09-15 via [PR #23](https://github.com/EHaake/Trove/pull/23); twenty tasks (T001–T020) with ten sub-lettered additions — three of them from the person's walkthrough at the Phase 5 pause (T018a–T018c) and one from the device pass (T018d) — seventeen criteria (1–16, with 7a) verified with per-criterion records in `spec.md` and **two honest partials named** (no second device for the sync check; the VoiceOver reading is the person's step). The app's **first record of a real transaction** — a sale is four fields and a link on the item itself, so it syncs as one record and "Return to collection" is nil-ing them; the Items tab grows a Sold side beside Owned, the Dashboard a Sold card, and the Sell Plan a third figure that still subtracts nothing. Three things were settled by measurement rather than argument: a 19.7 pt jump in the Owned/Sold switch, the stutter beneath it (a `matchedGeometryEffect` across an insert/remove crossfades instead of moving), and the sale sheet presenting exactly once per confirm (a probe inside the writer, not a screenshot). Xcode 27 arrived mid-spec and the branch carries the toolchain fixes and a warning-free build. The second spec measured under the model policy's **experiment 1**, its tier log in `tasks.md`. |
 | `014-sold-side-parity` | **Shipped** — merged to `main` 2026-09-19 via [PR #25](https://github.com/EHaake/Trove/pull/25); all tasks through T011's close-out done (2026-09-18), every criterion verified — criterion 12 attested by the person with Accessibility Inspector on 2026-09-19, so the spec closes with no partials; eleven tasks with eleven sub-lettered additions (T009a–T009i for Decision 7's export scope and the dropdown-anchor defect it uncovered, T010a for the device pass's criterion-3 finding, T010b for the Phase 2b sweep), **1540 unit tests in 208 suites** and **23 UI tests** green, the UI suite twice back to back. Thirteen of fourteen criteria verified with per-criterion records in `spec.md` and **one honest partial named** (criterion 12's Accessibility Inspector sweep is the person's step). The two things `006` left the person fighting — **Mark as sold…** hidden in a menu, and a Sold side with no way to find anything in it — answered by a Sell action on the leading swipe and the Owned side's search, chips and sort on Sold, each side keeping its own. The person's Phase 2 reading added Decision 7 mid-spec: exports from the Items list now choose owned, sold or both, for either format, with a "Sold Items" PDF of its own. Two claims the work falsified are recorded in `plan.md`'s **As built** — a header equality that held only while nothing sat beside it (the device pass measured it 13.67 pt out, and two guards now hold it), and an `anchorPreference` that silently dropped two of three dropdown anchors. The session moved to the stepped-down Opus model at the person's instruction from T010 on; its tier log is in `tasks.md`. |
 | `015-mark-as-bought` | **Shipped** — merged to `main` 2026-09-21 via [PR #29](https://github.com/EHaake/Trove/pull/29); all tasks through T013's close-out done (2026-09-21); thirteen tasks with eight sub-lettered additions (T006a from the Phase 1 review, T011a from the Phase 2 review, T011b and T012a–c from the person's two pauses, T012d–e from the review that followed), **1622 unit tests in 224 suites** and **25 UI tests** green, the UI suite twice back to back. Fourteen of fifteen criteria verified with per-criterion records in `spec.md` and **one honest partial named** (the two-device sync check — nobody has run it and no agent can). The buying half of the core loop, which the app had never had: **Mark as bought…** from the wishlist swipe, the wanted item's menu and its Sell Plan, one sheet for price, date, place and condition, and an item that carries the entry's photos, credits, category, Reverb match, year and notes across. The wanted entry is **marked, not deleted**, so the sell plan built around it survives as the record that it was carried out — which finally gives `009-sell-plan-list` a definition of "active". No undo, by the person's decision. The Phase 1 review caught that a purchase could happen **twice** (a second `Item`, and the first purchase's marker overwritten) — visible only at phase level, fixed in the one writer. The person's two pauses added four changes mid-spec: sentence case on the comparison line, at the Phase 2 pause; then at the walkthrough, a word instead of a bag glyph on the Sell Plan, an alert when a purchase is refused, and a saved sell plan leaving a trace on the wanted item's page. |
+| `009-sell-plan-list` | **Complete** — all tasks through T016's close-out done (2026-09-23), pre-merge sweep pending; twenty-one tasks (T001–T021, Amendment A's T017–T021 among them) with six sub-lettered additions (T009a–T009d from the Phase 3 walkthrough, T014a from the Phase 4 walkthrough, T021a from the Phase 4A walkthrough), **1746 unit tests in 234 suites** and **36 UI tests** green, both suites twice back to back. Twenty of twenty-three criteria verified with per-criterion records in `spec.md`; **criteria 17, 20 and 22 stay unticked** because their sync halves are untested — the person cannot run a two-device pass yet, and every sync step is gathered in `specs/SYNC-CHECKS.md` for one later pass. The person's Accessibility Inspector and VoiceOver pass is done. **A sell plan becomes a thing you create**, stored on the wanted item, active until the thing is bought and completed after, rather than inferred from whichever candidates are ticked — which is what let a plan survive every item on it selling. Existing plans carry over **once, recorded on each row**, so a plan deleted on one device cannot be resurrected by another. A **fourth tab**, Plans, lists Active and Completed with a sort each, a Buy swipe, a delete swipe and a read-only record for a completed plan, and a Dashboard card counts the active ones. The person's walkthroughs added **Amendment A** mid-spec: Delete as its own rust button on the Sell Plan, two app-wide standards (a destructive action is always rust — a `CLAUDE.md` amendment; a card responds anywhere in its box), completed rows showing the bought item's picture through a new purchase record, Settings from every tab, and Delete All Sell Plans. |
 
 ## Future specs
 
@@ -286,6 +287,16 @@ actually useful once the app is in daily use.
   sheet's content, which is what keeps SwiftUI from dropping it), presented
   off the existing property, with the binding's setter clearing it.
 - **Follow-up from `015` — a UI-test seed that produces a saved sell plan.**
+  **Done in `009`** (T014, 2026-09-23): `-seedPlans`, under `CLAUDE.md`'s two
+  conditions (its own argument, and gated on the built store being the
+  in-memory one), seeds six wanted items through the app's own writers,
+  including a saved plan with an item set aside, one whose selection a sale
+  emptied, a completed plan and a pre-`009` row for the launch carry-over.
+  The wanted page's "View your sell plan" state now has UI coverage
+  (`testCreatingASellPlanFromAWantedItem`). **Still open from this entry**:
+  no UI test drives a real purchase **refusal**, so the refusal alert's
+  automated coverage is still the source scan it had. The seed now makes
+  that test possible. The original entry:
   `-seedSellPlan` seeds candidates but has **never** assigned
   `plannedSaleItems`, so no UI test in this project has ever seen a saved
   plan. Two things `015` shipped therefore have no UI-suite coverage: the
@@ -333,6 +344,19 @@ actually useful once the app is in daily use.
   or the PDF, so "Delete all sell plans" is the one Delete-all row whose
   footer's advice cannot save what it deletes. A spec of its own, since it
   changes both export formats and the import that must round-trip them.
+- **Follow-up from `009` — one Settings sheet modifier for the four tabs.**
+  The Settings sheet block — the `.sheet(isPresented:)`, the four
+  environment reads it threads through (`storageMode`,
+  `storageFallbackReason`, `AppearanceStore`, `colorScheme`) and the
+  `onDismiss` reload — now exists in **four** copies, one per tab's root
+  screen: `DashboardView`, `ItemListView`, `WishlistView` and, since `009`
+  Amendment A, `PlansView`. `009` plan QA3 chose the fourth copy on purpose,
+  since a shared `settingsSheet(isPresented:)` modifier would have rewritten
+  three merged screens and `SettingsWiringTests`' two host tests for a
+  feature that needed none of it. Four is the number at which it stops
+  being speculative. It is mechanical, it wants its own diff, and
+  `SettingsWiringTests.everyTabsRootReachesSettings`, which derives the
+  hosts from the tab list, is the guard to keep green through it.
 - **`007-auto-categorization`** — Suggest a category path from a photo
   instead of typing it. The category field being a plain string path
   (not a fixed enum) since `001` is what keeps this a pure addition.
@@ -351,7 +375,8 @@ actually useful once the app is in daily use.
   palette needs to work across whatever range a real collection has, but
   worth treating as a strong early candidate once `001` ships, not a
   backlog afterthought.
-- **`009-sell-plan-list`** — A dedicated view of every wishlist item that
+- **`009-sell-plan-list`** (**Complete 2026-09-23**, not yet merged — see
+  `specs/009-sell-plan-list/` for the full record) — A dedicated view of every wishlist item that
   currently has an active Sell Plan (a non-empty `plannedSaleItems`
   selection)
   — *and note, from `015`'s sweep, that "non-empty" is a narrower definition
@@ -415,6 +440,23 @@ actually useful once the app is in daily use.
   for a purchase that never happened. This screen is the first place that can
   either show it, so it can be dealt with, or sweep it; `015` deliberately did
   neither, having nowhere to do it from.
+
+  **How it was answered** (spec session 2026-09-21–22, and three
+  walkthroughs). **A plan is a statement of intent, not a selection**
+  (spec Decision 1): it is stored on the wanted item when the person taps
+  *Create a sell plan*, it is active until the item is bought, and a plan
+  whose every candidate has sold stays on Active. Existing plans carry over
+  **once**, and the "once" is recorded on each row so it syncs with the row.
+  **A fourth tab after all** (Decision 4), overturning the paragraph above
+  on its own terms: "sell plans are a first class citizen, like owned items
+  and wishlist items", so a plan is not a filtered slice of the wishlist but
+  its own kind of record. A Dashboard card counts the active ones. **Counts,
+  never money** (Decision 5): the "$1,240 raised of $1,800" row imagined
+  above was declined, and a row says "Covered" once the sales alone reach
+  the estimate. The orphan is **shown, not swept**: it appears on Completed
+  and can be deleted there, and no automatic sweep was built. Deleting a plan
+  deletes only the plan. Nothing sold is unsold, and the sold-toward record
+  stays.
 - **`015-mark-as-bought`** (**Shipped 2026-09-21** via [PR #29](https://github.com/EHaake/Trove/pull/29) — see
   `specs/015-mark-as-bought/` for the full record) — the other half of the
   core loop, and the one

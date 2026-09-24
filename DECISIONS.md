@@ -772,3 +772,205 @@ spec.
   presentation slot. That was confirmed by driving a real refusal on the
   device, because no test in this project can observe it. A refused **sale**
   is still silent, deliberately untouched, and on `ROADMAP.md`.
+
+## Sell plans as things you create (`009`, complete 2026-09-23)
+
+The product decisions are numbered 1–18 (plus the P-items) in
+`specs/009-sell-plan-list/spec.md`. Decisions 13–18 are its Amendment A,
+from the person's walkthroughs. This records what reaches beyond that spec.
+
+- **A plan is one optional date on the wanted item, not an entity** (plan
+  Q1). `WishlistItem.sellPlanCreatedAt: Date?`, with nil meaning no plan. The
+  spec forbids more than one plan per want and a plan spanning wants, so a
+  `SellPlan` model would have been a one-to-one relationship holding nothing
+  but a date. It would also have been a CloudKit relationship whose two ends
+  can arrive out of order. "Active" is `hasSellPlan && !isBought` and
+  "completed" is `hasSellPlan && isBought`, with no stored lifecycle and no
+  third state. `015`'s marker is the ending, and the date is the beginning.
+  The rule is `015`'s again: **a fact that answers one question is a field,
+  not a model**, until something needs a second question answered.
+- **"Once" is recorded on each row, and it syncs** (plan Q2). Existing plans
+  had to carry over exactly once (spec P10), and the obvious way to record
+  that is a per-device `UserDefaults` flag. That would have been wrong in a
+  way no single-device test could show. Picture a second device updated a
+  week after the first. By then the person has deleted some of the plans
+  the first device carried over, but their sold-toward history is still
+  there (spec P3). The second device would run the carry-over over those
+  rows and bring the deleted plans back. So "already looked at" is a second
+  synced field, `sellPlanCheckedAt`, stamped at `init` for every entry made
+  from `009` on and by the carry-over for older ones. A delete leaves the
+  stamp, so no device ever looks at that row again. The general rule: **when
+  a one-time migration's effect can be undone by the person, record that it
+  ran on the record, not on the device.**
+  **Its limits, stated rather than implied.** Three windows remain where a
+  write can land on an old copy. (1) A signed-in device launched offline may
+  finish its setup *failed*, look signed-out, and run the carry-over on local
+  rows. (2) A multi-pass first import can carry a row from its old state
+  when its newer state is still in a later pass. (3) It is unknown which
+  write CloudKit keeps when a carried row meets a deletion made elsewhere, or
+  whether an app older than `009` editing a row keeps fields it doesn't know.
+  Delete all sell plans has a fourth window of the same class: it deletes
+  only the plans this device has, so a plan made elsewhere and not yet
+  arrived appears after the next import. **As the two-device step left them:
+  none of the four was observed.** The person cannot run a two-device pass
+  yet and asked for them to be marked untested. They are gathered in
+  `specs/SYNC-CHECKS.md` for one later pass, with criterion 17's, 20's and
+  22's sync halves. These are the same class of limit `015` inherited.
+- **Deriving the plan on read was weighed and rejected** (the plan sign-off
+  review's alternative). Treating "unchecked and has a selection or a sale"
+  as a plan on read removes every launch-time write, so no stale write can
+  happen at all, and that is a real strength. But a derived plan lives only
+  as long as its evidence. At least seven writers in five files destroy that
+  evidence: `SellPlanViewModel.toggle`; `ItemSaleStore.markSold`, which drops
+  the sold item from **every** plan's selection; `returnToCollection`;
+  `WishlistPurchaseStore.markBought`; and every owned-item delete, through the
+  implicit `.nullify`. Each would have had to store the derived plan of every
+  affected row first, or criterion 2 breaks silently when the last ticked
+  item goes. The only guard able to list those writers would have been a
+  source scan, which `CLAUDE.md` says leaves the thing untested. **What was
+  kept, read-only**: the carry-over's own predicate, `awaitsCarryOver`, is
+  read in exactly one other place. An empty Plans side says "Catching up
+  with iCloud" rather than "No sell plans yet" while any row awaits it. The
+  wanted item's page deliberately does **not** read it. The first draft let a
+  tap on **View** there store the plan, which is the same stale-copy write
+  moved from launch to a button the person pressed only to look. A row that
+  is waiting reads **Create a sell plan**, and the only write the page makes
+  is an explicit create.
+- **The carry-over runs on events, never on a phase edge** (plan Q3,
+  sign-off finding B1). `SyncMonitor` calls `onSettled` only when this
+  device's copy is known to be current or known to be the only copy: after a
+  successful import, after a finished failed setup (the signed-out
+  signature), and at launch for an in-memory store. It never runs after a
+  failed import, and never in `.localOnly`, which is the synced store opened
+  without its mirror for one launch, where a write would export next launch
+  from a copy of unknown age. Skipping costs one launch. The tempting
+  trigger was the `.unavailable` edge, but `SyncMonitor.phase` maps *any*
+  finished failed event there, a failed import included, which is exactly
+  the stale-copy case. The hook runs before `completedImports` moves and is
+  followed by its own `settledCount`, so the screens that reload on it see
+  the carried plans in the same pass. That ordering holds by construction,
+  not by the unspecified order of two `onChange` handlers.
+- **The readings the person left standing.** A completed plan's record has
+  no figures card (R1). Carried-over plans are dated when the carry-over
+  ran, not guessed, so they sort together (R3). There is no Plans card on
+  the first-run Dashboard (R4, spec Decision 12). "Delete all wanted items"
+  takes active plans with their wanted items and leaves completed ones (R5).
+  On iCloud the carry-over waits for the first successful import, with an
+  accepted one-launch "Catching up" on a `.localOnly` launch (R7). **R2** (no
+  picture slot on Completed) and **R6**'s "no '…'" were overturned at the
+  walkthroughs (Decisions 16 and 17, below).
+- **Two `015` decisions were revised and one was nearly reversed.** The
+  wanted item's Sell Plan button, which `015` T012c derived from the
+  selection, now reads a stored plan and gains a *Create* state (spec P9),
+  and the pointer is appended in `015`'s plan. The Sell Plan's Buy button's
+  gate became `offersPurchase`, because a bought entry's plan now opens as a
+  read-only record where an ungated Buy would offer to buy the thing twice.
+  `015`'s G18 was **rewritten** to the new gate, and the old gate was put
+  back to show the old guard stay green while the new one went red.
+  `015`'s own rule, **the one nearly reversed**, is "a one-row menu is a menu
+  for nothing". `009` planned Delete behind a one-row "…" on the Sell Plan,
+  and the person had it withdrawn at the Phase 3 walkthrough for exactly
+  that reason ("I'd just have two separate buttons: Buy and Delete"). So
+  `015`'s rule stands, and Delete is its own bar button (spec Decision 13).
+- **A destructive action is always rust, as a standard** (spec Decision 14,
+  T009d; `CLAUDE.md` amended in its own commit, `b42c70c`). The person, on
+  the Sell Plan's brass-tinted Delete: "This needs to be implemented as
+  standards across the app so that I don't have to manually point it out
+  every time." The cause was general. `ContentView`'s brass `.tint`
+  overrides the destructive role's red on every control the app draws
+  itself, so the role alone is not enough there. A decision review settled
+  the shape. Where the app draws the control, the colour goes on the control
+  itself: `accentRust` as a fill, `accentRustText` as a word. Where the
+  system draws it (alerts, the detail "…" menu), the role alone does it.
+  **Rust, not system red**, because the swipe rule and "no new colour"
+  already said so. There is **no shared modifier**, because swipes, words and
+  Settings' rows each colour differently and one modifier would have meant
+  rewriting merged screens. The guard, `DestructiveColourPolicyTests`,
+  classifies every `.destructive` in `Trove/Views` and `Trove/App` by its
+  enclosing call, so a new uncoloured one fails by name. That is a view-body
+  fact no view model can see, so the source scan is the legitimate shape.
+  The guard proves the colour is named, and the device pass proved it
+  renders.
+- **A card, row or chip responds anywhere in its box** (spec Decision 15,
+  T009c and T014a). A `.plain` button hit-tests only what it draws, so taps
+  in a card's padding did nothing. `.contentShape(Rectangle())` now goes last
+  on every such label, and `design/tokens.md` states it as a standard. Two
+  things worth keeping from how this went. First, **the fix to merged code
+  rode this branch at the person's "Fix it now"**, not a `fix/` branch, which
+  is a deliberate deviation recorded in `tasks.md`. Its code landed early,
+  swept into an unrelated commit (`6f1b591`) by a `git commit -a` made while
+  the implementer was mid-task, so the rule is now: commit named paths while
+  an agent works. Second, **the chip test was deleted because it could not
+  fail**: a 69 × 34 pt chip is within the label's own tap reach everywhere,
+  so no mutation turned it red. The callout test, placed from a frame
+  outside every text and image, can fail, and it is the one that shipped.
+- **A purchase now records the item it became** (spec Decision 16, plan
+  QA1). The person: "Why can't the completed sale plan show the same image
+  as from the active plan?" It couldn't, because `015` moves the wanted
+  item's photos to the bought item and keeps no link back. So
+  `WishlistItem.boughtItem` ↔ `Item.boughtFromWishlistItem` was added, an
+  optional pair, `.nullify` at both ends, written only by
+  `WishlistPurchaseStore.markBought`. **The delete rules are the design.**
+  Deleting the bought item nils the link and leaves the completed plan on
+  Completed with the placeholder (criterion 13). Deleting the entry could
+  never take owned gear with it. Selling the item leaves the link, and the
+  picture stays. Deleting the plan leaves it, since the record belongs to
+  the purchase, not the plan. `.cascade` on either end fails its own test.
+  **Weighed and rejected: a stored `boughtItemID: UUID?`.** It has no inverse
+  and no delete rule to get wrong. But a deleted item would leave a dangling
+  id forever, reading it needs a second fetch of every `Item`, and nothing
+  enforces an id's uniqueness. The schema's idiom for "which item" is a
+  relationship (`soldTowardWishlistItem`). **It revises `015` Decision 2 only
+  as `015`'s plan carried it** ("no relationship to the item the purchase
+  created"), and the pointer is appended in `015`'s plan. The decision's
+  substance stands. The link's **one reader takes photos, never money**: a
+  Plans row carries `[Photo]`, never the `Item`, and nothing claims the sales
+  funded the purchase. Purchases made before it have no link and show the
+  placeholder, so every row on both sides keeps one shape. That is what
+  Decision 11 was after when it removed the slot, reached the other way. One
+  measured surprise: the plan feared that without `inverse:` SwiftData would
+  pair the new link with `soldTowardWishlistItem` and still validate. It
+  didn't. It made two one-way links, and the CloudKit tests went red.
+- **Settings is reachable from every tab, and the guard reads the tab list**
+  (spec Decision 17, plan QA3). The person: "There should always be a way to
+  get to the settings menu." The Plans tab gained the "…" the other three
+  have, holding Settings alone, which is the Dashboard's one-row precedent
+  from `013`. It is not the one-row menu objected to on the Sell Plan,
+  where Delete would have been the only row. What is worth keeping is the
+  guard. `SettingsWiringTests.everyTabsRootReachesSettings` derives each
+  tab's root screen from `ContentView`'s `Tab(` closures, requires as many
+  as `AppRouter.Tab.allCases`, and requires each to host the badge and the
+  sheet. A fifth tab added without Settings fails it with no list for
+  anyone to remember to extend. The sheet block is now copied four times,
+  on purpose, and the extraction is a roadmap line.
+- **"Delete all sell plans" goes through the one writer, and takes rows
+  still waiting to carry over** (spec Decision 18, plan QA4, RA2). It loops
+  `SellPlanStore.delete`, so every plan it removes is removed exactly as a
+  single delete removes it: the plan and selection go, and the entry, every
+  item, the sold-toward record and the purchase record stay. Each row is
+  stamped checked, so no carry-over brings it back. No new write path means
+  no new way for criteria 10–12 to break, and G35 checks them anyway. **RA2,
+  answered (b) by the person on 2026-09-23**: a row still awaiting the
+  carry-over holds no stored plan, but it is counted and cleared too, so
+  after "Delete all" no plan comes back on its own. The cost, stated in the
+  plan: while the Plans tab still says "Catching up with iCloud", the count
+  in the alert can be higher than the rows it lists. Its copy lives in
+  `DeleteAllCopy` beside the other two Delete All rows, not in
+  `SellPlanCopy`, because every mechanism it needs is already keyed by
+  `DeleteTarget`.
+- **Deleting a bought item says what it costs a completed plan, and only
+  then** (T021a, RA4). Since completed rows draw the bought item's picture,
+  Delete All Items now also blanks those pictures, and the person said the
+  warning "should probably mention it". The several-items message always
+  does. For a single item, the person chose to add the clause only when the
+  item actually is one a purchase created
+  (`item.boughtFromWishlistItem != nil`). Otherwise the text is exactly what
+  it was, so no alert grows a clause that isn't true of the thing being
+  deleted.
+- **Sell plans stay out of the exports, for now** (criteria 18 and 23, RA3).
+  Exports and import are unchanged in shape. That makes "Delete all sell
+  plans" the one Delete All row whose footer ("Export first if you want a
+  copy.") cannot save what it deletes. The person kept the footer: "fine for
+  now, but we should add sell plans to the export eventually." It is on
+  `ROADMAP.md` as a spec of its own, since it changes both formats and the
+  import that must round-trip them.

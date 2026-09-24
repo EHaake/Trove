@@ -240,6 +240,11 @@ requirement, fetch logic needs to be testable independent of SwiftUI. So:
   which is what "names the task, not a target" forbids. The ranked list is
   still not shown here.*
 
+  *Superseded again by `009-sell-plan-list` (its spec P9), 2026-09-22: with
+  no plan the button reads **Create a sell plan** and creates the plan at
+  the tap, rather than "Find items to sell"; with one, its subtitle never
+  reads "0 items set aside". Still a count, never a target.*
+
   Edit and Delete also live here (and on `ItemDetailView`), reached via
   `DetailOverflowMenu` — one shared circular "..." button opening a
   `Menu`, Delete styled with the menu's `.destructive` role. Replaces an
@@ -353,6 +358,11 @@ button sits in a centre tab slot that doesn't exist in our three-tab
 layout — the floating treatment is the part worth keeping, the position
 adapts to the tab count we actually have).
 
+*Superseded in part by `009-sell-plan-list` (its spec, Decision 4),
+2026-09-23: the tab bar has **four** tabs — Overview, Items, Wishlist and
+**Plans**, each a `NavigationStack`. The floating add button stays on Items
+and Wishlist only.*
+
 List content scrolls all the way to the bottom of the screen, uncapped
 by any artificial margin — the floating button (and the system tab bar
 itself) is *meant* to overlay the last row or two when scrolled fully
@@ -381,6 +391,11 @@ loose one. Deliberately not built now: a tab leading nowhere is worse
 than no tab at all. Add it when an actual feature needs it (`004-themes`
 in `specs/ROADMAP.md` is the most likely trigger, given the theming and
 multi-currency groundwork already in this schema), not preemptively.
+
+*Filled by `009-sell-plan-list` (its spec, Decision 4), 2026-09-23, as this
+paragraph said it would be — not with "More", but with **Plans**, the first
+feature that needed the slot. Its icon was drawn to match the other three
+rather than given a design pass (that spec's Decision 8).*
 
 **List screens keep their header fixed.** On `ItemListView` (and
 `WishlistView` once built, for the same reason), the title, any summary

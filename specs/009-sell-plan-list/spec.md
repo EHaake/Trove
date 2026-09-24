@@ -209,6 +209,15 @@ if it could, the answer would be equally "no" for a real purchase later sold or
 deleted. A sweep would silently destroy real history to tidy up a rare
 mistake.
 
+*Revised in part by Amendment A (Decision 16; plan QA1), 2026-09-23: a
+purchase made from then on **does** record the item it became
+(`WishlistItem.boughtItem`), so "keeps no link" is true only of purchases
+made before the amendment. The conclusion stands on the same ground: a
+deleted item nils the link, so a real purchase whose item was later deleted
+still reads exactly like an orphan, and the app still cannot tell them
+apart. No sweep. The paragraph above is the person's and is left as
+written.*
+
 **What that leaves, said plainly rather than implied**: the orphaned entry
 itself is not removed from the store, only its plan and its place on this
 list. A bought entry with no plan is in no list, no count, no export and no
@@ -287,38 +296,88 @@ an undo: it removes the record of the plan, not the purchase.
 
 ## Copy
 
-Shapes, not shipped strings — the strings are settled in `plan.md` and
-recorded here at close-out, as `015`'s were. Everything below lives in one
-copy type and is pinned by literal, never typed inline in a view.
+**The shipped strings, replacing the shapes this section asserted** (T016,
+2026-09-23). Every one of them lives in `SellPlanCopy` and is pinned by
+literal in `SellPlanCopyTests` — except the Delete All Sell Plans strings,
+which live in `DeleteAllCopy` beside the two Delete All rows they join (plan
+QA4) and are pinned in `DeleteAllCopyTests`. Where a line differs from the
+shape the Draft asserted, the reason is beside it.
 
-- The tab: **Plans** (P1). One word, as the three existing tabs are.
-- The two sides: **Active** and **Completed** (P1).
+- The tab: **Plans** (`tab`). The two sides: **Active** and **Completed**,
+  spoken together as **"Active or completed"** (`sideSwitchLabel`, the Items
+  switch's "Owned or sold" shape).
 - The wanted item's entry point, with no plan: **Create a sell plan** over
-  today's "Browse your lowest desire-to-keep items". With a plan: today's
-  **View your sell plan** over **"<n> item(s) set aside"**, unchanged (P9).
-- A row's counts, reusing the wanted page's existing wording: **"<n> item(s)
-  set aside"**, and **"<n> sold toward it"**.
-- The covered marker: one short word, **Covered** (P8).
-- Deleting a plan: **"Delete the sell plan for <name>?"** over a consequence
-  sentence naming all three promises, the way `WishlistDeleteCopy` does —
-  nothing you own or sold is touched, what sold toward it stays on the record,
-  and this can't be undone. Confirm **Delete**, cancel **Keep**, matching
-  `010`'s unified verb.
-- The two sides differ in **one clause**, because what remains differs: on
-  Active the wanted item stays on your wishlist, on Completed the item you
-  bought stays in your collection. One string with one varying clause, not two
-  sets of copy that can drift — the mistake `WishlistDeleteCopy`'s own doc
-  comment records being found at a pre-merge review.
-- The Dashboard card: **"<n> active sell plan(s)"**.
-- Empty states, four of them, each naming what is actually missing: **no
-  plans while things are wanted** (plans start from a wanted item), **nothing
-  wanted at all** (the Wishlist is where a plan begins), **nothing completed
-  yet** (a plan lands here when its item is bought), and **still syncing**, the
-  reason every list screen in the app already has.
+  **Browse your lowest desire-to-keep items** (`createPlan`,
+  `noPlanSubtitle`). With a plan: **View your sell plan** (`viewPlan`) over,
+  in order of preference, **"1 item set aside" / "<n> items set aside"**,
+  else **"<n> sold toward it"**, else **"Nothing set aside yet"** — so it
+  never reads "0 items set aside" (P9). The three strings `015` T012c had
+  typed inline in `WishlistDetailViewModel` moved into `SellPlanCopy`
+  unchanged.
+- An active row's lines: **"<n> item(s) set aside"**, **"<n> sold toward
+  it"**, then **Covered** (`covered`), each present only when its count is
+  non-zero or its rule holds.
+- A completed row's lines, in the past tense: **"Bought Sep 12, 2026"**
+  (`bought(on:)`, the date `.abbreviated`), then **"1 was sold toward it" /
+  "<n> were sold toward it"** (`soldTowardPast`), then **Covered**. The
+  Draft named no past-tense form; the plan settled it (§3).
+- A completed plan's record, when nothing sold toward it: **"Nothing was
+  sold toward it."** (`nothingSoldToward`) — a line the Draft did not
+  anticipate, since it did not yet have a record screen (P12).
+- Deleting a plan: **"Delete the sell plan for <name>?"** (`deleteTitle`,
+  with **"this item"** standing in for a missing name) over **"Nothing you
+  own or sold is touched, and <clause>. What sold toward it stays on the
+  record. This can't be undone."** — the clause **"it stays on your
+  wishlist"** on Active and **"the item you bought stays in your
+  collection"** on Completed, one function with one varying clause. Confirm
+  **Delete**, cancel **Keep**. On the Sell Plan screen the confirm word is
+  also the bar button's label — **Delete**, in rust, apart from **Buy**
+  (Decisions 13 and 14).
+- The Dashboard card: header **Sell plans** over **"1 active sell plan" /
+  "<n> active sell plans"**, hint **"Shows your active sell plans"**.
+- The four empty states: **"No sell plans yet"** / **"A plan starts from
+  something on your wishlist. Open it and tap Create a sell plan."**;
+  **"Nothing on your wishlist"** / **"A sell plan starts with something you
+  want. Add it to your wishlist first."**; **"Nothing completed yet"** /
+  **"A plan lands here when you mark its item bought."**; and the app's
+  existing **"Catching up with iCloud"** over **"Your plans are on their way
+  to this device. They'll appear here as they arrive."**
+  (`stillSyncingDetail`). **Stated rather than implied**: that one headline
+  is typed inline in `PlansView`, as it is in the four other list screens
+  that show it — it is the app's shared wording, not this spec's, and moving
+  it would have touched four merged screens.
+- The sort labels, on their enums (the `SoldSortOrder.label` pattern):
+  Active **Newest**, **Oldest**, **Name**, **Wishlist order**; Completed
+  **Newest**, **Oldest**, **Name** — where Newest and Oldest read the **date
+  bought**.
+- The Plans "…" (Decision 17): one row, **Settings**; the dropdown's dismiss
+  control reads **"Dismiss more actions"**, as the other tabs' do.
+- **Delete All Sell Plans** (Decision 18, `DeleteAllCopy`): the row
+  **"Delete All Sell Plans…"**, hint **"Permanently deletes every sell plan,
+  active and completed."**; the title **"Delete all 4 sell plans?"** /
+  **"Delete your only sell plan?"**; the message **"Nothing you own or sold is
+  touched, and everything on your wishlist stays there. What sold toward them
+  stays on the record."** (**"…toward it…"** for one), then on iCloud only
+  **" If you're signed in to iCloud, the plans are removed from your other
+  devices as well."** (**"the plan is"** for one — named, because after
+  "what sold toward them" a bare "they're" would read as the sales), then
+  **" This can't be undone."**; confirm **Delete All**, cancel **Keep**; the
+  section's footer **"Export first if you want a copy."** unchanged (RA3,
+  kept by the person).
+- **Delete All Items, and deleting one item a purchase created** (T021a, the
+  person's call at the Phase 4A walkthrough — not in any Draft): the
+  several-items message now reads **"Their photos go too. Every sell plan
+  loses its items, and completed plans lose their pictures."**; for one
+  item, only when it is the item a purchase became, **"…Any sell plan it's
+  on drops it, and the completed plan it was bought for loses its
+  picture."** (owned) / **"Its photos go too, and the completed plan it was
+  bought for loses its picture."** (sold). Otherwise the text is exactly what
+  it was.
 
-There is **no design pass for this spec** (Decision 8), so the wording above
-is settled by the plan and corrected by the person at the pauses, as `015`'s
-was.
+There was **no design pass for this spec** (Decision 8), so the wording above
+was settled by the plan and corrected by the person at the pauses: the Sell
+Plan's Delete as a word of its own rather than a "…" (T009b), and the
+picture clause on Delete All Items (T021a).
 
 ## Design requirements
 
@@ -342,65 +401,358 @@ was.
 
 ## Acceptance criteria
 
-1. [ ] A wanted item with no plan offers to **create** one; the plan exists
+Verified at T016's close-out (2026-09-23) by the unit suite (**1746 tests in
+234 suites**), the UI suite (**36 tests**, run twice back to back at each
+phase end and twice more at T015), and the T015 device pass — two upgrades
+in place and a walk over the persistent store on two spare simulators, with
+a file probe inside `SellPlanStore` rather than a screenshot — plus the
+person's own Accessibility Inspector and VoiceOver pass, reported on
+2026-09-23: "All voiceover labels are as expected." **Twenty of the
+twenty-three criteria are ticked. Criteria 17, 20 and 22 stay unticked**:
+everything one device can show about them has been shown, and their sync
+halves have not been run by anyone — the person cannot run them yet and
+asked for them to be marked **untested**. Each is gathered in
+`specs/SYNC-CHECKS.md` for one later pass. Both simulators were signed out
+of iCloud, so every carry-over the device pass saw ran the signed-out path.
+Each criterion below names what was actually verified; where the only
+witness is a unit test, an inspection or a hand check, it says so.
+
+1. [x] A wanted item with no plan offers to **create** one; the plan exists
    from that tap, and it opens the Sell Plan screen with nothing selected and
    no target. With a plan, the entry point never reads "0 items set aside".
-2. [ ] A plan stays on the Active side no matter what happens to the
+    *Verified by*: `WishlistDetailViewModelTests.theSellPlanEntryOffersToCreateAPlanWhenThereIsNone`,
+    `openingTheSellPlanCreatesItExactlyOnce`,
+    `aRowAwaitingTheCarryOverOffersCreateAndTheTapCreatesThePlan` and
+    `openingTheSellPlanOnABoughtEntryCreatesNothing` (G16 — the plan is
+    stored at the tap, refetched on a second context; mutation: re-create on
+    a second tap → the date leg red), with
+    `theSellPlanEntryNamesThePlanAndCountsWhatIsSetAside`,
+    `theSellPlanEntryFallsBackToWhatWasSoldTowardIt` and
+    `SellPlanSummaryTests.theEntrySubtitlesThreeReadings` (G4) for the
+    subtitle (mutations: the fallbacks swapped → red; "0 items set aside"
+    returned → red). `SellPlanStoreTests.createDatesThePlanNowAndStampsTheRowChecked`
+    and `aSecondCreateKeepsTheFirstDate` (G5) hold the one writer. The Sell
+    Plan screen itself is unchanged (a Non-goal), and
+    `SellPlanFramingTests` stayed green **unedited** — still no target. On
+    screen: `testCreatingASellPlanFromAWantedItem` (Rode → **Create a sell
+    plan** → the Sell Plan → back → **View your sell plan** over **Nothing
+    set aside yet**; the Plans tab lists Rode), whose tap leg went red when
+    the view skipped `openSellPlan()` (the Phase 3 review's addition). The
+    person walked it at the Phase 3 pause.
+2. [x] A plan stays on the Active side no matter what happens to the
    selection — including after every item on it has been **sold**, which is
    the case `015`'s sweep found reads as no plan at all today.
-3. [ ] A plan leaves the Active side and appears on the Completed side when
+    *Verified by*: `PlansViewModelTests.aPlanWhoseEveryItemWasSoldStaysActive`
+    (G10; mutation: `active` read from the selection → 12 issues red) and
+    `WishlistDetailViewModelTests.theSellPlanEntryKeepsThePlanWhenItsSelectionIsReleased`.
+    On screen: `testThePlansTabSitsFourthAndOpensOnActiveEveryLaunch` lists
+    the seeded Vox AC15 — whose one set-aside item was sold, emptying the
+    selection — on Active, reading "1 sold toward it". On the device (T015):
+    the upgraded store's entry with only a sale toward it lands on Active.
+3. [x] A plan leaves the Active side and appears on the Completed side when
    the wanted item is marked bought, by any of the four paths that can mark
    it; a wanted item bought with no plan appears on neither.
-4. [ ] Wanted items that already have a selection or a sold-toward history
+    *Verified by*: `WishlistDetailViewModelTests.aPurchaseThroughAnyHostLandsIdentically`
+    — all four hosts (the Wishlist swipe, the wanted page's menu, the Sell
+    Plan's Buy and the Plans row's swipe) land one entry, bought, **with its
+    plan on its own date**, refetched on a second context (G13; mutation:
+    the fourth host skipping its save → the landing leg red) — and
+    `aPurchaseThroughAnyHostLeavesAPlanlessEntryPlanless` (each host buys a
+    planless entry and the Plans view model shows it on neither side; the
+    Plans tab, handed a stray row for one, refuses and writes nothing).
+    `PlansViewModelTests.buyingMovesAPlanToCompleted` and
+    `anEntryWithNoPlanIsOnNeitherSide` (G10). On screen:
+    `testAnActiveRowsBuySwipeMovesThePlanToCompleted`, and the seeded Nikon
+    FM2 (bought, no plan) absent from both sides in
+    `testThePlansTabSitsFourthAndOpensOnActiveEveryLaunch`.
+4. [x] Wanted items that already have a selection or a sold-toward history
    when this ships appear as plans, without anyone re-creating them — on
    Completed if already bought, by their sold-toward history alone.
-5. [ ] The Plans tab sits fourth in the tab bar, opens on Active at every
+    *Verified by*: `SellPlanStoreTests.theCarryOverPlansEachRowWithASelectionOrASoldTowardHistoryDatedNow`,
+    `theCarryOverLeavesRowsWithNothingToCarryPlanless`,
+    `theCarryOverLeavesAllSixRowsChecked` and
+    `aSecondCarryOverMakesNoPlanAndChangesNothing` (G7, six rows in one
+    store — bought-with-a-sale planned, bought-with-neither not; mutations:
+    only the selection counted → the sold-only and bought legs red; only
+    planned rows stamped → the all-six-checked leg red), with
+    `runCarryOverSavesThePlansItMakes`; the trigger by `SyncMonitorTests`'
+    `anInMemoryStoreSettlesOnceAtLaunch`, `aSuccessfulImportSettlesBeforeItIsCounted`,
+    `aFinishedFailedSetupSettlesOnce`, `aFailedImportAfterAGoodSetupNeverSettles`
+    and `exportsAndInFlightEventsNeverSettle` (G8); and
+    `UITestSeedTests.oneCarryOverOverThePlansSeedLeavesThreeActiveOneCompletedTwoPlanless`
+    (G9). **The launch wiring's only automated coverage** is the Fuji leg of
+    `testThePlansTabSitsFourthAndOpensOnActiveEveryLaunch` — a seeded
+    pre-`009` row arriving on Active — which went red both with the
+    `onSettled` closure dropped and with the seeds moved below the monitor
+    (T014). On the device (T015), an **upgrade in place from `main`**: a
+    selection → Active "1 item set aside"; a sale toward it → Active "1 sold
+    toward it"; bought with a sale → Completed, "1 was sold toward it";
+    bought with neither → neither; nothing → neither; the probe counting 3
+    plans made of 5 unchecked rows on the upgrade launch and 0 on every
+    relaunch. **Stated plainly**: both simulators were signed out, so the
+    carry-over ran on the signed-out path; the iCloud path (after the first
+    successful import) is unit-tested at the trigger, and its timing against
+    real synced data is sync untested — gathered in `specs/SYNC-CHECKS.md`
+    for one later pass, with plan Q2's three windows.
+5. [x] The Plans tab sits fourth in the tab bar, opens on Active at every
    launch, and each side keeps its own sort selection across visits within a
    launch.
-6. [ ] Each side offers its own sort options, applied to the rows on screen,
+    *Verified by*: `AppRouterTests.plansIsTheFourthAndLastTab`,
+    `PlansViewModelTests.aFreshViewModelOpensOnActiveWithBothSortsNewest` and
+    `eachSideKeepsItsOwnSortAcrossShow` (G11; mutation: one shared sort for
+    both sides → red), `TabIconTests.theFourIconsAreFourDifferentMarks` and
+    `theAssetIsTemplateRendered` (G20). On screen:
+    `testThePlansTabSitsFourthAndOpensOnActiveEveryLaunch` (tab buttons in
+    ascending `minX` Overview/Items/Wishlist/Plans; the switch reads Active;
+    terminate, relaunch → Active again) and
+    `testSortingEachSideReordersTheRowsAndIsKeptAcrossASwitch`. On the
+    device: the icon beside the other three in both appearances —
+    **observed to carry about half the visual weight of the other three**
+    (an 18.5 × 6.7 pt mark, drawn as planned; Decision 8 leaves it
+    revisitable).
+6. [x] Each side offers its own sort options, applied to the rows on screen,
    with the most recent plan first by default.
-7. [ ] A row shows the wanted item's name and category, the count set aside
+    *Verified by*: `PlansViewModelTests.theActiveSortsOrderTheActiveRows`,
+    `theCompletedSortsReadTheDateBought`, `settingTheActiveSortReordersTheRowsOnScreen`,
+    `settingTheCompletedSortReordersTheRowsOnScreen`,
+    `aTieFallsTheWishlistOrderWayNotTheNameWay` and
+    `aFreshViewModelOpensOnActiveWithBothSortsNewest` (G11 — two fixtures
+    in which every order differs from every other; mutations: a comparator
+    reversed; the bought date read as the plan date; the tie broken by name;
+    the Completed Name comparator dropped, which the Phase 2 review found
+    **green** until the fixture's wishlist positions stopped matching its
+    name order — each red), and `PlansWiringTests.noSortDropdownOffersAManualOrder`
+    (P5: the manual order is an order here, never editable). On screen:
+    `testSortingEachSideReordersTheRowsAndIsKeptAcrossASwitch`.
+7. [x] A row shows the wanted item's name and category, the count set aside
    when there is one, the count sold toward it when there is one, and nothing
    where a count would be zero. An active row shows its thumbnail (or the
    reserved placeholder, as a wishlist row does); a completed row has no
    picture and no picture slot. *(Revised by Amendment A, criterion 20.)*
-8. [ ] A row shows the covered marker exactly when the sales alone have
+    **Ticked as criterion 20 revised it** — every row on both sides has one
+    picture slot. *Verified by*: `SellPlanSummaryTests.anActiveRowHasALineOnlyForANonZeroCount`
+    and `aCompletedRowLeadsWithTheBoughtDate` (G4; mutation: `setAside(0)`
+    emitted → red), `PlansViewModelTests.eachRowsLinesAreItsSummarysRowLines`
+    (G10), and `PlansWiringTests.theRowDrawsItsLinesAndAThumbnailOnEveryRow`
+    (G31 — `RowThumbnail(photos: row.photos)` exactly once, in no `if`, and
+    no `SellPlanCopy` count function composed in the view; mutations: the
+    thumbnail under `if !row.isCompleted` → red; `RowThumbnail(photos: [])`
+    → red; `SellPlanCopy.setAside(` in place of `row.lines` → red). Which
+    picture each side draws is criterion 20's. On screen: Vox's row reads
+    "1 sold toward it" in `testThePlansTabSitsFourthAndOpensOnActiveEveryLaunch`.
+    On the device (T015): every Plans screen in both appearances.
+8. [x] A row shows the covered marker exactly when the sales alone have
    reached the estimated cost — never with no estimate, and never counting
    what is merely set aside — and no row anywhere on this screen shows a money
    figure, a target, a total raised, or a remaining-to-go.
-9. [ ] Tapping an active row opens that wanted item's existing Sell Plan
+    *Verified by*: `SellPlanSummaryTests.salesExactlyAtTheEstimateAreCovered`,
+    `salesADollarShortAreNotCovered`, `noEstimateIsNeverCovered`,
+    `aSelectionOverSalesShortOfTheEstimateIsNotCovered` (the fixture on which
+    `SellPlanViewModel.selectedValueMeetsCost` reads **true**),
+    `aValueOverTheEstimateWithASaleUnderItIsNotCovered` (Decision 10),
+    `anActiveRowSaysCoveredLastAndOnlyWhenCovered` and
+    `theCountAndTheSumAgreeWithTheSellPlanScreen` (G4; mutations: `>` for
+    `>=`; the zero-estimate guard dropped; the selection's value added;
+    `currentValueCents` summed — each red). The money half: `PlanRow`
+    declares no money field, and `PlansWiringTests.theScreenDrawsNoMoneyAndReachesNoStore`
+    (no `formattedAsWholeCurrency`, no `.currency(`, no `Cents` in
+    `PlansView.swift`; mutations: each added to the row → red).
+    **Stated plainly**: that scan pins spellings, so a figure formatted some
+    other way would pass it, and since Amendment A a row's `Photo` reaches
+    an `Item` and its prices — the scan, not the row's type, is what keeps
+    money off the row (plan QA2). On screen: Vox reads "Covered" and the
+    Hasselblad (sales short of its estimate) does not. On the device (T015):
+    Covered shown with no money anywhere on the row.
+9. [x] Tapping an active row opens that wanted item's existing Sell Plan
    screen exactly as it works today. Tapping a completed row opens the plan as a
    record — what sold toward it and when it was bought — offering no candidate,
    no selection, no sale, no purchase, and nothing that can change it except
    deleting it.
-10. [ ] Deleting a plan, on either side, changes no item anywhere in the app:
+    *Verified by*: `SellPlanRecordTests.aBoughtEntrysPlanIsARecordWithNoPool`,
+    `toggleOnACompletedPlanWritesNothing`, `markSoldOnACompletedPlanWritesNothing`
+    and `anActivePlanOffersThePurchaseAndTheDelete` (G14, second context;
+    mutations: the `toggle` guard dropped; the pool built for a bought entry;
+    `markSold`'s guard dropped — each red);
+    `SellPlanWiringTests.aBoughtPlanOpensAsARecordThatComposesNothingThatActs`
+    (no candidate list, row, figures, sale or purchase in `record(for:)`, and
+    no generic control; mutations: `viewModel.toggle` or `SellPlanRow(` put
+    in → red) and `WishlistPurchaseWiringTests.theSellPlanOffersMarkAsBoughtOnlyWhileItsEntryIsStillThere`,
+    **rewritten** to the `offersPurchase` gate (`015`'s G18): Buy gated back
+    on `wishlistItem != nil` → the old guard **green**, the new one red.
+    `MenuPolicyTests` green unedited, and red with a real `Menu` planted in
+    `record(for:)`. On screen: `testACompletedPlanOpensAsARecord` (no Buy, no
+    "Sell candidates", the NT1-A sold row, "Bought", and in the bar Delete and
+    nothing else but Back). On the device (T015): an active row opens the
+    live Sell Plan; the record in both appearances; the lone Delete with no
+    stray gap before it.
+10. [x] Deleting a plan, on either side, changes no item anywhere in the app:
     nothing is created, removed, unsold, or repriced, and gear that was set
     aside is simply owned again.
-11. [ ] Deleting an active plan leaves the wanted item on the wishlist with no
+    *Verified by*: `SellPlanStoreTests.deletingAnActivePlanTakesThePlanAndSelectionAndNothingElse`
+    and `deletingACompletedPlanLeavesThePurchaseAndTheHistory` (G6, G27 —
+    every `Item`'s sale date, sale price, value, desire and count identical
+    on a second context, `itemsSoldToward` the same ids, the purchase record
+    untouched; mutations: `itemsSoldToward` cleared; the selection kept; one
+    item's sale cleared; the entry deleted; `boughtItem` cleared — each red),
+    `SellPlanRecordTests.deletingAnActivePlanChangesNoItem` and
+    `deletingACompletedPlanChangesNoItem` (G14) and
+    `PlansViewModelTests.deletingAnActivePlanLeavesTheEntryAndItsSales`. On
+    screen: `testDeletingAPlanLeavesTheWantedItemAndTheSale` (the Items
+    tab's Sold side still lists Blues Junior). On the device (T015): the
+    wanted item and its sales survive a plan's delete.
+11. [x] Deleting an active plan leaves the wanted item on the wishlist with no
     plan; deleting a completed plan leaves the purchased item in the collection
     untouched. A plan can be deleted from its row and from its own screen, and
     both say what will happen before it happens; neither can be undone.
-12. [ ] The record of what sold toward a want survives deleting its plan, and
+    *Verified by*: the outcomes as criterion 10's, with
+    `PlansViewModelTests.anOrphanIsOnCompletedAndDeletingItsPlanTakesItOff`
+    (the entry stays in the store); the words by
+    `SellPlanCopyTests.theDeleteConfirmationsWords` and
+    `theTwoDeleteMessagesDifferInExactlyOneSentence` (G3; mutation: a shared
+    sentence reworded in one branch → red, even with the literal test edited
+    to match); the two hosts by `PlansWiringTests.theTrailingSwipeStagesTheDeletionAndNamesNoPurchase`,
+    `SellPlanWiringTests.theDeleteIsARedButtonOfItsOwnApartFromBuyOfferedOnlyWhileThereIsAPlan`
+    and `confirmingTheDeletePopsTheScreenOnlyOnceItTook` (mutation:
+    `dismiss()` outside the `deletePlan()` branch → red). On screen:
+    `testDeletingAPlanLeavesTheWantedItemAndTheSale` (the alert's title,
+    Delete, the row gone; Vox on the Wishlist, its page offering **Create a
+    sell plan**). **Guarded by no automated test, said plainly**: which clause
+    each host passes to `deleteMessage(isCompleted:)`. The device pass read
+    both alerts' text on both sides (T015). The probe in
+    `SellPlanStore.delete` counted: swipe opened and closed 0, the row's
+    alert Keep 0, Delete 1; the Sell Plan's Keep 0. No path restores a
+    deleted plan, and both alerts say "This can't be undone."
+12. [x] The record of what sold toward a want survives deleting its plan, and
     a plan created for that want afterwards still shows that history — and a
     deleted plan does not come back on its own.
-13. [ ] An orphaned completed plan — the one a hand-corrected purchase leaves
+    *Verified by*: G6's `itemsSoldToward` leg (the same ids, in the same
+    number, after the delete), `SellPlanStoreTests.theCarryOverNeverResurrectsADeletedPlan`
+    and `deletingOnAnUncheckedRowLeavesItCheckedSoTheCarryOverMakesNoPlan`
+    (G7; mutation: delete's nil-stamp dropped → the unchecked leg red), and
+    `SettingsDeleteAllSellPlansTests.confirmRemovesEveryPlanAndNothingElse`,
+    whose carry-over after Delete all is asserted per removed row. **G7's
+    resurrection mutation was re-run against the finished tree at T016**,
+    since T003 wrote it before any host existed. With the fetch's checked
+    filter dropped (T003's own mutation), the same three `SellPlanStoreTests`
+    legs went red as then and nothing else did — `awaitsCarryOver`'s own
+    check still keeps the plan away. With **both** layers dropped — a real
+    resurrection — 7 tests in three suites went red (13 issues), now
+    including the Delete-all host's no-carry-over leg
+    (`SettingsViewModelTests.swift:1620`) and the two seed tests. That a new
+    plan shows the history is the Sell Plan screen's Sold section reading
+    `itemsSoldToward`, unchanged since `006`, over G6's kept record — no test
+    creates a second plan and reads its Sold section; the person walked it at
+    the Phase 3 pause. On the device (T015): 0 plans made on every relaunch,
+    including after Delete all.
+13. [x] An orphaned completed plan — the one a hand-corrected purchase leaves
     behind — is visible on the Completed side and can be taken off it by
     deleting the plan.
-14. [ ] **Mark as bought…** from an active row opens the same sheet, seeded
+    *Verified by*: `PlansViewModelTests.anOrphanIsOnCompletedAndDeletingItsPlanTakesItOff`
+    (bought with a plan, its created item deleted: on Completed, then off it
+    once its plan is deleted, the entry still in the store — P4) and
+    `WishlistPurchaseStoreTests.deletingTheBoughtItemLeavesTheEntryBoughtAndPlannedWithNoRecord`
+    (G26; mutation: `.cascade` on the item's end → the entry-present leg
+    red). On the device (T015): deleting the bought item left the row on
+    Completed with the placeholder, and the probe counted 0 plan deletes.
+14. [x] **Mark as bought…** from an active row opens the same sheet, seeded
     the same way, as the three hosts `015` built; confirming moves the row to
     Completed, and cancelling changes nothing at all.
-15. [ ] The Dashboard shows a card counting active sell plans that opens the
+    *Verified by*: `WishlistDetailViewModelTests.everyHostSeedsThePurchaseSheetIdentically`,
+    `everyHostRefusesToBuyAnEntryTwice` and
+    `aPurchaseThroughAnyHostLandsIdentically`, extended to the fourth host
+    (G13; mutation: `?? 0` in the fourth seed → red),
+    `PlansViewModelTests.buyingMovesAPlanToCompleted`,
+    `PlansWiringTests.theBuySwipeIsTheLeadingBlockOnActiveRowsOnly` and
+    `thePurchaseSheetIsHostedOnceAndCancelClearsTheStaging` (G19; mutations:
+    Buy outside the Active gate → red; the cancel closure emptied → red), and
+    `WishlistPurchaseWiringTests.everyPurchaseHostShowsTheRefusalAlert` with
+    `PlansView.swift` among its hosts. On screen:
+    `testAnActiveRowsBuySwipeMovesThePlanToCompleted` (a partial drag,
+    "Mark as bought…" matched alone, the price reading 2400; Cancel → still
+    Active; confirm → gone from Active, on Completed).
+15. [x] The Dashboard shows a card counting active sell plans that opens the
     Plans tab on Active; it is absent when there are none, absent on the
     first-run Dashboard before anything is owned, and does not appear inside a
     category drill-down.
-16. [ ] Each of the four empty states says something true about what is
+    *Verified by*: `DashboardPlansCardTests.theCountExcludesCompletedAndPlanlessEntries`,
+    `noCardWithNoActivePlans`, `noCardInsideACategoryScope` and
+    `settledCountFollowsTheMonitor` (G15; mutations: `boughtDate == nil`
+    dropped; `scope.isEmpty` dropped — each red), `AppRouterTests.showingActivePlansSwitchesTabsPopsAndRaisesTheFlag`
+    and `thePlansRequestIsClearedOnceApplied`, and
+    `DashboardWiringTests.thePlansCardIsComposedOnceBehindItsGateAndOnlyOffTheFirstRunState`,
+    `tappingThePlansCardAsksTheRouterForActivePlans` and
+    `theDashboardReloadsWhenTheStoreSettles` (G21; mutations: the card out
+    of its gate; moved above the empty/scroll split; a second card in the
+    first-run branch; `showSoldItems()` for the action; the `settledCount`
+    reload dropped — each red). On screen:
+    `testTheDashboardCardOpensThePlansTabOnActive` (left on Completed, the
+    card reads "3 active sell plans", the tap lands on Active). On the
+    device (T015): the card lands on Active, and read "2 active sell plans"
+    over the upgraded store.
+16. [x] Each of the four empty states says something true about what is
     missing, rather than a blank screen or the wrong diagnosis.
+    *Verified by*: `PlansViewModelTests.anEmptyWishlistReadsNothingWantedAndNothingCompleted`,
+    `aPlanlessWishlistReadsNoPlans`, `aSideWithRowsHasNoEmptyReason`,
+    `stillSyncingOutranksEveryOtherReasonWhileImporting` and
+    `anEntryAwaitingTheCarryOverReadsStillSyncingWhenNotImporting` (G12;
+    mutations: `stillSyncing` below `noPlans`; the awaiting check dropped —
+    each red), with `SellPlanCopyTests.theEmptyStatesWords` for the words.
+    On screen: the two Delete-all legs of
+    `testDeletingAllSellPlansLeavesEverythingElse` ("No sell plans yet",
+    "Nothing completed yet"). On the device (T015): every Plans screen in
+    both appearances. **Not observed**: the offline
+    "Catching up with iCloud" while a plan awaits the carry-over — sync
+    untested, gathered in `specs/SYNC-CHECKS.md` for one later pass; the
+    unit test above is its witness. One known wrinkle, accepted at plan
+    sign-off (R7): on a `.localOnly` launch of a pre-`009` store the same
+    line can show for that one launch although nothing is syncing.
 17. [ ] That a plan exists survives a relaunch and syncs; the schema still
     validates against CloudKit.
-18. [ ] Exports and import are unchanged in shape: no new column in either
+    **Unticked — sync untested, gathered in `specs/SYNC-CHECKS.md` for one
+    later pass.** *Verified*: the schema by
+    `CloudKitSchemaTests.schemaMeetsCloudKitRequirements` and
+    `TwoStoreContainerTests.theProductionPairingLoadsAndSplits`, both red
+    with `@Attribute(.unique)` on `sellPlanCreatedAt` (G1, T001, error
+    134060); the fields by `WishlistSellPlanFieldTests.aFreshEntryIsPlanlessAndChecked`
+    and `aDateMakesItAPlan` (G2); persistence by every store test's
+    second-context refetch, and on the device (T015) by a **relaunch on the
+    persistent store** and by two **upgrades in place** — from `main`, and
+    from this branch's Phase 4 build — each launching over its old store with
+    the new fields read as the plan and migration claims say (plan §1's
+    "a pre-009 row reads unchecked" held: the upgrade launch carried 3 plans
+    of 5 unchecked rows). VoiceOver over the rows, the switch, the card, the
+    Sell Plan's Delete and the Plans "…": done by the person, 2026-09-23.
+    **What has not been done**: a plan created, sold through, deleted and
+    carried over on one device and seen on another, and plan Q2's three
+    windows — a signed-in device launched offline, a device returning after
+    a long absence, and which write survives when a carried row meets a
+    deletion made elsewhere. No agent can run them and the person has not
+    yet.
+18. [x] Exports and import are unchanged in shape: no new column in either
     format, no plan in any export, and today's files parse exactly as they do
     now.
-19. [ ] Nothing in this feature opens a network connection.
+    *Verified by*: `ExportSchemaTests` and `ImportSchemaTests` green
+    **unedited** at every task that touched the schema (T001, T017 — G23,
+    G38), `headerListsMatchThePinnedSchema` among them, so no column was
+    added and there is nothing new to parse. That no plan reaches an export
+    is evidenced by the **diff**: no file under `Trove/Export/`,
+    `Trove/Import/` or `Trove/Models/ExportSchema.swift` is in it, and
+    `ItemExportRecord`/`WishlistExportRecord` read named fields rather than
+    the model's properties (plan QA1).
+19. [x] Nothing in this feature opens a network connection.
+    **Ticked by inspection, and the inspection is the honest ceiling here.**
+    No test in this project can catch this being false without being a broad
+    noun-scan over the source — the shape `CLAUDE.md` names as having gone
+    vacuous (the seven-noun policy scan whose table could be deleted while it
+    stayed green, and `014`'s menu-row guard that `.init(` kept green) — and
+    a scan pins a spelling, not a behaviour. What can be said precisely, from
+    `git diff main...HEAD`: no file under `Trove/Market/` or `Trove/Photos/`
+    is in it; no added line names `URLSession`, `URLRequest`,
+    `ReverbService` or `WikimediaService` (the only `http` in it is the tab
+    icon's SVG namespace); no new service type exists; the new view models
+    take a `ModelContext`, a `SyncMonitor` and a clock, nothing that could
+    carry a connection; and `PRIVACY.md` is not in the diff. The device pass
+    adds the observation, not the proof.
 
 ## Decisions record
 
@@ -475,7 +827,15 @@ found between this spec and the code:
 ## Proposals (P-items)
 
 Claude Code's, becoming decisions on plan approval unless the person
-overturns them.
+overturns them. **Decisions since the plan's approval on 2026-09-22**, as
+`002`'s, `005`'s, `006`'s and `015`'s did; none was overturned. Two were
+built differently from their first shape, each at the person's word and each
+recorded where it happened: P11's placement on the plan's own screen is
+**Delete as a button of its own**, not a "…" (Decision 13, plan Q12 as
+amended), and P2's rows gained a **picture on the Completed side too**
+(Decision 16). P1's labels, P5's sort options, P8's covered rule, P9's
+fallback and P12's read-only record shipped as written; the strings are in
+**Copy** above.
 
 - **P1 — Two sides, not a menu option.** The person offered either; this takes
   the Items tab's Owned/Sold shape, because `014` already built it, already
@@ -636,21 +996,122 @@ recorded in `tasks.md` against the task that carries it.
 
 ### Acceptance criteria
 
+Verified at T016 as criteria 1–19 were (the preamble above). Criteria 20
+and 22 stay **unticked** for their sync halves, as 17 does; 21 and 23 are
+ticked.
+
 20. [ ] Every row on both sides of the Plans tab has a picture slot. An active
     row shows the wanted item's picture or the placeholder; a completed row
     shows the picture of the item the purchase created, when the purchase
     recorded it and that item still has one, and the placeholder otherwise.
     A purchase made from any of the four hosts records the item it became.
-21. [ ] The Plans tab's header has a "…" that opens Settings, and every tab's
+    **Unticked — sync untested, gathered in `specs/SYNC-CHECKS.md` for one
+    later pass** (a purchase on one device showing its picture on the
+    other's Completed row). *Verified on one device*: which picture each row
+    carries by `PlansViewModelTests.anActiveRowShowsItsEntrysPhotosAndACompletedRowItsBoughtItems`,
+    `aCompletedRowWhoseBoughtItemWasDeletedHasNoPicture` and
+    `aCompletedRowWithNoPurchaseRecordHasNoPicture` (G30 — each with a
+    photo attached to the wanted entry **after** the purchase, which the row
+    must not show; mutations: completed rows reading `wanted.photos` → red,
+    **and the deleted `showsThumbnail` guard passed that one**; the
+    `?? wanted.photos` fallback → the two late-photo legs red; active rows
+    reading `boughtItem` → red; photos only while unsold → the sold leg
+    red); that the view draws them on every row by
+    `PlansWiringTests.theRowDrawsItsLinesAndAThumbnailOnEveryRow` (G31);
+    the record by `WishlistPurchaseStoreTests.thePurchaseRecordsTheItemItBecameOnBothEnds`,
+    `aRefusedSecondPurchaseLeavesTheRecordOnTheFirstItem`,
+    `deletingTheBoughtItemLeavesTheEntryBoughtAndPlannedWithNoRecord`,
+    `sellingTheBoughtItemLeavesTheRecordIntact` and
+    `deletingTheBoughtEntryLeavesTheItemAndItsPhotos` (G25, G26, second
+    context; mutations: the assignment dropped; the purchase also writing
+    `soldTowardWishlistItem`; `.cascade` on either end — each red); all four
+    hosts by `WishlistDetailViewModelTests.aPurchaseThroughAnyHostLandsIdentically`'s
+    absolute per-host leg (G28 — with the assignment dropped it went red once
+    per host **while the equality legs stayed green**, which is why the
+    absolute leg exists); the seed by
+    `UITestSeedTests.thePlansSeedWritesSixWantedItemsInTheirShapes` (G29);
+    and a duplicate taking no record by
+    `ItemDuplicationTests.sellPlanMembershipIsNotInherited` (G39). On the
+    device (T015), the picture's four states on the persistent store: a
+    plan completed before the record existed → the placeholder (the second
+    upgrade in place, from this branch's Phase 4 build); bought → the photo;
+    its item sold → still the photo; its item deleted → the placeholder,
+    the row still on Completed.
+21. [x] The Plans tab's header has a "…" that opens Settings, and every tab's
     root screen has a way to Settings.
+    *Verified by*: `SettingsWiringTests.everyTabsRootReachesSettings` (G32 —
+    **derived from the tab list**, not from a list of files: each `Tab(`'s
+    root view in `ContentView`, as many as `AppRouter.Tab.allCases`, must
+    host an anchored `OverflowBadge(` and a dropdown that raises the sheet;
+    mutations: the Plans badge replaced by a `Button`; `PlansView` out of
+    `settingsHosts`; the Plans root swapped for `SellPlanView` (6 issues);
+    the row toggling instead of raising — each red), the parameterized
+    `theScreenAttachesTheSettingsSheetAndReloadsOnDismiss` and
+    `eachHostThreadsTheAppearanceStoreIntoSettings` over `PlansView.swift`
+    (mutation: the sheet's reload dropped → red), and
+    `DropdownWiringTests.everyBadgeCarriesItsHintAndIdentifier` (G33;
+    mutation: `moreActions.plans` removed → red). On screen:
+    `testEveryTabsRootReachesSettings` — badge, Settings, the bar, Done, on
+    all four tabs (mutation: the Plans badge removed → red, "the Plans tab's
+    root must have a '…'"). On the device (T015): the Plans "…" with its one
+    Settings row over a full and an empty side in both appearances, the
+    switch's top at 134.67 pt in every state, and Settings reached from all
+    four tabs. VoiceOver over the "…": done by the person, 2026-09-23.
 22. [ ] Settings offers "Delete all sell plans" under the existing Delete-all
     rows: dimmed with no plans; with plans, a confirmation naming the count;
     confirming removes every plan, active and completed, and nothing else
     (criteria 10–12 hold for every plan it removed); it is announced as
     destructive and drawn in rust.
-23. [ ] The schema still validates against CloudKit with the purchase's new
+    **Unticked — sync untested, gathered in `specs/SYNC-CHECKS.md` for one
+    later pass** (Delete all on one device clearing the other, and plan
+    RA2's window: a plan made on one device and not yet arrived on the other
+    is neither counted nor deleted there). *Verified on one device*:
+    `SettingsDeleteAllSellPlansTests.theCountIsTheStoredPlansAndTheRowAwaitingTheCarryOver`
+    (4, under RA2(b) as the person answered it),
+    `withNoPlansTheRowIsDimmedAndTheRequestStagesNothing`,
+    `theRequestReCountsAPlanThatArrivedAfterLoad`,
+    `confirmRemovesEveryPlanAndNothingElse` and
+    `activityIsSetSynchronouslyAndASecondActionIsRefused` (G35, second
+    context — every entry present, every item's sale, value, desire and
+    count identical, `itemsSoldToward` the same ids, the purchase record
+    identical, every removed row checked and given no plan by a following
+    carry-over; mutations: entries deleted instead of plans; completed
+    plans skipped; `itemsSoldToward` cleared; the save dropped; the count
+    over every entry; `SellPlanStore.delete`'s nil-stamp dropped — each
+    red); the words by `DeleteAllCopyTests.theSellPlansTitlesCountAndPluralize`,
+    `theSellPlansMessagesNameWhatStaysWhenSyncing`,
+    `theSellPlansMessagesOnALocalOnlyStoreLeaveICloudOut` and
+    `everyMessageEndsWithNoUndo` (G34); the row by
+    `SettingsWiringTests.everyDeleteRowCarriesAnAccessibilityHintAndTheRowAppliesIt`
+    and `everyActionRowGatesOnBusyAndReadsItsOwnActivity` (G36 — exactly 3
+    destructive rows, 3 hints, 8 action rows; mutations: `isDestructive`,
+    the hint and the busy gate each removed → red), with
+    `DestructiveColourPolicyTests.everyAppDrawnDestructiveControlIsColouredRust`
+    green unedited (the row's rust comes through `SettingsActionRow.color`,
+    its pinned exemption). The refused save's rollback is untested, as for
+    every Delete All. On screen: `testDeletingAllSellPlansLeavesEverythingElse`
+    ("Delete all 4 sell plans?", Keep, then Delete All; both sides empty;
+    Summicron, Vox and Fuji still on the Wishlist, Vox offering Create; the
+    two sales on the Sold side; the bought Hasselblad on Owned; the row
+    dimmed). On the device (T015): the row sampled `accentRustText` in both
+    appearances, dimmed with no plans, its alert's text, and the probe in
+    `SellPlanStore.delete` counting Keep 0 and Delete All 4. VoiceOver over
+    the row with its hint: done by the person, 2026-09-23.
+23. [x] The schema still validates against CloudKit with the purchase's new
     record (criterion 17), and exports and import are unchanged in shape
     (criterion 18).
+    *Verified by*: G24 — `deleteRule: .deny` on either end of the new pair
+    turned `CloudKitSchemaTests.schemaMeetsCloudKitRequirements` and
+    `TwoStoreContainerTests.theProductionPairingLoadsAndSplits` red (134060,
+    "unsupported delete rules"), and so did removing `inverse:` (SwiftData
+    made two one-way links — the plan's feared mis-pairing did not happen;
+    QA1 corrected as built); and G38 — `ExportSchemaTests`,
+    `ImportSchemaTests`, `PurchaseUndoTests`, `PhotoOwnershipTests`,
+    `MenuPolicyTests`, `DestructiveColourPolicyTests`, `SellPlanFramingTests`
+    and `PlansWiringTests.theScreenDrawsNoMoneyAndReachesNoStore` all green
+    **unedited** at T017. The pair's migration of a store already in the
+    field was seen on the device, from `main` and from the Phase 4 build
+    (T015). Criterion 17's own sync half is not part of this one's claim.
 
 ## Review pass
 

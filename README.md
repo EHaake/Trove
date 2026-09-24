@@ -25,7 +25,7 @@ purchases.
   and their credits, its Reverb match, its year and your notes — nothing
   to retype — and it leaves the wishlist. Nothing is thrown away: the
   sell plan you built around it survives as a record of what you sold
-  toward it. There's no undo, on purpose — every way in goes through a
+  toward it, on the Plans tab's Completed side. There's no undo, on purpose — every way in goes through a
   sheet you have to confirm, and an undo would have to delete the item
   the purchase created. A purchase made by mistake is corrected by
   deleting the item and adding the want back.
@@ -42,6 +42,24 @@ purchases.
   ledger. Within a desire level it lists what Reverb's asking prices say
   is rising first and falling last, with the median beside each matched
   item and one dated sentence on a rising row saying by how much.
+- **Sell plans, in a tab of their own** — a sell plan is something you
+  make on purpose: tap **Create a sell plan** on a wanted item, and it stays
+  a plan however the items you set aside change, even once every one of
+  them has sold. It ends when you buy the thing. The **Plans** tab lists
+  them in two halves. **Active** holds the plans you're working on, and
+  **Completed** holds the ones that ended in a purchase, each showing the
+  picture of the thing you bought, when there is one. Every row says what the plan is for,
+  how many items you've set aside, how many have sold toward it, and a
+  quiet "Covered" once the sales alone have reached what you expect to pay.
+  It never shows a money target or a total left to raise, because the plan
+  is advice, not a goal. Each half keeps its own sort. From a row you can
+  open the plan, swipe to buy the thing, or swipe to delete the plan. A
+  completed plan opens as a read-only record of what sold toward it and
+  when it was bought. Deleting a plan deletes only the plan: nothing you
+  own or sold is touched, and the record of what sold toward it stays. The
+  Overview gains an "active sell plans" card that takes you straight to
+  the Plans tab. Plans you'd already made before this feature carry over
+  on their own.
 - **Marking something sold** — the Items tab has an Owned side and a
   Sold side: record what it sold for, when, where and any note, and the
   item moves across to the Sold side, which says in words whether each
@@ -111,14 +129,14 @@ purchases.
   in the app and in a PDF export. Searching happens only when you ask,
   after the same kind of one-time notice the market search uses, and a
   fetched photo syncs like your own.
-- **Settings** — one sheet, reached from the "…" on either list or on
-  the dashboard: export *everything* as a CSV pair or a PDF pair (one
+- **Settings** — one sheet, reached from the "…" on every tab: export *everything* as a CSV pair or a PDF pair (one
   share sheet, two files), the blank import templates, a live iCloud
   status row that says what the app actually knows, Refresh market
   values (one walk over every matched item that is due, with its
-  progress shown), Delete All for either list (all-or-nothing, the
-  count in the title, with "Export first if you want a copy" right
-  there), and About — the Reverb attribution, the contact address and
+  progress shown), Delete All for either list and for every sell plan
+  (all-or-nothing, the count in the title, with "Export first if you
+  want a copy" right there; deleting all sell plans leaves every item,
+  wanted item and sale where it was), and About — the Reverb attribution, the contact address and
   the privacy policy.
 - **Appearance** — a System / Light / Dark choice in Settings, where Light is a paper-ground variant of the same brass/moss/rust identity rather than a new palette, System follows the device live, and the choice is stored per-device (Dark by default, so an existing install updates to exactly today's look).
 - **Menus that are the app's own** — every menu inside a page (Sort
@@ -132,7 +150,7 @@ purchases.
 
 ## Status
 
-Eleven specs shipped: `001-core-inventory` (v1 — item tracking, the
+Twelve specs shipped: `001-core-inventory` (v1 — item tracking, the
 dashboard, the wishlist, the Sell Plan, CloudKit sync),
 `010-item-management-enhancements` (merged 2026-08-30 — swipe actions,
 drag-to-reorder, duplication, expanded sorting, and a design-depth
@@ -166,7 +184,13 @@ plan, four new CSV columns, and a sale that can be undone), and
 swipe, the Sold side gaining the search, category chips and sort the
 Owned side has with sorts that fit things already sold, each side
 keeping its own, the sale shown under a sold item's name, and exports
-that ask first whether you mean owned, sold or both).
+that ask first whether you mean owned, sold or both), and
+`015-mark-as-bought` (merged 2026-09-21 — mark a wanted item bought from
+its swipe, its menu or its Sell Plan, and it becomes an item in your
+collection carrying its photos, credits and Reverb match, while the sell
+plan built around it survives as a record). `009-sell-plan-list` is
+complete on its branch — sell plans as things you create, the Plans tab
+and its Dashboard card — and not yet merged.
 See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.
@@ -226,7 +250,7 @@ Trove/                 App source
   Models/               SwiftData models
   Photos/                Wikimedia Commons client, licence filter, the notice store
   ViewModels/            One per screen
-  Views/                 Dashboard/, Items/, Wishlist/, Settings/, Market/, Photos/, Shared/
+  Views/                 Dashboard/, Items/, Wishlist/, Plans/, Settings/, Market/, Photos/, Shared/
   Extensions/            Small, flagged UIKit-bridge exceptions live here
 Trove/Fonts/            Bundled type (Archivo, IBM Plex Sans/Mono)
 TroveTests/             Swift Testing, one file per view model
