@@ -2,7 +2,7 @@
 
 **Status**: Signed off (2026-09-22) by the `skeptical-reviewer`; the spec-conformance summary approved by the person on 2026-09-22
 
-**Status (Amendment A, at the end of this file)**: Draft — pending sign-off
+**Status (Amendment A, at the end of this file)**: Signed off (2026-09-23) by the `skeptical-reviewer` after one re-review; RA2 awaits the person
 
 Drafted by the `sdd-planner` (per `CLAUDE.md`'s model policy as amended
 2026-09-19: every role runs at `opus`, no dispatch carries a model override)
@@ -999,7 +999,7 @@ is §13's device pass and the person's steps.
 
 ## Amendment A (2026-09-23)
 
-**Status**: Draft — pending sign-off
+**Status**: Signed off (2026-09-23) by the `skeptical-reviewer` after one re-review; RA2 awaits the person
 
 Drafted by the `sdd-planner` against spec **Amendment A** (Decisions 13–18,
 criteria 20–23) and the code at `6f1b591`. Decisions 13–15 are already built

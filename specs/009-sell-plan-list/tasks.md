@@ -2,7 +2,7 @@
 
 **Status**: Signed off (2026-09-22) by the `skeptical-reviewer`; the spec-conformance summary approved by the person on 2026-09-22
 
-**Status (Phase 4A — Amendment A, and its changes to T015/T016)**: Draft — pending sign-off
+**Status (Phase 4A — Amendment A, and its changes to T015/T016)**: Signed off (2026-09-23) by the `skeptical-reviewer` after one re-review; RA2 awaits the person
 
 Drafted against the approved `spec.md` (Approved 2026-09-22) and the draft
 `plan.md` in this directory, for branch `009-sell-plan-list` off `main`
@@ -110,7 +110,7 @@ Handoff notes for the pause reports:
   until then, and for as long as a device stays offline), the sort labels
   ("Newest" on Completed means date bought), the past-tense line on completed
   rows, and the tab icon (Decision 8 — drawn to match, revisitable).
-- **Phase 4A (Amendment A) — what can be tried** *(Draft)*: on the Plans
+- **Phase 4A (Amendment A) — what can be tried**: on the Plans
   tab, a "…" beside Sort (there over an empty side too) opens Settings, and
   every tab's "…" does. Put a picture on a wanted item, make a plan, buy it:
   its Completed row shows that picture; sell the item it became and the
@@ -556,7 +556,7 @@ Handoff notes for the pause reports:
   is written into `design/tokens.md`.
 
   **Done:** 2026-09-23. The eight content shapes — the Overview's unvalued callout, the Items and Wishlist category chips, the two condition chips, the category picker chip, the wishlist form's preset-amount buttons, the empty state's outlined button — each placed last on the label, landed early in `6f1b591` (an orchestrator miss, logged). Measured: at the two tested sites the hairline outline already caught taps, so the audit's gap did not reproduce; ruled at a decision review (A): keep the shapes (restyles remove outlines), guard the shape alone. `testTappingAnEmptyPartOfTheUnvaluedCalloutFollowsIt` taps a fixed point of the callout's own frame, anchored outside every text/image frame; mutation — shape deleted and `.allowsHitTesting(false)` on the outline, frame unchanged — red ("a tap on the callout's empty space … did not follow it"). The chip test was deleted: a 69 × 34 pt chip is within the label's tap reach everywhere, so no mutation could turn it red (CLAUDE.md: a test that cannot fail is deleted). `design/tokens.md` gains **Tap targets**. Rides this branch at the person's instruction ("Fix it now"), not a `fix/` branch. `scripts/verify.sh`: 1726 tests passed; the callout test green alone.
-## Phase 4A — Amendment A (**Draft**) · walkthrough: yes — the Plans tab has a "…" beside Sort (over an empty side too) that opens Settings, as every tab's does; a plan bought after this update shows the bought item's picture on its Completed row, kept when that item is sold and a grey placeholder once it is deleted, and older completed plans show the placeholder in the same slot; Settings' Delete section has a rust "Delete All Sell Plans…", dimmed with no plans, that asks "Delete all <n> sell plans?" and afterwards leaves both Plans sides empty and every wanted item, owned item and sale where it was
+## Phase 4A — Amendment A · walkthrough: yes — the Plans tab has a "…" beside Sort (over an empty side too) that opens Settings, as every tab's does; a plan bought after this update shows the bought item's picture on its Completed row, kept when that item is sold and a grey placeholder once it is deleted, and older completed plans show the placeholder in the same slot; Settings' Delete section has a rust "Delete All Sell Plans…", dimmed with no plans, that asks "Delete all <n> sell plans?" and afterwards leaves both Plans sides empty and every wanted item, owned item and sale where it was
 
 Per plan **Amendment A** (QA1–QA6, RA1–RA4, G24–G39). Decisions 13–15 are
 built (T009b, T009d, T009c/T014a) and are not replanned here. Ordering: the
@@ -907,3 +907,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T014a — `sdd-implementer` | `opus` | ~123k (harness, cumulative over three rounds) | Stopped twice on judgements (the gap didn't reproduce; the chip test couldn't fail) — ruled A at a decision review, then the chip test deleted per CLAUDE.md |
 | `skeptical-reviewer` — Amendment A sign-off | `opus` | ~170k (harness) | 1 BLOCKING: T018 deletes `showsThumbnail` while a test outside its file list builds a `PlanRow` with it; 9 non-blocking. Recommends RA2(b) |
 | `sdd-planner` — Amendment A fix pass (resumed) | `opus` | ~28k (budget counter) | All nine applied; G39 added; RA2 left for the person |
+| `skeptical-reviewer` — Amendment A re-review | `opus` | ~188k (harness, cumulative) | Signed off; all FIXED. Notes: G35's count reads 4 under RA2(b); G39 would read cleaner on a second wanted item with no selection |
