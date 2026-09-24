@@ -2310,6 +2310,163 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Rode NT5"].waitForExistence(timeout: 5), "the new plan must be listed on Plans")
     }
 
+    // MARK: - 009 Amendment A
+
+    /// Criterion 21's behavioural half (plan QA6): on a fresh install, every
+    /// tab's root screen has a "…" that opens Settings, and Done closes it —
+    /// `testDashboardOffersSettingsAndNothingElse`'s legs, once per tab. On
+    /// the Plans tab, with nothing stored, Delete All Sell Plans is there and
+    /// dimmed (criterion 22).
+    ///
+    /// Its mutation: removing the Plans tab's `OverflowBadge` must turn the
+    /// Plans leg's badge assertion red.
+    @MainActor
+    func testEveryTabsRootReachesSettings() {
+        let app = launchApp()
+        XCTAssertTrue(
+            app.staticTexts["Nothing tracked yet"].waitForExistence(timeout: 5),
+            "Expected the first-run dashboard."
+        )
+
+        let tabs = [
+            ("Overview", "moreActions.dashboard"),
+            ("Items", "moreActions.items"),
+            ("Wishlist", "moreActions.wishlist"),
+            ("Plans", "moreActions.plans"),
+        ]
+        for (tab, identifier) in tabs {
+            app.buttons[tab].tap()
+
+            let badge = app.buttons[identifier]
+            XCTAssertTrue(badge.waitForExistence(timeout: 5), "the \(tab) tab's root must have a \"…\"")
+            badge.tap()
+            let settings = app.buttons["Settings"]
+            XCTAssertTrue(settings.waitForExistence(timeout: 5), "the \(tab) tab's \"…\" must offer Settings")
+            settings.tap()
+
+            let sheet = app.navigationBars["Settings"]
+            XCTAssertTrue(sheet.waitForExistence(timeout: 5), "Settings should present as a sheet from the \(tab) tab")
+            if tab == "Plans" {
+                // Existence before `isEnabled`, which is false for a missing row.
+                let deletePlans = app.buttons["Delete All Sell Plans…"]
+                XCTAssertTrue(deletePlans.exists, "Settings must offer Delete All Sell Plans")
+                XCTAssertFalse(deletePlans.isEnabled, "Delete All Sell Plans must be dimmed with no plans")
+            }
+            app.buttons["Done"].tap()
+            XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings on the \(tab) tab")
+            XCTAssertTrue(badge.isHittable, "Done should return to the \(tab) tab's root")
+        }
+    }
+
+    /// Criterion 22 on the seeded Plans collection (plan QA6): the Plans
+    /// tab's "…" reaches Settings, whose Delete All Sell Plans asks first,
+    /// naming all four plans — the three Active, the carried-over Fuji among
+    /// them, and the one Completed. Keep changes nothing; Delete All empties
+    /// both sides of the tab at once, and leaves everything else where a
+    /// single delete leaves it — the wanted entries on the Wishlist, offering
+    /// a new plan, the sales on the Sold side, the bought item owned — and
+    /// the row dimmed.
+    ///
+    /// Its mutations: the Settings sheet's `onDismiss` reload dropped from
+    /// `PlansView` must turn the empty-state leg red; `confirmDeleteAll`
+    /// deleting the wanted entries instead of their plans must turn the
+    /// Wishlist leg red.
+    @MainActor
+    func testDeletingAllSellPlansLeavesEverythingElse() {
+        let app = launchPlans()
+        app.buttons["Plans"].tap()
+
+        let summicron = app.staticTexts["Summicron 35mm f/2"]
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "the seeded plans must be listed")
+
+        let badge = app.buttons["moreActions.plans"]
+        let sheet = app.navigationBars["Settings"]
+        let deletePlans = app.buttons["Delete All Sell Plans…"]
+        let alert = app.alerts["Delete all 4 sell plans?"]
+
+        // Keep changes nothing.
+        openSettings(from: badge, in: app)
+        XCTAssertTrue(deletePlans.exists, "Settings must offer Delete All Sell Plans")
+        XCTAssertTrue(deletePlans.isEnabled, "with plans stored, Delete All Sell Plans must be enabled")
+        scrollUntilHittable(deletePlans, in: app)
+        deletePlans.tap()
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "Delete All Sell Plans must ask first, naming all four plans")
+        alert.buttons["Keep"].tap()
+        XCTAssertTrue(alert.waitForNonExistence(timeout: 5), "Keep must close the alert")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings")
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "Keep must leave the plans listed")
+
+        // Delete All empties both sides.
+        openSettings(from: badge, in: app)
+        scrollUntilHittable(deletePlans, in: app)
+        deletePlans.tap()
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "the alert must ask again")
+        alert.buttons["Delete All"].tap()
+        // The delete commits in a task; the row dims once it has, so Done
+        // cannot race it.
+        let dimmed = expectation(for: NSPredicate(format: "isEnabled == false"), evaluatedWith: deletePlans)
+        XCTAssertEqual(XCTWaiter.wait(for: [dimmed], timeout: 5), .completed, "the row must dim once every plan is gone")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings")
+
+        XCTAssertTrue(
+            app.staticTexts["No sell plans yet"].waitForExistence(timeout: 5),
+            "the Active side must be empty as soon as Settings closes"
+        )
+        XCTAssertFalse(summicron.exists, "no plan may stay on Active")
+        let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
+        switchControl.buttons["Completed"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Nothing completed yet"].waitForExistence(timeout: 5),
+            "the Completed side must be empty too"
+        )
+
+        // The wanted entries stay, and offer a new plan.
+        app.buttons["Wishlist"].tap()
+        for name in ["Summicron 35mm f/2", "Vox AC15", "Fuji X100V"] {
+            XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5), "\(name) must stay on the Wishlist")
+        }
+        openDetail(in: app, named: "Vox AC15")
+        let createPlan = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Create a sell plan")).firstMatch
+        XCTAssertTrue(createPlan.waitForExistence(timeout: 5), "the Vox AC15 has no plan now, so it offers a new one")
+
+        // The sales and the bought item stay.
+        app.buttons["Items"].tap()
+        let itemsSwitch = element(in: app, identifiedBy: "items.sideSwitch")
+        XCTAssertTrue(itemsSwitch.waitForExistence(timeout: 5))
+        itemsSwitch.buttons["Sold"].tap()
+        for name in ["Blues Junior", "NT1-A"] {
+            XCTAssertTrue(soldRow(in: app, named: name).waitForExistence(timeout: 5), "the sale of the \(name) must stay")
+        }
+        itemsSwitch.buttons["Owned"].tap()
+        // An owned row's `.combine`d element — see
+        // `testMarkingAWantedItemBoughtMovesItToTheCollection`.
+        let hasselblad = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Hasselblad 80mm,"))
+            .firstMatch
+        XCTAssertTrue(hasselblad.waitForExistence(timeout: 5), "the item the completed plan bought must stay owned")
+
+        // And the row reads dimmed on a fresh visit.
+        app.buttons["Plans"].tap()
+        openSettings(from: badge, in: app)
+        XCTAssertTrue(deletePlans.exists, "Settings must still offer Delete All Sell Plans")
+        XCTAssertFalse(deletePlans.isEnabled, "with no plans left, Delete All Sell Plans must be dimmed")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings")
+    }
+
+    /// The Plans tab's "…" → Settings, waiting for the sheet.
+    @MainActor
+    private func openSettings(from badge: XCUIElement, in app: XCUIApplication) {
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "the Plans tab must have a \"…\"")
+        badge.tap()
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5), "the \"…\" must offer Settings")
+        settings.tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5), "Settings should present as a sheet")
+    }
+
     /// Launches on the seeded Plans collection.
     @MainActor
     private func launchPlans() -> XCUIApplication {

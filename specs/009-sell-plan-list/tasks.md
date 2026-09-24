@@ -753,7 +753,7 @@ Settings row it leads to; the UI tests last, against the final layout.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
   **Done:** 2026-09-23. `DeleteTarget.sellPlans` (with `CaseIterable`) and its copy — "Delete your only sell plan?" / "Delete all 4 sell plans?", the message naming the plans in its iCloud sentence; `SettingsViewModel.planCount`, `canDeleteSellPlans`, `Activity.deleteSellPlans`, the `.sellPlans` delete through `SellPlanStore.delete` in the existing one-save/rollback envelope, counted and deleted by one `plannedRows()` on RA2(b)'s path (stored plans plus rows awaiting the carry-over); a third rust row under Delete. Stale comments corrected. G34 (three copy tests), G35 (new suite `SettingsDeleteAllSellPlansTests`, 5, second context, count 4), G36 (exact counts 3/3/8). Mutations, each red: entries deleted instead of plans; completed plans skipped; `itemsSoldToward` cleared; the save dropped; `planCount` counting every entry; `SellPlanStore.delete`'s nil-stamp dropped (the unchecked plan re-planned); a copy sentence reworded; the iCloud sentence in `.localOnly`; `isDestructive`, the hint, and the busy gate each removed. The refused-save rollback is untested, as for every Delete All. `scripts/verify.sh`: 1742 tests in 234 suites passed.
-- [ ] **T021 — Amendment A's UI tests, and the suite twice.**
+- [x] **T021 — Amendment A's UI tests, and the suite twice.**
   Per plan QA6. `testEveryTabsRootReachesSettings` (`-uiTesting`) and
   `testDeletingAllSellPlansLeavesEverythingElse` (`-uiTesting -seedPlans`),
   exactly as QA6 lists their steps. Pattern:
@@ -768,6 +768,7 @@ Settings row it leads to; the UI tests last, against the final layout.
   **Verify:** `scripts/verify.sh` green; `scripts/verify.sh ui` green twice,
   both counts in the Done note (expected: the count before plus 2);
   mutations recorded.
+  **Done:** 2026-09-23. `testEveryTabsRootReachesSettings` and `testDeletingAllSellPlansLeavesEverythingElse` with an `openSettings(from:in:)` helper. Mutations, each red on a named assertion: the Plans `overflowControl` removed ("the Plans tab's root must have a '…'"); the Settings sheet's `onDismiss` reload dropped ("the Active side must be empty as soon as Settings closes"); entries deleted instead of their plans ("… must stay on the Wishlist"). The delete test waits for the row to dim before Done (the delete is async). `scripts/verify.sh`: 1742 tests passed; `scripts/verify.sh ui` twice back to back: 36 tests, 0 failures, both runs (~14 min each).
   **Phase 4A closes here — pause for the person** (what to try, and the
   readings to put as questions, are in the handoff note above).
 
@@ -917,3 +918,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T018 — `sdd-implementer` | `opus` | ~75k (harness) | Done first pass; no miss |
 | T019 — `sdd-implementer` | `opus` | ~81k (harness) | Done first pass; no miss |
 | T020 — `sdd-implementer` | `opus` | ~122k (harness) | Done first pass; no miss. Noted: `DestructiveColourPolicyTests` checks its counts as floors — plan wording saying "exact" there is inaccurate |
+| T021 — `sdd-implementer` | `opus` | ~82k (harness) | Done first pass; no miss |
