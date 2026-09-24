@@ -1778,21 +1778,23 @@ final class TroveUITests: XCTestCase {
 
     /// `009` T014a, the person's instruction after T009c ("Fix it now"): the
     /// Overview's not-yet-valued callout follows its link from a tap anywhere
-    /// inside its outline, not only on its words or its arrow.
+    /// inside its box, not only on its words or its arrow.
     ///
-    /// Two items are added with no current value, so the callout reads "2 items" and
-    /// leads to the Items list narrowed to them — whose own clear-chip is an
-    /// unambiguous sign the link was followed (one item would open that item,
-    /// whose name the list also shows). The tap lands in the callout's bottom
-    /// padding band, half of `cardPadding` (16 pt) above its lower edge at its
-    /// horizontal middle: empty whatever the copy says. The callout's frame is
-    /// safe to measure from here, unlike the Sell Plan card's in T009c: its
-    /// hairline outline is drawn edge to edge, so what it draws spans the whole
-    /// box with or without the content shape (read at 370 × 111 pt both ways).
+    /// Two items are added with no current value, so the callout reads
+    /// "2 items" and leads to the Items list narrowed to them — whose own
+    /// clear-chip is an unambiguous sign the link was followed (one item would
+    /// open that item, whose name the list also shows). The tap lands at a
+    /// fixed fraction of the callout's own frame, (0.8, 0.75): below "VALUE"
+    /// and right of the second line, about 18 pt from anything drawn at the
+    /// default text size (frame 354 × 73 pt). Before tapping, the point is
+    /// checked against the frame of every text and image inside the callout,
+    /// so a layout change can't quietly move the tap onto a label.
     ///
-    /// Its mutation: removing the callout's `.contentShape` in
-    /// `DashboardView.unvaluedCallout` must turn the navigation assertion red —
-    /// an unfilled `.plain` button hit-tests only what it draws.
+    /// Its mutation: delete the callout's `.contentShape` and add
+    /// `.allowsHitTesting(false)` to its hairline outline — the outline still
+    /// draws, so the frame doesn't move, but it stops catching the tap (today
+    /// it would, which `tokens.md`'s tap-target rule says not to rely on). The
+    /// navigation assertion goes red.
     @MainActor
     func testTappingAnEmptyPartOfTheUnvaluedCalloutFollowsIt() {
         let app = launchApp()
@@ -1826,55 +1828,23 @@ final class TroveUITests: XCTestCase {
             .firstMatch
         XCTAssertTrue(callout.waitForExistence(timeout: 5), "two items without a value must raise the callout")
         scrollUntilHittable(callout, in: app)
-        print("T014aPROBE callout \(callout.frame)")
 
-        callout.coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: callout.frame.width / 2, dy: callout.frame.height - 8))
-            .tap()
+        let offset = CGVector(dx: 0.8, dy: 0.75)
+        let frame = callout.frame
+        let point = CGPoint(x: frame.minX + frame.width * offset.dx, y: frame.minY + frame.height * offset.dy)
+        let drawn = callout.staticTexts.allElementsBoundByIndex + callout.images.allElementsBoundByIndex
+        XCTAssertFalse(drawn.isEmpty, "the callout's texts must be readable, or the anchor below checks nothing")
+        for element in drawn {
+            XCTAssertFalse(
+                element.frame.contains(point),
+                "the tap point \(point) must miss \"\(element.label)\" (\(element.frame)) — it is meant to land on empty space"
+            )
+        }
+
+        callout.coordinate(withNormalizedOffset: offset).tap()
         XCTAssertTrue(
             app.buttons["Clear the not-yet-valued filter"].waitForExistence(timeout: 5),
-            "tapping the callout's empty padding must follow it to the narrowed list — callout frame \(callout.frame)"
-        )
-    }
-
-    /// `009` T014a on the Items list's category chips: an unselected chip
-    /// selects from a tap inside its capsule's padding, away from its label.
-    ///
-    /// The seeded Sell Plan collection (`-seedSellPlan`) owns guitars, amps
-    /// and a microphone, so the row offers a "Guitars" chip, unselected on
-    /// arrival behind "All". The tap lands 7 pt in from the chip's leading
-    /// edge at its vertical middle — inside the capsule's rounded end, half
-    /// the 14 pt horizontal padding short of the label. The chip's frame is
-    /// safe to measure from: its hairline outline is drawn edge to edge, so
-    /// what it draws spans the whole capsule with or without the content
-    /// shape. Selection is read from the `isSelected` trait the chip adds
-    /// from the same `isSelected` it draws.
-    ///
-    /// Its mutation: removing the chip's `.contentShape(Capsule())` in
-    /// `ItemListView.chip(label:path:)` must turn the selection assertion red
-    /// — a clear fill doesn't hit-test.
-    @MainActor
-    func testTappingAnUnselectedChipsPaddingSelectsIt() {
-        let app = XCUIApplication()
-        app.launchArguments = ["-uiTesting", "-seedSellPlan"]
-        app.launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
-
-        app.buttons["Items"].tap()
-        let chip = app.buttons["Guitars"]
-        XCTAssertTrue(chip.waitForExistence(timeout: 5), "the seeded collection must offer a Guitars chip")
-        XCTAssertTrue(chip.isHittable, "the Guitars chip should be on screen on arrival")
-        XCTAssertFalse(chip.isSelected, "the Guitars chip must start unselected — All is the arrival filter")
-        print("T014aPROBE chip \(chip.frame)")
-
-        chip.coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: 7, dy: chip.frame.height / 2))
-            .tap()
-        let selected = expectation(for: NSPredicate(format: "isSelected == true"), evaluatedWith: chip)
-        XCTAssertEqual(
-            XCTWaiter.wait(for: [selected], timeout: 5),
-            .completed,
-            "tapping inside the chip's padding must select it — chip frame \(chip.frame)"
+            "a tap on the callout's empty space at \(point) did not follow it to the narrowed list"
         )
     }
 

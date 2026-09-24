@@ -348,6 +348,19 @@ Any control with `role: .destructive` is drawn in rust, wherever it appears.
 
 Guarded by `DestructiveColourPolicyTests`.
 
+### Tap targets (`009`, 2026-09-23)
+
+A card, chip or button drawn as a box responds to a tap anywhere inside
+its box. Put `.contentShape(Rectangle())` last on the label, after its
+padding (or the box's own shape when its corners are large:
+`Capsule()` on a chip), whether or not the box has a fill or an
+outline. A clear fill can't be relied on to catch taps. An outline
+happens to catch them today, but don't rely on that, because restyles
+remove outlines.
+
+Guarded by UI tests that tap the padding, away from the label: the
+Sell Plan card and the Overview's not-yet-valued callout.
+
 ### Item detail (`010` refresh, 2026-08-29)
 
 Source: `Trove Item Detail.dc.html`. Adopted selectively — the mock's

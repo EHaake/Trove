@@ -541,7 +541,7 @@ Handoff notes for the pause reports:
   **Phase 4 closes here — pause for the person** (what to try, and the
   readings to put as questions, are in the handoff note above).
 
-- [ ] **T014a — The person, Phase 4 walkthrough: every card and chip responds anywhere in its box.**
+- [x] **T014a — The person, Phase 4 walkthrough: every card and chip responds anywhere in its box.**
   The person, 2026-09-23, on T009c's audit (the Overview's "N items not yet
   valued" callout, `DashboardView.swift` ~382–416; the unselected category
   chips, `WishlistView.swift` ~521 and `ItemListView.swift` ~877, whose fill is
@@ -551,6 +551,7 @@ Handoff notes for the pause reports:
   gets a content shape; each gets a UI test that taps an empty point; the rule
   is written into `design/tokens.md`.
 
+  **Done:** 2026-09-23. The eight content shapes — the Overview's unvalued callout, the Items and Wishlist category chips, the two condition chips, the category picker chip, the wishlist form's preset-amount buttons, the empty state's outlined button — each placed last on the label, landed early in `6f1b591` (an orchestrator miss, logged). Measured: at the two tested sites the hairline outline already caught taps, so the audit's gap did not reproduce; ruled at a decision review (A): keep the shapes (restyles remove outlines), guard the shape alone. `testTappingAnEmptyPartOfTheUnvaluedCalloutFollowsIt` taps a fixed point of the callout's own frame, anchored outside every text/image frame; mutation — shape deleted and `.allowsHitTesting(false)` on the outline, frame unchanged — red ("a tap on the callout's empty space … did not follow it"). The chip test was deleted: a 69 × 34 pt chip is within the label's tap reach everywhere, so no mutation could turn it red (CLAUDE.md: a test that cannot fail is deleted). `design/tokens.md` gains **Tap targets**. Rides this branch at the person's instruction ("Fix it now"), not a `fix/` branch. `scripts/verify.sh`: 1726 tests passed; the callout test green alone.
 ## Phase 4A — Amendment A (**Draft**) · walkthrough: yes — the Plans tab has a "…" beside Sort (over an empty side too) that opens Settings, as every tab's does; a plan bought after this update shows the bought item's picture on its Completed row, kept when that item is sold and a grey placeholder once it is deleted, and older completed plans show the placeholder in the same slot; Settings' Delete section has a rust "Delete All Sell Plans…", dimmed with no plans, that asks "Delete all <n> sell plans?" and afterwards leaves both Plans sides empty and every wanted item, owned item and sale where it was
 
 Per plan **Amendment A** (QA1–QA6, RA1–RA4, G24–G38). Decisions 13–15 are
@@ -863,3 +864,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | Phase 4 — follow-ups (`sdd-implementer`, T014's agent resumed) | `opus` | ~174k (harness, cumulative) | All applied; each mutation red on a named assertion (a crossed-bracket plant passes under the old dead store — the control); 1726 unit tests; the three changed UI tests green alone | UI suite at `9f95b0f`: 33 tests, 0 failures |
 | Orchestrator miss — `6f1b591` | `claude-opus-5-5` session | — | The spec Amendment A commit, made with `git commit -a` while T014a's implementer was mid-task, swept its unfinished code (eight content shapes, two UI tests, two debug prints) into a commit about prose. Not rewritten (no force-push); T014a's own commit carries the corrections and names this one. Rule recorded: commit named paths while an agent works |
 | `sdd-planner` — Amendment A plan and tasks (Draft) | `opus` | ~265k (budget counter) | Phase 4A, T017–T021, 15 guards (G24–G38); T015/T016 updated; one product question returned (RA2: does Delete all sell plans include rows still awaiting the carry-over?) |
+| T014a — `sdd-implementer` | `opus` | ~123k (harness, cumulative over three rounds) | Stopped twice on judgements (the gap didn't reproduce; the chip test couldn't fail) — ruled A at a decision review, then the chip test deleted per CLAUDE.md |
