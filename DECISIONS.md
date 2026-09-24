@@ -333,7 +333,19 @@ The product decisions are numbered 1–14 (plus the P-items) in
   peace of mind on a first SDD project — upgraded to a Max x5 plan
   specifically to support this. The phase-tiered table in `tasks.md` is
   now historical context for why each phase was originally built the way
-  it was, not a live instruction.
+  it was, not a live instruction. **2026-09-24: reconciled with the
+  Solowright skill's 2026-09-23/24 change.** `CLAUDE.md`'s model policy
+  now reads as the skill's **Opus profile** with a role table — every
+  row `claude-opus-5-5`, no overrides, no fallback session model
+  (`claude-opus-4-8` dropped from `.claude/settings.json`, which is the
+  skill's `settings.opus.json` verbatim). Two rules adopted from the
+  skill's `references/collaboration-workflow.md` at the same time: the
+  close-out runs on an evidence bundle and its dispatch forbids full
+  reads of `spec.md`, `plan.md` and `tasks.md` (the skill measured
+  $12.38/111 turns against $0.99/24 turns for the two shapes); and a
+  device or browser pass runs in a `general-purpose` agent, one
+  dispatch per checklist section, waits folded into the next call,
+  deterministic checks moved to automated UI tests.
 - **Claude Code context management**: prefer `/clear` at phase
   boundaries over `/compact`, specifically because this project's
   discipline of keeping real decisions in the actual files (not just in
