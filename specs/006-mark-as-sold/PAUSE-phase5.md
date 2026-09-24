@@ -3,7 +3,7 @@
 State: T013–T018 and the review fix T017a are done, reviewed (two blocking
 findings fixed, re-review signed off), committed and pushed to draft PR #23.
 Remaining: T019 (device pass; person's steps: second-device sync and
-VoiceOver) and T020 (close-out), Phase 6.
+VoiceOver — done (the person, 2026-09-16)) and T020 (close-out), Phase 6.
 
 Open for the person at this pause:
 1. Product question (from T017): when a Sell Plan has no candidates left,

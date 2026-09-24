@@ -311,11 +311,12 @@ placeholders per P8 and Decisions 11–14.
 
 Fifteen of the seventeen were verified at T020's close-out (2026-09-15) — by
 the unit suites, the UI suite, and the T019 device pass on an iPhone 18 Pro
-(iOS 27.0) with the in-memory store. **Two are the person's own steps and stay
-unticked**: criterion 15 (a second device signed into the same iCloud account)
-and criterion 16 (Accessibility Inspector over the new surfaces). Each names
-what the agent *did* verify, so what is left is exactly the observation nobody
-has made yet.
+(iOS 27.0) with the in-memory store. **Two were the person's own steps and
+stayed unticked at the merge**: criterion 15 (a second device signed into the
+same iCloud account) and criterion 16 (Accessibility Inspector over the new
+surfaces) — **both done (the person, 2026-09-16)** and ticked below. Each names
+what the agent *did* verify, and the attestation beside it is the observation
+that was left.
 
 1. [x] An owned item's detail screen offers **Mark as sold…** in its top-right
    menu beside Edit and Delete; the Items list's swipe does not offer it.
@@ -581,8 +582,9 @@ has made yet.
     the link travelling with the item on a second context. The sale is stored
     *on* the item (plan Q1), so it is one CloudKit record on the path `001`'s
     item fields already take — there is no second record that could arrive
-    out of order. **Nobody has watched a sale arrive on a second device**: no
-    second device was available, exactly as `005`'s criterion 4 recorded.
+    out of order. **Nobody had watched a sale arrive on a second device** at
+    the merge — no second device was available, exactly as `005`'s criterion 4
+    recorded — **done (the person, 2026-09-16)**: see the attestation above.
 16. [x] **Attested by the person, 2026-09-16** — every listed element passed Xcode's Accessibility Inspector. (Was pending at the merge.) VoiceOver: **Mark as sold…**, the
     Owned / Sold switch and which side is showing, the Sold card, each
     Sold-side row, the sold mark and the sale line, and the Sell Plan's Sold

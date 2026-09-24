@@ -2,7 +2,7 @@
 
 **Status**: Signed off (2026-09-22) by the `skeptical-reviewer`; the spec-conformance summary approved by the person on 2026-09-22
 
-**Status (Phase 4A — Amendment A, and its changes to T015/T016)**: Signed off (2026-09-23) by the `skeptical-reviewer` after one re-review; RA2 awaits the person
+**Status (Phase 4A — Amendment A, and its changes to T015/T016)**: Signed off (2026-09-23) by the `skeptical-reviewer` after one re-review; RA2 answered (b) by the person on 2026-09-23
 
 Drafted against the approved `spec.md` (Approved 2026-09-22) and the draft
 `plan.md` in this directory, for branch `009-sell-plan-list` off `main`
