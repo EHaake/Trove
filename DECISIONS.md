@@ -345,7 +345,10 @@ The product decisions are numbered 1–14 (plus the P-items) in
   $12.38/111 turns against $0.99/24 turns for the two shapes); and a
   device or browser pass runs in a `general-purpose` agent, one
   dispatch per checklist section, waits folded into the next call,
-  deterministic checks moved to automated UI tests.
+  deterministic checks moved to automated UI tests. The plan-and-tasks
+  draft row is on trial at "implementation tier (no override)" from
+  the same date; the first spec opened afterwards records the start in
+  its tier log.
 - **Claude Code context management**: prefer `/clear` at phase
   boundaries over `/compact`, specifically because this project's
   discipline of keeping real decisions in the actual files (not just in

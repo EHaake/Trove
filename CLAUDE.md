@@ -307,7 +307,7 @@ no dispatch in this project carries an override.
 | Role | Dispatched as | Model | Effort |
 |---|---|---|---|
 | Spec conversation | the spec session itself | session tier | high (raised per session) |
-| Plan and tasks draft | `sdd-planner` | top tier (no override) | high |
+| Plan and tasks draft | `sdd-planner` | implementation tier (no override) — trial from 2026-09-24, see below | high |
 | Plan and tasks sign-off | `skeptical-reviewer` | top tier (no override) | high |
 | Decision review | `skeptical-reviewer` | top tier (no override) | high |
 | Task implementation | `sdd-implementer` | implementation tier | high |
@@ -316,6 +316,17 @@ no dispatch in this project carries an override.
 | Per-task and phase review | `skeptical-reviewer` | implementation tier | high |
 | Pre-merge sweep | `skeptical-reviewer` | implementation tier | high |
 | Orchestration and bookkeeping | the session itself | session tier | medium |
+
+**Trial, 2026-09-24, at the person's instruction: the plan-and-tasks
+draft row runs at the implementation tier (no override).** Under this
+profile that is the same model and effort the row already resolved
+to, so the trial changes the row's wording and what a later move to
+the Fable profile would inherit, not what runs today. It starts with
+the first spec opened after this date — that spec's `tasks.md` tier
+log records it as its first row ("plan-and-tasks draft at the
+implementation tier, no override, trial from 2026-09-24, started with
+this spec") so the change is dated in the log and not only here. It
+persists until the person says otherwise; never infer its end.
 
 **Moving a role.** Edit its row, nothing else. To change the
 implementer, change the agent name in that row — both definitions
@@ -386,9 +397,9 @@ infer the end of a temporary change and revert it unasked.
   being ambiguous goes back to the person as a product question. The
   session never diagnoses in place.
 - **The top tier runs only where the role table says it does**: the
-  `sdd-planner` (one dispatch per spec), the `skeptical-reviewer` on
-  plan/tasks sign-off and on decision reviews, and the close-out
-  dispatch. Under this profile that is the same model as everything
+  `skeptical-reviewer` on plan/tasks sign-off and on decision reviews,
+  and the close-out dispatch (the `sdd-planner` draft is on trial at
+  the implementation tier, per the table). Under this profile that is the same model as everything
   else, so those dispatches carry no override. The agent definitions
   carry `effort: high`, which overrides the session's medium, so
   reasoning stays at full strength where it matters.
