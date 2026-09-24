@@ -772,6 +772,14 @@ Settings row it leads to; the UI tests last, against the final layout.
   **Phase 4A closes here — pause for the person** (what to try, and the
   readings to put as questions, are in the handoff note above).
 
+- [ ] **T021a — Walkthrough finding: Delete All Items says completed plans lose their pictures.**
+  The person, Phase 4A walkthrough (2026-09-23), on RA4: the warning "should
+  probably mention it." `DeleteAllCopy`'s `.items` consequences gain that
+  completed sell plans lose the pictures that came from the deleted items;
+  `.wishlist` and `.sellPlans` unchanged; `DeleteAllCopyTests` by literal.
+  RA3 (the footer) stays, and sell plans in the exports go to
+  `specs/ROADMAP.md` as a follow-up — the person's answer.
+
 ## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; the person's own checks (VoiceOver, two devices) are named in T015 as their steps rather than a phase walkthrough, and nothing new is built
 
 - [ ] **T015 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver, two devices]**

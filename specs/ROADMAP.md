@@ -325,6 +325,14 @@ actually useful once the app is in daily use.
   speculative. The extraction is mechanical and wants its own diff; nothing in
   the three sheets' behaviour should change, which makes it easy to verify and
   easy to keep putting off.
+- **Follow-up from `009` — sell plans in the exports.** The person, at
+  `009`'s Phase 4A walkthrough (2026-09-23): the Delete section's "Export
+  first if you want a copy" is "fine for now, but we should add sell plans to
+  the export eventually." `009` kept exports unchanged in shape (criteria 18,
+  23): no plan, no selection, no plan date and no purchase record in the CSV
+  or the PDF, so "Delete all sell plans" is the one Delete-all row whose
+  footer's advice cannot save what it deletes. A spec of its own, since it
+  changes both export formats and the import that must round-trip them.
 - **`007-auto-categorization`** — Suggest a category path from a photo
   instead of typing it. The category field being a plain string path
   (not a fixed enum) since `001` is what keeps this a pure addition.
