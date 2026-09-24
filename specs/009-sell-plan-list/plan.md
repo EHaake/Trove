@@ -2,6 +2,8 @@
 
 **Status**: Signed off (2026-09-22) by the `skeptical-reviewer`; the spec-conformance summary approved by the person on 2026-09-22
 
+**Status (Amendment A, at the end of this file)**: Draft — pending sign-off
+
 Drafted by the `sdd-planner` (per `CLAUDE.md`'s model policy as amended
 2026-09-19: every role runs at `opus`, no dispatch carries a model override)
 against the approved `spec.md` (Approved 2026-09-22) and the code on the
@@ -67,7 +69,12 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   "Bought <date>" line, and the existing Sold section — each sale with its
   date and price, as today — or one quiet line when nothing sold toward it.
   Heard at the Phase 4 pause (it is first reachable there).
-- **R2 — A completed row has no picture and no picture slot** (spec
+- *(Revised 2026-09-23 by spec Amendment A, Decision 16 — see **Amendment
+  A, QA2**: every row on both sides keeps one picture slot; a completed row
+  draws the picture of the item the purchase became, recorded at the purchase
+  (QA1), and the placeholder when there is none. `showsThumbnail` is deleted.
+  The text below is the reading as signed off, kept as the record.)*
+  **R2 — A completed row has no picture and no picture slot** (spec
   Decision 11, the person's answer 2026-09-22 — superseding this plan's draft
   reading, an always-empty placeholder, which the person rejected). `015` Q6
   moves an entry's photos onto the bought item and keeps no link back, so a
@@ -91,7 +98,9 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   not on the wishlist (`015` R1, which that delete already honours).
 - **R6 — The Plans tab has no search, no category chips, no header summary
   line and no "…"**: the spec lists none, exports are unchanged (P7), and
-  Settings stays reachable from the other three tabs.
+  Settings stays reachable from the other three tabs. *(The "…" half revised
+  2026-09-23 by spec Amendment A, Decision 17 — see **Amendment A, QA3**: the
+  tab gains a "…" holding Settings. No search, chips or summary line still.)*
 - **R7 — On a device using iCloud, the carry-over waits for the first
   successful import of the launch** (Q3), and it never runs on a launch where
   iCloud failed to load. Until it runs, a Plans side with nothing on it says
@@ -549,7 +558,8 @@ final class PlansViewModel {
         let lines: [String]; let boughtDate: Date?   // lines: SellPlanSummary.rowLines
         let showsThumbnail: Bool                  // R2: set by the split, false on Completed
         var isCompleted: Bool { boughtDate != nil }
-    }
+    }   // Amendment A (QA2): `showsThumbnail` deleted; `photos` on a completed row is the bought item's
+
 
     private(set) var side: Side = .active    // every launch opens on Active
     private(set) var activeSortOrder: ActiveSortOrder = .newest
@@ -825,7 +835,8 @@ viewModel.completedImports)` and `.onChange(of: viewModel.settledCount)`;
 `.refreshable` with `RefreshPacing`.
 
 `PlanRowView` — `WishlistRow`'s head (`RowThumbnail` **only when
-`row.showsThumbnail`** — no slot, no placeholder otherwise, R2 — name in `rowTitle`,
+`row.showsThumbnail`** — no slot, no placeholder otherwise, R2; *drawn on every
+row since Amendment A, QA2* — name in `rowTitle`,
 category `monoLabel`, the stock-photo accessibility value) with
 `ForEach(row.lines)` stacked beneath in `secondary` on `textQuiet` (`015`
 T011b's house pairing). **The view decides nothing about which lines show**
@@ -931,7 +942,8 @@ meets a deletion made elsewhere.
 
 ## 14. Docs and close-out
 
-At T016: criteria 1–19 ticked with per-criterion citations — **criterion 19
+*(Amendment A adds criteria 20–23 and three `DECISIONS.md` entries — see
+**Amendment A, Close-out additions**.)* At T016: criteria 1–19 ticked with per-criterion citations — **criterion 19
 by inspection** (no new service, no `URLSession`, no change under
 `Trove/Market/` or `Trove/Photos/`), criterion 17 an honest partial until the
 two-device step; the Copy section's shapes replaced by the shipped strings
@@ -960,7 +972,7 @@ cut after `git add -A`, and the PR marked ready.
 | G7 | `SellPlanStoreTests.carryOver`: six rows, all six end checked, a second run returns 0, the deleted plan never resurrected, dated `now` | the checked filter dropped (resurrection leg); sold-toward ignored (sold-only and bought legs); only planned rows stamped (**the all-six-checked leg** — the idempotency leg stays green, since a second run makes no plan either way); `createdAt` written (date leg) |
 | G8 | `SyncMonitorTests`: `onSettled` at init for `.ephemeral` only; on a successful import, before the bump; on a finished failed setup; **not** on a failed import after a good setup; never on export/in-flight; `settledCount` after each call | hook after the bump; fired on the `.unavailable` edge (the failed-import leg); fired at init in `.localOnly`; fired on export |
 | G9 | `UITestSeedTests`: `shouldSeedPlans` refuses a persistent store with every flag set; the seed's shape; one carry-over over it yields three active | gate reads the flag alone; seed row missing |
-| G10 | `PlansViewModelTests` membership: all-sold stays Active; bought moves; planless on neither; orphan shown and deletable; rows' `lines`; `showsThumbnail` true on Active, false on Completed | active from the selection; completed ignoring the plan; a zero count drawn |
+| G10 | `PlansViewModelTests` membership: all-sold stays Active; bought moves; planless on neither; orphan shown and deletable; rows' `lines`; `showsThumbnail` true on Active, false on Completed *(the `showsThumbnail` leg deleted with the property at Amendment A — its rule is G30's)* | active from the selection; completed ignoring the plan; a zero count drawn |
 | G11 | `PlansViewModelTests` sorts: seven orders over two fixtures; the tie both ways; per-side persistence; fresh defaults | a comparator dropped or reversed; bought date read as plan date; tie by name; one shared sort |
 | G12 | `PlansViewModelTests` empty reasons and precedence, including an awaiting row under a not-importing monitor | `stillSyncing` below another; `nothingWanted` for a planless wishlist; the awaiting check dropped |
 | G13 | four-host seed equality, refusal and the one-landing comparison; the Buy moves the row | `?? 0` in the fourth seed; the fourth host skipping the store or its save |
@@ -969,7 +981,7 @@ cut after `git add -A`, and the PR marked ready.
 | G16 | `WishlistDetailViewModelTests` entry point and `openSellPlan`, including a row awaiting the carry-over | fallback order swapped; "0 items set aside"; plan re-created; an awaiting row offered "Create" |
 | G17 | `SellPlanWiringTests` + rewritten `015` G18: Buy gate, delete gate, the record composes nothing that acts, `soldSection` ×3 hosts | Buy gated on `wishlistItem != nil`; a row or `toggle` in the record; dismiss outside `deletePlan()` |
 | G18 | `SideSwitch` label fit; `ItemListSidesWiringTests` | a half narrower than its label |
-| G19 | `PlansWiringTests`: swipes, sheet, cancel, no money (`formattedAsWholeCurrency`, `.currency(`, `Cents`), rows draw `row.lines`, switch, no REORDER; `purchaseHosts` + `MenuPolicyTests` | Buy on Completed rows; cancel not clearing; a currency figure drawn; a count line composed in the view |
+| G19 | `PlansWiringTests`: swipes, sheet, cancel, no money (`formattedAsWholeCurrency`, `.currency(`, `Cents`), rows draw `row.lines`, switch, no REORDER; `purchaseHosts` + `MenuPolicyTests` *(the thumbnail-gate leg rewritten at Amendment A — G31)* | Buy on Completed rows; cancel not clearing; a currency figure drawn; a count line composed in the view |
 | G20 | `TabIconTests`: `TabPlans` resolves, template, four distinct | template intent dropped; an existing svg copied |
 | G21 | `DashboardWiringTests`-style scan of `DashboardView` | card outside the gate; wrong action |
 | G22 | UI tests, §13, twice back to back | see §13 |
@@ -982,3 +994,339 @@ produce (`015` As built): dates distinct from `createdAt`, sale prices
 distinct from current values, estimates never 0 unless 0 is the case. What
 the suites cannot reach — the migration, the look, the spoken names, sync —
 is §13's device pass and the person's steps.
+
+---
+
+## Amendment A (2026-09-23)
+
+**Status**: Draft — pending sign-off
+
+Drafted by the `sdd-planner` against spec **Amendment A** (Decisions 13–18,
+criteria 20–23) and the code at `6f1b591`. Decisions 13–15 are already built
+(T009b, T009d, T009c/T014a) and are not planned again; they reach this
+section only where the device pass and the close-out change for them (T015,
+T016). This section plans **Decision 16** (criterion 20), **Decision 17**
+(criterion 21), **Decision 18** (criterion 22) and criterion 23, as tasks
+T017–T021 in `tasks.md`'s Phase 4A.
+
+**Footprint.** One new synced relationship pair (`WishlistItem.boughtItem` ↔
+`Item.boughtFromWishlistItem`). No new production file. Changed:
+`WishlistItem.swift`, `Item.swift`, `WishlistPurchaseStore.swift`,
+`PlansViewModel.swift`, `PlansView.swift`, `DeleteAllCopy.swift`,
+`SettingsViewModel.swift`, `SettingsView.swift`. No export column, no import
+change, no new component (the "…" is `OverflowBadge` + `DropdownSurface` +
+`DropdownRow`; the sheet is the block the other three tabs already carry), no
+`.pbxproj` edit, no constitution amendment.
+
+**Decisions this revises, each with a pointer appended in place, never edited
+away**:
+
+- This plan's **R2** and **R6** — pointers added now (above), since a cold
+  reader of R2 would otherwise build to it. §5's `PlanRow` sketch, §11's
+  `PlanRowView` sentence and §15's G10/G19 rows carry one-line pointers too.
+- **`015` Decision 2**, as `015` Q6 carried it ("keeps no link back"): a
+  purchase now records the item it became. The person's Decision 16; pointer
+  appended at T016 in `specs/015-mark-as-bought/plan.md`.
+- The spec's own "Deleting a plan" paragraph says a bought entry "keeps no
+  link … so the app cannot even ask whether that item still exists". True
+  for purchases made before this amendment; after it, the link exists but a
+  deleted item nils it (QA1), so a real purchase whose item was later deleted
+  still reads exactly like an orphan. **The conclusion — no sweep — stands,
+  on the same ground.** T016 appends a pointer beside that paragraph; the
+  spec text is the person's and is not rewritten.
+
+### Readings for sign-off (not open questions — the plan builds to each)
+
+- **RA1 — A completed row reads the bought item's photos, never the wanted
+  entry's.** `015` moved the entry's photos at the purchase, so the entry's
+  own are empty on every completed plan the app itself made; reading them
+  as a fallback would only ever show something in a sync race (a photo added
+  on another device before it heard of the purchase). One source, stated.
+- **RA2 — "Delete all sell plans" removes the plans the app has stored, and
+  counts exactly those.** A row still awaiting the carry-over (Q2, R7) holds
+  no stored plan: its page reads "Create a sell plan" and the Plans tab does
+  not list it. It is neither counted nor touched, so the alert's number is
+  the number of rows the Plans tab shows (the `015` R1 principle Settings'
+  wishlist delete already follows: the gesture deletes exactly what the
+  alert's number promised). Consequence: if the carry-over runs afterwards,
+  that row becomes a plan then — as it would have without the delete. **The
+  person is being asked about this** (returned by the planner as a product
+  question); if they choose otherwise, T020's fetch changes from
+  `sellPlanCreatedAt != nil` to "stored plan **or** `awaitsCarryOver`", the
+  count follows, and `SellPlanStore.delete` stamps those rows checked so they
+  never carry — one predicate and one fixture row, nothing else.
+- **RA3 — The Delete section's footer stays as it is** ("Export first if you
+  want a copy."), under all three rows, although no export carries a plan.
+  Heard at the Phase 4A pause.
+- **RA4 — Settings' "Delete All Items" now also blanks completed rows'
+  pictures**: the bought items go, the link nils (QA1), and those rows fall
+  back to the placeholder. Its copy ("Every sell plan loses its items") is
+  unchanged. Heard at the pause.
+
+### Proposed at planning (QA1–QA6) — approved on sign-off unless overturned
+
+- **QA1. The record: one optional to-one relationship pair, `.nullify` both
+  ways, written only by `WishlistPurchaseStore.markBought`.**
+
+  ```swift
+  // WishlistItem.swift, beside itemsSoldToward
+  /// 009 Amendment A (Decision 16): the item this entry became when it was
+  /// bought — nil while wanted, nil on a purchase made before Amendment A,
+  /// and nil again once that item is deleted. Written only by
+  /// `WishlistPurchaseStore.markBought`. Read in one place: the Plans row's
+  /// picture (`PlansViewModel`). Never a source of money — `015` Decision 2
+  /// and this spec's Decision 5 stand. `Item` owns the inverse declaration.
+  @Relationship(deleteRule: .nullify)
+  var boughtItem: Item?
+
+  // Item.swift, beside soldTowardWishlistItem
+  /// 009 Amendment A: the wanted entry whose purchase created this item —
+  /// the inverse CloudKit requires of `WishlistItem.boughtItem`. Nothing
+  /// reads it. `.nullify`, never `.cascade`: deleting this item must leave
+  /// the completed plan on the Completed side (criterion 13), and deleting
+  /// the entry must never delete owned gear.
+  @Relationship(deleteRule: .nullify, inverse: \WishlistItem.boughtItem)
+  var boughtFromWishlistItem: WishlistItem?
+  ```
+
+  `markBought` gains `wanted.boughtItem = item` beside `wanted.boughtDate =
+  now` (after the insert, after the `alreadyBought` guard, so a refused
+  second purchase cannot move the record), and its doc comment's contract
+  gains "records the item". Every host goes through it (`015`'s one writer),
+  so all four hosts record by construction; G28 checks each anyway.
+  - **Bought item sold**: nothing touches the link (`ItemSaleStore.markSold`
+    writes sale fields and `soldTowardWishlistItem` only) — the picture stays.
+  - **Bought item deleted** (Items tab, detail page, Settings' Delete All
+    Items): `.nullify` nils `boughtItem`; the entry stays bought with its
+    plan, on Completed, with the placeholder (criteria 13, 20).
+  - **Entry deleted**: no path deletes a bought entry today (`015` R1); if
+    one ever does, `.nullify` leaves the item and its photos.
+  - **Plan deleted** (row, screen, or Delete all): `SellPlanStore.delete`
+    does not touch `boughtItem` — the record belongs to the purchase, not the
+    plan (Decision 9's "only the plan").
+  - **Not copied**: `ItemListViewModel.duplicate(id:)` builds a new `Item`
+    field by field, so a duplicate carries no back-link and cannot take the
+    record from the original — by construction, not tested.
+  - **Exports and import (criterion 23)**: `ItemExportRecord` and
+    `WishlistExportRecord` read named fields, not the model's properties, and
+    import builds rows through `init`, which has no parameter for the pair.
+    No column, no parse. `ExportSchemaTests`/`ImportSchemaTests`, which pin
+    the column lists, stay green unedited (G38).
+  - **CloudKit**: both ends optional, an inverse declared, no unique
+    constraint, not `.deny` — the rules this schema already follows for
+    `soldTowardWishlistItem`. G24 proves `CloudKitSchemaTests` checks it:
+    `.deny` on either end turns it red. The additive migration of a store
+    already in the field (from `main`, and from this branch's Phase 4
+    builds, which the person's walkthrough store is) is **verified at the
+    device pass** (T015), as §1's was.
+
+  **Weighed and rejected: a stored `boughtItemID: UUID?`.** No inverse, no
+  delete rule to get wrong — its real strength. But a deleted item leaves a
+  dangling id on the entry forever, `load()` needs a second fetch of every
+  `Item` to resolve it, and nothing in the schema enforces an id's
+  uniqueness, so a duplicate id would resolve to either row. The schema's
+  existing idiom for "which item" is a relationship
+  (`Item.soldTowardWishlistItem`); the pair is that idiom again, and the
+  delete-rule risk is covered by G26's two `.cascade` mutations.
+
+- **QA2. Which picture, and how the row carries it.** `PlanRow.photos` is
+  set by the view model: an active row's is `wanted.photos ?? []`; a
+  completed row's is `wanted.boughtItem?.photos ?? []` (RA1). **`PlanRow`
+  keeps `[Photo]` and never the `Item`** — `Photo` has no money on it, `Item`
+  does, so the row still cannot supply a figure (Q8). `showsThumbnail` is
+  **deleted**: the rule it encoded (no slot on Completed) no longer exists,
+  and a property that is always true would be a guard with nothing to guard.
+  `PlanRowView` draws `RowThumbnail(photos: row.photos)` on every row, so an
+  empty array is the placeholder — the shape Decision 16 asks for ("every row
+  on both sides has one shape again"). The stock-photo accessibility value
+  drops its `showsThumbnail &&` and reads `PhotoSelection.leadsWithStock`
+  alone, as `WishlistRow` does.
+
+  **Tests change meaning and are rewritten, never loosened** (Q19's rule):
+  G10's `showsThumbnail` leg is deleted with the property and replaced by
+  G30, which pins where each side's photos come from; G19's
+  `theRowDrawsItsLinesAndGatesItsThumbnail` becomes G31, which pins that the
+  thumbnail is drawn unconditionally. The mutation the old guards pass and
+  the new ones fail — completed rows reading `wanted.photos` (the old leg
+  only asked whether a slot showed) — is recorded at T018.
+
+- **QA3. The Plans "…".** `DashboardView`'s shape exactly: `HeaderDropdown`
+  gains `case overflow` ("Dismiss more actions"); the header's trailing
+  becomes `WishlistView`'s `HStack(spacing: 8) { if !viewModel.rows.isEmpty
+  { sortControl }; overflowControl }`, the "…" shown over an empty side too
+  (Settings is never gated); `overflowControl` is `OverflowBadge(isBusy:
+  false)` anchored `.dropdownAnchor(HeaderDropdown.overflow)`, identifier
+  `moreActions.plans`; the host's `.overflow` case is `DropdownSurface {
+  DropdownRow(title: "Settings") { isShowingSettings = true } }`. It holds
+  **Settings alone**: Export and Import are the lists' (plans are in no
+  export, P7), and the Dashboard's one-row menu is the precedent `013` P13
+  settled — the person asked for "the '…' the other tabs have, holding
+  Settings" (Decision 17), which is different from T009b's objection to a
+  one-row menu *on the Sell Plan screen*, where Delete was the only row.
+  `@State isShowingSettings`, the four environment reads the other hosts make
+  (`storageMode`, `storageFallbackReason`, `AppearanceStore`,
+  `colorScheme`), and the **sheet block copied from `DashboardView`** with
+  `onDismiss: viewModel.load`, so a Delete all behind it empties the list at
+  once. Both badges share a height (`OverflowBadge`'s own comment), so the
+  header is one height whether Sort shows or not — the switch's `minY`
+  claim from §13 is re-measured at T015.
+
+  **Chosen: the fourth copy of the sheet block, not a shared modifier.** A
+  `settingsSheet(isPresented:)` modifier would replace four copies with one,
+  but it rewrites three merged screens and the scans that read them
+  (`SettingsWiringTests`' two host tests) for a feature that needs none of
+  it; `SettingsWiringTests` already holds every host to one shape, and the
+  Plans file joins it. Recorded as a roadmap line at T016, the Q16 shape.
+
+  **Criterion 21 — "every tab's root reaches Settings" — is guarded from the
+  tab list, not from a list of files someone has to remember to extend**
+  (G32). A new `SettingsWiringTests` test reads `ContentView`, takes each
+  `Tab(`'s root view type (the first `…View(` inside its closure), `#require`s
+  as many as `AppRouter.Tab.allCases`, finds each type's file under
+  `Trove/Views` by its `struct <Name>: View` declaration, and requires of each
+  file: its `settingsHosts` membership (so the existing sheet and
+  appearance-threading tests run over it), one anchored `OverflowBadge(`, and
+  a dropdown host whose body writes `isShowingSettings = true`. This is a
+  view-body fact about which screen composes what — no view model can observe
+  it — so it is the legitimate source-scan shape (`CLAUDE.md`,
+  `MenuPolicyTests`). Its behavioural half is a UI test that opens Settings
+  from all four tabs (T021).
+
+- **QA4. "Delete all sell plans".** Copy in **`DeleteAllCopy`**, not
+  `SellPlanCopy`: the title function, the confirm/cancel pair, the iCloud
+  sentence's storage-mode rule and the alert case are all keyed by
+  `DeleteTarget` already, so a third case reuses every one of them and the
+  view's one alert needs no change. `DeleteTarget` gains `case sellPlans`
+  (singular "sell plan", plural "sell plans") and `CaseIterable`, so the copy
+  tests iterate `allCases` rather than a literal list a new case can miss.
+
+  | Member | String |
+  |---|---|
+  | `title(count: 4, target: .sellPlans)` | `Delete all 4 sell plans?` |
+  | `title(count: 1, target: .sellPlans)` | `Delete your only sell plan?` |
+  | `message(.sellPlans, count > 1)` consequences | `Nothing you own or sold is touched, and everything on your wishlist stays there. What sold toward them stays on the record.` |
+  | `message(.sellPlans, count == 1)` consequences | `Nothing you own or sold is touched, and everything on your wishlist stays there. What sold toward it stays on the record.` |
+  | then, as for every target | the iCloud sentence in `.cloudKit` only; ` This can't be undone.` |
+  | row title (inline in the view, as its two siblings are) | `Delete All Sell Plans…` |
+  | row hint (inline, as its siblings are) | `Permanently deletes every sell plan, active and completed.` |
+
+  The single-plan message is not pinned to `SellPlanCopy.deleteMessage`
+  (the pattern the other two targets' singulars follow): that message has a
+  clause that depends on which side the plan is on, which a count cannot
+  know. Spoken as destructive by the hint, drawn rust by
+  `SettingsActionRow(isDestructive: true)` — `SettingsActionRow.color`,
+  the pinned exemption in `DestructiveColourPolicyTests`.
+
+  `SettingsViewModel`:
+
+  ```swift
+  enum Activity { …; case deleteSellPlans }
+  /// Stored plans, active and completed (RA2) — the alert's number.
+  private(set) var planCount = 0
+  var canDeleteSellPlans: Bool { planCount > 0 }
+  // load(): planCount = fetchCount(#Predicate<WishlistItem> { $0.sellPlanCreatedAt != nil }) ?? 0
+  // requestDeleteAll: `let count = switch target { … case .sellPlans: planCount }`
+  // confirmDeleteAll: `activity = switch target { … case .sellPlans: .deleteSellPlans }`, and
+  case .sellPlans:
+      let moment = now()
+      for wanted in try modelContext.fetch(FetchDescriptor<WishlistItem>(
+          predicate: #Predicate<WishlistItem> { $0.sellPlanCreatedAt != nil })) {
+          SellPlanStore.delete(planOf: wanted, at: moment)
+      }
+  ```
+
+  Through the **one writer**, so every plan removed is removed exactly as a
+  single delete removes it — plan and selection gone, the entry, every item,
+  the sold-toward record and the purchase record untouched, the row stamped
+  checked so no carry-over brings it back (criteria 10–12, G35) — and the
+  existing envelope's **one save, `rollback()` on refusal, `.deleteFailed`**
+  (the rollback branch untested, as every Delete All's is). No
+  `MarketLocalStore.clear`: nothing is deleted. The row sits third in the
+  Delete section's rows, above the footer, `isEnabled:
+  viewModel.canDeleteSellPlans && !viewModel.isBusy` (dimmed with none),
+  `isActing: viewModel.activity == .deleteSellPlans`.
+
+  **What the merged guards become.** `DestructiveColourPolicyTests`:
+  **unchanged** — the new row adds no `.destructive` site (the only one is
+  inside `SettingsActionRow`'s body), so its counts stay 15 sites / 9
+  system-drawn / 6 app-drawn and it stays green unedited; T020 records the
+  counts. `SettingsWiringTests`' counts change meaning and are rewritten to
+  the new number, never loosened to `>=`: destructive rows 2 → 3, hints 2 →
+  3, action rows 7 → 8 (G36).
+
+- **QA5. The UI-test seed needs no change.** `-seedPlans`' Hasselblad is
+  bought through `WishlistPurchaseStore.markBought`, so it records its item
+  by construction; G29 adds one leg to `UITestSeedTests` saying so. The seed
+  has no photos and gains none: a picture on a completed row is covered by
+  G30 (which photos the row carries), G31 (that the view draws them) and the
+  device pass (that they render), and seeding one would mean committing image
+  bytes for a check the suites already make.
+
+- **QA6. UI tests (T021, `TroveUITests`).**
+  - `testEveryTabsRootReachesSettings` (`-uiTesting`, empty store): for each
+    of Overview/`moreActions.dashboard`, Items/`moreActions.items`,
+    Wishlist/`moreActions.wishlist`, Plans/`moreActions.plans` — select the
+    tab, tap the badge, tap **Settings**, the Settings bar appears, **Done**,
+    it goes. On Plans (an empty side), "Delete All Sell Plans…" exists and is
+    not enabled.
+  - `testDeletingAllSellPlansLeavesEverythingElse` (`-uiTesting
+    -seedPlans`): Plans → "…" → Settings → the row enabled → tap → the alert
+    reads "Delete all 4 sell plans?" (three Active including the carried-over
+    Fuji, one Completed) → **Keep** → Done → Summicron still listed; again →
+    **Delete All** → Done → Active reads "No sell plans yet", Completed
+    "Nothing completed yet"; the Wishlist lists Summicron, Vox and Fuji, and
+    Vox's page offers "Create a sell plan"; the Items tab's Sold side lists
+    Blues Junior and NT1-A; Owned lists Hasselblad 80mm; Settings' row is now
+    not enabled.
+
+### Guards that can fail (continuing §15)
+
+| # | Test | Red when |
+|---|---|---|
+| G24 | `CloudKitSchemaTests` (and `TwoStoreContainerTests`) over the pair | `deleteRule: .deny` on `WishlistItem.boughtItem`; on `Item.boughtFromWishlistItem`. Also run, recorded either way: `inverse:` removed from `Item`'s declaration (if SwiftData infers it and stays green, the Done note says so and `.deny` is the guard) |
+| G25 | `WishlistPurchaseStoreTests`, second context: `markBought` records both ends; a refused second purchase leaves the record on the first item and no second `Item` | the assignment dropped |
+| G26 | `WishlistPurchaseStoreTests`, second context: the bought item **deleted** → the entry present, still bought, still planned, `boughtItem == nil`; the bought item **sold** → link intact; the bought **entry** deleted → the item and its photos present | `.cascade` on `Item`'s end (the entry-present leg); `.cascade` on `WishlistItem`'s end (the item-present leg) |
+| G27 | `SellPlanStoreTests` G6, completed leg: `delete` leaves `boughtItem` identical | `wanted.boughtItem = nil` in `delete` |
+| G28 | `WishlistDetailViewModelTests`' four-host landing: `Landing` gains whether the entry records the created item, **plus an absolute per-host expectation** — the equality leg alone stays green when every host fails alike | the store's assignment dropped → the absolute leg red on all four hosts (the equality leg green, recorded as the reason the absolute leg exists) |
+| G29 | `UITestSeedTests`: the seeded Hasselblad records the seeded "Hasselblad 80mm" item | the store's assignment dropped |
+| G30 | `PlansViewModelTests` (replaces G10's `showsThumbnail` leg): an active row's photos are its entry's; a completed row's are its bought item's (by id); unchanged after that item is sold; empty after it is deleted, the row still on Completed; empty with no record (the pre-amendment shape) | completed rows reading `wanted.photos` (**the old leg passes this**); active rows reading `boughtItem`; completed photos read only while the item is unsold |
+| G31 | `PlansWiringTests` (replaces G19's gate leg): `PlansView.swift` draws `RowThumbnail(photos: row.photos)` exactly once, in `PlanRowView`'s body, inside no `if`; the file names no `showsThumbnail` | the thumbnail gated on `!row.isCompleted`; `RowThumbnail(photos: [])` |
+| G32 | `SettingsWiringTests`: `PlansView.swift` in `settingsHosts` (sheet reload + threading tests extend); new — every `Tab(` root in `ContentView`, as many as `AppRouter.Tab.allCases`, is a Settings host with an anchored `OverflowBadge(` and a host writing `isShowingSettings = true` | Plans' badge removed; Plans' sheet `onDismiss` dropped; `PlansView` removed from `settingsHosts` (the roots-are-hosts leg); the Plans tab's root swapped for a screen with no Settings |
+| G33 | `DropdownWiringTests.everyBadgeCarriesItsHintAndIdentifier`: Plans' sort and "…" badges | `moreActions.plans` misspelled or dropped |
+| G34 | `DeleteAllCopyTests`: `.sellPlans` titles (plural, singular), both messages by literal in `.cloudKit` and `.localOnly`, iCloud rule and "can't be undone" over `DeleteTarget.allCases` | a sell-plans sentence reworded; the iCloud sentence shown in `.localOnly` for it |
+| G35 | `SettingsViewModelTests`, second context — fixture: an active plan (selection, a sale toward it), a completed plan (bought, its record, a sale toward it), a planless entry, a planless bought entry, and a row awaiting the carry-over: `planCount == 2`; `canDeleteSellPlans` false at 0; `requestDeleteAll(.sellPlans)` re-counts; confirm → both plans gone and selections empty; every entry present; every `Item`'s sale, value, desire and count identical; `itemsSoldToward` the same ids; the record identical; the two removed rows checked, and a following `carryOver` makes no plan of them; the planless and awaiting rows untouched (RA2); `activity` `.deleteSellPlans` synchronously, nil after; a second action refused while busy | entries deleted instead of their plans; completed plans skipped (`&& boughtDate == nil`); `itemsSoldToward` cleared; the save dropped; `planCount` counting every entry |
+| G36 | `SettingsWiringTests`: destructive rows exactly 3, hints exactly 3, action rows exactly 8, each gated on `!viewModel.isBusy` and reading its own activity | the new row without `isDestructive: true`; without its hint; without `!viewModel.isBusy` |
+| G37 | QA6's two UI tests, and the whole UI suite twice back to back | Plans' badge removed (the every-tab test); the sheet's `onDismiss` reload dropped (the empty-state leg); entries deleted instead of plans (the Wishlist leg) |
+| G38 | Unedited and green: `ExportSchemaTests`, `ImportSchemaTests` (criterion 23), `PurchaseUndoTests` (`boughtDate` still has one writer), `PhotoOwnershipTests`, `MenuPolicyTests`, `DestructiveColourPolicyTests` (counts 15/9/6), `SellPlanFramingTests`, `PlansWiringTests.theScreenDrawsNoMoneyAndReachesNoStore` | — |
+
+Every guard mutation-verified before it lands, the Done note recording what
+was broken and what went red; persisted reads on a second `ModelContext`;
+every new scan `#require`s its anchor.
+
+### Close-out additions (T015, T016)
+
+- **Device pass (T015)** gains: the upgrade in place from this branch's
+  Phase 4 build as well as from `main` (the pair migrates; completed plans
+  from before read the placeholder); a completed row's picture through its
+  four states on the persistent store — a wanted item with a picture from
+  the simulator's library, planned and bought (picture), its item sold
+  (picture), deleted (placeholder); the Plans "…" in both appearances over an
+  empty and a full side, with the switch's `minY` identical; Settings from
+  each tab; the Delete All Sell Plans row sampled against `accentRustText`
+  in both appearances, dimmed, and its alert's text; the file probe in
+  `SellPlanStore.delete` firing once per plan on confirm and never on Keep.
+  Decision 13's shape replaces §13's "…" wording: Buy and Delete as two
+  separate bar buttons, and a completed plan's lone Delete with no stray gap.
+  **The person's steps** add VoiceOver over the new row and the Plans "…",
+  and on two devices: a purchase on one shows its picture on the other's
+  Completed row; Delete all on one clears the other.
+- **Close-out (T016)**: criteria 1–23 ticked with citations (criterion 7 as
+  criterion 20 revised it; 23 by G24 and G38); the Copy section gains the
+  Delete-all strings; `design/tokens.md`'s Plans entry gains the "…" and the
+  completed row's picture; `DECISIONS.md` gains three entries — **the purchase
+  record** (the pair and its delete rules, the UUID weighed and rejected, why
+  it revises `015` Decision 2, and that its one reader takes photos, never
+  money), **Settings from every tab** (guarded from the tab list), and
+  **Delete all sell plans** (through the one writer; RA2 as the person
+  answers it); `specs/ROADMAP.md` gains the settings-sheet extraction line
+  (QA3); the pointers named at the top of this section.
