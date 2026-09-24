@@ -139,7 +139,7 @@ struct SettingsViewModelSurfaceTests {
         viewModel.alert = .confirmDelete(.items, count: 3)
 
         #expect(viewModel.alertTitle == "Delete all 3 items?")
-        #expect(viewModel.alertMessage == DeleteAllCopy.message(for: .items, count: 3, mode: .cloudKit))
+        #expect(viewModel.alertMessage == DeleteAllCopy.message(for: .items, count: 3, mode: .cloudKit, picturesACompletedPlan: false))
         #expect(viewModel.alertMessage.contains("If you're signed in to iCloud"))
     }
 
@@ -151,7 +151,7 @@ struct SettingsViewModelSurfaceTests {
 
         #expect(viewModel.alertTitle == "Delete your only wishlist item?")
         #expect(!viewModel.alertMessage.contains("iCloud"))
-        #expect(viewModel.alertMessage == DeleteAllCopy.message(for: .wishlist, count: 1, mode: .localOnly))
+        #expect(viewModel.alertMessage == DeleteAllCopy.message(for: .wishlist, count: 1, mode: .localOnly, picturesACompletedPlan: false))
     }
 
     /// Criterion 16: a failed export-everything shows 011's copy, not new
@@ -758,6 +758,42 @@ struct SettingsViewModelDeleteTests {
 
         #expect(viewModel.alert == .confirmDelete(.items, count: 2))
         #expect(viewModel.alertTitle == "Delete all 2 items?")
+    }
+
+    /// 009 T021a: a list of one item that a completed plan was bought as
+    /// says the plan loses its picture; an ordinary only item doesn't.
+    @Test func theOnlyItemsAlertSaysWhenItPicturesACompletedPlan() throws {
+        let context = try makeInMemoryContext()
+        let wanted = insertWanted("Vox AC15", category: "Music/Amps", into: context)
+        let boughtAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let bought = try WishlistPurchaseStore.markBought(
+            wanted,
+            purchase: Purchase(date: boughtAt, priceCents: 70_000, location: "Reverb", condition: .excellent),
+            at: boughtAt,
+            in: context
+        )
+        try context.save()
+        let viewModel = SettingsViewModel(modelContext: context, storageMode: .localOnly)
+
+        viewModel.requestDeleteAll(.items)
+        #expect(viewModel.alert == .confirmDelete(.items, count: 1))
+        #expect(
+            viewModel.alertMessage
+                == "Its photos go too. Any sell plan it's on drops it, "
+                + "and the completed plan it was bought for loses its picture. This can't be undone."
+        )
+
+        viewModel.cancelDeleteAll()
+        context.delete(bought)
+        _ = insertItem("Blues Junior", into: context)
+        try context.save()
+
+        viewModel.requestDeleteAll(.items)
+        #expect(viewModel.alert == .confirmDelete(.items, count: 1))
+        #expect(
+            viewModel.alertMessage
+                == "Its photos go too. Any sell plan it's on drops it. This can't be undone."
+        )
     }
 
     @Test func requestOnAnEmptyListStagesNothing() throws {

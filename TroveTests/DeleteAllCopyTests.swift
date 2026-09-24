@@ -21,8 +21,8 @@ struct DeleteAllCopyTests {
 
     @Test func theItemsMessageNamesEveryConsequenceWhenSyncing() {
         #expect(
-            DeleteAllCopy.message(for: .items, count: 309, mode: .cloudKit)
-                == "Their photos go too. Every sell plan loses its items. "
+            DeleteAllCopy.message(for: .items, count: 309, mode: .cloudKit, picturesACompletedPlan: false)
+                == "Their photos go too. Every sell plan loses its items, and completed plans lose their pictures. "
                 + "If you're signed in to iCloud, they're removed from your other devices as well. "
                 + "This can't be undone."
         )
@@ -30,7 +30,7 @@ struct DeleteAllCopyTests {
 
     @Test func theWishlistMessageNamesTheAsymmetryWhenSyncing() {
         #expect(
-            DeleteAllCopy.message(for: .wishlist, count: 12, mode: .cloudKit)
+            DeleteAllCopy.message(for: .wishlist, count: 12, mode: .cloudKit, picturesACompletedPlan: false)
                 == "Their photos go too. Their sell plans go with them; the gear on those plans stays. "
                 + "If you're signed in to iCloud, they're removed from your other devices as well. "
                 + "This can't be undone."
@@ -43,12 +43,18 @@ struct DeleteAllCopyTests {
     @Test func theICloudSentenceFollowsTheStorageMode() {
         for target in DeleteTarget.allCases {
             for count in [1, 5] {
-                let syncing = DeleteAllCopy.message(for: target, count: count, mode: .cloudKit)
-                #expect(syncing.contains("If you're signed in to iCloud"), "\(target) ×\(count)")
-                for mode in [StorageMode.localOnly, .ephemeral] {
-                    let local = DeleteAllCopy.message(for: target, count: count, mode: mode)
-                    #expect(!local.contains("iCloud"), "\(target) ×\(count) in \(mode) mentions iCloud")
-                    #expect(!local.contains("other devices"), "\(target) ×\(count) in \(mode)")
+                for pictured in [false, true] {
+                    let syncing = DeleteAllCopy.message(
+                        for: target, count: count, mode: .cloudKit, picturesACompletedPlan: pictured
+                    )
+                    #expect(syncing.contains("If you're signed in to iCloud"), "\(target) ×\(count)")
+                    for mode in [StorageMode.localOnly, .ephemeral] {
+                        let local = DeleteAllCopy.message(
+                            for: target, count: count, mode: mode, picturesACompletedPlan: pictured
+                        )
+                        #expect(!local.contains("iCloud"), "\(target) ×\(count) in \(mode) mentions iCloud")
+                        #expect(!local.contains("other devices"), "\(target) ×\(count) in \(mode)")
+                    }
                 }
             }
         }
@@ -56,11 +62,12 @@ struct DeleteAllCopyTests {
 
     @Test func theLocalOnlyMessagesStillNameTheOtherConsequences() {
         #expect(
-            DeleteAllCopy.message(for: .items, count: 4, mode: .localOnly)
-                == "Their photos go too. Every sell plan loses its items. This can't be undone."
+            DeleteAllCopy.message(for: .items, count: 4, mode: .localOnly, picturesACompletedPlan: false)
+                == "Their photos go too. Every sell plan loses its items, and completed plans lose their pictures. "
+                + "This can't be undone."
         )
         #expect(
-            DeleteAllCopy.message(for: .wishlist, count: 4, mode: .ephemeral)
+            DeleteAllCopy.message(for: .wishlist, count: 4, mode: .ephemeral, picturesACompletedPlan: false)
                 == "Their photos go too. Their sell plans go with them; the gear on those plans stays. "
                 + "This can't be undone."
         )
@@ -70,21 +77,37 @@ struct DeleteAllCopyTests {
     /// the same sentences `ItemDeleteCopy` and `WishlistDeleteCopy` use.
     @Test func aListOfOneReadsLikeTheSingleItemAlert() {
         #expect(
-            DeleteAllCopy.message(for: .items, count: 1, mode: .cloudKit)
+            DeleteAllCopy.message(for: .items, count: 1, mode: .cloudKit, picturesACompletedPlan: false)
                 == "Its photos go too. Any sell plan it's on drops it. "
                 + "If you're signed in to iCloud, it's removed from your other devices as well. "
                 + "This can't be undone."
         )
         #expect(
-            DeleteAllCopy.message(for: .wishlist, count: 1, mode: .localOnly)
+            DeleteAllCopy.message(for: .wishlist, count: 1, mode: .localOnly, picturesACompletedPlan: false)
                 == "Its photos go too. Anything on its sell plan stays where it is. This can't be undone."
+        )
+        // 009 T021a: the only item a completed plan was bought as says the
+        // plan loses its picture — the single-item alert's same sentence.
+        #expect(
+            DeleteAllCopy.message(for: .items, count: 1, mode: .cloudKit, picturesACompletedPlan: true)
+                == "Its photos go too. Any sell plan it's on drops it, "
+                + "and the completed plan it was bought for loses its picture. "
+                + "If you're signed in to iCloud, it's removed from your other devices as well. "
+                + "This can't be undone."
         )
         // Shared by pin, not by coincidence: in a local-only mode a list of
         // one *is* the single-item alert, word for word, on both sides — so
         // rewording either single-item alert turns this red (the sweep's S6
         // replaced a magic-number prefix check with these).
-        #expect(DeleteAllCopy.message(for: .items, count: 1, mode: .localOnly) == ItemDeleteCopy.message(isSold: false))
-        #expect(DeleteAllCopy.message(for: .wishlist, count: 1, mode: .localOnly) == WishlistDeleteCopy.message)
+        #expect(
+            DeleteAllCopy.message(for: .items, count: 1, mode: .localOnly, picturesACompletedPlan: false)
+                == ItemDeleteCopy.message(isSold: false, picturesACompletedPlan: false)
+        )
+        #expect(
+            DeleteAllCopy.message(for: .items, count: 1, mode: .localOnly, picturesACompletedPlan: true)
+                == ItemDeleteCopy.message(isSold: false, picturesACompletedPlan: true)
+        )
+        #expect(DeleteAllCopy.message(for: .wishlist, count: 1, mode: .localOnly, picturesACompletedPlan: false) == WishlistDeleteCopy.message)
     }
 
     // MARK: - 009 Amendment A: G34, the sell plans
@@ -100,14 +123,14 @@ struct DeleteAllCopyTests {
     /// would read as the sales.
     @Test func theSellPlansMessagesNameWhatStaysWhenSyncing() {
         #expect(
-            DeleteAllCopy.message(for: .sellPlans, count: 4, mode: .cloudKit)
+            DeleteAllCopy.message(for: .sellPlans, count: 4, mode: .cloudKit, picturesACompletedPlan: false)
                 == "Nothing you own or sold is touched, and everything on your wishlist stays there. "
                 + "What sold toward them stays on the record. "
                 + "If you're signed in to iCloud, the plans are removed from your other devices as well. "
                 + "This can't be undone."
         )
         #expect(
-            DeleteAllCopy.message(for: .sellPlans, count: 1, mode: .cloudKit)
+            DeleteAllCopy.message(for: .sellPlans, count: 1, mode: .cloudKit, picturesACompletedPlan: false)
                 == "Nothing you own or sold is touched, and everything on your wishlist stays there. "
                 + "What sold toward it stays on the record. "
                 + "If you're signed in to iCloud, the plan is removed from your other devices as well. "
@@ -117,12 +140,12 @@ struct DeleteAllCopyTests {
 
     @Test func theSellPlansMessagesOnALocalOnlyStoreLeaveICloudOut() {
         #expect(
-            DeleteAllCopy.message(for: .sellPlans, count: 4, mode: .localOnly)
+            DeleteAllCopy.message(for: .sellPlans, count: 4, mode: .localOnly, picturesACompletedPlan: false)
                 == "Nothing you own or sold is touched, and everything on your wishlist stays there. "
                 + "What sold toward them stays on the record. This can't be undone."
         )
         #expect(
-            DeleteAllCopy.message(for: .sellPlans, count: 1, mode: .localOnly)
+            DeleteAllCopy.message(for: .sellPlans, count: 1, mode: .localOnly, picturesACompletedPlan: false)
                 == "Nothing you own or sold is touched, and everything on your wishlist stays there. "
                 + "What sold toward it stays on the record. This can't be undone."
         )
@@ -132,11 +155,13 @@ struct DeleteAllCopyTests {
         for target in DeleteTarget.allCases {
             for count in [1, 2] {
                 for mode in [StorageMode.cloudKit, .localOnly, .ephemeral] {
-                    #expect(
-                        DeleteAllCopy.message(for: target, count: count, mode: mode)
-                            .hasSuffix("This can't be undone."),
-                        "\(target) ×\(count) in \(mode)"
-                    )
+                    for pictured in [false, true] {
+                        #expect(
+                            DeleteAllCopy.message(for: target, count: count, mode: mode, picturesACompletedPlan: pictured)
+                                .hasSuffix("This can't be undone."),
+                            "\(target) ×\(count) in \(mode)"
+                        )
+                    }
                 }
             }
         }

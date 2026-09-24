@@ -37,6 +37,31 @@ struct ItemDeletionTests {
         #expect(viewModel.items.isEmpty, "The list should reload itself after a delete")
     }
 
+    /// 009 T021a: the swipe's delete alert asks the view model whether the
+    /// row is the item a purchase created — true for it (through
+    /// `markBought`, the only writer of the link), false for an ordinary row.
+    @Test func onlyABoughtItemPicturesACompletedPlan() throws {
+        let context = try makeInMemoryContext()
+        let ordinary = makeItem(in: context, name: "Blues Junior")
+        let wanted = WishlistItem(name: "Vox AC15", categoryPath: "Music/Amps")
+        context.insert(wanted)
+        let boughtAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let bought = try WishlistPurchaseStore.markBought(
+            wanted,
+            purchase: Purchase(date: boughtAt, priceCents: 70_000, location: "Reverb", condition: .excellent),
+            at: boughtAt,
+            in: context
+        )
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.load()
+        try #require(viewModel.items.count == 2)
+
+        #expect(viewModel.picturesACompletedPlan(id: bought.id))
+        #expect(!viewModel.picturesACompletedPlan(id: ordinary.id))
+    }
+
     @Test func deleteLeavesOtherItemsAlone() throws {
         let context = try makeInMemoryContext()
         let doomed = makeItem(in: context, name: "Blues Junior")

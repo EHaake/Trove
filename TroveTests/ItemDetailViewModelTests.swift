@@ -46,6 +46,33 @@ struct ItemDetailViewModelTests {
         #expect(viewModel.item == nil)
     }
 
+    /// 009 T021a: the delete alert's completed-plan clause follows the item —
+    /// true for the item a purchase created (through `markBought`, the only
+    /// writer of the link), false for gear added by hand.
+    @Test func onlyABoughtItemPicturesACompletedPlan() throws {
+        let context = try makeInMemoryContext()
+        let ordinary = Item(name: "Leica M6", categoryPath: "Photography/Cameras")
+        let wanted = WishlistItem(name: "Fender Telecaster", categoryPath: "Music/Guitars")
+        context.insert(ordinary)
+        context.insert(wanted)
+        let boughtAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let bought = try WishlistPurchaseStore.markBought(
+            wanted,
+            purchase: Purchase(date: boughtAt, priceCents: 150_000, location: "Reverb", condition: .excellent),
+            at: boughtAt,
+            in: context
+        )
+        try context.save()
+
+        let boughtPage = ItemDetailViewModel(modelContext: context, itemID: bought.id)
+        boughtPage.load()
+        let ordinaryPage = ItemDetailViewModel(modelContext: context, itemID: ordinary.id)
+        ordinaryPage.load()
+
+        #expect(boughtPage.picturesACompletedPlan)
+        #expect(!ordinaryPage.picturesACompletedPlan)
+    }
+
     @Test func deleteRemovesTheItemFromTheStore() throws {
         let context = try makeInMemoryContext()
         let item = Item(name: "Fender Telecaster", categoryPath: "Music/Guitars")

@@ -58,12 +58,27 @@ enum DeleteAllCopy {
     ///
     /// The iCloud sentence names **the plans** for that target — after "What
     /// sold toward them stays…", a bare "they're" would read as the sales.
-    static func message(for target: DeleteTarget, count: Int, mode: StorageMode) -> String {
+    ///
+    /// 009 T021a: deleting items can leave completed plans showing a
+    /// placeholder where the bought item's picture was. The plural always
+    /// says so; the singular says so only when `picturesACompletedPlan` —
+    /// the only item is the one a completed plan was bought as — matching
+    /// `ItemDeleteCopy`'s owned sentence for the same flag. The flag is read
+    /// for a single item only.
+    static func message(
+        for target: DeleteTarget,
+        count: Int,
+        mode: StorageMode,
+        picturesACompletedPlan: Bool
+    ) -> String {
         let consequences = switch (target, count == 1) {
         case (.items, false):
-            "Their photos go too. Every sell plan loses its items."
+            "Their photos go too. Every sell plan loses its items, and completed plans lose their pictures."
         case (.items, true):
-            "Its photos go too. Any sell plan it's on drops it."
+            picturesACompletedPlan
+                ? "Its photos go too. Any sell plan it's on drops it, "
+                    + "and the completed plan it was bought for loses its picture."
+                : "Its photos go too. Any sell plan it's on drops it."
         case (.wishlist, false):
             "Their photos go too. Their sell plans go with them; the gear on those plans stays."
         case (.wishlist, true):

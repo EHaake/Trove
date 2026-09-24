@@ -63,6 +63,11 @@ final class SettingsViewModel {
     /// delete then clears.
     private(set) var planCount = 0
 
+    /// 009 T021a: set with each Delete All request — whether a list of one
+    /// item is the item a completed plan was bought as, so the alert can say
+    /// the plan loses its picture. False for every other request.
+    private var onlyItemPicturesACompletedPlan = false
+
     /// 002: how many items — owned and wanted together — carry a Reverb
     /// match, counted through `MarketRefresher.targets(in:)` so Settings
     /// and the walk share the one definition of "matched".
@@ -190,7 +195,12 @@ final class SettingsViewModel {
     var alertMessage: String {
         switch alert {
         case .confirmDelete(let target, let count):
-            DeleteAllCopy.message(for: target, count: count, mode: storageMode)
+            DeleteAllCopy.message(
+                for: target,
+                count: count,
+                mode: storageMode,
+                picturesACompletedPlan: onlyItemPicturesACompletedPlan
+            )
         case .deleteFailed:
             DeleteAllCopy.failureMessage
         case .exportFailed:
@@ -422,6 +432,8 @@ final class SettingsViewModel {
         case .sellPlans: planCount
         }
         guard count > 0 else { return }
+        onlyItemPicturesACompletedPlan = target == .items && count == 1
+            && ((try? modelContext.fetch(FetchDescriptor<Item>()))?.first?.boughtFromWishlistItem != nil)
         alert = .confirmDelete(target, count: count)
     }
 

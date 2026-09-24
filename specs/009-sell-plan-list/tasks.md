@@ -772,7 +772,7 @@ Settings row it leads to; the UI tests last, against the final layout.
   **Phase 4A closes here — pause for the person** (what to try, and the
   readings to put as questions, are in the handoff note above).
 
-- [ ] **T021a — Walkthrough finding: Delete All Items says completed plans lose their pictures.**
+- [x] **T021a — Walkthrough finding: Delete All Items says completed plans lose their pictures.**
   The person, Phase 4A walkthrough (2026-09-23), on RA4: the warning "should
   probably mention it." `DeleteAllCopy`'s `.items` consequences gain that
   completed sell plans lose the pictures that came from the deleted items;
@@ -780,6 +780,7 @@ Settings row it leads to; the UI tests last, against the final layout.
   RA3 (the footer) stays, and sell plans in the exports go to
   `specs/ROADMAP.md` as a follow-up — the person's answer.
 
+  **Done:** 2026-09-23. Delete All Items (several): "Their photos go too. Every sell plan loses its items, and completed plans lose their pictures." The person chose (a) for a single item: `ItemDeleteCopy.message(isSold:picturesACompletedPlan:)` adds "…and the completed plan it was bought for loses its picture" (owned) / "Its photos go too, and the completed plan it was bought for loses its picture." (sold) only when `item.boughtFromWishlistItem != nil`; flag off reads byte for byte as before. `DeleteAllCopy`'s one-item text takes the same flag, so `aListOfOneReadsLikeTheSingleItemAlert` keeps its exact equality over both values. The item page, the Items list and Settings' only-item case each take the flag from their view model. Mutations, each red: the clause removed (owned; sold); Delete All ignoring the flag; each of the three view models hardcoding false. No UI test goes through an item's delete alert (the wording has no on-screen check). `scripts/verify.sh`: 1746 tests in 234 suites passed.
 ## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; the person's own checks (VoiceOver, two devices) are named in T015 as their steps rather than a phase walkthrough, and nothing new is built
 
 - [ ] **T015 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver, two devices]**
@@ -928,3 +929,5 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T020 — `sdd-implementer` | `opus` | ~122k (harness) | Done first pass; no miss. Noted: `DestructiveColourPolicyTests` checks its counts as floors — plan wording saying "exact" there is inaccurate |
 | T021 — `sdd-implementer` | `opus` | ~82k (harness) | Done first pass; no miss |
 | Phase 4A — `skeptical-reviewer` phase review (T017–T021) | `opus` | ~109k (harness) | Signed off; 0 blocking, 7 non-blocking, to the sweep: T021's dim-wait comment misstates why ordering holds; a stale "no figure" comment in `PlansView`; G31 blind to non-`if` gates; the every-tab guard's `isShowingSettings` match not scoped to `.overflow`. `DestructiveColourPolicyTests` unedited and green at T020 (T011 read 15 / 9 / 6; T020 added no site). Pause report: the walkthrough is the new link's first migration on a real store; one plan reads "Delete your only sell plan?"; under RA2(b) the count can exceed the listed rows while Plans reads "Catching up" |
+| T021a — `sdd-implementer` | `opus` | ~85k (harness, two rounds) | Stopped once on a product question (the single-item wording is pinned equal to the item page's) — the person chose (a), conditional; then done |
+| Phase 4A — the person's walkthrough | — | — | Attested 2026-09-23 ("Everything else looks good"); RA3 kept (exports follow-up on the roadmap); RA4 → T021a |

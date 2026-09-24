@@ -11,7 +11,7 @@ struct ItemDeleteCopyTests {
     /// All three promises: the cascade, the sell-plan drop spec.md requires,
     /// and the permanence sentence carried over from the shipped alert.
     @Test func theMessageKeepsAllThreePromises() {
-        let message = ItemDeleteCopy.message(isSold: false)
+        let message = ItemDeleteCopy.message(isSold: false, picturesACompletedPlan: false)
 
         #expect(message.localizedCaseInsensitiveContains("photos"), "\(message)")
         #expect(message.localizedCaseInsensitiveContains("sell plan"), "\(message)")
@@ -25,7 +25,7 @@ struct ItemDeleteCopyTests {
     /// wishlist's line in here would tell the user the exact opposite of
     /// the truth while every contains-check stays green.
     @Test func theSellPlanLineStatesTheDropNotTheSpare() {
-        let message = ItemDeleteCopy.message(isSold: false)
+        let message = ItemDeleteCopy.message(isSold: false, picturesACompletedPlan: false)
 
         #expect(message.localizedCaseInsensitiveContains("drops"), "\(message)")
         #expect(!message.localizedCaseInsensitiveContains("stays where it is"), "\(message)")
@@ -37,12 +37,36 @@ struct ItemDeleteCopyTests {
     /// message here — the tempting shortcut, since every other promise is the
     /// same — turns this red (G17).
     @Test func theSoldMessageDropsTheSellPlanLineAndKeepsTheRest() {
-        let message = ItemDeleteCopy.message(isSold: true)
+        let message = ItemDeleteCopy.message(isSold: true, picturesACompletedPlan: false)
 
         #expect(message.localizedCaseInsensitiveContains("photos"), "\(message)")
         #expect(message.localizedCaseInsensitiveContains("undone"), "\(message)")
         #expect(!message.localizedCaseInsensitiveContains("sell plan"), "\(message)")
-        #expect(message != ItemDeleteCopy.message(isSold: false), "\(message)")
+        #expect(message != ItemDeleteCopy.message(isSold: false, picturesACompletedPlan: false), "\(message)")
+    }
+
+    /// 009 T021a: every branch, whole. The completed-plan clause appears
+    /// only when the item is the picture a completed plan shows, on either
+    /// side; without it both messages are byte for byte what they were.
+    @Test func theCompletedPlanClauseAppearsOnlyForABoughtItem() {
+        #expect(
+            ItemDeleteCopy.message(isSold: false, picturesACompletedPlan: false)
+                == "Its photos go too. Any sell plan it's on drops it. This can't be undone."
+        )
+        #expect(
+            ItemDeleteCopy.message(isSold: false, picturesACompletedPlan: true)
+                == "Its photos go too. Any sell plan it's on drops it, "
+                + "and the completed plan it was bought for loses its picture. This can't be undone."
+        )
+        #expect(
+            ItemDeleteCopy.message(isSold: true, picturesACompletedPlan: false)
+                == "Its photos go too. This can't be undone."
+        )
+        #expect(
+            ItemDeleteCopy.message(isSold: true, picturesACompletedPlan: true)
+                == "Its photos go too, and the completed plan it was bought for loses its picture. "
+                + "This can't be undone."
+        )
     }
 
     @Test func theConfirmButtonAndTitleSayDelete() {

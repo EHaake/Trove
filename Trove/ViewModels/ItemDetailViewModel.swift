@@ -522,6 +522,11 @@ final class ItemDetailViewModel {
     /// can't disagree with what the last `load()` fetched.
     var isSold: Bool { item?.isSold ?? false }
 
+    /// 009 T021a: whether the loaded item is the one a wishlist purchase
+    /// created — the picture its completed plan shows — so the delete alert
+    /// can say the plan loses it. The link is set only by `markBought`.
+    var picturesACompletedPlan: Bool { item?.boughtFromWishlistItem != nil }
+
     /// The four sale fields as one value, or nil while the item is owned.
     var sale: Sale? { item?.sale }
 
