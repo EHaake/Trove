@@ -188,9 +188,10 @@ that ask first whether you mean owned, sold or both), and
 `015-mark-as-bought` (merged 2026-09-21 — mark a wanted item bought from
 its swipe, its menu or its Sell Plan, and it becomes an item in your
 collection carrying its photos, credits and Reverb match, while the sell
-plan built around it survives as a record). `009-sell-plan-list` is
-complete on its branch — sell plans as things you create, the Plans tab
-and its Dashboard card — and not yet merged.
+plan built around it survives as a record), and `009-sell-plan-list`
+(merged 2026-09-24 — sell plans as things you create, the Plans tab and
+its Dashboard card, completed plans showing the item they became, and
+Delete all sell plans in Settings).
 See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.
