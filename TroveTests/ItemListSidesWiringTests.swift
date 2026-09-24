@@ -440,12 +440,12 @@ struct ItemListSidesWiringTests {
     ///
     /// Mutation: `slideDuration = 0.25` → red.
     @Test func theSwitchesSlideIsAtOrUnderTwoTenthsOfASecond() throws {
-        #expect(SideSwitch.slideDuration <= 0.2)
+        #expect(SideSwitchMetrics.slideDuration <= 0.2)
 
         let code = try SourceScan.production(Self.control)
         #expect(
-            code.ranges(of: "Self.slideDuration").count == 2,
-            "the switch names `Self.slideDuration` \(code.ranges(of: "Self.slideDuration").count) times, expected 2 — one arm of the animation types its own duration"
+            code.ranges(of: "SideSwitchMetrics.slideDuration").count == 2,
+            "the switch names `SideSwitchMetrics.slideDuration` \(code.ranges(of: "SideSwitchMetrics.slideDuration").count) times, expected 2 — one arm of the animation types its own duration"
         )
     }
 

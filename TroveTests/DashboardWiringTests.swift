@@ -174,4 +174,65 @@ struct DashboardWiringTests {
         #expect(card.contains(".accessibilityHint("), "the Sold card says nothing about where it goes")
         #expect(card.contains("dashboard.soldCard"), "the Sold card carries no identifier")
     }
+
+    // MARK: - The Plans card (009 G21, criterion 15)
+
+    /// The plans branch — `#require`d to be found exactly once inside the
+    /// scrolling half. Mutation: rename the `if viewModel.showsPlansCard`
+    /// anchor → this fails.
+    private func plansBranch() throws -> String {
+        let content = try scrollContent()
+        let branches = SourceScan.closureBodies(after: "if viewModel.showsPlansCard", in: content)
+        try #require(
+            branches.count == 1,
+            "the Dashboard has \(branches.count) `if viewModel.showsPlansCard` branches, expected exactly 1"
+        )
+        return try #require(branches.first)
+    }
+
+    /// Composed once, behind `showsPlansCard`, and inside the scrolling half
+    /// — which only the non-empty branch of `body` builds, so the first-run
+    /// Dashboard shows no card even with a plan on file (spec Decision 12,
+    /// R4; `showsPlansCard` itself does not encode that). Mutations: compose
+    /// it outside the gate → the branch loses it; compose it above the
+    /// `if viewModel.isEmpty` split → the scrolling half loses it.
+    @Test func thePlansCardIsComposedOnceBehindItsGateAndOnlyOffTheFirstRunState() throws {
+        let code = try SourceScan.production(Self.dashboard)
+        let content = try scrollContent()
+        let branch = try plansBranch()
+
+        #expect(branch.contains("PlansCard("), "the plans branch doesn't compose the Plans card")
+        #expect(
+            content.ranges(of: "PlansCard(").count == 1,
+            "the Plans card is composed outside its gate, or more than once, in the figures"
+        )
+        #expect(
+            code.ranges(of: "PlansCard(").count == 1,
+            "the Plans card is composed outside the non-empty branch — the first-run Dashboard would show it"
+        )
+    }
+
+    /// Tapping it opens the Plans tab on Active through the router — not the
+    /// Sold card's destination, which sits one block above.
+    @Test func tappingThePlansCardAsksTheRouterForActivePlans() throws {
+        let branch = try plansBranch()
+
+        let closures = SourceScan.closureBodies(after: "PlansCard(", in: branch)
+        try #require(closures.count == 1, "the Plans card has \(closures.count) trailing closures, expected exactly 1")
+        let action = closures[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        #expect(action == "router.showActivePlans()", "the Plans card's action isn't showActivePlans: \(action)")
+    }
+
+    /// The launch tab reloads when the store settles (plan Q3): a carry-over
+    /// that landed on a failed setup moves no import count, so the
+    /// `completedImports` reload alone would leave a stale zero. Mutation:
+    /// drop the `settledCount` reload → red.
+    @Test func theDashboardReloadsWhenTheStoreSettles() throws {
+        let code = try SourceScan.production(Self.dashboard)
+
+        let reloads = SourceScan.closureBodies(after: ".onChange(of: viewModel.settledCount)", in: code)
+        try #require(reloads.count == 1, "the Dashboard has \(reloads.count) settledCount reloads, expected exactly 1")
+        let reload = reloads[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        #expect(reload == "viewModel.load()", "the settledCount reload doesn't load: \(reload)")
+    }
 }

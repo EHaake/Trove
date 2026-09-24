@@ -18,6 +18,7 @@ final class AppRouter {
         case overview
         case items
         case wishlist
+        case plans
     }
 
     /// What the Items tab should be showing when it next appears.
@@ -41,6 +42,15 @@ final class AppRouter {
     var itemsPath: [UUID] = []
 
     private(set) var itemsRequest: ItemsRequest?
+
+    /// Plans pushed onto the Plans tab's stack, by wishlist entry id — the
+    /// same shape as `itemsPath`, for the same reason.
+    var plansPath: [UUID] = []
+
+    /// Set when the Dashboard's Plans card asks for the Active side.
+    /// `PlansView` applies it with `viewModel.show(.active)` and clears it —
+    /// the `wantsAddItemForm` shape: a request the destination owns.
+    private(set) var wantsActivePlans = false
 
     /// Set when another screen has asked for the add-item form. `ItemListView`
     /// owns that sheet — it has to, so dismissing it can refetch the list — so
@@ -102,6 +112,23 @@ final class AppRouter {
         itemsRequest = nil
         wantsAddItemForm = true
         popToItemsRoot()
+    }
+
+    /// Show the Plans tab's Active side, at its root.
+    ///
+    /// The Dashboard's Plans card is the caller. Pops for the reason the
+    /// Items requests do: arriving at a plan's screen when you asked for the
+    /// list is the wrong place.
+    func showActivePlans() {
+        selectedTab = .plans
+        plansPath = []
+        wantsActivePlans = true
+    }
+
+    /// Called by `PlansView` once it has shown the Active side, so a later
+    /// visit keeps whichever side the person has since chosen.
+    func clearPlansRequest() {
+        wantsActivePlans = false
     }
 
     /// Called by `ItemListView` once the form is open, so returning to the tab

@@ -454,3 +454,35 @@ struct WishlistBoughtFieldTests {
         #expect(wanted.isBought)
     }
 }
+
+/// 009/T001 (G2): the plan on `WishlistItem` — one optional `Date` and the
+/// predicate that reads it, plus the "checked" stamp `init` writes so a new
+/// entry is never taken for an older one awaiting the carry-over (plan §1,
+/// Q1, Q2). The CloudKit side (G1) is `CloudKitSchemaTests`' — its red run
+/// for this task: declare `@Attribute(.unique) var sellPlanCreatedAt: Date?`.
+@Suite("The sell plan fields on WishlistItem")
+struct WishlistSellPlanFieldTests {
+    @Test func aFreshEntryIsPlanlessAndChecked() throws {
+        let context = try makeInMemoryContext()
+        let before = Date.now
+        let wanted = WishlistItem(name: "Rickenbacker 330")
+        context.insert(wanted)
+
+        #expect(wanted.sellPlanCreatedAt == nil)
+        #expect(!wanted.hasSellPlan)
+        let checkedAt = try #require(wanted.sellPlanCheckedAt)
+        #expect(checkedAt >= before)
+    }
+
+    @Test func aDateMakesItAPlan() throws {
+        let context = try makeInMemoryContext()
+        let createdOn = Date(timeIntervalSince1970: 1_770_000_000)
+        let wanted = WishlistItem(name: "Rickenbacker 330")
+        context.insert(wanted)
+
+        wanted.sellPlanCreatedAt = createdOn
+
+        #expect(wanted.sellPlanCreatedAt == createdOn)
+        #expect(wanted.hasSellPlan)
+    }
+}

@@ -283,6 +283,9 @@ struct PurchaseFormView: View {
                         lineWidth: theme.metrics.hairline
                     )
                 )
+                // A clear fill doesn't hit-test: without this an unselected
+                // chip's padding took no tap (009 T014a).
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)

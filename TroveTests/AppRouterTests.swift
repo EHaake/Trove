@@ -110,6 +110,55 @@ struct AppRouterTests {
         #expect(router.selectedTab == .items)
     }
 
+    // MARK: - The Plans tab (009, G15)
+
+    /// Fourth in the tab bar (criterion 5): the order `ContentView` lays the
+    /// tabs out in follows this one.
+    @Test func plansIsTheFourthAndLastTab() {
+        #expect(AppRouter.Tab.allCases == [.overview, .items, .wishlist, .plans])
+    }
+
+    /// The Dashboard's Plans card lands here: the Plans tab, at its root,
+    /// with the Active side asked for.
+    ///
+    /// Mutation: drop `wantsActivePlans = true` from `showActivePlans()` → red.
+    @Test func showingActivePlansSwitchesTabsPopsAndRaisesTheFlag() {
+        let router = AppRouter()
+        #expect(!router.wantsActivePlans)
+        router.plansPath = [UUID()]
+
+        router.showActivePlans()
+
+        #expect(router.selectedTab == .plans)
+        #expect(router.plansPath.isEmpty)
+        #expect(router.wantsActivePlans)
+    }
+
+    /// `PlansView` clears the flag once applied, so a later visit keeps the
+    /// side the person has since chosen. Clearing is not leaving the tab.
+    @Test func thePlansRequestIsClearedOnceApplied() {
+        let router = AppRouter()
+        router.showActivePlans()
+
+        router.clearPlansRequest()
+
+        #expect(!router.wantsActivePlans)
+        #expect(router.selectedTab == .plans)
+    }
+
+    /// The Plans request touches nothing on the Items side.
+    @Test func showingActivePlansLeavesTheItemsSideAlone() {
+        let router = AppRouter()
+        let id = UUID()
+        router.showItem(id)
+
+        router.showActivePlans()
+
+        #expect(router.itemsPath == [id])
+        #expect(router.itemsRequest == nil)
+        #expect(!router.wantsAddItemForm)
+    }
+
     @Test func aLaterRequestReplacesAnEarlierOne() {
         let router = AppRouter()
         router.showItems(inCategory: "Music/Amps")

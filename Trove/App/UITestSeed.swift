@@ -185,6 +185,151 @@ enum UITestSeed {
         try context.save()
     }
 
+    /// `009`'s own launch argument, spelled exactly once in the project for
+    /// the same reason the other two are — the app asks `shouldSeedPlans`, it
+    /// never names the flag.
+    static let plansArgument = "-seedPlans"
+
+    /// Whether this launch should be seeded with the Plans collection: the
+    /// store that was actually built is the in-memory one, **and** this
+    /// seed's own argument is present. Gated on the built store rather than
+    /// on a second read of `-uiTesting`, and keyed to its own argument so
+    /// every UI test before this one keeps the starting state it was written
+    /// against (plan Q18).
+    static func shouldSeedPlans(mode: StorageMode, arguments: [String]) -> Bool {
+        mode == .ephemeral && arguments.contains(plansArgument)
+    }
+
+    /// The collection `009`'s Plans tab UI tests need (plan §13): every kind
+    /// of wanted item the tab has to sort onto a side, or leave off both.
+    ///
+    /// - **Summicron 35mm f/2**: a plan three days old, the Telecaster set
+    ///   aside — Active.
+    /// - **Vox AC15**: a plan two days old whose one candidate, the Blues
+    ///   Junior, was then sold toward it for more than it costs — Active and
+    ///   covered, with the selection emptied by the sale (criterion 2's case).
+    /// - **Hasselblad 80mm**: a plan five days old, the NT1-A sold toward it,
+    ///   then bought — Completed, and not covered.
+    /// - **Rode NT5**: wanted, no plan — on neither side.
+    /// - **Nikon FM2**: bought with no plan — on neither side (criterion 3).
+    /// - **Fuji X100V**: the Telecaster set aside and never checked — the
+    ///   shape only an app from before `009` writes. The launch's carry-over
+    ///   makes it a plan, so it is Active by the launch wiring alone.
+    ///
+    /// Owned: the Telecaster and the Leica M6, which is kept at desire 5 so the
+    /// Dashboard has collection figures to draw beside the Plans card.
+    ///
+    /// Every row goes through the app's own writers — `SellPlanStore.create`,
+    /// `ItemSaleStore.markSold`, `WishlistPurchaseStore.markBought` — so the
+    /// seed cannot produce a shape the app itself can't, with the one
+    /// exception the Fuji row documents. The plan dates are days before
+    /// `now`, so none of them coincides with a row's `createdAt`, and the
+    /// three Active plans' newest-first order is not their insertion order.
+    static func plans(into context: ModelContext, now: Date) throws {
+        let day: TimeInterval = 24 * 60 * 60
+
+        // What is owned, or was until it was sold toward a plan.
+        let telecaster = Item(
+            name: "Telecaster",
+            categoryPath: "Music/Guitars",
+            purchasePriceCents: 90_000,
+            currentValueCents: 60_000,
+            desireToKeep: 2,
+            sortOrder: 0
+        )
+        let bluesJunior = Item(
+            name: "Blues Junior",
+            categoryPath: "Music/Amps",
+            purchasePriceCents: 70_000,
+            currentValueCents: 64_000,
+            desireToKeep: 2,
+            sortOrder: 1
+        )
+        let nt1a = Item(
+            name: "NT1-A",
+            categoryPath: "Music/Microphones",
+            purchasePriceCents: 30_000,
+            currentValueCents: 40_000,
+            desireToKeep: 2,
+            sortOrder: 2
+        )
+        let leica = Item(
+            name: "Leica M6",
+            categoryPath: "Photography/Cameras",
+            purchasePriceCents: 220_000,
+            currentValueCents: 260_000,
+            desireToKeep: 5,
+            sortOrder: 3
+        )
+        for item in [telecaster, bluesJunior, nt1a, leica] {
+            context.insert(item)
+        }
+
+        let summicron = WishlistItem(name: "Summicron 35mm f/2", categoryPath: "Photography/Lenses", estimatedCostCents: 240_000, sortOrder: 0)
+        let vox = WishlistItem(name: "Vox AC15", categoryPath: "Music/Amps", estimatedCostCents: 105_000, sortOrder: 1)
+        let hasselblad = WishlistItem(name: "Hasselblad 80mm", categoryPath: "Photography/Lenses", estimatedCostCents: 95_000, sortOrder: 2)
+        let rode = WishlistItem(name: "Rode NT5", categoryPath: "Music/Microphones", estimatedCostCents: 43_000, sortOrder: 3)
+        let nikon = WishlistItem(name: "Nikon FM2", categoryPath: "Photography/Cameras", estimatedCostCents: 38_000, sortOrder: 4)
+        let fuji = WishlistItem(name: "Fuji X100V", categoryPath: "Photography/Cameras", estimatedCostCents: 160_000, sortOrder: 5)
+        for wanted in [summicron, vox, hasselblad, rode, nikon, fuji] {
+            context.insert(wanted)
+        }
+
+        // Summicron: a plan with the Telecaster set aside.
+        SellPlanStore.create(for: summicron, at: now - 3 * day)
+        summicron.plannedSaleItems = [telecaster]
+
+        // Vox: a plan whose one candidate was sold toward it for $1,100
+        // against a $1,050 estimate. The sale empties the selection, so the
+        // plan has nothing set aside and must still read as a plan.
+        SellPlanStore.create(for: vox, at: now - 2 * day)
+        vox.plannedSaleItems = [bluesJunior]
+        try ItemSaleStore.markSold(
+            bluesJunior,
+            sale: Sale(date: now - 1 * day, priceCents: 110_000, location: "Reverb", note: nil),
+            toward: vox,
+            at: now,
+            in: context
+        )
+
+        // Hasselblad: a plan, $300 sold toward it, then bought — Completed.
+        SellPlanStore.create(for: hasselblad, at: now - 5 * day)
+        hasselblad.plannedSaleItems = [nt1a]
+        try ItemSaleStore.markSold(
+            nt1a,
+            sale: Sale(date: now - 4 * day, priceCents: 30_000, location: "eBay", note: nil),
+            toward: hasselblad,
+            at: now,
+            in: context
+        )
+        try WishlistPurchaseStore.markBought(
+            hasselblad,
+            purchase: Purchase(date: now - 1 * day, priceCents: 92_000, location: nil, condition: .excellent),
+            at: now - 1 * day,
+            in: context
+        )
+
+        // Nikon: bought with no plan, so it is on neither side.
+        try WishlistPurchaseStore.markBought(
+            nikon,
+            purchase: Purchase(date: now - 6 * day, priceCents: 36_000, location: nil, condition: .good),
+            at: now - 6 * day,
+            in: context
+        )
+
+        // Fuji: the one row no writer made. `WishlistItem.init` stamps every
+        // row checked, and no writer ever un-stamps one, so the only way to
+        // put the legacy shape — a selection with no stored plan, unchecked —
+        // in front of the launch's carry-over is to clear the stamp here. It
+        // is what an app from before 009 leaves behind, and the one way any
+        // automated test can see that the carry-over is actually wired at
+        // launch (plan Q18): the row is Active only if it ran.
+        fuji.plannedSaleItems = [telecaster]
+        fuji.sellPlanCheckedAt = nil
+
+        try context.save()
+    }
+
     // MARK: - Private
 
     private static func owned(

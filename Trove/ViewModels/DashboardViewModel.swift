@@ -87,6 +87,13 @@ final class DashboardViewModel {
     /// AC4's exclusion is built out of.
     private(set) var soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)
 
+    /// How many wishlist entries have a sell plan and haven't been bought
+    /// yet (009, plan §8) — the Dashboard's Plans card. Counted over the
+    /// whole store rather than the scope: plans aren't filed by the owned
+    /// categories the scope narrows, so `showsPlansCard` hides the card in a
+    /// drill-down instead of counting a subset.
+    private(set) var activePlanCount = 0
+
     /// The only un-valued item, when there is exactly one.
     ///
     /// Held so `unvaluedDestination` can name it. Not exposed directly: the
@@ -191,6 +198,19 @@ final class DashboardViewModel {
     /// The realised gain or loss beneath them — "+$350 vs paid".
     var soldDeltaLine: String { SaleCopy.realised(deltaCents: soldTotals.realisedDeltaCents) }
 
+    /// Whether the Plans card shows — the `hasSales` gating, plus the root
+    /// scope only (P6): a drill-down is about one category's figures, and
+    /// active plans are about none of them.
+    var showsPlansCard: Bool { scope.isEmpty && activePlanCount > 0 }
+
+    /// The card's line — "3 active sell plans".
+    var plansLine: String { SellPlanCopy.activeCount(activePlanCount) }
+
+    /// Bumped each time the monitor settles, so the screen can refetch —
+    /// see `SyncMonitor.settledCount`. A signed-out device's carry-over
+    /// lands on the launch tab without moving `completedImports`.
+    var settledCount: Int { syncMonitor.settledCount }
+
     /// Decision 22's whole line — "Market · $18,400 · 12 of 34 items".
     ///
     /// One string, composed here rather than in the view: the amount and
@@ -254,6 +274,11 @@ final class DashboardViewModel {
             let summaries = MarketSummary.summaries(forSubjects: owned.map(\.id), in: modelContext, now: now())
             apply(owned, marketSummaries: summaries)
             soldTotals = SaleOutcome.totals(over: sold)
+            // Planned and not bought: a completed plan is a record on the
+            // Plans tab's Completed side, not something still to act on.
+            activePlanCount = try modelContext.fetchCount(FetchDescriptor<WishlistItem>(
+                predicate: #Predicate { $0.sellPlanCreatedAt != nil && $0.boughtDate == nil }
+            ))
         } catch {
             loadFailureMessage = error.localizedDescription
             valuedCount = 0
@@ -265,6 +290,7 @@ final class DashboardViewModel {
             breakdown = []
             soleUnvaluedItemID = nil
             soldTotals = SaleTotals(count: 0, proceedsCents: 0, realisedDeltaCents: 0)
+            activePlanCount = 0
         }
     }
 

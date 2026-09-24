@@ -89,6 +89,16 @@ final class Item {
     @Relationship(deleteRule: .nullify, inverse: \WishlistItem.itemsSoldToward)
     var soldTowardWishlistItem: WishlistItem?
 
+    /// 009 Amendment A: the wanted entry whose purchase created this item —
+    /// the inverse CloudKit requires of `WishlistItem.boughtItem`. The three
+    /// delete alerts' view models read it (009 T021a) — item page, Items list,
+    /// Settings — to say a completed plan loses its picture. `.nullify`, never
+    /// `.cascade`: deleting this item must leave the completed plan on the
+    /// Completed side (criterion 13), and deleting the entry must never delete
+    /// owned gear.
+    @Relationship(deleteRule: .nullify, inverse: \WishlistItem.boughtItem)
+    var boughtFromWishlistItem: WishlistItem?
+
     /// Optional, not `[Photo]`, because CloudKit rejects non-optional
     /// relationships outright — see the note in plan.md. Read it as
     /// `photos ?? []`; nil and empty mean the same thing here.

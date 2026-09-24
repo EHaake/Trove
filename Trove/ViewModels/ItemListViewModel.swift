@@ -546,6 +546,16 @@ final class ItemListViewModel {
         marketSummaries[id]?.currentTrend
     }
 
+    /// 009 T021a: whether the item is the picture a completed plan shows —
+    /// bought from a wishlist entry that still has its sell plan — so the
+    /// swipe's delete alert can say the plan loses it. Either side, like
+    /// `delete(id:)`: a bought item can be sold later. `markBought` links
+    /// every purchase, planned or not, so the link alone isn't enough.
+    func picturesACompletedPlan(id: UUID) -> Bool {
+        let item = items.first(where: { $0.id == id }) ?? soldItems.first(where: { $0.id == id })
+        return item?.boughtFromWishlistItem?.hasSellPlan == true
+    }
+
     /// Deletes an owned item by id, on the same shape as
     /// `WishlistViewModel.delete(id:)` — the list's swipe (T015) routes here
     /// rather than touching the store itself, per `DeletionGuardTests`'

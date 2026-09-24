@@ -517,6 +517,9 @@ struct WishlistView: View {
                         lineWidth: theme.metrics.hairline
                     )
                 )
+                // A clear fill doesn't hit-test: without this an unselected
+                // chip's padding took no tap (009 T014a).
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
@@ -591,8 +594,9 @@ struct WishlistView: View {
 /// removed after seeing it: a CTA repeated down every row pushes harder toward
 /// the Sell Plan than the goal-completion framing that was already cut from
 /// the plan screen itself — the same over-prominence in another form. The plan
-/// is reached from `WishlistDetailView`'s button alone, one tap further in,
-/// which is the right trade for something meant to stay quietly available.
+/// is reached from `WishlistDetailView`'s button — the wishlist's only route
+/// to it; the Plans tab's rows are the other — one tap further in, which is
+/// the right trade for something meant to stay quietly available.
 /// See spec.md's Sell Plan section.
 private struct WishlistRow: View {
     let item: WishlistItem

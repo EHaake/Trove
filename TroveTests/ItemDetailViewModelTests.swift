@@ -46,6 +46,43 @@ struct ItemDetailViewModelTests {
         #expect(viewModel.item == nil)
     }
 
+    /// 009 T021a: the delete alert's completed-plan clause follows the item —
+    /// true for the item bought (through `markBought`) for an entry with a
+    /// sell plan, false for one bought for an entry with no plan (the link is
+    /// set on every purchase) and for gear added by hand.
+    @Test func onlyAnItemBoughtForAPlanPicturesACompletedPlan() throws {
+        let context = try makeInMemoryContext()
+        let ordinary = Item(name: "Leica M6", categoryPath: "Photography/Cameras")
+        let planned = WishlistItem(name: "Fender Telecaster", categoryPath: "Music/Guitars")
+        let unplanned = WishlistItem(name: "Vox AC15", categoryPath: "Music/Amps")
+        for model in [planned, unplanned] { context.insert(model) }
+        context.insert(ordinary)
+        let boughtAt = Date(timeIntervalSince1970: 1_760_000_000)
+        SellPlanStore.create(for: planned, at: Date(timeIntervalSince1970: 1_750_000_000))
+        func buy(_ entry: WishlistItem) throws -> Item {
+            try WishlistPurchaseStore.markBought(
+                entry,
+                purchase: Purchase(date: boughtAt, priceCents: 150_000, location: "Reverb", condition: .excellent),
+                at: boughtAt,
+                in: context
+            )
+        }
+        let boughtForAPlan = try buy(planned)
+        let boughtWithoutAPlan = try buy(unplanned)
+        try context.save()
+        try #require(boughtWithoutAPlan.boughtFromWishlistItem != nil, "the fixture: every purchase is linked")
+
+        func page(_ item: Item) -> ItemDetailViewModel {
+            let viewModel = ItemDetailViewModel(modelContext: context, itemID: item.id)
+            viewModel.load()
+            return viewModel
+        }
+
+        #expect(page(boughtForAPlan).picturesACompletedPlan)
+        #expect(!page(boughtWithoutAPlan).picturesACompletedPlan, "bought with no plan: no completed plan to lose its picture")
+        #expect(!page(ordinary).picturesACompletedPlan)
+    }
+
     @Test func deleteRemovesTheItemFromTheStore() throws {
         let context = try makeInMemoryContext()
         let item = Item(name: "Fender Telecaster", categoryPath: "Music/Guitars")

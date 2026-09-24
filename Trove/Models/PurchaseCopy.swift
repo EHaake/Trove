@@ -5,12 +5,12 @@ import Foundation
 /// typed inline. `SaleCopy`'s shape and rules, for the same reason: two
 /// surfaces saying the same thing must not drift apart.
 ///
-/// Not *all* of spec 015's Copy section: the Sell Plan entry point's four
-/// strings (T012c) live inline in `WishlistDetailViewModel.sellPlanEntryTitle`
-/// and `.sellPlanEntrySubtitle`, because they are a branch rather than a fixed
-/// label — which of them a person sees is behaviour a view-model test reaches,
-/// so the words sit with the branch that chooses them. One source of truth per
-/// string either way; only the claim that they all live here was wrong.
+/// Not *all* of spec 015's Copy section: the Sell Plan entry point's strings
+/// (T012c) live in `SellPlanCopy` since 009 (plan Q7), that spec's one string
+/// table, and `WishlistDetailViewModel.sellPlanEntryTitle` and
+/// `.sellPlanEntrySubtitle` choose between them — which of them a person sees
+/// is behaviour a view-model test reaches. One source of truth per string
+/// either way; only the claim that they all live here was wrong.
 ///
 /// Its own table rather than rows added to `SaleCopy` (plan Q3): the spec's
 /// non-goals forbid changing 006's fields, and one of the two should be

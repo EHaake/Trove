@@ -2,11 +2,11 @@ import SwiftData
 import SwiftUI
 
 /// The Settings sheet (013): export-everything, the blank templates, the
-/// iCloud row, Delete All for each list, and About — reached from both
-/// lists' "…" menu, presented as a sheet, with the form sheets' chrome.
+/// iCloud row, Delete All for each list and for every sell plan (009
+/// Amendment A), and About — reached from every tab's "…" menu, presented as a sheet, with the form sheets' chrome.
 ///
 /// Built from the detail screens' vocabulary — `DetailSection` headings,
-/// hairline-ruled rows, brass actions, rust for the two destructive rows —
+/// hairline-ruled rows, brass actions, rust for the three destructive rows —
 /// rather than a system list: a Trove screen, not the iOS Settings app in
 /// a dark theme. Everything it shows comes from `SettingsViewModel`; the
 /// view decides only layout.
@@ -258,6 +258,17 @@ struct SettingsView: View {
                     ) {
                         viewModel.requestDeleteAll(.wishlist)
                     }
+                    // 009 Amendment A (Decision 18, plan QA4): the plans only,
+                    // dimmed when there are none.
+                    SettingsActionRow(
+                        title: "Delete All Sell Plans…",
+                        isActing: viewModel.activity == .deleteSellPlans,
+                        isEnabled: viewModel.canDeleteSellPlans && !viewModel.isBusy,
+                        isDestructive: true,
+                        accessibilityHint: "Permanently deletes every sell plan, active and completed."
+                    ) {
+                        viewModel.requestDeleteAll(.sellPlans)
+                    }
                 }
                 // The mitigation sits on the same screen, and says so.
                 Text(DeleteAllCopy.footer)
@@ -305,7 +316,7 @@ struct SettingsView: View {
     }
 }
 
-/// One action row: a hairline-ruled button in brass — rust for the two
+/// One action row: a hairline-ruled button in brass — rust for the three
 /// destructive ones, dimmed when there's nothing to act on — with the
 /// compact spinner trailing while it is the acting row.
 ///

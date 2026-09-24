@@ -984,6 +984,7 @@ outstanding: the sale sheet's presentation count (a file probe inside
 future days (a screenshot, the unit suite holding the past-midnight edge); the
 switch's motion (a screen recording with per-frame timing, since a screenshot
 cannot show it); and every surface against its artboard, by a simulator agent
-at each screen task. **Still the person's**: a sale arriving on a second device
-(criterion 15) and the VoiceOver reading of the new surfaces (criterion 16),
-including the plan's sold row now announcing "Sold" first.
+at each screen task. **Still the person's** at the merge — **done (the
+person, 2026-09-16)**: a sale arriving on a second device (criterion 15) and
+the VoiceOver reading of the new surfaces (criterion 16), including the plan's
+sold row now announcing "Sold" first.

@@ -1,6 +1,6 @@
 # 006 — Mark as Sold: Tasks
 
-**Status**: **Shipped** (2026-09-15; criteria 15 and 16 pending the person's steps) — was Signed off (2026-09-13) — skeptical-reviewer at `fable` (experiment
+**Status**: **Shipped** (2026-09-15; criteria 15 and 16 pending the person's steps at the merge — done (the person, 2026-09-16)) — was Signed off (2026-09-13) — skeptical-reviewer at `fable` (experiment
 1's top tier); one blocking finding at the first review (B1, the Sold side's
 CSV export inheriting the Owned side's narrowing — fixed as Q15/G33) and
 eleven second-look notes, all folded in; the re-review signed off with
@@ -1075,7 +1075,8 @@ because the person will feel it before they read it.
   routine and inside the footprint, else returned as a diagnosis for a
   decision review; each fix a sub-lettered task.
   **[person]** Sync (criterion 15): a sale appearing on a second device, or
-  recorded as an honest partial as `005` did. VoiceOver (criterion 16):
+  recorded as an honest partial as `005` did — done (the person,
+  2026-09-16). VoiceOver (criterion 16):
   Accessibility Inspector over the menu rows, the switch, the card, a Sold
   row, the Sold mark, the plan's Sold figure.
   **Verify:** the record in the Done note with what was seen and the probe's
@@ -1100,7 +1101,7 @@ because the person will feel it before they read it.
   the UI helper matches `BEGINSWITH "<name>,"`; the behaviour on the device
   is right. Orchestrator miss: T018c's Verify named the unit suite only
   after a view change that alters an a11y label. Fixed as T018d. Unit 1498
-  green twice; UI 20 with that one test red twice. **[person, pending]**
+  green twice; UI 20 with that one test red twice. **[person — done (the person, 2026-09-16)]**
   criterion 15 (second device) and criterion 16 (Accessibility Inspector
   over the menu rows, the switch, the card, a Sold row, the Sold mark, the
   plan's Sold figure — note the plan's sold row now announces "Sold" first).
@@ -1153,7 +1154,8 @@ because the person will feel it before they read it.
   203 suites, 0 failures (T018d's double run and T020's docs run). No
   Swift changed after T018d. Allowance: not read (the usage page is the
   person's).
-  Criteria 15 and 16 pending the person's steps.
+  Criteria 15 and 16 pending the person's steps — done (the person,
+  2026-09-16).
 
 ## Post-merge fixes (`fix/006-post-merge`, 2026-09-16)
 

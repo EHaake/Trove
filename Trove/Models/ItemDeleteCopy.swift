@@ -26,10 +26,25 @@ enum ItemDeleteCopy {
     /// sell-plan sentence and keeps the rest. Both entry points — the list's
     /// swipe and the detail's menu — pass the item's own `isSold`, so neither
     /// side can promise the wrong thing.
-    static func message(isSold: Bool) -> String {
-        isSold
-            ? "Its photos go too. This can't be undone."
-            : "Its photos go too. Any sell plan it's on drops it. This can't be undone."
+    ///
+    /// 009 T021a: an item a purchase created is the picture its completed
+    /// plan shows (Amendment A), and deleting it leaves that plan a
+    /// placeholder — so, only for such an item, the message says so, on
+    /// both sides, since a bought item can be sold later. Each entry point's
+    /// view model supplies the flag; otherwise the text is what it was.
+    static func message(isSold: Bool, picturesACompletedPlan: Bool) -> String {
+        switch (isSold, picturesACompletedPlan) {
+        case (false, false):
+            "Its photos go too. Any sell plan it's on drops it. This can't be undone."
+        case (false, true):
+            "Its photos go too. Any sell plan it's on drops it, "
+                + "and the completed plan it was bought for loses its picture. This can't be undone."
+        case (true, false):
+            "Its photos go too. This can't be undone."
+        case (true, true):
+            "Its photos go too, and the completed plan it was bought for loses its picture. "
+                + "This can't be undone."
+        }
     }
 
     static let confirm = "Delete"

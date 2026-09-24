@@ -3,7 +3,8 @@ import Observation
 import SwiftData
 
 /// The Settings sheet's state and intents (013): export-everything, the
-/// blank templates, the iCloud row, Delete All for each list, and About.
+/// blank templates, the iCloud row, Delete All for each list and — from
+/// 009 Amendment A — for every sell plan, and About.
 ///
 /// Owns everything the screen shows — including the iCloud row's copy and
 /// the alerts' words — so nothing on the view is more than layout, and the
@@ -15,7 +16,7 @@ import SwiftData
 /// sheet.
 @Observable
 final class SettingsViewModel {
-    /// Which action is in flight, if any — one optional rather than six
+    /// Which action is in flight, if any — one optional rather than eight
     /// booleans, so the acting row can show the spinner and everything
     /// else can disable off `isBusy` (spec §Busy and failure states).
     enum Activity: Equatable {
@@ -25,6 +26,8 @@ final class SettingsViewModel {
         case wishlistTemplate
         case deleteItems
         case deleteWishlist
+        /// 009 Amendment A (Decision 18): every sell plan, active and completed.
+        case deleteSellPlans
         /// 002: the walk over every matched item (spec criterion 10).
         case refreshMarket
     }
@@ -51,6 +54,20 @@ final class SettingsViewModel {
     /// only need to know whether there's anything to act on, and how many.
     private(set) var itemCount = 0
     private(set) var wishlistCount = 0
+
+    /// 009 Amendment A (plan QA4, RA2(b)): stored plans, active and completed,
+    /// plus rows still awaiting the carry-over — the alert's number. The one
+    /// count here taken from **loaded rows** rather than `fetchCount`:
+    /// `awaitsCarryOver` reads relationships, which no `#Predicate` can, so
+    /// the count is `plannedRows()`'s filtered fetch — the very rows the
+    /// delete then clears.
+    private(set) var planCount = 0
+
+    /// 009 T021a: set with each Delete All request — whether a list of one
+    /// item is the picture a completed plan shows (bought from an entry that
+    /// still has its sell plan), so the alert can say the plan loses it.
+    /// False for every other request.
+    private var onlyItemPicturesACompletedPlan = false
 
     /// 002: how many items — owned and wanted together — carry a Reverb
     /// match, counted through `MarketRefresher.targets(in:)` so Settings
@@ -116,6 +133,20 @@ final class SettingsViewModel {
             FetchDescriptor<WishlistItem>(predicate: #Predicate<WishlistItem> { $0.boughtDate == nil })
         )) ?? 0
         matchedCount = ((try? MarketRefresher.targets(in: modelContext)) ?? []).count
+        planCount = ((try? plannedRows()) ?? []).count
+    }
+
+    /// Every row "Delete all sell plans" clears (plan RA2(b)): a stored plan,
+    /// or a row the carry-over would make one — so after the delete no plan
+    /// comes back on its own. The fetch narrows to rows that could be either;
+    /// the filter decides, in memory, since `awaitsCarryOver` reads
+    /// relationships. One definition for the count and the delete, so the
+    /// gesture clears exactly what the alert's number promised.
+    private func plannedRows() throws -> [WishlistItem] {
+        try modelContext.fetch(FetchDescriptor<WishlistItem>(
+            predicate: #Predicate<WishlistItem> { $0.sellPlanCreatedAt != nil || $0.sellPlanCheckedAt == nil }
+        ))
+        .filter { $0.hasSellPlan || $0.awaitsCarryOver }
     }
 
     // MARK: - Derived state
@@ -129,6 +160,7 @@ final class SettingsViewModel {
 
     var canDeleteItems: Bool { itemCount > 0 }
     var canDeleteWishlist: Bool { wishlistCount > 0 }
+    var canDeleteSellPlans: Bool { planCount > 0 }
 
     /// Nothing matched, nothing to refresh — and never while another action
     /// runs (spec §Busy and failure states).
@@ -164,7 +196,12 @@ final class SettingsViewModel {
     var alertMessage: String {
         switch alert {
         case .confirmDelete(let target, let count):
-            DeleteAllCopy.message(for: target, count: count, mode: storageMode)
+            DeleteAllCopy.message(
+                for: target,
+                count: count,
+                mode: storageMode,
+                picturesACompletedPlan: onlyItemPicturesACompletedPlan
+            )
         case .deleteFailed:
             DeleteAllCopy.failureMessage
         case .exportFailed:
@@ -390,8 +427,14 @@ final class SettingsViewModel {
     func requestDeleteAll(_ target: DeleteTarget) {
         guard !isBusy else { return }
         load()
-        let count = target == .items ? itemCount : wishlistCount
+        let count = switch target {
+        case .items: itemCount
+        case .wishlist: wishlistCount
+        case .sellPlans: planCount
+        }
         guard count > 0 else { return }
+        onlyItemPicturesACompletedPlan = target == .items && count == 1
+            && ((try? modelContext.fetch(FetchDescriptor<Item>()))?.first?.boughtFromWishlistItem?.hasSellPlan == true)
         alert = .confirmDelete(target, count: count)
     }
 
@@ -406,11 +449,19 @@ final class SettingsViewModel {
     /// (criterion 13), and `ModelContext.delete(model:)` commits outside
     /// it. Photos cascade and sell plans nullify by the schema's rules —
     /// nothing is unlinked by hand, exactly as the single deletes work.
+    ///
+    /// The third target, sell plans (009 Amendment A), deletes no model at
+    /// all: each plan goes through `SellPlanStore.delete`, the one writer a
+    /// single plan's delete uses, inside the same one-save envelope.
     @discardableResult
     func confirmDeleteAll(_ target: DeleteTarget) -> Task<Void, Never>? {
         guard !isBusy else { return nil }
         alert = nil
-        activity = target == .items ? .deleteItems : .deleteWishlist
+        activity = switch target {
+        case .items: .deleteItems
+        case .wishlist: .deleteWishlist
+        case .sellPlans: .deleteSellPlans
+        }
 
         return Task { @MainActor in
             defer {
@@ -443,6 +494,17 @@ final class SettingsViewModel {
                     ) {
                         try MarketLocalStore.clear(subjectID: wanted.id, in: modelContext)
                         modelContext.delete(wanted)
+                    }
+                // 009 Amendment A (plan QA4, RA2(b)): every plan removed
+                // exactly as a single delete removes it — plan and selection
+                // gone, the entry, every item, the sold-toward record and the
+                // purchase record untouched, the row stamped checked so no
+                // carry-over brings it back. Nothing is deleted, so no market
+                // rows are cleared.
+                case .sellPlans:
+                    let moment = now()
+                    for wanted in try plannedRows() {
+                        SellPlanStore.delete(planOf: wanted, at: moment)
                     }
                 }
                 try modelContext.save()

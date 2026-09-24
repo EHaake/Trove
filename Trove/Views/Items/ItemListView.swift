@@ -289,7 +289,8 @@ struct ItemListView: View {
             }
             Button(ItemDeleteCopy.cancel, role: .cancel) {}
         } message: { item in
-            Text(ItemDeleteCopy.message(isSold: item.isSold))
+            Text(ItemDeleteCopy.message(isSold: item.isSold,
+                                        picturesACompletedPlan: viewModel.picturesACompletedPlan(id: item.id)))
         }
         // 011's share sheet, presented off view-model state so the export
         // intent stays a testable method; dismissal writes nil back through
@@ -873,6 +874,9 @@ struct ItemListView: View {
                         lineWidth: theme.metrics.hairline
                     )
                 )
+                // A clear fill doesn't hit-test: without this an unselected
+                // chip's padding took no tap (009 T014a).
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)

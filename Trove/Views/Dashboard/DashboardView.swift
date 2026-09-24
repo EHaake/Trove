@@ -102,6 +102,16 @@ struct DashboardView: View {
                                 router.showSoldItems()
                             }
                         }
+                        // 009 §12: directly below the Sold card, and inside
+                        // this non-empty branch like it — the first-run
+                        // Dashboard shows no card even with a plan on file
+                        // (spec Decision 12). The gate itself hides it at
+                        // zero and in a drill-down.
+                        if viewModel.showsPlansCard {
+                            PlansCard(line: viewModel.plansLine) {
+                                router.showActivePlans()
+                            }
+                        }
                         breakdown
                     }
                     .padding(.horizontal, theme.metrics.screenGutter)
@@ -122,6 +132,9 @@ struct DashboardView: View {
         // show, and nothing else tells it — the view models fetch on appear
         // and hold an array rather than observing the store.
         .onChange(of: viewModel.completedImports) { viewModel.load() }
+        // 009 Q3: a carry-over that landed on a failed setup moves no import
+        // count, so the launch tab would keep a stale zero without this.
+        .onChange(of: viewModel.settledCount) { viewModel.load() }
         // Pull to refresh, per plan.md's CloudKit sync section: the user says
         // when a screen should look again, rather than the screen watching the
         // store continuously. Straight into the same load() everything else
@@ -412,6 +425,10 @@ struct DashboardView: View {
                     .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
             )
             .clipShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
+            // Unfilled, so without this only the text, the arrow and the
+            // outline took a tap; the padding and the spacer's gap didn't
+            // (009 T014a).
+            .contentShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)

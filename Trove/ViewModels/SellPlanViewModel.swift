@@ -151,9 +151,11 @@ final class SellPlanViewModel {
 
     /// What those sales actually brought in: `salePriceCents`, the figure the
     /// person recorded, never a current value — the sale is settled and the
-    /// market has nothing left to say about it.
+    /// market has nothing left to say about it. `SellPlanSummary.soldCents`
+    /// is the one sum, so this figure and the Plans rows' covered marker
+    /// cannot read different ones (009 plan Q5).
     var soldValueCents: Int {
-        soldItems.compactMap { $0.sale?.priceCents }.reduce(0, +)
+        SellPlanSummary.soldCents(of: soldItems)
     }
 
     /// Whether the screen carries the third figure and the Sold section at
@@ -161,6 +163,26 @@ final class SellPlanViewModel {
     var hasSales: Bool { soldCount > 0 }
 
     var isEmpty: Bool { candidates.isEmpty }
+
+    // MARK: - The completed record (009)
+
+    /// The wanted entry has been bought, so this plan is a record — what sold
+    /// toward it and when it was bought — and nothing on it acts (009 plan
+    /// Q11). Gated here rather than by the stores' refusals: `toggle`,
+    /// `markSold` and `load()` read it, and the view branches on it.
+    var isCompleted: Bool { wishlistItem?.isBought == true }
+
+    /// Whether the screen offers Mark as bought… — only on a loaded plan whose
+    /// entry is still wanted. `WishlistPurchaseStore`'s refusal stays the
+    /// backstop, never the thing that hides the action.
+    var offersPurchase: Bool { wishlistItem != nil && !isCompleted }
+
+    /// Whether there is a plan to delete, on either side.
+    var offersDelete: Bool { wishlistItem?.hasSellPlan == true }
+
+    /// When the entry was bought, for the record's date line; nil while it is
+    /// still wanted.
+    var boughtDate: Date? { wishlistItem?.boughtDate }
 
     /// Why the pool is empty, so the screen can name the missing half rather
     /// than reciting both rules at someone who only needs one.
@@ -265,6 +287,19 @@ final class SellPlanViewModel {
             // plan stays empty until the user picks something.
             let planned = wanted?.plannedSaleItems ?? []
             selectedIDs = Set(planned.map(\.id))
+
+            // A completed plan is a record, not a pool (009 plan §6): no
+            // owned fetch, no candidates, nothing to rank or figure.
+            guard !isCompleted else {
+                ownedCount = 0
+                lowDesireCount = 0
+                loadedAt = now()
+                marketSummaries = [:]
+                candidates = []
+                rises = [:]
+                hasLoaded = true
+                return
+            }
 
             // Sold gear leaves this screen before anything is counted (006
             // plan §3): a sold item is never a candidate, and it reaches
@@ -375,7 +410,8 @@ final class SellPlanViewModel {
     /// step, consistent with the app's low-friction bar.
     func toggle(_ item: Item) {
         saveFailureMessage = nil
-        guard let wishlistItem else { return }
+        // A completed plan has no selection to change (009 plan Q11).
+        guard let wishlistItem, !isCompleted else { return }
 
         var planned = wishlistItem.plannedSaleItems ?? []
         if selectedIDs.contains(item.id) {
@@ -418,6 +454,8 @@ final class SellPlanViewModel {
     @discardableResult
     func markSold(_ item: Item, sale: Sale) -> Bool {
         saveFailureMessage = nil
+        // Nothing is sold from a completed plan's record (009 plan Q11).
+        guard !isCompleted else { return false }
         do {
             try ItemSaleStore.markSold(item, sale: sale, toward: wishlistItem, at: now(), in: modelContext)
             try modelContext.save()
@@ -510,6 +548,39 @@ final class SellPlanViewModel {
             load()
             return false
         }
+        return true
+    }
+
+    // MARK: - Deleting the plan (009)
+
+    /// Delete this plan, on either side: the plan and its selection go, and
+    /// nothing else — every item, the sold-toward record and the entry itself
+    /// stay (spec criteria 10–12).
+    ///
+    /// `SellPlanStore` is the one writer (009 plan Q4) and callers save — the
+    /// `markSold(_:sale:)` shape beside it, one intent, one immediate save,
+    /// and a reload so the screen shows what is stored. Returns false, writing
+    /// nothing, with no plan loaded. A refused save is rolled back and
+    /// reloaded, so the plan shows as it is still stored — and is silent on
+    /// screen, as every delete in the app is (009 plan §5): no view reads the
+    /// `saveFailureMessage` it leaves behind.
+    @discardableResult
+    func deletePlan() -> Bool {
+        saveFailureMessage = nil
+        guard let wishlistItem else { return false }
+        do {
+            SellPlanStore.delete(planOf: wishlistItem, at: now())
+            try modelContext.save()
+        } catch {
+            // `rollback()` discards every pending change on the shared
+            // context, not only this intent's — the same recovery `markSold`
+            // uses; the reload shows the plan as it is still stored.
+            modelContext.rollback()
+            saveFailureMessage = error.localizedDescription
+            load()
+            return false
+        }
+        load()
         return true
     }
 }

@@ -927,6 +927,100 @@ struct DashboardSoldFiguresTests {
     }
 }
 
+// MARK: - 009/G15: the Plans card
+
+/// G15 (criterion 15). The Dashboard's Plans card counts active plans only —
+/// planned and not yet bought — shows nothing at zero, and never appears
+/// inside a category drill-down (P6).
+@Suite("DashboardViewModel — the Plans card")
+struct DashboardPlansCardTests {
+    private let planned = Date(timeIntervalSince1970: 1_781_000_000)
+    private let bought = Date(timeIntervalSince1970: 1_782_000_000)
+
+    @discardableResult
+    private func insertWish(
+        _ name: String,
+        planned plannedAt: Date? = nil,
+        bought boughtAt: Date? = nil,
+        into context: ModelContext
+    ) -> WishlistItem {
+        let wish = WishlistItem(name: name, categoryPath: "Music/Amps", estimatedCostCents: 120_000)
+        wish.sellPlanCreatedAt = plannedAt
+        wish.boughtDate = boughtAt
+        context.insert(wish)
+        return wish
+    }
+
+    /// Two active plans, one completed (bought), one planless, and an owned
+    /// item so the Dashboard has figures. Three would mean the completed plan
+    /// was counted; four, the planless entry too.
+    private func makeCollection() throws -> ModelContext {
+        let context = try makeInMemoryContext()
+        insertItem("Amp", category: "Music/Amps", paidCents: 69_000, valueCents: 54_000, into: context)
+        insertWish("Twin Reverb", planned: planned, into: context)
+        insertWish("Deluxe Reverb", planned: planned.addingTimeInterval(60), into: context)
+        insertWish("Princeton", planned: planned, bought: bought, into: context)
+        insertWish("Vox AC15", into: context)
+        try context.save()
+        return context
+    }
+
+    /// Mutation: drop `$0.boughtDate == nil` from the predicate → the
+    /// completed plan counts, 3 → red.
+    @Test func theCountExcludesCompletedAndPlanlessEntries() throws {
+        let viewModel = DashboardViewModel(modelContext: try makeCollection())
+        viewModel.load()
+
+        #expect(viewModel.activePlanCount == 2)
+        #expect(viewModel.showsPlansCard)
+        #expect(viewModel.plansLine == SellPlanCopy.activeCount(2))
+    }
+
+    /// Only a completed plan and a planless entry: no card, rather than a
+    /// card reading "0 active sell plans".
+    @Test func noCardWithNoActivePlans() throws {
+        let context = try makeInMemoryContext()
+        insertItem("Amp", category: "Music/Amps", paidCents: 69_000, valueCents: 54_000, into: context)
+        insertWish("Princeton", planned: planned, bought: bought, into: context)
+        insertWish("Vox AC15", into: context)
+        try context.save()
+
+        let viewModel = DashboardViewModel(modelContext: context)
+        viewModel.load()
+
+        #expect(viewModel.activePlanCount == 0)
+        #expect(!viewModel.showsPlansCard)
+    }
+
+    /// P6: a drill-down shows no card, even with active plans in the store
+    /// and in the very category drilled into.
+    ///
+    /// Mutation: drop `scope.isEmpty` from `showsPlansCard` → red.
+    @Test func noCardInsideACategoryScope() throws {
+        let viewModel = DashboardViewModel(modelContext: try makeCollection(), scope: "Music")
+        viewModel.load()
+
+        #expect(viewModel.activePlanCount == 2, "the plans really are there")
+        #expect(viewModel.totalItemCount == 1, "and the scope really does hold something")
+        #expect(!viewModel.showsPlansCard)
+    }
+
+    /// The screen reloads on `settledCount` because a signed-out device's
+    /// carry-over settles without moving `completedImports` — so the view
+    /// model must hand the monitor's count through, not a copy of it.
+    @Test func settledCountFollowsTheMonitor() throws {
+        let monitor = SyncMonitor(mode: .cloudKit)
+        let viewModel = DashboardViewModel(modelContext: try makeInMemoryContext(), syncMonitor: monitor)
+        #expect(viewModel.settledCount == 0)
+
+        monitor.record(SyncEvent(kind: .setup, isFinished: false, succeeded: false))
+        monitor.record(SyncEvent(kind: .setup, isFinished: true, succeeded: false))
+
+        #expect(viewModel.settledCount == 1)
+        #expect(viewModel.completedImports == 0, "the count a failed setup never moves")
+    }
+}
+
 // MARK: - 015/G22: an item that arrived by purchase
 
 /// G22 (criterion 10): "every Dashboard figure reflects the new item exactly

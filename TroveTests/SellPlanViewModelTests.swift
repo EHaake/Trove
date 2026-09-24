@@ -1160,3 +1160,244 @@ struct SellPlanPurchaseTests {
         #expect(entry.boughtDate == nil, "and the entry on screen elsewhere is untouched")
     }
 }
+
+// MARK: - 009/T006: the completed record and deleting the plan
+
+/// G14 (009 plan §6, Q11): a bought entry's plan is a record — its history
+/// and its date, no pool, and nothing on it writes — and deleting a plan, on
+/// either side, takes the plan and nothing else (spec criteria 9–12).
+///
+/// Every persisted assertion reads a second `ModelContext`, the T003 rule.
+@Suite("SellPlanViewModel — the completed record and deleting the plan")
+struct SellPlanRecordTests {
+    private let planMadeOn = Date(timeIntervalSince1970: 1_760_000_000)
+    private let soldOn = Date(timeIntervalSince1970: 1_770_000_000)
+    private let boughtOn = Date(timeIntervalSince1970: 1_775_000_000)
+    private let now = Date(timeIntervalSince1970: 1_783_000_000)
+
+    private var purchase: Purchase {
+        Purchase(date: Date(timeIntervalSince1970: 1_774_000_000), priceCents: 219_500, location: "Kerrisdale Cameras", condition: .good)
+    }
+
+    private var sale: Sale {
+        Sale(date: soldOn, priceCents: 172_500, location: "Reverb", note: nil)
+    }
+
+    /// Everything about an item a plan delete could plausibly disturb.
+    private struct ItemFacts: Equatable {
+        let name: String
+        let purchasePriceCents: Int
+        let currentValueCents: Int?
+        let desireToKeep: Int
+        let conditionRawValue: String
+        let soldDate: Date?
+        let salePriceCents: Int?
+        let soldTowardID: UUID?
+        let updatedAt: Date
+    }
+
+    private func facts(in container: ModelContainer) throws -> [UUID: ItemFacts] {
+        let items = try ModelContext(container).fetch(FetchDescriptor<Item>())
+        return Dictionary(uniqueKeysWithValues: items.map { item in
+            (item.id, ItemFacts(
+                name: item.name,
+                purchasePriceCents: item.purchasePriceCents,
+                currentValueCents: item.currentValueCents,
+                desireToKeep: item.desireToKeep,
+                conditionRawValue: item.conditionRawValue,
+                soldDate: item.soldDate,
+                salePriceCents: item.salePriceCents,
+                soldTowardID: item.soldTowardWishlistItem?.id,
+                updatedAt: item.updatedAt
+            ))
+        })
+    }
+
+    /// A plan with a qualifying candidate still owned and one sale toward it —
+    /// bought when `bought` is true, which releases the candidate's selection.
+    private func planWithHistory(
+        bought: Bool, in context: ModelContext
+    ) throws -> (plan: WishlistItem, candidate: Item) {
+        let plan = wanted(into: context)
+        SellPlanStore.create(for: plan, at: planMadeOn)
+        let candidate = owned("Nikon F3", desire: 1, valueCents: 55_000, into: context)
+        plan.plannedSaleItems = [candidate]
+        let gone = owned("Leica M6", desire: 1, valueCents: 180_000, into: context)
+        try ItemSaleStore.markSold(gone, sale: sale, toward: plan, at: soldOn, in: context)
+        if bought {
+            _ = try WishlistPurchaseStore.markBought(plan, purchase: purchase, at: boughtOn, in: context)
+        }
+        try context.save()
+        return (plan, candidate)
+    }
+
+    /// Criterion 9: the record is the history and the date, with no pool.
+    ///
+    /// Mutation: build the pool for a bought entry (drop `load()`'s
+    /// completed guard) → the qualifying Nikon F3 is a candidate and the
+    /// `candidates` leg goes red.
+    @Test func aBoughtEntrysPlanIsARecordWithNoPool() throws {
+        let context = ModelContext(try makeInMemoryContainer())
+        let (plan, _) = try planWithHistory(bought: true, in: context)
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+
+        #expect(viewModel.isCompleted)
+        #expect(viewModel.offersPurchase == false)
+        #expect(viewModel.offersDelete)
+        #expect(viewModel.boughtDate == boughtOn)
+        #expect(viewModel.candidates.isEmpty, "a completed plan builds no pool")
+        #expect(viewModel.selectedIDs.isEmpty)
+        #expect(viewModel.soldItems.map(\.name) == ["Leica M6"], "the history is still the record")
+        #expect(viewModel.soldValueCents == 172_500)
+        #expect(viewModel.loadFailureMessage == nil)
+        #expect(viewModel.hasLoaded)
+    }
+
+    /// The active side of the same three readers, and the unloaded one.
+    @Test func anActivePlanOffersThePurchaseAndTheDelete() throws {
+        let context = ModelContext(try makeInMemoryContainer())
+        let (plan, _) = try planWithHistory(bought: false, in: context)
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+
+        #expect(viewModel.isCompleted == false)
+        #expect(viewModel.offersPurchase)
+        #expect(viewModel.offersDelete)
+        #expect(viewModel.boughtDate == nil)
+        #expect(viewModel.candidates.map(\.name) == ["Nikon F3"])
+
+        let unloaded = SellPlanViewModel(modelContext: context, wishlistItemID: UUID(), now: { self.now })
+        unloaded.load()
+        #expect(unloaded.offersPurchase == false)
+        #expect(unloaded.offersDelete == false)
+        #expect(unloaded.isCompleted == false)
+    }
+
+    /// An entry with no plan has nothing to delete.
+    @Test func anEntryWithNoPlanOffersNoDelete() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(into: context)
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+
+        #expect(plan.hasSellPlan == false)
+        #expect(viewModel.offersDelete == false)
+    }
+
+    /// Mutation: drop `toggle`'s completed guard → the candidate is planned
+    /// on the bought entry and saved, and this goes red.
+    @Test func toggleOnACompletedPlanWritesNothing() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let (plan, candidate) = try planWithHistory(bought: true, in: context)
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+        viewModel.toggle(candidate)
+
+        #expect(viewModel.selectedIDs.isEmpty)
+        #expect(context.hasChanges == false)
+        let elsewhere = ModelContext(container)
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(entry.plannedSaleItems?.isEmpty == true, "a completed plan's selection stays empty")
+    }
+
+    @Test func markSoldOnACompletedPlanWritesNothing() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let (plan, candidate) = try planWithHistory(bought: true, in: context)
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+
+        #expect(viewModel.markSold(candidate, sale: Sale(date: now, priceCents: 51_000, location: nil, note: nil)) == false)
+
+        let elsewhere = ModelContext(container)
+        let stored = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first { $0.name == "Nikon F3" })
+        #expect(stored.soldDate == nil, "the item stays unsold")
+        #expect(stored.soldTowardWishlistItem == nil)
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(entry.itemsSoldToward?.map(\.name) == ["Leica M6"])
+    }
+
+    /// Criteria 10–12 on the active side: the plan and its selection go; every
+    /// item is identical, the set-aside gear is simply owned again, the entry
+    /// stays on the wishlist and keeps its sold-toward history.
+    ///
+    /// Mutation: `deletePlan` clearing `itemsSoldToward` → the Leica's
+    /// `soldTowardID` and the history leg go red.
+    @Test func deletingAnActivePlanChangesNoItem() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let (plan, candidate) = try planWithHistory(bought: false, in: context)
+        _ = owned("Fuji X100V", desire: 4, valueCents: 120_000, into: context)
+        try context.save()
+        let before = try facts(in: container)
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+        #expect(viewModel.selectedIDs == [candidate.id])
+
+        #expect(viewModel.deletePlan())
+
+        #expect(viewModel.saveFailureMessage == nil)
+        #expect(viewModel.offersDelete == false)
+        #expect(viewModel.selectedIDs.isEmpty)
+        #expect(viewModel.soldItems.map(\.name) == ["Leica M6"])
+
+        #expect(try facts(in: container) == before, "no item is created, removed, unsold or repriced")
+        let elsewhere = ModelContext(container)
+        let entries = try elsewhere.fetch(FetchDescriptor<WishlistItem>())
+        let entry = try #require(entries.first)
+        #expect(entries.count == 1, "the wanted item stays on the wishlist")
+        #expect(entry.hasSellPlan == false)
+        #expect(entry.boughtDate == nil)
+        #expect(entry.plannedSaleItems?.isEmpty == true)
+        #expect(entry.itemsSoldToward?.map(\.name) == ["Leica M6"], "the history survives the delete")
+        let setAside = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first { $0.id == candidate.id })
+        #expect(setAside.plannedForWishlistItems?.isEmpty == true, "set-aside gear is simply owned again")
+    }
+
+    /// Criteria 10–12 on the completed side: the purchased item stays in the
+    /// collection untouched, and the entry keeps its date and its history.
+    @Test func deletingACompletedPlanChangesNoItem() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let (plan, _) = try planWithHistory(bought: true, in: context)
+        let before = try facts(in: container)
+        #expect(before.values.contains { $0.name == "Summicron 35mm f/2" && $0.purchasePriceCents == 219_500 })
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.now })
+        viewModel.load()
+
+        #expect(viewModel.deletePlan())
+
+        #expect(viewModel.offersDelete == false)
+        #expect(try facts(in: container) == before, "the purchased item and every other stay exactly as they were")
+        let elsewhere = ModelContext(container)
+        let entries = try elsewhere.fetch(FetchDescriptor<WishlistItem>())
+        let entry = try #require(entries.first)
+        #expect(entries.count == 1)
+        #expect(entry.hasSellPlan == false)
+        #expect(entry.boughtDate == boughtOn)
+        #expect(entry.itemsSoldToward?.map(\.name) == ["Leica M6"], "the history survives the delete")
+    }
+
+    @Test func deletingWithNoEntryLoadedWritesNothing() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let (_, _) = try planWithHistory(bought: false, in: context)
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: UUID(), now: { self.now })
+        viewModel.load()
+
+        #expect(viewModel.deletePlan() == false)
+        let entry = try #require(try ModelContext(container).fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(entry.sellPlanCreatedAt == planMadeOn)
+    }
+}

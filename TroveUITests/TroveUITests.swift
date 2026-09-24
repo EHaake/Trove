@@ -630,7 +630,7 @@ final class TroveUITests: XCTestCase {
         // given one for a test's sake, so it's matched on the first thing it
         // says — the subtitle follows in the same combined label.
         let findItemsToSell = app.buttons
-            .matching(NSPredicate(format: "label BEGINSWITH %@", "Find items to sell"))
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Create a sell plan"))
             .firstMatch
         XCTAssertTrue(
             findItemsToSell.waitForExistence(timeout: 5),
@@ -702,6 +702,21 @@ final class TroveUITests: XCTestCase {
         // one element and `sellPlan.market` to *two per matched row* (six),
         // so both stay addressable but the market identifier is no count of
         // market lines. Nothing above depends on either.
+
+        // 009 P9: the tap on "Create a sell plan" created the plan, so the
+        // page it came from now offers to view it. Read on the way back, not
+        // off the view model — the view's action is what's under test: if it
+        // navigated without calling `openSellPlan()`, the Sell Plan above
+        // would still open and rank, and only this line would notice that no
+        // plan was ever stored.
+        app.buttons["Back"].tap()
+        let viewPlan = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "View your sell plan"))
+            .firstMatch
+        XCTAssertTrue(
+            viewPlan.waitForExistence(timeout: 5),
+            "back on the wanted item's page, the entry point must read View your sell plan — the tap creates the plan"
+        )
     }
 
     // MARK: - 005 Stock photos (offline states only)
@@ -1586,7 +1601,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Wishlist"].tap()
         openDetail(in: app, named: "Summicron 35mm f/2")
         let findItemsToSell = app.buttons
-            .matching(NSPredicate(format: "label BEGINSWITH %@", "Find items to sell"))
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Create a sell plan"))
             .firstMatch
         XCTAssertTrue(findItemsToSell.waitForExistence(timeout: 5), "the wishlist detail must offer a way into the Sell Plan")
         scrollUntilHittable(findItemsToSell, in: app)
@@ -1662,6 +1677,175 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(soldEntry.waitForExistence(timeout: 5), "the plan's Sold section should list the sale")
         XCTAssertGreaterThan(soldEntry.frame.minY, headerBand, "the Sold section sits under the candidates")
         XCTAssertTrue(soldEntry.label.contains("$640"), "the Sold section's row reads \"\(soldEntry.label)\"")
+    }
+
+    /// `009` T009c, the person's walkthrough: tapping *anywhere* on a Sell
+    /// Plan candidate's card toggles it, not only its checkbox or its text —
+    /// and the Mark as sold… strip under it stays a target of its own (`006`
+    /// spec Decision 4).
+    ///
+    /// Hit-testing is only visible here: the unit suite can't see which view
+    /// a tap lands on. The card is tapped in its bottom padding band, which is
+    /// empty whatever the row says: the point is read off the *strip's* frame
+    /// — its horizontal middle, half of `cardPadding` (16 pt, `ThemeMetrics`)
+    /// above its top edge, which is where the card ends. Not off the card
+    /// button's own frame: that one follows the fix under test (without the
+    /// content shape it shrinks to what the card draws, measured 348 pt wide
+    /// against 380), and a point derived from it would move with the thing it
+    /// is checking. The strip's frame doesn't depend on the card at all. The
+    /// strip itself is tapped at its leading tenth, where the right-aligned
+    /// label never reaches. Selection is read from the card's `isSelected`
+    /// trait, which the row adds from the same `isSelected` it draws.
+    ///
+    /// Its mutation: removing the card's `.contentShape(Rectangle())` in
+    /// `SellPlanRow` must turn the first toggle assertion red — a `.plain`
+    /// button hit-tests only what it draws.
+    @MainActor
+    func testTappingAnEmptyPartOfASellPlanCardTogglesItAndTheStripStaysApart() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSellPlan"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Wishlist"].tap()
+        openDetail(in: app, named: "Summicron 35mm f/2")
+        let findItemsToSell = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Create a sell plan"))
+            .firstMatch
+        XCTAssertTrue(findItemsToSell.waitForExistence(timeout: 5), "the wishlist detail must offer a way into the Sell Plan")
+        scrollUntilHittable(findItemsToSell, in: app)
+        findItemsToSell.tap()
+
+        let card = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Blues Junior"))
+            .firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 5), "the seeded plan must offer the Blues Junior as a candidate")
+
+        // The strip under this card: the first that starts below its top.
+        let strip = app.buttons
+            .matching(identifier: "sellPlan.row.markAsSold")
+            .allElementsBoundByIndex
+            .filter { $0.frame.minY > card.frame.minY }
+            .min { $0.frame.minY < $1.frame.minY }
+        guard let markAsSold = strip else {
+            return XCTFail("the Blues Junior's row must offer Mark as sold…")
+        }
+        scrollUntilHittable(markAsSold, in: app)
+
+        let startedSelected = card.isSelected
+        let paddingBand = markAsSold.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: markAsSold.frame.width / 2, dy: -8))
+        let price = app.textFields["sale.sheet.price"]
+
+        // First tap on empty card: the selection flips, and no sheet opens.
+        paddingBand.tap()
+        let flipped = expectation(
+            for: NSPredicate(format: "isSelected == %@", NSNumber(value: !startedSelected)),
+            evaluatedWith: card
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [flipped], timeout: 5),
+            .completed,
+            "tapping the card's empty padding must toggle it — it still reads isSelected \(card.isSelected)"
+        )
+        XCTAssertFalse(price.exists, "a tap on the card must not open the sale sheet")
+
+        // Second tap at the same point: back to where it started.
+        paddingBand.tap()
+        let restored = expectation(
+            for: NSPredicate(format: "isSelected == %@", NSNumber(value: startedSelected)),
+            evaluatedWith: card
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [restored], timeout: 5),
+            .completed,
+            "a second tap at the same empty point must toggle it back — it reads isSelected \(card.isSelected)"
+        )
+
+        // The strip's own empty space opens the sheet and leaves the card be.
+        markAsSold.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: markAsSold.frame.width / 10, dy: markAsSold.frame.height / 2))
+            .tap()
+        XCTAssertTrue(price.waitForExistence(timeout: 5), "tapping the strip's empty space must open the sale sheet")
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(price.waitForNonExistence(timeout: 5), "Cancel should close the sale sheet")
+        XCTAssertEqual(
+            card.isSelected,
+            startedSelected,
+            "a tap on the Mark as sold… strip must not toggle the card above it"
+        )
+    }
+
+    /// `009` T014a, the person's instruction after T009c ("Fix it now"): the
+    /// Overview's not-yet-valued callout follows its link from a tap anywhere
+    /// inside its box, not only on its words or its arrow.
+    ///
+    /// Two items are added with no current value, so the callout reads
+    /// "2 items" and leads to the Items list narrowed to them — whose own
+    /// clear-chip is an unambiguous sign the link was followed (one item would
+    /// open that item, whose name the list also shows). The tap lands at a
+    /// fixed fraction of the callout's own frame, (0.8, 0.75): below "VALUE"
+    /// and right of the second line, about 18 pt from anything drawn at the
+    /// default text size (frame 354 × 73 pt). Before tapping, the point is
+    /// checked against the frame of every text and image inside the callout,
+    /// so a layout change can't quietly move the tap onto a label.
+    ///
+    /// Its mutation: delete the callout's `.contentShape` and add
+    /// `.allowsHitTesting(false)` to its hairline outline — the outline still
+    /// draws, so the frame doesn't move, but it stops catching the tap (today
+    /// it would, which `tokens.md`'s tap-target rule says not to rely on). The
+    /// navigation assertion goes red.
+    @MainActor
+    func testTappingAnEmptyPartOfTheUnvaluedCalloutFollowsIt() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Items"].tap()
+        for name in ["Rolleiflex 2.8F", "Hasselblad 500C/M"] {
+            let addButton = app.buttons["Add item"]
+            XCTAssertTrue(addButton.waitForExistence(timeout: 5), "the Items tab must offer quick add")
+            addButton.tap()
+            let nameField = app.textFields["Name"]
+            XCTAssertTrue(nameField.waitForExistence(timeout: 5), "the add-item sheet didn't present")
+            nameField.tap()
+            nameField.typeText(name)
+            let categoryField = app.textFields["Category"]
+            categoryField.tap()
+            categoryField.typeText("Photography/Cameras")
+            let priceField = app.textFields["Price paid"]
+            priceField.tap()
+            priceField.typeText("900")
+            app.buttons["Save item"].tap()
+            XCTAssertTrue(
+                app.buttons["Save item"].waitForNonExistence(timeout: 5),
+                "saving \(name) with no current value should close the sheet"
+            )
+        }
+
+        app.buttons["Overview"].tap()
+        let callout = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "2 items not yet valued"))
+            .firstMatch
+        XCTAssertTrue(callout.waitForExistence(timeout: 5), "two items without a value must raise the callout")
+        scrollUntilHittable(callout, in: app)
+
+        let offset = CGVector(dx: 0.8, dy: 0.75)
+        let frame = callout.frame
+        let point = CGPoint(x: frame.minX + frame.width * offset.dx, y: frame.minY + frame.height * offset.dy)
+        let drawn = callout.staticTexts.allElementsBoundByIndex + callout.images.allElementsBoundByIndex
+        XCTAssertFalse(drawn.isEmpty, "the callout's texts must be readable, or the anchor below checks nothing")
+        for element in drawn {
+            XCTAssertFalse(
+                element.frame.contains(point),
+                "the tap point \(point) must miss \"\(element.label)\" (\(element.frame)) — it is meant to land on empty space"
+            )
+        }
+
+        callout.coordinate(withNormalizedOffset: offset).tap()
+        XCTAssertTrue(
+            app.buttons["Clear the not-yet-valued filter"].waitForExistence(timeout: 5),
+            "a tap on the callout's empty space at \(point) did not follow it to the narrowed list"
+        )
     }
 
     /// The Sold side's row for one item — the `.combine`d element whose label
@@ -1854,6 +2038,477 @@ final class TroveUITests: XCTestCase {
             .firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 5), "criterion 8: the bought entry must appear in the collection")
         XCTAssertTrue(row.label.contains("$2,400"), "the row reads \"\(row.label)\"")
+    }
+
+    // MARK: - 009 Plans (the seeded collection)
+
+    /// `009` criteria 4, 5 and 2 on the seeded Plans collection
+    /// (`-seedPlans`, plan §13): the tab sits fourth, opens on Active, lists
+    /// the three active plans — the Fuji among them — and keeps the planless
+    /// and the bought ones off; Completed lists the bought plan; and a
+    /// relaunch comes back to Active after being left on Completed.
+    ///
+    /// **The Fuji row is the launch wiring's only automated coverage.** The
+    /// seed leaves it unchecked, the shape only an app from before `009`
+    /// writes, so it is a plan only if the carry-over actually ran at launch.
+    /// Its mutations: dropping the `onSettled` closure from `TroveApp.init`,
+    /// or moving the seeds below the monitor's construction, must turn the
+    /// Fuji assertion red.
+    @MainActor
+    func testThePlansTabSitsFourthAndOpensOnActiveEveryLaunch() {
+        let app = launchPlans()
+
+        // Criterion 5: fourth in the tab bar, read off the screen.
+        let tabs = ["Overview", "Items", "Wishlist", "Plans"].map { app.buttons[$0] }
+        for tab in tabs {
+            XCTAssertTrue(tab.waitForExistence(timeout: 5), "the tab bar has no \(tab.label) button")
+        }
+        for (earlier, later) in zip(tabs, tabs.dropFirst()) {
+            XCTAssertLessThan(earlier.frame.minX, later.frame.minX, "\(earlier.label) should sit left of \(later.label)")
+        }
+
+        app.buttons["Plans"].tap()
+        let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
+        XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the Plans tab must offer the side switch")
+        XCTAssertEqual(switchControl.value as? String, "Active", "the Plans tab must open on Active")
+
+        XCTAssertTrue(
+            app.staticTexts["Fuji X100V"].waitForExistence(timeout: 5),
+            "the Fuji X100V's plan exists only if the launch ran the carry-over — its absence means the launch wiring is broken"
+        )
+        XCTAssertTrue(app.staticTexts["Vox AC15"].exists, "the Vox AC15's plan must be Active")
+        XCTAssertTrue(app.staticTexts["Summicron 35mm f/2"].exists, "the Summicron's plan must be Active")
+
+        // Criterion 2: every candidate sold, and still a plan — covered.
+        let vox = planRow(in: app, named: "Vox AC15")
+        XCTAssertTrue(vox.waitForExistence(timeout: 5), "no combined row for the Vox AC15")
+        XCTAssertTrue(vox.label.contains("1 sold toward it"), "the Vox AC15's row reads \"\(vox.label)\"")
+        XCTAssertTrue(vox.label.contains("Covered"), "the Vox AC15's row reads \"\(vox.label)\"")
+
+        XCTAssertFalse(app.staticTexts["Rode NT5"].exists, "a wanted item with no plan is on neither side")
+        XCTAssertFalse(app.staticTexts["Nikon FM2"].exists, "a bought item with no plan is on neither side")
+        XCTAssertFalse(app.staticTexts["Hasselblad 80mm"].exists, "a bought plan belongs to Completed")
+
+        switchControl.buttons["Completed"].tap()
+        let hasselblad = planRow(in: app, named: "Hasselblad 80mm")
+        XCTAssertTrue(hasselblad.waitForExistence(timeout: 5), "Completed must list the bought plan")
+        XCTAssertTrue(hasselblad.label.contains("Bought"), "the Hasselblad's row reads \"\(hasselblad.label)\"")
+        XCTAssertFalse(
+            hasselblad.label.contains("Covered"),
+            "$300 sold toward a $950 estimate is not covered — the row reads \"\(hasselblad.label)\""
+        )
+        XCTAssertFalse(app.staticTexts["Nikon FM2"].exists, "a bought item with no plan is not a completed plan")
+        XCTAssertFalse(app.staticTexts["Vox AC15"].exists, "an active plan is not on Completed")
+
+        // Left on Completed; the next launch opens on Active again.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        app.buttons["Plans"].tap()
+        let relaunchedSwitch = element(in: app, identifiedBy: "plans.sideSwitch")
+        XCTAssertTrue(relaunchedSwitch.waitForExistence(timeout: 5))
+        XCTAssertEqual(relaunchedSwitch.value as? String, "Active", "every launch must open the Plans tab on Active")
+    }
+
+    /// Criteria 5 and 6 on the Active side: the default is the newest plan
+    /// first (the Vox, two days old, above the Summicron, three), **Name**
+    /// reverses that pair, and the selection survives a visit to Completed.
+    /// Driven through the badge and the dropdown on screen.
+    @MainActor
+    func testSortingEachSideReordersTheRowsAndIsKeptAcrossASwitch() {
+        let app = launchPlans()
+        app.buttons["Plans"].tap()
+
+        let summicron = app.staticTexts["Summicron 35mm f/2"]
+        let vox = app.staticTexts["Vox AC15"]
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5))
+        XCTAssertTrue(vox.exists)
+        XCTAssertLessThan(vox.frame.minY, summicron.frame.minY, "by default the newer plan (Vox) comes first")
+
+        let badge = app.buttons["sortOptions.plans"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "the Active side must offer Sort By")
+        XCTAssertEqual(badge.label, "Sort by Newest")
+        badge.tap()
+        XCTAssertTrue(app.staticTexts["SORT BY"].waitForExistence(timeout: 5), "the Plans Sort By should open")
+        app.buttons["Name"].tap()
+        waitForLabel(badge, "Sort by Name")
+        XCTAssertLessThan(summicron.frame.minY, vox.frame.minY, "Name must put the Summicron above the Vox")
+
+        let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
+        switchControl.buttons["Completed"].tap()
+        XCTAssertTrue(planRow(in: app, named: "Hasselblad 80mm").waitForExistence(timeout: 5))
+        waitForLabel(badge, "Sort by Newest")
+        switchControl.buttons["Active"].tap()
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5))
+        waitForLabel(badge, "Sort by Name")
+        XCTAssertLessThan(summicron.frame.minY, vox.frame.minY, "the Active side must come back sorted by Name")
+    }
+
+    /// Criterion 14: an Active row's leading swipe offers **Mark as bought…**
+    /// (matched alone, never `OR "Buy"` — `015`'s close-out lesson), opening
+    /// the purchase sheet seeded from the estimate; Cancel changes nothing,
+    /// and confirming moves the plan to Completed. Opened with the partial
+    /// drag, never `swipeRight()`, which fires the edge action instead.
+    ///
+    /// Its mutation: the Buy swipe wired to `pendingDeletion` instead of
+    /// `planBeingBought` must turn the price field's existence red.
+    @MainActor
+    func testAnActiveRowsBuySwipeMovesThePlanToCompleted() {
+        let app = launchPlans()
+        app.buttons["Plans"].tap()
+
+        let summicron = app.staticTexts["Summicron 35mm f/2"]
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5))
+        let buy = app.buttons.matching(NSPredicate(format: "label == %@", "Mark as bought\u{2026}")).firstMatch
+        let price = app.textFields["purchase.sheet.price"]
+
+        openLeadingSwipe(on: summicron, in: app)
+        XCTAssertTrue(buy.waitForExistence(timeout: 5), "an Active row's leading swipe must offer Mark as bought…")
+        buy.tap()
+        XCTAssertTrue(price.waitForExistence(timeout: 5), "Mark as bought… must open the purchase sheet")
+        XCTAssertEqual(plainFigure(price), "2400", "the sheet must pre-fill from the estimate — it reads \"\(price.value as? String ?? "")\"")
+
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(price.waitForNonExistence(timeout: 5), "Cancel must close the purchase sheet")
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "a cancelled purchase leaves the plan on Active")
+
+        openLeadingSwipe(on: summicron, in: app)
+        XCTAssertTrue(buy.waitForExistence(timeout: 5), "the swipe must open a second time")
+        buy.tap()
+        XCTAssertTrue(price.waitForExistence(timeout: 5))
+        app.buttons["Good"].tap()
+        app.buttons["purchase.sheet.confirm"].tap()
+        XCTAssertTrue(price.waitForNonExistence(timeout: 5), "Mark as bought must close the sheet")
+        XCTAssertTrue(summicron.waitForNonExistence(timeout: 5), "a bought plan leaves Active")
+
+        element(in: app, identifiedBy: "plans.sideSwitch").buttons["Completed"].tap()
+        XCTAssertTrue(
+            planRow(in: app, named: "Summicron 35mm f/2").waitForExistence(timeout: 5),
+            "a bought plan lands on Completed"
+        )
+    }
+
+    /// Decision 9: deleting a plan from its row's trailing swipe asks first,
+    /// then removes the plan and nothing else — the wanted item stays on the
+    /// Wishlist, offering a new plan, and the sale toward it stays on the
+    /// Items tab's Sold side.
+    @MainActor
+    func testDeletingAPlanLeavesTheWantedItemAndTheSale() {
+        let app = launchPlans()
+        app.buttons["Plans"].tap()
+
+        let vox = planRow(in: app, named: "Vox AC15")
+        XCTAssertTrue(vox.waitForExistence(timeout: 5))
+        openTrailingSwipe(on: vox, in: app)
+        let delete = app.buttons["Delete"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 5), "the trailing swipe must offer Delete")
+        delete.tap()
+
+        let alert = app.alerts["Delete the sell plan for Vox AC15?"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "Delete must ask first, naming the plan")
+        alert.buttons["Delete"].tap()
+        XCTAssertTrue(app.staticTexts["Vox AC15"].waitForNonExistence(timeout: 5), "the deleted plan must leave the list")
+
+        app.buttons["Wishlist"].tap()
+        openDetail(in: app, named: "Vox AC15")
+        let createPlan = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Create a sell plan")).firstMatch
+        XCTAssertTrue(createPlan.waitForExistence(timeout: 5), "the wanted item stays, with no plan, so it offers a new one")
+
+        app.buttons["Items"].tap()
+        let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
+        XCTAssertTrue(switchControl.waitForExistence(timeout: 5))
+        switchControl.buttons["Sold"].tap()
+        XCTAssertTrue(
+            soldRow(in: app, named: "Blues Junior").waitForExistence(timeout: 5),
+            "deleting the plan must leave the sale toward it standing"
+        )
+    }
+
+    /// Criterion 9's second half: a completed row opens the plan as a
+    /// record — what sold toward it and when it was bought — with no
+    /// purchase, no candidates, and Delete the one thing left to do.
+    @MainActor
+    func testACompletedPlanOpensAsARecord() {
+        let app = launchPlans()
+        app.buttons["Plans"].tap()
+
+        let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
+        XCTAssertTrue(switchControl.waitForExistence(timeout: 5))
+        switchControl.buttons["Completed"].tap()
+        openDetail(in: app, named: "Hasselblad 80mm")
+
+        let soldEntry = soldRow(in: app, named: "NT1-A", precededBy: "Sold")
+        XCTAssertTrue(soldEntry.waitForExistence(timeout: 5), "the record must list what sold toward it")
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH[c] %@", "Bought ")).firstMatch.exists,
+            "the record must say when it was bought"
+        )
+        XCTAssertFalse(element(in: app, identifiedBy: "purchase.sellPlan").exists, "a bought plan offers no purchase")
+        XCTAssertFalse(
+            app.staticTexts.matching(NSPredicate(format: "label ==[c] %@", "Sell candidates")).firstMatch.exists,
+            "a bought plan offers no candidates"
+        )
+        // The bar holds Back and Delete and nothing else — no Buy on a plan
+        // whose item is already bought (plan §13 as amended; Q12).
+        let bar = app.navigationBars["Sell plan"]
+        XCTAssertTrue(bar.exists, "the record keeps the Sell plan bar")
+        let barButtons = bar.buttons.allElementsBoundByIndex.map(\.label).sorted()
+        XCTAssertEqual(barButtons, ["Back", "Delete"], "the record's bar must offer only Back and Delete — it offers \(barButtons)")
+    }
+
+    /// Criterion 15: the Dashboard's card counts the active plans and opens
+    /// the Plans tab on Active, even when it was left on Completed.
+    ///
+    /// Its mutation: the card calling `router.showSoldItems()` must turn the
+    /// switch assertion red.
+    @MainActor
+    func testTheDashboardCardOpensThePlansTabOnActive() {
+        let app = launchPlans()
+        app.buttons["Plans"].tap()
+        let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
+        XCTAssertTrue(switchControl.waitForExistence(timeout: 5))
+        switchControl.buttons["Completed"].tap()
+        XCTAssertTrue(planRow(in: app, named: "Hasselblad 80mm").waitForExistence(timeout: 5))
+
+        app.buttons["Overview"].tap()
+        let card = app.buttons["dashboard.plansCard"]
+        XCTAssertTrue(card.waitForExistence(timeout: 5), "three active plans, so the card must show")
+        XCTAssertTrue(card.label.contains("3 active sell plans"), "the Plans card reads \"\(card.label)\"")
+        scrollUntilHittable(card, in: app)
+        card.tap()
+
+        XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the card should land on the Plans tab")
+        let onActive = expectation(for: NSPredicate(format: "value == %@", "Active"), evaluatedWith: switchControl)
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [onActive], timeout: 5),
+            .completed,
+            "the card must open Plans on Active — the switch reads \(switchControl.value as? String ?? "nil")"
+        )
+    }
+
+    /// Creating a plan from a wanted item with none: the Sell Plan opens,
+    /// the page comes back offering to view it with nothing set aside, and
+    /// the Plans tab lists it.
+    @MainActor
+    func testCreatingASellPlanFromAWantedItem() {
+        let app = launchPlans()
+        app.buttons["Wishlist"].tap()
+        openDetail(in: app, named: "Rode NT5")
+
+        let createPlan = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Create a sell plan")).firstMatch
+        XCTAssertTrue(createPlan.waitForExistence(timeout: 5), "a wanted item with no plan offers to create one")
+        scrollUntilHittable(createPlan, in: app)
+        createPlan.tap()
+        XCTAssertTrue(app.navigationBars["Sell plan"].waitForExistence(timeout: 5), "the tap must open the Sell Plan")
+
+        app.buttons["Back"].tap()
+        let viewPlan = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "View your sell plan")).firstMatch
+        XCTAssertTrue(viewPlan.waitForExistence(timeout: 5), "the page must now offer to view the plan")
+        XCTAssertTrue(viewPlan.label.contains("Nothing set aside yet"), "the entry point reads \"\(viewPlan.label)\"")
+
+        app.buttons["Plans"].tap()
+        XCTAssertTrue(app.staticTexts["Rode NT5"].waitForExistence(timeout: 5), "the new plan must be listed on Plans")
+    }
+
+    // MARK: - 009 Amendment A
+
+    /// Criterion 21's behavioural half (plan QA6): on a fresh install, every
+    /// tab's root screen has a "…" that opens Settings, and Done closes it —
+    /// `testDashboardOffersSettingsAndNothingElse`'s legs, once per tab. On
+    /// the Plans tab, with nothing stored, Delete All Sell Plans is there and
+    /// dimmed (criterion 22).
+    ///
+    /// Its mutation: removing the Plans tab's `OverflowBadge` must turn the
+    /// Plans leg's badge assertion red.
+    @MainActor
+    func testEveryTabsRootReachesSettings() {
+        let app = launchApp()
+        XCTAssertTrue(
+            app.staticTexts["Nothing tracked yet"].waitForExistence(timeout: 5),
+            "Expected the first-run dashboard."
+        )
+
+        let tabs = [
+            ("Overview", "moreActions.dashboard"),
+            ("Items", "moreActions.items"),
+            ("Wishlist", "moreActions.wishlist"),
+            ("Plans", "moreActions.plans"),
+        ]
+        for (tab, identifier) in tabs {
+            app.buttons[tab].tap()
+
+            let badge = app.buttons[identifier]
+            XCTAssertTrue(badge.waitForExistence(timeout: 5), "the \(tab) tab's root must have a \"…\"")
+            badge.tap()
+            let settings = app.buttons["Settings"]
+            XCTAssertTrue(settings.waitForExistence(timeout: 5), "the \(tab) tab's \"…\" must offer Settings")
+            settings.tap()
+
+            let sheet = app.navigationBars["Settings"]
+            XCTAssertTrue(sheet.waitForExistence(timeout: 5), "Settings should present as a sheet from the \(tab) tab")
+            if tab == "Plans" {
+                // Existence before `isEnabled`, which is false for a missing row.
+                let deletePlans = app.buttons["Delete All Sell Plans…"]
+                XCTAssertTrue(deletePlans.exists, "Settings must offer Delete All Sell Plans")
+                XCTAssertFalse(deletePlans.isEnabled, "Delete All Sell Plans must be dimmed with no plans")
+            }
+            app.buttons["Done"].tap()
+            XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings on the \(tab) tab")
+            XCTAssertTrue(badge.isHittable, "Done should return to the \(tab) tab's root")
+        }
+    }
+
+    /// Criterion 22 on the seeded Plans collection (plan QA6): the Plans
+    /// tab's "…" reaches Settings, whose Delete All Sell Plans asks first,
+    /// naming all four plans — the three Active, the carried-over Fuji among
+    /// them, and the one Completed. Keep changes nothing; Delete All empties
+    /// both sides of the tab at once, and leaves everything else where a
+    /// single delete leaves it — the wanted entries on the Wishlist, offering
+    /// a new plan, the sales on the Sold side, the bought item owned — and
+    /// the row dimmed.
+    ///
+    /// Its mutations: the Settings sheet's `onDismiss` reload dropped from
+    /// `PlansView` must turn the empty-state leg red; `confirmDeleteAll`
+    /// deleting the wanted entries instead of their plans must turn the
+    /// Wishlist leg red.
+    @MainActor
+    func testDeletingAllSellPlansLeavesEverythingElse() {
+        let app = launchPlans()
+        app.buttons["Plans"].tap()
+
+        let summicron = app.staticTexts["Summicron 35mm f/2"]
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "the seeded plans must be listed")
+
+        let badge = app.buttons["moreActions.plans"]
+        let sheet = app.navigationBars["Settings"]
+        let deletePlans = app.buttons["Delete All Sell Plans…"]
+        let alert = app.alerts["Delete all 4 sell plans?"]
+
+        // Keep changes nothing.
+        openSettings(from: badge, in: app)
+        XCTAssertTrue(deletePlans.exists, "Settings must offer Delete All Sell Plans")
+        XCTAssertTrue(deletePlans.isEnabled, "with plans stored, Delete All Sell Plans must be enabled")
+        scrollUntilHittable(deletePlans, in: app)
+        deletePlans.tap()
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "Delete All Sell Plans must ask first, naming all four plans")
+        alert.buttons["Keep"].tap()
+        XCTAssertTrue(alert.waitForNonExistence(timeout: 5), "Keep must close the alert")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings")
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "Keep must leave the plans listed")
+
+        // Delete All empties both sides.
+        openSettings(from: badge, in: app)
+        scrollUntilHittable(deletePlans, in: app)
+        deletePlans.tap()
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "the alert must ask again")
+        alert.buttons["Delete All"].tap()
+        // The delete commits in a task, and the busy gate dims the row as
+        // soon as it starts — before the delete runs, so the dimming doesn't
+        // prove it landed. Done can't race it anyway: the delete and the
+        // Plans tab's reload run on the same main context.
+        let dimmed = expectation(for: NSPredicate(format: "isEnabled == false"), evaluatedWith: deletePlans)
+        XCTAssertEqual(XCTWaiter.wait(for: [dimmed], timeout: 5), .completed, "the row must dim once every plan is gone")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings")
+
+        XCTAssertTrue(
+            app.staticTexts["No sell plans yet"].waitForExistence(timeout: 5),
+            "the Active side must be empty as soon as Settings closes"
+        )
+        XCTAssertFalse(summicron.exists, "no plan may stay on Active")
+        let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
+        switchControl.buttons["Completed"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Nothing completed yet"].waitForExistence(timeout: 5),
+            "the Completed side must be empty too"
+        )
+
+        // The wanted entries stay, and offer a new plan.
+        app.buttons["Wishlist"].tap()
+        for name in ["Summicron 35mm f/2", "Vox AC15", "Fuji X100V"] {
+            XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5), "\(name) must stay on the Wishlist")
+        }
+        openDetail(in: app, named: "Vox AC15")
+        let createPlan = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Create a sell plan")).firstMatch
+        XCTAssertTrue(createPlan.waitForExistence(timeout: 5), "the Vox AC15 has no plan now, so it offers a new one")
+
+        // The sales and the bought item stay.
+        app.buttons["Items"].tap()
+        let itemsSwitch = element(in: app, identifiedBy: "items.sideSwitch")
+        XCTAssertTrue(itemsSwitch.waitForExistence(timeout: 5))
+        itemsSwitch.buttons["Sold"].tap()
+        for name in ["Blues Junior", "NT1-A"] {
+            XCTAssertTrue(soldRow(in: app, named: name).waitForExistence(timeout: 5), "the sale of the \(name) must stay")
+        }
+        itemsSwitch.buttons["Owned"].tap()
+        // An owned row's `.combine`d element — see
+        // `testMarkingAWantedItemBoughtMovesItToTheCollection`.
+        let hasselblad = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Hasselblad 80mm,"))
+            .firstMatch
+        XCTAssertTrue(hasselblad.waitForExistence(timeout: 5), "the item the completed plan bought must stay owned")
+
+        // And the row reads dimmed on a fresh visit.
+        app.buttons["Plans"].tap()
+        openSettings(from: badge, in: app)
+        XCTAssertTrue(deletePlans.exists, "Settings must still offer Delete All Sell Plans")
+        XCTAssertFalse(deletePlans.isEnabled, "with no plans left, Delete All Sell Plans must be dimmed")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings")
+    }
+
+    /// The Plans tab's "…" → Settings, waiting for the sheet.
+    @MainActor
+    private func openSettings(from badge: XCUIElement, in app: XCUIApplication) {
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "the Plans tab must have a \"…\"")
+        badge.tap()
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5), "the \"…\" must offer Settings")
+        settings.tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5), "Settings should present as a sheet")
+    }
+
+    /// Launches on the seeded Plans collection.
+    @MainActor
+    private func launchPlans() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedPlans"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        return app
+    }
+
+    /// A Plans row's `.combine`d element — its label is the name, the
+    /// category and the count lines. Matched across every type, as the
+    /// owned row is in `testMarkingAWantedItemBoughtMovesItToTheCollection`;
+    /// the comma tells it from the plain name inside it.
+    @MainActor
+    private func planRow(in app: XCUIApplication, named name: String) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "\(name),"))
+            .firstMatch
+    }
+
+    /// A price field's figure with any grouping separator stripped.
+    @MainActor
+    private func plainFigure(_ field: XCUIElement) -> String {
+        (field.value as? String ?? "")
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: "\u{00A0}", with: "")
+            .replacingOccurrences(of: "\u{202F}", with: "")
+    }
+
+    /// `openLeadingSwipe`'s mirror: a partial drag leftward from near the
+    /// row's trailing edge, so the tray opens without the full swipe that
+    /// would fire its edge action.
+    @MainActor
+    private func openTrailingSwipe(on row: XCUIElement, in app: XCUIApplication) {
+        let start = row.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5))
+        start.press(
+            forDuration: 0.1,
+            thenDragTo: start.withOffset(CGVector(dx: -app.frame.width * 0.4, dy: 0))
+        )
     }
 
     /// Opens a row's leading swipe tray with a **partial** drag across about

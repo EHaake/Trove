@@ -2,10 +2,10 @@ import Foundation
 import SwiftData
 
 /// The one writer of a purchase (plan Q4, §3), the shape and the contract
-/// `ItemSaleStore` holds for a sale: all three hosts mark a wanted entry
-/// bought through this one static, so "creates the item, moves the photos,
-/// marks the entry, releases the plan, clears the device's market rows" is
-/// one function's contract rather than three screens' agreement.
+/// `ItemSaleStore` holds for a sale: every host marks a wanted entry bought
+/// through this one static, so "creates the item, moves the photos, marks the
+/// entry, records the item, releases the plan, clears the device's market
+/// rows" is one function's contract rather than four screens' agreement.
 ///
 /// **Callers save**, the `MarketLocalStore` shape: this leaves its changes in
 /// the caller's context, so the new item, the marker and the local market
@@ -28,11 +28,12 @@ enum WishlistPurchaseStore {
     }
 
     /// The purchase: a new owned item carrying everything the wanted entry
-    /// knew, its photos moved across, the entry marked bought, its unsold
-    /// candidates released and its sold-toward history kept.
+    /// knew, its photos moved across, the entry marked bought and recording
+    /// the item it became (009 Amendment A), its unsold candidates released
+    /// and its sold-toward history kept.
     ///
     /// **An entry is bought once.** The guard lives here rather than in the
-    /// three hosts because the two windows in which a second tap is reachable
+    /// four hosts because the two windows in which a second tap is reachable
     /// are windows the hosts cannot close: `WishlistDetailView`'s `.onAppear`
     /// (R2's mechanism) fires on push and on return, not when a marker
     /// arrives from another device mid-screen (criterion 12), and
@@ -91,6 +92,9 @@ enum WishlistPurchaseStore {
         }
 
         wanted.boughtDate = now
+        // 009 Amendment A (QA1): after the guard and the insert, so a refused
+        // second purchase cannot move the record off the first item.
+        wanted.boughtItem = item
         // P6: nothing is earmarked toward a purchase that has happened. The
         // sales already recorded toward it (`itemsSoldToward`) are the record
         // Decision 3 keeps, and are deliberately untouched.

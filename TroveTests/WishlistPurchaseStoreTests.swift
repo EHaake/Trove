@@ -243,4 +243,159 @@ struct WishlistPurchaseStoreTests {
         #expect(try MarketLocalStore.history(for: otherWanted.id, in: elsewhere).count == 1)
         #expect(try MarketLocalStore.snapshot(for: otherWanted.id, in: elsewhere) != nil)
     }
+
+    // MARK: - G25: the record of the item the purchase became
+
+    /// G25 (009 Amendment A, QA1, criterion 20). The purchase records the item
+    /// it became, and **both ends** read back on a second context. `Item` has
+    /// two to-one relationships into `WishlistItem`, so the bought item's
+    /// `soldTowardWishlistItem` is read too: a purchase that wrote the record
+    /// onto the sold-toward link turns that leg red (T017, mutation-checked).
+    /// With `inverse:` removed from `Item`'s declaration, what T017 observed
+    /// was not a mis-pairing: SwiftData made two one-way links, the item's
+    /// `boughtFromWishlistItem` read back nil here, and the CloudKit schema
+    /// check went red.
+    @Test func thePurchaseRecordsTheItemItBecameOnBothEnds() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        // An owned bystander, so "the item it became" is picked out of more
+        // than one `Item`.
+        context.insert(Item(name: "Telecaster", purchasePriceCents: 100_000))
+        let wanted = WishlistItem(name: "Rickenbacker 330")
+        context.insert(wanted)
+        try context.save()
+        let wantedID = wanted.id
+
+        let item = try WishlistPurchaseStore.markBought(wanted, purchase: purchase(), at: now, in: context)
+        try context.save()
+        let itemID = item.id
+
+        let elsewhere = ModelContext(container)
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first { $0.id == wantedID })
+        let bought = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first { $0.id == itemID })
+        #expect(entry.boughtItem?.id == itemID, "the entry records the item its purchase created")
+        #expect(bought.boughtFromWishlistItem?.id == wantedID, "and the item records the entry it came from")
+        #expect(bought.soldTowardWishlistItem == nil, "the record is not the sold-toward link")
+        #expect((entry.itemsSoldToward ?? []).isEmpty, "nothing was sold toward the entry")
+    }
+
+    /// G25. A refused second purchase moves nothing: the record stays on the
+    /// first purchase's item and no second item is created.
+    @Test func aRefusedSecondPurchaseLeavesTheRecordOnTheFirstItem() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let wanted = WishlistItem(name: "Rickenbacker 330")
+        context.insert(wanted)
+        try context.save()
+
+        let first = try WishlistPurchaseStore.markBought(wanted, purchase: purchase(), at: now, in: context)
+        try context.save()
+        let firstID = first.id
+
+        #expect(throws: WishlistPurchaseStore.PurchaseError.alreadyBought) {
+            try WishlistPurchaseStore.markBought(wanted, purchase: purchase(310_000), at: now, in: context)
+        }
+        try context.save()
+
+        let elsewhere = ModelContext(container)
+        let items = try elsewhere.fetch(FetchDescriptor<Item>())
+        #expect(items.map(\.id) == [firstID], "a refused purchase creates no second item")
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(entry.boughtItem?.id == firstID, "the record stays on the first purchase's item")
+    }
+
+    // MARK: - G26: the record's delete rules
+
+    /// A planned entry bought, one photo moved onto the item, saved.
+    private func boughtWithAPlan(
+        in context: ModelContext
+    ) throws -> (wantedID: UUID, itemID: UUID, photoID: UUID) {
+        let wanted = WishlistItem(name: "Rickenbacker 330")
+        context.insert(wanted)
+        let photo = Photo(imageData: Data([0xAB]), source: .device)
+        context.insert(photo)
+        wanted.photos = [photo]
+        SellPlanStore.create(for: wanted, at: boughtOn)
+        try context.save()
+        let item = try WishlistPurchaseStore.markBought(wanted, purchase: purchase(), at: now, in: context)
+        try context.save()
+        return (wanted.id, item.id, photo.id)
+    }
+
+    /// G26 (QA1, criteria 13 and 20). Deleting the bought item nils the
+    /// record and nothing more: the entry is still there, still bought, still
+    /// planned — a completed plan with the placeholder.
+    @Test func deletingTheBoughtItemLeavesTheEntryBoughtAndPlannedWithNoRecord() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let ids = try boughtWithAPlan(in: context)
+
+        let deleting = ModelContext(container)
+        let item = try #require(try deleting.fetch(FetchDescriptor<Item>()).first { $0.id == ids.itemID })
+        deleting.delete(item)
+        try deleting.save()
+
+        let elsewhere = ModelContext(container)
+        #expect(try elsewhere.fetch(FetchDescriptor<Item>()).isEmpty, "the fixture: the bought item is gone")
+        let entry = try #require(
+            try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first { $0.id == ids.wantedID },
+            "deleting the bought item must never delete the entry"
+        )
+        #expect(entry.boughtDate == now, "the entry is still bought")
+        #expect(entry.sellPlanCreatedAt == boughtOn, "and still planned, so it stays on Completed")
+        #expect(entry.boughtItem == nil, "the record nils with the item")
+    }
+
+    /// G26 (QA1). Selling the bought item leaves the record where it was —
+    /// sold toward *another* entry's plan, so the sale writes `Item`'s other
+    /// to-one into `WishlistItem` beside the record.
+    @Test func sellingTheBoughtItemLeavesTheRecordIntact() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let ids = try boughtWithAPlan(in: context)
+        let nextWant = WishlistItem(name: "Vox AC15")
+        context.insert(nextWant)
+        try context.save()
+        let nextWantID = nextWant.id
+
+        let item = try #require(try context.fetch(FetchDescriptor<Item>()).first { $0.id == ids.itemID })
+        try ItemSaleStore.markSold(
+            item, sale: Sale(date: now, priceCents: 260_000, location: "Reverb", note: nil),
+            toward: nextWant, at: now, in: context
+        )
+        try context.save()
+
+        let elsewhere = ModelContext(container)
+        let entries = try elsewhere.fetch(FetchDescriptor<WishlistItem>())
+        let entry = try #require(entries.first { $0.id == ids.wantedID })
+        let sold = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first { $0.id == ids.itemID })
+        #expect(sold.isSold, "the fixture: the bought item sold")
+        #expect(entry.boughtItem?.id == ids.itemID, "the entry still records the item it became")
+        #expect(sold.boughtFromWishlistItem?.id == ids.wantedID)
+        #expect(sold.soldTowardWishlistItem?.id == nextWantID, "the sale's own link is the other entry")
+        #expect(entries.first { $0.id == nextWantID }?.boughtItem == nil, "the sale records no purchase")
+    }
+
+    /// G26 (QA1). No path deletes a bought entry today (`015` R1); if one ever
+    /// does, the owned item and its photos stay.
+    @Test func deletingTheBoughtEntryLeavesTheItemAndItsPhotos() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let ids = try boughtWithAPlan(in: context)
+
+        let deleting = ModelContext(container)
+        let entry = try #require(try deleting.fetch(FetchDescriptor<WishlistItem>()).first { $0.id == ids.wantedID })
+        deleting.delete(entry)
+        try deleting.save()
+
+        let elsewhere = ModelContext(container)
+        #expect(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).isEmpty, "the fixture: the entry is gone")
+        let item = try #require(
+            try elsewhere.fetch(FetchDescriptor<Item>()).first { $0.id == ids.itemID },
+            "deleting the entry must never delete the owned item"
+        )
+        #expect(item.boughtFromWishlistItem == nil, "the record nils with the entry")
+        #expect((item.photos ?? []).map(\.id) == [ids.photoID], "the item keeps its photos")
+        #expect(try elsewhere.fetch(FetchDescriptor<Photo>()).count == 1)
+    }
 }

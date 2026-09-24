@@ -157,6 +157,15 @@ behind is `009`'s to surface or sweep, as this spec's Non-goals record.
   add one without a migration if it turns out to want one. No purchase price or
   date on the entry either — those live on the `Item`, which is the record of
   the purchase.
+
+  *Superseded in part by `009-sell-plan-list` (its spec, Amendment A,
+  Decision 16; plan QA1), 2026-09-23: the relationship foreseen here was
+  added — `WishlistItem.boughtItem` ↔ `Item.boughtFromWishlistItem`, optional
+  and `.nullify` at both ends, written only by `markBought` — so a completed
+  plan's row can show the bought item's picture. It revises Decision 2's
+  "no link" only as this Q1 carried it: the link's one reader takes the
+  item's **photos**, never a price, and nothing claims the sales funded the
+  purchase. Purchases made before it carry no link.*
 - **Q2. `Purchase`, beside `Sale`, in its own file.** `nonisolated struct
   Purchase: Sendable, Equatable { date, priceCents, location: String?,
   condition: Condition }` in `Trove/Models/Purchase.swift`, the shape
@@ -776,6 +785,17 @@ confirm wired to call `confirm` unguarded → red). The comparison line's own
   G18's leg was rewritten to pin the word **and** the absence of any `Image(`
   in the gate, so a glyph cannot return beside it.
 
+  *Superseded in part by `009-sell-plan-list` (its plan Q11, Q12 as amended;
+  spec Decisions 13 and 14), 2026-09-23: the gate is now
+  `viewModel.offersPurchase` — an entry still there **and not yet bought** —
+  because `009` opens a bought entry's plan as a read-only record, where an
+  ungated Buy would offer to buy the thing twice; G18 was rewritten to that
+  gate (with the old gate put back, the old guard stayed green and the new
+  one went red). The bar also gained a **Delete** of its own, in rust, apart
+  from Buy. "A one-row menu is a menu for nothing" **stands**: `009` first
+  put Delete behind a one-row "…" here, and the person had it withdrawn at
+  the Phase 3 walkthrough for exactly this reason.*
+
 **Testable claims**: G15 (the list's swipe order and wiring), G16 (the glyph),
 G17 (the menu row and the absent page button), G18 (the Sell Plan's toolbar,
 sheet and dismiss), G19 (the detail's dismiss-on-appear). Every scan `#require`s
@@ -1054,6 +1074,14 @@ and T013 verified it is there.
   trap was real and was held: `003` deliberately refused a target or a
   progress figure on that button, and a **count** of what the person set aside
   is allowed where "$840 of $3,900" is not.
+
+  *Superseded by `009-sell-plan-list` (its spec P9, Decision 1), 2026-09-22:
+  the two states are no longer derived from the selection. A plan is stored
+  on the entry, the no-plan state reads **Create a sell plan** and creates
+  it at the tap, and the plan state's subtitle falls back from the set-aside
+  count to the sold count to "Nothing set aside yet" — so a plan whose every
+  item has sold no longer reverts to reading as no plan. The strings moved
+  into `SellPlanCopy`; the rule held here — a count, never a target — holds.*
 - **`WishlistDetailViewModel` reports `PurchaseCopy` rather than
   `error.localizedDescription`** (T012b), so no raw system error string can
   reach a Trove screen from this path.
