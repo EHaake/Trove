@@ -782,6 +782,12 @@ Settings row it leads to; the UI tests last, against the final layout.
   `specs/ROADMAP.md` as a follow-up — the person's answer.
 
   **Done:** 2026-09-23. Delete All Items (several): "Their photos go too. Every sell plan loses its items, and completed plans lose their pictures." The person chose (a) for a single item: `ItemDeleteCopy.message(isSold:picturesACompletedPlan:)` adds "…and the completed plan it was bought for loses its picture" (owned) / "Its photos go too, and the completed plan it was bought for loses its picture." (sold) only when `item.boughtFromWishlistItem != nil`; flag off reads byte for byte as before. `DeleteAllCopy`'s one-item text takes the same flag, so `aListOfOneReadsLikeTheSingleItemAlert` keeps its exact equality over both values. The item page, the Items list and Settings' only-item case each take the flag from their view model. Mutations, each red: the clause removed (owned; sold); Delete All ignoring the flag; each of the three view models hardcoding false. No UI test goes through an item's delete alert (the wording has no on-screen check). `scripts/verify.sh`: 1746 tests in 234 suites passed.
+- [ ] **T021b — The Plans tab icon redrawn as the tipped scale (spec Amendment A, Decision 19).**
+  `design/icons/tab-plans.svg` and `TabPlans.imageset/tab-plans.svg` become
+  candidate H (the drawing is in the bundle); `TabIconTests` green unedited —
+  G20's template and four-distinct legs re-run as mutations; `design/tokens.md`'s
+  tab-icon line describes the new mark.
+
 ## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; the person's own checks (VoiceOver, two devices) are named in T015 as their steps rather than a phase walkthrough, and nothing new is built
 
 - [ ] **T015 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver, two devices]**

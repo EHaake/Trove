@@ -994,6 +994,15 @@ recorded in `tasks.md` against the task that carries it.
     delete leaves them (Decision 9). The row is dimmed when there are no
     plans, drawn in rust (Decision 14).
 
+19. **The Plans tab icon is redrawn: a tipped scale** — revising Decision 8's
+    first mark, which the device pass found carried about half the other
+    icons' weight. The person chose it over three rounds of candidates
+    (2026-09-23): "I like the idea of J, but I think the multiple blocks will
+    be too small to be noticeable on a small screen. Let's go with H." A beam
+    on a post, tipped, with a faint block (what is set aside) on its low end
+    and a solid one (what is wanted) on its high end, in the Wishlist mark's
+    shade steps. (T021b)
+
 ### Acceptance criteria
 
 Verified at T016 as criteria 1–19 were (the preamble above). Criteria 20
