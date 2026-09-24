@@ -1042,19 +1042,23 @@ away**:
   own are empty on every completed plan the app itself made; reading them
   as a fallback would only ever show something in a sync race (a photo added
   on another device before it heard of the purchase). One source, stated.
-- **RA2 — "Delete all sell plans" removes the plans the app has stored, and
-  counts exactly those.** A row still awaiting the carry-over (Q2, R7) holds
+- **RA2 — "Delete all sell plans" removes every plan, including rows still
+  awaiting the carry-over — (b), the person's answer, 2026-09-23.** The text
+  that follows was the draft's reading (a), kept for the record; **(b)
+  below is what is built.** A row still awaiting the carry-over (Q2, R7) holds
   no stored plan: its page reads "Create a sell plan" and the Plans tab does
   not list it. It is neither counted nor touched, so the alert's number is
   the number of rows the Plans tab shows (the `015` R1 principle Settings'
   wishlist delete already follows: the gesture deletes exactly what the
   alert's number promised). Consequence: if the carry-over runs afterwards,
-  that row becomes a plan then — as it would have without the delete. **Open:
-  the person is being asked about this** (returned by the planner as a
-  product question); the orchestrator transcribes the answer here.
+  that row becomes a plan then — as it would have without the delete.
+  **Answered (b) by the person on 2026-09-23**, with the sign-off review's
+  recommendation: after "Delete all", no plan comes back on its own
+  (criterion 12's spirit); the count may exceed what the Plans tab lists,
+  and only while that tab reads "Catching up with iCloud".
   - **(a), as written**: fetch and count `#Predicate<WishlistItem> {
     $0.sellPlanCreatedAt != nil }`.
-  - **(b), the implementation path if chosen**: `awaitsCarryOver` cannot go
+  - **(b), the implementation path — chosen**: `awaitsCarryOver` cannot go
     in a `#Predicate` (it reads relationships), so fetch
     `$0.sellPlanCreatedAt != nil || $0.sellPlanCheckedAt == nil`, filter in
     memory by `hasSellPlan || awaitsCarryOver`, and take `planCount` from that
@@ -1331,7 +1335,7 @@ away**:
 | G32 | `SettingsWiringTests`: `PlansView.swift` in `settingsHosts` (sheet reload + threading tests extend); new — every `Tab(` root in `ContentView`, as many as `AppRouter.Tab.allCases`, is a Settings host with an anchored `OverflowBadge(` and a host writing `isShowingSettings = true` | Plans' badge removed; Plans' sheet `onDismiss` dropped; `PlansView` removed from `settingsHosts` (the roots-are-hosts leg); the Plans tab's root swapped for a screen with no Settings |
 | G33 | `DropdownWiringTests.everyBadgeCarriesItsHintAndIdentifier`: Plans' sort and "…" badges | `moreActions.plans` misspelled or dropped |
 | G34 | `DeleteAllCopyTests`: `.sellPlans` titles (plural, singular), both messages by literal in `.cloudKit` and `.localOnly`, iCloud rule and "can't be undone" over `DeleteTarget.allCases` | a sell-plans sentence reworded; the iCloud sentence shown in `.localOnly` for it |
-| G35 | `SettingsViewModelTests`, second context — fixture: an active plan (selection, a sale toward it), a completed plan (bought, its record, a sale toward it), **a stored plan whose `sellPlanCheckedAt` the test sets nil, with a sale toward it** (the defence path `SellPlanStore.delete` documents), a planless entry, a planless bought entry, and a row awaiting the carry-over: `planCount` equals the stored plans (3 under RA2(a)); `canDeleteSellPlans` false at 0; `requestDeleteAll(.sellPlans)` re-counts; confirm → every removed plan gone and selections empty; every entry present; every `Item`'s sale, value, desire and count identical; `itemsSoldToward` the same ids; the record identical; **every row the delete removed a plan from ends checked, and a following `carryOver` gives none of those rows a plan** — asserted per removed row, so it holds under either RA2 answer (under (b) the awaiting row is one of them); the planless entries untouched, and under (a) the awaiting row too; `activity` `.deleteSellPlans` synchronously, nil after; a second action refused while busy | entries deleted instead of their plans; completed plans skipped (`&& boughtDate == nil`); `itemsSoldToward` cleared; the save dropped; `planCount` counting every entry; **`delete`'s nil-stamp dropped** (the unchecked stored plan is re-planned by the carry-over) |
+| G35 | `SettingsViewModelTests`, second context — fixture: an active plan (selection, a sale toward it), a completed plan (bought, its record, a sale toward it), **a stored plan whose `sellPlanCheckedAt` the test sets nil, with a sale toward it** (the defence path `SellPlanStore.delete` documents), a planless entry, a planless bought entry, and a row awaiting the carry-over: `planCount` equals the stored plans plus the row awaiting the carry-over (**4**, RA2(b)); `canDeleteSellPlans` false at 0; `requestDeleteAll(.sellPlans)` re-counts; confirm → every removed plan gone and selections empty; every entry present; every `Item`'s sale, value, desire and count identical; `itemsSoldToward` the same ids; the record identical; **every row the delete removed a plan from ends checked, and a following `carryOver` gives none of those rows a plan** — asserted per removed row, so it holds under either RA2 answer (under (b) the awaiting row is one of them); the planless entries untouched; `activity` `.deleteSellPlans` synchronously, nil after; a second action refused while busy | entries deleted instead of their plans; completed plans skipped (`&& boughtDate == nil`); `itemsSoldToward` cleared; the save dropped; `planCount` counting every entry; **`delete`'s nil-stamp dropped** (the unchecked stored plan is re-planned by the carry-over) |
 | G36 | `SettingsWiringTests`: destructive rows exactly 3, hints exactly 3, action rows exactly 8, each gated on `!viewModel.isBusy` and reading its own activity | the new row without `isDestructive: true`; without its hint; without `!viewModel.isBusy` |
 | G37 | QA6's two UI tests, and the whole UI suite twice back to back | Plans' badge removed (the every-tab test); the sheet's `onDismiss` reload dropped (the empty-state leg); entries deleted instead of plans (the Wishlist leg) |
 | G38 | Unedited and green: `ExportSchemaTests`, `ImportSchemaTests` (criterion 23), `PurchaseUndoTests` (`boughtDate` still has one writer), `PhotoOwnershipTests`, `MenuPolicyTests`, `DestructiveColourPolicyTests` (counts 15/9/6), `SellPlanFramingTests`, `PlansWiringTests.theScreenDrawsNoMoneyAndReachesNoStore` | — |
