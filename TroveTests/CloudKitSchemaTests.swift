@@ -30,6 +30,15 @@ import Testing
 /// `sellPlanCheckedAt`: both optional, neither unique, additive to the same
 /// store — and T001 proved it the same way, declaring
 /// `@Attribute(.unique) var sellPlanCreatedAt: Date?` turns this test red.
+///
+/// The fourth is `009` Amendment A's relationship pair
+/// `WishlistItem.boughtItem` ↔ `Item.boughtFromWishlistItem`: both ends
+/// optional, an inverse declared, `.nullify` rather than `.deny` — and T017
+/// proved it the same way, `deleteRule: .deny` on either end turns this test
+/// red. Removing `inverse:` from `Item`'s declaration turns it red as well:
+/// T017 observed SwiftData make two one-way links, not pair the record with
+/// `Item`'s other to-one into `WishlistItem`. `WishlistPurchaseStoreTests`
+/// reads both ends back on a second context.
 @Suite("CloudKit schema compatibility")
 struct CloudKitSchemaTests {
     @Test func schemaMeetsCloudKitRequirements() throws {

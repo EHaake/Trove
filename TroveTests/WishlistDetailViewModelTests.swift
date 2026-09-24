@@ -1731,6 +1731,10 @@ struct WishlistPurchaseHostTests {
         /// 009, criterion 3: the plan survives the purchase whichever host
         /// made it — that is what puts it on the Completed side.
         var sellPlanCreatedAt: Date?
+        /// 009 Amendment A (QA1, criterion 20): the entry records the item the
+        /// purchase created, and that item records the entry — whichever host
+        /// made the purchase.
+        var recordsTheCreatedItem: Bool
 
         var description: String { "\(name) @ \(purchasePriceCents), bought \(String(describing: boughtDate))" }
     }
@@ -1766,7 +1770,9 @@ struct WishlistPurchaseHostTests {
             boughtDate: wanted.boughtDate,
             wishlistPhotoCount: (wanted.photos ?? []).count,
             plannedSaleCount: (wanted.plannedSaleItems ?? []).count,
-            sellPlanCreatedAt: wanted.sellPlanCreatedAt
+            sellPlanCreatedAt: wanted.sellPlanCreatedAt,
+            recordsTheCreatedItem: wanted.boughtItem?.id == item.id
+                && item.boughtFromWishlistItem?.id == wanted.id
         )
     }
 
@@ -1856,6 +1862,13 @@ struct WishlistPurchaseHostTests {
         #expect(fromList.wishlistPhotoCount == 0, "moved, never copied")
         #expect(fromList.plannedSaleCount == 0, "P6: nothing is earmarked toward a purchase that has happened")
         #expect(fromList.sellPlanCreatedAt == plannedOn, "the plan survives the purchase, on its own date")
+
+        // G28 (009 Amendment A, criterion 20): absolute, per host. The
+        // equality legs above stay green when every host fails to record the
+        // item alike, so each host is held to it on its own.
+        for (host, landed) in [("the list", fromList), ("the page", fromPage), ("the plan", fromPlan), ("the Plans tab", fromPlans)] {
+            #expect(landed.recordsTheCreatedItem, "\(host): the purchase records the item it became")
+        }
     }
 
     /// 009, criterion 3: a purchase through any host leaves a planless entry

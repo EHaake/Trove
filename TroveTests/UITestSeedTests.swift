@@ -361,6 +361,10 @@ struct UITestSeedTests {
         // desire 5, and the two purchases.
         let owned = try context.fetch(FetchDescriptor<Item>()).filter { !$0.isSold }
         #expect(Set(owned.map(\.name)) == ["Telecaster", "Leica M6", "Hasselblad 80mm", "Nikon FM2"])
+        // 009 Amendment A (G29): the Hasselblad's purchase records the item it
+        // became, so its completed row has a picture source.
+        let hasselbladItem = try #require(owned.first { $0.name == "Hasselblad 80mm" })
+        #expect(hasselblad.boughtItem?.id == hasselbladItem.id, "the seeded purchase records the seeded Hasselblad 80mm item")
         let telecaster = try #require(owned.first { $0.name == "Telecaster" })
         #expect(telecaster.currentValueCents == 60_000)
         #expect(telecaster.desireToKeep == 2)

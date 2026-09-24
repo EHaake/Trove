@@ -93,6 +93,15 @@ struct ItemDuplicationTests {
         let wanted = WishlistItem(name: "Vox AC15", categoryPath: "Music/Amps")
         context.insert(wanted)
         wanted.plannedSaleItems = [original]
+        // 009 Amendment A (G39): the original is also the item a second,
+        // bought entry became — that entry has no selection, as a bought
+        // entry never does. The two fields are set directly for brevity;
+        // `WishlistPurchaseStoreTests` (G25) proves `markBought` writes the
+        // same two.
+        let bought = WishlistItem(name: "Rickenbacker 330", categoryPath: "Music/Guitars")
+        context.insert(bought)
+        bought.boughtDate = Date(timeIntervalSince1970: 1_770_000_000)
+        bought.boughtItem = original
         try context.save()
 
         let viewModel = ItemListViewModel(modelContext: context)
@@ -100,11 +109,16 @@ struct ItemDuplicationTests {
         viewModel.duplicate(id: original.id)
 
         let fresh = ModelContext(container)
-        let plan = try #require(try fresh.fetch(FetchDescriptor<WishlistItem>()).first)
+        let entries = try fresh.fetch(FetchDescriptor<WishlistItem>())
+        let plan = try #require(entries.first { $0.name == "Vox AC15" })
         #expect(
             plan.plannedSaleItems?.map(\.id) == [original.id],
             "The plan's selection must still be exactly the original — the user selected nothing else"
         )
+        let purchase = try #require(entries.first { $0.name == "Rickenbacker 330" })
+        let copy = try #require(try fresh.fetch(FetchDescriptor<Item>()).first { $0.id != original.id })
+        #expect(purchase.boughtItem?.id == original.id, "The purchase's record stays on the original")
+        #expect(copy.boughtFromWishlistItem == nil, "The copy was bought from nothing")
     }
 
     @Test func theCopyLandsImmediatelyAfterTheOriginal() throws {

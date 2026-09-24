@@ -1138,7 +1138,12 @@ away**:
     `boughtItem` with the wrong one and still validate. The guard for that is
     G25's both-ends leg on a second context — `wanted.boughtItem` **and**
     `item.boughtFromWishlistItem` read back, and `soldTowardWishlistItem`
-    still nil on the bought item. The additive migration of a store
+    still nil on the bought item. *(As built, T017: measured, the premise
+    is wrong — with `inverse:` removed SwiftData made two one-way links, and
+    `CloudKitSchemaTests`/`TwoStoreContainerTests` went red (no inverse), as
+    did G25's `boughtFromWishlistItem` leg. The `soldTowardWishlistItem`
+    leg is proved by its own mutation instead — the purchase also writing
+    that link.)* The additive migration of a store
     already in the field (from `main`, and from this branch's Phase 4
     builds, which the person's walkthrough store is) is **verified at the
     device pass** (T015), as §1's was.

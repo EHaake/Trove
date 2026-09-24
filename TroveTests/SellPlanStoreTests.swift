@@ -173,6 +173,10 @@ struct SellPlanStoreTests {
 
     /// G6 (criterion 11). A completed plan: the purchased item stays in the
     /// collection untouched, and the entry stays bought.
+    ///
+    /// G27 (009 Amendment A, QA1): the delete leaves the purchase's record of
+    /// the item it became exactly as it was — the record belongs to the
+    /// purchase, not the plan (Decision 9's "only the plan").
     @Test func deletingACompletedPlanLeavesThePurchaseAndTheHistory() throws {
         let container = try makeInMemoryContainer()
         let context = ModelContext(container)
@@ -185,6 +189,10 @@ struct SellPlanStoreTests {
         let itemsBefore = try itemStates(in: before)
         let soldTowardBefore = soldTowardIDs(of: try wanted(named: "Rickenbacker 330", in: before))
         #expect(itemsBefore.count == 4, "the three owned items and the purchase")
+        let recordBefore = try #require(
+            try wanted(named: "Rickenbacker 330", in: before).boughtItem?.id,
+            "the fixture: the purchase recorded the item it became"
+        )
 
         SellPlanStore.delete(planOf: entry, at: now)
         try context.save()
@@ -192,6 +200,7 @@ struct SellPlanStoreTests {
         try expectOnlyThePlanWent(container: container, itemsBefore: itemsBefore, soldTowardBefore: soldTowardBefore)
         let stored = try wanted(named: "Rickenbacker 330", in: ModelContext(container))
         #expect(stored.boughtDate == soldOn, "the entry stays bought")
+        #expect(stored.boughtItem?.id == recordBefore, "deleting the plan leaves the purchase's record identical")
     }
 
     /// G6 (Q4's defence, criterion 12's "does not come back"). A delete on a

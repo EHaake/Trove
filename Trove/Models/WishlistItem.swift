@@ -100,6 +100,15 @@ final class WishlistItem {
     @Relationship(deleteRule: .nullify)
     var itemsSoldToward: [Item]? = []
 
+    /// 009 Amendment A (Decision 16): the item this entry became when it was
+    /// bought — nil while wanted, nil on a purchase made before Amendment A,
+    /// and nil again once that item is deleted. Written only by
+    /// `WishlistPurchaseStore.markBought`. Read in one place: the Plans row's
+    /// picture (`PlansViewModel`). Never a source of money — `015` Decision 2
+    /// and this spec's Decision 5 stand. `Item` owns the inverse declaration.
+    @Relationship(deleteRule: .nullify)
+    var boughtItem: Item?
+
     /// The one bought predicate, in memory, as `Item.isSold` is for the sale.
     /// Predicates and sort descriptors can only see the stored `boughtDate`,
     /// so they spell out `boughtDate == nil` themselves (plan Q1).

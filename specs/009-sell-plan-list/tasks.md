@@ -564,7 +564,7 @@ schema and its one writer first, since the row's picture reads the record;
 then the row; then the Plans "…" (independent of the record); then the
 Settings row it leads to; the UI tests last, against the final layout.
 
-- [ ] **T017 — The purchase records the item it became. `review: per-task`.**
+- [x] **T017 — The purchase records the item it became. `review: per-task`.**
   Per plan QA1. `WishlistItem.boughtItem: Item?` with
   `@Relationship(deleteRule: .nullify)` and `Item.boughtFromWishlistItem:
   WishlistItem?` with `@Relationship(deleteRule: .nullify, inverse:
@@ -621,6 +621,7 @@ Settings row it leads to; the UI tests last, against the final layout.
   mutation recorded verbatim; `scripts/verify.sh ui` once, green at the
   count before the task (the schema change must disturb no seed).
 
+  **Done:** 2026-09-23. `WishlistItem.boughtItem` ↔ `Item.boughtFromWishlistItem`, `.nullify` both ends, inverse on `Item`, neither an `init` parameter; `markBought` sets `wanted.boughtItem = item` after the guard and the insert. Guards and mutations, each red on a named assertion: G24 — `.deny` on either end → `CloudKitSchemaTests.schemaMeetsCloudKitRequirements` and `TwoStoreContainerTests.theProductionPairingLoadsAndSplits` (134060, "unsupported delete rules"); `inverse:` removed → both schema tests red and G25's `boughtFromWishlistItem` leg (SwiftData made two one-way links, not a mis-pairing — plan QA1 corrected as built). G25 — the assignment dropped → 5 issues; the purchase also writing `soldTowardWishlistItem` → `bought.soldTowardWishlistItem == nil` (:274). G26 — `.cascade` on the item's end (entry present) and on the entry's end (item present). G27 — `delete` clearing the record. G28 — the assignment dropped → the per-host `recordsTheCreatedItem` leg red once per host while the equality legs stayed green (why the per-host leg exists). G29 — the seeded Hasselblad's record. G39 — the duplicate taking the back-link → both halves red (:120, :121). G38 unedited and green. `scripts/verify.sh` (orchestrator re-run): 1731 tests passed; `scripts/verify.sh ui`: 34 tests, 0 failures.
 - [ ] **T018 — Completed rows draw the bought item's picture.**
   Per plan QA2, RA1. `PlansViewModel`: `PlanRow.showsThumbnail` **deleted**;
   `row(for:)` sets `photos` to `wanted.photos ?? []` on an active row and
@@ -908,3 +909,5 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | `skeptical-reviewer` — Amendment A sign-off | `opus` | ~170k (harness) | 1 BLOCKING: T018 deletes `showsThumbnail` while a test outside its file list builds a `PlanRow` with it; 9 non-blocking. Recommends RA2(b) |
 | `sdd-planner` — Amendment A fix pass (resumed) | `opus` | ~28k (budget counter) | All nine applied; G39 added; RA2 left for the person |
 | `skeptical-reviewer` — Amendment A re-review | `opus` | ~188k (harness, cumulative) | Signed off; all FIXED. Notes: G35's count reads 4 under RA2(b); G39 would read cleaner on a second wanted item with no selection |
+| T017 — `sdd-implementer` | `opus` | ~116k (harness, incl. a follow-up round) | Done first pass; review follow-ups applied |
+| T017 — `skeptical-reviewer` per-task | `opus` | ~73k (harness) | Signed off; 0 blocking, 6 non-blocking: the never-red `soldTowardWishlistItem` leg mutation-proved; QA1's mis-pairing premise corrected in plan.md; G39 split; "three hosts" → four; the doc naming `PlansViewModel` as reader confirmed at T018 |
