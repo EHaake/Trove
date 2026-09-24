@@ -7,7 +7,8 @@ import Testing
 /// on which side, the seven sorts and their tie-break, each side keeping its
 /// own sort, and the four empty reasons with `stillSyncing` first. G13, the
 /// fourth purchase host, lives beside the other three in
-/// `WishlistPurchaseHostTests`.
+/// `WishlistPurchaseHostTests`. G30 (Amendment A) pins where each side's
+/// row picture comes from.
 ///
 /// Every date here is distinct from every other a broken implementation could
 /// read instead: plan dates never coincide with bought dates or the view
@@ -188,25 +189,107 @@ struct PlansViewModelTests {
         #expect((entry.itemsSoldToward ?? []).map(\.name) == ["Nikon F3"], "what sold toward it stays on the record")
     }
 
-    /// Criterion 7, Decision 11, R2: an active row shows its thumbnail, a
-    /// completed row has no picture slot.
+    /// G30 (Amendment A, QA2, RA1, criterion 20): where each side's picture
+    /// comes from. An active row's photos are its entry's; a completed row's
+    /// are the item its purchase became — the entry's own moved there at the
+    /// purchase, so they are empty — and stay so after that item is sold.
+    /// Every photo has its own id, so a row reading the wrong owner's reads a
+    /// different id, not an empty array that happens to match.
     ///
-    /// Mutation: `showsThumbnail` true throughout → red.
-    @Test func showsThumbnailIsTrueOnActiveRowsAndFalseOnCompletedOnes() throws {
-        let context = try makeInMemoryContext()
-        wanted("Summicron 35mm f/2", planned: day(1), into: context)
-        wanted("Vox AC15 Custom", planned: day(2), into: context)
-        let bought = wanted("Fender Deluxe", planned: day(3), into: context)
-        try buy(bought, on: day(5), in: context)
+    /// Mutations (T018): completed rows reading `wanted.photos` → red (the
+    /// deleted `showsThumbnail` leg, which only asked whether a slot showed,
+    /// passes it); active rows reading `boughtItem` → red; completed photos
+    /// read only while the item is unsold → red on the sold leg.
+    @Test func anActiveRowShowsItsEntrysPhotosAndACompletedRowItsBoughtItems() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let active = wanted("Summicron 35mm f/2", planned: day(1), into: context)
+        let wantedPhoto = Photo(imageData: Data([0xA1]), source: .device)
+        active.photos = [wantedPhoto]
+        let completed = wanted("Fender Deluxe", position: 1, planned: day(2), into: context)
+        let movedPhoto = Photo(imageData: Data([0xB2]), source: .device)
+        completed.photos = [movedPhoto]
+        try context.save()
+        let item = try buy(completed, on: day(5), in: context)
+        try context.save()
+        #expect((completed.photos ?? []).isEmpty, "the fixture: the purchase moved the entry's photo to the item")
+        #expect(item.photos?.map(\.id) == [movedPhoto.id], "the fixture: the bought item holds the moved photo")
+
+        let viewModel = PlansViewModel(modelContext: ModelContext(container), now: { self.now })
+        viewModel.load()
+        #expect(viewModel.activeRows.map { $0.photos.map(\.id) } == [[wantedPhoto.id]], "an active row shows its entry's photos")
+        #expect(viewModel.completedRows.map { $0.photos.map(\.id) } == [[movedPhoto.id]], "a completed row shows its bought item's photos")
+
+        try ItemSaleStore.markSold(
+            item,
+            sale: Sale(date: day(20), priceCents: 90_000, location: "Reverb", note: nil),
+            toward: nil,
+            at: day(20),
+            in: context
+        )
         try context.save()
 
-        let viewModel = PlansViewModel(modelContext: context, now: { self.now })
-        viewModel.load()
+        let afterSale = PlansViewModel(modelContext: ModelContext(container), now: { self.now })
+        afterSale.load()
+        #expect(afterSale.completedRows.map { $0.photos.map(\.id) } == [[movedPhoto.id]], "selling the bought item leaves the completed row's picture")
+    }
 
-        #expect(viewModel.activeRows.count == 2)
-        #expect(viewModel.activeRows.allSatisfy { $0.showsThumbnail })
-        #expect(viewModel.completedRows.count == 1)
-        #expect(viewModel.completedRows.allSatisfy { !$0.showsThumbnail })
+    /// G30 (QA1, RA1): the bought item deleted, the completed row stays on
+    /// Completed with no picture — even with a photo on the wanted entry
+    /// itself, attached after the purchase (a sync race: added on another
+    /// device before it heard of the purchase). One source, never a fallback.
+    ///
+    /// Mutations (T018): completed rows reading `wanted.photos` → red; a
+    /// fallback `boughtItem?.photos ?? wanted.photos ?? []` → red.
+    @Test func aCompletedRowWhoseBoughtItemWasDeletedHasNoPicture() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let completed = wanted("Fender Deluxe", planned: day(2), into: context)
+        completed.photos = [Photo(imageData: Data([0xB2]), source: .device)]
+        try context.save()
+        let item = try buy(completed, on: day(5), in: context)
+        try context.save()
+
+        let deleting = ModelContext(container)
+        let doomed = try #require(try deleting.fetch(FetchDescriptor<Item>()).first { $0.id == item.id })
+        deleting.delete(doomed)
+        try deleting.save()
+
+        let racing = ModelContext(container)
+        let entry = try #require(try racing.fetch(FetchDescriptor<WishlistItem>()).first { $0.id == completed.id })
+        #expect(entry.boughtItem == nil, "the fixture: the record nilled with the item")
+        let late = Photo(imageData: Data([0xC3]), source: .device)
+        entry.photos = [late]
+        try racing.save()
+
+        let viewModel = PlansViewModel(modelContext: ModelContext(container), now: { self.now })
+        viewModel.load()
+        #expect(viewModel.completedRows.map(\.id) == [completed.id], "the row stays on Completed")
+        #expect(viewModel.completedRows.first?.photos.map(\.id) == [], "a deleted bought item leaves the placeholder, not the entry's late photo")
+    }
+
+    /// G30 (RA1, Decision 16): a purchase with no record — the shape of one
+    /// made before Amendment A — shows no picture, even with a photo on the
+    /// wanted entry attached after the purchase.
+    ///
+    /// Mutations (T018): completed rows reading `wanted.photos` → red; a
+    /// fallback `boughtItem?.photos ?? wanted.photos ?? []` → red.
+    @Test func aCompletedRowWithNoPurchaseRecordHasNoPicture() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let completed = wanted("Fender Deluxe", planned: day(2), into: context)
+        completed.photos = [Photo(imageData: Data([0xB2]), source: .device)]
+        try context.save()
+        try buy(completed, on: day(5), in: context)
+        completed.boughtItem = nil
+        let late = Photo(imageData: Data([0xC3]), source: .device)
+        completed.photos = [late]
+        try context.save()
+
+        let viewModel = PlansViewModel(modelContext: ModelContext(container), now: { self.now })
+        viewModel.load()
+        #expect(viewModel.completedRows.map(\.id) == [completed.id], "the row stays on Completed")
+        #expect(viewModel.completedRows.first?.photos.map(\.id) == [], "a purchase with no record leaves the placeholder, not the entry's late photo")
     }
 
     /// Criterion 7: each row's lines are `SellPlanSummary.rowLines` for its

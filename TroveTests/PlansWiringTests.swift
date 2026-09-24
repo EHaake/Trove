@@ -148,13 +148,17 @@ struct PlansWiringTests {
         }
     }
 
-    /// G19, Q5 and R2: the row draws the view model's lines and composes none
-    /// of its own, and draws `RowThumbnail` only inside the
-    /// `row.showsThumbnail` gate — the file's one thumbnail.
+    /// G19 and Q5: the row draws the view model's lines and composes none of
+    /// its own. G31 (Amendment A, QA2, criterion 20): it draws
+    /// `RowThumbnail(photos: row.photos)` — the file's one thumbnail — in
+    /// `PlanRowView`'s body on every row, inside no `if` or `else`, so a
+    /// completed row keeps the slot an active one has; and no
+    /// `showsThumbnail` survives in the file's code.
     ///
-    /// Mutations (T011): a `SellPlanCopy.setAside(` composed in the row → red;
-    /// `RowThumbnail` drawn outside the gate → red.
-    @Test func theRowDrawsItsLinesAndGatesItsThumbnail() throws {
+    /// Mutations: a `SellPlanCopy.setAside(` composed in the row → red
+    /// (T011); the thumbnail gated on `!row.isCompleted` → red (T018);
+    /// `RowThumbnail(photos: [])` → red (T018).
+    @Test func theRowDrawsItsLinesAndAThumbnailOnEveryRow() throws {
         let code = try SourceScan.production(Self.view)
         let start = try #require(code.range(of: "private struct PlanRowView"), "no PlanRowView in \(Self.view)")
         let rowCode = String(code[start.lowerBound...])
@@ -171,16 +175,26 @@ struct PlansWiringTests {
             #expect(!rowCode.contains(member), "PlanRowView composes `\(member)` itself instead of drawing `row.lines` (Q5)")
         }
 
+        let thumbnail = "RowThumbnail(photos: row.photos)"
         #expect(
             code.ranges(of: "RowThumbnail(").count == 1,
             "PlansView.swift draws \(code.ranges(of: "RowThumbnail(").count) thumbnails, expected exactly 1"
         )
-        let gated = SourceScan.closureBodies(after: "if row.showsThumbnail", in: rowCode)
-        try #require(gated.count == 1, "the row has \(gated.count) thumbnail gates, expected exactly 1")
+        let bodies = SourceScan.closureBodies(after: "var body: some View", in: rowCode)
+        let body = try #require(bodies.first, "no `var body` in PlanRowView")
         #expect(
-            gated[0].trimmingCharacters(in: .whitespacesAndNewlines) == "RowThumbnail(photos: row.photos)",
-            "the thumbnail gate holds something other than the thumbnail — a completed row has no picture and no slot (R2): {\(gated[0])}"
+            body.ranges(of: thumbnail).count == 1,
+            "PlanRowView's body draws `\(thumbnail)` \(body.ranges(of: thumbnail).count) times, expected exactly 1 — the view model chose the photos (QA2)"
         )
+        let branches = SourceScan.closureBodies(after: "if ", in: body)
+            + SourceScan.closureBodies(after: "else", in: body)
+        for branch in branches {
+            #expect(
+                !branch.contains("RowThumbnail("),
+                "the thumbnail sits inside a branch — every row on both sides keeps its slot (criterion 20): {\(branch)}"
+            )
+        }
+        #expect(!code.contains("showsThumbnail"), "PlansView.swift still names `showsThumbnail` — the property is gone (QA2)")
     }
 
     /// G19, criterion 5: the switch reports through `show(_:)` and is never

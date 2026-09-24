@@ -71,21 +71,26 @@ final class PlansViewModel {
         case stillSyncing
     }
 
-    /// One row, as a value (plan Q8): nothing on it can supply a money figure,
-    /// so no row can draw one (criterion 8).
+    /// One row, as a value (plan Q8): it declares no money field, so no row
+    /// is handed a figure to draw (criterion 8). It carries the row's photos,
+    /// never the `Item` they came from (Amendment A, QA2) — though that is no
+    /// type-level wall, since `Photo.item` reaches the item's prices;
+    /// `PlansWiringTests.theScreenDrawsNoMoneyAndReachesNoStore` is what keeps
+    /// money off the row.
     struct PlanRow: Identifiable {
         let id: UUID
         let name: String
         let categoryPath: String
+        /// The picture every row draws (Amendment A, criterion 20): an active
+        /// row's are its wanted entry's; a completed row's are the bought
+        /// item's, read through `boughtItem` and never from the entry (RA1) —
+        /// empty when the purchase recorded no item or that item was deleted,
+        /// so the row draws the placeholder.
         let photos: [Photo]
         /// `SellPlanSummary.rowLines` for the entry — which counts show is
         /// decided here, not in the view (criterion 7).
         let lines: [String]
         let boughtDate: Date?
-        /// True on Active, false on Completed (spec Decision 11, plan R2): a
-        /// bought entry's photos moved to the item it became, so a completed
-        /// row has no picture and no picture slot.
-        let showsThumbnail: Bool
 
         var isCompleted: Bool { boughtDate != nil }
     }
@@ -210,21 +215,25 @@ final class PlansViewModel {
 
         activeRows = active
             .sorted { Self.areInActiveOrder($0, $1, under: activeSortOrder) }
-            .map { Self.row(for: $0, showsThumbnail: true) }
+            .map(Self.row(for:))
         completedRows = completed
             .sorted { Self.areInCompletedOrder($0, $1, under: completedSortOrder) }
-            .map { Self.row(for: $0, showsThumbnail: false) }
+            .map(Self.row(for:))
     }
 
-    private static func row(for wanted: WishlistItem, showsThumbnail: Bool) -> PlanRow {
+    private static func row(for wanted: WishlistItem) -> PlanRow {
         PlanRow(
             id: wanted.id,
             name: wanted.name,
             categoryPath: wanted.categoryPath,
-            photos: wanted.photos ?? [],
+            // RA1: a completed row has one source — the item the purchase
+            // became. `015` moved the entry's own photos to it, so the entry's
+            // are empty on every plan the app completed; a fallback to them
+            // would show only a photo synced in from another device before it
+            // heard of the purchase.
+            photos: wanted.isBought ? (wanted.boughtItem?.photos ?? []) : (wanted.photos ?? []),
             lines: SellPlanSummary(wanted).rowLines(boughtDate: wanted.boughtDate),
-            boughtDate: wanted.boughtDate,
-            showsThumbnail: showsThumbnail
+            boughtDate: wanted.boughtDate
         )
     }
 

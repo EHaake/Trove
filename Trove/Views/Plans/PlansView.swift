@@ -343,12 +343,10 @@ private struct PlanRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: theme.metrics.rowContentGap) {
-            // Active rows only (plan R2): a bought entry's photos moved to the
-            // item it became, so a completed row has no picture and no slot.
-            // An active row with no photo still gets the placeholder.
-            if row.showsThumbnail {
-                RowThumbnail(photos: row.photos)
-            }
+            // Every row, on both sides (Amendment A, criterion 20): the view
+            // model chose whose photos these are, and an empty array draws
+            // the placeholder — one shape for every row, as `WishlistRow`.
+            RowThumbnail(photos: row.photos)
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(row.name)
@@ -373,8 +371,8 @@ private struct PlanRowView: View {
         // One element, as the wishlist row is.
         .accessibilityElement(children: .combine)
         // A stock-leading thumbnail is announced as representative, as on
-        // the wishlist row — only where a thumbnail is drawn.
-        .accessibilityValue(row.showsThumbnail && PhotoSelection.leadsWithStock(row.photos)
+        // the wishlist row. Same predicate as the visible mark.
+        .accessibilityValue(PhotoSelection.leadsWithStock(row.photos)
             ? StockPhotoCopy.badgeAccessibilityLabel : "")
         .padding(theme.metrics.rowPadding)
         .frame(maxWidth: .infinity, alignment: .leading)

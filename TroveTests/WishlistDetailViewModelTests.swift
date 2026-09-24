@@ -1919,8 +1919,7 @@ struct WishlistPurchaseHostTests {
             categoryPath: viaPlans.wanted.categoryPath,
             photos: [],
             lines: [],
-            boughtDate: nil,
-            showsThumbnail: true
+            boughtDate: nil
         )
         #expect(plans.markBought(stray, purchase: purchase) == false)
         #expect(plans.purchaseFailureMessage == PurchaseCopy.failureMessage, "a refusal is never silent")
