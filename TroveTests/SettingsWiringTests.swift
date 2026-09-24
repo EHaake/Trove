@@ -201,9 +201,13 @@ struct SettingsWiringTests {
         "Trove/Views/Wishlist/WishlistView.swift",
     ]
 
-    /// The three screens that reach Settings — both lists and, since 013
-    /// Amendment A, the root Dashboard.
-    private nonisolated static let settingsHosts = lists + ["Trove/Views/Dashboard/DashboardView.swift"]
+    /// The screens that reach Settings — both lists, since 013 Amendment A
+    /// the root Dashboard, and since 009 Amendment A the Plans tab (G32).
+    /// `everyTabsRootReachesSettings` holds every tab's root to membership.
+    private nonisolated static let settingsHosts = lists + [
+        "Trove/Views/Dashboard/DashboardView.swift",
+        "Trove/Views/Plans/PlansView.swift",
+    ]
 
     /// Every screen that opens Settings owns the sheet the way the lists
     /// own their form sheets — refetching on dismiss, so a Delete All
@@ -227,6 +231,62 @@ struct SettingsWiringTests {
             ] {
                 #expect(call.contains(argument), "\(path) doesn't pass \(argument) to Settings")
             }
+        }
+    }
+
+    /// G32, criterion 21 (009 Amendment A, plan QA3): every tab's root screen
+    /// has a way to Settings. The roots are derived from `ContentView`'s
+    /// `Tab(` closures — the first `…View(` inside each — never from a list
+    /// someone has to remember to extend, and there must be as many as
+    /// `AppRouter.Tab.allCases`. Each root's file is found by its
+    /// `struct <Name>: View` declaration, and must be a Settings host (so the
+    /// sheet and threading tests above run over it), draw exactly one
+    /// `OverflowBadge(` anchored as the `.overflow` dropdown, and host a
+    /// dropdown that writes `isShowingSettings = true`. Which screen composes
+    /// what is a view-body fact no view model can observe — the
+    /// `MenuPolicyTests` shape; the behavioural half is the UI test that opens
+    /// Settings from all four tabs.
+    /// Mutations (T019): Plans' `OverflowBadge` removed → red; `PlansView`
+    /// taken out of `settingsHosts` → red; the Plans tab's root swapped for
+    /// `SellPlanView(…)` in `ContentView` → red.
+    @Test func everyTabsRootReachesSettings() throws {
+        let content = try SourceScan.production("Trove/App/ContentView.swift")
+        let tabs = SourceScan.closureBodies(after: "Tab(", in: content)
+        let rootCall = try Regex(#"(?:^|[^A-Za-z0-9_.])([A-Z][A-Za-z0-9_]*View)\("#, as: (Substring, Substring).self)
+        let roots = tabs.compactMap { tab in tab.firstMatch(of: rootCall).map { String($0.output.1) } }
+        try #require(
+            roots.count == AppRouter.Tab.allCases.count,
+            "found \(roots.count) tab roots in ContentView (\(roots)), expected \(AppRouter.Tab.allCases.count)"
+        )
+
+        let files = try SourceScan.swiftFiles(under: "Trove/Views", minimum: 40)
+        for root in roots {
+            let declaration = "struct \(root): View"
+            let matches = try files.filter { try SourceScan.production($0).contains(declaration) }
+            try #require(matches.count == 1, "expected one file declaring `\(declaration)`, found \(matches)")
+            let path = matches[0]
+            let code = try SourceScan.production(path)
+
+            #expect(Self.settingsHosts.contains(path), "\(root) is a tab's root but not a Settings host (\(path))")
+            #expect(
+                code.ranges(of: "OverflowBadge(").count == 1,
+                "\(root) draws \(code.ranges(of: "OverflowBadge(").count) \"…\" badges, expected exactly 1"
+            )
+            // The Items badge carries its export choosers' anchors too, so
+            // the `.overflow` one is looked for among them.
+            let overflow = SourceScan.closureBodies(after: "private var overflowControl: some View", in: code)
+            #expect(overflow.first?.contains("OverflowBadge(") == true, "\(root)'s overflowControl draws no \"…\" badge")
+            let anchors = overflow.first.map { SourceScan.argumentLists(of: ".dropdownAnchor", in: $0) } ?? []
+            #expect(
+                anchors.contains { $0.hasSuffix("Dropdown.overflow") },
+                "\(root)'s \"…\" isn't anchored as its `.overflow` dropdown: \(anchors)"
+            )
+            let hosts = SourceScan.closureBodies(after: ".dropdownHost(", in: code)
+            #expect(hosts.count == 1, "\(root) has \(hosts.count) dropdown hosts, expected exactly 1")
+            #expect(
+                hosts.first?.contains("isShowingSettings = true") == true,
+                "\(root)'s dropdown host never opens Settings"
+            )
         }
     }
 

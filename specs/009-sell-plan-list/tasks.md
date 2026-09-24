@@ -665,7 +665,7 @@ Settings row it leads to; the UI tests last, against the final layout.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
   **Done:** 2026-09-23. `PlanRow.showsThumbnail` deleted; `row(for:)` takes `wanted.isBought ? (wanted.boughtItem?.photos ?? []) : (wanted.photos ?? [])`; `PlansView` draws `RowThumbnail(photos: row.photos)` on every row, ungated; the stray `PlanRow` in `WishlistDetailViewModelTests` drops the argument. G30 — three tests replacing the `showsThumbnail` leg (active/completed/sold; bought item deleted; no record), each with a late photo on the entry. G31 — `theRowDrawsItsLinesAndAThumbnailOnEveryRow`. Mutations, each red: completed rows reading `wanted.photos` — **the old `showsThumbnail` guard passes this one** (it is HEAD's own line, green at `930f2ea`); the `?? wanted.photos` fallback (the two late-photo legs); active rows reading `boughtItem`; photos only while unsold (the sold leg); the thumbnail under `if !row.isCompleted`; `RowThumbnail(photos: [])`. `scripts/verify.sh`: 1733 tests in 233 suites passed.
-- [ ] **T019 — The Plans tab's "…", and Settings from every tab's root.**
+- [x] **T019 — The Plans tab's "…", and Settings from every tab's root.**
   Per plan QA3. `PlansView`: `HeaderDropdown.overflow` ("Dismiss more
   actions"); the header's trailing `HStack(spacing: 8) { if
   !viewModel.rows.isEmpty { sortControl }; overflowControl }`;
@@ -696,6 +696,7 @@ Settings row it leads to; the UI tests last, against the final layout.
   `TroveTests/SettingsWiringTests.swift`, `TroveTests/DropdownWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
+  **Done:** 2026-09-23. `PlansView`'s header holds the sort badge (when the side has rows) and an `OverflowBadge` always, anchored `.overflow`, identifier `moreActions.plans`, whose dropdown's one row opens Settings; the Settings sheet copied from `DashboardView` with `onDismiss: viewModel.load`. G32 — `PlansView.swift` in `settingsHosts`; new `everyTabsRootReachesSettings` derives each tab's root from `ContentView`, requires as many as `AppRouter.Tab.allCases`, and requires each to host the badge and a dropdown that raises the sheet. G33 — Plans' badges' identifiers and hints. Mutations, each red: the badge replaced by a `Button`; the sheet without its reload; Plans out of `settingsHosts`; the Plans root swapped for `SellPlanView` (6 issues); the row toggling instead of raising; the identifier removed. The preview injects `AppearanceStore`. `scripts/verify.sh`: 1734 tests in 233 suites passed.
 - [ ] **T020 — "Delete All Sell Plans…" in Settings.**
   Per plan QA4, RA2 (**build to RA2 as written unless the person has
   answered otherwise by dispatch** — if they have, the orchestrator
@@ -913,3 +914,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T017 — `sdd-implementer` | `opus` | ~116k (harness, incl. a follow-up round) | Done first pass; review follow-ups applied |
 | T017 — `skeptical-reviewer` per-task | `opus` | ~73k (harness) | Signed off; 0 blocking, 6 non-blocking: the never-red `soldTowardWishlistItem` leg mutation-proved; QA1's mis-pairing premise corrected in plan.md; G39 split; "three hosts" → four; the doc naming `PlansViewModel` as reader confirmed at T018 |
 | T018 — `sdd-implementer` | `opus` | ~75k (harness) | Done first pass; no miss |
+| T019 — `sdd-implementer` | `opus` | ~81k (harness) | Done first pass; no miss |

@@ -1,16 +1,18 @@
 import SwiftData
 import SwiftUI
 
-/// The header's one dropdown. An optional of this type is the screen's whole
-/// open-menu state — the list screens' shape (013 Amendment A), with Sort By
-/// its only case: the Plans tab has no "…" (009 plan R6).
+/// The header's dropdowns. An optional of this type is the screen's whole
+/// open-menu state — the list screens' shape (013 Amendment A): Sort By, and
+/// since Amendment A the "…" holding Settings (009 plan QA3, revising R6).
 private enum HeaderDropdown: Hashable {
     case sort
+    case overflow
 
     /// What the tap-outside layer calls itself to VoiceOver.
     var dismissLabel: String {
         switch self {
         case .sort: "Dismiss sort options"
+        case .overflow: "Dismiss more actions"
         }
     }
 }
@@ -19,9 +21,10 @@ private enum HeaderDropdown: Hashable {
 /// waiting on their purchase and the ones whose wanted item has been bought.
 ///
 /// `WishlistView`'s file shape with only what the spec asks for — a fixed
-/// header with the sort badge, the Active / Completed switch under it, then
-/// the empty state or the rows. No search, no category chips, no summary line
-/// and no "…" (plan R6), and no money anywhere: a row is a
+/// header with the sort badge and the "…", the Active / Completed switch under
+/// it, then the empty state or the rows. The "…" holds Settings alone (plan
+/// QA3, Amendment A's criterion 21 — every tab reaches Settings). No search,
+/// no category chips, no summary line, and no money anywhere: a row is a
 /// `PlansViewModel.PlanRow`, which carries nothing a figure could be drawn
 /// from (plan Q8, criterion 8).
 struct PlansView: View {
@@ -38,12 +41,21 @@ struct PlansView: View {
     /// — the swipe stages, the alert commits through the view model (Q12).
     @State private var pendingDeletion: PlansViewModel.PlanRow?
 
+    /// Amendment A (plan QA3): the "…" opens Settings, as on the other tabs.
+    @State private var isShowingSettings = false
+
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(AppRouter.self) private var router
+    @Environment(\.storageMode) private var storageMode
+    @Environment(\.storageFallbackReason) private var storageFallbackReason
+    /// 004: threaded into the Settings sheet — see `ItemListView`'s twin.
+    @Environment(AppearanceStore.self) private var appearanceStore
+    /// 004 (T009): the resolved scheme under `ThemedRoot` — see `ItemListView`'s twin.
+    @Environment(\.colorScheme) private var systemColorScheme
 
-    /// Kept for the Sell Plan screens this tab pushes, which take the monitor
-    /// the way this screen does.
+    /// Kept for the Sell Plan screens this tab pushes and for the Settings
+    /// sheet, which take the monitor the way this screen does.
     private let syncMonitor: SyncMonitor
 
     init(modelContext: ModelContext, syncMonitor: SyncMonitor = .notSyncing) {
@@ -156,12 +168,38 @@ struct PlansView: View {
         } message: {
             Text(viewModel.purchaseFailureMessage ?? PurchaseCopy.failureMessage)
         }
-        // The sort dropdown, through the shared host (013 Amendment A). One
-        // badge over two selections: the side on screen picks which orders
-        // it offers and which it writes. No REORDER tag on either — a plan
-        // list has no manual order to drag into (plan P5).
+        // The Settings sheet, reached from the "…" since Amendment A — the
+        // Dashboard's block. The dismissal runs the same load appear does, so
+        // a Delete all behind it empties this list at once.
+        .sheet(isPresented: $isShowingSettings, onDismiss: viewModel.load) {
+            NavigationStack {
+                SettingsView(
+                    modelContext: modelContext,
+                    appearanceStore: appearanceStore,
+                    syncMonitor: syncMonitor,
+                    storageMode: storageMode,
+                    storageFallbackReason: storageFallbackReason
+                )
+            }
+            // 004 (T009): the sheet adopts the resolved scheme so a live
+            // appearance switch follows — see `ItemListView`'s twin.
+            .preferredColorScheme(appearanceStore.choice.sheetColorScheme(device: systemColorScheme))
+        }
+        // The header's dropdowns, through the shared host (013 Amendment A).
+        // Sort By is one badge over two selections: the side on screen picks
+        // which orders it offers and which it writes. No REORDER tag on
+        // either — a plan list has no manual order to drag into (plan P5).
         .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
             switch dropdown {
+            case .overflow:
+                // Settings alone (plan QA3): plans are in no export, so
+                // Export and Import stay the lists'. A one-row menu, as on
+                // the Dashboard (013 P13).
+                DropdownSurface {
+                    DropdownRow(title: "Settings") {
+                        isShowingSettings = true
+                    }
+                }
             case .sort:
                 switch viewModel.side {
                 case .active:
@@ -199,12 +237,26 @@ struct PlansView: View {
 
             Spacer()
 
-            // Hidden over an empty side, as on the list screens: there is
-            // nothing to order.
-            if !viewModel.rows.isEmpty {
-                sortControl
+            // `WishlistView`'s pair. Sort is hidden over an empty side, as on
+            // the list screens — there is nothing to order; the "…" always
+            // shows, since Settings is never gated (plan QA3).
+            HStack(spacing: 8) {
+                if !viewModel.rows.isEmpty {
+                    sortControl
+                }
+                overflowControl
             }
         }
+    }
+
+    /// Never busy: nothing runs from this tab. The badge only opens the
+    /// one-row menu on the host — the Dashboard's twin.
+    private var overflowControl: some View {
+        OverflowBadge(isBusy: false) {
+            openDropdown = .overflow
+        }
+        .dropdownAnchor(HeaderDropdown.overflow)
+        .accessibilityIdentifier("moreActions.plans")
     }
 
     /// T035's badge — `ItemListView`'s twin, naming the side on screen's
@@ -403,5 +455,6 @@ private struct PlanRowView: View {
     .environment(\.theme, .dark)
     .environment(AppRouter())
     .environment(SyncMonitor.notSyncing)
+    .environment(AppearanceStore())
     .preferredColorScheme(.dark)
 }

@@ -69,8 +69,9 @@ struct DropdownWiringTests {
 
     /// Decision 18 in code: every badge is a button whose hint says what it
     /// opens, and every badge carries the identifier the UI tests query —
-    /// all six, not just the three the tests happen to use. Read from the
-    /// controls' own bodies.
+    /// all eight, not just the three the tests happen to use. Read from the
+    /// controls' own bodies. The Plans pair joined at 009 Amendment A (G33;
+    /// mutation: `moreActions.plans` dropped → red).
     @Test func everyBadgeCarriesItsHintAndIdentifier() throws {
         let badge = try SourceScan.production("Trove/Views/Shared/OverflowBadge.swift")
         let badgeBody = try #require(SourceScan.closureBodies(after: "var body: some View", in: badge).first)
@@ -80,6 +81,7 @@ struct DropdownWiringTests {
         for (path, sortID, overflowID) in [
             ("Trove/Views/Items/ItemListView.swift", "sortOptions.items", "moreActions.items"),
             ("Trove/Views/Wishlist/WishlistView.swift", "sortOptions.wishlist", "moreActions.wishlist"),
+            ("Trove/Views/Plans/PlansView.swift", "sortOptions.plans", "moreActions.plans"),
         ] {
             let code = try SourceScan.production(path)
             let sort = try #require(SourceScan.closureBodies(after: "private var sortControl: some View", in: code).first)
