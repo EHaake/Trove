@@ -14,8 +14,8 @@ round: the person's reading of the first Draft replaced its most destructive
 proposal with a simpler rule (Decision 9) and settled the one remaining fork
 through the principle behind it (Decision 10), so **nothing is left open**.
 **Amendment A** (2026-09-23), from the person's Phase 3 and Phase 4
-walkthroughs, is at the end: Decisions 13–18 and criteria 20–23; it revises
-Decision 11 and criterion 7. Approved by the person on 2026-09-23 ("Correct
+walkthroughs, is at the end: Decisions 13–19 and criteria 20–23; it revises
+Decisions 8 and 11 and criterion 7. Approved by the person on 2026-09-23 ("Correct
 on both").
 
 **Depends on**: `001-core-inventory` (the wishlist, the Sell Plan screen and
@@ -163,6 +163,12 @@ is the only figure the entry holds: it keeps no link to what was actually paid
 (`015` Decision 2). What it does not carry is any figure comparing what was
 raised to what was paid — that is the arithmetic `003` refused and `015`
 declined to introduce, and buying does not make it a different claim.
+
+*Revised by Amendment A (Decision 16, criterion 20), 2026-09-23: a completed
+row **has** a picture slot, like every Active row. It shows the picture of the
+item the purchase created when the purchase recorded it and that item still
+has one, and the placeholder otherwise. The paragraph above is the person's
+earlier decision and is left as written.*
 
 ### Deleting a plan
 
@@ -371,8 +377,11 @@ shape the Draft asserted, the reason is beside it.
   item, only when it is the item a purchase became, **"…Any sell plan it's
   on drops it, and the completed plan it was bought for loses its
   picture."** (owned) / **"Its photos go too, and the completed plan it was
-  bought for loses its picture."** (sold). Otherwise the text is exactly what
-  it was.
+  bought for loses its picture."** (sold). Only when that entry **still holds
+  a plan**, active or completed: a purchase made with no plan never shows the
+  clause, and deleting the plan removes it, since in either case no Plans row
+  would lose a picture (corrected at the pre-merge sweep). Otherwise the text
+  is exactly what it was.
 
 There was **no design pass for this spec** (Decision 8), so the wording above
 was settled by the plan and corrected by the person at the pauses: the Sell
@@ -398,6 +407,9 @@ picture clause on Delete All Items (T021a).
   same rhythm the other way round — **no** row there has a slot (Decision 11),
   which is `001`'s reason (every row in one scroll the same shape) applied to a
   side where no row has a picture to show.
+  *Revised by Amendment A (Decision 16, criterion 20): **every** row on both
+  sides keeps one picture slot, so both sides have one shape again: a
+  completed row draws the bought item's picture, or the placeholder.*
 
 ## Acceptance criteria
 
@@ -509,7 +521,11 @@ witness is a unit test, an inspection or a hand check, it says so.
     device: the icon beside the other three in both appearances —
     **observed to carry about half the visual weight of the other three**
     (an 18.5 × 6.7 pt mark, drawn as planned; Decision 8 leaves it
-    revisitable).
+    revisitable). **Redrawn at T021b** as the tipped scale the person chose
+    (Decision 19). Measured at 25 pt @3x, it is 21.0 × 18.0 pt with 1,166 ink
+    px, next to Overview's 1,202, Items' 1,922 and Wishlist's 1,661 (the old
+    mark: 19.0 × 7.0 pt, 966 px). `TabIconTests` green unedited, and G20's
+    template and distinctness legs re-run as mutations.
 6. [x] Each side offers its own sort options, applied to the rows on screen,
    with the most recent plan first by default.
     *Verified by*: `PlansViewModelTests.theActiveSortsOrderTheActiveRows`,

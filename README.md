@@ -140,7 +140,7 @@ purchases.
   the privacy policy.
 - **Appearance** — a System / Light / Dark choice in Settings, where Light is a paper-ground variant of the same brass/moss/rust identity rather than a new palette, System follows the device live, and the choice is stored per-device (Dark by default, so an existing install updates to exactly today's look).
 - **Menus that are the app's own** — every menu inside a page (Sort
-  By, both "…" badges, the dashboard's category order) opens one
+  By, every tab's "…" badge, the dashboard's category order) opens one
   shared dropdown surface in Trove's own type and tokens, growing out
   of its badge; the one system menu left is in the navigation bar,
   where the system's chrome belongs.
@@ -266,6 +266,10 @@ specs/
   004-themes/            Shipped — light mode and the appearance choice
   005-stock-photos/      Shipped — credited stock photos from Wikimedia Commons
   006-mark-as-sold/      Shipped — the sale, the Sold side, the Sold card
+  014-sold-side-parity/  Shipped — Sell on the swipe, and the Sold side's search, chips and sort
+  015-mark-as-bought/    Shipped — the purchase: a wanted item becomes an owned one
+  009-sell-plan-list/    Sell plans you create, the Plans tab and its Dashboard card
+  SYNC-CHECKS.md         Every untested sync check, from all specs, for one pass
   ROADMAP.md             Backlog of future specs
 design/
   brief.md               Visual/interaction direction

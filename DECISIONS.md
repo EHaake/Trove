@@ -775,8 +775,8 @@ spec.
 
 ## Sell plans as things you create (`009`, complete 2026-09-23)
 
-The product decisions are numbered 1–18 (plus the P-items) in
-`specs/009-sell-plan-list/spec.md`. Decisions 13–18 are its Amendment A,
+The product decisions are numbered 1–19 (plus the P-items) in
+`specs/009-sell-plan-list/spec.md`. Decisions 13–19 are its Amendment A,
 from the person's walkthroughs. This records what reaches beyond that spec.
 
 - **A plan is one optional date on the wanted item, not an entity** (plan
@@ -962,11 +962,29 @@ from the person's walkthroughs. This records what reaches beyond that spec.
   then** (T021a, RA4). Since completed rows draw the bought item's picture,
   Delete All Items now also blanks those pictures, and the person said the
   warning "should probably mention it". The several-items message always
-  does. For a single item, the person chose to add the clause only when the
-  item actually is one a purchase created
-  (`item.boughtFromWishlistItem != nil`). Otherwise the text is exactly what
-  it was, so no alert grows a clause that isn't true of the thing being
-  deleted.
+  does. For a single item, the person chose to add the clause only when it
+  is true: the item is one a purchase created **and** that wanted entry still
+  holds a plan, active or completed
+  (`item.boughtFromWishlistItem?.hasSellPlan == true`). Otherwise the text is
+  exactly what it was, so no alert grows a clause that isn't true of the
+  thing being deleted. The first version checked only for the purchase record
+  (`boughtFromWishlistItem != nil`). The pre-merge sweep found that it
+  broke its own reason: a purchase made with no plan, or one whose plan was
+  since deleted, has no Plans row to lose a picture, yet its alert still said
+  one would. The plan check restores the rule.
+- **The Plans tab icon is a tipped scale** (spec Decision 19, T021b). The
+  first mark was drawn to match the other three without a design pass
+  (Decision 8), and the device pass measured it at about half their visual
+  weight: an 18.5 × 6.7 pt mark beside marks that fill the box. The person
+  chose a replacement over three rounds of candidates. It shows a beam on a
+  post, tipped, with a faint block on the low end (what is set aside) and a
+  solid one on the high end (what is wanted), in the Wishlist mark's shade
+  steps. They passed over a busier candidate because "the multiple blocks
+  will be too small to be noticeable on a small screen." Measured the way the
+  device pass measured the old mark (25 pt @3x): 21.0 × 18.0 pt and 1,166 ink
+  px, beside 1,202, 1,922 and 1,661 for the other three. The rule worth
+  keeping: **a drawn-to-match icon still needs a weight check against its
+  neighbours**. Count ink, don't eyeball it.
 - **Sell plans stay out of the exports, for now** (criteria 18 and 23, RA3).
   Exports and import are unchanged in shape. That makes "Delete all sell
   plans" the one Delete All row whose footer ("Export first if you want a

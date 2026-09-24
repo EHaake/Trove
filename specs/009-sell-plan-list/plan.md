@@ -260,6 +260,11 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   twice: structurally (the row cannot supply a figure) and by one source scan
   on the view (it draws no currency) — a view-body fact no view-model test
   reaches (G19).
+  *Made false by Amendment A, QA2 (2026-09-23): a row's `photos` are the
+  bought item's `Photo`s, and `Photo.item` reaches that `Item` and its
+  prices, so the row **can** supply a figure. It still declares no money
+  field, but that is no longer a wall. What keeps money off the row is the
+  wiring scan, `PlansWiringTests.theScreenDrawsNoMoneyAndReachesNoStore`.*
 - **Q9. Sort options (P5) and the tie-break.** Active:
   `newest` (default), `oldest`, `name`, `wishlistOrder`, labelled "Newest",
   "Oldest", "Name", "Wishlist order". Completed: `newest` (default),
@@ -652,7 +657,9 @@ comes from its rows; confirming moves the row from `activeRows` to
 Adds `isCompleted` (`wishlistItem?.isBought == true`), `offersPurchase`
 (`wishlistItem != nil && !isCompleted`), `offersDelete`
 (`wishlistItem?.hasSellPlan == true`), `boughtDate`, and
-`@discardableResult func deletePlan() -> Bool`. `toggle` and `markSold`
+`@discardableResult func deletePlan() -> Bool` (`SellPlanStore.delete`, one
+save, `rollback()` + `load()` on refusal, silent as every delete in the app
+is, as §5's). `toggle` and `markSold`
 return without writing when `isCompleted`; `load()` skips the owned fetch
 and leaves `candidates` empty for a completed plan. `soldValueCents` reads
 `SellPlanSummary.soldCents(of:)` (Q5) — the same sum, from one place.
@@ -1397,9 +1404,10 @@ other.
 Final counts: **1746 unit tests in 234 suites** (from 1622 in 224 at the
 branch point) and **36 UI tests** (from 25). Both suites ran twice back to
 back at `6fdfa97` for T015, and the UI suite twice at each phase end. Twenty-one
-planned tasks (T001–T016, and Amendment A's T017–T021) plus **six**
+planned tasks (T001–T016, and Amendment A's T017–T021) plus **seven**
 sub-lettered additions: T009a–T009d from the Phase 3 walkthrough, T014a from
-the Phase 4 walkthrough, and T021a from the Phase 4A walkthrough. **No
+the Phase 4 walkthrough, T021a from the Phase 4A walkthrough, and T021b, the
+Plans tab icon the person chose after the device pass (spec Decision 19). **No
 `.pbxproj` edit anywhere in the spec.** The new `Views/Plans/` folder and the
 `TabPlans` imageset joined the build by existing.
 
@@ -1519,7 +1527,24 @@ the Phase 4 walkthrough, and T021a from the Phase 4A walkthrough. **No
   `ItemDeleteCopy`, `ItemDetailViewModel`, `ItemListViewModel`,
   `ItemDetailView` and `ItemListView`, because the person chose to say the
   picture clause on the single-item alerts too (option (a)), and those are
-  the alerts' own hosts.
+  the alerts' own hosts. **Its predicate was corrected at the pre-merge
+  sweep.** It first read `item.boughtFromWishlistItem != nil`, so a
+  purchase made with no plan, or one whose plan was later deleted, still
+  warned that "the completed plan it was bought for loses its picture",
+  though no Plans row existed to lose one. It now reads
+  `item.boughtFromWishlistItem?.hasSellPlan == true`: the clause shows only
+  while that entry holds a plan, active or completed.
+- **T021b redrew the Plans tab icon** after the device pass measured the
+  first mark at about half the other icons' weight. It is the tipped scale
+  the person chose over three rounds (spec Decision 19): 21.0 × 18.0 pt and
+  1,166 ink px at 25 pt @3x, beside 1,202, 1,922 and 1,661 (the old mark was
+  19.0 × 7.0 pt, 966 px). `TabIconTests` green unedited, and G20 re-run as
+  mutations.
+- **`specs/SYNC-CHECKS.md`** was written at the person's instruction ("gather
+  all untested sync tests in one place (from all specs) so we can do them in
+  one pass later"). It is one runnable checklist covering every spec, not
+  just this one, so it rode this branch's close-out rather than any one
+  spec's.
 - **The Plans view model's sort orders became intents**
   (`setActiveSort` / `setCompletedSort`, Phase 4 review). With them, the
   Completed side's reorder is unit-tested, not left to a view-body pair.
@@ -1540,6 +1565,18 @@ the Phase 4 walkthrough, and T021a from the Phase 4A walkthrough. **No
   later pass, and criteria 17, 20 and 22 stay unticked until then. The
   person's Accessibility Inspector and VoiceOver pass **is** done
   (2026-09-23: "All voiceover labels are as expected").
+- **A failed Plans fetch reads "Nothing on your wishlist."** `PlansViewModel`
+  empties its rows when a fetch throws, and the view then diagnoses an
+  empty wishlist. This is **house-wide, not this screen's**: no list screen
+  in the app shows a load failure, so every one reads a failed fetch as its
+  empty state. It is on `ROADMAP.md` as a follow-up for all of them.
+- **`runCarryOver` saves, or rolls back, the whole main context**, not only
+  its own rows (plan Q4's stated caveat, carried from the Phase 1 review).
+  **Reviewed at the pre-merge sweep and found harmless.** The sweep checked
+  the mechanism rather than the intent: every intent in the app saves
+  before it returns, and nothing leaves unsaved inserts on the main context
+  across a suspension, so when the hook runs there is nothing of anyone
+  else's for it to save or discard.
 - **The rollback branches.** `runCarryOver`'s `hasChanges` condition and its
   rollback; `openSellPlan`'s save-failure rollback; the Plans host's
   `rollback()` on a real save failure in `markBought` and `deletePlan`;

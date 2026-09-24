@@ -86,7 +86,8 @@ Handoff notes for the pause reports:
   candidates, back out: "2 items set aside". Sell both from the plan: the page
   still says View your sell plan, now "2 sold toward it" — the plan did not
   vanish when it succeeded. Delete the plan from the "…" on the Sell Plan
-  screen: read the alert, confirm; the page offers Create again, the two sales
+  screen *(superseded: Delete is its own rust bar button apart from Buy, no
+  "…" — T009b, T009d)*: read the alert, confirm; the page offers Create again, the two sales
   are still on the Items tab's Sold side, and creating a new plan shows them
   in its Sold section. **If the walkthrough store still holds `015`'s
   dataset**, its saved plan should read View your sell plan without having
@@ -96,14 +97,17 @@ Handoff notes for the pause reports:
   a successful iCloud sync or on a signed-out device, never when iCloud
   failed to load (plan Q3), so on a simulator without iCloud the orchestrator
   should say which case it is in before the person looks. Readings to put as questions: the Sell
-  Plan's Delete sits behind a "…" next to Buy (plan Q12); the fallback line
+  Plan's Delete sits behind a "…" next to Buy (plan Q12) *(superseded:
+  the person had it made its own button — T009b)*; the fallback line
   "Nothing set aside yet" and the "<n> sold toward it" wording.
 - **Phase 4 — what can be tried**: the fourth tab, its two sides, sorting
   each side, a Buy swipe moving a plan to Completed, a delete swipe, opening a
   completed plan as a record, the Dashboard card taking you to Active. Put as
   questions, not facts: **R1** (the record has no figures card), **R2** is no
   longer a question — the person decided it (spec Decision 11): say that
-  completed rows show no picture and no slot, and check it reads right, **R3** (carried-over
+  completed rows show no picture and no slot, and check it reads right
+  *(superseded: completed rows show the bought item's picture in a slot
+  like every row's — spec Decision 16, T018)*, **R3** (carried-over
   plans are dated at the update, so they sort together), **R4** (decided, Decision 12: no card on an
   empty Dashboard), **R5** (Delete all wanted items leaves completed plans),
   **R6** (no search, chips or summary line), **R7** (on iCloud, plans carry
