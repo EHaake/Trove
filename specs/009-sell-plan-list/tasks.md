@@ -514,6 +514,16 @@ Handoff notes for the pause reports:
   **Phase 4 closes here — pause for the person** (what to try, and the
   readings to put as questions, are in the handoff note above).
 
+- [ ] **T014a — The person, Phase 4 walkthrough: every card and chip responds anywhere in its box.**
+  The person, 2026-09-23, on T009c's audit (the Overview's "N items not yet
+  valued" callout, `DashboardView.swift` ~382–416; the unselected category
+  chips, `WishlistView.swift` ~521 and `ItemListView.swift` ~877, whose fill is
+  `Color.clear`): "Fix it now." Merged code outside `009`'s footprint, riding
+  this branch at the person's instruction rather than a `fix/` branch — a
+  deliberate deviation from `CLAUDE.md`'s git conventions, recorded here. Each
+  gets a content shape; each gets a UI test that taps an empty point; the rule
+  is written into `design/tokens.md`.
+
 ## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; the person's own checks (VoiceOver, two devices) are named in T015 as their steps rather than a phase walkthrough, and nothing new is built
 
 - [ ] **T015 — Device pass. [general-purpose agent with simulator tools; person: VoiceOver, two devices]**
