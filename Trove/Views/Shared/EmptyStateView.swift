@@ -118,6 +118,9 @@ struct EmptyStateView: View {
                         )
                     }
                 }
+                // The outlined variant draws no fill, so without this its
+                // padding took no tap (009 T014a).
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
     }

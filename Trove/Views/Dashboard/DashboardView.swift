@@ -425,6 +425,10 @@ struct DashboardView: View {
                     .strokeBorder(theme.colors.divider, lineWidth: theme.metrics.hairline)
             )
             .clipShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
+            // Unfilled, so without this only the text, the arrow and the
+            // outline took a tap; the padding and the spacer's gap didn't
+            // (009 T014a).
+            .contentShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)

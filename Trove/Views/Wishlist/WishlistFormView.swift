@@ -198,6 +198,9 @@ struct WishlistFormView: View {
                                     lineWidth: theme.metrics.hairline
                                 )
                         )
+                        // A clear fill doesn't hit-test: without this an
+                        // unselected preset's padding took no tap (009 T014a).
+                        .contentShape(RoundedRectangle(cornerRadius: theme.metrics.cardRadius))
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)

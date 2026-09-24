@@ -1776,6 +1776,108 @@ final class TroveUITests: XCTestCase {
         )
     }
 
+    /// `009` T014a, the person's instruction after T009c ("Fix it now"): the
+    /// Overview's not-yet-valued callout follows its link from a tap anywhere
+    /// inside its outline, not only on its words or its arrow.
+    ///
+    /// Two items are added with no current value, so the callout reads "2 items" and
+    /// leads to the Items list narrowed to them — whose own clear-chip is an
+    /// unambiguous sign the link was followed (one item would open that item,
+    /// whose name the list also shows). The tap lands in the callout's bottom
+    /// padding band, half of `cardPadding` (16 pt) above its lower edge at its
+    /// horizontal middle: empty whatever the copy says. The callout's frame is
+    /// safe to measure from here, unlike the Sell Plan card's in T009c: its
+    /// hairline outline is drawn edge to edge, so what it draws spans the whole
+    /// box with or without the content shape (read at 370 × 111 pt both ways).
+    ///
+    /// Its mutation: removing the callout's `.contentShape` in
+    /// `DashboardView.unvaluedCallout` must turn the navigation assertion red —
+    /// an unfilled `.plain` button hit-tests only what it draws.
+    @MainActor
+    func testTappingAnEmptyPartOfTheUnvaluedCalloutFollowsIt() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Items"].tap()
+        for name in ["Rolleiflex 2.8F", "Hasselblad 500C/M"] {
+            let addButton = app.buttons["Add item"]
+            XCTAssertTrue(addButton.waitForExistence(timeout: 5), "the Items tab must offer quick add")
+            addButton.tap()
+            let nameField = app.textFields["Name"]
+            XCTAssertTrue(nameField.waitForExistence(timeout: 5), "the add-item sheet didn't present")
+            nameField.tap()
+            nameField.typeText(name)
+            let categoryField = app.textFields["Category"]
+            categoryField.tap()
+            categoryField.typeText("Photography/Cameras")
+            let priceField = app.textFields["Price paid"]
+            priceField.tap()
+            priceField.typeText("900")
+            app.buttons["Save item"].tap()
+            XCTAssertTrue(
+                app.buttons["Save item"].waitForNonExistence(timeout: 5),
+                "saving \(name) with no current value should close the sheet"
+            )
+        }
+
+        app.buttons["Overview"].tap()
+        let callout = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "2 items not yet valued"))
+            .firstMatch
+        XCTAssertTrue(callout.waitForExistence(timeout: 5), "two items without a value must raise the callout")
+        scrollUntilHittable(callout, in: app)
+        print("T014aPROBE callout \(callout.frame)")
+
+        callout.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: callout.frame.width / 2, dy: callout.frame.height - 8))
+            .tap()
+        XCTAssertTrue(
+            app.buttons["Clear the not-yet-valued filter"].waitForExistence(timeout: 5),
+            "tapping the callout's empty padding must follow it to the narrowed list — callout frame \(callout.frame)"
+        )
+    }
+
+    /// `009` T014a on the Items list's category chips: an unselected chip
+    /// selects from a tap inside its capsule's padding, away from its label.
+    ///
+    /// The seeded Sell Plan collection (`-seedSellPlan`) owns guitars, amps
+    /// and a microphone, so the row offers a "Guitars" chip, unselected on
+    /// arrival behind "All". The tap lands 7 pt in from the chip's leading
+    /// edge at its vertical middle — inside the capsule's rounded end, half
+    /// the 14 pt horizontal padding short of the label. The chip's frame is
+    /// safe to measure from: its hairline outline is drawn edge to edge, so
+    /// what it draws spans the whole capsule with or without the content
+    /// shape. Selection is read from the `isSelected` trait the chip adds
+    /// from the same `isSelected` it draws.
+    ///
+    /// Its mutation: removing the chip's `.contentShape(Capsule())` in
+    /// `ItemListView.chip(label:path:)` must turn the selection assertion red
+    /// — a clear fill doesn't hit-test.
+    @MainActor
+    func testTappingAnUnselectedChipsPaddingSelectsIt() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSellPlan"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Items"].tap()
+        let chip = app.buttons["Guitars"]
+        XCTAssertTrue(chip.waitForExistence(timeout: 5), "the seeded collection must offer a Guitars chip")
+        XCTAssertTrue(chip.isHittable, "the Guitars chip should be on screen on arrival")
+        XCTAssertFalse(chip.isSelected, "the Guitars chip must start unselected — All is the arrival filter")
+        print("T014aPROBE chip \(chip.frame)")
+
+        chip.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: 7, dy: chip.frame.height / 2))
+            .tap()
+        let selected = expectation(for: NSPredicate(format: "isSelected == true"), evaluatedWith: chip)
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [selected], timeout: 5),
+            .completed,
+            "tapping inside the chip's padding must select it — chip frame \(chip.frame)"
+        )
+    }
+
     /// The Sold side's row for one item — the `.combine`d element whose label
     /// is the whole announcement ("Telecaster, Sold Sep 11, 2026, $1,250,
     /// Gain $350 vs paid"), not the plain name inside it. The comma is what

@@ -13,6 +13,10 @@ as `002`'s, `005`'s, `006`'s and `015`'s did. The conversation ran to a second
 round: the person's reading of the first Draft replaced its most destructive
 proposal with a simpler rule (Decision 9) and settled the one remaining fork
 through the principle behind it (Decision 10), so **nothing is left open**.
+**Amendment A** (2026-09-23), from the person's Phase 3 and Phase 4
+walkthroughs, is at the end: Decisions 13–18 and criteria 20–23; it revises
+Decision 11 and criterion 7. Approved by the person on 2026-09-23 ("Correct
+on both").
 
 **Depends on**: `001-core-inventory` (the wishlist, the Sell Plan screen and
 its ranking, the tab bar, the manual wishlist order, the cross-tab deep-link
@@ -359,7 +363,7 @@ was.
    when there is one, the count sold toward it when there is one, and nothing
    where a count would be zero. An active row shows its thumbnail (or the
    reserved placeholder, as a wishlist row does); a completed row has no
-   picture and no picture slot.
+   picture and no picture slot. *(Revised by Amendment A, criterion 20.)*
 8. [ ] A row shows the covered marker exactly when the sales alone have
    reached the estimated cost — never with no estimate, and never counting
    what is merely set aside — and no row anywhere on this screen shows a money
@@ -452,7 +456,8 @@ Made by the person, 2026-09-21, in this spec session:
 Made by the person, 2026-09-22, answering the two contradictions planning
 found between this spec and the code:
 
-11. **Completed rows have no picture slot at all.** Planning found a completed
+11. *(Revised by Amendment A, Decision 16 — completed rows show a picture.)*
+    **Completed rows have no picture slot at all.** Planning found a completed
     row cannot show the wanted item's picture: `015` moves the photos to the
     bought item, and keeps no link back. The planned answer was the empty
     placeholder; the person rejected it — "if it goes from having an image to
@@ -592,6 +597,60 @@ overturns them.
 What remains before implementation is the ordinary gate: the `sdd-planner`
 drafts `plan.md` and `tasks.md` against this spec, and the `skeptical-reviewer`
 signs them off.
+
+## Amendment A — the walkthroughs (2026-09-23)
+
+Decided by the person at the Phase 3 and Phase 4 walkthroughs; each is
+recorded in `tasks.md` against the task that carries it.
+
+### Decisions
+
+13. **Delete on the Sell Plan screen is its own button, separate from Buy**
+    — "the delete button under the ... is fine if there are more items
+    beneath the ... but there aren't … I'd just have two separate buttons:
+    Buy and Delete at the top right." (T009b)
+14. **A destructive action is always drawn red, as a standard** — "This needs
+    to be implemented as standards across the app so that I don't have to
+    manually point it out every time." Red is the app's rust wherever the app
+    draws the control; the system's red where the system does. (T009d; now in
+    `CLAUDE.md` and `design/tokens.md`.)
+15. **A card, row or chip responds anywhere in its box** — "tapping anywhere in
+    the item box marks or unmarks", then, for the Overview's callout and the
+    category chips, "Fix it now." (T009c, T014a; in `design/tokens.md`.)
+16. **Completed rows show a picture** — revising Decision 11. "Why can't the
+    complete sale plan show the same image as from the active plan? I think
+    that makes sense to do." From this amendment on, marking an item bought
+    records which item it became, and a completed row shows that item's
+    picture. A plan completed before this amendment has no such record and
+    shows the empty placeholder — the same slot every Active row keeps — so
+    every row on both sides has one shape again.
+17. **Every tab reaches Settings from its "…"** — "There should always be a
+    way to get to the settings menu." The Plans tab gains the "…" the other
+    tabs have, holding Settings.
+18. **Settings can delete all sell plans** — "There should be a setting to
+    delete all plans." It removes every plan, active and completed, after a
+    confirmation that says how many; it touches nothing else — wanted items,
+    owned items, sales and the sold-toward record stay exactly as a single
+    delete leaves them (Decision 9). The row is dimmed when there are no
+    plans, drawn in rust (Decision 14).
+
+### Acceptance criteria
+
+20. [ ] Every row on both sides of the Plans tab has a picture slot. An active
+    row shows the wanted item's picture or the placeholder; a completed row
+    shows the picture of the item the purchase created, when the purchase
+    recorded it and that item still has one, and the placeholder otherwise.
+    A purchase made from any of the four hosts records the item it became.
+21. [ ] The Plans tab's header has a "…" that opens Settings, and every tab's
+    root screen has a way to Settings.
+22. [ ] Settings offers "Delete all sell plans" under the existing Delete-all
+    rows: dimmed with no plans; with plans, a confirmation naming the count;
+    confirming removes every plan, active and completed, and nothing else
+    (criteria 10–12 hold for every plan it removed); it is announced as
+    destructive and drawn in rust.
+23. [ ] The schema still validates against CloudKit with the purchase's new
+    record (criterion 17), and exports and import are unchanged in shape
+    (criterion 18).
 
 ## Review pass
 
