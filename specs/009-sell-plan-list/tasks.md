@@ -933,3 +933,4 @@ is filled in as the spec runs; escape-hatch misses are recorded here too.
 | T021a — `sdd-implementer` | `opus` | ~85k (harness, two rounds) | Stopped once on a product question (the single-item wording is pinned equal to the item page's) — the person chose (a), conditional; then done |
 | Phase 4A — the person's walkthrough | — | — | Attested 2026-09-23 ("Everything else looks good"); RA3 kept (exports follow-up on the roadmap); RA4 → T021a |
 | T015 — device pass (`general-purpose`, simulator tools) | `opus` | ~350k (harness) | Every reachable check passed; no finding blocks; spoken names and iCloud steps to the person |
+| T015 — `scripts/verify.sh all` twice at `6fdfa97` | — | — | Both runs: 1746 unit tests, 36 UI tests, 0 failures |
