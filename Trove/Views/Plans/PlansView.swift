@@ -24,9 +24,11 @@ private enum HeaderDropdown: Hashable {
 /// header with the sort badge and the "…", the Active / Completed switch under
 /// it, then the empty state or the rows. The "…" holds Settings alone (plan
 /// QA3, Amendment A's criterion 21 — every tab reaches Settings). No search,
-/// no category chips, no summary line, and no money anywhere: a row is a
-/// `PlansViewModel.PlanRow`, which carries nothing a figure could be drawn
-/// from (plan Q8, criterion 8).
+/// no category chips, no summary line, and no money anywhere (plan Q8,
+/// criterion 8). The row value alone doesn't guarantee that — a row's
+/// photos reach their item, and so its prices, through `Photo.item` — so
+/// what keeps money off the screen is `PlansWiringTests`'
+/// `theScreenDrawsNoMoneyAndReachesNoStore`.
 struct PlansView: View {
     @State private var viewModel: PlansViewModel
 

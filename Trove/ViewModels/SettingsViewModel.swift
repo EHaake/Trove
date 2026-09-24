@@ -64,8 +64,9 @@ final class SettingsViewModel {
     private(set) var planCount = 0
 
     /// 009 T021a: set with each Delete All request — whether a list of one
-    /// item is the item a completed plan was bought as, so the alert can say
-    /// the plan loses its picture. False for every other request.
+    /// item is the picture a completed plan shows (bought from an entry that
+    /// still has its sell plan), so the alert can say the plan loses it.
+    /// False for every other request.
     private var onlyItemPicturesACompletedPlan = false
 
     /// 002: how many items — owned and wanted together — carry a Reverb
@@ -433,7 +434,7 @@ final class SettingsViewModel {
         }
         guard count > 0 else { return }
         onlyItemPicturesACompletedPlan = target == .items && count == 1
-            && ((try? modelContext.fetch(FetchDescriptor<Item>()))?.first?.boughtFromWishlistItem != nil)
+            && ((try? modelContext.fetch(FetchDescriptor<Item>()))?.first?.boughtFromWishlistItem?.hasSellPlan == true)
         alert = .confirmDelete(target, count: count)
     }
 

@@ -761,18 +761,24 @@ struct SettingsViewModelDeleteTests {
     }
 
     /// 009 T021a: a list of one item that a completed plan was bought as
-    /// says the plan loses its picture; an ordinary only item doesn't.
+    /// says the plan loses its picture; one bought for an entry with no plan
+    /// (the link is set on every purchase) and an ordinary only item don't.
     @Test func theOnlyItemsAlertSaysWhenItPicturesACompletedPlan() throws {
         let context = try makeInMemoryContext()
-        let wanted = insertWanted("Vox AC15", category: "Music/Amps", into: context)
         let boughtAt = Date(timeIntervalSince1970: 1_760_000_000)
-        let bought = try WishlistPurchaseStore.markBought(
-            wanted,
-            purchase: Purchase(date: boughtAt, priceCents: 70_000, location: "Reverb", condition: .excellent),
-            at: boughtAt,
-            in: context
-        )
-        try context.save()
+        func buy(_ entry: WishlistItem) throws -> Item {
+            let item = try WishlistPurchaseStore.markBought(
+                entry,
+                purchase: Purchase(date: boughtAt, priceCents: 70_000, location: "Reverb", condition: .excellent),
+                at: boughtAt,
+                in: context
+            )
+            try context.save()
+            return item
+        }
+        let planned = insertWanted("Vox AC15", category: "Music/Amps", into: context)
+        SellPlanStore.create(for: planned, at: Date(timeIntervalSince1970: 1_750_000_000))
+        let bought = try buy(planned)
         let viewModel = SettingsViewModel(modelContext: context, storageMode: .localOnly)
 
         viewModel.requestDeleteAll(.items)
@@ -785,6 +791,20 @@ struct SettingsViewModelDeleteTests {
 
         viewModel.cancelDeleteAll()
         context.delete(bought)
+        try context.save()
+        let boughtWithoutAPlan = try buy(insertWanted("Fender Deluxe", category: "Music/Amps", into: context))
+        try #require(boughtWithoutAPlan.boughtFromWishlistItem != nil, "the fixture: every purchase is linked")
+
+        viewModel.requestDeleteAll(.items)
+        #expect(viewModel.alert == .confirmDelete(.items, count: 1))
+        #expect(
+            viewModel.alertMessage
+                == "Its photos go too. Any sell plan it's on drops it. This can't be undone.",
+            "bought with no plan: no completed plan to lose its picture"
+        )
+
+        viewModel.cancelDeleteAll()
+        context.delete(boughtWithoutAPlan)
         _ = insertItem("Blues Junior", into: context)
         try context.save()
 

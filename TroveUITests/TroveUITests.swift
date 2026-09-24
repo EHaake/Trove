@@ -2403,8 +2403,10 @@ final class TroveUITests: XCTestCase {
         deletePlans.tap()
         XCTAssertTrue(alert.waitForExistence(timeout: 5), "the alert must ask again")
         alert.buttons["Delete All"].tap()
-        // The delete commits in a task; the row dims once it has, so Done
-        // cannot race it.
+        // The delete commits in a task, and the busy gate dims the row as
+        // soon as it starts — before the delete runs, so the dimming doesn't
+        // prove it landed. Done can't race it anyway: the delete and the
+        // Plans tab's reload run on the same main context.
         let dimmed = expectation(for: NSPredicate(format: "isEnabled == false"), evaluatedWith: deletePlans)
         XCTAssertEqual(XCTWaiter.wait(for: [dimmed], timeout: 5), .completed, "the row must dim once every plan is gone")
         app.buttons["Done"].tap()

@@ -37,7 +37,6 @@ struct PlansWiringTests {
                 try #require(!label.isEmpty, "the \(control.name) switch has an empty label")
                 for isActive in [false, true] {
                     let width = try labelWidth(label, isActive: isActive)
-                    print("SideSwitch \(control.name) \"\(label)\" \(isActive ? "medium" : "regular"): \(width) pt in a \(control.halfWidth) pt half")
                     #expect(
                         CGFloat(width) < room,
                         "the \(control.name) switch's \"\(label)\" measures \(width) pt at \(isActive ? "medium" : "regular"), not narrower than its \(control.halfWidth) pt half less 4 pt either side (\(room) pt)"
@@ -134,8 +133,10 @@ struct PlansWiringTests {
     }
 
     /// G19, criterion 8 and Q8: the screen draws no money. The row value
-    /// cannot supply a figure; this is the view-body half — no currency
-    /// formatter, no `Cents` field, and no store reached past the view model.
+    /// could reach a figure (its photos reach their item through
+    /// `Photo.item`), so this test is what keeps money off the row — no
+    /// currency formatter, no `Cents` field, and no store reached past the
+    /// view model.
     ///
     /// Mutation (T011): `formattedAsWholeCurrency` added to the row → red;
     /// a `.currency(` format added → red.

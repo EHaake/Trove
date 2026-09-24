@@ -13,9 +13,11 @@ import Testing
 /// Every date here is distinct from every other a broken implementation could
 /// read instead: plan dates never coincide with bought dates or the view
 /// model's clock. `createdAt` is the real clock at insert, which the pinned
-/// dates cannot equal — so each sort fixture inserts its rows in an order that
-/// matches none of the orders it checks, and a sort reading `createdAt` goes
-/// red rather than landing on the expected order by insertion.
+/// dates cannot equal. The Active fixture inserts its rows in an order none
+/// of its four sorts produces, so an Active sort reading `createdAt` goes red.
+/// The Completed fixture is inserted in Name order; its Newest and Oldest
+/// orders differ from that, so those two still go red on `createdAt`, but
+/// its Name sort can't be told apart from insertion order.
 @Suite("PlansViewModel")
 struct PlansViewModelTests {
     private let base = Date(timeIntervalSince1970: 1_750_000_000)

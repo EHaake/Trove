@@ -38,27 +38,37 @@ struct ItemDeletionTests {
     }
 
     /// 009 T021a: the swipe's delete alert asks the view model whether the
-    /// row is the item a purchase created — true for it (through
-    /// `markBought`, the only writer of the link), false for an ordinary row.
-    @Test func onlyABoughtItemPicturesACompletedPlan() throws {
+    /// row is the picture a completed plan shows — true for the item bought
+    /// (through `markBought`) for an entry with a sell plan, false for one
+    /// bought for an entry with no plan (the link is set on every purchase)
+    /// and for an ordinary row.
+    @Test func onlyAnItemBoughtForAPlanPicturesACompletedPlan() throws {
         let context = try makeInMemoryContext()
         let ordinary = makeItem(in: context, name: "Blues Junior")
-        let wanted = WishlistItem(name: "Vox AC15", categoryPath: "Music/Amps")
-        context.insert(wanted)
+        let planned = WishlistItem(name: "Vox AC15", categoryPath: "Music/Amps")
+        let unplanned = WishlistItem(name: "Fender Deluxe", categoryPath: "Music/Amps")
+        for model in [planned, unplanned] { context.insert(model) }
+        SellPlanStore.create(for: planned, at: Date(timeIntervalSince1970: 1_750_000_000))
         let boughtAt = Date(timeIntervalSince1970: 1_760_000_000)
-        let bought = try WishlistPurchaseStore.markBought(
-            wanted,
-            purchase: Purchase(date: boughtAt, priceCents: 70_000, location: "Reverb", condition: .excellent),
-            at: boughtAt,
-            in: context
-        )
+        func buy(_ entry: WishlistItem) throws -> Item {
+            try WishlistPurchaseStore.markBought(
+                entry,
+                purchase: Purchase(date: boughtAt, priceCents: 70_000, location: "Reverb", condition: .excellent),
+                at: boughtAt,
+                in: context
+            )
+        }
+        let boughtForAPlan = try buy(planned)
+        let boughtWithoutAPlan = try buy(unplanned)
         try context.save()
+        try #require(boughtWithoutAPlan.boughtFromWishlistItem != nil, "the fixture: every purchase is linked")
 
         let viewModel = ItemListViewModel(modelContext: context)
         viewModel.load()
-        try #require(viewModel.items.count == 2)
+        try #require(viewModel.items.count == 3)
 
-        #expect(viewModel.picturesACompletedPlan(id: bought.id))
+        #expect(viewModel.picturesACompletedPlan(id: boughtForAPlan.id))
+        #expect(!viewModel.picturesACompletedPlan(id: boughtWithoutAPlan.id), "bought with no plan: no completed plan to lose its picture")
         #expect(!viewModel.picturesACompletedPlan(id: ordinary.id))
     }
 
