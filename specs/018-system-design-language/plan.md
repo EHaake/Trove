@@ -35,8 +35,21 @@ store, service or schema changes** — every sort write moves verbatim from a
 dropdown row's closure into a menu's `select` (Q7). No new dependency, no
 `.pbxproj` edit (the root `Trove` and `TroveTests` groups are synchronized
 folders — a new file joins the build by existing; if one doesn't, stop and
-flag). No constitution amendment: the rule this spec reverses lives in
-`design/brief.md` and `MenuPolicyTests`, not in `CLAUDE.md`.
+flag).
+
+**One constitution amendment, in its own commit, before the guard flips.**
+The rule this spec reverses lives in `design/brief.md` and `MenuPolicyTests`,
+and it is also quoted in `CLAUDE.md`: the Testing section's source-scan
+paragraph gives `MenuPolicyTests` as "the legitimate shape — 'no system menu
+inside page content' is a fact about view bodies that no view-model test can
+observe." After T011 that sentence would describe a guard asserting the
+opposite. T011's **first step, committed on its own before the guard is
+rewritten** (the constitution's amendment rule), rewords the example to the
+new guard — "'every header control opens a system menu and no view floats a
+surface of its own' is a fact about view bodies that no view-model test can
+observe" — with a parenthesis noting that the example quoted `013`'s
+opposite rule until `018` reversed it (plan §7). Nothing else in `CLAUDE.md`
+changes.
 
 **Merged decisions this reverses, each with a pointer appended in place at
 close-out, never edited away** (`014/plan.md:704-711` is the pattern):
@@ -91,7 +104,8 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
 - **R7 — The tear is filmed on both installed runtimes**, iOS 27.0 and 26.5.
   The spec's device pass names 27.0; the deployment target is 26.0 and
   T029c's tear was UIKit's, so the older runtime is where a regression would
-  hide.
+  hide. If no 26.5 runtime is installed when a film runs, the film records
+  that and runs on 27.0 alone.
 
 ## Proposed at planning (Q1–Q14) — approved on plan approval unless overturned
 
@@ -136,8 +150,12 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
 - **Q6. The badges' control size is measured, not chosen by eye** (§1). The
   G38 proviso (`ItemListHeaderLayoutTests`) is that the title's line box, not
   the badge row, sets the header's height; T001 renders the glass badge at
-  `.regular` and `.small` and ships the largest that keeps the proviso. If
-  neither does, the badge row sets the height on both sides equally
+  `.regular` and `.small` and ships the largest that keeps the proviso.
+  **The render must speak for the device**: if T002 finds the device's
+  `sortOptions.items` frame height more than a point off T001's render, the
+  control-size choice is re-made from the device's height (the orchestrator
+  sends it back to T001's implementer as a follow-up) before T004 and T005
+  copy it. If neither size keeps the proviso, the badge row sets the height on both sides equally
   (criterion 7 still holds); the proviso case is then **rewritten to pin the
   new relationship** — header = badge row + 6 + one meta line — never
   deleted, and the Done note says which element now sets the height.
@@ -218,7 +236,8 @@ New test file: `TroveTests/HeaderControlsWiringTests.swift`. Rewritten:
 `ItemListSidesWiringTests`, `PlansWiringTests`, `ExportWiringTests`,
 `SettingsWiringTests`, `TroveUITests`. Deleted whole: `DropdownWiringTests`,
 `DropdownAnchorTests`, `DropdownPlacementTests`, `OverflowDropdownRenderTests`.
-Scripts: `scripts/motion-probe/profile.swift`, `README.md` (Q14). Docs:
+Scripts: `scripts/motion-probe/profile.swift`, `README.md` (Q14). Constitution:
+`CLAUDE.md`'s one Testing example (Context), its own commit at T011. Docs:
 `design/brief.md`, `design/tokens.md`; at close-out the pointers above,
 `README.md` if its words describe the old controls, and the post-merge draft.
 
@@ -305,7 +324,11 @@ at the label's height) **lies inside it**, on every frame from the tap to the
 settled label. A frame where the label stands outside the capsule, or the
 capsule breaks into two runs, is the tear. Filmed on Owned Date → the widest
 Owned label (G38's own measurement picks it) and back, and on Sold Name →
-Date sold, on iOS 27.0 and 26.5 (R7).
+Date sold, on iOS 27.0 and 26.5 (R7). **Filmed twice**: first at T001's
+commit (T002, criterion 1's "measured first"), and again at T008's commit
+(T009, criterion 1's "absent at the end"), because by then T005 has put a
+second glass `Menu` beside the sort badge and removed the dropdown host the
+first film was taken beside — a different header than the one measured.
 
 **If the tear shows** (T003): the label takes a constant footprint —
 `ZStack(alignment: .leading) { ForEach(options) { Text(label($0)).hidden() };
@@ -319,12 +342,13 @@ and `OverflowMenu`; plus the two badges render at one height). G2
 (`HeaderControlsWiringTests`: `SortMenu`'s body composes a `Menu {`, a
 `Picker(` with `.pickerStyle(.inline)`, `.buttonStyle(.glass)`, and names no
 `theme.colors`). G6/G7 (per-side menus on Items and Plans). G13 (the menu's
-shape on screen). G14a (the film). **Needs verification on the device, not
-by the suites:** that `ImageRenderer` lays a glass `Menu` out at the height
-the device draws it — T002 reads `sortOptions.items`' frame height from a
-temporary UI test and compares it with G1's render; if they differ by more
-than a point, G1 can't speak for the device and the claim rests on G39 (the
-UI test), said so in **As built**.
+shape on screen). G14a (the films, T002 and T009). **Needs verification on
+the device, not by the suites:** that `ImageRenderer` lays a glass `Menu` out
+at the height the device draws it — T002 reads `sortOptions.items`' frame
+height from a temporary UI test and compares it with G1's render; if they
+differ by more than a point, Q6's control size is re-made from the device's
+height before T004/T005 copy it, G1 can't speak for the device, and the claim
+rests on G39 (the UI test), said so in **As built**.
 
 ## 2. `OverflowMenu` and the four "…" menus
 
@@ -518,24 +542,29 @@ legitimate source-scan shape), each `#require`-ing its anchors:
 - **G12a `everyMenuControlOpensASystemMenu`.** The tab roots are derived from
   `ContentView`'s `Tab(` closures (the `everyTabsRootReachesSettings`
   derivation; as many as `AppRouter.Tab.allCases`). In each root:
-  `overflowControl` composes `OverflowMenu(`; `sortControl`, where declared,
-  composes `SortMenu(`; the Dashboard's `orderControl` composes `Menu {` and
-  `Picker(`. `SortMenu.swift` and `OverflowMenu.swift` each compose a
-  `Menu {`; `DetailOverflowMenu.swift` still does. **Mutation (criterion 10's
-  "a bespoke row put back")**: the Wishlist's `sortControl` becomes a
-  `Button` toggling a `@State` that shows an `.overlay` of hand-drawn rows →
-  red.
-- **G12b `noViewFloatsAMenuOrDrawsAPickerOfItsOwn`.** No file under
-  `Trove/Views` or `Trove/App` uses `overlayPreferenceValue`,
-  `anchorPreference` or `transformAnchorPreference` — the mechanism every
-  floating in-page surface in this app used; every `.pickerStyle(` names
-  `.segmented` or `.inline`; every file composing `Picker(` sets a style.
-  (Not the catchers' "Dismiss …" labels: a scan for a wording pins the
-  spelling, and the mechanism is the thing.) Mutation: `DropdownHost.swift`
-  restored from `main` and one host re-attached → red. **What it does not
-  claim**: a bespoke control built some other way (an `HStack` of buttons
-  with a selected trait) is invisible to it; G12a's positive half and review
-  are what catch that, and the plan says so rather than implying coverage.
+  `overflowControl` composes `OverflowMenu(`. **`sortControl` is required by
+  name** in `ItemListView`, `WishlistView` and `PlansView` — `#require`d to be
+  declared exactly once in each, so a renamed or missing control fails
+  rather than being skipped — and composes `SortMenu(`; the Dashboard's
+  `orderControl` is required likewise and composes `Menu {` and `Picker(`.
+  `SortMenu.swift` and `OverflowMenu.swift` each compose a `Menu {`;
+  `DetailOverflowMenu.swift` still does. **Mutation (criterion 10's "a
+  bespoke row put back")**: the Wishlist's `sortControl` becomes a `Button`
+  toggling a `@State` that shows an `.overlay` of hand-drawn rows → red.
+- **G12b `noViewFloatsASurfaceOfItsOwn`.** No file under `Trove/Views` or
+  `Trove/App` uses `overlayPreferenceValue`, `anchorPreference` or
+  `transformAnchorPreference` — the mechanism every floating in-page surface
+  in this app used. (Not the catchers' "Dismiss …" labels: a scan for a
+  wording pins the spelling, and the mechanism is the thing.) **No leg on
+  picker styles**: the draft's "every `.pickerStyle(` is `.segmented` or
+  `.inline`" would have banned `.pickerStyle(.menu)` and unstyled pickers,
+  which are system controls the rule allows (Decision 12); "no picker of its
+  own" is G12a's positive half and G10's `SidePicker` legs, not a style
+  allowlist. Mutation: `DropdownHost.swift` restored from `main` and one host
+  re-attached → red. **What it does not claim**: a bespoke control built
+  some other way (an `HStack` of buttons with a selected trait) is invisible
+  to it; G12a's positive half and review are what catch that, and the plan
+  says so rather than implying coverage.
 - **G12c `glassIsOnlyOnTheHeaderBadgesAndTheAddButton`** (P8, Q5). Every
   `.glass`, `.glassProminent`, `.glassEffect(` and `GlassEffectContainer`
   under `Trove/Views` and `Trove/App` sits in `SortMenu.swift`,
@@ -548,8 +577,16 @@ legitimate source-scan shape), each `#require`-ing its anchors:
   `UISegmentedControl.appearance().selectedSegmentTintColor = .brown` in
   `TroveApp.init` → red; a `.confirmationDialog` on a Delete → red.
 
+**Every `Picker(` match in these guards (G2, G5, G10, G12a) is on a word
+boundary** — `(?:^|[^A-Za-z0-9_])Picker\s*\(`, the existing `Menu` regex's
+shape — so `DatePicker(` and `PhotosPicker(` never fire.
+
 The allowlist and `theOnlySystemMenuIsTheDetailScreensNavBarOverflow` go; the
 doc comments that state the old rule are corrected in the same task (Context).
+**Before any of it, in its own commit**: `CLAUDE.md`'s Testing paragraph that
+cites `MenuPolicyTests` as the legitimate source-scan shape is reworded to the
+new guard, keeping a note that the old wording quoted `013`'s rule (Context).
+The constitution is amended first, then the guard follows it.
 
 ## 8. Design documents (criterion 14)
 
@@ -609,22 +646,33 @@ by identifier and read by `.buttons["Sold"].isSelected`, never `.value`.
   person's Accessibility Inspector step and **As built** says so.
 
 **Films** (a `general-purpose` agent; the implementers have no simulator):
-G14a at T002 (§1), and G14b at T009 — the segmented control through Owned →
-Sold → Owned and Active → Completed: the selection's edge takes several
-distinct frames to cross (a slide, not a cut), and the title, meta line and
-the switch's own top edge, and the list's top edge, hold still to within a
-pixel throughout (criterion 7).
+G14a at T002 (§1, criterion 1's first measurement) and **again at T009**, at
+T008's commit on the same runtimes with the same probe — the Items sort,
+Owned from Date to the widest label and back and Sold from Name to Date
+sold, with the same "whole on every frame" verdict — which is the film
+criterion 1's "absent at the end" rests on, since by then T005 has put the
+glass "…" beside the badge and removed the host; and G14b at T009 — the
+segmented control through Owned → Sold → Owned and Active → Completed: the
+selection's edge takes several distinct frames to cross (a slide, not a
+cut), and the title, meta line and the switch's own top edge, and the list's
+top edge, hold still to within a pixel throughout (criterion 7).
 
 **Device pass** (T013, one `general-purpose` dispatch per section, each
 returning a short pass/fail list; the constitution's three habits): (1) every
 screen in Light and Dark — the four headers, the open menus, the switches,
-the add button over rows — screenshots for the person (criteria 8, 15, 16);
-(2) once each under Increase Contrast (`xcrun simctl ui … increase_contrast
-enabled`) and Reduce Transparency (the person's step if `simctl` offers no
-switch for it) — every glass label legible (criterion 8); (3) an export from
-each list's menu: the spinner on the "…", then the share sheet (criterion 4);
-(4) the Items "…" on the Sold side under a chip: the scope rows' gates
-(criterion 3's look). On iOS 27.0, said so. **The person's steps**: the
+the add button over rows — screenshots for the person (criteria 8, 15, 16).
+**The appearance is changed with the app's own Appearance control while the
+app runs**, with the Items and Plans screens behind the Settings sheet, and
+those screens looked at after the sheet closes, in both directions — `004`'s
+defect showed only on an in-app switch, so relaunching into each appearance
+is not the same check; (2) once each under Increase Contrast (`xcrun simctl
+ui … increase_contrast enabled`) and Reduce Transparency (the person's step
+if `simctl` offers no switch for it) — every glass label legible (criterion
+8); (3) an export from each list's menu: the spinner on the "…", then the
+share sheet (criterion 4); and **Import from CSV… from each list's system
+menu opens the file importer** (criterion 2 — no UI test reaches the
+system's document picker; cancelled, the list unchanged); (4) the Items "…"
+on the Sold side under a chip: the scope rows' gates (criterion 3's look). On iOS 27.0, said so. **The person's steps**: the
 Accessibility Inspector over the two badges (pop-up button, no hint), a sort
 menu's rows (the current one selected), both switches (the selected segment)
 and the add button (criterion 11); the walkthrough attestation that every
@@ -634,7 +682,8 @@ screen reads as one language (criterion 15).
 
 At T014, on an evidence bundle (the constitution's close-out rule; no full
 reads of `spec.md`, `plan.md`, `tasks.md`): criteria 1–16 ticked with
-citations; P-items → decisions; this file gains **As built** (the tear's
+citations — **criterion 1 on both films, T002's (measured first) and T009's
+(absent at the end, on the finished header)**; P-items → decisions; this file gains **As built** (the tear's
 result and whether P4 shipped, the control size, the header and subtitle
 mechanisms, the `isSelected` finding, G1's render-vs-device comparison);
 the pointers of Context appended in place (`grep -c` each); `README.md` if
@@ -666,7 +715,7 @@ retired and why each could go); `scripts/verify.sh all`. Then the pre-merge
 | G11 | `HeaderControlsWiringTests` + `testTheAddButtonKeepsItsSizeAndPlace` | `.glassProminent` removed; `Circle().fill` back; the button 60 pt |
 | G12 | `MenuPolicyTests` a–d (§7) | a bespoke sort back on the Wishlist; `DropdownHost` restored; glass on `PlansCard`; an appearance proxy; a confirmation dialog |
 | G13 | UI tests, §9, twice back to back | each new test's own mutation: `manualOrder` on Plans; the order setter not writing; the add button's frame changed |
-| G14 | Films: a — the capsule whole on every frame (criterion 1); b — the selection slides, the header holds (criterion 7) | — (measurements; the frame tables are the record) |
+| G14 | Films: a — the capsule whole on every frame (criterion 1), at T002 (and T003 if needed) and again at T009 on the finished header; b — the selection slides, the header holds (criterion 7), at T009 | — (measurements; the frame tables are the record) |
 | G15 | Unedited and green: `DestructiveColourPolicyTests` (its site counts recorded), `SoldStateWiringTests.theOverflowMenuHostsExactlyOneSystemMenu`, `SettingsWiringTests.theAppearanceSectionLeadsAsASegmentedPickerOverTheChoice` (comment only), `ReorderWiringTests`, `PullToRefreshTests`, `ExportWiringTests.theShareSheetAndFailureAlertAreWired`, `ThemeTests` | — |
 
 Every guard is mutation-verified before it lands; the Done note records what

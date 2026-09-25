@@ -31,8 +31,9 @@ first. Every other task gets the default one review per phase.
 
 **Walkthrough marks and the pause cadence.** Phases 1, 2 and 3 are marked
 `walkthrough: yes` — each changes controls the person uses — so each ends in a
-pause. Phase 4 is `walkthrough: none` (it deletes code nothing calls, rewrites
-a test and edits two documents; nothing on screen changes) and runs on after
+pause. Phase 4 is `walkthrough: none` (it deletes code nothing calls, rewords one
+`CLAUDE.md` example in its own commit, rewrites a test and edits two
+documents; nothing on screen changes) and runs on after
 its review. Phase 5 pauses only for the person's own steps and the merge.
 **Phase 1 can also stop early**: if T003's re-film still shows the tear, the
 work pauses on a product question with the films (spec, Inherited caveats),
@@ -117,10 +118,10 @@ Handoff notes for the pause reports:
   (whether the capsule stayed whole through a switch from the shortest label
   to the longest, on both iOS versions) and whether the fallback was needed —
   if it was, the capsule is now as wide as its longest option all the time.
-  The "…" beside it is still the old one until the next phase. Put as
-  questions, not facts: **R3** — the capsule's words and bars are drawn in
-  whatever colour the system gives a glass button (brass only if the system
-  applies the app's tint), and the device check says which it is.
+  The "…" beside it is still the old one until the next phase. Put as a
+  question, not a fact: the capsule's words and bars are drawn in whatever
+  colour the system gives a glass button (brass only if the system applies
+  the app's tint), and the device check says which it is.
 - **Phase 2 — what can be tried**: every tab's "…" opens the iPhone's own
   menu. Overview and Plans: Settings alone. Wishlist: Export as CSV…, Export
   as PDF…, Import from CSV…, Settings, with separators between the three
@@ -131,18 +132,19 @@ Handoff notes for the pause reports:
   An export shows a spinner in the "…" and then the share sheet, as before.
   On the Overview, "BY VALUE" opens the same kind of menu headed "Order by".
   Opening Sort By while the "…" is open now takes one tap, which is the
-  iPhone's own rule. Put as a question: **R5** — the order label stays plain
-  text, with no glass, because it sits inside the category card.
+  iPhone's own rule. Put as a question: the order label stays plain text,
+  with no glass, because it sits inside the category card.
 - **Phase 3 — what can be tried**: Owned/Sold on Items and Active/Completed on
   Plans are the iPhone's own segmented control — the selection is a glass
   pill that slides; the film says whether the header above held still. The
   add button on Items and the Wishlist is a brass glass disc in the same
   corner, the same size, opening the same form. **Every screen, in both Light
   and Dark, should now read as one language** — a "…" in a header, a "…" on
-  an item's page and the tab bar all open the same glass (criterion 15). Put
-  as questions: **R1** — the switch is only as wide as its two words, not the
-  full width; **R2** — tapping the side already showing no longer refreshes
-  it (pull down to refresh still does); **R4** — the Wishlist's add button
+  an item's page and the tab bar all open the same glass. Say too that the
+  Sort By capsule was filmed again on this finished header and whether it
+  stayed whole. Put as questions: the switch is only as wide as its two
+  words, not the full width; tapping the side already showing no longer
+  refreshes it (pull down to refresh still does); the Wishlist's add button
   still says "Add wanted item" to VoiceOver.
 
 ## Phase 1 — Sort By, measured first (**foundational**) · walkthrough: yes — on the Items tab (both sides), the Wishlist and the Plans tab (both sides), Sort By is a glass capsule opening the system menu under "Sort by" with the current order ticked; on Items' Owned side and the Wishlist the Custom row reads "Drag rows to reorder"; choosing a row re-sorts and renames the capsule; the film of the capsule through a width-changing sort is in the report
@@ -203,7 +205,8 @@ Handoff notes for the pause reports:
   Per plan §1 (the definition of "whole on every frame"), R7, Q8, Q14;
   criterion 1's first measurement. At T001's commit, the build path from
   `-showBuildSettings` and the installed binary's mtime checked; iOS 27.0 and
-  26.5 simulators, `-uiTesting -seedSold`. Extend
+  26.5 simulators, `-uiTesting -seedSold` (if no 26.5 runtime is installed,
+  record that and film on 27.0 alone). Extend
   `scripts/motion-probe/profile.swift` with a background-difference mode
   (plan Q14) and document it in the README. Drive with a **temporary**
   XCUITest (never committed) while `simctl io recordVideo` runs: Items, Owned
@@ -217,7 +220,11 @@ Handoff notes for the pause reports:
   Remove the temporary test; the tree byte-identical to T001's but for the
   probe script and README. **If the menu has no subtitle under Custom or two
   headers, report it — the orchestrator takes Q8's stop to a decision review
-  before T003/T004.**
+  before T003/T004.** **If the device's badge height is more than a point off
+  T001's render, report it — the orchestrator sends T001's control-size choice
+  back to T001's implementer to be re-made from the device's height before
+  T004 and T005 copy it (plan Q6).** The probe extension is this agent's
+  because it can only be tested against film (tier log).
   Files: `scripts/motion-probe/profile.swift`, `scripts/motion-probe/README.md`.
   **Verify:** the frame table per runtime and per switch in the Done note, a
   verdict for each (whole on every frame, or the frames that tear), the
@@ -342,7 +349,7 @@ Handoff notes for the pause reports:
   phase's final commit, count recorded; mutations recorded.
   **Phase 2 closes here — pause for the person.**
 
-## Phase 3 — The two switches and the add button · walkthrough: yes — Owned/Sold and Active/Completed are the system segmented control whose glass selection slides while the header holds still (the film is in the report); the add button on Items and the Wishlist is a brass glass disc in the same corner and size, opening the same form; every screen in Light and Dark reads as one language (criterion 15)
+## Phase 3 — The two switches and the add button · walkthrough: yes — Owned/Sold and Active/Completed are the system segmented control whose glass selection slides while the header holds still, and Sort By's capsule stays whole through a width-changing sort on the finished header (both films are in the report); the add button on Items and the Wishlist is a brass glass disc in the same corner and size, opening the same form; every screen in Light and Dark reads as one language (criterion 15)
 
 - [ ] **T007 — `SidePicker`, and both switches on it.**
   Per plan §4, Q3, R1, R2. New `Trove/Views/Shared/SidePicker.swift` exactly
@@ -393,20 +400,30 @@ Handoff notes for the pause reports:
   green at this commit (the phase's last code change), count recorded;
   mutations recorded.
 
-- [ ] **T009 — The switch's slide, filmed. [`general-purpose` agent with simulator tools]**
-  Per plan §9 (G14b), criterion 7. At T008's commit (build path and mtime
-  checked), iOS 27.0 and 26.5, `-uiTesting -seedPlans`: Items Owned → Sold →
-  Owned and Plans Active → Completed, filmed with the probe's
-  background-difference mode (T002). Report: the frames the selection's edge
+- [ ] **T009 — The switch's slide and the finished header's sort, filmed. [`general-purpose` agent with simulator tools]**
+  Per plan §1 and §9 (G14a, G14b), criteria 1 and 7. At T008's commit (build
+  path and mtime checked), iOS 27.0 and 26.5 (27.0 alone, recorded, if no
+  26.5 runtime is installed), with the probe's background-difference mode
+  (T002). **The sort, again (criterion 1's "absent at the end")**: on
+  `-uiTesting -seedSold`, Items Owned from Date to the widest Owned label and
+  back, and Sold from Name to Date sold — exactly T002's switches, on the
+  header as it now stands, with the glass "…" beside the badge and no
+  dropdown host — each frame judged by plan §1's "whole on every frame".
+  **The switches (criterion 7)**: on `-uiTesting -seedPlans`, Items Owned →
+  Sold → Owned and Plans Active → Completed: the frames the selection's edge
   takes to cross, with Δt (a slide, not a cut); the title, meta line, the
   switch's top edge and the list's top edge held within a pixel on every
   frame. Also Light and Dark screenshots of both switches and of the add
-  button over scrolled rows, for the pause.
+  button over scrolled rows, for the pause. **If the sort film shows the
+  tear**, the orchestrator treats it as T003's case on the finished header
+  (P4's fallback if not yet applied; a product question with the films if
+  it was).
   Files: none (the Done note is the record).
-  **Verify:** the frame tables and verdicts in the Done note.
+  **Verify:** the frame tables and verdicts in the Done note — the sort's
+  per runtime and per switch, the switches' per control.
   **Phase 3 closes here — pause for the person.**
 
-## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewrites the policy guard and edits the two design documents; nothing on screen changes
+## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
 - [ ] **T010 — Delete the bespoke controls and the tests that guarded only them.**
   Per plan §6, Q13. Delete `Trove/Views/Shared/Dropdown.swift`,
@@ -431,7 +448,19 @@ Handoff notes for the pause reports:
   unedited, its site counts recorded.
 
 - [ ] **T011 — The policy guard, inverted.**
-  Per plan §7, R6 (criteria 8, 10). Rewrite `TroveTests/MenuPolicyTests.swift`
+  Per plan §7, R6 (criteria 8, 10), and plan Context's constitution
+  amendment. **First step, committed on its own before anything else in this
+  task** (`CLAUDE.md`'s amendment rule — the constitution changes first,
+  explicitly): in `CLAUDE.md`'s Testing section, the paragraph on source
+  scans that gives `MenuPolicyTests` as the legitimate shape — "'no system
+  menu inside page content' is a fact about view bodies that no view-model
+  test can observe" — is reworded to the new guard: "'every header control
+  opens a system menu and no view floats a surface of its own' is a fact
+  about view bodies that no view-model test can observe", with a
+  parenthesis that until `018` the example quoted `013`'s opposite rule. No
+  other word of `CLAUDE.md` changes; the orchestrator commits this step
+  alone, its message naming the amendment, then dispatches the rest.
+  Then: rewrite `TroveTests/MenuPolicyTests.swift`
   as the four tests of plan §7 (G12a–d), the allowlist and the old test gone,
   the suite's doc comment stating the new rule and naming `013` Amendment A
   as what it replaces. Correct the doc comments plan Context lists
@@ -447,10 +476,16 @@ Handoff notes for the pause reports:
   restored from `main` with one host re-attached; `.glassEffect()` on
   `PlansCard`; `UISegmentedControl.appearance().selectedSegmentTintColor =
   .brown` in `TroveApp.init`; a `.confirmationDialog` on a Delete.
-  Files: `TroveTests/MenuPolicyTests.swift`, the five doc-comment files,
+  G12a requires `sortControl` by name in `ItemListView`, `WishlistView` and
+  `PlansView` and `orderControl` in `DashboardView`; G12b carries no
+  picker-style leg; every `Picker(` match is on a word boundary so
+  `DatePicker(` and `PhotosPicker(` never fire (plan §7).
+  Files: `CLAUDE.md` (the one example, its own commit),
+  `TroveTests/MenuPolicyTests.swift`, the five doc-comment files,
   `TroveTests/SettingsWiringTests.swift` (comment).
-  **Verify:** `scripts/verify.sh` green; all five mutations recorded with the
-  failing assertion's message.
+  **Verify:** the `CLAUDE.md` commit precedes the guard's, and
+  `git show --stat` of it lists `CLAUDE.md` alone; `scripts/verify.sh` green;
+  all five mutations recorded with the failing assertion's message.
 
 - [ ] **T012 — The design documents say what the app now does.**
   Per plan §8 (criterion 14). `design/brief.md`: "Menus and chrome" rewritten
@@ -472,16 +507,22 @@ Handoff notes for the pause reports:
 ## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; the person's own checks (the Accessibility Inspector, Reduce Transparency if the simulator can't switch it, the one-language attestation) are named in T013 as their steps, and nothing new is built
 
 - [ ] **T013 — Device pass. [`general-purpose` agent with simulator tools, one dispatch per section; person: Accessibility Inspector, attestation]**
-  Per plan §9 and criteria 3, 4, 8, 11, 15, 16. At the final code commit
+  Per plan §9 and criteria 2, 3, 4, 8, 11, 15, 16. At the final code commit
   (build path and mtime checked), iOS 27.0, said so. Sections, each its own
   dispatch returning a short pass/fail list: **(1)** every screen in Light
   and Dark — the four headers, each open menu, both switches, the add button
-  over scrolled rows — screenshots for the person; **(2)** once each under
+  over scrolled rows — screenshots for the person, **the appearance changed
+  with the app's own Appearance control while the app runs** (Dark → Light
+  → Dark), with the Items and Plans screens behind the Settings sheet and
+  looked at after it closes — never by relaunching into each appearance,
+  since `004`'s defect showed only on an in-app switch; **(2)** once each under
   Increase Contrast (`xcrun simctl ui … increase_contrast enabled`) and Reduce
   Transparency (the person's step if `simctl` has no switch for it): every
   glass control's label legible; **(3)** a PDF export from the Items submenu
-  and from the Wishlist: the spinner on the "…", then the share sheet;
-  **(4)** the Items "…" on the Sold side under a chip: the scope rows' gates.
+  and from the Wishlist: the spinner on the "…", then the share sheet; and
+  **Import from CSV… from each list's system menu opens the file importer**
+  (criterion 2 — no UI test reaches the system's document picker), cancelled
+  with the list unchanged; **(4)** the Items "…" on the Sold side under a chip: the scope rows' gates.
   Findings fixed in place if routine and inside the footprint, else returned
   for a decision review; each fix a sub-lettered task. **[person]** The
   Accessibility Inspector over the two badges (pop-up button, no hint), a
@@ -500,6 +541,9 @@ Handoff notes for the pause reports:
   the tier log, the spec's summary and decided lines, the `ROADMAP.md`
   entries this spec touches, `009`'s `DECISIONS.md` section as the shape);
   **the dispatch forbids full reads of `spec.md`, `plan.md` and `tasks.md`**.
+  The bundle's evidence for **criterion 1 is both films** — T002's (and
+  T003's if it ran), the measurement taken first, and **T009's**, the one on
+  the finished header that "absent at the end" rests on.
   Criteria 1–16 ticked in `spec.md` with citations; P-items → decisions; this
   plan's **As built** (the tear's result and whether P4 shipped, the control
   size, the header and subtitle mechanisms, the `isSelected` finding, G1's
@@ -532,4 +576,5 @@ recorded here too.
 |---|---|---|---|
 | Policy: plan-and-tasks draft at the implementation tier, no override, trial from 2026-09-24, started with this spec | — | — | `CLAUDE.md` role table, trial row; persists until the person says otherwise |
 | Spec session (this spec's `spec.md`, three rounds and approval) | `claude-fable-5-1` at high effort | orchestrating seat, not measured separately | Spec session ran on claude-fable-5-1 at high effort by the person's per-session pick from the app's picker, 2026-09-24; not a role-table change; the Opus profile stands. Draft 2026-09-24, approved the same day with Decisions 1–14; nothing left open |
+| Note: T002's device agent extends `scripts/motion-probe/profile.swift` | — | — | Implementation work in a `general-purpose` dispatch, planned deliberately rather than the device agent quietly doing a task: the probe's new background-difference mode can only be tested against film, which only the simulator agent can take. The orchestrator commits it with T002 and the phase review reads it |
 | `sdd-planner` — plan.md and tasks.md (draft) | `opus` | ~375k (budget counter, cache re-reads included) | 14 tasks, 5 phases, 15 guards; no product question returned; one spec/code inconsistency stated as a reading (plan R4: the Wishlist add button says "Add wanted item", not the spec's "Add to wishlist", and has no identifier) |
