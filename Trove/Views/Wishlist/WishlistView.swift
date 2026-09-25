@@ -2,17 +2,16 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The header's two dropdowns. One optional of this type is the screen's
-/// whole open-menu state, which is what makes "one open at a time" true by
-/// type rather than by coordination (013 Amendment A).
+/// The header's dropdowns. One optional of this type is the screen's whole
+/// open-menu state, which is what makes "one open at a time" true by type
+/// rather than by coordination (013 Amendment A). Sort By left it at `018`
+/// for a system menu of its own (`SortMenu`).
 private enum HeaderDropdown: Hashable {
-    case sort
     case overflow
 
     /// What the tap-outside layer calls itself to VoiceOver.
     var dismissLabel: String {
         switch self {
-        case .sort: "Dismiss sort options"
         case .overflow: "Dismiss more actions"
         }
     }
@@ -279,17 +278,6 @@ struct WishlistView: View {
         // for the same reach reasons (013 Amendment A).
         .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
             switch dropdown {
-            case .sort:
-                SortDropdown(
-                    options: WishlistViewModel.SortOrder.allCases,
-                    selection: viewModel.sortOrder,
-                    label: \.label,
-                    isManualOrder: { $0 == .custom }
-                ) { option in
-                    // The row has already closed the dropdown.
-                    viewModel.sortOrder = option
-                    viewModel.load()
-                }
             case .overflow:
                 OverflowDropdown(
                     // One flag into both gates: a wishlist has no sold half,
@@ -346,16 +334,16 @@ struct WishlistView: View {
             + viewModel.totalEstimatedCostCents.formattedAsWholeCurrency(currencyCode: "USD")
     }
 
-    /// T035's badge — one control on both screens; see `SortBadge` and
-    /// ItemListView's twin for the note on why the system `Menu` left.
+    /// Sort By as a system menu (`018` plan §1) — `ItemListView`'s Owned
+    /// side: one `SortMenu` over the wishlist's orders, Custom's row carrying
+    /// the reorder subtitle. The spoken label and the identifier stay; the
+    /// "Opens sort options" hint goes — a system menu's button announces
+    /// itself as a pop-up button (criterion 11).
     private var sortControl: some View {
-        SortBadge(label: viewModel.sortOrder.label) {
-            openDropdown = .sort
-        }
-        .dropdownAnchor(HeaderDropdown.sort)
-        .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
-        .accessibilityHint("Opens sort options")
-        .accessibilityIdentifier("sortOptions.wishlist")
+        SortMenu(options: WishlistViewModel.SortOrder.allCases, selection: viewModel.sortOrder,
+                 label: \.label, manualOrder: .custom) { viewModel.sortOrder = $0; viewModel.load() }
+            .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+            .accessibilityIdentifier("sortOptions.wishlist")
     }
 
     // MARK: - Rows

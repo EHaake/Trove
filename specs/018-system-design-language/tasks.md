@@ -345,7 +345,7 @@ Handoff notes for the pause reports:
   stale shadow. Criterion 1's first measurement is met by this film; T009
   repeats it on the finished header.
 
-- [ ] **T004 — Sort By on the Wishlist and Plans; the sort menus' UI test.**
+- [x] **T004 — Sort By on the Wishlist and Plans; the sort menus' UI test.**
   Per plan §1, §9. `WishlistView.sortControl`: one `SortMenu` over
   `WishlistViewModel.SortOrder.allCases`, `manualOrder: .custom`, `select`
   writing as the dropdown row did. `PlansView.sortControl`: one per side, no
@@ -377,6 +377,30 @@ Handoff notes for the pause reports:
   `TroveTests/DropdownWiringTests.swift`, `TroveUITests/TroveUITests.swift`.
   **Verify:** `scripts/verify.sh` green; `scripts/verify.sh ui` green at the
   phase's final commit, count recorded; mutations recorded.
+  **Done (2026-09-24).** Wishlist: one `SortMenu`, `manualOrder: .custom`;
+  Plans: a `@ViewBuilder` `Group` over the side, one `SortMenu` per side, no
+  `manualOrder`, `setActiveSort`/`setCompletedSort`; both keep label and
+  identifier, lose the hint; `HeaderDropdown.sort`, host `case .sort:` and
+  the sort anchors gone (`.overflow` stays). G7 renamed and rewritten; G3
+  is one test over Items, Wishlist and Plans; the two carried notes from
+  T001's review done (G6's Sold leg, the UI comment). Mutations, all red:
+  G7 `manualOrder: .newest` on Plans Active (`PlansWiringTests.swift:231`);
+  G3 `sortOptions.plans` dropped (`HeaderControlsWiringTests.swift:76`),
+  the Wishlist hint put back (`:80`); G6 Sold writing both orders
+  (`ItemListSidesWiringTests.swift:151`); UI: `manualOrder: .newest` on
+  Plans → "Newest, Drag rows to reorder" ≠ "Newest" and the subtitle count
+  1 ≠ 0; the subtitle `Text` removed → "Custom" ≠ "Custom, Drag rows to
+  reorder" on Items Owned and the Wishlist. **XCUITest exposure (27.0)**:
+  the ticked row is `isSelected` and the only selected row; the subtitle
+  is joined into the button's label; exactly one element is labelled
+  exactly "Sort by". (On 26.5 the subtitle is absent from the tree, per
+  T002; the suite runs on 27.0.) `-seedPlans` populates all five sides.
+  `scripts/verify.sh`: green, 1749 tests in 235 suites. The three named UI
+  tests green alone (42 s, 20 s, 49 s). **`scripts/verify.sh ui` at the
+  phase's final commit: 36 tests, 0 failures, 873 s.** Note for the
+  record: verify.sh's failures section matches only Swift Testing's ✘
+  lines; an XCTest failure shows only in the count line, and its message
+  must be pulled from the log path with `grep "error: -\["`.
   **Phase 1 closes here — pause for the person** (what to try is in the
   handoff note above).
 
@@ -693,3 +717,4 @@ recorded here too.
 | `general-purpose` — T002 film (probe extension, four films, menu checks) | `opus` | ~307k (subagent total; three probe drafts before the mode could fail) | Tear absent on 27.0, present on 26.5 as a stale-width capsule → T003 runs (P4). Probe `bg` mode and README committed with T002 |
 | `sdd-implementer` — T003 | `opus` | ~54k (subagent total) | Done; G1 one-width leg red under mutation; unit suite green (1749) |
 | `general-purpose` — T003 re-film (same agent as T002, resumed) | `opus` | ~289k (subagent cumulative, includes T002) | Whole on every frame on 27.0 and 26.5, both appearances; P4 shipped |
+| `sdd-implementer` — T004 | `opus` | ~101k (subagent total) | Done; unit 1749 green; UI suite 36/36 at the phase's final commit; mutations recorded |

@@ -214,20 +214,23 @@ struct PlansWiringTests {
         )
     }
 
-    /// G19, P5: neither side's Sort By offers a manual order, so no row is
-    /// tagged REORDER. Both dropdowns are required, one per side.
+    /// `018` G7 (was 009's G19, P5): neither side's Sort By offers a manual
+    /// order, so no row carries the "Drag rows to reorder" subtitle. Both
+    /// menus are required, one per side, read from `sortControl`'s body.
     ///
-    /// Mutation (T011): a `SortDropdown` with `isManualOrder: { _ in true }`
-    /// → red.
-    @Test func noSortDropdownOffersAManualOrder() throws {
+    /// Mutation (T004): `manualOrder: .newest` on one menu → red.
+    @Test func noSortMenuOffersAManualOrder() throws {
         let code = try SourceScan.production(Self.view)
 
-        let dropdowns = SourceScan.argumentLists(of: "SortDropdown", in: code)
-        try #require(dropdowns.count == 2, "the screen builds \(dropdowns.count) sort dropdowns, expected 2 — one per side")
-        for dropdown in dropdowns {
+        let controls = SourceScan.closureBodies(after: "private var sortControl: some View", in: code)
+        try #require(controls.count == 1, "PlansView declares \(controls.count) `sortControl`s, expected exactly 1")
+        let control = try #require(controls.first)
+        let menus = SourceScan.argumentLists(of: "SortMenu", in: control)
+        try #require(menus.count == 2, "`sortControl` builds \(menus.count) sort menus, expected 2 — one per side: \(control)")
+        for menu in menus {
             #expect(
-                dropdown.contains("isManualOrder: { _ in false }"),
-                "a Plans sort dropdown can tag an option REORDER — a plan list has no manual order (P5): \(dropdown)"
+                !menu.contains("manualOrder:"),
+                "a Plans sort menu gives a row the reorder subtitle — a plan list has no manual order (P5): \(menu)"
             )
         }
     }

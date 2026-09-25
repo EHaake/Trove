@@ -60,7 +60,8 @@ struct ItemListSidesWiringTests {
     /// → red (the gate count and the no-side-in-the-header expectation);
     /// move `viewModel.searchText = ""` back above `switch request` → red
     /// (the pre-switch span); `manualOrder:` on the Sold menu → red; the
-    /// Sold menu writing `viewModel.sortOrder` → red (T001).
+    /// Sold menu writing `viewModel.sortOrder` → red (T001); the Sold menu
+    /// writing both orders → red (T004).
     @Test func oneNarrowingGateCoversBothSidesAndEachSideBringsItsOwnSort() throws {
         let code = try code()
 
@@ -148,7 +149,7 @@ struct ItemListSidesWiringTests {
             "the Sold menu selects nothing"
         )
         #expect(
-            soldSelect.contains("viewModel.soldSortOrder = $0"),
+            soldSelect.contains("viewModel.soldSortOrder = $0") && !soldSelect.contains("viewModel.sortOrder"),
             "the Sold menu writes something other than the Sold side's order: \(soldSelect)"
         )
 

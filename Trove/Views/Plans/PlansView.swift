@@ -2,16 +2,15 @@ import SwiftData
 import SwiftUI
 
 /// The header's dropdowns. An optional of this type is the screen's whole
-/// open-menu state — the list screens' shape (013 Amendment A): Sort By, and
-/// since Amendment A the "…" holding Settings (009 plan QA3, revising R6).
+/// open-menu state — the list screens' shape (013 Amendment A): since
+/// Amendment A the "…" holding Settings (009 plan QA3, revising R6). Sort By
+/// left it at `018` for a system menu of its own (`SortMenu`).
 private enum HeaderDropdown: Hashable {
-    case sort
     case overflow
 
     /// What the tap-outside layer calls itself to VoiceOver.
     var dismissLabel: String {
         switch self {
-        case .sort: "Dismiss sort options"
         case .overflow: "Dismiss more actions"
         }
     }
@@ -188,9 +187,6 @@ struct PlansView: View {
             .preferredColorScheme(appearanceStore.choice.sheetColorScheme(device: systemColorScheme))
         }
         // The header's dropdowns, through the shared host (013 Amendment A).
-        // Sort By is one badge over two selections: the side on screen picks
-        // which orders it offers and which it writes. No REORDER tag on
-        // either — a plan list has no manual order to drag into (plan P5).
         .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
             switch dropdown {
             case .overflow:
@@ -200,29 +196,6 @@ struct PlansView: View {
                 DropdownSurface {
                     DropdownRow(title: "Settings") {
                         isShowingSettings = true
-                    }
-                }
-            case .sort:
-                switch viewModel.side {
-                case .active:
-                    SortDropdown(
-                        options: PlansViewModel.ActiveSortOrder.allCases,
-                        selection: viewModel.activeSortOrder,
-                        label: \.label,
-                        isManualOrder: { _ in false }
-                    ) { option in
-                        // The row has already closed the dropdown. The intent
-                        // sets this side's order and reloads the rows.
-                        viewModel.setActiveSort(option)
-                    }
-                case .completed:
-                    SortDropdown(
-                        options: PlansViewModel.CompletedSortOrder.allCases,
-                        selection: viewModel.completedSortOrder,
-                        label: \.label,
-                        isManualOrder: { _ in false }
-                    ) { option in
-                        viewModel.setCompletedSort(option)
                     }
                 }
             }
@@ -261,15 +234,24 @@ struct PlansView: View {
         .accessibilityIdentifier("moreActions.plans")
     }
 
-    /// T035's badge — `ItemListView`'s twin, naming the side on screen's
-    /// selection.
-    private var sortControl: some View {
-        SortBadge(label: viewModel.visibleSortLabel) {
-            openDropdown = .sort
+    /// Sort By as a system menu (`018` plan §1) — `ItemListView`'s twin: one
+    /// `SortMenu` per side, each over that side's own orders and calling that
+    /// side's own intent, which sets the order and reloads the rows. No row
+    /// carries the reorder subtitle — a plan list has no manual order to drag
+    /// into (009 plan P5). The spoken label and the identifier stay; the
+    /// "Opens sort options" hint goes (criterion 11).
+    @ViewBuilder private var sortControl: some View {
+        Group {
+            switch viewModel.side {
+            case .active:
+                SortMenu(options: PlansViewModel.ActiveSortOrder.allCases, selection: viewModel.activeSortOrder,
+                         label: \.label) { viewModel.setActiveSort($0) }
+            case .completed:
+                SortMenu(options: PlansViewModel.CompletedSortOrder.allCases, selection: viewModel.completedSortOrder,
+                         label: \.label) { viewModel.setCompletedSort($0) }
+            }
         }
-        .dropdownAnchor(HeaderDropdown.sort)
         .accessibilityLabel("Sort by \(viewModel.visibleSortLabel)")
-        .accessibilityHint("Opens sort options")
         .accessibilityIdentifier("sortOptions.plans")
     }
 

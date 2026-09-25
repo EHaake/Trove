@@ -487,8 +487,8 @@ final class TroveUITests: XCTestCase {
     /// Its mutation: removing the `.marketFigure` case from either list's
     /// `SortOrder` must turn this red.
     ///
-    /// `018`: both legs drive the system menu. The Items sort is one from
-    /// T001; the Wishlist's becomes one at T004, and its leg is red until then.
+    /// `018`: both legs drive the system menu — the Items sort from T001, the
+    /// Wishlist's from T004.
     @MainActor
     func testTheSortMenuOffersMarketRows() {
         let app = launchApp()
@@ -837,8 +837,8 @@ final class TroveUITests: XCTestCase {
         )
         badge.tap()
         // `018`: a system menu under one header, in the system's casing
-        // (`SortMenuCopy.header`) — exactly one, which is what says the
-        // picker's label and a section title aren't both drawn (plan Q8).
+        // (`SortMenuCopy.header`) — exactly one: one section header, not two
+        // (plan Q8).
         let header = app.staticTexts["Sort by"]
         XCTAssertTrue(
             header.waitForExistence(timeout: 5),
@@ -2084,7 +2084,9 @@ final class TroveUITests: XCTestCase {
     /// Criteria 5 and 6 on the Active side: the default is the newest plan
     /// first (the Vox, two days old, above the Summicron, three), **Name**
     /// reverses that pair, and the selection survives a visit to Completed.
-    /// Driven through the badge and the dropdown on screen.
+    /// Driven through the badge and its system menu on screen (`018`): the
+    /// row is a button titled with its order, and choosing it closes the
+    /// menu.
     @MainActor
     func testSortingEachSideReordersTheRowsAndIsKeptAcrossASwitch() {
         let app = launchPlans()
@@ -2100,7 +2102,7 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(badge.waitForExistence(timeout: 5), "the Active side must offer Sort By")
         XCTAssertEqual(badge.label, "Sort by Newest")
         badge.tap()
-        XCTAssertTrue(app.staticTexts["SORT BY"].waitForExistence(timeout: 5), "the Plans Sort By should open")
+        XCTAssertTrue(app.staticTexts["Sort by"].waitForExistence(timeout: 5), "the Plans Sort By should open")
         app.buttons["Name"].tap()
         waitForLabel(badge, "Sort by Name")
         XCTAssertLessThan(summicron.frame.minY, vox.frame.minY, "Name must put the Summicron above the Vox")
@@ -2113,6 +2115,128 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(summicron.waitForExistence(timeout: 5))
         waitForLabel(badge, "Sort by Name")
         XCTAssertLessThan(summicron.frame.minY, vox.frame.minY, "the Active side must come back sorted by Name")
+    }
+
+    /// `018` criterion 5 on every sort menu in the app, over the seeded Plans
+    /// collection (`-seedPlans` leaves rows on all five): Items' Owned and
+    /// Sold sides, the Wishlist, and both Plans sides. Each opens under
+    /// exactly one "Sort by" header, offers one row per order, and checks the
+    /// default and nothing else; the Custom row carries "Drag rows to
+    /// reorder" on the two lists with a manual order, and no row does on the
+    /// other three.
+    ///
+    /// What XCUITest exposes, found here (plan §9's open question): the
+    /// checked row is `isSelected` (the `Toggle` row's Selected trait), and on
+    /// the iOS 27.0 runtime the subtitle is joined into the row's label —
+    /// "Custom, Drag rows to reorder" — rather than exposed as a static text
+    /// of its own. On iOS 26.5 the subtitle is drawn but absent from the tree
+    /// (T002), so this test's subtitle legs speak for the 27.0 runtime the UI
+    /// suite runs on. The header is counted by an exact label, so the badge's
+    /// own "Sort by Date" never matches.
+    ///
+    /// Mutations (T004): `manualOrder: .newest` on a Plans menu → red (the
+    /// Newest row's label); the subtitle `Text` removed from `SortMenu` → red
+    /// (the Custom row's label).
+    @MainActor
+    func testEverySortMenuOffersItsOrdersUnderSortByWithTheCurrentOneChecked() {
+        let app = launchPlans()
+
+        app.buttons["Items"].tap()
+        assertSortMenu(
+            in: app, badge: "sortOptions.items", screen: "Items' Owned side",
+            options: ["Custom", "Date", "Value \u{2193}", "Value \u{2191}", "Market \u{2193}", "Market \u{2191}", "Desire"],
+            current: "Date", manualOrder: "Custom"
+        )
+        let itemsSwitch = element(in: app, identifiedBy: "items.sideSwitch")
+        XCTAssertTrue(itemsSwitch.waitForExistence(timeout: 5), "the Items tab must offer the side switch")
+        itemsSwitch.buttons["Sold"].tap()
+        assertSortMenu(
+            in: app, badge: "sortOptions.items", screen: "Items' Sold side",
+            options: ["Date sold", "Price \u{2193}", "Price \u{2191}", "Paid \u{2193}", "Paid \u{2191}", "Gain \u{2193}", "Gain \u{2191}", "Name"],
+            current: "Date sold", manualOrder: nil
+        )
+
+        app.buttons["Wishlist"].tap()
+        assertSortMenu(
+            in: app, badge: "sortOptions.wishlist", screen: "the Wishlist",
+            options: ["Custom", "Cost \u{2191}", "Cost \u{2193}", "Market \u{2193}", "Market \u{2191}", "Desire", "Alphabetical"],
+            current: "Custom", manualOrder: "Custom"
+        )
+
+        app.buttons["Plans"].tap()
+        assertSortMenu(
+            in: app, badge: "sortOptions.plans", screen: "Plans' Active side",
+            options: ["Newest", "Oldest", "Name", "Wishlist order"],
+            current: "Newest", manualOrder: nil
+        )
+        let plansSwitch = element(in: app, identifiedBy: "plans.sideSwitch")
+        XCTAssertTrue(plansSwitch.waitForExistence(timeout: 5), "the Plans tab must offer the side switch")
+        plansSwitch.buttons["Completed"].tap()
+        XCTAssertTrue(planRow(in: app, named: "Hasselblad 80mm").waitForExistence(timeout: 5), "Completed must list the bought plan")
+        assertSortMenu(
+            in: app, badge: "sortOptions.plans", screen: "Plans' Completed side",
+            options: ["Newest", "Oldest", "Name"],
+            current: "Newest", manualOrder: nil
+        )
+    }
+
+    /// Opens one sort menu and reads it whole: one "Sort by", one row per
+    /// order labelled exactly its name (the manual order's with its subtitle
+    /// joined, as iOS 27.0 exposes it), exactly `current` selected, and no
+    /// subtitle anywhere when the list has no manual order. Closed by the
+    /// outside tap.
+    @MainActor
+    private func assertSortMenu(
+        in app: XCUIApplication,
+        badge identifier: String,
+        screen: String,
+        options: [String],
+        current: String,
+        manualOrder: String?,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let subtitle = "Drag rows to reorder"
+        let badge = app.buttons[identifier]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "\(screen) must offer Sort By", file: file, line: line)
+        badge.tap()
+        let header = app.staticTexts["Sort by"]
+        XCTAssertTrue(header.waitForExistence(timeout: 5), "\(screen)'s Sort By should open", file: file, line: line)
+        XCTAssertEqual(
+            app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Sort by")).count,
+            1,
+            "\(screen)'s Sort By should carry exactly one \"Sort by\" header",
+            file: file,
+            line: line
+        )
+
+        var selected: [String] = []
+        for option in options {
+            let row = app.buttons
+                .matching(NSPredicate(format: "label == %@ OR label BEGINSWITH %@", option, "\(option), "))
+                .firstMatch
+            guard row.exists else {
+                XCTFail("\(screen)'s Sort By has no \(option) row", file: file, line: line)
+                continue
+            }
+            let expected = option == manualOrder ? "\(option), \(subtitle)" : option
+            XCTAssertEqual(row.label, expected, "\(screen)'s \(option) row", file: file, line: line)
+            if row.isSelected { selected.append(option) }
+        }
+        XCTAssertEqual(selected, [current], "\(screen)'s Sort By should check its default and nothing else", file: file, line: line)
+
+        if manualOrder == nil {
+            XCTAssertEqual(
+                app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", subtitle)).count,
+                0,
+                "\(screen) has no manual order, so no row carries \"\(subtitle)\"",
+                file: file,
+                line: line
+            )
+        }
+
+        tapOutsideMenu(in: app)
+        XCTAssertTrue(header.waitForNonExistence(timeout: 5), "\(screen)'s Sort By should close", file: file, line: line)
     }
 
     /// Criterion 14: an Active row's leading swipe offers **Mark as bought…**

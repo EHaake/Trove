@@ -60,19 +60,27 @@ struct HeaderControlsWiringTests {
     /// system menu's button announces itself as a pop-up button, which is the
     /// job "Opens sort options" did for a bespoke button (criterion 11).
     ///
-    /// Mutation (T001): the Items sort control's identifier dropped → red.
+    /// Mutations: the Items sort control's identifier dropped → red (T001);
+    /// the Plans sort control's identifier dropped → red, and the Wishlist's
+    /// "Opens sort options" hint put back → red (T004).
     @Test func everyConvertedHeaderControlKeepsItsIdentifierAndCarriesNoHint() throws {
-        let code = try SourceScan.production("Trove/Views/Items/ItemListView.swift")
-        let controls = SourceScan.closureBodies(after: "private var sortControl: some View", in: code)
-        try #require(controls.count == 1, "ItemListView declares \(controls.count) `sortControl`s, expected exactly 1")
-        let control = try #require(controls.first)
-        #expect(
-            control.contains(".accessibilityIdentifier(\"sortOptions.items\")"),
-            "the Items sort control lost its identifier: \(control)"
-        )
-        #expect(
-            !control.contains(".accessibilityHint("),
-            "the Items sort control carries a hint again — the system menu announces itself (criterion 11): \(control)"
-        )
+        for (path, identifier) in [
+            ("Trove/Views/Items/ItemListView.swift", "sortOptions.items"),
+            ("Trove/Views/Wishlist/WishlistView.swift", "sortOptions.wishlist"),
+            ("Trove/Views/Plans/PlansView.swift", "sortOptions.plans"),
+        ] {
+            let code = try SourceScan.production(path)
+            let controls = SourceScan.closureBodies(after: "private var sortControl: some View", in: code)
+            try #require(controls.count == 1, "\(path) declares \(controls.count) `sortControl`s, expected exactly 1")
+            let control = try #require(controls.first)
+            #expect(
+                control.contains(".accessibilityIdentifier(\"\(identifier)\")"),
+                "\(path): the sort control lost its identifier `\(identifier)`: \(control)"
+            )
+            #expect(
+                !control.contains(".accessibilityHint("),
+                "\(path): the sort control carries a hint again — the system menu announces itself (criterion 11): \(control)"
+            )
+        }
     }
 }
