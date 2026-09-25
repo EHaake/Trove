@@ -377,7 +377,7 @@ run count is printed for information only. What the films therefore rest
 on is (a) the settled capsule extent checked against XCUITest's frame on
 every switch — within 0.7 pt on every row after T003, where at T002 the
 two 26.5 narrow-to-wide rows disagreed by 12–16 pt, which is how the tear
-was found — and (b) the frames of every dismiss viewed by eye. **Criterion
+was found — and (b) the named frames viewed by eye (T003's Done note lists them). **Criterion
 1's first measurement is met on that evidence**, not on an automatic
 verdict. Before T009's final film the probe is made able to fail: pixels
 adjacent to a brass pixel are excluded from the capsule, and the change is
