@@ -243,7 +243,7 @@ which is the "sparingly" Apple asks for.
 The floating add button on the Items and Wishlist lists becomes a
 **prominent Liquid Glass button**, tinted brass, keeping its size, its
 place over the bottom-trailing corner of the rows, its plus and its "Add
-item" / "Add to wishlist" label (Decision 14). It is the one control in
+item" / "Add wanted item" label (Decision 14). It is the one control in
 the app that floats over scrolling content — where Apple puts glass and
 where the material actually refracts what passes beneath it — and iOS 26's
 own compose buttons are glass discs in the same corner. Its drawn brass
