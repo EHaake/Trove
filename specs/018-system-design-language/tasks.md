@@ -239,7 +239,7 @@ Handoff notes for the pause reports:
   timed again at the phase-end UI run, and T002 looks at whether the glass
   button keeps the app from idling.
 
-- [ ] **T002 — The tear, filmed. [`general-purpose` agent with simulator tools]**
+- [x] **T002 — The tear, filmed. [`general-purpose` agent with simulator tools]**
   Per plan §1 (the definition of "whole on every frame"), R7, Q8, Q14;
   criterion 1's first measurement. At T001's commit, the build path from
   `-showBuildSettings` and the installed binary's mtime checked; iOS 27.0 and
@@ -274,6 +274,38 @@ Handoff notes for the pause reports:
   verdict for each (whole on every frame, or the frames that tear), the
   screenshots' findings, the two heights. If every switch is whole, T003 is
   ticked "not needed" with the film's numbers.
+  **Done (2026-09-24, at T001's commit 930c90b, binary mtime checked).**
+  Four films: iOS 27.0 Dark/Light, iOS 26.5 Dark/Light; `-uiTesting
+  -seedSold`; widest Owned label "Market ↓" (mono 11 pt, 8 characters);
+  switches Date → Date (current row), Date → Market ↓, Market ↓ → Date,
+  Sold Date sold → Name, Name → Date sold; Δt 5–23 ms; badge box
+  (220, 81, 112 × 41). Probe `bg` mode: label = brass (R−B > 40), capsule =
+  differing and not brass, extent over the box's full height; calibrated
+  against XCUITest's frame (27.0 within 0.7 pt on every state).
+  **iOS 27.0: whole on every frame**, all five switches, both appearances —
+  the dismiss is a glass morph (panel → droplet, box bare 0.11–0.16 s, the
+  capsule scales in over ~12 frames with the label clipped inside, settled
+  by +0.35 s); settled extents match the true frame within 0.7 pt.
+  **iOS 26.5: the tear, in a settled form** — after a narrow-to-wide relabel
+  the capsule keeps the previous label's width until the next tap:
+  Date → Market ↓ settles at 25.0–95.0 against a true 13.0–108.0 (label
+  26.3–94.7, zero padding, bars and arrow at or over the rim, frames 819–864
+  Dark / 918–945 Light); Name → Date sold 22.3–92.0 against 6.3–108.0;
+  wide-to-narrow leaves a stale wider shadow behind the right pill (Light,
+  frame 1183). The probe's TEAR verdict cannot fire there (the label's
+  fringe is the outermost non-brass pixel); the finding rests on the
+  calibration column and the viewed frames. **P4 applies → T003.**
+  Menu checks, all four runs: exactly one "Sort by", Date ticked, one
+  checkmark, "Drag rows to reorder" under Custom, no switches; tapping the
+  current row closes the menu with the label unchanged and no frame with
+  two checks or none. Accessibility: 7 buttons, Date `isSelected == true`,
+  one selected; the subtitle is joined into the button's label on 27.0
+  ("Custom, Drag rows to reorder") and absent from the tree on 26.5 though
+  drawn — T004's UI test matches Custom by prefix and never counts the
+  subtitle as a static text. Heights: device 28.33 pt on both runtimes
+  against 29 rendered (within a point; Q6's choice stands). Idle: no
+  "animations complete" stalls in any log; the glass menu does not keep the
+  app from idling (T001's 209 s run is not the menu's doing).
 
 - [ ] **T003 — (Only if T002 shows the tear) P4's constant footprint, re-filmed.**
   Per plan §1, P4. `SortMenu`'s label reserves the widest of its menu's
@@ -636,3 +668,4 @@ recorded here too.
 | `skeptical-reviewer` — decision review at T001 | `opus` | ~52k (subagent total) | Q8: `Section` of `Toggle` checkmark rows (header, subtitle and Selected trait all present on the probe; three device checks added to T002). G1: a stand-in sized from a render of the badge row alone, no self-satisfying leg, a `.large` mutation added. Both blocking as things stood; transcribed into plan §1, Q8, §3, §11 and here before T001 resumed |
 | `sdd-implementer` — T001 (resumed on the decisions) | `opus` | ~162k (subagent total, includes the first pass) | Done; unit suite green (1748); the named UI tests green alone; mutations recorded in the Done note |
 | `skeptical-reviewer` — T001 per-task review | `opus` | ~84k (subagent total) | **approved**, eight notes, none blocking, carried in the Done note. One on the orchestrator: the bundle pasted the implementer's whole transcript file (~990 KB) instead of its final message — future bundles carry the final report only |
+| `general-purpose` — T002 film (probe extension, four films, menu checks) | `opus` | ~307k (subagent total; three probe drafts before the mode could fail) | Tear absent on 27.0, present on 26.5 as a stale-width capsule → T003 runs (P4). Probe `bg` mode and README committed with T002 |
