@@ -1,8 +1,7 @@
 # 018 — System Design Language
 
-**Status**: **Draft**, third round (2026-09-24), **nothing left open** —
-awaiting the person's approval — written with the person in
-a spec session of its own, per `CLAUDE.md`'s model policy. One note for the
+**Status**: **Approved** (2026-09-24, "Approved.") — third round, **nothing
+left open** — written with the person in a spec session of its own, per `CLAUDE.md`'s model policy. One note for the
 record: the session ran on Fable 5.1 at high effort, which the Opus profile
 adopted this morning does not name; the person chose the entry before
 choosing a model, the session model was a per-session pick from the app's
