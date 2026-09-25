@@ -307,7 +307,7 @@ Handoff notes for the pause reports:
   "animations complete" stalls in any log; the glass menu does not keep the
   app from idling (T001's 209 s run is not the menu's doing).
 
-- [ ] **T003 — (Only if T002 shows the tear) P4's constant footprint, re-filmed.**
+- [x] **T003 — (Only if T002 shows the tear) P4's constant footprint, re-filmed.**
   Per plan §1, P4. `SortMenu`'s label reserves the widest of its menu's
   options (the hidden-labels `ZStack` of plan §1). Tests: **G1** gains "one
   width for every selection" — a `SortMenu` rendered once per selected option
@@ -322,6 +322,28 @@ Handoff notes for the pause reports:
   (`specs/010-item-management-enhancements/tasks.md`, T029c).
   **Verify:** `scripts/verify.sh` green; the mutation recorded; the re-film's
   frame table whole on every frame, both runtimes.
+  **Done (2026-09-24, code at 07459bb; re-film at that commit, app rebuilt,
+  binary mtime checked).** `SortMenu`'s label is a `ZStack` of every
+  option's label hidden under the selected one, mono 11, no colour of its
+  own. G1 gains `theSortBadgeIsOneWidthForEverySelection`: every Items
+  Owned option renders at 95 pt (under the mutation — hidden labels
+  removed — the widths were Date 69, Custom/Desire 82, Value 89, Market 95,
+  red at `ItemListHeaderLayoutTests.swift:158`, `Set(widths.values).count
+  == 1`). Header height still 53 in every case; Owned badge row 145 × 30,
+  Sold 152 × 30. `scripts/verify.sh`: green, 1749 tests in 235 suites;
+  `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch` alone 31 s (no
+  stalls; T001's 209 s does not reproduce). **Re-film**: four films (27.0
+  Dark/Light, 26.5 Dark/Light), the same five switches, same probe and
+  thresholds; device badge frame 95 × 28.33 on Owned for every selection,
+  101.67 × 28.33 on Sold, both runtimes. **Whole on every frame, all
+  switches, both runtimes, both appearances**: the settled extent matches
+  XCUITest's frame within 0.7 pt on every row, including 26.5's Date →
+  Market ↓ (13.0–108.0, was 25.0–95.0) and Name → Date sold (6.3–108.0,
+  was 22.3–92.0); the Light ghost after Market ↓ → Date is gone. Frames
+  viewed by eye on 26.5 (Dark f690/f725, f905/f945, f1410/f1445; Light
+  f830/f870, f1030/f1070, f1485/f1525): full capsule with padding, no
+  stale shadow. Criterion 1's first measurement is met by this film; T009
+  repeats it on the finished header.
 
 - [ ] **T004 — Sort By on the Wishlist and Plans; the sort menus' UI test.**
   Per plan §1, §9. `WishlistView.sortControl`: one `SortMenu` over
@@ -669,3 +691,5 @@ recorded here too.
 | `sdd-implementer` — T001 (resumed on the decisions) | `opus` | ~162k (subagent total, includes the first pass) | Done; unit suite green (1748); the named UI tests green alone; mutations recorded in the Done note |
 | `skeptical-reviewer` — T001 per-task review | `opus` | ~84k (subagent total) | **approved**, eight notes, none blocking, carried in the Done note. One on the orchestrator: the bundle pasted the implementer's whole transcript file (~990 KB) instead of its final message — future bundles carry the final report only |
 | `general-purpose` — T002 film (probe extension, four films, menu checks) | `opus` | ~307k (subagent total; three probe drafts before the mode could fail) | Tear absent on 27.0, present on 26.5 as a stale-width capsule → T003 runs (P4). Probe `bg` mode and README committed with T002 |
+| `sdd-implementer` — T003 | `opus` | ~54k (subagent total) | Done; G1 one-width leg red under mutation; unit suite green (1749) |
+| `general-purpose` — T003 re-film (same agent as T002, resumed) | `opus` | ~289k (subagent cumulative, includes T002) | Whole on every frame on 27.0 and 26.5, both appearances; P4 shipped |
