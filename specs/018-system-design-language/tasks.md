@@ -149,7 +149,7 @@ Handoff notes for the pause reports:
 
 ## Phase 1 — Sort By, measured first (**foundational**) · walkthrough: yes — on the Items tab (both sides), the Wishlist and the Plans tab (both sides), Sort By is a glass capsule opening the system menu under "Sort by" with the current order ticked; on Items' Owned side and the Wishlist the Custom row reads "Drag rows to reorder"; choosing a row re-sorts and renames the capsule; the film of the capsule through a width-changing sort is in the report
 
-- [ ] **T001 — `SortMenu`, and Items' Sort By on it. `review: per-task`.**
+- [x] **T001 — `SortMenu`, and Items' Sort By on it. `review: per-task`.**
   Per plan §1, Q1, Q6, Q8, Q11. New `Trove/Views/Shared/SortMenu.swift`:
   `SortMenuCopy` (`header`, `reorderSubtitle`) and `SortMenu<Option:
   Hashable>` exactly as plan §1 declares it — a system `Menu` over an inline
@@ -209,6 +209,35 @@ Handoff notes for the pause reports:
   `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch` and
   `testTheSoldCardLandsOnTheSoldSideWhichListsSalesMostRecentFirst` green run
   alone; both control-size heights and every mutation recorded.
+  **Done (2026-09-24, commit follows).** Stopped once on plan Q8's stop and a
+  second finding (a glass `Menu` in the header's `VStack` crashes
+  `ImageRenderer`); both went to a decision review (tier log) and were
+  transcribed into plan §1, Q8, §3, §11 before the task resumed. Shipped:
+  `SortMenu` as a `Menu` over `Section(SortMenuCopy.header)` of `Toggle`
+  checkmark rows, `.glass`, `.controlSize(.regular)`. Control size (Q6):
+  sort badge alone `.regular` 102×29, `.small` 98×25, `.large` 118×45; badge
+  row (with `OverflowBadge`, 42×30) 152×30 / 148×30; header 53 at both,
+  equal to the no-badges header 53 (title line box 33 + 6 + meta 14), so
+  the proviso holds and `.regular` ships; `.large` breaks it (header 65).
+  Simulator frame of `sortOptions.items` 28.33 pt against 29 rendered.
+  Mutations, all red: G2 Toggle rows → Button rows
+  (`HeaderControlsWiringTests.swift:47`), `theme.colors` foreground (`:52`);
+  G1 new `.large` (`ItemListHeaderLayoutTests.swift:117`), meta beside the
+  badges (`:121–133`), 200-pt baseline (`:117–133`), `OverflowBadge` padding
+  8→14 (`:117`); G3 identifier dropped (`:58`); G6 `manualOrder:` on Sold
+  (`ItemListSidesWiringTests.swift:145`), Sold writing `sortOrder` (`:150`),
+  gate `&& side == .owned` (`:76`), search clear moved (`:161`).
+  `scripts/verify.sh`: green, 1748 tests in 235 suites (implementer and
+  orchestrator re-run). UI: the two named tests green alone;
+  `testTheSortMenuOffersMarketRows` Items leg green, Wishlist leg red until
+  T004 (line 501, count 0 of "Sort by"). **Carried notes** from the review:
+  G6's Sold leg gains `!soldSelect.contains("viewModel.sortOrder")` and the
+  UI comment at ~837 stops naming a picker (T004); "the two badges one
+  height" is T005's leg; `MenuPolicyTests`' old test name is renamed at
+  T011; `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch` ran 209 s
+  with three 60 s "animations complete notification not received" stalls —
+  timed again at the phase-end UI run, and T002 looks at whether the glass
+  button keeps the app from idling.
 
 - [ ] **T002 — The tear, filmed. [`general-purpose` agent with simulator tools]**
   Per plan §1 (the definition of "whole on every frame"), R7, Q8, Q14;
@@ -605,3 +634,5 @@ recorded here too.
 | Implementation session (this spec, from T001) | `claude-fable-5-1` at medium effort | orchestrating seat, not measured separately | Opened 2026-09-24 at the person's instruction on Fable 5.1 at medium, a per-session pick from the app's picker (the Opus profile names `claude-opus-5-5` for the seat); not a role-table change. Every dispatch runs with no model override, per the table |
 | `sdd-implementer` — T001 (first pass) | `opus` | ~148k (subagent total) | Built SortMenu, Items' sortControl, G2/G3/G6, the narrowed legs and the UI test rewrites; unit suite green (1748). **Stopped on a judgment call**, correctly: plan Q8's pre-authorised stop (an inline `Picker` in a `Menu` draws no header and no subtitle on iOS 27.0) and a second finding (a glass `Menu` in the header's `VStack` crashes `ImageRenderer`, so G1 could not be rewritten). G1's three mutations not re-run; control size `.regular` shipped on separate badge and title renders (`.regular` 102×29, `.small` 98×25, title line box 33) |
 | `skeptical-reviewer` — decision review at T001 | `opus` | ~52k (subagent total) | Q8: `Section` of `Toggle` checkmark rows (header, subtitle and Selected trait all present on the probe; three device checks added to T002). G1: a stand-in sized from a render of the badge row alone, no self-satisfying leg, a `.large` mutation added. Both blocking as things stood; transcribed into plan §1, Q8, §3, §11 and here before T001 resumed |
+| `sdd-implementer` — T001 (resumed on the decisions) | `opus` | ~162k (subagent total, includes the first pass) | Done; unit suite green (1748); the named UI tests green alone; mutations recorded in the Done note |
+| `skeptical-reviewer` — T001 per-task review | `opus` | ~84k (subagent total) | **approved**, eight notes, none blocking, carried in the Done note. One on the orchestrator: the bundle pasted the implementer's whole transcript file (~990 KB) instead of its final message — future bundles carry the final report only |

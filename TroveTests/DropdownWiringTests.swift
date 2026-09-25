@@ -71,7 +71,9 @@ struct DropdownWiringTests {
     /// opens, and every badge carries the identifier the UI tests query —
     /// all eight, not just the three the tests happen to use. Read from the
     /// controls' own bodies. The Plans pair joined at 009 Amendment A (G33;
-    /// mutation: `moreActions.plans` dropped → red).
+    /// mutation: `moreActions.plans` dropped → red). The Items sort badge
+    /// left at `018` for a system menu, which carries no hint —
+    /// `HeaderControlsWiringTests` (G3) pins its identifier now.
     @Test func everyBadgeCarriesItsHintAndIdentifier() throws {
         let badge = try SourceScan.production("Trove/Views/Shared/OverflowBadge.swift")
         let badgeBody = try #require(SourceScan.closureBodies(after: "var body: some View", in: badge).first)
@@ -79,14 +81,16 @@ struct DropdownWiringTests {
         #expect(badgeBody.contains("isBusy ? \"Working\" : \"More actions\""), "the \"…\" badge's label, both states")
 
         for (path, sortID, overflowID) in [
-            ("Trove/Views/Items/ItemListView.swift", "sortOptions.items", "moreActions.items"),
+            ("Trove/Views/Items/ItemListView.swift", nil, "moreActions.items"),
             ("Trove/Views/Wishlist/WishlistView.swift", "sortOptions.wishlist", "moreActions.wishlist"),
             ("Trove/Views/Plans/PlansView.swift", "sortOptions.plans", "moreActions.plans"),
-        ] {
+        ] as [(String, String?, String)] {
             let code = try SourceScan.production(path)
-            let sort = try #require(SourceScan.closureBodies(after: "private var sortControl: some View", in: code).first)
-            #expect(sort.contains(".accessibilityHint(\"Opens sort options\")"), "\(path): the sort badge's hint")
-            #expect(sort.contains(".accessibilityIdentifier(\"\(sortID)\")"), "\(path): the sort badge's identifier")
+            if let sortID {
+                let sort = try #require(SourceScan.closureBodies(after: "private var sortControl: some View", in: code).first)
+                #expect(sort.contains(".accessibilityHint(\"Opens sort options\")"), "\(path): the sort badge's hint")
+                #expect(sort.contains(".accessibilityIdentifier(\"\(sortID)\")"), "\(path): the sort badge's identifier")
+            }
             let overflow = try #require(SourceScan.closureBodies(after: "private var overflowControl: some View", in: code).first)
             #expect(overflow.contains(".accessibilityIdentifier(\"\(overflowID)\")"), "\(path): the \"…\" badge's identifier")
         }
@@ -133,7 +137,9 @@ struct DropdownWiringTests {
 
     /// One optional is the screen's whole open-menu state: exactly one
     /// `openDropdown`, no surviving boolean, and a host bound to it — placed
-    /// after the add button's overlay so the dropdown draws above it.
+    /// after the add button's overlay so the dropdown draws above it. The two
+    /// Sort By legs are the Wishlist's alone since `018` moved the Items sort
+    /// to a system menu; T004 takes them from the Wishlist too.
     @Test(arguments: lists)
     func eachListHostsItsDropdownsOffOneOptional(path: String) throws {
         let code = try SourceScan.production(path)
@@ -145,10 +151,15 @@ struct DropdownWiringTests {
         if let host = hosts.first {
             #expect(host.lowerBound > addButton.upperBound, "\(path): the host must come after the add button's overlay")
         }
-        #expect(code.ranges(of: ".dropdownAnchor(HeaderDropdown.sort)").count == 1, "\(path): the sort badge must be anchored, once")
+        let wishlist = path == "Trove/Views/Wishlist/WishlistView.swift"
+        if wishlist {
+            #expect(code.ranges(of: ".dropdownAnchor(HeaderDropdown.sort)").count == 1, "\(path): the sort badge must be anchored, once")
+        }
         #expect(code.ranges(of: ".dropdownAnchor(HeaderDropdown.overflow)").count == 1, "\(path): the overflow badge must be anchored, once")
         let host = try #require(SourceScan.closureBodies(after: ".dropdownHost(open: $openDropdown", in: code).first)
-        #expect(host.contains("case .sort:") && host.contains("SortDropdown("), "\(path): the host must compose Sort By")
+        if wishlist {
+            #expect(host.contains("case .sort:") && host.contains("SortDropdown("), "\(path): the host must compose Sort By")
+        }
         #expect(host.contains("case .overflow:") && host.contains("OverflowDropdown("), "\(path): the host must compose the overflow")
     }
 

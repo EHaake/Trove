@@ -293,59 +293,6 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(badge.isHittable, "Done should return to the Dashboard")
     }
 
-    /// 013 Amendment A, criterion 24 as Decision 19 fixed it: while a
-    /// dropdown is open, a tap anywhere outside it — the other badge
-    /// included — only closes it; the next tap opens. One item is added
-    /// through the quick-add path so the sort badge exists at all. Its own
-    /// mutation: a tap-outside layer that no longer closes must turn the
-    /// first pair red.
-    @MainActor
-    func testAnOpenMenuClosesOnAnyOutsideTapIncludingTheOtherBadge() {
-        let app = launchApp()
-        XCTAssertTrue(app.staticTexts["Nothing tracked yet"].waitForExistence(timeout: 5), "Expected the first-run dashboard.")
-        app.buttons["Items"].tap()
-
-        let addButton = app.buttons["Add item"]
-        XCTAssertTrue(addButton.waitForExistence(timeout: 5))
-        addButton.tap()
-        let nameField = app.textFields["Name"]
-        XCTAssertTrue(nameField.waitForExistence(timeout: 5), "The add-item sheet didn't present")
-        nameField.tap()
-        nameField.typeText("Rolleiflex")
-        let categoryField = app.textFields["Category"]
-        categoryField.tap()
-        categoryField.typeText("Photography/Cameras")
-        let priceField = app.textFields["Price paid"]
-        priceField.tap()
-        priceField.typeText("1850")
-        app.buttons["Save item"].tap()
-        XCTAssertTrue(app.buttons["Save item"].waitForNonExistence(timeout: 5), "The sheet stayed up")
-
-        let sortBadge = app.buttons["sortOptions.items"]
-        XCTAssertTrue(sortBadge.waitForExistence(timeout: 5), "one item is enough for the sort badge to show")
-        let overflowBadge = app.buttons["moreActions.items"]
-        XCTAssertTrue(overflowBadge.waitForExistence(timeout: 5))
-        // Captured before anything opens: while a dropdown is open the badge
-        // sits under the tap-outside layer, and a coordinate tap is how a
-        // person's finger lands there regardless.
-        let overflowCentre = overflowBadge.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-
-        sortBadge.tap()
-        let sortHeader = app.staticTexts["SORT BY"]
-        XCTAssertTrue(sortHeader.waitForExistence(timeout: 5), "Sort By should open")
-
-        // The other badge, while Sort By is open: closes, opens nothing.
-        overflowCentre.tap()
-        XCTAssertTrue(sortHeader.waitForNonExistence(timeout: 5), "the tap on the other badge must close Sort By")
-        XCTAssertFalse(app.buttons["Import from CSV…"].exists, "…and must not open the overflow in the same tap (Decision 19)")
-
-        // The next tap opens.
-        overflowCentre.tap()
-        XCTAssertTrue(app.buttons["Import from CSV…"].waitForExistence(timeout: 5), "the second tap opens the overflow")
-        app.buttons["Dismiss more actions"].tap()
-        XCTAssertTrue(app.buttons["Import from CSV…"].waitForNonExistence(timeout: 5), "the labelled catcher closes it")
-    }
-
     /// 013's behavioral half for criteria 3, 7, 8 and 11 on a fresh
     /// install: Settings presents as a sheet from the menu; with nothing in
     /// the store the two templates are enabled and export-everything and
@@ -539,6 +486,9 @@ final class TroveUITests: XCTestCase {
     ///
     /// Its mutation: removing the `.marketFigure` case from either list's
     /// `SortOrder` must turn this red.
+    ///
+    /// `018`: both legs drive the system menu. The Items sort is one from
+    /// T001; the Wishlist's becomes one at T004, and its leg is red until then.
     @MainActor
     func testTheSortMenuOffersMarketRows() {
         let app = launchApp()
@@ -886,13 +836,24 @@ final class TroveUITests: XCTestCase {
             line: line
         )
         badge.tap()
+        // `018`: a system menu under one header, in the system's casing
+        // (`SortMenuCopy.header`) — exactly one, which is what says the
+        // picker's label and a section title aren't both drawn (plan Q8).
+        let header = app.staticTexts["Sort by"]
         XCTAssertTrue(
-            app.staticTexts["SORT BY"].waitForExistence(timeout: 5),
+            header.waitForExistence(timeout: 5),
             "\(screen)'s Sort By should open",
             file: file,
             line: line
         )
-        // The dropdown row's title, as `MarketCopy.sortDescending` and
+        XCTAssertEqual(
+            app.staticTexts.matching(NSPredicate(format: "label == %@", "Sort by")).count,
+            1,
+            "\(screen)'s Sort By should carry exactly one \"Sort by\" header",
+            file: file,
+            line: line
+        )
+        // The menu row's title, as `MarketCopy.sortDescending` and
         // `sortAscending` spell it — a UI-test target can't import the app,
         // so the copy is repeated here and `MarketCopyTests` pins the source.
         for title in ["Market \u{2193}", "Market \u{2191}"] {
@@ -903,13 +864,23 @@ final class TroveUITests: XCTestCase {
                 line: line
             )
         }
-        app.buttons["Dismiss sort options"].tap()
+        tapOutsideMenu(in: app)
         XCTAssertTrue(
-            app.staticTexts["SORT BY"].waitForNonExistence(timeout: 5),
+            header.waitForNonExistence(timeout: 5),
             "\(screen)'s Sort By should close",
             file: file,
             line: line
         )
+    }
+
+    /// Closes an open system menu the way a person does: one tap outside it.
+    /// iOS consumes that tap rather than passing it through, and the point is
+    /// fixed — over the screen's title, top left, clear of a menu opening
+    /// down from a trailing header badge — so every caller closes a menu the
+    /// same way (`018` plan §9).
+    @MainActor
+    private func tapOutsideMenu(in app: XCUIApplication) {
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.1)).tap()
     }
 
     /// Adds one item through the real form — the same steps
@@ -1190,7 +1161,7 @@ final class TroveUITests: XCTestCase {
         let badge = app.buttons["sortOptions.items"]
         XCTAssertTrue(badge.waitForExistence(timeout: 5), "the Sold side must offer Sort By")
         badge.tap()
-        XCTAssertTrue(app.staticTexts["SORT BY"].waitForExistence(timeout: 5), "the Sold side's Sort By should open")
+        XCTAssertTrue(app.staticTexts["Sort by"].waitForExistence(timeout: 5), "the Sold side's Sort By should open")
         app.buttons["Price \u{2191}"].tap()
 
         let telecaster = soldRow(in: app, named: "Telecaster")

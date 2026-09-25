@@ -16,8 +16,8 @@ private enum ExportFormat: Hashable {
 /// what makes the export chooser a *replacement* for the overflow rather
 /// than a second plate over them: the "…" rows set this to `.exportScope`,
 /// one change in one transaction, so the plate stays and its rows swap.
+/// Sort By left it at `018` for a system menu of its own (`SortMenu`).
 private enum HeaderDropdown: Hashable {
-    case sort
     case overflow
     /// The scope chooser the two export rows open (014 Decision 7, spec P12).
     case exportScope(ExportFormat)
@@ -25,7 +25,6 @@ private enum HeaderDropdown: Hashable {
     /// What the tap-outside layer calls itself to VoiceOver.
     var dismissLabel: String {
         switch self {
-        case .sort: "Dismiss sort options"
         case .overflow: "Dismiss more actions"
         case .exportScope: "Dismiss export options"
         }
@@ -65,7 +64,8 @@ struct ItemListView: View {
     /// collide with one — no real path is empty *and* prefixed like this.
     private static let unvaluedChipID = "\u{0}unvalued"
 
-    /// Which header dropdown is open — Sort By or the "…" — or neither.
+    /// Which header dropdown is open — the "…" or its export chooser — or
+    /// neither.
     /// Owned here rather than by a badge because the dropdown floats over
     /// the whole screen and dismisses on any outside tap, both beyond the
     /// header's reach; one optional, so only one can be open (T035, then
@@ -353,36 +353,6 @@ struct ItemListView: View {
         // dropdown draws above it.
         .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
             switch dropdown {
-            case .sort:
-                // One badge, one host, two menus — the side on screen picks
-                // which orders it offers, and each writes its own selection
-                // (014 plan §6). Nothing is shared between them but the
-                // drawing.
-                switch viewModel.side {
-                case .owned:
-                    SortDropdown(
-                        options: ItemListViewModel.SortOrder.allCases,
-                        selection: viewModel.sortOrder,
-                        label: \.label,
-                        isManualOrder: { $0 == .custom }
-                    ) { option in
-                        // The row has already closed the dropdown.
-                        viewModel.sortOrder = option
-                        viewModel.load()
-                    }
-                case .sold:
-                    // No REORDER tag: the Sold side has no manual order to
-                    // drag into (P16), so no option is the manual one.
-                    SortDropdown(
-                        options: ItemListViewModel.SoldSortOrder.allCases,
-                        selection: viewModel.soldSortOrder,
-                        label: \.label,
-                        isManualOrder: { _ in false }
-                    ) { option in
-                        viewModel.soldSortOrder = option
-                        viewModel.load()
-                    }
-                }
             case .overflow:
                 // Since 014 the two export rows don't export: they open the
                 // scope chooser (Decision 7, spec P12). The row has already
@@ -716,20 +686,26 @@ struct ItemListView: View {
         return parts.joined(separator: " · ")
     }
 
-    /// T035's badge — see `SortBadge` for why this stopped being a system
-    /// `Menu` (the T029c saga in one sentence: UIKit animated the Menu
-    /// label's bounds beyond SwiftUI's reach; a custom control has no such
-    /// machinery, so the badge simply hugs its label again).
-    /// Since 014 the badge reads `visibleSortLabel` rather than either side's
-    /// order directly: one control over two selections, so the side on screen
-    /// is the one it names — and the one it names aloud (014 plan §6).
-    private var sortControl: some View {
-        SortBadge(label: viewModel.visibleSortLabel) {
-            openDropdown = .sort
+    /// Sort By as a system menu again (`018` plan §1): one `SortMenu` per
+    /// side, each over that side's own orders and writing that side's own
+    /// selection, so the badge's label is always the selection of the menu
+    /// it opens. The Sold side has no manual order to drag into (P16), so
+    /// no row there carries the reorder subtitle. The spoken label still
+    /// reads `visibleSortLabel` and the identifier stays; the "Opens sort
+    /// options" hint goes — a system menu's button announces itself as a
+    /// pop-up button (criterion 11).
+    @ViewBuilder private var sortControl: some View {
+        Group {
+            switch viewModel.side {
+            case .owned:
+                SortMenu(options: ItemListViewModel.SortOrder.allCases, selection: viewModel.sortOrder,
+                         label: \.label, manualOrder: .custom) { viewModel.sortOrder = $0; viewModel.load() }
+            case .sold:
+                SortMenu(options: ItemListViewModel.SoldSortOrder.allCases, selection: viewModel.soldSortOrder,
+                         label: \.label) { viewModel.soldSortOrder = $0; viewModel.load() }
+            }
         }
-        .dropdownAnchor(HeaderDropdown.sort)
         .accessibilityLabel("Sort by \(viewModel.visibleSortLabel)")
-        .accessibilityHint("Opens sort options")
         .accessibilityIdentifier("sortOptions.items")
     }
 

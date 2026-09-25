@@ -50,16 +50,17 @@ struct ItemListSidesWiringTests {
 
     /// G20, the header as one control set over two sides (criteria 3 and 7):
     /// the narrowing gate is spelled once, in two places, and reads the view
-    /// model's rule rather than the side; the search field and the sort badge
-    /// are each composed once and both sit inside it; the host carries one
-    /// menu per side, each writing its own selection; and `apply` writes
-    /// nothing before it has crossed to the side it is narrowing.
+    /// model's rule rather than the side; the search field and the sort control
+    /// are each composed once and both sit inside it; the sort control is one
+    /// `SortMenu` per side, each writing its own selection, the Owned one
+    /// alone carrying the manual order (`018` G6); and `apply` writes nothing
+    /// before it has crossed to the side it is narrowing.
     ///
     /// Mutations: put a `viewModel.side == .owned` clause back on either gate
     /// → red (the gate count and the no-side-in-the-header expectation);
     /// move `viewModel.searchText = ""` back above `switch request` → red
-    /// (the pre-switch span); delete either arm of the host's `case .sort:`
-    /// → red (the dropdown count).
+    /// (the pre-switch span); `manualOrder:` on the Sold menu → red; the
+    /// Sold menu writing `viewModel.sortOrder` → red (T001).
     @Test func oneNarrowingGateCoversBothSidesAndEachSideBringsItsOwnSort() throws {
         let code = try code()
 
@@ -98,41 +99,57 @@ struct ItemListSidesWiringTests {
             "the screen names `sortControl` \(code.ranges(of: "sortControl").count) times — its declaration plus one gated use is two"
         )
 
-        // The one badge names whichever side's order is showing, rather than
-        // the Owned side's through both (plan §6).
-        let badge = try body(of: "private var sortControl: some View")
+        // The control names whichever side's order is showing, aloud, rather
+        // than the Owned side's through both (014 plan §6).
+        let control = try body(of: "private var sortControl: some View")
         #expect(
-            badge.contains("viewModel.visibleSortLabel") && !badge.contains("viewModel.sortOrder"),
-            "the sort badge reads a side's order directly instead of the visible label: \(badge)"
+            control.contains(".accessibilityLabel(\"Sort by \\(viewModel.visibleSortLabel)\")"),
+            "the sort control's spoken label reads a side's order directly instead of the visible label: \(control)"
         )
 
-        // The host's sort case: one menu per side, over that side's own
-        // options, writing that side's own selection.
-        let sortCase = SourceScan.closureBodies(after: "case .sort:", in: code)
-        try #require(sortCase.count == 1, "the host opens \(sortCase.count) spans for `case .sort:`, expected exactly 1")
-        let sorts = try #require(sortCase.first)
+        // One menu per side, over that side's own options, writing that
+        // side's own selection (018 plan §1, G6).
         #expect(
-            sorts.ranges(of: "SortDropdown(").count == 2,
-            "`case .sort:` composes \(sorts.ranges(of: "SortDropdown(").count) sort menus, expected 2 — one per side"
+            control.ranges(of: "SortMenu(").count == 2,
+            "`sortControl` composes \(control.ranges(of: "SortMenu(").count) sort menus, expected 2 — one per side"
         )
-        let owned = try #require(
-            SourceScan.argumentLists(of: "SortDropdown", in: sorts).first { $0.contains("SortOrder.allCases") && !$0.contains("SoldSortOrder.allCases") },
-            "no menu over the Owned side's orders: \(sorts)"
+        // A `case` has no braces to span, so the branches are cut at their
+        // own labels: Owned runs to the Sold label, Sold to the end.
+        let ownedCase = try #require(control.range(of: "case .owned:"), "`sortControl` has no Owned branch: \(control)")
+        let soldCase = try #require(control.range(of: "case .sold:"), "`sortControl` has no Sold branch: \(control)")
+        try #require(ownedCase.upperBound <= soldCase.lowerBound, "`sortControl`'s Sold branch comes before its Owned branch — the cut below assumes the other order")
+        let owned = String(control[ownedCase.upperBound..<soldCase.lowerBound])
+        let sold = String(control[soldCase.upperBound...])
+        let ownedMenu = try #require(
+            SourceScan.argumentLists(of: "SortMenu", in: owned).first,
+            "the Owned branch composes no `SortMenu`: \(owned)"
         )
-        #expect(owned.contains("selection: viewModel.sortOrder"), "the Owned menu doesn't show the Owned side's selection: \(owned)")
-        let sold = try #require(
-            SourceScan.argumentLists(of: "SortDropdown", in: sorts).first { $0.contains("SoldSortOrder.allCases") },
-            "no menu over the Sold side's orders: \(sorts)"
+        #expect(ownedMenu.contains("options: ItemListViewModel.SortOrder.allCases"), "the Owned menu isn't over the Owned side's orders: \(ownedMenu)")
+        #expect(ownedMenu.contains("selection: viewModel.sortOrder"), "the Owned menu doesn't show the Owned side's selection: \(ownedMenu)")
+        #expect(ownedMenu.contains("manualOrder: .custom"), "the Owned menu's Custom row lost its reorder subtitle (P3): \(ownedMenu)")
+        let ownedSelect = try #require(
+            SourceScan.closureBodies(after: ownedMenu, in: owned).first,
+            "the Owned menu selects nothing"
         )
-        #expect(sold.contains("selection: viewModel.soldSortOrder"), "the Sold menu doesn't show the Sold side's selection: \(sold)")
-        #expect(sold.contains("isManualOrder: { _ in false }"), "the Sold menu tags an option REORDER — there is no manual order on that side (P16)")
-        let soldSelection = try #require(
-            SourceScan.closureBodies(after: sold, in: sorts).first,
+        #expect(
+            ownedSelect.contains("viewModel.sortOrder = $0") && !ownedSelect.contains("soldSortOrder"),
+            "the Owned menu writes something other than the Owned side's order: \(ownedSelect)"
+        )
+
+        let soldMenu = try #require(
+            SourceScan.argumentLists(of: "SortMenu", in: sold).first,
+            "the Sold branch composes no `SortMenu`: \(sold)"
+        )
+        #expect(soldMenu.contains("options: ItemListViewModel.SoldSortOrder.allCases"), "the Sold menu isn't over the Sold side's orders: \(soldMenu)")
+        #expect(soldMenu.contains("selection: viewModel.soldSortOrder"), "the Sold menu doesn't show the Sold side's selection: \(soldMenu)")
+        #expect(!soldMenu.contains("manualOrder:"), "the Sold menu gives a row the reorder subtitle — there is no manual order on that side (P16): \(soldMenu)")
+        let soldSelect = try #require(
+            SourceScan.closureBodies(after: soldMenu, in: sold).first,
             "the Sold menu selects nothing"
         )
         #expect(
-            soldSelection.contains("viewModel.soldSortOrder = option"),
-            "the Sold menu writes something other than the Sold side's order: \(soldSelection)"
+            soldSelect.contains("viewModel.soldSortOrder = $0"),
+            "the Sold menu writes something other than the Sold side's order: \(soldSelect)"
         )
 
         // Nothing in `apply` runs before the switch: a clear up here would
