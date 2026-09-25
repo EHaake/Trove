@@ -168,8 +168,17 @@ Handoff notes for the pause reports:
   widths, the label's font); `DetailOverflowMenu.swift` (the app's existing
   system `Menu`); `SettingsView.swift:124–132` (a `Picker` over a
   selection); `ItemListHeaderLayoutTests.headerHeight` (the scratch render).
+  **Decided at T001's decision review (2026-09-24, plan Q8):** the menu's
+  content is a `Section(SortMenuCopy.header)` of `Toggle(` checkmark rows in
+  a `ForEach`, the setter `{ _ in select(option) }`, the subtitle a second
+  `Text` on the `manualOrder` row — an inline `Picker` draws neither header
+  nor subtitle inside a `Menu`. **G1** renders the header with a stand-in
+  in the trailing slot sized from a render of the badge row alone (a glass
+  `Menu` in the header's `VStack` crashes `ImageRenderer`); no leg compares
+  the stand-in to the render it came from; new mutation: `SortMenu` at
+  `.large` → the proviso red.
   Tests: new `TroveTests/HeaderControlsWiringTests.swift` — **G2** (mutations:
-  the `Picker` replaced by a `ForEach` of `Button`s → red;
+  the `Toggle` rows replaced by `Button` rows → red;
   `.foregroundStyle(theme.colors.accentBrass)` on the label → red) and **G3**'s
   first leg (`sortOptions.items` present on `sortControl`, no
   `.accessibilityHint` there; mutation: the identifier dropped → red). **G6**:
@@ -216,7 +225,13 @@ Handoff notes for the pause reports:
   the mid-line is one contiguous run containing every label column, with Δt.
   Also, in Light and Dark: a screenshot of the open menu — exactly one "Sort
   by", Date ticked, "Drag rows to reorder" under Custom (Q8) — and the badge's
-  frame height against T001's recorded render height (plan §1's claim).
+  frame height against T001's recorded render height of `SortMenu` alone
+  (plan §1's claim). **Added at T001's decision review, on both runtimes:**
+  exactly one checkmark in the open menu; tapping the current row closes
+  the menu with the label unchanged and no frame of the close showing two
+  checks or none; an accessibility-tree dump showing Selected on the
+  current row. If iOS 26.5 draws the rows as switches or drops the header,
+  stop and report — a second decision review follows.
   Remove the temporary test; the tree byte-identical to T001's but for the
   probe script and README. **If the menu has no subtitle under Custom or two
   headers, report it — the orchestrator takes Q8's stop to a decision review
@@ -266,7 +281,11 @@ Handoff notes for the pause reports:
   `testTheSortMenuOffersMarketRows` green on both legs; new
   `testEverySortMenuOffersItsOrdersUnderSortByWithTheCurrentOneChecked`
   (`-uiTesting -seedPlans`, plan §9 — records whether XCUITest exposes the
-  tick as `isSelected` and how it exposes the subtitle; mutations:
+  tick as `isSelected` and how it exposes the subtitle; per T001's decision
+  review: count elements whose label is **exactly** "Sort by" so the badge's
+  own "Sort by Date" never matches, assert the current row `isSelected`,
+  the Custom row's label "Custom, Drag rows to reorder" and every other
+  row's label exactly its option name; mutations:
   `manualOrder: .newest` on a Plans menu → red; the subtitle `Text` removed
   from `SortMenu` → red).
   Files: `Trove/Views/Wishlist/WishlistView.swift`,
@@ -327,8 +346,10 @@ Handoff notes for the pause reports:
   `testEveryTabsRootReachesSettings` green run alone; mutations recorded.
 
 - [ ] **T006 — The Dashboard's order menu.**
-  Per plan §3, R5. `orderControl` per plan §3 — a system `Menu` over an inline
-  `Picker` under "Order by" (T001's header mechanism), the mono label in
+  Per plan §3, R5. `orderControl` per plan §3 — a system `Menu` whose content
+  is a `Section("Order by")` of `Toggle(` checkmark rows (T001's header
+  mechanism as decided at its review; the UI test's checks mirror T004's for
+  "Order by"), the mono label in
   `textQuiet`, no glass, the label and identifier kept, the hint gone. The
   Dashboard's host goes: `DashboardDropdown`, `openDropdown`, `.dropdownHost`.
   `MenuPolicyTests`' allowlist gains `"DashboardView.swift"`. Pattern: T001's
@@ -581,3 +602,6 @@ recorded here too.
 | `sdd-planner` — sign-off fix pass (B1, B2, seven second-looks) | `opus` | ~15k (~390k cumulative for the planner) | Same agent resumed with the findings; the diff is the re-review's bundle |
 | `skeptical-reviewer` — plan/tasks sign-off | `opus` | ~107k (subagent total) | fix and re-review: B1 (CLAUDE.md's Testing example quotes the rule 018 reverses; T011 now rewords it first, in its own commit), B2 (criterion 1's "absent at the end" had no film on the finished header; T009 now re-films the sort). Seven second-looks applied. The planner's six deviations accepted as flagged; R2 (tapping the showing side no longer reloads) to be recorded in spec.md once the person answers; R4 corrected in spec.md the same day |
 | `skeptical-reviewer` — sign-off re-review | `opus` | ~125k (subagent total, includes the first review's context) | **signed off**. Two non-blocking notes for the orchestrator: dispatch T011's CLAUDE.md edit alone and commit it before the rest of T011; tell the person about the CLAUDE.md rewording in plain words in the next report (Phase 4 has no pause) |
+| Implementation session (this spec, from T001) | `claude-fable-5-1` at medium effort | orchestrating seat, not measured separately | Opened 2026-09-24 at the person's instruction on Fable 5.1 at medium, a per-session pick from the app's picker (the Opus profile names `claude-opus-5-5` for the seat); not a role-table change. Every dispatch runs with no model override, per the table |
+| `sdd-implementer` — T001 (first pass) | `opus` | ~148k (subagent total) | Built SortMenu, Items' sortControl, G2/G3/G6, the narrowed legs and the UI test rewrites; unit suite green (1748). **Stopped on a judgment call**, correctly: plan Q8's pre-authorised stop (an inline `Picker` in a `Menu` draws no header and no subtitle on iOS 27.0) and a second finding (a glass `Menu` in the header's `VStack` crashes `ImageRenderer`, so G1 could not be rewritten). G1's three mutations not re-run; control size `.regular` shipped on separate badge and title renders (`.regular` 102×29, `.small` 98×25, title line box 33) |
+| `skeptical-reviewer` — decision review at T001 | `opus` | ~52k (subagent total) | Q8: `Section` of `Toggle` checkmark rows (header, subtitle and Selected trait all present on the probe; three device checks added to T002). G1: a stand-in sized from a render of the badge row alone, no self-satisfying leg, a `.large` mutation added. Both blocking as things stood; transcribed into plan §1, Q8, §3, §11 and here before T001 resumed |

@@ -176,6 +176,31 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   for a decision review — criterion 5 (the subtitle) and criterion 11 (the
   picker announces the current sort as selected) pull opposite ways if the
   rows have to become buttons.
+  **Decided at T001's decision review (2026-09-24, `skeptical-reviewer`,
+  Opus profile).** The stop was taken. The implementer's probe on iOS 27.0
+  (an accessibility-tree dump of the open Owned menu from a temporary UI
+  test) found: an inline `Picker` inside a `Menu`, labelled or wrapped in a
+  `Section`, draws **no header** and shows only a row's first `Text`; a
+  `Section` over `Button` rows draws the header and the subtitle but the
+  current row carries **no Selected trait**; a `Section` over `Toggle` rows
+  draws the header, the subtitle *and* the Selected trait, since SwiftUI
+  draws a `Toggle` inside a `Menu` as a checkmark row. **The mechanism is
+  therefore `Section(SortMenuCopy.header) { ForEach(options, id: \.self) {
+  Toggle(isOn: Binding(get: { option == selection }, set: { _ in
+  select(option) })) { Text(label(option)); if option == manualOrder {
+  Text(SortMenuCopy.reorderSubtitle) } } } }`** — the setter re-selects on
+  any tap, as a picker does (`select` is idempotent), so there is no
+  turn-off branch. The spec's "a system menu holding a picker" is met by
+  behaviour (one header, one check, the selected trait) rather than by the
+  `Picker` type; recorded here as a divergence, not a product question,
+  since what the person sees and hears is what the spec describes. Three
+  things the probe did not prove, which **T002 checks on device on both
+  runtimes**: exactly one checkmark in the open menu; tapping a row closes
+  the menu; no frame of the close shows two checks or none. If iOS 26.5
+  draws the toggle as a switch or drops the header, T002 stops and a second
+  decision review follows. §3's `orderControl` uses the same shape under
+  "Order by" (a small shared rows view with two callers is a second look,
+  not required). G2 and G5 are reworded in §11 accordingly.
 - **Q9. Group breaks are `Divider()`s** inside the menu, as the pre-`013`
   system menu had; disabled rows are `.disabled(...)`. Items' two export rows
   are `Menu("Export as CSV") { … }` / `Menu("Export as PDF") { … }` — P2's
@@ -266,9 +291,18 @@ struct SortMenu<Option: Hashable>: View {
 
     var body: some View {
         Menu {
-            // Q8: one header, an inline picker bound through `select`.
-            Picker(selection: Binding(get: { selection }, set: select)) { rows } …
-                .pickerStyle(.inline)
+            // Q8 as decided at T001's review: one header, checkmark rows
+            // bound through `select`. (The draft's inline `Picker` drew no
+            // header and no subtitle inside a `Menu` on iOS 27.0.)
+            Section(SortMenuCopy.header) {
+                ForEach(options, id: \.self) { option in
+                    Toggle(isOn: Binding(get: { option == selection },
+                                         set: { _ in select(option) })) {
+                        Text(label(option))
+                        if option == manualOrder { Text(SortMenuCopy.reorderSubtitle) }
+                    }
+                }
+            }
         } label: {
             HStack(spacing: 8) {
                 glyph                                   // three bars 10/7/4 × 1.5, 2.5 apart,
@@ -337,11 +371,22 @@ so the dismiss has no width to animate; re-filmed. **If it survives that**,
 the work stops and the person is asked, with the film (spec, Inherited
 caveats).
 
-**Testable claims.** G1 (the header layout, rewritten to render `SortMenu`
-and `OverflowMenu`; plus the two badges render at one height). G2
+**Testable claims.** G1 (the header layout, rewritten per the T001 decision
+review: `ImageRenderer` crashes the test process — `precondition failure:
+invalid type ID: 0` — whenever a glass `Menu` sits in a `VStack` with
+siblings, and `ItemsListHeader` is one, so the header is rendered with a
+**stand-in** `Color.clear.frame(width:height:)` in the trailing slot, sized
+from a separate render of the badge row alone — `HStack { SortMenu(one
+option); OverflowBadge }`, `OverflowMenu` from T005 — which does render;
+`widestLabel(of:)` renders a one-option `SortMenu` per label; the two badges
+render at one height. No leg asserts the stand-in equals the render it was
+sized from — that can only pass. The file's doc comment records the crash.
+What the render cannot show is how the glass behaves once it sits in the
+header; that rests on T002/T009's device frame check and G39). G2
 (`HeaderControlsWiringTests`: `SortMenu`'s body composes a `Menu {`, a
-`Picker(` with `.pickerStyle(.inline)`, `.buttonStyle(.glass)`, and names no
-`theme.colors`). G6/G7 (per-side menus on Items and Plans). G13 (the menu's
+`Section(SortMenuCopy.header)`, a `Toggle(` inside a `ForEach`,
+`.buttonStyle(.glass)`, and names no `theme.colors` — a spelling check; the
+checkmark and the selected trait are T004's UI test's to guard). G6/G7 (per-side menus on Items and Plans). G13 (the menu's
 shape on screen). G14a (the films, T002 and T009). **Needs verification on
 the device, not by the suites:** that `ImageRenderer` lays a glass `Menu` out
 at the height the device draws it — T002 reads `sortOptions.items`' frame
@@ -428,12 +473,16 @@ alone). G13 (the rows and gates on screen).
 ```swift
 private var orderControl: some View {
     Menu {
-        // Q8's header mechanism, "Order by"
-        Picker(selection: Binding(get: { viewModel.breakdownOrder },
-                                  set: { viewModel.breakdownOrder = $0; viewModel.load() })) {
-            ForEach(DashboardViewModel.BreakdownOrder.allCases) { Text($0.label).tag($0) }
-        } …
-        .pickerStyle(.inline)
+        // Q8's header mechanism as decided at T001's review, "Order by":
+        // a Section over Toggle checkmark rows, the setter writing and reloading.
+        Section("Order by") {
+            ForEach(DashboardViewModel.BreakdownOrder.allCases) { order in
+                Toggle(isOn: Binding(get: { viewModel.breakdownOrder == order },
+                                     set: { _ in viewModel.breakdownOrder = order; viewModel.load() })) {
+                    Text(order.label)
+                }
+            }
+        }
     } label: {
         Text(viewModel.breakdownOrder.label).monoLabel(color: theme.colors.textQuiet)
     }
@@ -447,8 +496,9 @@ host: `DashboardDropdown`, `openDropdown`, `.dropdownHost`. **One caller**, so
 the header-plus-inline-picker shape is written here rather than shared with
 `SortMenu` — it is five lines, and the two differ in their label and in glass.
 
-**Testable claims.** G5 (the picker over `BreakdownOrder.allCases`, its setter
-writing and reloading, the mono label, no `.glass`). G13 (a new UI test:
+**Testable claims.** G5 (the `Section("Order by")` of `Toggle(` rows over
+`BreakdownOrder.allCases`, its setter writing and reloading, the mono label,
+no `.glass`). G13 (a new UI test:
 "Order by" once, By value selected, By count chosen → the control reads "Order
 categories By count").
 
@@ -702,11 +752,11 @@ retired and why each could go); `scripts/verify.sh all`. Then the pre-merge
 
 | # | Test | Red when |
 |---|---|---|
-| G1 | `ItemListHeaderLayoutTests` (`014` G38, kept): the header one meta line tall under every summary and every sort label, rendering `SortMenu` + `OverflowMenu`; the no-badges proviso (or its Q6 rewrite); **the two badges one height** (new); with P4, **one width for every selection** (T003) | the meta line back beside the badges; the baseline rendered at 200 pt (the instrument check); `OverflowMenu` at another control size; P4's hidden labels dropped |
-| G2 | `HeaderControlsWiringTests`: `SortMenu` is a `Menu` over an inline `Picker`, `.glass`, no `theme.colors` | the `Picker` replaced by `Button` rows; `.foregroundStyle(theme.colors.accentBrass)` on the label |
+| G1 | `ItemListHeaderLayoutTests` (`014` G38, kept): the header one meta line tall under every summary and every sort label, the trailing slot a stand-in sized from a render of the badge row alone (`SortMenu` + `OverflowBadge`, then `OverflowMenu` from T005 — a glass `Menu` in the header's `VStack` crashes `ImageRenderer`, T001 review); the no-badges proviso (or its Q6 rewrite); **the two badges one height** (new); with P4, **one width for every selection** (T003). What the render can't show — the glass once it sits in the header — rests on T002/T009's device frame check and G39 | the meta line back beside the badges; the baseline rendered at 200 pt (the instrument check); `SortMenu` at `.large` (the proviso); `OverflowMenu` at another control size; P4's hidden labels dropped |
+| G2 | `HeaderControlsWiringTests`: `SortMenu` is a `Menu` whose content is a `Section(SortMenuCopy.header)` of `Toggle(` rows in a `ForEach`, `.glass`, no `theme.colors` (spelling only; the check and selected trait are T004's UI test's) | the `Toggle` rows replaced by `Button` rows; `.foregroundStyle(theme.colors.accentBrass)` on the label |
 | G3 | `HeaderControlsWiringTests`: every header control carries its identifier (`sortOptions.items/wishlist/plans`, `moreActions.items/wishlist/plans/dashboard`, `orderOptions.dashboard`) and no hint — per control as each is converted (T001–T006), then, once `OverflowBadge.swift` is gone (T010), no `.accessibilityHint("Opens` anywhere under `Trove/Views` | an identifier dropped; a hint put back |
 | G4 | `HeaderControlsWiringTests`: `OverflowMenu`'s busy branch — `ProgressView()`, `.disabled(isBusy)`, "Working"/"More actions"; each list passes `viewModel.isBusy` | `.disabled` removed; `isBusy: false` on Items |
-| G5 | `HeaderControlsWiringTests`: the Dashboard's "…" inside exactly one `if isRoot` span; `orderControl` a `Menu` over `BreakdownOrder.allCases` whose setter writes and calls `load()`, `.monoLabel(`, no `.glass` | the "…" outside the gate; `load()` dropped; `.buttonStyle(.glass)` on the label |
+| G5 | `HeaderControlsWiringTests`: the Dashboard's "…" inside exactly one `if isRoot` span; `orderControl` a `Menu` whose content is a `Section("Order by")` of `Toggle(` rows over `BreakdownOrder.allCases` whose setter writes and calls `load()`, `.monoLabel(`, no `.glass` | the "…" outside the gate; `load()` dropped; `.buttonStyle(.glass)` on the label |
 | G6 | `ItemListSidesWiringTests` (G20 rewritten): `sortControl` inside the narrowing gate, one `SortMenu` per side, Owned over `SortOrder` with `manualOrder: .custom` writing `sortOrder`, Sold over `SoldSortOrder` with no `manualOrder` writing `soldSortOrder` | `manualOrder:` on the Sold menu; the Sold menu writing `sortOrder` |
 | G7 | `PlansWiringTests.noSortMenuOffersAManualOrder`: two `SortMenu`s, neither with `manualOrder:` | `manualOrder: .newest` on one |
 | G8 | `ExportWiringTests` (three rewritten): rows, order, gates, two `Divider()`s, Import and Settings wired and ungated; Items' two submenus over every scope, each row on its own gate, no scope literal, no ellipsis | the PDF row gated on the CSV flag; a submenu exporting `.both` directly; Import gated; "Export as CSV…" on Items |
