@@ -1,6 +1,6 @@
 # 018 — System Design Language — Technical Plan
 
-**Status**: Draft — pending sign-off
+**Status**: **Signed off** (2026-09-24) — drafted by the `sdd-planner`, reviewed by the `skeptical-reviewer` (two blocking findings, B1 and B2, fixed and re-reviewed the same day: signed off). Final for the implementation session.
 
 Drafted by the `sdd-planner` (per `CLAUDE.md`'s model policy, Opus profile as
 reconciled 2026-09-24: every role runs at `opus`, no dispatch carries a model

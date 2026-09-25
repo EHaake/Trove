@@ -1,6 +1,6 @@
 # 018 — System Design Language: Tasks
 
-**Status**: Draft — pending sign-off
+**Status**: **Signed off** (2026-09-24) — drafted by the `sdd-planner`, reviewed by the `skeptical-reviewer` (two blocking findings, B1 and B2, fixed and re-reviewed the same day: signed off). Final for the implementation session.
 
 Drafted against the approved `spec.md` (Approved 2026-09-24) and the draft
 `plan.md` in this directory, for branch `018-system-design-language` off
@@ -578,3 +578,6 @@ recorded here too.
 | Spec session (this spec's `spec.md`, three rounds and approval) | `claude-fable-5-1` at high effort | orchestrating seat, not measured separately | Spec session ran on claude-fable-5-1 at high effort by the person's per-session pick from the app's picker, 2026-09-24; not a role-table change; the Opus profile stands. Draft 2026-09-24, approved the same day with Decisions 1–14; nothing left open |
 | Note: T002's device agent extends `scripts/motion-probe/profile.swift` | — | — | Implementation work in a `general-purpose` dispatch, planned deliberately rather than the device agent quietly doing a task: the probe's new background-difference mode can only be tested against film, which only the simulator agent can take. The orchestrator commits it with T002 and the phase review reads it |
 | `sdd-planner` — plan.md and tasks.md (draft) | `opus` | ~375k (budget counter, cache re-reads included) | 14 tasks, 5 phases, 15 guards; no product question returned; one spec/code inconsistency stated as a reading (plan R4: the Wishlist add button says "Add wanted item", not the spec's "Add to wishlist", and has no identifier) |
+| `sdd-planner` — sign-off fix pass (B1, B2, seven second-looks) | `opus` | ~15k (~390k cumulative for the planner) | Same agent resumed with the findings; the diff is the re-review's bundle |
+| `skeptical-reviewer` — plan/tasks sign-off | `opus` | ~107k (subagent total) | fix and re-review: B1 (CLAUDE.md's Testing example quotes the rule 018 reverses; T011 now rewords it first, in its own commit), B2 (criterion 1's "absent at the end" had no film on the finished header; T009 now re-films the sort). Seven second-looks applied. The planner's six deviations accepted as flagged; R2 (tapping the showing side no longer reloads) to be recorded in spec.md once the person answers; R4 corrected in spec.md the same day |
+| `skeptical-reviewer` — sign-off re-review | `opus` | ~125k (subagent total, includes the first review's context) | **signed off**. Two non-blocking notes for the orchestrator: dispatch T011's CLAUDE.md edit alone and commit it before the rest of T011; tell the person about the CLAUDE.md rewording in plain words in the next report (Phase 4 has no pause) |
