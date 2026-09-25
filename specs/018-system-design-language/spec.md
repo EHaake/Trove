@@ -1,6 +1,7 @@
 # 018 — System Design Language
 
-**Status**: **Draft**, second round (2026-09-24) — written with the person in
+**Status**: **Draft**, third round (2026-09-24), **nothing left open** —
+awaiting the person's approval — written with the person in
 a spec session of its own, per `CLAUDE.md`'s model policy. One note for the
 record: the session ran on Fable 5.1 at high effort, which the Opus profile
 adopted this morning does not name; the person chose the entry before
@@ -11,10 +12,9 @@ person has made — three on the roadmap on 2026-09-19, and their reading of
 the first Draft on 2026-09-24, which overturned two of its proposals and
 set the goal in one sentence: **"full iOS standard, so liquid glass wherever
 possible."** The **P-items** are Claude Code's proposals and become
-decisions on plan approval, as `009`'s did. The **Open questions** at the
-end are what the person still has to answer, each with a recommendation,
-so "go with the recommendations" is a complete answer. The first of them is
-the one that sizes the spec.
+decisions on plan approval, as `009`'s did. The four **Open questions** the
+second round carried were answered the same day and are Decisions 11–14;
+the section at the end records how.
 
 **Depends on**: `010-item-management-enhancements` (the sort picker, and
 T029c — the record of why it stopped being a system menu),
@@ -116,11 +116,11 @@ That is the reading the sections below apply.
 What this spec does not do, under the recommended scope, is redesign the
 app around Apple's *layout*. The tab roots keep their standing headers
 rather than gaining the system navigation bar and toolbar; the search
-field, the chips, Settings' rows and the forms stay as they are. Open
-question 1 puts the alternative — the navigation bar and toolbar on every
-tab root, which is what glass is designed to float in — in front of the
-person as a named choice, because "full iOS standard" arguably means it,
-and recommends it as the next spec rather than this one.
+field, the chips, Settings' rows and the forms stay as they are. The
+alternative — the navigation bar and toolbar on every tab root, which is
+what glass is designed to float in — was put to the person as a named
+choice, because "full iOS standard" arguably means it, and they chose this
+scope (Decision 11); the bar is proposed as the next spec, before `019`.
 
 ## The rule
 
@@ -189,10 +189,13 @@ reservation noted).
 ### The Dashboard's order control
 
 "BY VALUE" opens a **system menu holding a picker** under an **Order by**
-header: By value and By count, the current one checked. Whether the label
-itself wears glass is Open question 2: it sits inside the category
-breakdown card, which is content by Apple's rule and this spec's, and the
-recommendation is that it keeps its quiet mono drawing.
+header: By value and By count, the current one checked — the same glass
+menu every other control in the app opens, because "having two different
+designs for selection windows is inconsistent" (Decision 12). The label
+itself keeps its quiet mono drawing: it sits inside the category breakdown
+card, in the body rather than on the top row, which is where the person
+drew the header's edge (Decision 13), and a glass capsule inside a plate is
+the stacking P8 forbids.
 
 ### The two switches
 
@@ -231,9 +234,20 @@ Two consequences stated plainly. Glass over a flat header shows a frosted
 capsule with the material's highlight and nothing refracting beneath it,
 because the header stands still and the rows scroll under the *list*, not
 under it; that is what a glass button looks like anywhere Apple puts one
-over a solid surface, and it is what Open question 1's alternative would
+over a solid surface, and it is what the bar spec Decision 11 defers would
 change. And the badges are the only custom glass in the app under this
 spec — two per header, which is the "sparingly" Apple asks for.
+
+### The add button
+
+The floating add button on the Items and Wishlist lists becomes a
+**prominent Liquid Glass button**, tinted brass, keeping its size, its
+place over the bottom-trailing corner of the rows, its plus and its "Add
+item" / "Add to wishlist" label (Decision 14). It is the one control in
+the app that floats over scrolling content — where Apple puts glass and
+where the material actually refracts what passes beneath it — and iOS 26's
+own compose buttons are glass discs in the same corner. Its drawn brass
+disc and shadow go; the glass is the surface.
 
 ### What stays exactly as it is
 
@@ -252,8 +266,8 @@ Everything that is already the system's, and everything that is content:
   capsules, the cost presets, the form fields and plates, the save bars,
   the empty states, the desire dial and gauge, the market value slider,
   the photo carousel, the Sell Plan's cards and their Mark as sold strip
-- the search field and the floating add button, unless Open questions 3
-  and 4 say otherwise
+- the search field, which the person places in the body, not the header
+  (Decision 13), and whose system form belongs to the bar spec
 
 Nothing in a row, a card, a form or a sheet changes. No copy changes
 except the two ellipses P2 removes and the subtitle P3 adds.
@@ -322,9 +336,9 @@ are replaced the same way. No Design pass: nothing new is being designed
    applies it and the badge's label names it. The Custom row, where a
    list offers one, carries the subtitle "Drag rows to reorder" and no
    other row carries a subtitle.
-6. [ ] The Dashboard's order control opens a system menu with By value and
-   By count under an **Order by** header, the current one checked, and is
-   drawn as Open question 2 decides.
+6. [ ] The Dashboard's order control keeps its mono label and opens a
+   system menu with By value and By count under an **Order by** header,
+   the current one checked.
 7. [ ] Owned/Sold and Active/Completed are system segmented controls.
    Switching shows the other side; each side keeps its own search, chips
    and sort across a switch (`014` criterion 8's guarantee, restated); the
@@ -332,8 +346,8 @@ are replaced the same way. No Design pass: nothing new is being designed
    sides within a point (`014` G38 and G39, kept). Filmed with the motion
    probe: the selection slides between the segments rather than cutting,
    and the header above and the rows below do not move during it.
-8. [ ] The two switches and the two badges are not themed through any
-   UIKit appearance proxy. Both appearances, Light and Dark, show a
+8. [ ] The two switches, the two badges and the add button are not themed
+   through any UIKit appearance proxy. Both appearances, Light and Dark, show a
    legible label on every glass control at the system's own colours —
    checked on the device pass in both, and once each under Increase
    Contrast and Reduce Transparency, since `004`'s defect showed only in
@@ -368,6 +382,10 @@ are replaced the same way. No Design pass: nothing new is being designed
 15. [ ] Every screen is walked in both appearances at the phase pause and
     reads as one language: a "…" in a header, a "…" in a bar and the tab
     bar wear and open the same system glass. The person attests.
+16. [ ] The add button on the Items and Wishlist lists is a prominent glass
+    button, brass-tinted, in its current size and place, with its label
+    and identifier unchanged; it opens the same sheet; the rows scroll
+    under it as they do now. Both appearances on the device pass.
 
 ## Decisions record
 
@@ -410,6 +428,25 @@ Made by the person:
 10. **No Design pass** (2026-09-24): "No design pass needed since we
     aren't designing anything new."
 
+Made by the person on 2026-09-24, answering the second round's questions:
+
+11. **Glass buttons in Trove's headers, not the system's bar** — option
+    (A). The tab roots keep their standing headers. The bar and toolbar
+    are proposed as the next spec, before `019`.
+12. **Every menu is the same system glass menu.** On the Dashboard's
+    order control: "the window popup when you tap on the by value … should
+    be liquid glass. All menu pop ups should be liquid glass. Having two
+    different designs for selection windows is inconsistent." Under this
+    spec it already was — every menu in the app is the system's — and the
+    decision is recorded so no later spec brings a second design back.
+13. **The header is the top row.** "By header I meant anything on the top
+    row." So the sort and "…" badges wear glass; the search field ("I
+    consider it to be in the body") and the Dashboard's order label, which
+    sits in a card, keep their drawing. The switches are covered by
+    Decision 7 on their own.
+14. **The add button goes to prominent glass** — "Yes, let's try that."
+    The person sees it at the phase pause and can send it back.
+
 ## Proposals (P-items)
 
 Claude Code's; they become decisions on plan approval unless the person
@@ -450,21 +487,20 @@ overrules one here.
 - **P8 — Glass is never stacked and never on a card.** Apple's rule,
   adopted as the app's: a glass control sits on the header's flat surface
   or floats over the scrolling rows, never inside a plate, and no glass
-  element overlaps another. This is what keeps Open question 2's answer
+  element overlaps another. This is what keeps Decision 13
   and any later "make it glass" request from drifting onto content.
 
 ## Non-goals (explicit)
 
-- **The system navigation bar and toolbar on the tab roots** — under the
-  recommended answer to Open question 1. The headers — title, meta line,
+- **The system navigation bar and toolbar on the tab roots** (Decision
+  11). The headers — title, meta line,
   badges, switch — stay Trove's standing header. Putting the title in a
   navigation bar and sort and "…" into an iOS 26 toolbar is the fully
   Apple-shaped answer and a redesign of every list's top; it is proposed
   as the next spec, before `019`.
-- **The search field** becoming the system's search, which on iOS 26
-  floats at the bottom of the screen and needs the navigation bar above.
-  It goes with the non-goal above. (Open question 3 asks about its
-  drawing meanwhile.)
+- **The search field** — its drawing (Decision 13: it is in the body)
+  and its system form, iOS 26's floating bottom search, which needs the
+  navigation bar above and goes with the non-goal above.
 - **Settings' rows** becoming a system list (Decision 9).
 - **Alerts becoming confirmation dialogs.** The standing reason holds.
 - **The condition capsules, cost presets and category chips** becoming
@@ -508,55 +544,17 @@ overrules one here.
 
 ## Open questions
 
-Each with a recommendation. "Go with the recommendations" answers all
-four. The first sizes the spec.
+**None.** The second round's four were answered the same day:
 
-1. **Glass buttons in Trove's header, or the system's bar?** Two ways to
-   honour "full iOS standard":
-   - **(A) This spec as written.** The tab roots keep their standing
-     headers; the sort and "…" badges become glass buttons in them; the
-     switches become the system segmented control. Glass over a flat
-     header reads as a frosted capsule — the material's highlight without
-     anything scrolling beneath it.
-   - **(B) The tab roots take the system navigation bar and toolbar.** The
-     title becomes the bar's title, sort and "…" become toolbar items in
-     the system's glass with the system's scroll-edge effect, the meta
-     line, switch, search and chips become the top of the scrolling
-     content or a bar of their own, the add button likely becomes a
-     toolbar item, and the search field can become the system's. This is
-     what Liquid Glass is designed to float in, and it is the shape every
-     Apple list app has on iOS 26.
+1. **Header or bar** — (A), the header, and the bar as the next spec
+   (Decision 11).
+2. **The Dashboard's order label** — the person's answer was about the
+   menu it opens, which is the system's like every other; the label keeps
+   its drawing because it is in a card, not on the top row (Decisions 12
+   and 13).
+3. **The search field** — stays, as body (Decision 13).
+4. **The add button** — prominent glass (Decision 14).
 
-   *Recommendation: (A) now, (B) as its own spec, placed before `019`.*
-   (A) is the decision the roadmap asked for and the scope Decision 4
-   chose; it removes every bespoke control and leaves nothing (B) would
-   have to undo — (B) moves glass buttons from a header into a bar, which
-   is a layout change, not a reversal. (B) touches every list's top, the
-   header layout guards, the empty states, the add button and search, and
-   it is the pass that should be drawn with `019`'s wide layout in mind,
-   which is why it wants its own spec rather than a phase here. If the
-   person would rather see the finished shape once, (B) folds in and the
-   spec roughly doubles.
-2. **The Dashboard's order label.** It opens a system menu either way. Does
-   "BY VALUE" become a glass button, or keep its quiet mono drawing?
-   *Recommendation: keep the drawing.* It sits inside the category
-   breakdown card — content, by Apple's rule and P8 — and a glass capsule
-   inside a plate is exactly the stacking Apple says not to do. It is the
-   one interactable that is not in a header.
-3. **The search field.** It is in the header, so Decision 5's "any other
-   interactible in the header" reaches it. Its system form (the floating
-   bottom search) belongs to option (B). Meanwhile: leave it on its plate,
-   or draw it as a glass capsule? *Recommendation: leave it.* A glass text
-   field beside a glass button is two materials fighting for the same
-   line, and it would be redrawn again under (B).
-4. **The floating add button.** Not in a header, but it is the one control
-   that floats over scrolling content — where Apple puts glass and where
-   it actually refracts — and iOS 26's own compose buttons are glass
-   discs. Make it a prominent glass button, brass-tinted, keeping its
-   size and place? *Recommendation: yes.* It is one modifier, it is the
-   most important functional element on both lists, and it is the one
-   place in this spec the material does what it is for.
-
-Once these are answered the spec is approved, and the ordinary gate
-follows: the `sdd-planner` drafts `plan.md` and `tasks.md` against it, and
-the `skeptical-reviewer` signs them off.
+Once the person approves, the ordinary gate follows: the `sdd-planner`
+drafts `plan.md` and `tasks.md` against this spec, and the
+`skeptical-reviewer` signs them off.
