@@ -342,8 +342,15 @@ Handoff notes for the pause reports:
   was 22.3–92.0); the Light ghost after Market ↓ → Date is gone. Frames
   viewed by eye on 26.5 (Dark f690/f725, f905/f945, f1410/f1445; Light
   f830/f870, f1030/f1070, f1485/f1525): full capsule with padding, no
-  stale shadow. Criterion 1's first measurement is met by this film; T009
-  repeats it on the finished header.
+  stale shadow. **What this rests on (Phase 1 review):** the probe's TEAR
+  verdict cannot fire on either runtime — a label's anti-aliased fringe is
+  differing-and-not-brass, so a protruding label widens the measured
+  capsule and `out=` stays 0 — and the capsule is measured over the box's
+  full height, not the mid-line run plan §1 first named. The evidence is
+  the settled extent against XCUITest's frame on every switch (the check
+  that found the 26.5 tear at T002) and the frames viewed by eye. On that
+  evidence criterion 1's first measurement is met; T009 repeats it on the
+  finished header with a probe first shown able to fail (plan §1 As built).
 
 - [x] **T004 — Sort By on the Wishlist and Plans; the sort menus' UI test.**
   Per plan §1, §9. `WishlistView.sortControl`: one `SortMenu` over
@@ -545,8 +552,15 @@ Handoff notes for the pause reports:
   button over scrolled rows, for the pause. **If the sort film shows the
   tear**, the orchestrator treats it as T003's case on the finished header
   (P4's fallback if not yet applied; a product question with the films if
-  it was).
-  Files: none (the Done note is the record).
+  it was). **Added at the Phase 1 review:** before the final film, make the
+  probe able to fail — exclude pixels adjacent to a brass pixel from the
+  capsule so a protruding label no longer widens it — and show TEAR firing
+  on T002's iOS 26.5 Dark film, frames 819–864 (the film file is in the
+  scratchpad if it survives; otherwise re-film T002's Date → Market ↓ on
+  26.5 at commit 930c90b to reproduce it); drop the unused
+  `labelThreshold` argument. Only then film the finished header.
+  Files: `scripts/motion-probe/profile.swift`, `scripts/motion-probe/README.md`
+  (the Done note is the record for the films).
   **Verify:** the frame tables and verdicts in the Done note — the sort's
   per runtime and per switch, the switches' per control.
   **Phase 3 closes here — pause for the person.**
@@ -718,3 +732,4 @@ recorded here too.
 | `sdd-implementer` — T003 | `opus` | ~54k (subagent total) | Done; G1 one-width leg red under mutation; unit suite green (1749) |
 | `general-purpose` — T003 re-film (same agent as T002, resumed) | `opus` | ~289k (subagent cumulative, includes T002) | Whole on every frame on 27.0 and 26.5, both appearances; P4 shipped |
 | `sdd-implementer` — T004 | `opus` | ~101k (subagent total) | Done; unit 1749 green; UI suite 36/36 at the phase's final commit; mutations recorded |
+| `skeptical-reviewer` — Phase 1 review | `opus` | ~104k (subagent total) | **fix and re-review, documents only**: the probe's TEAR verdict cannot fire (a protruding label widens the measured capsule), so the films' claim is restated onto the settled-extent check and the viewed frames (plan §1 As built, T003's Done note) and T009 gains a make-the-probe-fail step. Notes carried: G1's `badgeRowSize` should render the side's real options (T005); G2's no-colour check also bans `.foregroundStyle(`/`.tint(` in the file (T005); the UI sort helper counts each row exactly once and both helpers use the same "Sort by" query (T005); the 26.5 subtitle exposure told to the person |

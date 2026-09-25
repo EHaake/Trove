@@ -364,6 +364,31 @@ commit (T002, criterion 1's "measured first"), and again at T008's commit
 second glass `Menu` beside the sort badge and removed the dropdown host the
 first film was taken beside — a different header than the one measured.
 
+**As built (Phase 1, 2026-09-24).** The tear was filmed twice (T002, T003).
+What the films measure, stated exactly: the probe's `bg` mode takes the
+capsule as every pixel differing from the box's corner colour that is not
+brass, over the box's full height (on 26.5 the fill and side rims are
+within 2/441 of the background at the mid-line, so the mid-line alone
+reads nothing), and the label as the brass columns. **Its TEAR verdict
+cannot fire on either runtime**: a label's anti-aliased fringe is
+differing-and-not-brass, so a label standing past the rim carries its own
+edge with it and the measured capsule grows to cover it. The mid-line's
+run count is printed for information only. What the films therefore rest
+on is (a) the settled capsule extent checked against XCUITest's frame on
+every switch — within 0.7 pt on every row after T003, where at T002 the
+two 26.5 narrow-to-wide rows disagreed by 12–16 pt, which is how the tear
+was found — and (b) the frames of every dismiss viewed by eye. **Criterion
+1's first measurement is met on that evidence**, not on an automatic
+verdict. Before T009's final film the probe is made able to fail: pixels
+adjacent to a brass pixel are excluded from the capsule, and the change is
+shown firing TEAR on T002's 26.5 frames 819–864 before the finished header
+is filmed (T009's task line carries this). Q6 as built: `.regular`, the
+render 29 pt against 28.33 on both runtimes. Q8 as built: `Section` of
+`Toggle` rows; on iOS 26.5 the subtitle is drawn but absent from the
+accessibility tree, so VoiceOver on 26.x does not read it — the UI test's
+subtitle legs hold on 27.0, where the suite runs, and would go red rather
+than falsely green on 26.x.
+
 **If the tear shows** (T003): the label takes a constant footprint —
 `ZStack(alignment: .leading) { ForEach(options) { Text(label($0)).hidden() };
 Text(label(selection)) }` — sized once to the widest of its menu's options,
