@@ -235,8 +235,9 @@ capsule with the material's highlight and nothing refracting beneath it,
 because the header stands still and the rows scroll under the *list*, not
 under it; that is what a glass button looks like anywhere Apple puts one
 over a solid surface, and it is what the bar spec Decision 11 defers would
-change. And the badges are the only custom glass in the app under this
-spec — two per header, which is the "sparingly" Apple asks for.
+change. And the badges and the add button are the only custom glass in
+the app under this spec — two per header and one floating over the rows,
+which is the "sparingly" Apple asks for.
 
 ### The add button
 
