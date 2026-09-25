@@ -112,7 +112,7 @@ struct ItemListHeaderLayoutTests {
             trailingSize: try badgeRowSize(sortLabel: soldWidest)
         )
 
-        print("ItemsListHeader heights at width \(contentWidth) — badge row: \(baselineRow), baseline: \(baseline), no badges: \(withoutBadges), owned under \"\(ownedWidest)\": \(owned), owned at scale: \(ownedLarge), sold: \(sold), sold at scale under \"\(soldWidest)\": \(soldLarge)")
+        print("ItemsListHeader heights at width \(contentWidth) — badge row: \(baselineRow), owned badge row: \(ownedRow), baseline: \(baseline), no badges: \(withoutBadges), owned under \"\(ownedWidest)\": \(owned), owned at scale: \(ownedLarge), sold: \(sold), sold at scale under \"\(soldWidest)\": \(soldLarge)")
 
         #expect(
             withoutBadges == baseline,
@@ -133,6 +133,31 @@ struct ItemListHeaderLayoutTests {
         #expect(
             soldLarge == baseline,
             "the Sold summary at six figures under the widest sold sort label measured \(soldLarge) pt against the one-line baseline's \(baseline) pt — the meta line wrapped, so the switch sits \(soldLarge - baseline) pt lower on this side (criterion 3)"
+        )
+    }
+
+    /// P4 (`018`, T003): the sort badge is one width whatever it is set to.
+    /// T002 filmed the glass capsule on iOS 26.5 keeping the previous label's
+    /// width after a menu-driven relabel; with every option's label reserved
+    /// under the visible one, a relabel has no width to change. The Owned
+    /// side's real options, one render per selection over the same set.
+    ///
+    /// Its mutation, run at T003: the hidden labels removed from `SortMenu`'s
+    /// label, and the widths split by label length → red.
+    @Test func theSortBadgeIsOneWidthForEverySelection() throws {
+        let options = ItemListViewModel.SortOrder.allCases
+        try #require(options.count > 1, "one sort option can't show a width change")
+        var widths: [String: Int] = [:]
+        for selection in options {
+            widths[selection.label] = try #require(
+                renderBitmap(SortMenu(options: options, selection: selection, label: \.label) { _ in }),
+                "ImageRenderer produced nothing to measure for the badge set to \"\(selection.label)\"."
+            ).width
+        }
+        print("SortMenu widths over the Owned options, per selection: \(widths)")
+        #expect(
+            Set(widths.values).count == 1,
+            "the sort badge's width follows its selection — \(widths) — so a relabel changes the capsule's width and iOS 26.5's stale-width tear returns (P4, T002)"
         )
     }
 

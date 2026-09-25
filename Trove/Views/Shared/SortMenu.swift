@@ -25,6 +25,15 @@ enum SortMenuCopy {
 /// style's foreground together, and brass arrives only through the root
 /// tint where the style applies it. `HeaderControlsWiringTests` (G2) pins
 /// that this file names no theme colour.
+///
+/// **Its footprint is constant** (spec P4): the label reserves the widest of
+/// its menu's options, sized once, so choosing a row never changes the
+/// badge's width. T002 filmed why: on iOS 26.5 the glass capsule keeps the
+/// previous label's width after a menu-driven relabel until the next tap —
+/// the label standing past the capsule's rim after a narrow-to-wide switch,
+/// a stale wider shadow after a wide-to-narrow one. With no width to change,
+/// the dismiss has none to animate. `ItemListHeaderLayoutTests` (G1) holds
+/// every selection to one width.
 struct SortMenu<Option: Hashable>: View {
     let options: [Option]
     let selection: Option
@@ -57,8 +66,16 @@ struct SortMenu<Option: Hashable>: View {
                     bar(width: 7)
                     bar(width: 4)
                 }
-                Text(label(selection))
-                    .font(ThemeTypography.font(.mono, size: 11))
+                // P4's constant footprint: every option's label laid out
+                // hidden under the visible one, so the badge is always as
+                // wide as its widest option and a relabel changes no width.
+                ZStack(alignment: .leading) {
+                    ForEach(options, id: \.self) { option in
+                        Text(label(option)).hidden()
+                    }
+                    Text(label(selection))
+                }
+                .font(ThemeTypography.font(.mono, size: 11))
             }
         }
         .buttonStyle(.glass)
