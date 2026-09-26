@@ -73,6 +73,17 @@ import Testing
 /// sides against 53 pt with no badges. The Owned sort badge renders 95 × 37,
 /// the Sold 102 × 37 — so `theTwoBadgesRenderAtOneHeight` reads 36 against
 /// 37.
+///
+/// **Re-measured at `018` T006a** (spec Decision 18): Sort By sized to its
+/// text, the "…" a glass circle on a 22 pt glyph row. The badge row renders
+/// 146 × 37 on the Sold side (under "Date sold") and, on the Owned side, from
+/// 113 × 37 under "Date" to 139 × 37 under "Market ↓"/"Market ↑" — so the
+/// widest-label proviso case still measures the Owned side under "Market ↓".
+/// The header is 57 pt on both sides and under every Owned label, against
+/// 53 pt with no badges, the meta line 14 pt: 37 + 6 + 14 still holds. At 3×
+/// the "…" renders 108 × 109 px, the Owned sort badge (under "Custom")
+/// 245 × 109 and the Sold 305 × 109. `theSortBadgeIsOneWidthForEverySelection`
+/// is retired with P4.
 @Suite("Items header layout")
 @MainActor
 struct ItemListHeaderLayoutTests {
@@ -189,28 +200,34 @@ struct ItemListHeaderLayoutTests {
         )
     }
 
-    /// P4 (`018`, T003): the sort badge is one width whatever it is set to.
-    /// T002 filmed the glass capsule on iOS 26.5 keeping the previous label's
-    /// width after a menu-driven relabel; with every option's label reserved
-    /// under the visible one, a relabel has no width to change. The Owned
-    /// side's real options, one render per selection over the same set.
+    /// Spec Decision 18 (`018` T006a): Sort By is sized to its text, so the
+    /// Owned side's badge row is narrower under its narrowest label than under
+    /// its widest — and the header's height must not follow it, or the switch
+    /// under it moves when the person changes the sort. Every Owned selection
+    /// is rendered over the side's real options, the narrowest and the widest
+    /// row are taken as measured, and the header is laid out around each.
     ///
-    /// Its mutation, run at T003: the hidden labels removed from `SortMenu`'s
-    /// label, and the widths split by label length → red.
-    @Test func theSortBadgeIsOneWidthForEverySelection() throws {
+    /// Its mutation, run at T006a: a fixed-height frame on `SortMenu`'s label
+    /// keyed to the label → red.
+    @Test func theHeaderIsOneHeightUnderTheNarrowestAndTheWidestOwnedLabel() throws {
         let options = ItemListViewModel.SortOrder.allCases
-        try #require(options.count > 1, "one sort option can't show a width change")
-        var widths: [String: Int] = [:]
+        var rows: [String: CGSize] = [:]
         for selection in options {
-            widths[selection.label] = try #require(
-                renderBitmap(SortMenu(options: options, selection: selection, label: \.label) { _ in }),
-                "ImageRenderer produced nothing to measure for the badge set to \"\(selection.label)\"."
-            ).width
+            rows[selection.label] = try badgeRowSize(options: options, selection: selection, label: \.label)
         }
-        print("SortMenu widths over the Owned options, per selection: \(widths)")
+        let narrowest = try #require(rows.min { $0.value.width < $1.value.width })
+        let widest = try #require(rows.max { $0.value.width < $1.value.width })
+        try #require(
+            narrowest.value.width < widest.value.width,
+            "every Owned sort label renders the badge row at one width — \(rows) — so this case can't see the header following the label"
+        )
+        let meta = "34 items · $18,420 · 3 unvalued"
+        let narrowHeader = try headerHeight(meta: meta, trailingSize: narrowest.value)
+        let wideHeader = try headerHeight(meta: meta, trailingSize: widest.value)
+        print("Owned badge rows per selection: \(rows); header under \"\(narrowest.key)\": \(narrowHeader), under \"\(widest.key)\": \(wideHeader)")
         #expect(
-            Set(widths.values).count == 1,
-            "the sort badge's width follows its selection — \(widths) — so a relabel changes the capsule's width and iOS 26.5's stale-width tear returns (P4, T002)"
+            narrowHeader == wideHeader,
+            "the Owned header measured \(narrowHeader) pt under \"\(narrowest.key)\" (row \(narrowest.value)) against \(wideHeader) pt under \"\(widest.key)\" (row \(widest.value)) — the header's height follows the sort label, so the switch moves when the sort changes (spec Decision 18)"
         )
     }
 
@@ -225,7 +242,15 @@ struct ItemListHeaderLayoutTests {
     ///
     /// Its mutations (T005): the glyph row back at `.frame(height: 14)` → red;
     /// `OverflowMenu` at `.controlSize(.small)` → red; the hidden line's font
-    /// at size 12 → red.
+    /// at size 12 → red. Since T006a the "…" is a glass circle (spec Decision
+    /// 18) with a 22 pt glyph row; it renders here 108 × 109 px against both
+    /// sort badges' 109 px. **The glyph row's width is untested off-device**:
+    /// `ImageRenderer` draws the circle as width × the label's height, not at
+    /// its diameter, so the row back at 18 pt wide renders 96 × 109 px and
+    /// stays green, where the device draws a 32.67 pt circle. The circle's
+    /// 36.67 × 36.33 is the device pass's to check (T009 films the header,
+    /// T013 measures the circle); this test carries no tolerance (T005's
+    /// decision review).
     @Test func theTwoBadgesRenderAtOneHeight() throws {
         let overflow = try #require(
             renderAt3x(OverflowMenu { Button("Settings") {} }),
@@ -323,9 +348,9 @@ struct ItemListHeaderLayoutTests {
     /// The badge row as `ItemListView` composes it — `SortMenu` over the
     /// side's real options set to the case's selection, beside `OverflowMenu`,
     /// 8 pt apart — rendered on its own, which works where rendering it
-    /// inside the header does not. The real option set, not a one-option
-    /// menu, because P4's badge reserves its widest option: the row is as
-    /// wide as it ships only over every option the side offers (`018` T005).
+    /// inside the header does not. Over the side's real option set, as it
+    /// ships (`018` T005); since T006a (spec Decision 18) the badge is sized
+    /// to the selection's text, so the row's width follows the selection.
     private func badgeRowSize<Option: Hashable>(
         options: [Option],
         selection: Option,

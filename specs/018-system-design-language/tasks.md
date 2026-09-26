@@ -648,7 +648,7 @@ Handoff notes for the pause reports:
   per R3) — outside its file list, authorised.
   **Phase 2 closes here — pause for the person.**
 
-- [ ] **T006a — The person's Phase 2 findings: the "…" a circle, Sort By sized to its text (Decision 18).**
+- [x] **T006a — The person's Phase 2 findings: the "…" a circle, Sort By sized to its text (Decision 18).**
   Per spec Decision 18, plan §1's Decision 18 paragraph. `OverflowMenu`:
   `.buttonBorderShape(.circle)` directly after `.buttonStyle(.glass)`; the
   hidden glyph row `.frame(width: 22)`; comments say why 22. `SortMenu`:
@@ -673,6 +673,24 @@ Handoff notes for the pause reports:
   `TroveTests/HeaderControlsWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; the two UI tests green alone;
   mutations recorded; the person looks before Phase 3.
+  **Done (2026-09-26).** `OverflowMenu`: `.buttonBorderShape(.circle)`
+  after `.buttonStyle(.glass)`, glyph row 22 wide; `SortMenu`: bare
+  `Text(label(selection))`, Decision 18 recorded in its doc. **Retired by
+  name:** `ItemListHeaderLayoutTests.theSortBadgeIsOneWidthForEverySelection`.
+  New `theHeaderIsOneHeightUnderTheNarrowestAndTheWidestOwnedLabel`.
+  G2 pins the circle on `OverflowMenu.swift` and none on `SortMenu.swift`;
+  G4's tint regex now reads glass → circle → tint. Measured (27.0 render):
+  Owned badge row per selection Date 113 … Market 139, all 37 tall; Sold
+  146 × 37; header 57 everywhere (53 without badges); at 3× "…" 108 × 109
+  px, sort 245/305 × 109. Mutations: a label-keyed fixed height → red
+  (`ItemListHeaderLayoutTests.swift:217`, 62 vs 82, and `:252/:256`); the
+  circle removed → red (`HeaderControlsWiringTests.swift:84` and `:166`).
+  **The glyph row back to 18 stays green**: `ImageRenderer` draws the glass
+  circle as width × label-height (96 × 109 px at 18, 108 × 109 at 22), so
+  the circle's diameter is untestable off-device; by T005's ruling (no
+  tolerance in G1) it is verified on device — T009's film and T013's
+  measurement — and the test's doc says so. `scripts/verify.sh`: green,
+  1749 in 235. UI alone: the two named tests green (30 s, 17 s).
 
 ## Phase 3 — The two switches and the add button · walkthrough: yes — Owned/Sold and Active/Completed are the system segmented control whose glass selection slides while the header holds still, and Sort By's capsule stays whole through a width-changing sort on the finished header (both films are in the report); the add button on Items and the Wishlist is a brass glass disc in the same corner and size, opening the same form; every screen in Light and Dark reads as one language (criterion 15)
 
@@ -944,3 +962,4 @@ recorded here too.
 | `sdd-implementer` — T006 | `opus` | ~72k (subagent total) | Done; unit 1749 green; UI suite 37/37 at the phase's final commit; four mutations recorded |
 | `skeptical-reviewer` — Phase 2 review (T004a, T004b, T005, T006) | `opus` | ~122k (subagent total) | **approved**, seven notes, none blocking. Carried: (T010) `ItemListHeaderLayoutTests`' T005 doc paragraph re-measured to the 109 px equality, `ItemListHeader.swift`'s "system's control size" phrase, T005's Done note names `SortMenu.swift` and `ThemeTests.swift` as touched (authorised by the decision review and R3); (T011) the theme-colour exemption matches an exact count of code lines with comments skipped, and `ExportWiringTests.rowStart` also asserts no `Button`/`Menu`/`Toggle` other than the listed rows; (T013) the ten device checks the review lists — the "…" glyph and spinner colour, the busy capsule's size and inertness, the share sheet after a scope row, Import from the menu, one badge height and a 57 pt header that holds across a switch, the order label's quiet colour and tap area (`.contentShape` went with `.buttonStyle(.plain)`), checkmark colour consistency between the sort and order menus, the chevron-less disabled row, VoiceOver traits, and the sort tests' collection-view shape on 26.x |
 | `general-purpose` — Phase 2 diagnosis on device (circle, text-sized capsule, 26.5 behaviour, `.id` mitigation filmed) | `opus` | ~169k (subagent total) | The look measured; the 26.5 transient (41 pt for 1.1 s, then a snap) filmed; `.id(selection)` removes it but kills the morph on both runtimes. The person kept the morph and accepted the transient → Decision 18, T006a |
+| `sdd-implementer` — T006a | `opus` | ~75k + resumed pass | Done; stopped once on the untestable circle diameter, settled by T005's no-tolerance ruling (verified on device instead); unit 1749 green |

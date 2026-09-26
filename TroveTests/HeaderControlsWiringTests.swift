@@ -36,6 +36,11 @@ struct HeaderControlsWiringTests {
     /// label → red (the no-colour leg). T004a: the label's
     /// `.foregroundStyle(.primary)` removed → red (the system-colour leg, as
     /// it was then). T004b: the tint removed → red (the tint leg).
+    ///
+    /// Since T006a (spec Decision 18) it also holds the two badges' shapes:
+    /// `OverflowMenu`'s glass button carries the circle border shape directly
+    /// after the glass style, and `SortMenu` sets no border shape. Mutation:
+    /// the shape removed from `OverflowMenu` → red (the circle leg).
     @Test func theSortMenuIsASystemMenuOfToggleRowsUnderOneHeaderInGlassWithNoColourOfItsOwn() throws {
         let code = try SourceScan.production("Trove/Views/Shared/SortMenu.swift")
         let anchor = "struct SortMenu<Option: Hashable>: View"
@@ -69,6 +74,20 @@ struct HeaderControlsWiringTests {
         #expect(
             !code.contains("theme.colors"),
             "SortMenu.swift names a theme colour — the badge draws no colour of its own (R3)"
+        )
+
+        // Spec Decision 18: the "…" beside it is a glass circle, and Sort By
+        // stays the capsule sized to its text.
+        let overflow = try SourceScan.production("Trove/Views/Shared/OverflowMenu.swift")
+        let overflowAnchor = "struct OverflowMenu<Content: View>: View"
+        try #require(overflow.contains(overflowAnchor), "OverflowMenu.swift no longer declares `\(overflowAnchor)`")
+        #expect(
+            overflow.contains(try Regex(#"\.buttonStyle\(\.glass\)\s*\.buttonBorderShape\(\.circle\)"#)),
+            "the \"…\" isn't a glass circle — `.buttonBorderShape(.circle)` no longer follows its `.buttonStyle(.glass)` (spec Decision 18)"
+        )
+        #expect(
+            !code.contains(".buttonBorderShape("),
+            "SortMenu.swift sets a border shape — Sort By is the glass capsule sized to its text, not a circle (spec Decision 18)"
         )
     }
 
@@ -115,7 +134,8 @@ struct HeaderControlsWiringTests {
     /// test can hold an export mid-run, so the branch is read from the body.
     /// It is drawn like the sort badge beside it: the glass style with the
     /// system's label colour set as the tint directly after it (spec Decision
-    /// 17), and no hint, since a menu's button announces itself (criterion
+    /// 17) — since T006a after the circle border shape that follows the
+    /// glass style (spec Decision 18) — and no hint, since a menu's button announces itself (criterion
     /// 11).
     ///
     /// **This checks spelling only**, as G2 does: the spinner on screen is
@@ -144,8 +164,8 @@ struct HeaderControlsWiringTests {
         )
         #expect(!code.contains(".accessibilityHint("), "the \"…\" carries a hint — the system menu announces itself (criterion 11)")
         #expect(
-            body.contains(try Regex(#"\.buttonStyle\(\.glass\)\s*\.tint\(\.primary\)"#)),
-            "the \"…\"'s glass button isn't tinted `.primary` directly after `.buttonStyle(.glass)`, so the root brass tint colours its glyph (spec Decision 17): \(body)"
+            body.contains(try Regex(#"\.buttonStyle\(\.glass\)\s*\.buttonBorderShape\(\.circle\)\s*\.tint\(\.primary\)"#)),
+            "the \"…\"'s glass button isn't tinted `.primary` directly after `.buttonStyle(.glass)` and its circle border shape, so the root brass tint colours its glyph (spec Decision 17): \(body)"
         )
         #expect(!code.contains("theme.colors"), "OverflowMenu.swift names a theme colour — the badge draws no colour of its own")
 

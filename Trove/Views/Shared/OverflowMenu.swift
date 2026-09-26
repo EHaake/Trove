@@ -22,6 +22,13 @@ import SwiftUI
 /// the two badges render at one height (`ItemListHeaderLayoutTests`, G1). Never a theme colour; `ThemeTests`
 /// lets exactly the one tint line through.
 ///
+/// **One difference, its shape** (spec Decision 18): the "…" is a glass
+/// circle, like the one in an item's detail, where Sort By stays a capsule
+/// sized to its text. The circle's border shape sits between the glass style
+/// and the tint; its hidden glyph row is 22 pt wide so the circle comes out
+/// at the capsule's height (`HeaderControlsWiringTests`, G2, pins the shape;
+/// G1 the height).
+///
 /// No accessibility hint (criterion 11): a menu's button announces itself as
 /// a pop-up button, which is the job "Opens more actions" did for the bespoke
 /// badge.
@@ -38,10 +45,15 @@ struct OverflowMenu<Content: View>: View {
             // exactly rather than a rounded literal (a 14 pt frame left the
             // capsule a third of a point short). The glyph or the spinner is
             // an overlay on it, so neither can grow the row.
+            //
+            // 22 pt wide because the button is a circle (spec Decision 18): a
+            // glass circle's diameter is the label's width + 14.67, so 22
+            // gives 36.67 × 36.33 — the sort capsule's height to the pixel.
+            // 18 gave 32.67, four points short.
             Text(verbatim: "0")
                 .font(SortMenuCopy.labelFont)
                 .hidden()
-                .frame(width: 18)
+                .frame(width: 22)
                 .overlay {
                     if isBusy {
                         ProgressView()
@@ -55,6 +67,8 @@ struct OverflowMenu<Content: View>: View {
                 .padding(.vertical, 4)
         }
         .buttonStyle(.glass)
+        // Decision 18: a full circle, as the "…" in an item's detail is.
+        .buttonBorderShape(.circle)
         // Decision 17: the system's label colour as the tint, as on the
         // sort badge beside it.
         .tint(.primary)

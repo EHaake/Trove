@@ -36,14 +36,19 @@ enum SortMenuCopy {
 /// (G2) pins the tint's place and that this file names no theme colour;
 /// `NoHardcodedColorsTests` lets exactly those two lines through.
 ///
-/// **Its footprint is constant** (spec P4): the label reserves the widest of
-/// its menu's options, sized once, so choosing a row never changes the
-/// badge's width. T002 filmed why: on iOS 26.5 the glass capsule keeps the
-/// previous label's width after a menu-driven relabel until the next tap —
-/// the label standing past the capsule's rim after a narrow-to-wide switch,
-/// a stale wider shadow after a wide-to-narrow one. With no width to change,
-/// the dismiss has none to animate. `ItemListHeaderLayoutTests` (G1) holds
-/// every selection to one width.
+/// **Its width follows its label** (spec Decision 18, withdrawing P4): the
+/// capsule is sized to the current option's text, and the glass style's own
+/// horizontal padding gives the glyph and the text equal insets (12.33 pt
+/// left, 13.33 pt right on iOS 27.0) with no padding of the app's own. The
+/// price is recorded, not hidden: on iOS 26.5 a menu-driven relabel from a
+/// narrow option to a wider one leaves the capsule at the old width for about
+/// 1.4 s (Date → Market ↓: 41 pt under a 54 pt label from +0.3 s to +1.4 s),
+/// then it snaps to the right width in one frame; wide to narrow morphs
+/// correctly, and iOS 27.0 is clean. Resetting the menu's identity on each
+/// selection removes that, but it replaces the system's menu-to-button morph
+/// with a crossfade on both runtimes; the person kept the morph — it is the
+/// standard iOS behaviour, and a menu button that looks standard should
+/// behave so — and accepted the 26.5 transient, which T009 films and times.
 struct SortMenu<Option: Hashable>: View {
     let options: [Option]
     let selection: Option
@@ -76,16 +81,9 @@ struct SortMenu<Option: Hashable>: View {
                     bar(width: 7)
                     bar(width: 4)
                 }
-                // P4's constant footprint: every option's label laid out
-                // hidden under the visible one, so the badge is always as
-                // wide as its widest option and a relabel changes no width.
-                ZStack(alignment: .leading) {
-                    ForEach(options, id: \.self) { option in
-                        Text(label(option)).hidden()
-                    }
-                    Text(label(selection))
-                }
-                .font(SortMenuCopy.labelFont)
+                // Sized to the selection's text (Decision 18).
+                Text(label(selection))
+                    .font(SortMenuCopy.labelFont)
             }
             // Q6 as overtaken by spec Decision 17: 4 pt above and below the
             // label, so the capsule sits between the system's two sizes.
