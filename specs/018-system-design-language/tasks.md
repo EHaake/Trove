@@ -91,6 +91,7 @@ agent holds the simulator. Everything the person reads is plain language.
 | `DropdownWiringTests` — the file, with what remains: `everyRowDismissesBeforeItActs`, `aDisabledRowIsInertAndDimmed`, `theSurfaceMarksItsFirstRowWhichTakesFocusAndClosesOnEscape`, `everyBadgeCarriesItsHintAndIdentifier` (its `OverflowBadge.swift` legs; the per-screen identifier legs move to G3 at T001–T006), `theBadgeShowsTheSpinnerAndDisablesWhileBusy` (→ G4 at T005), `sortByComposesTheSharedSurface`, `theOverflowDropdownIsHeaderlessOnTheSharedSurface`, `theHostInjectsDismissAndContainsVoiceOver` | `DropdownSurface`, `DropdownRow`, `OverflowBadge`, `SortDropdown`, `OverflowDropdown`, `DropdownHost` | T010 |
 | `DropdownAnchorTests` — `threeTagsOnOneViewAllReachTheReader`, `aSiblingBadgesTagMergesWithTheStackedThree` | `dropdownAnchor` | T010 |
 | `DropdownPlacementTests` — `hangsBelowTheBadgeAtTheTrailingGutterWhenThereIsRoom`, `theTrailingEdgeIsTheGuttersNotTheBadges`, `flipsAboveWhenBelowWouldRunPastTheBottom`, `touchingTheBottomStillHangsBelow`, `pinsToTheTopWhenNeitherDirectionFits`, `neverPastTheLeadingGutter`, `theSortBySurfaceIsTheSizeThisSuiteMeasuresAgainst`, `growsFromTheBadgesTrailingEdge`, `measuresFromTheRegionsOwnOrigin` | `DropdownPlacement` and the grow-from-badge animation | T010 |
+| `ItemListHeaderLayoutTests.theSortBadgeIsOneWidthForEverySelection` (T003's G1 leg) | P4's constant footprint, withdrawn by Decision 18 | T006a |
 | `OverflowDropdownRenderTests` — `theTwoGroupBreaksReadStrongerThanTheRowSeparator`, `theExportRowsDimWhenThereIsNothingToExport`, `eachExportRowDimsOnItsOwnGate` | the overflow dropdown's drawn hairlines and dimming | T010 |
 
 **Rewritten, not retired** (each Done note records the mutation the rewrite
@@ -647,6 +648,32 @@ Handoff notes for the pause reports:
   per R3) — outside its file list, authorised.
   **Phase 2 closes here — pause for the person.**
 
+- [ ] **T006a — The person's Phase 2 findings: the "…" a circle, Sort By sized to its text (Decision 18).**
+  Per spec Decision 18, plan §1's Decision 18 paragraph. `OverflowMenu`:
+  `.buttonBorderShape(.circle)` directly after `.buttonStyle(.glass)`; the
+  hidden glyph row `.frame(width: 22)`; comments say why 22. `SortMenu`:
+  the hidden-labels `ZStack` replaced by the bare `Text(label(selection))`
+  (same font); the P4 paragraph in its doc comment replaced by Decision
+  18's record (the 26.5 transient accepted, the morph kept). Tests: G1 —
+  `theSortBadgeIsOneWidthForEverySelection` **retired** (P4 withdrawn;
+  list it in the retirement table under this task); `theTwoBadgesRenderAtOneHeight`
+  still exact at 3× (mutation: the glyph row back to 18 → red, the circle
+  shorter); `badgeRowSize` and the proviso cases re-measured and recorded
+  (the Owned row is now narrower under "Date" than under "Market ↓" — the
+  header height must not change with it: add a case that the header is
+  equal under the narrowest and the widest Owned label, mutation: a
+  fixed-height frame keyed to the label → red, or say why no mutation is
+  possible). G2 gains a leg that `OverflowMenu.swift` carries
+  `.buttonBorderShape(.circle)` and `SortMenu.swift` does not (mutation:
+  the shape removed → red). UI: `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch`
+  and G39's test green alone. The tried diff is in the scratchpad
+  (`phase2-diagnosis-tried.diff`) — copy the two production changes, not
+  `.id(selection)`. Files: `Trove/Views/Shared/OverflowMenu.swift`,
+  `Trove/Views/Shared/SortMenu.swift`, `TroveTests/ItemListHeaderLayoutTests.swift`,
+  `TroveTests/HeaderControlsWiringTests.swift`.
+  **Verify:** `scripts/verify.sh` green; the two UI tests green alone;
+  mutations recorded; the person looks before Phase 3.
+
 ## Phase 3 — The two switches and the add button · walkthrough: yes — Owned/Sold and Active/Completed are the system segmented control whose glass selection slides while the header holds still, and Sort By's capsule stays whole through a width-changing sort on the finished header (both films are in the report); the add button on Items and the Wishlist is a brass glass disc in the same corner and size, opening the same form; every screen in Light and Dark reads as one language (criterion 15)
 
 - [ ] **T007 — `SidePicker`, and both switches on it.**
@@ -707,6 +734,11 @@ Handoff notes for the pause reports:
   back, and Sold from Name to Date sold — exactly T002's switches, on the
   header as it now stands, with the glass "…" beside the badge and no
   dropdown host — each frame judged by plan §1's "whole on every frame".
+  **Decision 18:** on iOS 27.0 the verdict stands as written; on iOS 26.5
+  the narrow-to-wide transient is expected — record its width, its
+  duration to the snap, and that the wide-to-narrow morph is clean; it is
+  a failure only if it does not self-correct within about 1.5 s or shows
+  on 27.0.
   **The switches (criterion 7)**: on `-uiTesting -seedPlans`, Items Owned →
   Sold → Owned and Plans Active → Completed: the frames the selection's edge
   takes to cross, with Δt (a slide, not a cut); the title, meta line, the
@@ -911,3 +943,4 @@ recorded here too.
 | `sdd-implementer` — T005 (resumed) | `opus` | ~206k + resumed pass | Done; unit 1749 green; six UI tests green alone; every mutation recorded |
 | `sdd-implementer` — T006 | `opus` | ~72k (subagent total) | Done; unit 1749 green; UI suite 37/37 at the phase's final commit; four mutations recorded |
 | `skeptical-reviewer` — Phase 2 review (T004a, T004b, T005, T006) | `opus` | ~122k (subagent total) | **approved**, seven notes, none blocking. Carried: (T010) `ItemListHeaderLayoutTests`' T005 doc paragraph re-measured to the 109 px equality, `ItemListHeader.swift`'s "system's control size" phrase, T005's Done note names `SortMenu.swift` and `ThemeTests.swift` as touched (authorised by the decision review and R3); (T011) the theme-colour exemption matches an exact count of code lines with comments skipped, and `ExportWiringTests.rowStart` also asserts no `Button`/`Menu`/`Toggle` other than the listed rows; (T013) the ten device checks the review lists — the "…" glyph and spinner colour, the busy capsule's size and inertness, the share sheet after a scope row, Import from the menu, one badge height and a 57 pt header that holds across a switch, the order label's quiet colour and tap area (`.contentShape` went with `.buttonStyle(.plain)`), checkmark colour consistency between the sort and order menus, the chevron-less disabled row, VoiceOver traits, and the sort tests' collection-view shape on 26.x |
+| `general-purpose` — Phase 2 diagnosis on device (circle, text-sized capsule, 26.5 behaviour, `.id` mitigation filmed) | `opus` | ~169k (subagent total) | The look measured; the 26.5 transient (41 pt for 1.1 s, then a snap) filmed; `.id(selection)` removes it but kills the morph on both runtimes. The person kept the morph and accepted the transient → Decision 18, T006a |

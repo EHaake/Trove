@@ -320,6 +320,10 @@ are replaced the same way. No Design pass: nothing new is being designed
    P4's fallback is applied and the measurement repeated; the criterion
    is met by the final one. This is the first task of the spec, before
    any other surface is converted.
+   *Amended by Decision 18 (2026-09-26): the criterion holds as written
+   on iOS 27.0; on iOS 26.5 a transient wrong width after a narrow-to-wide
+   relabel, self-correcting within about 1.5 s, is accepted and recorded
+   rather than counted as the tear.*
 2. [ ] Each of the four "…" badges opens a system menu whose rows carry the
    labels, order, groups and enabled gates the bespoke dropdown carried,
    and each row does what it did. On an empty collection the export rows
@@ -481,6 +485,27 @@ Made by the person on 2026-09-26, at the second Phase 1 re-look:
     tint (`.tint(.primary)`), since the glass style paints its label with
     the tint and ignores the label's own foreground.
 
+Made by the person on 2026-09-26, at the Phase 2 walkthrough:
+
+18. **The "…" is a glass circle; Sort By is sized to its text; the morph
+    is kept, and the iOS 26.5 tear is accepted as the price.** "The ...
+    should be a full circle, like it is in the item detail, then the order
+    picker needs to match its height. I'd also like to try to make the
+    order picker narrower again, so that there isn't any empty space to
+    the right of the text." Shown that a text-sized capsule brings the
+    26.5 defect back in a self-healing form (the capsule at the wrong
+    width for about 1.4 s after choosing a longer order, then a snap to
+    the right width, on 26.5 only; 27.0 clean), and that the only fix
+    found replaces the system's menu-to-button morph with a crossfade on
+    both versions, the person asked whether the morph is standard iOS
+    behaviour — it is — and chose: "I want to keep it since it would be
+    jarring to have menu buttons that look like standard iOS but then
+    behave differently when tapped," then "We'll go with 1." **P4 is
+    withdrawn**; criterion 1 is amended: whole on every frame on iOS 27.0;
+    on iOS 26.5 the narrow-to-wide relabel's transient (≤ ~1.5 s, then
+    self-correcting) is an accepted, recorded flaw, measured by T009, not
+    a failure.
+
 ## Proposals (P-items)
 
 Claude Code's; they become decisions on plan approval unless the person
@@ -497,7 +522,8 @@ overrules one here.
   telling the person which order they can drag — in the idiom the system
   menu offers for exactly that, and it is now visible whenever the menu
   is open rather than only once Custom is chosen.
-- **P4 — The tear's fallback is pre-authorised.** If criterion 1's first
+- **P4 — The tear's fallback is pre-authorised.** *Applied at T003, then
+  withdrawn by Decision 18.* If criterion 1's first
   measurement shows T029c's tear behind a system menu, the sort badge
   takes a constant footprint: sized once to its widest label, so the
   menu's dismiss has no width to animate. That was the interim fix T029c

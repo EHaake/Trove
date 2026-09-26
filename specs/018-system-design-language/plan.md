@@ -432,6 +432,22 @@ accessibility tree, so VoiceOver on 26.x does not read it — the UI test's
 subtitle legs hold on 27.0, where the suite runs, and would go red rather
 than falsely green on 26.x.
 
+**Decision 18 (2026-09-26, Phase 2 pause) — as built from T006a.** P4's
+hidden-labels footprint is removed; the capsule is sized to its text, and
+the glass style's own ~12.3 pt horizontal padding gives equal insets
+(glyph-left 12.33, text-right 13.33 on 27.0) with no padding of the
+app's own. The "…" wears `.buttonBorderShape(.circle)`; its hidden glyph
+row is 22 pt wide, because a glass circle's diameter is the label's width
++ 14.67, so 22 gives 36.67 × 36.33 — the capsule's height to the pixel
+(18 gave 32.67, four points short). Measured on 26.5 with the text-sized
+capsule: Date → Market ↓ grows the capsule to 41 pt under a 54 pt label
+and holds it from +0.3 s to +1.4 s, then snaps to 95.00 in one frame;
+Market ↓ → Date morphs correctly. `.id(selection)` on the Menu removes
+that entirely but replaces the panel→button morph with a crossfade on
+both runtimes; the person kept the morph (it is the system's standard
+behaviour) and accepted the 26.5 transient. G1's one-width leg (T003) is
+retired with P4; T009 films the transient and records its duration.
+
 **If the tear shows** (T003): the label takes a constant footprint —
 `ZStack(alignment: .leading) { ForEach(options) { Text(label($0)).hidden() };
 Text(label(selection)) }` — sized once to the widest of its menu's options,
