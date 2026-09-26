@@ -513,6 +513,8 @@ Handoff notes for the pause reports:
   gap, the false-passing shape `CLAUDE.md` asks to audit for — T011 (the
   policy-guard task) fixes it and re-runs the mutation.
 
+**Phase 1 pause (2026-09-24 → 26).** The person tried the app three times: found the brass label and the squashed capsule (→ T004a), then the label still brass and the capsule oversized with blank space on the right (→ T004b, size C chosen from rendered candidates), then: "Looks good, continue."
+
 ## Phase 2 — Every header menu is the system's · walkthrough: yes — each tab's "…" opens the system menu: Settings alone on the Overview and Plans; Export as CSV…, Export as PDF…, Import from CSV…, Settings in three groups on the Wishlist; on Items the two exports (no ellipsis) open submenus of Owned items, Sold items, Owned and sold, greyed where a scope has nothing on screen; an export shows the spinner then the share sheet; the Overview's "BY VALUE" opens a menu headed "Order by"
 
 - [ ] **T005 — `OverflowMenu`, and every "…" on it.**
