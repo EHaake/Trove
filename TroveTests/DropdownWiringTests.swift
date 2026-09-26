@@ -68,35 +68,17 @@ struct DropdownWiringTests {
     }
 
     /// Decision 18 in code: every badge is a button whose hint says what it
-    /// opens, and every badge carries the identifier the UI tests query —
-    /// all eight, not just the three the tests happen to use. Read from the
-    /// controls' own bodies. The Plans pair joined at 009 Amendment A (G33;
-    /// mutation: `moreActions.plans` dropped → red).
+    /// opens, and every badge carries the identifier the UI tests query.
+    /// Read from the controls' own bodies. The three sort badges left at
+    /// `018` for system menus, and the four "…" badges at T005 — they carry
+    /// no hint, and `HeaderControlsWiringTests` (G3) pins their identifiers
+    /// now, as it does the Dashboard's order control since T006. What is
+    /// left here is `OverflowBadge` itself, until it goes at T010.
     @Test func everyBadgeCarriesItsHintAndIdentifier() throws {
         let badge = try SourceScan.production("Trove/Views/Shared/OverflowBadge.swift")
         let badgeBody = try #require(SourceScan.closureBodies(after: "var body: some View", in: badge).first)
         #expect(badgeBody.contains(".accessibilityHint(\"Opens more actions\")"), "the \"…\" badge's hint")
         #expect(badgeBody.contains("isBusy ? \"Working\" : \"More actions\""), "the \"…\" badge's label, both states")
-
-        for (path, sortID, overflowID) in [
-            ("Trove/Views/Items/ItemListView.swift", "sortOptions.items", "moreActions.items"),
-            ("Trove/Views/Wishlist/WishlistView.swift", "sortOptions.wishlist", "moreActions.wishlist"),
-            ("Trove/Views/Plans/PlansView.swift", "sortOptions.plans", "moreActions.plans"),
-        ] {
-            let code = try SourceScan.production(path)
-            let sort = try #require(SourceScan.closureBodies(after: "private var sortControl: some View", in: code).first)
-            #expect(sort.contains(".accessibilityHint(\"Opens sort options\")"), "\(path): the sort badge's hint")
-            #expect(sort.contains(".accessibilityIdentifier(\"\(sortID)\")"), "\(path): the sort badge's identifier")
-            let overflow = try #require(SourceScan.closureBodies(after: "private var overflowControl: some View", in: code).first)
-            #expect(overflow.contains(".accessibilityIdentifier(\"\(overflowID)\")"), "\(path): the \"…\" badge's identifier")
-        }
-
-        let dashboard = try SourceScan.production("Trove/Views/Dashboard/DashboardView.swift")
-        let overflow = try #require(SourceScan.closureBodies(after: "private var overflowControl: some View", in: dashboard).first)
-        #expect(overflow.contains(".accessibilityIdentifier(\"moreActions.dashboard\")"), "the Dashboard's \"…\" identifier")
-        let order = try #require(SourceScan.closureBodies(after: "private var orderControl: some View", in: dashboard).first)
-        #expect(order.contains(".accessibilityHint(\"Opens order options\")"), "the order control's hint")
-        #expect(order.contains(".accessibilityIdentifier(\"orderOptions.dashboard\")"), "the order control's identifier")
     }
 
     /// Criterion 14/23's badge half on the pill T021 rewrote: while busy the
@@ -125,32 +107,6 @@ struct DropdownWiringTests {
     }
 
     // MARK: - The host and its screens
-
-    private nonisolated static let lists = [
-        "Trove/Views/Items/ItemListView.swift",
-        "Trove/Views/Wishlist/WishlistView.swift",
-    ]
-
-    /// One optional is the screen's whole open-menu state: exactly one
-    /// `openDropdown`, no surviving boolean, and a host bound to it — placed
-    /// after the add button's overlay so the dropdown draws above it.
-    @Test(arguments: lists)
-    func eachListHostsItsDropdownsOffOneOptional(path: String) throws {
-        let code = try SourceScan.production(path)
-        #expect(code.ranges(of: "@State private var openDropdown: HeaderDropdown?").count == 1, "\(path): one optional, declared once")
-        #expect(!code.contains("isSortMenuOpen"), "\(path): the boolean must be gone")
-        let hosts = code.ranges(of: ".dropdownHost(open: $openDropdown")
-        #expect(hosts.count == 1, "\(path) attaches \(hosts.count) hosts, expected exactly 1")
-        let addButton = try #require(code.range(of: ".overlay(alignment: .bottomTrailing)"), "\(path): no add-button overlay?")
-        if let host = hosts.first {
-            #expect(host.lowerBound > addButton.upperBound, "\(path): the host must come after the add button's overlay")
-        }
-        #expect(code.ranges(of: ".dropdownAnchor(HeaderDropdown.sort)").count == 1, "\(path): the sort badge must be anchored, once")
-        #expect(code.ranges(of: ".dropdownAnchor(HeaderDropdown.overflow)").count == 1, "\(path): the overflow badge must be anchored, once")
-        let host = try #require(SourceScan.closureBodies(after: ".dropdownHost(open: $openDropdown", in: code).first)
-        #expect(host.contains("case .sort:") && host.contains("SortDropdown("), "\(path): the host must compose Sort By")
-        #expect(host.contains("case .overflow:") && host.contains("OverflowDropdown("), "\(path): the host must compose the overflow")
-    }
 
     /// The overflow dropdown is the shared surface with no header (P9),
     /// read from its body — and nothing in its file draws a plate of its
@@ -206,51 +162,6 @@ struct DropdownWiringTests {
         #expect(host.contains("scale: 0.92"), "the dropdown grows from 92%")
         #expect(!host.contains("withAnimation"), "no screen write is ever animated — the animation is the host's alone")
         #expect(!host.contains("$0.animation = nil"), "the transaction's animation is no longer stripped")
-    }
-
-    /// The root Dashboard alone carries the "…" (spec Decision 16): the
-    /// anchor sits inside exactly one `if isRoot` span and nowhere else,
-    /// the screen's open-menu state is one optional, and the host composes
-    /// the one-row Settings menu on the shared surface.
-    @Test func theDashboardAnchorsItsBadgeOnTheRootAloneAndComposesSettings() throws {
-        let code = try SourceScan.production("Trove/Views/Dashboard/DashboardView.swift")
-        let anchor = ".dropdownAnchor(DashboardDropdown.overflow)"
-        #expect(code.ranges(of: anchor).count == 1, "the Dashboard badge must be anchored, once")
-        let rootSpans = SourceScan.closureBodies(after: "if isRoot", in: code)
-        try #require(!rootSpans.isEmpty, "no `if isRoot` gates — wrong scan target?")
-        #expect(rootSpans.filter { $0.contains("overflowControl") }.count == 1, "the badge must be gated on isRoot, in exactly one span")
-        // The control's body carries the anchor; the gate carries the control.
-        let control = try #require(SourceScan.closureBodies(after: "private var overflowControl: some View", in: code).first)
-        #expect(control.contains(anchor) && control.contains("openDropdown = .overflow"), "the badge must open the overflow and be anchored")
-
-        #expect(code.ranges(of: "@State private var openDropdown: DashboardDropdown?").count == 1, "one optional, declared once")
-        let hosts = SourceScan.closureBodies(after: ".dropdownHost(open: $openDropdown", in: code)
-        try #require(hosts.count == 1, "the Dashboard attaches \(hosts.count) hosts, expected exactly 1")
-        #expect(hosts[0].contains("case .overflow:") && hosts[0].contains("DropdownSurface {") && hosts[0].contains("DropdownRow(title: \"Settings\")"), "the host must compose the one-row Settings menu")
-        #expect(hosts[0].contains("isShowingSettings = true"), "the Settings row must open the sheet")
-        // The order control's system menu leaves at T023; `MenuPolicyTests`
-        // owns that rule. This host, at least, composes no system menu.
-        #expect(!hosts[0].contains("Menu {"), "no system menu inside the Dashboard's host")
-    }
-
-    /// The Dashboard's category-order control (spec P12, criterion 25): the
-    /// mono label stays a label — no pill — and opens the shared surface
-    /// under ORDER BY, its rows the shared row with the current order
-    /// selected. Read from the control's body and the host's `.order` case.
-    @Test func theDashboardOrderControlOpensTheSharedSurfaceUnderOrderBy() throws {
-        let code = try SourceScan.production("Trove/Views/Dashboard/DashboardView.swift")
-        #expect(code.ranges(of: ".dropdownAnchor(DashboardDropdown.order)").count == 1, "the order control must be anchored, once")
-        let control = try #require(SourceScan.closureBodies(after: "private var orderControl: some View", in: code).first)
-        #expect(control.contains("openDropdown = .order"), "the control must open the order dropdown")
-        #expect(control.contains(".monoLabel("), "the label stays the mock's mono text (P12)")
-        #expect(!control.contains("Badge("), "the order control is not a pill (P12)")
-
-        let host = try #require(SourceScan.closureBodies(after: ".dropdownHost(open: $openDropdown", in: code).first)
-        let orderCase = try #require(host.range(of: "case .order:"), "the host must compose the order dropdown")
-        let composition = String(host[orderCase.upperBound...])
-        #expect(composition.contains("DropdownSurface(title: \"ORDER BY\")"), "the order dropdown opens under ORDER BY")
-        #expect(composition.contains("DropdownRow(title: order.label, isSelected: order == viewModel.breakdownOrder)"), "the rows are the shared row, the current order selected")
-        #expect(composition.contains("viewModel.breakdownOrder = order") && composition.contains("viewModel.load()"), "choosing must reorder and reload")
     }
 
     // MARK: - Helpers

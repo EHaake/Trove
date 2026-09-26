@@ -163,6 +163,16 @@ struct ThemeCompositionTests {
 /// active `Theme` is all a future light mode needs. That claim is only true
 /// while it stays true, and it degrades the moment one view reaches for a
 /// literal — so it gets checked rather than asserted, per CLAUDE.md.
+///
+/// **One recorded exception** (`018` Decisions 15 and 17): the glass header
+/// controls are system controls, and their label takes the system's label
+/// colour — `.primary`, which follows the appearance on its own — rather
+/// than the root brass tint or any theme colour. `systemLabelExemptions`
+/// names each such text by file; both scans honour it, a line is let
+/// through only if it is clean once the named text is taken out, so nothing
+/// else in that file and that text in no other file gets past, and an entry
+/// that no longer matches its file fails the scan that would otherwise
+/// flag it rather than lingering.
 @Suite("No hardcoded colors in views")
 struct NoHardcodedColorsTests {
     /// `Color.clear` is absence of color rather than a palette choice, so it's
@@ -171,6 +181,16 @@ struct NoHardcodedColorsTests {
         "red", "blue", "green", "yellow", "orange", "purple", "pink", "brown",
         "gray", "grey", "black", "white", "cyan", "mint", "teal", "indigo",
         "primary", "secondary", "accentColor",
+    ]
+
+    /// Decisions 15 and 17 (018): glass header controls are system controls;
+    /// their label takes the system's label colour, which follows the
+    /// appearance. The glass style paints its label with the button's tint,
+    /// so the colour is the tint; the glyph's bars are colour views so they
+    /// draw at the tint's full strength.
+    private static let systemLabelExemptions: [String: [String]] = [
+        "SortMenu.swift": [".tint(.primary)", "Color.primary"],
+        "OverflowMenu.swift": [".tint(.primary)"],
     ]
 
     private static let colorTakingModifiers = [
@@ -218,21 +238,17 @@ struct NoHardcodedColorsTests {
         let constructed = try Regex(#"\bColor\("#)
         let named = try Regex(#"Color\.(\#(names))\b"#)
 
-        var violations: [String] = []
-        for file in try swiftFilesToCheck() {
-            let source = try String(contentsOf: file, encoding: .utf8)
-            for (offset, line) in source.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
-                let text = String(line)
-                if text.firstMatch(of: constructed) != nil || text.firstMatch(of: named) != nil {
-                    violations.append("\(file.lastPathComponent):\(offset + 1): \(text.trimmingCharacters(in: .whitespaces))")
-                }
-            }
+        let (violations, stale) = try scan { text in
+            text.firstMatch(of: constructed) != nil || text.firstMatch(of: named) != nil
         }
 
         #expect(
             violations.isEmpty,
             "Views must read colors from Theme, not build them:\n\(violations.joined(separator: "\n"))"
         )
+        for entry in stale {
+            Issue.record("exemption \(entry) no longer used — no line in the file carries it, so the entry lets nothing through and should go (018 Decisions 15 and 17)")
+        }
     }
 
     @Test func noViewPassesASystemColorToAColorTakingModifier() throws {
@@ -240,20 +256,50 @@ struct NoHardcodedColorsTests {
         let modifiers = Self.colorTakingModifiers.joined(separator: "|")
         let shorthand = try Regex(#"(\#(modifiers))\(\s*\.(\#(names))\b"#)
 
-        var violations: [String] = []
-        for file in try swiftFilesToCheck() {
-            let source = try String(contentsOf: file, encoding: .utf8)
-            for (offset, line) in source.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
-                let text = String(line)
-                if text.firstMatch(of: shorthand) != nil {
-                    violations.append("\(file.lastPathComponent):\(offset + 1): \(text.trimmingCharacters(in: .whitespaces))")
-                }
-            }
-        }
+        let (violations, stale) = try scan { $0.firstMatch(of: shorthand) != nil }
 
         #expect(
             violations.isEmpty,
             "Views must read colors from Theme, not use system colors:\n\(violations.joined(separator: "\n"))"
         )
+        for entry in stale {
+            Issue.record("exemption \(entry) no longer used — no line in the file carries it, so the entry lets nothing through and should go (018 Decisions 15 and 17)")
+        }
+    }
+
+    /// Every view line `flags` reports, less the lines `systemLabelExemptions`
+    /// lets through: a flagged line passes only if it is clean once its
+    /// file's exempted texts are taken out of it, so an exempted text never
+    /// carries another colour through on the same line. `stale` is every
+    /// entry this scan would itself flag (the entry's text trips `flags`)
+    /// that no flagged line in its file carried — the other scan is
+    /// responsible for the rest.
+    private func scan(flags: (String) -> Bool) throws -> (violations: [String], stale: [String]) {
+        var violations: [String] = []
+        var used: Set<String> = []
+        for file in try swiftFilesToCheck() {
+            let name = file.lastPathComponent
+            let exemptions = Self.systemLabelExemptions[name] ?? []
+            let source = try String(contentsOf: file, encoding: .utf8)
+            for (offset, line) in source.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
+                let text = String(line)
+                guard flags(text) else { continue }
+                var rest = text
+                for entry in exemptions where rest.contains(entry) {
+                    rest = rest.replacing(entry, with: "")
+                    used.insert("\(name): \(entry)")
+                }
+                if flags(rest) {
+                    violations.append("\(name):\(offset + 1): \(text.trimmingCharacters(in: .whitespaces))")
+                }
+            }
+        }
+        let stale = Self.systemLabelExemptions.keys.sorted().flatMap { name in
+            (Self.systemLabelExemptions[name] ?? [])
+                .filter { flags($0) }
+                .map { "\(name): \($0)" }
+                .filter { !used.contains($0) }
+        }
+        return (violations, stale)
     }
 }

@@ -16,10 +16,20 @@ import Testing
 /// scan cannot see a wrap, and the device pass that found it costs a person's
 /// afternoon; the render can, off-device, in a second.
 ///
-/// Every case measures the real ingredients — `SortBadge` and `OverflowBadge`
-/// as the trailing row, a `.monoLabel()` line as the meta, the copy composed
+/// Every case measures the real ingredients — `SortMenu` and `OverflowMenu`
+/// (`OverflowBadge` until `018` T005) as the trailing row, a `.monoLabel()` line as the meta, the copy composed
 /// by `SaleCopy` rather than typed out here — at the width the header is laid
-/// out in on the device criterion 3 was measured on. Each case differs from
+/// out in on the device criterion 3 was measured on.
+///
+/// **Since `018` the badge row is measured on its own and stood in for.**
+/// `ImageRenderer` can't render a glass `Menu` in place: in a `VStack` with
+/// any sibling (which `ItemsListHeader` is) it kills the test process with
+/// `precondition failure: invalid type ID: 0`, at every control size and
+/// under `.fixedSize()`, `.compositingGroup()` or `.drawingGroup()` (T001's
+/// probes). The row *does* render alone in its `HStack`, so
+/// `badgeRowSize(sortLabel:)` measures it there, and the header is rendered
+/// with a clear box of that size in the trailing slot. Nothing asserts that
+/// the box matches the row it was measured from — that could only pass. Each case differs from
 /// the baseline in something the *production* view controls; a case that
 /// could only be reddened by editing this file guards nothing (T010a's
 /// review found one and it was deleted).
@@ -29,8 +39,40 @@ import Testing
 /// render the baseline at width 200 instead and **all** of them go red, which
 /// is what proves the instrument can see a wrap at all rather than only
 /// agreeing with itself; fatten `OverflowBadge`'s vertical padding and the
-/// empty-trailing case alone goes red, which is what makes the 30 pt proviso
-/// below a measurement instead of a claim.
+/// empty-trailing case alone goes red, which is what made the 30 pt proviso
+/// a measurement instead of a claim. T001 (`018`) re-ran all three
+/// on the stand-in, and added a fourth: `SortMenu` at `.controlSize(.large)`
+/// turned the proviso red, since its 45 pt badge is taller than the title's
+/// line box.
+///
+/// **Since `018` T004a the badge row sets the header's height** (spec
+/// Decision 16, plan Q6's pre-authorised rewrite): the person found the
+/// 28 pt capsule squashed, `SortMenu` went to `.large`, and the proviso case
+/// now pins the new relationship — header = badge row + 6 + one meta line on
+/// both sides, and the header with no badges shorter than that. Its
+/// mutations, run at T004a: the meta line back beside the badges → red;
+/// `SortMenu` back at `.regular` → the rewritten proviso red.
+///
+/// **Re-measured at `018` T004b** (spec Decision 17): `SortMenu` at
+/// `.regular` with 4 pt of vertical padding on its label. The badge renders
+/// 95 × 37 on the Owned side — 95 wide under every one of its seven
+/// selections — and 102 × 37 on the Sold side; the badge row 145 × 37 on
+/// the Owned side (under "Market ↓") and 152 × 37 on the Sold side (under
+/// "Date sold"), `OverflowBadge` 42 × 30 beside it; the header 57 pt on both
+/// sides against 53 pt with no badges, the meta line 14 pt — so 37 + 6 + 14
+/// still holds and the badge row still sets the height. Its mutation: the
+/// label's padding removed → the badge row falls to `OverflowBadge`'s 30 pt,
+/// the header to 53 pt on both sides, level with the no-badge header, and
+/// all three proviso expectations go red.
+///
+/// **At `018` T005** the row composes `OverflowMenu`, and `SortMenu` renders
+/// over the side's real options set to the case's selection rather than as
+/// a one-option menu, so the row is as wide as it ships. The badge row
+/// renders 145 × 37 on the Owned side (under "Market ↓") and 152 × 37 on the
+/// Sold side, `OverflowMenu` 42 × 36 beside it; the header 57 pt on both
+/// sides against 53 pt with no badges. The Owned sort badge renders 95 × 37,
+/// the Sold 102 × 37 — so `theTwoBadgesRenderAtOneHeight` reads 36 against
+/// 37.
 @Suite("Items header layout")
 @MainActor
 struct ItemListHeaderLayoutTests {
@@ -52,14 +94,20 @@ struct ItemListHeaderLayoutTests {
     /// pass found *healthy*: at "0 sold · $0" both sides read 154.33 pt, so a
     /// header that matches this one matches the Owned side.
     @Test func theHeaderIsOneMetaLineTallForEverySummaryAndEverySortLabel() throws {
-        let baseline = try headerHeight(meta: soldSummary(count: 0, proceeds: 0, realised: 0), sortLabel: "Date sold")
+        let soldOptions = ItemListViewModel.SoldSortOrder.allCases
+        let ownedOptions = ItemListViewModel.SortOrder.allCases
+        let baselineRow = try badgeRowSize(options: soldOptions, selection: .soldDate, label: \.label)
+        let baseline = try headerHeight(meta: soldSummary(count: 0, proceeds: 0, realised: 0), trailingSize: baselineRow)
 
-        // The proviso plan Q18 states: the header is the title's line box
-        // plus 6 plus one meta line only while the title's box is at least
-        // the badge row's 30 pt. Strip the badges out and the height must not
-        // move — if it drops, the badge row was driving it, and every other
-        // case here (all of which carry the same badges) would have agreed
-        // with itself about the wrong number.
+        // The proviso as plan Q6 rewrote it (spec Decision 16, T004a): the
+        // badges are at the system's control size, taller than the title's
+        // line box, so the badge row — not the title — sets the header's
+        // height, and it must do so the same way on both sides: badge row
+        // plus the header's 6 pt spacing plus one meta line. The meta line is
+        // measured alone, where it cannot wrap. Stripping the badges out must
+        // then *drop* the height — if it doesn't, the title is driving it
+        // again, and the relationship pinned below describes a header the
+        // screen no longer draws.
         let withoutBadges = try #require(
             renderBitmap(
                 ItemsListHeader(title: "Items") {
@@ -76,32 +124,52 @@ struct ItemListHeaderLayoutTests {
         // unvalued count `ItemListView.summaryLine` appends — under the widest
         // label its Sort By can show. The same latent wrap lived here: nothing
         // about this defect was Sold-only once both sides carry a badge.
-        let ownedWidest = try widestLabel(of: ItemListViewModel.SortOrder.allCases.map(\.label))
-        let owned = try headerHeight(meta: "34 items · $18,420 · 3 unvalued", sortLabel: ownedWidest)
+        let ownedWidest = try widestLabel(of: ownedOptions.map(\.label))
+        let ownedRow = try badgeRowSize(
+            options: ownedOptions,
+            selection: try #require(ownedOptions.first { $0.label == ownedWidest }),
+            label: \.label
+        )
+        let owned = try headerHeight(meta: "34 items · $18,420 · 3 unvalued", trailingSize: ownedRow)
 
         // And the Owned line at a size a serious collection reaches: "full
         // width" is not the same claim as "never wraps", and this is the case
         // that would notice the difference on this side.
-        let ownedLarge = try headerHeight(meta: "1,284 items · $1,248,200 · 37 unvalued", sortLabel: ownedWidest)
+        let ownedLarge = try headerHeight(meta: "1,284 items · $1,248,200 · 37 unvalued", trailingSize: ownedRow)
 
         // The seeded Sold collection's line at a plausible size — the shape
         // the device pass measured wrapping.
-        let sold = try headerHeight(meta: soldSummary(count: 6, proceeds: 398_500, realised: 10_500), sortLabel: "Date sold")
+        let sold = try headerHeight(meta: soldSummary(count: 6, proceeds: 398_500, realised: 10_500), trailingSize: baselineRow)
 
         // The same line at figures that will not fit in any reading of "about
         // 232 pt", under the widest label `SoldSortOrder` offers — so a longer
         // label added later cannot sneak past this suite either.
-        let soldWidest = try widestLabel(of: ItemListViewModel.SoldSortOrder.allCases.map(\.label))
+        let soldWidest = try widestLabel(of: soldOptions.map(\.label))
         let soldLarge = try headerHeight(
             meta: soldSummary(count: 999, proceeds: 124_820_000, realised: 11_245_000),
-            sortLabel: soldWidest
+            trailingSize: try badgeRowSize(
+                options: soldOptions,
+                selection: try #require(soldOptions.first { $0.label == soldWidest }),
+                label: \.label
+            )
         )
 
-        print("ItemsListHeader heights at width \(contentWidth) — baseline: \(baseline), no badges: \(withoutBadges), owned under \"\(ownedWidest)\": \(owned), owned at scale: \(ownedLarge), sold: \(sold), sold at scale under \"\(soldWidest)\": \(soldLarge)")
+        let soldMetaLine = try metaLineHeight(soldSummary(count: 0, proceeds: 0, realised: 0))
+        let ownedMetaLine = try metaLineHeight("34 items · $18,420 · 3 unvalued")
+
+        print("ItemsListHeader heights at width \(contentWidth) — badge row: \(baselineRow), owned badge row: \(ownedRow), meta line: sold \(soldMetaLine) owned \(ownedMetaLine), baseline: \(baseline), no badges: \(withoutBadges), owned under \"\(ownedWidest)\": \(owned), owned at scale: \(ownedLarge), sold: \(sold), sold at scale under \"\(soldWidest)\": \(soldLarge)")
 
         #expect(
-            withoutBadges == baseline,
-            "the header measured \(withoutBadges) pt with no badges against \(baseline) pt with them — the badge row is taller than the title's line box, so it and not the title is setting the header's height (plan Q18's proviso)"
+            baseline == Int(baselineRow.height) + 6 + soldMetaLine,
+            "the Sold header measured \(baseline) pt against its badge row's \(baselineRow.height) + 6 + one \(soldMetaLine) pt meta line — the badge row is no longer what sets the header's height (plan Q6 as rewritten, spec Decision 16)"
+        )
+        #expect(
+            owned == Int(ownedRow.height) + 6 + ownedMetaLine,
+            "the Owned header measured \(owned) pt against its badge row's \(ownedRow.height) + 6 + one \(ownedMetaLine) pt meta line — the badge row is no longer what sets the header's height (plan Q6 as rewritten, spec Decision 16)"
+        )
+        #expect(
+            withoutBadges < baseline,
+            "the header measured \(withoutBadges) pt with no badges against \(baseline) pt with them — stripping the badges didn't lower it, so the title and not the badge row is setting the header's height (plan Q6 as rewritten)"
         )
         #expect(
             owned == baseline,
@@ -119,6 +187,75 @@ struct ItemListHeaderLayoutTests {
             soldLarge == baseline,
             "the Sold summary at six figures under the widest sold sort label measured \(soldLarge) pt against the one-line baseline's \(baseline) pt — the meta line wrapped, so the switch sits \(soldLarge - baseline) pt lower on this side (criterion 3)"
         )
+    }
+
+    /// P4 (`018`, T003): the sort badge is one width whatever it is set to.
+    /// T002 filmed the glass capsule on iOS 26.5 keeping the previous label's
+    /// width after a menu-driven relabel; with every option's label reserved
+    /// under the visible one, a relabel has no width to change. The Owned
+    /// side's real options, one render per selection over the same set.
+    ///
+    /// Its mutation, run at T003: the hidden labels removed from `SortMenu`'s
+    /// label, and the widths split by label length → red.
+    @Test func theSortBadgeIsOneWidthForEverySelection() throws {
+        let options = ItemListViewModel.SortOrder.allCases
+        try #require(options.count > 1, "one sort option can't show a width change")
+        var widths: [String: Int] = [:]
+        for selection in options {
+            widths[selection.label] = try #require(
+                renderBitmap(SortMenu(options: options, selection: selection, label: \.label) { _ in }),
+                "ImageRenderer produced nothing to measure for the badge set to \"\(selection.label)\"."
+            ).width
+        }
+        print("SortMenu widths over the Owned options, per selection: \(widths)")
+        #expect(
+            Set(widths.values).count == 1,
+            "the sort badge's width follows its selection — \(widths) — so a relabel changes the capsule's width and iOS 26.5's stale-width tear returns (P4, T002)"
+        )
+    }
+
+    /// The two badges render at one height (`018` plan §11, G1): `OverflowMenu`
+    /// copies `SortMenu`'s control size and label padding (spec Decisions 16
+    /// and 17), and its glyph row is one hidden line of the sort badge's label
+    /// type (`SortMenuCopy.labelFont`), so the "…" beside Sort By is the same
+    /// capsule height on both sides. Measured at 3× with exact equality, each
+    /// rendered alone, against both sides' sort badges: at 1× a third of a
+    /// point rounds away or up by accident, and a 14 pt glyph row (the height
+    /// `OverflowBadge` used) is exactly that third short.
+    ///
+    /// Its mutations (T005): the glyph row back at `.frame(height: 14)` → red;
+    /// `OverflowMenu` at `.controlSize(.small)` → red; the hidden line's font
+    /// at size 12 → red.
+    @Test func theTwoBadgesRenderAtOneHeight() throws {
+        let overflow = try #require(
+            renderAt3x(OverflowMenu { Button("Settings") {} }),
+            "ImageRenderer produced nothing to measure for the \"…\" badge."
+        )
+        let owned = try #require(
+            renderAt3x(SortMenu(options: ItemListViewModel.SortOrder.allCases, selection: .custom, label: \.label) { _ in }),
+            "ImageRenderer produced nothing to measure for the Owned side's sort badge."
+        )
+        let sold = try #require(
+            renderAt3x(SortMenu(options: ItemListViewModel.SoldSortOrder.allCases, selection: .soldDate, label: \.label) { _ in }),
+            "ImageRenderer produced nothing to measure for the Sold side's sort badge."
+        )
+        print("Badge sizes at 3× — \"…\": \(overflow.width) × \(overflow.height) px, Owned sort: \(owned.width) × \(owned.height) px, Sold sort: \(sold.width) × \(sold.height) px")
+        #expect(
+            overflow.height == owned.height,
+            "the \"…\" renders \(overflow.height) px tall at 3× beside the Owned side's \(owned.height) px sort badge — the two badges are no longer one height"
+        )
+        #expect(
+            overflow.height == sold.height,
+            "the \"…\" renders \(overflow.height) px tall at 3× beside the Sold side's \(sold.height) px sort badge — the two badges are no longer one height"
+        )
+    }
+
+    /// A view rendered at 3×, the device's scale, so a fraction of a point
+    /// shows as whole pixels rather than rounding away.
+    private func renderAt3x(_ view: some View) -> CGImage? {
+        let renderer = ImageRenderer(content: view.environment(\.theme, .dark))
+        renderer.scale = 3
+        return renderer.cgImage
     }
 
     /// The composition half, which the renders above cannot see: `G38`
@@ -161,26 +298,56 @@ struct ItemListHeaderLayoutTests {
 
     // MARK: - The instrument
 
-    /// The header as the screen composes it: the title, the badge row the
-    /// trailing slot carries on both sides since `014`, and one mono meta
-    /// line — rendered at the device's content width, which is the only width
-    /// at which "does this wrap" has an answer.
+    /// The header as the screen composes it: the title, a stand-in for the
+    /// badge row the trailing slot carries on both sides since `014`, and one
+    /// mono meta line — rendered at the device's content width, which is the
+    /// only width at which "does this wrap" has an answer. The stand-in is a
+    /// clear box at the size `badgeRowSize(sortLabel:)` measured (see the
+    /// suite's comment for why the row itself can't be rendered here).
     ///
     /// `width` has no shipped caller: it exists so the instrument check
     /// (mutation (b) — render the baseline narrow and watch every case go
     /// red) can be run without restructuring the suite.
-    private func headerHeight(meta: String, sortLabel: String, width: CGFloat? = nil) throws -> Int {
+    private func headerHeight(meta: String, trailingSize: CGSize, width: CGFloat? = nil) throws -> Int {
         let header = ItemsListHeader(title: "Items") {
             Text(meta).monoLabel()
         } trailing: {
-            HStack(spacing: 8) {
-                SortBadge(label: sortLabel) {}
-                OverflowBadge(isBusy: false) {}
-            }
+            Color.clear.frame(width: trailingSize.width, height: trailingSize.height)
         }
         return try #require(
             renderBitmap(header.frame(width: width ?? contentWidth)),
             "ImageRenderer produced nothing to measure."
+        ).height
+    }
+
+    /// The badge row as `ItemListView` composes it — `SortMenu` over the
+    /// side's real options set to the case's selection, beside `OverflowMenu`,
+    /// 8 pt apart — rendered on its own, which works where rendering it
+    /// inside the header does not. The real option set, not a one-option
+    /// menu, because P4's badge reserves its widest option: the row is as
+    /// wide as it ships only over every option the side offers (`018` T005).
+    private func badgeRowSize<Option: Hashable>(
+        options: [Option],
+        selection: Option,
+        label: @escaping (Option) -> String
+    ) throws -> CGSize {
+        let row = HStack(spacing: 8) {
+            SortMenu(options: options, selection: selection, label: label) { _ in }
+            OverflowMenu { Button("Settings") {} }
+        }
+        let image = try #require(
+            renderBitmap(row),
+            "ImageRenderer produced nothing to measure for the badge row under \"\(label(selection))\"."
+        )
+        return CGSize(width: image.width, height: image.height)
+    }
+
+    /// One meta line's height: the line rendered alone, at its own width, where
+    /// it cannot wrap.
+    private func metaLineHeight(_ meta: String) throws -> Int {
+        try #require(
+            renderBitmap(Text(meta).monoLabel()),
+            "ImageRenderer produced nothing to measure for the meta line \"\(meta)\"."
         ).height
     }
 
@@ -194,7 +361,7 @@ struct ItemListHeaderLayoutTests {
     }
 
     /// The widest badge a sort menu can produce, measured: every label is
-    /// rendered as the real `SortBadge` and the widest bitmap wins. Picking
+    /// rendered as a one-option `SortMenu` and the widest bitmap wins. Picking
     /// the longest string instead would be an unasserted claim about the
     /// badge's font, and the label that takes the most width from the meta
     /// line is the one this suite needs.
@@ -204,7 +371,7 @@ struct ItemListHeaderLayoutTests {
         var widestWidth = -1
         for label in labels {
             let width = try #require(
-                renderBitmap(SortBadge(label: label) {}),
+                renderBitmap(SortMenu(options: [label], selection: label, label: { $0 }) { _ in }),
                 "ImageRenderer produced nothing to measure for the \"\(label)\" badge."
             ).width
             if width > widestWidth {

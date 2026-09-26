@@ -1,22 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The root Dashboard's dropdowns (013 Amendment A). One optional of this
-/// type is the screen's whole open-menu state — "one at a time" true by
-/// type, as on the lists.
-private enum DashboardDropdown: Hashable {
-    case overflow
-    case order
-
-    /// What the tap-outside layer calls itself to VoiceOver.
-    var dismissLabel: String {
-        switch self {
-        case .overflow: "Dismiss more actions"
-        case .order: "Dismiss order options"
-        }
-    }
-}
-
 /// The overview screen, per `design/screens/Trove Dashboard.png`: what the
 /// collection is worth, what it cost, what's missing from that figure, and how
 /// it splits by category.
@@ -27,7 +11,6 @@ private enum DashboardDropdown: Hashable {
 /// overview again rather than a second screen that could drift from it.
 struct DashboardView: View {
     @State private var viewModel: DashboardViewModel
-    @State private var openDropdown: DashboardDropdown?
     /// 013 Amendment A: the "…" the mock always drew, holding Settings.
     @State private var isShowingSettings = false
 
@@ -163,34 +146,6 @@ struct DashboardView: View {
             // appearance switch follows — see `ItemListView`'s twin.
             .preferredColorScheme(appearanceStore.choice.sheetColorScheme(device: systemColorScheme))
         }
-        // The root "…"'s dropdown floats over the whole screen from here —
-        // the same host as the lists' (013 Amendment A). The header scrolls
-        // on this screen, which is exactly why the host finds the badge by
-        // its anchor rather than by a fixed offset.
-        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
-            switch dropdown {
-            case .overflow:
-                // One row, deliberately a menu rather than a direct button
-                // (spec P13): the roadmap's Dashboard exports land here.
-                DropdownSurface {
-                    DropdownRow(title: "Settings") {
-                        isShowingSettings = true
-                    }
-                }
-            case .order:
-                // The same surface and rows Sort By is made of, under its
-                // own header (spec P12): the current order tinted and
-                // checked, no REORDER tag — there is no manual order here.
-                DropdownSurface(title: "ORDER BY") {
-                    ForEach(DashboardViewModel.BreakdownOrder.allCases) { order in
-                        DropdownRow(title: order.label, isSelected: order == viewModel.breakdownOrder) {
-                            viewModel.breakdownOrder = order
-                            viewModel.load()
-                        }
-                    }
-                }
-            }
-        }
     }
 
     // MARK: - Header
@@ -225,13 +180,13 @@ struct DashboardView: View {
         }
     }
 
-    /// Never busy: nothing runs from the Dashboard. The badge only opens the
-    /// one-row menu on the host.
+    /// Never busy: nothing runs from the Dashboard. One row, deliberately a
+    /// menu rather than a direct button (spec P13): the roadmap's Dashboard
+    /// exports land here. A system menu since `018` (plan §2).
     private var overflowControl: some View {
-        OverflowBadge(isBusy: false) {
-            openDropdown = .overflow
+        OverflowMenu(isBusy: false) {
+            Button("Settings") { isShowingSettings = true }
         }
-        .dropdownAnchor(DashboardDropdown.overflow)
         .accessibilityIdentifier("moreActions.dashboard")
     }
 
@@ -474,24 +429,27 @@ struct DashboardView: View {
         }
     }
 
-    /// Design's "BY VALUE" control: the mono label the mock draws, not a
-    /// pill (spec P12), opening the shared surface under ORDER BY on the
-    /// host. A system `Menu` from `001` to 013 Amendment A — the exact
-    /// variable-width-label-in-a-`Menu` shape T029c evicted from the list
-    /// headers, unreported here only because this label has no border to
-    /// lag. Converting it removed the risk rather than waiting for it.
+    /// Design's "BY VALUE" control: the mock's quiet mono label, opening
+    /// the system menu every other control opens (`018` spec Decision 12) —
+    /// one "Order by" header over checkmark rows, the current order checked.
+    /// A `Toggle` row is what iOS draws checked and announces as selected
+    /// (plan Q8); its setter re-selects on any tap, so there is no turning an
+    /// order off. No glass: the label sits inside the breakdown card, in the
+    /// body rather than on the header's top row (Decision 13, P8).
     private var orderControl: some View {
-        Button {
-            openDropdown = .order
+        Menu {
+            Section("Order by") {
+                ForEach(DashboardViewModel.BreakdownOrder.allCases) { order in
+                    Toggle(isOn: Binding(get: { viewModel.breakdownOrder == order },
+                                         set: { _ in viewModel.breakdownOrder = order; viewModel.load() })) {
+                        Text(order.label)
+                    }
+                }
+            }
         } label: {
-            Text(viewModel.breakdownOrder.label)
-                .monoLabel(color: theme.colors.textQuiet)
-                .contentShape(Rectangle())
+            Text(viewModel.breakdownOrder.label).monoLabel(color: theme.colors.textQuiet)
         }
-        .buttonStyle(.plain)
-        .dropdownAnchor(DashboardDropdown.order)
         .accessibilityLabel("Order categories \(viewModel.breakdownOrder.label)")
-        .accessibilityHint("Opens order options")
         .accessibilityIdentifier("orderOptions.dashboard")
     }
 
