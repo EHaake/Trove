@@ -20,10 +20,12 @@ enum SortMenuCopy {
 /// `Hashable` rather than `Identifiable` so the header's render test can
 /// build one over bare strings (plan Q1).
 ///
-/// **It draws no colour of its own** (R3): the glyph's bars are unfilled
-/// `Rectangle`s and the label carries no style, so both take the glass
-/// style's foreground together, and brass arrives only through the root
-/// tint where the style applies it. `HeaderControlsWiringTests` (G2) pins
+/// **Its label is in the system's primary label colour** (spec Decision 15,
+/// overtaking R3): the glyph's bars are unfilled `Rectangle`s sharing the
+/// text's one primary foreground style, so the root brass tint no
+/// longer colours the badge — the default monochrome label the guidelines
+/// ask for on Liquid Glass, matching the system menu it opens. Never a theme
+/// colour: `HeaderControlsWiringTests` (G2) pins both the `.primary` and
 /// that this file names no theme colour.
 ///
 /// **Its footprint is constant** (spec P4): the label reserves the widest of
@@ -77,14 +79,18 @@ struct SortMenu<Option: Hashable>: View {
                 }
                 .font(ThemeTypography.font(.mono, size: 11))
             }
+            // Decision 15: the system's label colour, not the root tint's brass.
+            .foregroundStyle(.primary)
         }
         .buttonStyle(.glass)
-        // Q6: the largest size whose badge stays under the Items title's
-        // line box — 29 pt at `.regular` (25 at `.small`) against 33.
-        .controlSize(.regular)
+        // Q6 as overtaken by spec Decision 16: the system's control size —
+        // 45 pt rendered, against the 44 pt the guidelines ask for — so the
+        // badge row, not the Items title's 33 pt line box, now sets the
+        // header's height, equally on both sides (`ItemListHeaderLayoutTests`).
+        .controlSize(.large)
     }
 
-    /// Unfilled, so it takes the style's foreground with the label (R3).
+    /// Unfilled, so it takes the label's `.primary` with the text.
     private func bar(width: CGFloat) -> some View {
         Rectangle()
             .frame(width: width, height: 1.5)

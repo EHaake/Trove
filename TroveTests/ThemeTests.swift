@@ -163,6 +163,14 @@ struct ThemeCompositionTests {
 /// active `Theme` is all a future light mode needs. That claim is only true
 /// while it stays true, and it degrades the moment one view reaches for a
 /// literal — so it gets checked rather than asserted, per CLAUDE.md.
+///
+/// **One recorded exception** (`018` Decision 15): the glass header
+/// controls are system controls, and their label takes the system's label
+/// colour — `.primary`, which follows the appearance on its own — rather
+/// than the root brass tint or any theme colour. `systemLabelExemptions`
+/// names each such line by file and exact text; nothing else in that file,
+/// and that text in no other file, is let through, and an entry that no
+/// longer matches its file fails the scan rather than lingering.
 @Suite("No hardcoded colors in views")
 struct NoHardcodedColorsTests {
     /// `Color.clear` is absence of color rather than a palette choice, so it's
@@ -171,6 +179,12 @@ struct NoHardcodedColorsTests {
         "red", "blue", "green", "yellow", "orange", "purple", "pink", "brown",
         "gray", "grey", "black", "white", "cyan", "mint", "teal", "indigo",
         "primary", "secondary", "accentColor",
+    ]
+
+    /// Decision 15 (018): glass header controls are system controls; their
+    /// label takes the system's label colour, which follows the appearance.
+    private static let systemLabelExemptions: [String: String] = [
+        "SortMenu.swift": ".foregroundStyle(.primary)",
     ]
 
     private static let colorTakingModifiers = [
@@ -241,11 +255,17 @@ struct NoHardcodedColorsTests {
         let shorthand = try Regex(#"(\#(modifiers))\(\s*\.(\#(names))\b"#)
 
         var violations: [String] = []
+        var usedExemptions: Set<String> = []
         for file in try swiftFilesToCheck() {
             let source = try String(contentsOf: file, encoding: .utf8)
+            let exemption = Self.systemLabelExemptions[file.lastPathComponent]
             for (offset, line) in source.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
                 let text = String(line)
                 if text.firstMatch(of: shorthand) != nil {
+                    if let exemption, text.trimmingCharacters(in: .whitespaces).contains(exemption) {
+                        usedExemptions.insert(file.lastPathComponent)
+                        continue
+                    }
                     violations.append("\(file.lastPathComponent):\(offset + 1): \(text.trimmingCharacters(in: .whitespaces))")
                 }
             }
@@ -255,5 +275,8 @@ struct NoHardcodedColorsTests {
             violations.isEmpty,
             "Views must read colors from Theme, not use system colors:\n\(violations.joined(separator: "\n"))"
         )
+        for file in Self.systemLabelExemptions.keys.sorted() where !usedExemptions.contains(file) {
+            Issue.record("exemption for \(file) no longer used — no line in it carries `\(Self.systemLabelExemptions[file] ?? "")`, so the entry lets nothing through and should go (018 Decision 15)")
+        }
     }
 }

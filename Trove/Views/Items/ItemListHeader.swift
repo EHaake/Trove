@@ -24,14 +24,13 @@ struct ItemsListHeader<Meta: View, Trailing: View>: View {
 
     @Environment(\.theme) private var theme
 
-    /// The badges stay top-aligned with the title rather than centred on it,
-    /// so the header's height is the title's line box plus the 6 pt spacing
-    /// plus one meta line — unchanged from the shape this replaced, provided
-    /// the title's box is at least the badge row's 30 pt. G38's
-    /// no-badges case is where that proviso is measured rather than
-    /// assumed: the same header with an empty trailing slot must come out
-    /// the same height, which it can only do while the title, and not the
-    /// badge row, is what sets it.
+    /// The badges stay top-aligned with the title rather than centred on it.
+    /// Since `018` (spec Decision 16) the badges are at the system's control
+    /// size, taller than the title's line box, so the header's height is the
+    /// badge row plus the 6 pt spacing plus one meta line — the same on both
+    /// sides. G38's proviso case measures it rather than assuming it: that
+    /// sum on both sides, and the same header with an empty trailing slot
+    /// coming out shorter.
     ///
     /// One disclosed consequence (plan Q18): VoiceOver now reads title,
     /// badges, meta rather than title, meta, badges. The person confirms it

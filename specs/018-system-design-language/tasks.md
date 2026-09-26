@@ -411,7 +411,7 @@ Handoff notes for the pause reports:
   **Phase 1 closes here — pause for the person** (what to try is in the
   handoff note above).
 
-- [ ] **T004a — The person's Phase 1 findings: the badges in the system's colour and at the system's size.**
+- [x] **T004a — The person's Phase 1 findings: the badges in the system's colour and at the system's size.**
   Per spec Decisions 15 and 16 (2026-09-25), plan R3 and Q6 as overtaken.
   (a) `SortMenu`'s label `HStack` (glyph and text) takes
   `.foregroundStyle(.primary)` — the system's label colour, never a theme
@@ -438,6 +438,30 @@ Handoff notes for the pause reports:
   `TroveTests/ItemListHeaderLayoutTests.swift`.
   **Verify:** `scripts/verify.sh` green; the named UI tests green alone;
   mutations recorded; the person looks again before Phase 2 starts.
+  **Done (2026-09-25).** (a) `.foregroundStyle(.primary)` on the label
+  `HStack`; `NoHardcodedColorsTests.systemLabelExemptions` holds
+  `"SortMenu.swift": ".foregroundStyle(.primary)"` with a stale-entry check;
+  G2's leg requires exactly one `} label:` closure carrying the line.
+  (b) `.controlSize(.large)`; G1's proviso rewritten: header = badge row +
+  6 + meta line on both sides, no-badges render shorter than the header.
+  Measured at width 354: badge row Sold 168×45, Owned 161×45; meta 14;
+  header 65 both sides (no badges 53); Owned badge 111 wide for every
+  selection; mono 11 pt unchanged. `ItemListHeader.swift`'s body comment
+  corrected (comment only, outside the footprint). Mutations, all red:
+  meta beside the badges (7 failures, headers 67); `.regular` (both sums
+  and `withoutBadges < baseline`, 53 = 53); the line put in
+  `ItemListHeader.swift` (`ThemeTests.swift:274`, per file); `.tint(.red)`
+  in `SortMenu.swift` (`:274`, per line); the modifier removed
+  (`:279` stale entry, and `HeaderControlsWiringTests.swift:58`).
+  `scripts/verify.sh`: green, 1749 tests in 235 suites. UI alone:
+  `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch` 30 s green,
+  G39's `testTheSoldCardLandsOnTheSoldSideWhichListsSalesMostRecentFirst`
+  19 s green (switch `minY` equal both sides at `.large`). **Findings
+  carried:** the colour scan reads comment lines, so an exempted spelling
+  in a doc comment would satisfy the stale-entry check — T005 keeps
+  `OverflowMenu.swift`'s comments free of the literal, and T011 may teach
+  the scan to skip comments; the two badges differ in height (45 vs 30)
+  until T005's `OverflowMenu` copies `.large`. Reviewed with Phase 2.
 
 ## Phase 2 — Every header menu is the system's · walkthrough: yes — each tab's "…" opens the system menu: Settings alone on the Overview and Plans; Export as CSV…, Export as PDF…, Import from CSV…, Settings in three groups on the Wishlist; on Items the two exports (no ellipsis) open submenus of Owned items, Sold items, Owned and sold, greyed where a scope has nothing on screen; an export shows the spinner then the share sheet; the Overview's "BY VALUE" opens a menu headed "Order by"
 
@@ -764,3 +788,4 @@ recorded here too.
 | `skeptical-reviewer` — Phase 1 re-review | `opus` | ~108k (cumulative) | **approved**; one wording note applied ("the named frames viewed by eye") |
 | `sdd-implementer` — T004a (first pass) | `opus` | ~65k (subagent total) | Part (b) done and verified; stopped on a judgment call, correctly: Decision 15's `.foregroundStyle(.primary)` trips `NoHardcodedColorsTests` |
 | `skeptical-reviewer` — decision review at T004a | `opus` | ~33k (subagent total) | A named per-file, per-line exemption with a stale-entry check (a recorded exception to `004`'s rule); dodging the scan's wording and `.tint(nil)` rejected. Transcribed into plan R3 and T004a |
+| `sdd-implementer` — T004a (resumed) | `opus` | ~65k + resumed pass (subagent cumulative not reported) | Done; unit 1749 green; the two UI tests green alone; five mutations recorded |

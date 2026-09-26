@@ -17,8 +17,10 @@ struct HeaderControlsWiringTests {
 
     /// G2: `SortMenu` is a system `Menu` holding one "Sort by" section of
     /// `Toggle` rows built by a `ForEach`, drawn in the glass button style,
-    /// and it draws no colour of its own (R3). The glyph and the label take
-    /// the style's foreground, and brass arrives only through the root tint.
+    /// and its label is in the system's primary label colour (spec Decision
+    /// 15, overtaking R3): the glyph and the text sit under one
+    /// `.foregroundStyle(.primary)`, so the root brass tint doesn't reach
+    /// them, and the file still names no theme colour.
     ///
     /// **This checks spelling only.** It pins how the menu is composed, not
     /// what iOS draws from it. The checkmark on the current row and the
@@ -28,7 +30,8 @@ struct HeaderControlsWiringTests {
     ///
     /// Mutations (T001): the `Toggle` rows replaced by `Button` rows → red
     /// (the toggle leg); `.foregroundStyle(theme.colors.accentBrass)` on the
-    /// label → red (the no-colour leg).
+    /// label → red (the no-colour leg). T004a: the label's
+    /// `.foregroundStyle(.primary)` removed → red (the system-colour leg).
     @Test func theSortMenuIsASystemMenuOfToggleRowsUnderOneHeaderInGlassWithNoColourOfItsOwn() throws {
         let code = try SourceScan.production("Trove/Views/Shared/SortMenu.swift")
         let anchor = "struct SortMenu<Option: Hashable>: View"
@@ -49,6 +52,13 @@ struct HeaderControlsWiringTests {
             "Sort By's rows are no longer `Toggle`s, so nothing draws the current sort checked: \(row)"
         )
         #expect(body.contains(".buttonStyle(.glass)"), "Sort By's badge isn't a glass button: \(body)")
+        let labels = SourceScan.closureBodies(after: "} label:", in: body)
+        try #require(labels.count == 1, "Sort By's `Menu` opens \(labels.count) label closures, expected exactly 1: \(body)")
+        let label = try #require(labels.first)
+        #expect(
+            label.contains(".foregroundStyle(.primary)"),
+            "Sort By's label doesn't set `.foregroundStyle(.primary)`, so the root brass tint colours it again (spec Decision 15): \(label)"
+        )
         #expect(
             !code.contains("theme.colors"),
             "SortMenu.swift names a theme colour — the badge draws no colour of its own (R3)"

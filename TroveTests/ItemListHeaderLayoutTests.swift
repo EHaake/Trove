@@ -39,11 +39,19 @@ import Testing
 /// render the baseline at width 200 instead and **all** of them go red, which
 /// is what proves the instrument can see a wrap at all rather than only
 /// agreeing with itself; fatten `OverflowBadge`'s vertical padding and the
-/// empty-trailing case alone goes red, which is what makes the 30 pt proviso
-/// below a measurement instead of a claim. T001 (`018`) re-ran all three
+/// empty-trailing case alone goes red, which is what made the 30 pt proviso
+/// a measurement instead of a claim. T001 (`018`) re-ran all three
 /// on the stand-in, and added a fourth: `SortMenu` at `.controlSize(.large)`
-/// turns the proviso red, since its 45 pt badge is taller than the title's
+/// turned the proviso red, since its 45 pt badge is taller than the title's
 /// line box.
+///
+/// **Since `018` T004a the badge row sets the header's height** (spec
+/// Decision 16, plan Q6's pre-authorised rewrite): the person found the
+/// 28 pt capsule squashed, `SortMenu` went to `.large`, and the proviso case
+/// now pins the new relationship — header = badge row + 6 + one meta line on
+/// both sides, and the header with no badges shorter than that. Its
+/// mutations, run at T004a: the meta line back beside the badges → red;
+/// `SortMenu` back at `.regular` → the rewritten proviso red.
 @Suite("Items header layout")
 @MainActor
 struct ItemListHeaderLayoutTests {
@@ -68,12 +76,15 @@ struct ItemListHeaderLayoutTests {
         let baselineRow = try badgeRowSize(sortLabel: "Date sold")
         let baseline = try headerHeight(meta: soldSummary(count: 0, proceeds: 0, realised: 0), trailingSize: baselineRow)
 
-        // The proviso plan Q18 states: the header is the title's line box
-        // plus 6 plus one meta line only while the title's box is at least
-        // the badge row's 30 pt. Strip the badges out and the height must not
-        // move — if it drops, the badge row was driving it, and every other
-        // case here (all of which carry the same badges) would have agreed
-        // with itself about the wrong number.
+        // The proviso as plan Q6 rewrote it (spec Decision 16, T004a): the
+        // badges are at the system's control size, taller than the title's
+        // line box, so the badge row — not the title — sets the header's
+        // height, and it must do so the same way on both sides: badge row
+        // plus the header's 6 pt spacing plus one meta line. The meta line is
+        // measured alone, where it cannot wrap. Stripping the badges out must
+        // then *drop* the height — if it doesn't, the title is driving it
+        // again, and the relationship pinned below describes a header the
+        // screen no longer draws.
         let withoutBadges = try #require(
             renderBitmap(
                 ItemsListHeader(title: "Items") {
@@ -112,11 +123,22 @@ struct ItemListHeaderLayoutTests {
             trailingSize: try badgeRowSize(sortLabel: soldWidest)
         )
 
-        print("ItemsListHeader heights at width \(contentWidth) — badge row: \(baselineRow), owned badge row: \(ownedRow), baseline: \(baseline), no badges: \(withoutBadges), owned under \"\(ownedWidest)\": \(owned), owned at scale: \(ownedLarge), sold: \(sold), sold at scale under \"\(soldWidest)\": \(soldLarge)")
+        let soldMetaLine = try metaLineHeight(soldSummary(count: 0, proceeds: 0, realised: 0))
+        let ownedMetaLine = try metaLineHeight("34 items · $18,420 · 3 unvalued")
+
+        print("ItemsListHeader heights at width \(contentWidth) — badge row: \(baselineRow), owned badge row: \(ownedRow), meta line: sold \(soldMetaLine) owned \(ownedMetaLine), baseline: \(baseline), no badges: \(withoutBadges), owned under \"\(ownedWidest)\": \(owned), owned at scale: \(ownedLarge), sold: \(sold), sold at scale under \"\(soldWidest)\": \(soldLarge)")
 
         #expect(
-            withoutBadges == baseline,
-            "the header measured \(withoutBadges) pt with no badges against \(baseline) pt with them — the badge row is taller than the title's line box, so it and not the title is setting the header's height (plan Q18's proviso)"
+            baseline == Int(baselineRow.height) + 6 + soldMetaLine,
+            "the Sold header measured \(baseline) pt against its badge row's \(baselineRow.height) + 6 + one \(soldMetaLine) pt meta line — the badge row is no longer what sets the header's height (plan Q6 as rewritten, spec Decision 16)"
+        )
+        #expect(
+            owned == Int(ownedRow.height) + 6 + ownedMetaLine,
+            "the Owned header measured \(owned) pt against its badge row's \(ownedRow.height) + 6 + one \(ownedMetaLine) pt meta line — the badge row is no longer what sets the header's height (plan Q6 as rewritten, spec Decision 16)"
+        )
+        #expect(
+            withoutBadges < baseline,
+            "the header measured \(withoutBadges) pt with no badges against \(baseline) pt with them — stripping the badges didn't lower it, so the title and not the badge row is setting the header's height (plan Q6 as rewritten)"
         )
         #expect(
             owned == baseline,
@@ -236,6 +258,15 @@ struct ItemListHeaderLayoutTests {
             "ImageRenderer produced nothing to measure for the badge row under \"\(sortLabel)\"."
         )
         return CGSize(width: image.width, height: image.height)
+    }
+
+    /// One meta line's height: the line rendered alone, at its own width, where
+    /// it cannot wrap.
+    private func metaLineHeight(_ meta: String) throws -> Int {
+        try #require(
+            renderBitmap(Text(meta).monoLabel()),
+            "ImageRenderer produced nothing to measure for the meta line \"\(meta)\"."
+        ).height
     }
 
     /// The Sold side's line through the one function that composes it, so a
