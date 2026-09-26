@@ -1,21 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// The header's dropdowns. An optional of this type is the screen's whole
-/// open-menu state — the list screens' shape (013 Amendment A): since
-/// Amendment A the "…" holding Settings (009 plan QA3, revising R6). Sort By
-/// left it at `018` for a system menu of its own (`SortMenu`).
-private enum HeaderDropdown: Hashable {
-    case overflow
-
-    /// What the tap-outside layer calls itself to VoiceOver.
-    var dismissLabel: String {
-        switch self {
-        case .overflow: "Dismiss more actions"
-        }
-    }
-}
-
 /// The Plans tab (009 plan §11): every sell plan, split into the ones still
 /// waiting on their purchase and the ones whose wanted item has been bought.
 ///
@@ -30,9 +15,6 @@ private enum HeaderDropdown: Hashable {
 /// `theScreenDrawsNoMoneyAndReachesNoStore`.
 struct PlansView: View {
     @State private var viewModel: PlansViewModel
-
-    /// Which header dropdown is open, or neither — see `ItemListView`'s twin.
-    @State private var openDropdown: HeaderDropdown?
 
     /// The row whose Buy swipe is open in the purchase sheet (plan Q13) —
     /// `WishlistView`'s `itemBeingBought` staging, over the plan's row.
@@ -186,20 +168,6 @@ struct PlansView: View {
             // appearance switch follows — see `ItemListView`'s twin.
             .preferredColorScheme(appearanceStore.choice.sheetColorScheme(device: systemColorScheme))
         }
-        // The header's dropdowns, through the shared host (013 Amendment A).
-        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
-            switch dropdown {
-            case .overflow:
-                // Settings alone (plan QA3): plans are in no export, so
-                // Export and Import stay the lists'. A one-row menu, as on
-                // the Dashboard (013 P13).
-                DropdownSurface {
-                    DropdownRow(title: "Settings") {
-                        isShowingSettings = true
-                    }
-                }
-            }
-        }
     }
 
     // MARK: - Header
@@ -224,13 +192,13 @@ struct PlansView: View {
         }
     }
 
-    /// Never busy: nothing runs from this tab. The badge only opens the
-    /// one-row menu on the host — the Dashboard's twin.
+    /// Never busy: nothing runs from this tab. Settings alone (plan QA3):
+    /// plans are in no export, so Export and Import stay the lists'. A
+    /// one-row system menu since `018` (plan §2), as on the Dashboard.
     private var overflowControl: some View {
-        OverflowBadge(isBusy: false) {
-            openDropdown = .overflow
+        OverflowMenu(isBusy: false) {
+            Button("Settings") { isShowingSettings = true }
         }
-        .dropdownAnchor(HeaderDropdown.overflow)
         .accessibilityIdentifier("moreActions.plans")
     }
 

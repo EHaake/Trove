@@ -16,8 +16,8 @@ import Testing
 /// scan cannot see a wrap, and the device pass that found it costs a person's
 /// afternoon; the render can, off-device, in a second.
 ///
-/// Every case measures the real ingredients — `SortMenu` and `OverflowBadge`
-/// as the trailing row, a `.monoLabel()` line as the meta, the copy composed
+/// Every case measures the real ingredients — `SortMenu` and `OverflowMenu`
+/// (`OverflowBadge` until `018` T005) as the trailing row, a `.monoLabel()` line as the meta, the copy composed
 /// by `SaleCopy` rather than typed out here — at the width the header is laid
 /// out in on the device criterion 3 was measured on.
 ///
@@ -64,6 +64,15 @@ import Testing
 /// label's padding removed → the badge row falls to `OverflowBadge`'s 30 pt,
 /// the header to 53 pt on both sides, level with the no-badge header, and
 /// all three proviso expectations go red.
+///
+/// **At `018` T005** the row composes `OverflowMenu`, and `SortMenu` renders
+/// over the side's real options set to the case's selection rather than as
+/// a one-option menu, so the row is as wide as it ships. The badge row
+/// renders 145 × 37 on the Owned side (under "Market ↓") and 152 × 37 on the
+/// Sold side, `OverflowMenu` 42 × 36 beside it; the header 57 pt on both
+/// sides against 53 pt with no badges. The Owned sort badge renders 95 × 37,
+/// the Sold 102 × 37 — so `theTwoBadgesRenderAtOneHeight` reads 36 against
+/// 37.
 @Suite("Items header layout")
 @MainActor
 struct ItemListHeaderLayoutTests {
@@ -85,7 +94,9 @@ struct ItemListHeaderLayoutTests {
     /// pass found *healthy*: at "0 sold · $0" both sides read 154.33 pt, so a
     /// header that matches this one matches the Owned side.
     @Test func theHeaderIsOneMetaLineTallForEverySummaryAndEverySortLabel() throws {
-        let baselineRow = try badgeRowSize(sortLabel: "Date sold")
+        let soldOptions = ItemListViewModel.SoldSortOrder.allCases
+        let ownedOptions = ItemListViewModel.SortOrder.allCases
+        let baselineRow = try badgeRowSize(options: soldOptions, selection: .soldDate, label: \.label)
         let baseline = try headerHeight(meta: soldSummary(count: 0, proceeds: 0, realised: 0), trailingSize: baselineRow)
 
         // The proviso as plan Q6 rewrote it (spec Decision 16, T004a): the
@@ -113,8 +124,12 @@ struct ItemListHeaderLayoutTests {
         // unvalued count `ItemListView.summaryLine` appends — under the widest
         // label its Sort By can show. The same latent wrap lived here: nothing
         // about this defect was Sold-only once both sides carry a badge.
-        let ownedWidest = try widestLabel(of: ItemListViewModel.SortOrder.allCases.map(\.label))
-        let ownedRow = try badgeRowSize(sortLabel: ownedWidest)
+        let ownedWidest = try widestLabel(of: ownedOptions.map(\.label))
+        let ownedRow = try badgeRowSize(
+            options: ownedOptions,
+            selection: try #require(ownedOptions.first { $0.label == ownedWidest }),
+            label: \.label
+        )
         let owned = try headerHeight(meta: "34 items · $18,420 · 3 unvalued", trailingSize: ownedRow)
 
         // And the Owned line at a size a serious collection reaches: "full
@@ -129,10 +144,14 @@ struct ItemListHeaderLayoutTests {
         // The same line at figures that will not fit in any reading of "about
         // 232 pt", under the widest label `SoldSortOrder` offers — so a longer
         // label added later cannot sneak past this suite either.
-        let soldWidest = try widestLabel(of: ItemListViewModel.SoldSortOrder.allCases.map(\.label))
+        let soldWidest = try widestLabel(of: soldOptions.map(\.label))
         let soldLarge = try headerHeight(
             meta: soldSummary(count: 999, proceeds: 124_820_000, realised: 11_245_000),
-            trailingSize: try badgeRowSize(sortLabel: soldWidest)
+            trailingSize: try badgeRowSize(
+                options: soldOptions,
+                selection: try #require(soldOptions.first { $0.label == soldWidest }),
+                label: \.label
+            )
         )
 
         let soldMetaLine = try metaLineHeight(soldSummary(count: 0, proceeds: 0, realised: 0))
@@ -193,6 +212,50 @@ struct ItemListHeaderLayoutTests {
             Set(widths.values).count == 1,
             "the sort badge's width follows its selection — \(widths) — so a relabel changes the capsule's width and iOS 26.5's stale-width tear returns (P4, T002)"
         )
+    }
+
+    /// The two badges render at one height (`018` plan §11, G1): `OverflowMenu`
+    /// copies `SortMenu`'s control size and label padding (spec Decisions 16
+    /// and 17), and its glyph row is one hidden line of the sort badge's label
+    /// type (`SortMenuCopy.labelFont`), so the "…" beside Sort By is the same
+    /// capsule height on both sides. Measured at 3× with exact equality, each
+    /// rendered alone, against both sides' sort badges: at 1× a third of a
+    /// point rounds away or up by accident, and a 14 pt glyph row (the height
+    /// `OverflowBadge` used) is exactly that third short.
+    ///
+    /// Its mutations (T005): the glyph row back at `.frame(height: 14)` → red;
+    /// `OverflowMenu` at `.controlSize(.small)` → red; the hidden line's font
+    /// at size 12 → red.
+    @Test func theTwoBadgesRenderAtOneHeight() throws {
+        let overflow = try #require(
+            renderAt3x(OverflowMenu { Button("Settings") {} }),
+            "ImageRenderer produced nothing to measure for the \"…\" badge."
+        )
+        let owned = try #require(
+            renderAt3x(SortMenu(options: ItemListViewModel.SortOrder.allCases, selection: .custom, label: \.label) { _ in }),
+            "ImageRenderer produced nothing to measure for the Owned side's sort badge."
+        )
+        let sold = try #require(
+            renderAt3x(SortMenu(options: ItemListViewModel.SoldSortOrder.allCases, selection: .soldDate, label: \.label) { _ in }),
+            "ImageRenderer produced nothing to measure for the Sold side's sort badge."
+        )
+        print("Badge sizes at 3× — \"…\": \(overflow.width) × \(overflow.height) px, Owned sort: \(owned.width) × \(owned.height) px, Sold sort: \(sold.width) × \(sold.height) px")
+        #expect(
+            overflow.height == owned.height,
+            "the \"…\" renders \(overflow.height) px tall at 3× beside the Owned side's \(owned.height) px sort badge — the two badges are no longer one height"
+        )
+        #expect(
+            overflow.height == sold.height,
+            "the \"…\" renders \(overflow.height) px tall at 3× beside the Sold side's \(sold.height) px sort badge — the two badges are no longer one height"
+        )
+    }
+
+    /// A view rendered at 3×, the device's scale, so a fraction of a point
+    /// shows as whole pixels rather than rounding away.
+    private func renderAt3x(_ view: some View) -> CGImage? {
+        let renderer = ImageRenderer(content: view.environment(\.theme, .dark))
+        renderer.scale = 3
+        return renderer.cgImage
     }
 
     /// The composition half, which the renders above cannot see: `G38`
@@ -257,17 +320,24 @@ struct ItemListHeaderLayoutTests {
         ).height
     }
 
-    /// The badge row as `ItemListView` composes it — `SortMenu` beside
-    /// `OverflowBadge`, 8 pt apart — rendered on its own, which works where
-    /// rendering it inside the header does not.
-    private func badgeRowSize(sortLabel: String) throws -> CGSize {
+    /// The badge row as `ItemListView` composes it — `SortMenu` over the
+    /// side's real options set to the case's selection, beside `OverflowMenu`,
+    /// 8 pt apart — rendered on its own, which works where rendering it
+    /// inside the header does not. The real option set, not a one-option
+    /// menu, because P4's badge reserves its widest option: the row is as
+    /// wide as it ships only over every option the side offers (`018` T005).
+    private func badgeRowSize<Option: Hashable>(
+        options: [Option],
+        selection: Option,
+        label: @escaping (Option) -> String
+    ) throws -> CGSize {
         let row = HStack(spacing: 8) {
-            SortMenu(options: [sortLabel], selection: sortLabel, label: { $0 }) { _ in }
-            OverflowBadge(isBusy: false) {}
+            SortMenu(options: options, selection: selection, label: label) { _ in }
+            OverflowMenu { Button("Settings") {} }
         }
         let image = try #require(
             renderBitmap(row),
-            "ImageRenderer produced nothing to measure for the badge row under \"\(sortLabel)\"."
+            "ImageRenderer produced nothing to measure for the badge row under \"\(label(selection))\"."
         )
         return CGSize(width: image.width, height: image.height)
     }

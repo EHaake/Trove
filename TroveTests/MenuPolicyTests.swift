@@ -19,7 +19,9 @@ import Testing
 /// are covered so the rule can't be routed around. `.alert(` stays allowed.
 @Suite("Menu policy")
 struct MenuPolicyTests {
-    private let allowlist: Set<String> = ["DetailOverflowMenu.swift", "SortMenu.swift"]
+    private let allowlist: Set<String> = [
+        "DetailOverflowMenu.swift", "SortMenu.swift", "OverflowMenu.swift", "ItemListView.swift",
+    ]
 
     @Test func theOnlySystemMenuIsTheDetailScreensNavBarOverflow() throws {
         let root = URL(filePath: "\(#filePath)")

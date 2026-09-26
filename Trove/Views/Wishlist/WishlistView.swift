@@ -2,21 +2,6 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The header's dropdowns. One optional of this type is the screen's whole
-/// open-menu state, which is what makes "one open at a time" true by type
-/// rather than by coordination (013 Amendment A). Sort By left it at `018`
-/// for a system menu of its own (`SortMenu`).
-private enum HeaderDropdown: Hashable {
-    case overflow
-
-    /// What the tap-outside layer calls itself to VoiceOver.
-    var dismissLabel: String {
-        switch self {
-        case .overflow: "Dismiss more actions"
-        }
-    }
-}
-
 /// Browse the wishlist, per `design/screens/Trove Wishlist List.png`.
 ///
 /// Follows the item list's standing layout rule from plan.md — title, summary,
@@ -35,10 +20,6 @@ struct WishlistView: View {
     @State private var viewModel: WishlistViewModel
     @State private var isAddingItem = false
     @State private var selectedItemID: UUID?
-
-    /// Which header dropdown is open — Sort By or the "…" — or neither;
-    /// see ItemListView's twin for why the screen owns it.
-    @State private var openDropdown: HeaderDropdown?
 
     /// Whether 012's file picker is up — see `ItemListView`'s twin.
     @State private var isPickingImportFile = false
@@ -274,23 +255,6 @@ struct WishlistView: View {
         } message: {
             Text(viewModel.importAlertMessage)
         }
-        // The header's dropdowns — the same shared host as ItemListView's,
-        // for the same reach reasons (013 Amendment A).
-        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
-            switch dropdown {
-            case .overflow:
-                OverflowDropdown(
-                    // One flag into both gates: a wishlist has no sold half,
-                    // so its CSV and its PDF cover exactly the same rows.
-                    canExportCSV: viewModel.canExport,
-                    canExportPDF: viewModel.canExport,
-                    exportCSV: { Task { await viewModel.exportCSV() } },
-                    exportPDF: { Task { await viewModel.exportPDF() } },
-                    importCSV: { isPickingImportFile = true },
-                    openSettings: { isShowingSettings = true }
-                )
-            }
-        }
     }
 
     // MARK: - Header
@@ -318,12 +282,22 @@ struct WishlistView: View {
         }
     }
 
-    /// 012's overflow — ItemListView's twin.
+    /// 012's overflow — ItemListView's twin, a system menu since `018` (plan
+    /// §2). The two export rows export directly and keep their ellipsis
+    /// (spec P2): a wishlist has no sold half, so there is no scope to
+    /// choose, and one flag gates both — its CSV and its PDF cover exactly
+    /// the same rows.
     private var overflowControl: some View {
-        OverflowBadge(isBusy: viewModel.isBusy) {
-            openDropdown = .overflow
+        OverflowMenu(isBusy: viewModel.isBusy) {
+            Button("Export as CSV…") { Task { await viewModel.exportCSV() } }
+                .disabled(!viewModel.canExport)
+            Button("Export as PDF…") { Task { await viewModel.exportPDF() } }
+                .disabled(!viewModel.canExport)
+            Divider()
+            Button("Import from CSV…") { isPickingImportFile = true }
+            Divider()
+            Button("Settings") { isShowingSettings = true }
         }
-        .dropdownAnchor(HeaderDropdown.overflow)
         .accessibilityIdentifier("moreActions.wishlist")
     }
 

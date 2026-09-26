@@ -517,7 +517,7 @@ Handoff notes for the pause reports:
 
 ## Phase 2 — Every header menu is the system's · walkthrough: yes — each tab's "…" opens the system menu: Settings alone on the Overview and Plans; Export as CSV…, Export as PDF…, Import from CSV…, Settings in three groups on the Wishlist; on Items the two exports (no ellipsis) open submenus of Owned items, Sold items, Owned and sold, greyed where a scope has nothing on screen; an export shows the spinner then the share sheet; the Overview's "BY VALUE" opens a menu headed "Order by"
 
-- [ ] **T005 — `OverflowMenu`, and every "…" on it.**
+- [x] **T005 — `OverflowMenu`, and every "…" on it.**
   Per plan §2, Q2, Q9, Q11, Q12. New `Trove/Views/Shared/OverflowMenu.swift`
   exactly as plan §2 declares it, at `SortMenu`'s control size. The four
   `overflowControl`s become `OverflowMenu(isBusy: …) { rows }` with plan §2's
@@ -562,6 +562,43 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green; the two rewritten UI tests,
   `testDashboardOffersSettingsAndNothingElse` and
   `testEveryTabsRootReachesSettings` green run alone; mutations recorded.
+  **Done (2026-09-26).** `OverflowMenu` with `SortMenu`'s modifiers in order
+  (`.glass`, `.tint(.primary)`, `.regular`), the glyph row a hidden
+  mono-11 line box (`SortMenuCopy.labelFont`, shared) with the spinner or
+  ellipsis overlaid, 4 pt vertical padding; both badges 109 px at 3×
+  (36.33 pt; the badge row 37 at 1×, header 57). Items' `exportMenu` is
+  `@ViewBuilder`: the format's own flag chooses a `Menu` of scope rows or
+  a `Button(title) {}.disabled(true)` (a nested `Menu`'s `.disabled` is
+  ignored inside a system menu on 27.0). Items, Wishlist and Plans have no
+  dropdown host; the Dashboard keeps `.order`. `ExportCopy.scopeTitleCSV/
+  PDF` gone. Allowlists: `MenuPolicyTests` + `OverflowMenu.swift`,
+  `ItemListView.swift`; `ThemeTests` + `"OverflowMenu.swift":
+  [".tint(.primary)"]`. **Retired by name:**
+  `DropdownWiringTests.eachListHostsItsDropdownsOffOneOptional` (and its
+  `lists` static), `DropdownWiringTests.theDashboardAnchorsItsBadgeOnTheRootAloneAndComposesSettings`,
+  `ExportWiringTests.theScopeChooserHeadersReadAsTheSpecWritesThem`. G8's
+  three tests renamed to describe a menu. Carried notes done: G1's
+  `badgeRowSize` renders the side's real options; `assertSortMenu` counts
+  each row once and the cell count; both sort helpers use the same exact
+  "Sort by" query. Mutations, all red: G4 `.disabled(isBusy)` removed
+  (`HeaderControlsWiringTests.swift:138`), `isBusy: false` on Items (`:153`),
+  tint removed (`:144` + the stale entry); G3 `moreActions.dashboard`
+  dropped (`:98`); G5 "…" outside `if isRoot` (`:174`); G1 `.frame(height:
+  14)` put back (108 vs 109 px, `ItemListHeaderLayoutTests.swift:243/247`),
+  `.small` (97 px), hidden font 12 (113 px); G8 PDF on the CSV flag
+  (`ExportWiringTests.swift:209`), `.both` exported directly (`:229/:232`),
+  Import gated (`:172`), "Export as CSV…" on Items (`:202/:208`),
+  `.disabled(true)` dropped (`:221`); G9 Plans' menu a `Button`
+  (`SettingsWiringTests.swift:274/281/282`), Settings row removed (`:282`);
+  UI: scope rows on `canExportCSV` (`TroveUITests.swift:1425`),
+  `.disabled(true)` dropped (`:270`, both formats). `scripts/verify.sh`:
+  green, 1749 in 235. UI alone, all green: the two rewritten tests (22 s,
+  30 s), `testDashboardOffersSettingsAndNothingElse` (15 s),
+  `testEveryTabsRootReachesSettings` (46 s), and the two sort tests. **For
+  the pause:** an empty format's export row on Items has no chevron.
+  **For the device pass:** `ImageRenderer` draws a glass button as an
+  opaque white placeholder, so the ellipsis's brightness under the tint is
+  the device pass's to look at (T013).
 
 - [ ] **T006 — The Dashboard's order menu.**
   Per plan §3, R5. `orderControl` per plan §3 — a system `Menu` whose content
@@ -849,3 +886,4 @@ recorded here too.
 | `sdd-implementer` — T004b | `opus` | ~87k (subagent total) | Done; unit 1749 green; both UI tests green alone; four mutations recorded; one pre-existing guard gap found and carried to T011 |
 | `sdd-implementer` — T005 (first pass) | `opus` | ~206k (subagent total) | Built everything; stopped on two judgment calls, correctly: the "…" renders ⅓ pt shorter than the sort badge (a literal 14 vs the mono line box), and iOS 27.0 ignores `.disabled` on a nested `Menu` (criterion 2 red on Items) |
 | `skeptical-reviewer` — decision review at T005 | `opus` | ~52k (subagent total) | (1) a hidden mono-11 line box sets the glyph row (overlay, so the spinner can't grow it); G1 compares at 3× exactly, tolerance rejected. (2) a disabled `Button` stands in for an empty format's submenu — routine, inside the footprint; the missing chevron noted for the pause. Transcribed into plan §2, Q9, §11 |
+| `sdd-implementer` — T005 (resumed) | `opus` | ~206k + resumed pass | Done; unit 1749 green; six UI tests green alone; every mutation recorded |

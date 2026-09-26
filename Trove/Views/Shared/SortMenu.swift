@@ -4,6 +4,10 @@ import SwiftUI
 /// stored statics (`009` Q14's finding).
 enum SortMenuCopy {
     static let header = "Sort by"
+    /// The badges' label type — Sort By's label, and the line box that sets
+    /// the "…" glyph row's height in `OverflowMenu`, so the two capsules are
+    /// one height (`018` G1). One source, so the two can't drift.
+    static let labelFont = ThemeTypography.font(.mono, size: 11)
     /// P3: what the REORDER tag became — the manual-order row's subtitle,
     /// drawn by the system under the row's title whether or not it is the
     /// selected sort.
@@ -81,7 +85,7 @@ struct SortMenu<Option: Hashable>: View {
                     }
                     Text(label(selection))
                 }
-                .font(ThemeTypography.font(.mono, size: 11))
+                .font(SortMenuCopy.labelFont)
             }
             // Q6 as overtaken by spec Decision 17: 4 pt above and below the
             // label, so the capsule sits between the system's two sizes.

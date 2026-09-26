@@ -13,88 +13,124 @@ struct ExportWiringTests {
         "Trove/Views/Wishlist/WishlistView.swift",
     ]
 
-    /// A list screen and the two gate expressions its dropdown must be fed
-    /// (006, plan Q5). Separate arguments rather than one, because the Items
-    /// list feeds two different flags and the Wishlist feeds one flag twice —
-    /// a scan for a single `canExport:` can no longer say which.
-    nonisolated struct DropdownGates: Sendable {
-        let path: String
-        let csv: String
-        let pdf: String
-        /// The exact CSV intent this screen's row must fire, **argument label
-        /// included**. Per screen since 014/T009b, and since T009e the two
-        /// screens don't even fire the same *kind* of thing: the Items list's
-        /// row opens the scope chooser (Decision 7 — the scope is chosen
-        /// there, so the row exports nothing itself), while the Wishlist's
-        /// still exports directly. A scan for one shared literal could not
-        /// tell the two apart.
-        ///
-        /// The label is what makes the claim below true (T010b/S3 of the
-        /// Phase 2b sweep): the assertions are `contains` over the whole
-        /// argument list, so pinning the body alone — `openDropdown =
-        /// .exportScope(.csv)` — stayed green when the two closures were
-        /// swapped, both bodies still being somewhere in the list. Pinned as
-        /// `exportCSV: { … }`, a swap moves the body out from under its label
-        /// and fails.
-        let csvAction: String
-        /// The exact PDF intent, labelled the same way and for the same
-        /// reasons — per screen since 014/T009d, re-pointed at the chooser at
-        /// T009e. Re-pointed, never broadened: each screen still names one
-        /// literal, so either row quietly going back to a direct export (or
-        /// to the wrong format's chooser, or to the other row's closure)
-        /// fails here.
-        let pdfAction: String
+    /// One row of a list's "…" menu, as the screen writes it (`018` plan §2):
+    /// where it starts, the one gate that may follow it before the next row,
+    /// and the action its segment must carry. A row with no gate is provably
+    /// ungated — nothing between it and the next row says `.disabled(`.
+    nonisolated struct MenuRow: Sendable {
+        /// The row's whole opening, matched as a literal: a titled `Button`,
+        /// a `Divider()`, or the Items list's `exportMenu(_:)` call.
+        let start: String
+        /// The whole `.disabled(…)` this row wears, or nil for an ungated row.
+        var gate: String? = nil
+        /// A literal the row's segment must contain — its intent or its
+        /// navigation. Nil for a `Divider()`, and for the Items list's two
+        /// submenus, whose rows `theItemsListsExportRowsAreSubmenusOverEveryScope`
+        /// reads.
+        var action: String? = nil
     }
 
-    private nonisolated static let gates = [
-        DropdownGates(
-            path: "Trove/Views/Items/ItemListView.swift",
-            csv: "canExportCSV: viewModel.canExportCSV",
-            pdf: "canExportPDF: viewModel.canExportPDF",
-            csvAction: "exportCSV: { openDropdown = .exportScope(.csv) }",
-            pdfAction: "exportPDF: { openDropdown = .exportScope(.pdf) }"
-        ),
-        DropdownGates(
-            path: "Trove/Views/Wishlist/WishlistView.swift",
-            csv: "canExportCSV: viewModel.canExport",
-            pdf: "canExportPDF: viewModel.canExport",
-            csvAction: "exportCSV: { Task { await viewModel.exportCSV() } }",
-            pdfAction: "exportPDF: { Task { await viewModel.exportPDF() } }"
-        ),
+    /// A list screen and its "…" menu, row by row in order (spec "The '…'
+    /// menus", criterion 2): two export rows, Import, then Settings, in three
+    /// groups. The Wishlist's two exports are buttons that export directly
+    /// and keep their ellipsis, each gated on the one flag a wishlist has;
+    /// the Items list's are submenus (plan Q9), ungated here because their
+    /// gates live in `exportMenu(_:)`.
+    nonisolated struct ListMenu: Sendable {
+        let path: String
+        let rows: [MenuRow]
+    }
+
+    private nonisolated static let menus = [
+        ListMenu(path: "Trove/Views/Items/ItemListView.swift", rows: [
+            MenuRow(start: "exportMenu(.csv)"),
+            MenuRow(start: "exportMenu(.pdf)"),
+            MenuRow(start: "Divider()"),
+            MenuRow(start: "Button(\"Import from CSV…\")", action: "isPickingImportFile = true"),
+            MenuRow(start: "Divider()"),
+            MenuRow(start: "Button(\"Settings\")", action: "isShowingSettings = true"),
+        ]),
+        ListMenu(path: "Trove/Views/Wishlist/WishlistView.swift", rows: [
+            MenuRow(
+                start: "Button(\"Export as CSV…\")",
+                gate: ".disabled(!viewModel.canExport)",
+                action: "Task { await viewModel.exportCSV() }"
+            ),
+            MenuRow(
+                start: "Button(\"Export as PDF…\")",
+                gate: ".disabled(!viewModel.canExport)",
+                action: "Task { await viewModel.exportPDF() }"
+            ),
+            MenuRow(start: "Divider()"),
+            MenuRow(start: "Button(\"Import from CSV…\")", action: "isPickingImportFile = true"),
+            MenuRow(start: "Divider()"),
+            MenuRow(start: "Button(\"Settings\")", action: "isShowingSettings = true"),
+        ]),
     ]
 
-    /// Each list screen builds exactly one `OverflowBadge` (012's rename of
-    /// `ExportBadge`; since 013 Amendment A the pill alone), fed the view
-    /// model's busy state and opening the overflow on the screen's host —
-    /// and exactly one `OverflowDropdown`, fed both export gates (006) and firing the
-    /// three list intents and Settings: 011's criterion-1/2 wiring, 012's
-    /// criterion 1, and 013's criterion 1, which took the template intent
-    /// out of this menu.
-    @Test(arguments: gates)
-    func theBadgeOpensTheDropdownWhichFiresEveryIntentAndOpensSettings(gates: DropdownGates) throws {
-        let path = gates.path
+    /// A menu row's opening, for reading a menu's rows in order: a titled
+    /// `Button`, a `Divider()`, or an `exportMenu(_:)` call, each on a word
+    /// boundary so a longer name ending in the same word never counts.
+    private let rowStart = #"(?:^|[^A-Za-z0-9_])(Button\("[^"]*"\)|Divider\(\)|exportMenu\(\.[a-z]+\))"#
+
+    /// The content of the one `OverflowMenu` a list's `overflowControl`
+    /// builds, split into one segment per row — each running from its row's
+    /// opening to the next one's — with the row openings in order.
+    private func menuSegments(_ path: String) throws -> (starts: [String], segments: [String]) {
+        let code = try SourceScan.production(path)
+        let controls = SourceScan.closureBodies(after: "private var overflowControl: some View", in: code)
+        try #require(controls.count == 1, "\(path) declares \(controls.count) `overflowControl`s, expected exactly 1")
+        let control = try #require(controls.first)
+        let menus = SourceScan.closureBodies(after: "OverflowMenu(", in: control)
+        try #require(menus.count == 1, "\(path)'s overflowControl builds \(menus.count) OverflowMenus, expected exactly 1: \(control)")
+        let content = try #require(menus.first)
+        let matches = content.matches(of: try Regex(rowStart, as: (Substring, Substring).self))
+        let starts = matches.map { String($0.output.1) }
+        var segments: [String] = []
+        for (index, match) in matches.enumerated() {
+            let end = index + 1 < matches.count ? matches[index + 1].range.lowerBound : content.endIndex
+            segments.append(String(content[match.range.lowerBound..<end]))
+        }
+        return (starts, segments)
+    }
+
+    /// G8. Each list screen builds exactly one `OverflowMenu`, in its
+    /// `overflowControl`, fed the view model's busy state (criterion 4) —
+    /// and each of its rows fires what it did: the Wishlist's two exports
+    /// straight into their intents, Import into the file picker, Settings
+    /// into its sheet (011's criterion-1/2 wiring, 012's criterion 1, 013's
+    /// criterion 1). The template intent 013 moved to Settings stays out.
+    ///
+    /// Mutations (T005): see `eachListsMenuCarriesItsRowsInThreeGroupsWithOnlyTheExportsGated`
+    /// and `theItemsListsExportRowsAreSubmenusOverEveryScope`, which share
+    /// this reading.
+    @Test(arguments: menus)
+    func eachListBuildsOneMenuFedItsBusyStateWhoseRowsFireEveryIntent(menu: ListMenu) throws {
+        let path = menu.path
         let code = try SourceScan.production(path)
 
-        let badges = SourceScan.argumentLists(of: "OverflowBadge", in: code)
-        #expect(badges.count == 1, "\(path) builds \(badges.count) OverflowBadges, expected exactly 1")
-        #expect(badges.first?.contains("isBusy: viewModel.isBusy") == true, "\(path) badge not fed isBusy")
-        let opens = SourceScan.closureBodies(after: "OverflowBadge(isBusy: viewModel.isBusy)", in: code)
-        #expect(opens.first?.contains("openDropdown = .overflow") == true, "\(path) badge doesn't open the overflow")
+        let calls = SourceScan.argumentLists(of: "OverflowMenu", in: code)
+        #expect(calls.count == 1, "\(path) builds \(calls.count) OverflowMenus, expected exactly 1")
+        #expect(calls.first == "isBusy: viewModel.isBusy", "\(path)'s menu isn't fed `isBusy: viewModel.isBusy`: \(calls)")
 
-        let dropdowns = SourceScan.argumentLists(of: "OverflowDropdown", in: code)
-        #expect(dropdowns.count == 1, "\(path) builds \(dropdowns.count) OverflowDropdowns, expected exactly 1")
-        for call in dropdowns {
-            #expect(call.contains(gates.csv), "\(path) dropdown not fed \(gates.csv)")
-            #expect(call.contains(gates.pdf), "\(path) dropdown not fed \(gates.pdf)")
-            #expect(call.contains(gates.csvAction), "\(path) dropdown doesn't fire \(gates.csvAction)")
-            #expect(call.contains(gates.pdfAction), "\(path) dropdown doesn't fire \(gates.pdfAction)")
-            #expect(call.contains("isPickingImportFile = true"), "\(path) dropdown doesn't open the picker")
-            #expect(call.contains("isShowingSettings = true"), "\(path) dropdown doesn't open Settings")
+        let (starts, segments) = try menuSegments(path)
+        try #require(
+            starts == menu.rows.map(\.start),
+            "\(path)'s menu rows are \(starts), expected \(menu.rows.map(\.start))"
+        )
+        for (row, segment) in zip(menu.rows, segments) {
+            if let action = row.action {
+                #expect(segment.contains(action), "\(path): \(row.start) doesn't fire `\(action)`: \(segment)")
+            }
             #expect(
-                !call.contains("exportBlankTemplate"),
-                "\(path) dropdown still fires the template intent 013 moved to Settings"
+                !segment.contains("exportBlankTemplate"),
+                "\(path): \(row.start) fires the template intent 013 moved to Settings"
             )
         }
+        #expect(
+            !SourceScan.stringLiterals(in: code).contains("Get Blank Template…"),
+            "\(path) still offers the template 013 moved to Settings"
+        )
     }
 
     /// Delivery and failure surfaces: the share sheet presents off
@@ -108,116 +144,112 @@ struct ExportWiringTests {
         #expect(code.contains("viewModel.exportFailureMessage"), "\(path) doesn't wire the failure state")
     }
 
-    /// The menu's contract after 013 (criterion 1), on the surface Amendment
-    /// A moved it to: five items in three groups — the two exports, Import,
-    /// Settings — with the template gone to Settings; the two *export* rows
-    /// each gated on its own flag (006/G29) and, the count being exactly 2,
-    /// Import and Settings provably ungated, since an empty collection is
-    /// exactly who they serve; the two group breaks on exactly the Import
-    /// and Settings rows (`startsGroup`, which replaced the system menu's
-    /// two `Divider()`s); and Settings last, in its own group.
-    @Test func theMenuCarriesFiveItemsInThreeGroups() throws {
-        let code = try SourceScan.production("Trove/Views/Shared/OverflowDropdown.swift")
-        let literals = SourceScan.stringLiterals(in: code)
-        #expect(literals.contains("Export as CSV…"))
-        #expect(literals.contains("Export as PDF…"))
-        #expect(literals.contains("Import from CSV…"))
-        #expect(literals.contains("Settings"))
-        #expect(!literals.contains("Get Blank Template…"), "the template left this menu for Settings")
-
-        let rows = SourceScan.argumentLists(of: "DropdownRow", in: code)
-        try #require(rows.count == 4, "four rows, found \(rows.count)")
-        #expect(rows[0].contains("Export as CSV…") && rows[0].contains("isEnabled: canExportCSV"))
-        #expect(rows[1].contains("Export as PDF…") && rows[1].contains("isEnabled: canExportPDF"))
-        #expect(rows[2].contains("Import from CSV…") && rows[2].contains("startsGroup: true"))
-        #expect(rows[3].contains("Settings") && rows[3].contains("startsGroup: true"))
-        // 006/G29 broadened, not weakened: one gate each, on its own flag —
-        // the two rows sharing one flag was the whole of the old contract and
-        // is now the failure — and still exactly two gates in the file, which
-        // is what proves Import and Settings ungated.
-        #expect(
-            code.ranges(of: "isEnabled: canExportCSV").count == 1,
-            "the CSV row must gate on canExportCSV, once"
+    /// G8, the menu's contract after 013 (criterion 1) as `018` writes it —
+    /// the rows in order in three groups, the two exports then Import then
+    /// Settings, with two `Divider()`s between them (plan Q9, the pre-`013`
+    /// system menu's breaks); each row wearing exactly the gate its entry
+    /// names and nothing else. Import and Settings are provably ungated —
+    /// no `.disabled(` anywhere between their openings and the next row's —
+    /// since an empty collection is exactly who they serve (criterion 2).
+    ///
+    /// Its mutation (T005): Import on the Items list gated
+    /// `.disabled(!viewModel.canExportCSV)` → red (the ungated leg).
+    @Test(arguments: menus)
+    func eachListsMenuCarriesItsRowsInThreeGroupsWithOnlyTheExportsGated(menu: ListMenu) throws {
+        let path = menu.path
+        let (starts, segments) = try menuSegments(path)
+        try #require(
+            starts == menu.rows.map(\.start),
+            "\(path)'s menu rows are \(starts), expected \(menu.rows.map(\.start))"
         )
-        #expect(
-            code.ranges(of: "isEnabled: canExportPDF").count == 1,
-            "the PDF row must gate on canExportPDF, once"
-        )
-        #expect(
-            code.ranges(of: "isEnabled:").count == 2,
-            "exactly the two export rows are gated — Import and Settings must stay ungated"
-        )
-        #expect(code.ranges(of: "startsGroup: true").count == 2, "three groups need two breaks")
+        #expect(starts.filter { $0 == "Divider()" }.count == 2, "\(path): three groups need two breaks")
+        #expect(starts.last == "Button(\"Settings\")", "\(path): Settings is last, in its own group")
+        for (row, segment) in zip(menu.rows, segments) {
+            let gates = SourceScan.argumentLists(of: ".disabled", in: segment).map { ".disabled(\($0))" }
+            if let gate = row.gate {
+                #expect(gates == [gate], "\(path): \(row.start) is gated \(gates), expected exactly [\(gate)]")
+            } else {
+                #expect(gates.isEmpty, "\(path): \(row.start) is gated \(gates) — it must stay ungated")
+            }
+        }
     }
 
-    /// G37 — the scope chooser the two export rows now open (014 Decision 7,
-    /// spec P12 and criterion 14). That they *open* it rather than export is
-    /// pinned per screen in `gates` above, alongside the Wishlist's rows,
-    /// which still export directly; this is what the Items list's host draws
-    /// when they do: one titled surface, one row per scope in the enum's own
+    /// G8, G37 as `018` writes it (plan Q9; spec criteria 2 and 3, 014
+    /// Decision 7): the Items list's two export rows are submenus titled
+    /// "Export as CSV" / "Export as PDF", without the ellipsis (spec P2) —
+    /// written once by `exportMenu(_:)`: one row per scope in the enum's own
     /// order, each gated on that scope's own rows, and one action handing the
-    /// scope to whichever intent the format names.
+    /// row's scope to whichever intent the format names. While the format's
+    /// own flag is false the row is a plain `Button` under the same title,
+    /// `.disabled(true)`: a `Menu`'s `.disabled` is not honoured inside a
+    /// system menu on iOS 27.0 (T005's finding), so the branch on the
+    /// format's own flag is the gate.
     ///
-    /// The `no literal` half is the load-bearing one: a chooser that named
+    /// The `no literal` half is the load-bearing one: a submenu that named
     /// `.owned` or `.both` anywhere inside it would be exporting a fixed half
-    /// under a row that says otherwise — which is the six-row menu plan Q14
-    /// refused, wearing a chooser's clothes.
-    @Test func theItemsListComposesTheScopeChooserOverEveryScope() throws {
-        let code = try SourceScan.production("Trove/Views/Items/ItemListView.swift")
+    /// under a row that says otherwise — which is the six-row menu 014 plan
+    /// Q14 refused, wearing a submenu's clothes.
+    ///
+    /// Mutations (T005): the PDF branch on the CSV flag → red (the branch
+    /// leg); `.disabled(true)` dropped from the else branch → red (the else
+    /// leg); the CSV action exporting `.both` directly → red (the scope
+    /// literal and the scope-carrying action); the title "Export as CSV…" →
+    /// red (the titles and the no-ellipsis leg).
+    @Test func theItemsListsExportRowsAreSubmenusOverEveryScope() throws {
+        let path = "Trove/Views/Items/ItemListView.swift"
+        let code = try SourceScan.production(path)
+        let helpers = SourceScan.closureBodies(after: "private func exportMenu(_ format: ExportFormat) -> some View", in: code)
+        try #require(helpers.count == 1, "the Items list declares \(helpers.count) `exportMenu(_:)`s, expected exactly 1")
+        let helper = try #require(helpers.first)
 
-        let surfaces = SourceScan.argumentLists(of: "DropdownSurface", in: code)
-        try #require(surfaces.count == 1, "the Items list composes \(surfaces.count) DropdownSurfaces, expected exactly 1")
-        #expect(surfaces[0].hasPrefix("title:"), "the chooser's surface carries no header")
-        #expect(surfaces[0].contains("ExportCopy.scopeTitleCSV"), "the CSV header isn't the shared copy")
-        #expect(surfaces[0].contains("ExportCopy.scopeTitlePDF"), "the PDF header isn't the shared copy")
-
-        let chooser = try #require(
-            SourceScan.closureBodies(after: "case .exportScope(let format):", in: code).first,
-            "the host draws nothing for .exportScope"
+        #expect(
+            helper.contains("let title = format == .csv ? \"Export as CSV\" : \"Export as PDF\""),
+            "the export rows aren't titled \"Export as CSV\" / \"Export as PDF\" by format: \(helper)"
         )
         #expect(
-            chooser.ranges(of: "ForEach(ItemListViewModel.ExportScope.allCases").count == 1,
-            "the chooser must list every scope, once — a hand-written row set can go stale"
+            helper.contains("let isEnabled = format == .csv ? viewModel.canExportCSV : viewModel.canExportPDF"),
+            "each format's row must branch on its own format's flag: \(helper)"
         )
-
-        let rows = SourceScan.argumentLists(of: "DropdownRow", in: chooser)
-        try #require(rows.count == 1, "one row built per scope, found \(rows.count) DropdownRows")
-        #expect(rows[0].contains("title: scope.label"), "the row doesn't name its scope from the enum")
+        let enabled = SourceScan.closureBodies(after: "if isEnabled", in: helper)
+        try #require(enabled.count == 1, "`exportMenu(_:)` branches on `isEnabled` \(enabled.count) times, expected exactly 1: \(helper)")
         #expect(
-            rows[0].contains("isEnabled: viewModel.canExport(scope)"),
-            "the row must be gated on its own scope — a menu-level flag enables rows with nothing in them"
+            SourceScan.argumentLists(of: "Menu", in: enabled[0]).first == "title",
+            "the enabled branch isn't the submenu under the row's title: \(enabled[0])"
         )
-
-        #expect(chooser.contains("viewModel.exportCSV(scope: scope)"), "the CSV action doesn't carry the row's scope")
-        #expect(chooser.contains("viewModel.exportPDF(scope: scope)"), "the PDF action doesn't carry the row's scope")
-        for literal in [".owned", ".sold", ".both"] {
+        let disabled = SourceScan.closureBodies(after: "} else", in: helper)
+        try #require(disabled.count == 1, "`exportMenu(_:)` has \(disabled.count) else branches, expected exactly 1: \(helper)")
+        #expect(
+            disabled[0].contains(try Regex(#"Button\(title\)\s*\{\s*\}\s*\.disabled\(true\)"#)),
+            "with nothing to export the row must be a plain `Button(title) {}` wearing `.disabled(true)` (criterion 2): \(disabled[0])"
+        )
+        let literals = SourceScan.stringLiterals(in: code)
+        for title in ["Export as CSV…", "Export as PDF…"] {
             #expect(
-                !chooser.contains(literal),
-                "the chooser names \(literal) — the scope must travel from the row it was chosen on"
+                !literals.contains(title),
+                "the Items list still titles a row \"\(title)\" — a row that opens a submenu drops its ellipsis (spec P2)"
             )
         }
 
-        // `DropdownHost` draws a dropdown only for an identifier that has an
-        // anchor, so the badge wears all three: drop one and that row opens a
-        // chooser nothing positions or renders (plan Q17).
-        let badge = try #require(
-            SourceScan.closureBodies(after: "private var overflowControl: some View", in: code).first,
-            "the Items list has no overflowControl"
+        #expect(
+            helper.ranges(of: "ForEach(ItemListViewModel.ExportScope.allCases)").count == 1,
+            "the submenu must list every scope, once — a hand-written row set can go stale"
         )
-        for anchor in [
-            ".dropdownAnchor(HeaderDropdown.overflow)",
-            ".dropdownAnchor(HeaderDropdown.exportScope(.csv))",
-            ".dropdownAnchor(HeaderDropdown.exportScope(.pdf))",
-        ] {
-            try #require(badge.contains(anchor), "overflowControl is missing \(anchor)")
-        }
-    }
+        let rows = SourceScan.argumentLists(of: "Button", in: enabled[0])
+        #expect(rows == ["scope.label"], "one row built per scope, named from the enum: \(rows)")
+        let gates = SourceScan.argumentLists(of: ".disabled", in: enabled[0]).map { ".disabled(\($0))" }
+        #expect(
+            gates == [".disabled(!viewModel.canExport(scope))"],
+            "each scope row must be gated on its own scope, and nothing else: \(gates)"
+        )
 
-    /// The chooser's two headers as the spec writes them (P12), pinned by
-    /// literal beside the failure copy they share an enum with.
-    @Test func theScopeChooserHeadersReadAsTheSpecWritesThem() {
-        #expect(ExportCopy.scopeTitleCSV == "EXPORT AS CSV")
-        #expect(ExportCopy.scopeTitlePDF == "EXPORT AS PDF")
+        #expect(helper.contains("case .csv: await viewModel.exportCSV(scope: scope)"), "the CSV action doesn't carry the row's scope")
+        #expect(helper.contains("case .pdf: await viewModel.exportPDF(scope: scope)"), "the PDF action doesn't carry the row's scope")
+        for literal in [".owned", ".sold", ".both"] {
+            #expect(
+                !helper.contains(literal),
+                "the submenu names \(literal) — the scope must travel from the row it was chosen on"
+            )
+        }
     }
 
     /// The constitution's UIKit boundary, pinned as a walk: the activity

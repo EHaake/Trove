@@ -2,16 +2,15 @@ import SwiftData
 import SwiftUI
 
 /// The root Dashboard's dropdowns (013 Amendment A). One optional of this
-/// type is the screen's whole open-menu state — "one at a time" true by
-/// type, as on the lists.
+/// type is the screen's whole open-menu state. The "…" left it at `018` for
+/// a system menu of its own (`OverflowMenu`); the order control's dropdown
+/// is what remains.
 private enum DashboardDropdown: Hashable {
-    case overflow
     case order
 
     /// What the tap-outside layer calls itself to VoiceOver.
     var dismissLabel: String {
         switch self {
-        case .overflow: "Dismiss more actions"
         case .order: "Dismiss order options"
         }
     }
@@ -163,20 +162,12 @@ struct DashboardView: View {
             // appearance switch follows — see `ItemListView`'s twin.
             .preferredColorScheme(appearanceStore.choice.sheetColorScheme(device: systemColorScheme))
         }
-        // The root "…"'s dropdown floats over the whole screen from here —
-        // the same host as the lists' (013 Amendment A). The header scrolls
-        // on this screen, which is exactly why the host finds the badge by
-        // its anchor rather than by a fixed offset.
+        // The order control's dropdown floats over the whole screen from
+        // here — the same host as the lists' had (013 Amendment A). The
+        // header scrolls on this screen, which is exactly why the host finds
+        // the control by its anchor rather than by a fixed offset.
         .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
             switch dropdown {
-            case .overflow:
-                // One row, deliberately a menu rather than a direct button
-                // (spec P13): the roadmap's Dashboard exports land here.
-                DropdownSurface {
-                    DropdownRow(title: "Settings") {
-                        isShowingSettings = true
-                    }
-                }
             case .order:
                 // The same surface and rows Sort By is made of, under its
                 // own header (spec P12): the current order tinted and
@@ -225,13 +216,13 @@ struct DashboardView: View {
         }
     }
 
-    /// Never busy: nothing runs from the Dashboard. The badge only opens the
-    /// one-row menu on the host.
+    /// Never busy: nothing runs from the Dashboard. One row, deliberately a
+    /// menu rather than a direct button (spec P13): the roadmap's Dashboard
+    /// exports land here. A system menu since `018` (plan §2).
     private var overflowControl: some View {
-        OverflowBadge(isBusy: false) {
-            openDropdown = .overflow
+        OverflowMenu(isBusy: false) {
+            Button("Settings") { isShowingSettings = true }
         }
-        .dropdownAnchor(DashboardDropdown.overflow)
         .accessibilityIdentifier("moreActions.dashboard")
     }
 

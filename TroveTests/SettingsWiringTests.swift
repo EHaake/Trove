@@ -241,15 +241,17 @@ struct SettingsWiringTests {
     /// someone has to remember to extend, and there must be as many as
     /// `AppRouter.Tab.allCases`. Each root's file is found by its
     /// `struct <Name>: View` declaration, and must be a Settings host (so the
-    /// sheet and threading tests above run over it), draw exactly one
-    /// `OverflowBadge(` anchored as the `.overflow` dropdown, and host a
-    /// dropdown that writes `isShowingSettings = true`. Which screen composes
+    /// sheet and threading tests above run over it), and draw exactly one
+    /// `OverflowMenu(` — in its `overflowControl` — whose content writes
+    /// `isShowingSettings = true` (`018` plan §2, G9). Which screen composes
     /// what is a view-body fact no view model can observe — the
     /// `MenuPolicyTests` shape; the behavioural half is the UI test that opens
     /// Settings from all four tabs.
     /// Mutations (T019): Plans' `OverflowBadge` removed → red; `PlansView`
     /// taken out of `settingsHosts` → red; the Plans tab's root swapped for
-    /// `SellPlanView(…)` in `ContentView` → red.
+    /// `SellPlanView(…)` in `ContentView` → red. Rewritten at `018` T005 for
+    /// the system menu; its mutations: Plans' `OverflowMenu` replaced by a
+    /// `Button` → red; Plans' Settings row removed → red.
     @Test func everyTabsRootReachesSettings() throws {
         let content = try SourceScan.production("Trove/App/ContentView.swift")
         let tabs = SourceScan.closureBodies(after: "Tab(", in: content)
@@ -270,23 +272,16 @@ struct SettingsWiringTests {
 
             #expect(Self.settingsHosts.contains(path), "\(root) is a tab's root but not a Settings host (\(path))")
             #expect(
-                code.ranges(of: "OverflowBadge(").count == 1,
-                "\(root) draws \(code.ranges(of: "OverflowBadge(").count) \"…\" badges, expected exactly 1"
+                code.ranges(of: "OverflowMenu(").count == 1,
+                "\(root) draws \(code.ranges(of: "OverflowMenu(").count) \"…\" menus, expected exactly 1"
             )
-            // The Items badge carries its export choosers' anchors too, so
-            // the `.overflow` one is looked for among them.
-            let overflow = SourceScan.closureBodies(after: "private var overflowControl: some View", in: code)
-            #expect(overflow.first?.contains("OverflowBadge(") == true, "\(root)'s overflowControl draws no \"…\" badge")
-            let anchors = overflow.first.map { SourceScan.argumentLists(of: ".dropdownAnchor", in: $0) } ?? []
+            let controls = SourceScan.closureBodies(after: "private var overflowControl: some View", in: code)
+            #expect(controls.count == 1, "\(root) declares \(controls.count) `overflowControl`s, expected exactly 1")
+            let menus = controls.first.map { SourceScan.closureBodies(after: "OverflowMenu(", in: $0) } ?? []
+            #expect(menus.count == 1, "\(root)'s overflowControl draws \(menus.count) \"…\" menus, expected exactly 1")
             #expect(
-                anchors.contains { $0.hasSuffix("Dropdown.overflow") },
-                "\(root)'s \"…\" isn't anchored as its `.overflow` dropdown: \(anchors)"
-            )
-            let hosts = SourceScan.closureBodies(after: ".dropdownHost(", in: code)
-            #expect(hosts.count == 1, "\(root) has \(hosts.count) dropdown hosts, expected exactly 1")
-            #expect(
-                hosts.first?.contains("isShowingSettings = true") == true,
-                "\(root)'s dropdown host never opens Settings"
+                menus.first?.contains("isShowingSettings = true") == true,
+                "\(root)'s \"…\" never opens Settings: \(menus)"
             )
         }
     }
