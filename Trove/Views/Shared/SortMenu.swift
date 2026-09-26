@@ -20,13 +20,17 @@ enum SortMenuCopy {
 /// `Hashable` rather than `Identifiable` so the header's render test can
 /// build one over bare strings (plan Q1).
 ///
-/// **Its label is in the system's primary label colour** (spec Decision 15,
-/// overtaking R3): the glyph's bars are unfilled `Rectangle`s sharing the
-/// text's one primary foreground style, so the root brass tint no
-/// longer colours the badge — the default monochrome label the guidelines
-/// ask for on Liquid Glass, matching the system menu it opens. Never a theme
-/// colour: `HeaderControlsWiringTests` (G2) pins both the `.primary` and
-/// that this file names no theme colour.
+/// **Its label is in the system's primary label colour** (spec Decisions 15
+/// and 17, overtaking R3) — the default monochrome label the guidelines ask
+/// for on Liquid Glass, matching the system menu it opens. The glass style
+/// paints its label with the button's tint and ignores the label's own
+/// foreground, so the colour arrives as the button's tint, set to the
+/// primary style directly after the glass style, overriding the root brass
+/// tint. The glyph's bars are primary-coloured views rather than shapes: a
+/// shape under the hierarchical tint draws dimmed on the device, a colour
+/// view at full strength. Never a theme colour: `HeaderControlsWiringTests`
+/// (G2) pins the tint's place and that this file names no theme colour;
+/// `NoHardcodedColorsTests` lets exactly those two lines through.
 ///
 /// **Its footprint is constant** (spec P4): the label reserves the widest of
 /// its menu's options, sized once, so choosing a row never changes the
@@ -79,20 +83,26 @@ struct SortMenu<Option: Hashable>: View {
                 }
                 .font(ThemeTypography.font(.mono, size: 11))
             }
-            // Decision 15: the system's label colour, not the root tint's brass.
-            .foregroundStyle(.primary)
+            // Q6 as overtaken by spec Decision 17: 4 pt above and below the
+            // label, so the capsule sits between the system's two sizes.
+            .padding(.vertical, 4)
         }
         .buttonStyle(.glass)
-        // Q6 as overtaken by spec Decision 16: the system's control size —
-        // 45 pt rendered, against the 44 pt the guidelines ask for — so the
-        // badge row, not the Items title's 33 pt line box, now sets the
-        // header's height, equally on both sides (`ItemListHeaderLayoutTests`).
-        .controlSize(.large)
+        // Decision 17: the glass style paints the label with the tint, so the
+        // system's label colour, not the root tint's brass, is set here.
+        .tint(.primary)
+        // Q6 as overtaken by spec Decision 17: the system's regular control
+        // size with the label's padding above — the capsule the person chose
+        // from rendered candidates. The badge row, not the Items title's line
+        // box, sets the header's height, equally on both sides
+        // (`ItemListHeaderLayoutTests`).
+        .controlSize(.regular)
     }
 
-    /// Unfilled, so it takes the label's `.primary` with the text.
+    /// A colour view rather than a shape, so it draws at the tint's full
+    /// primary with the text rather than dimmed (Decision 17).
     private func bar(width: CGFloat) -> some View {
-        Rectangle()
+        Color.primary
             .frame(width: width, height: 1.5)
     }
 }

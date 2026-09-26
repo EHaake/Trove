@@ -52,6 +52,18 @@ import Testing
 /// both sides, and the header with no badges shorter than that. Its
 /// mutations, run at T004a: the meta line back beside the badges → red;
 /// `SortMenu` back at `.regular` → the rewritten proviso red.
+///
+/// **Re-measured at `018` T004b** (spec Decision 17): `SortMenu` at
+/// `.regular` with 4 pt of vertical padding on its label. The badge renders
+/// 95 × 37 on the Owned side — 95 wide under every one of its seven
+/// selections — and 102 × 37 on the Sold side; the badge row 145 × 37 on
+/// the Owned side (under "Market ↓") and 152 × 37 on the Sold side (under
+/// "Date sold"), `OverflowBadge` 42 × 30 beside it; the header 57 pt on both
+/// sides against 53 pt with no badges, the meta line 14 pt — so 37 + 6 + 14
+/// still holds and the badge row still sets the height. Its mutation: the
+/// label's padding removed → the badge row falls to `OverflowBadge`'s 30 pt,
+/// the header to 53 pt on both sides, level with the no-badge header, and
+/// all three proviso expectations go red.
 @Suite("Items header layout")
 @MainActor
 struct ItemListHeaderLayoutTests {

@@ -17,10 +17,13 @@ struct HeaderControlsWiringTests {
 
     /// G2: `SortMenu` is a system `Menu` holding one "Sort by" section of
     /// `Toggle` rows built by a `ForEach`, drawn in the glass button style,
-    /// and its label is in the system's primary label colour (spec Decision
-    /// 15, overtaking R3): the glyph and the text sit under one
-    /// `.foregroundStyle(.primary)`, so the root brass tint doesn't reach
-    /// them, and the file still names no theme colour.
+    /// and its label is in the system's primary label colour (spec Decisions
+    /// 15 and 17, overtaking R3). The glass style paints its label with the
+    /// button's tint and ignores the label's own foreground, so the colour is
+    /// the tint, set to `.primary` directly after the glass style — overriding
+    /// the root brass tint — and the file sets no foreground style, which the
+    /// style would ignore (the device showed it staying brass). The file
+    /// still names no theme colour.
     ///
     /// **This checks spelling only.** It pins how the menu is composed, not
     /// what iOS draws from it. The checkmark on the current row and the
@@ -31,7 +34,8 @@ struct HeaderControlsWiringTests {
     /// Mutations (T001): the `Toggle` rows replaced by `Button` rows → red
     /// (the toggle leg); `.foregroundStyle(theme.colors.accentBrass)` on the
     /// label → red (the no-colour leg). T004a: the label's
-    /// `.foregroundStyle(.primary)` removed → red (the system-colour leg).
+    /// `.foregroundStyle(.primary)` removed → red (the system-colour leg, as
+    /// it was then). T004b: the tint removed → red (the tint leg).
     @Test func theSortMenuIsASystemMenuOfToggleRowsUnderOneHeaderInGlassWithNoColourOfItsOwn() throws {
         let code = try SourceScan.production("Trove/Views/Shared/SortMenu.swift")
         let anchor = "struct SortMenu<Option: Hashable>: View"
@@ -54,10 +58,13 @@ struct HeaderControlsWiringTests {
         #expect(body.contains(".buttonStyle(.glass)"), "Sort By's badge isn't a glass button: \(body)")
         let labels = SourceScan.closureBodies(after: "} label:", in: body)
         try #require(labels.count == 1, "Sort By's `Menu` opens \(labels.count) label closures, expected exactly 1: \(body)")
-        let label = try #require(labels.first)
         #expect(
-            label.contains(".foregroundStyle(.primary)"),
-            "Sort By's label doesn't set `.foregroundStyle(.primary)`, so the root brass tint colours it again (spec Decision 15): \(label)"
+            body.contains(try Regex(#"\.buttonStyle\(\.glass\)\s*\.tint\(\.primary\)"#)),
+            "Sort By's glass button isn't tinted `.primary` directly after `.buttonStyle(.glass)`, so the root brass tint colours its label again (spec Decision 17): \(body)"
+        )
+        #expect(
+            !code.contains(".foregroundStyle("),
+            "SortMenu.swift sets a foreground style — the glass style ignores it and paints the label with the tint (spec Decision 17)"
         )
         #expect(
             !code.contains("theme.colors"),

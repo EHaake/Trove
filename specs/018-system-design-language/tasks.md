@@ -463,7 +463,7 @@ Handoff notes for the pause reports:
   the scan to skip comments; the two badges differ in height (45 vs 30)
   until T005's `OverflowMenu` copies `.large`. Reviewed with Phase 2.
 
-- [ ] **T004b — The person's second re-look: the colour that actually takes, and the chosen size.**
+- [x] **T004b — The person's second re-look: the colour that actually takes, and the chosen size.**
   Per spec Decision 17, plan R3 and Q6 as overtaken (2026-09-26). In
   `SortMenu.swift`: `.tint(.primary)` on the `Menu` directly after
   `.buttonStyle(.glass)`; the glyph bars `Color.primary.frame(width:height:
@@ -488,6 +488,30 @@ Handoff notes for the pause reports:
   and G39's test green alone; a pixel read of the label on the device in
   both appearances is the orchestrator's install-and-look step with the
   person.
+  **Done (2026-09-26).** `.tint(.primary)` after `.buttonStyle(.glass)`;
+  bars as `Color.primary` views; `.foregroundStyle` gone; `.regular` with
+  4 pt vertical label padding; ZStack `.leading`. `NoHardcodedColorsTests`:
+  `systemLabelExemptions: [String: [String]]`, both scans through one
+  `scan(flags:)`, a flagged line passes only when clean with its file's
+  exempted texts removed, staleness per entry by the scan its text trips.
+  G2 pins `.buttonStyle(.glass)` immediately followed by `.tint(.primary)`
+  and no `.foregroundStyle(` in the comment-stripped file. Measured at
+  width 354: badge Owned 95 × 37, Sold 102 × 37; rows 145 × 37 / 152 × 37;
+  header 57 both sides (no badges 53, meta 14); 95 wide under every Owned
+  selection. Mutations, all red: `.tint(.primary)` removed (G2
+  `HeaderControlsWiringTests.swift:61` and the stale entry); `.tint(.blue)`
+  in `SortMenu.swift` (`SortMenu.swift:99`); `.background(Color.primary)`
+  in `ItemListHeader.swift` (`noViewConstructsAColorDirectly`); the
+  padding removed (rows 30, headers 53: both sums and `withoutBadges <
+  baseline` red). `scripts/verify.sh`: green, 1749 in 235. UI alone:
+  `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch` 31 s,
+  G39's test 17 s, both green. **Finding carried to T011:** both colour
+  scans miss a system colour followed by a member (`Color.primary.opacity(0)`
+  stayed green) — Swift `Regex`'s default `\b` is a Unicode word boundary
+  that does not break inside `primary.opacity`; `.wordBoundaryKind(.simple)`
+  fixes it; nothing in `Trove/Views` has that shape today. Pre-existing
+  gap, the false-passing shape `CLAUDE.md` asks to audit for — T011 (the
+  policy-guard task) fixes it and re-runs the mutation.
 
 ## Phase 2 — Every header menu is the system's · walkthrough: yes — each tab's "…" opens the system menu: Settings alone on the Overview and Plans; Export as CSV…, Export as PDF…, Import from CSV…, Settings in three groups on the Wishlist; on Items the two exports (no ellipsis) open submenus of Owned items, Sold items, Owned and sold, greyed where a scope has nothing on screen; an export shows the spinner then the share sheet; the Overview's "BY VALUE" opens a menu headed "Order by"
 
@@ -696,6 +720,10 @@ Handoff notes for the pause reports:
   restored from `main` with one host re-attached; `.glassEffect()` on
   `PlansCard`; `UISegmentedControl.appearance().selectedSegmentTintColor =
   .brown` in `TroveApp.init`; a `.confirmationDialog` on a Delete.
+  **Added at T004b:** `NoHardcodedColorsTests`' two scans use
+  `.wordBoundaryKind(.simple)` (or an explicit `[^A-Za-z0-9_]` boundary) so
+  `Color.primary.opacity(0)` and `.foregroundStyle(.red.opacity(0.5))` are
+  caught; mutation: `.background(Color.primary.opacity(0))` in a view → red.
   G12a requires `sortControl` by name in `ItemListView`, `WishlistView` and
   `PlansView` and `orderControl` in `DashboardView`; G12b carries no
   picker-style leg; every `Picker(` match is on a word boundary so
@@ -816,3 +844,4 @@ recorded here too.
 | `skeptical-reviewer` — decision review at T004a | `opus` | ~33k (subagent total) | A named per-file, per-line exemption with a stale-entry check (a recorded exception to `004`'s rule); dodging the scan's wording and `.tint(nil)` rejected. Transcribed into plan R3 and T004a |
 | `sdd-implementer` — T004a (resumed) | `opus` | ~65k + resumed pass (subagent cumulative not reported) | Done; unit 1749 green; the two UI tests green alone; five mutations recorded |
 | `general-purpose` — diagnosis on device (T004a's colour not taking; size candidates rendered) | `opus` | ~115k (subagent total) | `.foregroundStyle` ignored by the glass style; `.tint(.primary)` + `Color.primary` bars verified by pixel in both appearances; four size crops for the person, who chose C → T004b |
+| `sdd-implementer` — T004b | `opus` | ~87k (subagent total) | Done; unit 1749 green; both UI tests green alone; four mutations recorded; one pre-existing guard gap found and carried to T011 |
