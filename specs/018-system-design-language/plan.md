@@ -243,6 +243,13 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   titles, no ellipsis — each gated as a whole on `canExportCSV` /
   `canExportPDF` (any scope has rows) and each scope row on its own
   `canExport(scope)`, the bespoke chooser's two gates carried over exactly.
+  **T005 decision review (2026-09-26):** a `Menu`'s `.disabled` is not
+  honoured inside a system menu (measured on iOS 27.0: the submenu opened
+  onto three disabled rows), so when a format's flag is false a plain
+  `Button(title) {}.disabled(true)` stands in for the submenu — the
+  system's disabled row, which is what criterion 2 asks for; it carries no
+  chevron, a visible difference noted for the Phase 2 pause. No 26.x check
+  needed: it rests on a disabled `Button`, which the Wishlist shows working.
   One private helper `exportMenu(_ format: ExportFormat)` writes both, over
   the file's existing `ExportFormat`.
 - **Q10. Tests migrate with the control they guard, task by task** (§6, and
@@ -471,7 +478,10 @@ struct OverflowMenu<Content: View>: View {
                 if isBusy { ProgressView().controlSize(.small) }
                 else { Image(systemName: "ellipsis").font(.system(size: 15, weight: .semibold)) }
             }
-            .frame(width: 18, height: 14)           // the sort badge's content row, as today
+            // T005 decision review: a hidden mono-11 "0" sets the content row
+            // to the sort label's line box by construction (an overlay, so the
+            // busy spinner cannot grow it); 18 wide. A literal 14 rendered ⅓ pt
+            // short of the sort badge (36 vs 37 at 1×).
         }
         .buttonStyle(.glass)
         // .controlSize(…) — SortMenu's literal (Q6); G1 holds them to one height
@@ -523,7 +533,8 @@ fed `isBusy: viewModel.isBusy`; its rows in order, the export rows gated on
 their own flags and nothing else gated, two `Divider()`s, Import and
 Settings wired, no template; the Items submenus over `ExportScope.allCases`,
 each row gated on `canExport(scope)`, each action carrying `scope`, no
-`.owned`/`.sold`/`.both` literal, titles without an ellipsis). G9
+`.owned`/`.sold`/`.both` literal, titles without an ellipsis; each format's
+branch on its own flag, the else branch a `.disabled(true)` `Button`). G9
 (`SettingsWiringTests.everyTabsRootReachesSettings`, rewritten: every tab
 root's `overflowControl` composes exactly one `OverflowMenu(` whose content
 writes `isShowingSettings = true`). G5 (the Dashboard's "…" on the root
@@ -813,7 +824,7 @@ retired and why each could go); `scripts/verify.sh all`. Then the pre-merge
 
 | # | Test | Red when |
 |---|---|---|
-| G1 | `ItemListHeaderLayoutTests` (`014` G38, kept): the header one meta line tall under every summary and every sort label, the trailing slot a stand-in sized from a render of the badge row alone (`SortMenu` + `OverflowBadge`, then `OverflowMenu` from T005 — a glass `Menu` in the header's `VStack` crashes `ImageRenderer`, T001 review); the no-badges proviso (or its Q6 rewrite); **the two badges one height** (new); with P4, **one width for every selection** (T003). What the render can't show — the glass once it sits in the header — rests on T002/T009's device frame check and G39 | the meta line back beside the badges; the baseline rendered at 200 pt (the instrument check); `SortMenu` at `.large` (the proviso); `OverflowMenu` at another control size; P4's hidden labels dropped |
+| G1 | `ItemListHeaderLayoutTests` (`014` G38, kept; "the two badges one height" compared at 3× with exact equality — a 1× comparison hides up to a point, T005 review): the header one meta line tall under every summary and every sort label, the trailing slot a stand-in sized from a render of the badge row alone (`SortMenu` + `OverflowBadge`, then `OverflowMenu` from T005 — a glass `Menu` in the header's `VStack` crashes `ImageRenderer`, T001 review); the no-badges proviso (or its Q6 rewrite); **the two badges one height** (new); with P4, **one width for every selection** (T003). What the render can't show — the glass once it sits in the header — rests on T002/T009's device frame check and G39 | the meta line back beside the badges; the baseline rendered at 200 pt (the instrument check); `SortMenu` at `.large` (the proviso); `OverflowMenu` at another control size; P4's hidden labels dropped |
 | G2 | `HeaderControlsWiringTests`: `SortMenu` is a `Menu` whose content is a `Section(SortMenuCopy.header)` of `Toggle(` rows in a `ForEach`, `.glass`, no `theme.colors` (spelling only; the check and selected trait are T004's UI test's) | the `Toggle` rows replaced by `Button` rows; `.foregroundStyle(theme.colors.accentBrass)` on the label |
 | G3 | `HeaderControlsWiringTests`: every header control carries its identifier (`sortOptions.items/wishlist/plans`, `moreActions.items/wishlist/plans/dashboard`, `orderOptions.dashboard`) and no hint — per control as each is converted (T001–T006), then, once `OverflowBadge.swift` is gone (T010), no `.accessibilityHint("Opens` anywhere under `Trove/Views` | an identifier dropped; a hint put back |
 | G4 | `HeaderControlsWiringTests`: `OverflowMenu`'s busy branch — `ProgressView()`, `.disabled(isBusy)`, "Working"/"More actions"; each list passes `viewModel.isBusy` | `.disabled` removed; `isBusy: false` on Items |
