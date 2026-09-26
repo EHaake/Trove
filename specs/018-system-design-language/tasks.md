@@ -642,6 +642,9 @@ Handoff notes for the pause reports:
   the tint on a `Menu` label with no button style is unverified off-device.
   `MenuPolicyTests`' doc comment and `Dropdown.swift:7` still name the old
   rule — T010/T011.
+  T005 also touched `SortMenu.swift` (the shared `labelFont`, per the
+  decision review) and `ThemeTests.swift` (the `OverflowMenu.swift` entry,
+  per R3) — outside its file list, authorised.
   **Phase 2 closes here — pause for the person.**
 
 ## Phase 3 — The two switches and the add button · walkthrough: yes — Owned/Sold and Active/Completed are the system segmented control whose glass selection slides while the header holds still, and Sort By's capsule stays whole through a width-changing sort on the finished header (both films are in the report); the add button on Items and the Wishlist is a brass glass disc in the same corner and size, opening the same form; every screen in Light and Dark reads as one language (criterion 15)
@@ -907,3 +910,4 @@ recorded here too.
 | `skeptical-reviewer` — decision review at T005 | `opus` | ~52k (subagent total) | (1) a hidden mono-11 line box sets the glyph row (overlay, so the spinner can't grow it); G1 compares at 3× exactly, tolerance rejected. (2) a disabled `Button` stands in for an empty format's submenu — routine, inside the footprint; the missing chevron noted for the pause. Transcribed into plan §2, Q9, §11 |
 | `sdd-implementer` — T005 (resumed) | `opus` | ~206k + resumed pass | Done; unit 1749 green; six UI tests green alone; every mutation recorded |
 | `sdd-implementer` — T006 | `opus` | ~72k (subagent total) | Done; unit 1749 green; UI suite 37/37 at the phase's final commit; four mutations recorded |
+| `skeptical-reviewer` — Phase 2 review (T004a, T004b, T005, T006) | `opus` | ~122k (subagent total) | **approved**, seven notes, none blocking. Carried: (T010) `ItemListHeaderLayoutTests`' T005 doc paragraph re-measured to the 109 px equality, `ItemListHeader.swift`'s "system's control size" phrase, T005's Done note names `SortMenu.swift` and `ThemeTests.swift` as touched (authorised by the decision review and R3); (T011) the theme-colour exemption matches an exact count of code lines with comments skipped, and `ExportWiringTests.rowStart` also asserts no `Button`/`Menu`/`Toggle` other than the listed rows; (T013) the ten device checks the review lists — the "…" glyph and spinner colour, the busy capsule's size and inertness, the share sheet after a scope row, Import from the menu, one badge height and a 57 pt header that holds across a switch, the order label's quiet colour and tap area (`.contentShape` went with `.buttonStyle(.plain)`), checkmark colour consistency between the sort and order menus, the chevron-less disabled row, VoiceOver traits, and the sort tests' collection-view shape on 26.x |
