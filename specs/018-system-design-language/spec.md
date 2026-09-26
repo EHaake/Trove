@@ -467,6 +467,20 @@ Made by the person on 2026-09-25, at the Phase 1 walkthrough:
     sides equally, per Q6's pre-authorised rewrite of the layout proviso.
     **The mono type stays** at its size: "keep the mono type."
 
+Made by the person on 2026-09-26, at the second Phase 1 re-look:
+
+17. **The capsule between the two system sizes, the text beside the
+    glyph.** Decision 16's 45 pt capsule "looks oversized" against the
+    11 pt mono, and the constant width (P4) leaves "how much empty space
+    there is on the right side of the bubble". From four rendered
+    candidates the person chose C: the `.regular` control size with 4 pt of
+    vertical padding on the label (a 36 pt capsule, the header 57 pt), the
+    label left-aligned beside the glyph, the reserved width unchanged (P4
+    stands). The text size stays: "I'm not sure the text should be made
+    bigger though." Decision 15's colour is reached through the button's
+    tint (`.tint(.primary)`), since the glass style paints its label with
+    the tint and ignores the label's own foreground.
+
 ## Proposals (P-items)
 
 Claude Code's; they become decisions on plan approval unless the person

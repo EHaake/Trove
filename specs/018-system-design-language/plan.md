@@ -104,6 +104,15 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   `.foregroundStyle(.primary)` beats the glass style's tint on the device —
   the person's re-look before Phase 2 is the check. Recorded at close-out
   in `DECISIONS.md` as narrowing `004`'s rule.
+  **Device finding (2026-09-26):** `.foregroundStyle(.primary)` is ignored —
+  the glass style paints its label with the tint; on the device the label
+  stayed brass (199,154,86). What works, pixel-verified in both
+  appearances: `.tint(.primary)` on the `Menu` directly after
+  `.buttonStyle(.glass)`, and the glyph bars as `Color.primary.frame(…)`
+  rather than `Rectangle()` (a shape under the hierarchical tint draws
+  dimmed at (97,98,101); a `Color` view draws at full primary). The
+  exemption becomes those two lines for `SortMenu.swift`; the
+  `.foregroundStyle(.primary)` line goes. Spec Decision 17; T004b.
 - **R4 — The Wishlist's add button is labelled "Add wanted item"**, as the
   code has it since `001`; the spec's prose says "Add to wishlist", and
   criterion 16 says the label is unchanged. The plan keeps "Add wanted item".
@@ -182,6 +191,10 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   rewritten exactly as this paragraph pre-authorised — the badge row sets
   the header's height on both sides equally; T004a. The mono label keeps
   its 11 pt.
+  **Overtaken again (spec Decision 17, 2026-09-26):** `.large` read
+  oversized; the person chose, from rendered candidates, `.regular` with
+  `.padding(.vertical, 4)` on the label — 96 × 36 on Items Owned, the
+  header 57 — the label left beside the glyph, P4's width unchanged; T004b.
 - **Q7. No view-model change.** Each menu's `select` carries the closure the
   dropdown row ran — `viewModel.sortOrder = $0; viewModel.load()` on Items
   and the Wishlist, `viewModel.setActiveSort($0)` on Plans,

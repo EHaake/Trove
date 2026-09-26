@@ -463,6 +463,32 @@ Handoff notes for the pause reports:
   the scan to skip comments; the two badges differ in height (45 vs 30)
   until T005's `OverflowMenu` copies `.large`. Reviewed with Phase 2.
 
+- [ ] **T004b — The person's second re-look: the colour that actually takes, and the chosen size.**
+  Per spec Decision 17, plan R3 and Q6 as overtaken (2026-09-26). In
+  `SortMenu.swift`: `.tint(.primary)` on the `Menu` directly after
+  `.buttonStyle(.glass)`; the glyph bars `Color.primary.frame(width:height:
+  1.5)` instead of `Rectangle()`; the `.foregroundStyle(.primary)` line
+  removed (it is ignored by the glass style); `.controlSize(.regular)` with
+  `.padding(.vertical, 4)` on the label `HStack`; the `ZStack` stays
+  `.leading`. `NoHardcodedColorsTests.systemLabelExemptions` becomes
+  `[String: [String]]`, `"SortMenu.swift": [".tint(.primary)",
+  "Color.primary"]`, each entry checked for staleness, and the
+  `Color.primary` scan (the suite's other test) honours the same list; G2's
+  leg pins `.tint(.primary)` after `.buttonStyle(.glass)` and no
+  `.foregroundStyle(`; G1 re-measured (badge, row, header on both sides;
+  one width per selection). Mutations: `.tint(.primary)` removed → G2 and
+  the stale-entry check red; `.tint(.blue)` in `SortMenu.swift` → red;
+  `Color.primary` used in `ItemListHeader.swift` → red; the vertical
+  padding removed → G1's proviso numbers change (record) — if no G1
+  assertion goes red on that, say so, since the proviso is a relation, not
+  a number. Files: `Trove/Views/Shared/SortMenu.swift`,
+  `TroveTests/ThemeTests.swift`, `TroveTests/HeaderControlsWiringTests.swift`,
+  `TroveTests/ItemListHeaderLayoutTests.swift`.
+  **Verify:** `scripts/verify.sh` green; `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch`
+  and G39's test green alone; a pixel read of the label on the device in
+  both appearances is the orchestrator's install-and-look step with the
+  person.
+
 ## Phase 2 — Every header menu is the system's · walkthrough: yes — each tab's "…" opens the system menu: Settings alone on the Overview and Plans; Export as CSV…, Export as PDF…, Import from CSV…, Settings in three groups on the Wishlist; on Items the two exports (no ellipsis) open submenus of Owned items, Sold items, Owned and sold, greyed where a scope has nothing on screen; an export shows the spinner then the share sheet; the Overview's "BY VALUE" opens a menu headed "Order by"
 
 - [ ] **T005 — `OverflowMenu`, and every "…" on it.**
@@ -789,3 +815,4 @@ recorded here too.
 | `sdd-implementer` — T004a (first pass) | `opus` | ~65k (subagent total) | Part (b) done and verified; stopped on a judgment call, correctly: Decision 15's `.foregroundStyle(.primary)` trips `NoHardcodedColorsTests` |
 | `skeptical-reviewer` — decision review at T004a | `opus` | ~33k (subagent total) | A named per-file, per-line exemption with a stale-entry check (a recorded exception to `004`'s rule); dodging the scan's wording and `.tint(nil)` rejected. Transcribed into plan R3 and T004a |
 | `sdd-implementer` — T004a (resumed) | `opus` | ~65k + resumed pass (subagent cumulative not reported) | Done; unit 1749 green; the two UI tests green alone; five mutations recorded |
+| `general-purpose` — diagnosis on device (T004a's colour not taking; size candidates rendered) | `opus` | ~115k (subagent total) | `.foregroundStyle` ignored by the glass style; `.tint(.primary)` + `Color.primary` bars verified by pixel in both appearances; four size crops for the person, who chose C → T004b |
