@@ -90,7 +90,20 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   **Overtaken at the Phase 1 pause (spec Decision 15):** the badges set the
   system's primary label colour explicitly (`.foregroundStyle(.primary)` on
   the label, still never a theme colour), so the root tint no longer
-  colours them; T004a.
+  colours them; T004a. **Decision review at T004a (2026-09-25):** that line
+  trips `NoHardcodedColorsTests.noViewPassesASystemColorToAColorTakingModifier`
+  (`004`: views read colours from `Theme`). Resolved as a **recorded
+  exception to `004`'s rule**, held by a per-file, per-line allowlist
+  `systemLabelExemptions` in `ThemeTests.swift` — `"SortMenu.swift":
+  ".foregroundStyle(.primary)"`, `OverflowMenu.swift` added by T005 — with a
+  stale-entry check (an entry matching no line fails the test), so any
+  other system colour in those files, or the line in any other file, still
+  fails. Spelling it `HierarchicalShapeStyle.primary` to dodge the scan was
+  rejected as passing the letter while failing the point; `.tint(nil)`
+  restores the accent, not the label colour. Untested by the suites: that
+  `.foregroundStyle(.primary)` beats the glass style's tint on the device —
+  the person's re-look before Phase 2 is the check. Recorded at close-out
+  in `DECISIONS.md` as narrowing `004`'s rule.
 - **R4 — The Wishlist's add button is labelled "Add wanted item"**, as the
   code has it since `001`; the spec's prose says "Add to wishlist", and
   criterion 16 says the label is unchanged. The plan keeps "Add wanted item".

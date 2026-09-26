@@ -417,7 +417,13 @@ Handoff notes for the pause reports:
   `.foregroundStyle(.primary)` — the system's label colour, never a theme
   colour — so the root brass tint no longer reaches it; G2 gains a leg that
   the label sets `.primary` and keeps "names no `theme.colors`" (mutation:
-  the `.foregroundStyle(.primary)` removed → red). (b) `.controlSize(.large)`
+  the `.foregroundStyle(.primary)` removed → red). **Decision review at this
+  task:** `NoHardcodedColorsTests` gains a per-file, per-line
+  `systemLabelExemptions` allowlist (`"SortMenu.swift":
+  ".foregroundStyle(.primary)"`) with a stale-entry check; mutations: the
+  line put in `ItemListHeader.swift` → red (per file); `.tint(.red)` in
+  `SortMenu.swift` → red (per line); the modifier removed from `SortMenu`
+  → red (stale entry, and G2). (b) `.controlSize(.large)`
   on `SortMenu` (T005's `OverflowMenu` copies it); G1's proviso case is
   rewritten per Q6 to pin header = badge row + 6 + one meta line, the
   no-badges render now shorter than the header, and every other G1 case
@@ -756,3 +762,5 @@ recorded here too.
 | `sdd-implementer` — T004 | `opus` | ~101k (subagent total) | Done; unit 1749 green; UI suite 36/36 at the phase's final commit; mutations recorded |
 | `skeptical-reviewer` — Phase 1 review | `opus` | ~104k (subagent total) | **fix and re-review, documents only**: the probe's TEAR verdict cannot fire (a protruding label widens the measured capsule), so the films' claim is restated onto the settled-extent check and the viewed frames (plan §1 As built, T003's Done note) and T009 gains a make-the-probe-fail step. Notes carried: G1's `badgeRowSize` should render the side's real options (T005); G2's no-colour check also bans `.foregroundStyle(`/`.tint(` in the file (T005); the UI sort helper counts each row exactly once and both helpers use the same "Sort by" query (T005); the 26.5 subtitle exposure told to the person |
 | `skeptical-reviewer` — Phase 1 re-review | `opus` | ~108k (cumulative) | **approved**; one wording note applied ("the named frames viewed by eye") |
+| `sdd-implementer` — T004a (first pass) | `opus` | ~65k (subagent total) | Part (b) done and verified; stopped on a judgment call, correctly: Decision 15's `.foregroundStyle(.primary)` trips `NoHardcodedColorsTests` |
+| `skeptical-reviewer` — decision review at T004a | `opus` | ~33k (subagent total) | A named per-file, per-line exemption with a stale-entry check (a recorded exception to `004`'s rule); dodging the scan's wording and `.tint(nil)` rejected. Transcribed into plan R3 and T004a |
