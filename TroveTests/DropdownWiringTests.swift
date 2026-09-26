@@ -72,18 +72,13 @@ struct DropdownWiringTests {
     /// Read from the controls' own bodies. The three sort badges left at
     /// `018` for system menus, and the four "…" badges at T005 — they carry
     /// no hint, and `HeaderControlsWiringTests` (G3) pins their identifiers
-    /// now. What is left here is `OverflowBadge` itself, until it goes at
-    /// T010, and the Dashboard's order control, until T006.
+    /// now, as it does the Dashboard's order control since T006. What is
+    /// left here is `OverflowBadge` itself, until it goes at T010.
     @Test func everyBadgeCarriesItsHintAndIdentifier() throws {
         let badge = try SourceScan.production("Trove/Views/Shared/OverflowBadge.swift")
         let badgeBody = try #require(SourceScan.closureBodies(after: "var body: some View", in: badge).first)
         #expect(badgeBody.contains(".accessibilityHint(\"Opens more actions\")"), "the \"…\" badge's hint")
         #expect(badgeBody.contains("isBusy ? \"Working\" : \"More actions\""), "the \"…\" badge's label, both states")
-
-        let dashboard = try SourceScan.production("Trove/Views/Dashboard/DashboardView.swift")
-        let order = try #require(SourceScan.closureBodies(after: "private var orderControl: some View", in: dashboard).first)
-        #expect(order.contains(".accessibilityHint(\"Opens order options\")"), "the order control's hint")
-        #expect(order.contains(".accessibilityIdentifier(\"orderOptions.dashboard\")"), "the order control's identifier")
     }
 
     /// Criterion 14/23's badge half on the pill T021 rewrote: while busy the
@@ -167,26 +162,6 @@ struct DropdownWiringTests {
         #expect(host.contains("scale: 0.92"), "the dropdown grows from 92%")
         #expect(!host.contains("withAnimation"), "no screen write is ever animated — the animation is the host's alone")
         #expect(!host.contains("$0.animation = nil"), "the transaction's animation is no longer stripped")
-    }
-
-    /// The Dashboard's category-order control (spec P12, criterion 25): the
-    /// mono label stays a label — no pill — and opens the shared surface
-    /// under ORDER BY, its rows the shared row with the current order
-    /// selected. Read from the control's body and the host's `.order` case.
-    @Test func theDashboardOrderControlOpensTheSharedSurfaceUnderOrderBy() throws {
-        let code = try SourceScan.production("Trove/Views/Dashboard/DashboardView.swift")
-        #expect(code.ranges(of: ".dropdownAnchor(DashboardDropdown.order)").count == 1, "the order control must be anchored, once")
-        let control = try #require(SourceScan.closureBodies(after: "private var orderControl: some View", in: code).first)
-        #expect(control.contains("openDropdown = .order"), "the control must open the order dropdown")
-        #expect(control.contains(".monoLabel("), "the label stays the mock's mono text (P12)")
-        #expect(!control.contains("Badge("), "the order control is not a pill (P12)")
-
-        let host = try #require(SourceScan.closureBodies(after: ".dropdownHost(open: $openDropdown", in: code).first)
-        let orderCase = try #require(host.range(of: "case .order:"), "the host must compose the order dropdown")
-        let composition = String(host[orderCase.upperBound...])
-        #expect(composition.contains("DropdownSurface(title: \"ORDER BY\")"), "the order dropdown opens under ORDER BY")
-        #expect(composition.contains("DropdownRow(title: order.label, isSelected: order == viewModel.breakdownOrder)"), "the rows are the shared row, the current order selected")
-        #expect(composition.contains("viewModel.breakdownOrder = order") && composition.contains("viewModel.load()"), "choosing must reorder and reload")
     }
 
     // MARK: - Helpers

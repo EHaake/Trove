@@ -21,6 +21,7 @@ import Testing
 struct MenuPolicyTests {
     private let allowlist: Set<String> = [
         "DetailOverflowMenu.swift", "SortMenu.swift", "OverflowMenu.swift", "ItemListView.swift",
+        "DashboardView.swift",
     ]
 
     @Test func theOnlySystemMenuIsTheDetailScreensNavBarOverflow() throws {

@@ -2253,6 +2253,48 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(header.waitForNonExistence(timeout: 5), "\(screen)'s Sort By should close", file: file, line: line)
     }
 
+    /// Criterion 6 (`018` plan §3): the Overview's order control opens the
+    /// system menu under exactly one "Order by" header, By value and By
+    /// count its rows, By value checked by default and the only row checked;
+    /// choosing By count closes the menu and the control then reads "Order
+    /// categories By count". The seeded collection has owned items with
+    /// categories, so the breakdown card and its control are on screen. The
+    /// header is counted by an exact label, so the control's own "Order
+    /// categories By value" never matches.
+    ///
+    /// Mutation (T006): the row's setter not writing the order → red (the
+    /// control still reads "By value").
+    @MainActor
+    func testTheOverviewsOrderMenuOffersValueAndCountUnderOrderBy() {
+        let app = launchPlans()
+        app.buttons["Overview"].tap()
+
+        let control = app.buttons["orderOptions.dashboard"]
+        XCTAssertTrue(control.waitForExistence(timeout: 5), "the Overview must offer the order control on a seeded collection")
+        XCTAssertEqual(control.label, "Order categories By value", "the order control starts on By value")
+        control.tap()
+
+        let header = app.staticTexts["Order by"]
+        XCTAssertTrue(header.waitForExistence(timeout: 5), "the order menu should open")
+        XCTAssertEqual(
+            app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Order by")).count,
+            1,
+            "the order menu should carry exactly one \"Order by\" header"
+        )
+
+        var selected: [String] = []
+        for option in ["By value", "By count"] {
+            let rows = app.buttons.matching(NSPredicate(format: "label == %@", option))
+            XCTAssertEqual(rows.count, 1, "the order menu should carry exactly one \(option) row")
+            if rows.firstMatch.exists, rows.firstMatch.isSelected { selected.append(option) }
+        }
+        XCTAssertEqual(selected, ["By value"], "the order menu should check By value and nothing else")
+
+        app.buttons.matching(NSPredicate(format: "label == %@", "By count")).firstMatch.tap()
+        XCTAssertTrue(header.waitForNonExistence(timeout: 5), "choosing an order should close the menu")
+        XCTAssertEqual(control.label, "Order categories By count", "choosing By count should reorder the categories by count")
+    }
+
     /// Criterion 14: an Active row's leading swipe offers **Mark as bought…**
     /// (matched alone, never `OR "Buy"` — `015`'s close-out lesson), opening
     /// the purchase sheet seeded from the estimate; Cancel changes nothing,

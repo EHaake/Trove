@@ -600,7 +600,7 @@ Handoff notes for the pause reports:
   opaque white placeholder, so the ellipsis's brightness under the tint is
   the device pass's to look at (T013).
 
-- [ ] **T006 — The Dashboard's order menu.**
+- [x] **T006 — The Dashboard's order menu.**
   Per plan §3, R5. `orderControl` per plan §3 — a system `Menu` whose content
   is a `Section("Order by")` of `Toggle(` checkmark rows (T001's header
   mechanism as decided at its review; the UI test's checks mirror T004's for
@@ -623,6 +623,25 @@ Handoff notes for the pause reports:
   `TroveTests/MenuPolicyTests.swift` (allowlist only), `TroveUITests/TroveUITests.swift`.
   **Verify:** `scripts/verify.sh` green; `scripts/verify.sh ui` green at the
   phase's final commit, count recorded; mutations recorded.
+  **Done (2026-09-26).** `orderControl` per plan §3 (Section("Order by") of
+  Toggle rows, setter writes and reloads, mono label in `textQuiet`, no
+  glass, no button style); label and identifier kept, hint gone; the
+  Dashboard's host, `DashboardDropdown`, `openDropdown` and anchor gone.
+  `MenuPolicyTests` allowlist + `DashboardView.swift`. G5 order test and
+  G3's `orderOptions.dashboard` row added. **Retired by name:**
+  `DropdownWiringTests.theDashboardOrderControlOpensTheSharedSurfaceUnderOrderBy`;
+  `everyBadgeCarriesItsHintAndIdentifier` loses its Dashboard legs. New UI
+  test `testTheOverviewsOrderMenuOffersValueAndCountUnderOrderBy`
+  (`-seedPlans` suffices). Mutations, all red: `load()` dropped
+  (`HeaderControlsWiringTests.swift:220`); `.glass` on the label (`:225`);
+  identifier dropped (`:100`); the setter not writing (UI,
+  `TroveUITests.swift:2295`). `scripts/verify.sh`: green, 1749 in 235. UI
+  alone: the new test 16 s, `testDashboardOffersSettingsAndNothingElse`
+  16 s. **`scripts/verify.sh ui` at the phase's final commit: 37 tests,
+  0 failures, 920 s.** For the device pass: R5's `textQuiet` winning over
+  the tint on a `Menu` label with no button style is unverified off-device.
+  `MenuPolicyTests`' doc comment and `Dropdown.swift:7` still name the old
+  rule — T010/T011.
   **Phase 2 closes here — pause for the person.**
 
 ## Phase 3 — The two switches and the add button · walkthrough: yes — Owned/Sold and Active/Completed are the system segmented control whose glass selection slides while the header holds still, and Sort By's capsule stays whole through a width-changing sort on the finished header (both films are in the report); the add button on Items and the Wishlist is a brass glass disc in the same corner and size, opening the same form; every screen in Light and Dark reads as one language (criterion 15)
@@ -887,3 +906,4 @@ recorded here too.
 | `sdd-implementer` — T005 (first pass) | `opus` | ~206k (subagent total) | Built everything; stopped on two judgment calls, correctly: the "…" renders ⅓ pt shorter than the sort badge (a literal 14 vs the mono line box), and iOS 27.0 ignores `.disabled` on a nested `Menu` (criterion 2 red on Items) |
 | `skeptical-reviewer` — decision review at T005 | `opus` | ~52k (subagent total) | (1) a hidden mono-11 line box sets the glyph row (overlay, so the spinner can't grow it); G1 compares at 3× exactly, tolerance rejected. (2) a disabled `Button` stands in for an empty format's submenu — routine, inside the footprint; the missing chevron noted for the pause. Transcribed into plan §2, Q9, §11 |
 | `sdd-implementer` — T005 (resumed) | `opus` | ~206k + resumed pass | Done; unit 1749 green; six UI tests green alone; every mutation recorded |
+| `sdd-implementer` — T006 | `opus` | ~72k (subagent total) | Done; unit 1749 green; UI suite 37/37 at the phase's final commit; four mutations recorded |

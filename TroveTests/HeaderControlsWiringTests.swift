@@ -80,7 +80,8 @@ struct HeaderControlsWiringTests {
     /// Mutations: the Items sort control's identifier dropped → red (T001);
     /// the Plans sort control's identifier dropped → red, and the Wishlist's
     /// "Opens sort options" hint put back → red (T004); the Dashboard's
-    /// `moreActions.dashboard` dropped → red (T005).
+    /// `moreActions.dashboard` dropped → red (T005); the Dashboard's
+    /// `orderOptions.dashboard` dropped → red (T006).
     @Test func everyConvertedHeaderControlKeepsItsIdentifierAndCarriesNoHint() throws {
         for (path, anchor, identifier) in [
             ("Trove/Views/Items/ItemListView.swift", "private var sortControl: some View", "sortOptions.items"),
@@ -90,6 +91,7 @@ struct HeaderControlsWiringTests {
             ("Trove/Views/Wishlist/WishlistView.swift", "private var overflowControl: some View", "moreActions.wishlist"),
             ("Trove/Views/Plans/PlansView.swift", "private var overflowControl: some View", "moreActions.plans"),
             ("Trove/Views/Dashboard/DashboardView.swift", "private var overflowControl: some View", "moreActions.dashboard"),
+            ("Trove/Views/Dashboard/DashboardView.swift", "private var orderControl: some View", "orderOptions.dashboard"),
         ] {
             let code = try SourceScan.production(path)
             let controls = SourceScan.closureBodies(after: anchor, in: code)
@@ -177,5 +179,49 @@ struct HeaderControlsWiringTests {
         )
         let uses = code.ranges(of: try Regex(#"(?:^|[^A-Za-z0-9_])overflowControl(?![A-Za-z0-9_])"#)).count
         #expect(uses == 2, "`overflowControl` appears \(uses) times in the Dashboard, expected 2 — its declaration and its one gated use")
+    }
+
+    /// G5, its order legs (plan §3, R5): the Dashboard's order control is a
+    /// system `Menu` holding one "Order by" section of `Toggle` rows built by
+    /// one `ForEach` over `BreakdownOrder.allCases`, each row's setter
+    /// writing the order and reloading; its label is the mock's mono text,
+    /// and nothing in the control is glass — the label sits inside the
+    /// breakdown card, in the body, where a glass capsule inside a plate is
+    /// the stacking P8 forbids (Decision 13).
+    ///
+    /// **This checks spelling only**, as G2 does: the one header, the
+    /// checked row and the chosen order on screen are
+    /// `testTheOverviewsOrderMenuOffersValueAndCountUnderOrderBy`'s to guard.
+    ///
+    /// Mutations (T006): `viewModel.load()` dropped from the setter → red
+    /// (the reload leg); `.buttonStyle(.glass)` on the label → red (the
+    /// no-glass leg).
+    @Test func theDashboardsOrderControlIsASystemMenuOfToggleRowsUnderOrderByOnTheMonoLabel() throws {
+        let code = try SourceScan.production("Trove/Views/Dashboard/DashboardView.swift")
+        let controls = SourceScan.closureBodies(after: "private var orderControl: some View", in: code)
+        try #require(controls.count == 1, "DashboardView declares \(controls.count) `orderControl`s, expected exactly 1")
+        let control = try #require(controls.first)
+
+        #expect(control.contains("Menu {"), "the order control is no longer a system `Menu`: \(control)")
+        let sections = SourceScan.closureBodies(after: "Section(\"Order by\")", in: control)
+        try #require(sections.count == 1, "the order control opens \(sections.count) \"Order by\" sections, expected exactly 1: \(control)")
+        let section = try #require(sections.first)
+        let rows = SourceScan.closureBodies(after: "ForEach(DashboardViewModel.BreakdownOrder.allCases)", in: section)
+        try #require(rows.count == 1, "the \"Order by\" section builds its rows over `BreakdownOrder.allCases` with \(rows.count) `ForEach`es, expected exactly 1: \(section)")
+        let row = try #require(rows.first)
+        #expect(
+            row.contains(try Regex(toggleCall)),
+            "the order rows are no longer `Toggle`s, so nothing draws the current order checked: \(row)"
+        )
+        let setters = SourceScan.closureBodies(after: "set:", in: row)
+        try #require(setters.count == 1, "the order row's binding has \(setters.count) setters, expected exactly 1: \(row)")
+        let setter = try #require(setters.first)
+        #expect(setter.contains("viewModel.breakdownOrder = order"), "choosing an order no longer writes it: \(setter)")
+        #expect(setter.contains("viewModel.load()"), "choosing an order no longer reloads the breakdown: \(setter)")
+
+        let labels = SourceScan.closureBodies(after: "} label:", in: control)
+        try #require(labels.count == 1, "the order control's `Menu` opens \(labels.count) label closures, expected exactly 1: \(control)")
+        #expect(labels[0].contains(".monoLabel("), "the order control's label is no longer the mock's mono text: \(labels[0])")
+        #expect(!control.contains(".glass"), "the order control wears glass — it sits in the body, inside a card (Decision 13, P8): \(control)")
     }
 }
