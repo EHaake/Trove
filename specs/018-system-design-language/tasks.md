@@ -411,6 +411,28 @@ Handoff notes for the pause reports:
   **Phase 1 closes here — pause for the person** (what to try is in the
   handoff note above).
 
+- [ ] **T004a — The person's Phase 1 findings: the badges in the system's colour and at the system's size.**
+  Per spec Decisions 15 and 16 (2026-09-25), plan R3 and Q6 as overtaken.
+  (a) `SortMenu`'s label `HStack` (glyph and text) takes
+  `.foregroundStyle(.primary)` — the system's label colour, never a theme
+  colour — so the root brass tint no longer reaches it; G2 gains a leg that
+  the label sets `.primary` and keeps "names no `theme.colors`" (mutation:
+  the `.foregroundStyle(.primary)` removed → red). (b) `.controlSize(.large)`
+  on `SortMenu` (T005's `OverflowMenu` copies it); G1's proviso case is
+  rewritten per Q6 to pin header = badge row + 6 + one meta line, the
+  no-badges render now shorter than the header, and every other G1 case
+  re-run (the two badges still one row; one width for every selection);
+  record the new badge height, row height and header height on both
+  sides, and confirm G39's equality (header height and switch `minY` equal
+  on both sides) still holds on the UI run. The mono type stays 11 pt.
+  Tests: `HeaderControlsWiringTests` (G2), `ItemListHeaderLayoutTests`
+  (G1); the UI test `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch`
+  and G39's test run alone. Files: `Trove/Views/Shared/SortMenu.swift`,
+  `TroveTests/HeaderControlsWiringTests.swift`,
+  `TroveTests/ItemListHeaderLayoutTests.swift`.
+  **Verify:** `scripts/verify.sh` green; the named UI tests green alone;
+  mutations recorded; the person looks again before Phase 2 starts.
+
 ## Phase 2 — Every header menu is the system's · walkthrough: yes — each tab's "…" opens the system menu: Settings alone on the Overview and Plans; Export as CSV…, Export as PDF…, Import from CSV…, Settings in three groups on the Wishlist; on Items the two exports (no ellipsis) open submenus of Owned items, Sold items, Owned and sold, greyed where a scope has nothing on screen; an export shows the spinner then the share sheet; the Overview's "BY VALUE" opens a menu headed "Order by"
 
 - [ ] **T005 — `OverflowMenu`, and every "…" on it.**

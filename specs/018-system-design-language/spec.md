@@ -447,6 +447,26 @@ Made by the person on 2026-09-24, answering the second round's questions:
 14. **The add button goes to prominent glass** — "Yes, let's try that."
     The person sees it at the phase pause and can send it back.
 
+Made by the person on 2026-09-25, at the Phase 1 walkthrough:
+
+15. **Glass labels in the system's colour, not brass.** "I think the text
+    in the menu glass bubbles should maybe be the system gray, especially
+    since the menu text after tapping it is that way." The Human Interface
+    Guidelines say the same — prefer the default monochrome label on
+    Liquid Glass and be judicious with colour in controls — so the sort and
+    "…" capsules' glyph and label take the system's primary label colour,
+    and P6's "brass `.tint` where the system applies it" no longer reaches
+    the header badges (it still reaches the add button, `.glassProminent`,
+    which is tinted by design, Decision 14).
+16. **The capsules at the system's size; the header grows to fit.** "The
+    menu bubble just looks a little bit too short vertically. It kind of
+    looks squashed." The guidelines' 44 pt control height, which iOS 26's
+    own glass bar buttons use, against the 28 pt the plan's Q6 chose to
+    keep the header's height at its title's. The badges go to the
+    `.large` control size (45 pt rendered) and the header grows on both
+    sides equally, per Q6's pre-authorised rewrite of the layout proviso.
+    **The mono type stays** at its size: "keep the mono type."
+
 ## Proposals (P-items)
 
 Claude Code's; they become decisions on plan approval unless the person
@@ -478,7 +498,8 @@ overrules one here.
   its test go with it (criterion 12).
 - **P6 — Glass controls take the system's colours.** Brass `.tint` where
   the system applies it, the system's own label colours otherwise, and no
-  appearance proxy. `004`'s record: "a system control taking the system
+  appearance proxy. *Amended by Decision 15: the two header badges take
+  the system's label colour, not the tint.* `004`'s record: "a system control taking the system
   semantic colour is appropriate."
 - **P7 — The Plans tab's switch is sized by the system.** `009` sized its
   halves from a render so both labels fit; a segmented control sizes its

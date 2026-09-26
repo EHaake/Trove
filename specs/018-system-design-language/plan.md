@@ -87,6 +87,10 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   the root `.tint(accentBrass)` where the style applies it. If the device
   pass shows the labels in the system's label colour rather than brass, that
   is P6 as written, and the person is told so at Phase 1's pause.
+  **Overtaken at the Phase 1 pause (spec Decision 15):** the badges set the
+  system's primary label colour explicitly (`.foregroundStyle(.primary)` on
+  the label, still never a theme colour), so the root tint no longer
+  colours them; T004a.
 - **R4 — The Wishlist's add button is labelled "Add wanted item"**, as the
   code has it since `001`; the spec's prose says "Add to wishlist", and
   criterion 16 says the label is unchanged. The plan keeps "Add wanted item".
@@ -159,6 +163,12 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   (criterion 7 still holds); the proviso case is then **rewritten to pin the
   new relationship** — header = badge row + 6 + one meta line — never
   deleted, and the Done note says which element now sets the height.
+  **Overtaken at the Phase 1 pause (spec Decision 16):** the person found
+  the 28 pt capsule squashed against the system's 44 pt control height;
+  the badges go to `.large` (45 pt rendered) and the proviso case is
+  rewritten exactly as this paragraph pre-authorised — the badge row sets
+  the header's height on both sides equally; T004a. The mono label keeps
+  its 11 pt.
 - **Q7. No view-model change.** Each menu's `select` carries the closure the
   dropdown row ran — `viewModel.sortOrder = $0; viewModel.load()` on Items
   and the Wishlist, `viewModel.setActiveSort($0)` on Plans,
