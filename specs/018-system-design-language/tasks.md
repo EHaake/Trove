@@ -692,6 +692,8 @@ Handoff notes for the pause reports:
   measurement — and the test's doc says so. `scripts/verify.sh`: green,
   1749 in 235. UI alone: the two named tests green (30 s, 17 s).
 
+**Phase 2 pause (2026-09-26 → 27).** The person tried the app twice: the "…" should be a full circle and Sort By narrower with equal insets (→ Decision 18, T006a, with the morph kept and the 26.5 transient accepted), then: "Looks good. Continue."
+
 ## Phase 3 — The two switches and the add button · walkthrough: yes — Owned/Sold and Active/Completed are the system segmented control whose glass selection slides while the header holds still, and Sort By's capsule stays whole through a width-changing sort on the finished header (both films are in the report); the add button on Items and the Wishlist is a brass glass disc in the same corner and size, opening the same form; every screen in Light and Dark reads as one language (criterion 15)
 
 - [ ] **T007 — `SidePicker`, and both switches on it.**
