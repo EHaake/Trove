@@ -14,7 +14,7 @@ import Testing
 @Suite("Item list sides wiring")
 struct ItemListSidesWiringTests {
     private nonisolated static let list = "Trove/Views/Items/ItemListView.swift"
-    private nonisolated static let control = "Trove/Views/Shared/SidePicker.swift"
+    private nonisolated static let control = "Trove/Views/Shared/SideToggle.swift"
 
     private func code() throws -> String {
         try SourceScan.production(Self.list)
@@ -297,10 +297,12 @@ struct ItemListSidesWiringTests {
     /// `$0` aside).
     ///
     /// Mutation (018 T007): `SidePicker(side: $viewModel.side, …)` → red.
+    /// Re-run on `SideToggle` at T009a: `side: $viewModel.wrappedValue.side`
+    /// → red.
     @Test func theSwitchReportsThroughShowAndBindsToNothing() throws {
         let code = try code()
 
-        let calls = SourceScan.argumentLists(of: "SidePicker", in: code)
+        let calls = SourceScan.argumentLists(of: "SideToggle", in: code)
         try #require(calls.count == 1, "the screen composes \(calls.count) side switches, expected exactly 1")
         let call = try #require(calls.first)
 
@@ -316,12 +318,12 @@ struct ItemListSidesWiringTests {
     /// over an empty Owned side exactly as it is over rows.
     ///
     /// Mutation (018 T007): the `SidePicker(` call moved into the empty-state
-    /// branch → red.
+    /// branch → red. Re-run on `SideToggle` at T009a → red.
     @Test func theSwitchStandsOutsideTheEmptyState() throws {
         let branches = try body(of: "if let reason = viewModel.emptyReason")
 
         #expect(
-            !branches.contains("SidePicker("),
+            !branches.contains("SideToggle("),
             "the switch is composed inside the empty-state branch, so an emptied side would lose it"
         )
         #expect(
@@ -382,7 +384,7 @@ struct ItemListSidesWiringTests {
 
     /// Spec Decision 13, as the view can express it: neither side's meta line
     /// is conditional, so the slot under the title is there on both sides and
-    /// the `SidePicker` beneath it cannot jump as the sides change. The
+    /// the list beneath it cannot jump as the sides change. The
     /// person saw exactly that jump at the Phase 5 pause.
     ///
     /// The type carries most of the guarantee — `soldSummaryLine` is a
@@ -433,40 +435,62 @@ struct ItemListSidesWiringTests {
         #expect(state.contains("isAddingItem = true"), "the everything-sold state offers no way to add something new")
     }
 
-    // MARK: - The control itself (018 G10, plan §4 and Q3)
+    // MARK: - The control itself (018 G10, plan §4 and Q3, Decision 19)
 
-    /// The switch is the system segmented control, and its selection is a
-    /// `Binding` whose getter reads the side and whose setter *is* `select` —
-    /// so a choice reaches the screen's `show(_:)` and nothing writes the side
-    /// directly. The body is read whole and compared by whole literals. The
-    /// Items switch's words, VoiceOver label and identifier are read off a
-    /// switch built through its own `init(side:select:)`, so they are values
-    /// rather than spellings.
+    /// Since `018` T009a (spec Decision 19) the switch is one glass button in
+    /// the header's control row showing the current side, and a tap asks
+    /// `select` for the other side — so a choice reaches the screen's
+    /// `show(_:)` and nothing writes the side directly. The action is read
+    /// whole and compared as a whole literal; the style as `OverflowMenu`'s
+    /// minus the circle, and no theme colour. The Items toggle's words,
+    /// glyphs, VoiceOver label, identifier and the side a tap asks for are
+    /// read off a toggle built through its own `init(side:select:)`, so they
+    /// are values rather than spellings.
     ///
-    /// Mutations (018 T007): `.pickerStyle(.menu)` → red; the binding's
-    /// setter `{ _ in }` → red.
-    @Test func theSwitchIsTheSystemSegmentedControlReportingThroughSelect() throws {
+    /// Mutations (T009a): the action `select(side)` → red; a theme colour
+    /// named in the file → red.
+    @Test func theSwitchIsAGlassToggleAskingForTheOtherSide() throws {
         let code = try SourceScan.production(Self.control)
+        let anchor = "struct SideToggle<Side: Hashable>: View"
+        try #require(code.contains(anchor), "SideToggle.swift no longer declares `\(anchor)`")
 
         let bodies = SourceScan.closureBodies(after: "var body: some View", in: code)
-        try #require(bodies.count == 1, "SidePicker declares \(bodies.count) bodies, expected exactly 1")
+        try #require(bodies.count == 1, "SideToggle declares \(bodies.count) bodies, expected exactly 1")
         let body = try #require(bodies.first)
 
+        // A `Button`, and no menu: a tap shows the other side (Decision 19).
+        let actions = SourceScan.closureBodies(after: "Button", in: body)
+        try #require(actions.count == 1, "SideToggle's body builds \(actions.count) buttons, expected exactly 1: \(body)")
+        let action = try #require(actions.first).trimmingCharacters(in: .whitespacesAndNewlines)
+        #expect(action == "select(other)", "a tap doesn't ask for the other side — the action reads `\(action)`")
+        // Word-bounded, so `SortMenuCopy` (the label type) doesn't match.
         #expect(
-            body.contains("Picker(accessibilityLabel, selection: Binding(get: { side }, set: select))"),
-            "the switch is not a `Picker` whose selection reads `side` and reports through `select`: \(body)"
+            !body.contains(try Regex(#"(?:^|[^A-Za-z0-9_])Menu\s*[{(]"#)),
+            "the toggle opens a menu — a tap shows the other side (Decision 19): \(body)"
         )
-        #expect(body.contains(".pickerStyle(.segmented)"), "the switch is not the system segmented control: \(body)")
-        #expect(body.contains(".accessibilityIdentifier(identifier)"), "the switch carries no identifier: \(body)")
+
+        #expect(
+            body.contains(try Regex(#"\.buttonStyle\(\.glass\)\s*\.tint\(\.primary\)\s*\.controlSize\(\.regular\)"#)),
+            "the toggle isn't `OverflowMenu`'s glass button tinted `.primary` at the regular control size: \(body)"
+        )
+        #expect(!body.contains(".buttonBorderShape("), "the toggle sets a border shape — it is a capsule, the \"…\" alone is a circle: \(body)")
+        #expect(body.contains(".accessibilityLabel(accessibilityLabel)"), "the toggle carries no VoiceOver label: \(body)")
+        #expect(body.contains(".accessibilityValue(word(side))"), "the toggle doesn't speak the side showing as its value: \(body)")
+        #expect(body.contains(".accessibilityIdentifier(identifier)"), "the toggle carries no identifier: \(body)")
         // It reports; it never writes. A `@Binding` here would be a second
         // way to change sides, one that skips `show(_:)`.
-        #expect(!code.contains("@Binding"), "the switch binds the side instead of reporting a choice (plan Q3)")
+        #expect(!code.contains("@Binding"), "the toggle binds the side instead of reporting a choice (plan Q3)")
+        #expect(!code.contains("theme.colors"), "SideToggle.swift names a theme colour — the toggle draws no colour of its own")
 
-        let items = SidePicker(side: ItemListViewModel.Side.sold, select: { _ in })
-        #expect(items.side == .sold)
-        #expect(items.leading == .owned && items.leadingLabel == SaleCopy.owned, "the Items switch's leading segment isn't Owned")
-        #expect(items.trailing == .sold && items.trailingLabel == SaleCopy.sold, "the Items switch's trailing segment isn't Sold")
-        #expect(items.accessibilityLabel == "Owned or sold", "the Items switch isn't labelled for VoiceOver")
-        #expect(items.identifier == "items.sideSwitch", "the Items switch's identifier changed — the UI tests find it by it")
+        let owned = SideToggle(side: ItemListViewModel.Side.owned, select: { _ in })
+        let sold = SideToggle(side: ItemListViewModel.Side.sold, select: { _ in })
+        #expect(owned.side == .owned && sold.side == .sold)
+        #expect(owned.other == .sold, "a tap on Owned doesn't ask for Sold")
+        #expect(sold.other == .owned, "a tap on Sold doesn't ask for Owned")
+        #expect(owned.word(.owned) == SaleCopy.owned && owned.word(.sold) == SaleCopy.sold, "the Items toggle's words aren't Owned and Sold")
+        #expect(owned.icon(.owned) == "shippingbox", "Owned's glyph isn't `shippingbox` (Decision 19)")
+        #expect(owned.icon(.sold) == "tag", "Sold's glyph isn't `tag` (Decision 19)")
+        #expect(owned.accessibilityLabel == "Owned or sold", "the Items toggle isn't labelled for VoiceOver")
+        #expect(owned.identifier == "items.sideSwitch", "the Items toggle's identifier changed — the UI tests find it by it")
     }
 }

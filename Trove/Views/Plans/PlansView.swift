@@ -5,8 +5,8 @@ import SwiftUI
 /// waiting on their purchase and the ones whose wanted item has been bought.
 ///
 /// `WishlistView`'s file shape with only what the spec asks for — a fixed
-/// header with the sort badge and the "…", the Active / Completed switch under
-/// it, then the empty state or the rows. The "…" holds Settings alone (plan
+/// header with the Active / Completed toggle, the sort badge and the "…",
+/// then the empty state or the rows. The "…" holds Settings alone (plan
 /// QA3, Amendment A's criterion 21 — every tab reaches Settings). No search,
 /// no category chips, no summary line, and no money anywhere (plan Q8,
 /// criterion 8). The row value alone doesn't guarantee that — a row's
@@ -55,16 +55,6 @@ struct PlansView: View {
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
                     header
-                        .padding(.horizontal, theme.metrics.screenGutter)
-
-                    // In the standing header, so it is there over an empty
-                    // side exactly as over a full one — `ItemListView`'s
-                    // placement. Never bound to `side`: a choice asks
-                    // `show(_:)` through the picker's `select`, which sets the
-                    // side and reloads, and clears nothing, so each side keeps
-                    // its own sort (criterion 5). The system segmented control
-                    // since 018 (plan §4).
-                    SidePicker(side: viewModel.side, select: { viewModel.show($0) })
                         .padding(.horizontal, theme.metrics.screenGutter)
                 }
                 .padding(.top, theme.metrics.sectionGap)
@@ -179,18 +169,27 @@ struct PlansView: View {
             Text(SellPlanCopy.tab)
                 .font(theme.typography.screenTitle)
                 .foregroundStyle(theme.colors.textPrimary)
+                .lineLimit(1)
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            // `WishlistView`'s pair. Sort is hidden over an empty side, as on
-            // the list screens — there is nothing to order; the "…" always
-            // shows, since Settings is never gated (plan QA3).
+            // `WishlistView`'s pair, led by the side toggle (018 Decision
+            // 19). Sort is hidden over an empty side, as on the list screens
+            // — there is nothing to order; the "…" always shows, since
+            // Settings is never gated (plan QA3). The toggle is outside that
+            // gate, so it is there over an empty side exactly as over a full
+            // one — `ItemListView`'s placement. Never bound to `side`: a tap
+            // asks `show(_:)` for the other side, which sets it and reloads,
+            // and clears nothing, so each side keeps its own sort (criterion
+            // 5). The row keeps its ideal width, so a glass label never wraps.
             HStack(spacing: 8) {
+                SideToggle(side: viewModel.side, select: { viewModel.show($0) })
                 if !viewModel.rows.isEmpty {
                     sortControl
                 }
                 overflowControl
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
     }
 

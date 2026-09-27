@@ -379,8 +379,9 @@ final class TroveUITests: XCTestCase {
 
         // A segmented Picker surfaces as a segmentedControl whose segments are
         // buttons read by their displayName; selection is `.isSelected`. Found
-        // by its "System" segment rather than as the first segmented control:
-        // since 018 the Items switch behind the sheet is one too.
+        // by its "System" segment rather than as the first segmented control,
+        // so it can only ever be this control: the Items switch behind the
+        // sheet was one too from 018 T007 until T009a made it a button.
         let control = app.segmentedControls.containing(NSPredicate(format: "label == %@", "System")).firstMatch
         XCTAssertTrue(control.waitForExistence(timeout: 5), "the Appearance segmented control must be on the screen")
 
@@ -796,6 +797,38 @@ final class TroveUITests: XCTestCase {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
 
+    /// Shows a list screen's `side` through its side toggle (`018` spec
+    /// Decision 19): one glass button showing the current side, whose tap
+    /// shows the other. The side is read from the toggle's accessibility
+    /// value — the current side's word — so the helper checks the toggle is
+    /// showing the other side first (a tap on the side already showing would
+    /// leave it), taps, and waits for the value to read `side`.
+    @MainActor
+    private func showSide(
+        _ side: String,
+        on toggle: XCUIElement,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "the screen must offer the side toggle", file: file, line: line)
+        XCTAssertNotEqual(
+            toggle.value as? String,
+            side,
+            "the toggle already shows \(side) — a tap would show the other side",
+            file: file,
+            line: line
+        )
+        toggle.tap()
+        let reads = expectation(for: NSPredicate(format: "value == %@", side), evaluatedWith: toggle)
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [reads], timeout: 5),
+            .completed,
+            "the side toggle still reads \(String(describing: toggle.value)) rather than \(side)",
+            file: file,
+            line: line
+        )
+    }
+
     /// Waits until `element` reads `label` — the gate the frame readings in
     /// G39 stand behind. A frame read while the badge still names the other
     /// side's order is a frame from before the header relaid out, so the two
@@ -1044,7 +1077,7 @@ final class TroveUITests: XCTestCase {
         // side, not just a figure.
         let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the card should land on the Items tab")
-        XCTAssertTrue(switchControl.buttons["Sold"].isSelected, "the card should land on the Sold side, not on Owned")
+        XCTAssertEqual(switchControl.value as? String, "Sold", "the card should land on the Sold side, not on Owned")
 
         let telecaster = soldRow(in: app, named: "Telecaster")
         let bluesJunior = soldRow(in: app, named: "Blues Junior")
@@ -1118,7 +1151,7 @@ final class TroveUITests: XCTestCase {
 
         // One tap back to Owned, which is a different list with its own
         // selection under the same controls.
-        switchControl.buttons["Owned"].tap()
+        showSide("Owned", on: switchControl)
         XCTAssertTrue(
             app.staticTexts["Leica M6"].waitForExistence(timeout: 5),
             "the Owned side should list the item that wasn't sold"
@@ -1170,7 +1203,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Items"].tap()
         let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the Items tab must offer the side switch")
-        switchControl.buttons["Sold"].tap()
+        showSide("Sold", on: switchControl)
 
         // Criterion 6, from the control rather than from the model: the Sold
         // side's Sort By offers its own orders, and Price ↑ puts the
@@ -1207,7 +1240,7 @@ final class TroveUITests: XCTestCase {
 
         // Criterion 7, the first direction: the Owned side is untouched by
         // any of it — empty field, its own row, its own sort.
-        switchControl.buttons["Owned"].tap()
+        showSide("Owned", on: switchControl)
         XCTAssertTrue(
             app.staticTexts["Leica M6"].waitForExistence(timeout: 5),
             "the Owned side's own row must show — the Sold side's query is not this side's"
@@ -1228,7 +1261,7 @@ final class TroveUITests: XCTestCase {
         // Criterion 7, the other direction: the Sold side comes back exactly
         // as it was left — the typed query still in the field, the rows still
         // narrowed by it, the badge still on the order that was picked.
-        switchControl.buttons["Sold"].tap()
+        showSide("Sold", on: switchControl)
         XCTAssertTrue(telecaster.waitForExistence(timeout: 5), "the Sold side's narrowing must survive the round trip")
         XCTAssertEqual(field.value as? String, "tele", "the Sold side's query must survive the round trip")
         XCTAssertFalse(bluesJunior.exists, "the Sold side must come back narrowed, not whole")
@@ -1408,7 +1441,7 @@ final class TroveUITests: XCTestCase {
         // so the owned scope has nothing to write under what's on screen.
         let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the Items tab must offer the side switch")
-        switchControl.buttons["Sold"].tap()
+        showSide("Sold", on: switchControl)
         let guitars = app.buttons["Guitars"]
         XCTAssertTrue(guitars.waitForExistence(timeout: 5), "the Sold side's chips are the sold half's categories")
         guitars.tap()
@@ -1505,7 +1538,7 @@ final class TroveUITests: XCTestCase {
         )
 
         let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
-        switchControl.buttons["Sold"].tap()
+        showSide("Sold", on: switchControl)
         let row = soldRow(in: app, named: name)
         XCTAssertTrue(row.waitForExistence(timeout: 5), "the sold item must be on the Sold side")
         XCTAssertTrue(row.label.contains("$500"), "the row reads \"\(row.label)\"")
@@ -1539,7 +1572,7 @@ final class TroveUITests: XCTestCase {
             app.staticTexts["Nothing sold yet."].waitForExistence(timeout: 5),
             "the last sale was returned, so the Sold side is empty again"
         )
-        switchControl.buttons["Owned"].tap()
+        showSide("Owned", on: switchControl)
         XCTAssertTrue(
             app.staticTexts[name].waitForExistence(timeout: 5),
             "the returned item should be back in the collection"
@@ -2042,7 +2075,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Plans"].tap()
         let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the Plans tab must offer the side switch")
-        XCTAssertTrue(switchControl.buttons["Active"].isSelected, "the Plans tab must open on Active")
+        XCTAssertEqual(switchControl.value as? String, "Active", "the Plans tab must open on Active")
 
         XCTAssertTrue(
             app.staticTexts["Fuji X100V"].waitForExistence(timeout: 5),
@@ -2061,7 +2094,7 @@ final class TroveUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Nikon FM2"].exists, "a bought item with no plan is on neither side")
         XCTAssertFalse(app.staticTexts["Hasselblad 80mm"].exists, "a bought plan belongs to Completed")
 
-        switchControl.buttons["Completed"].tap()
+        showSide("Completed", on: switchControl)
         let hasselblad = planRow(in: app, named: "Hasselblad 80mm")
         XCTAssertTrue(hasselblad.waitForExistence(timeout: 5), "Completed must list the bought plan")
         XCTAssertTrue(hasselblad.label.contains("Bought"), "the Hasselblad's row reads \"\(hasselblad.label)\"")
@@ -2079,7 +2112,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Plans"].tap()
         let relaunchedSwitch = element(in: app, identifiedBy: "plans.sideSwitch")
         XCTAssertTrue(relaunchedSwitch.waitForExistence(timeout: 5))
-        XCTAssertTrue(relaunchedSwitch.buttons["Active"].isSelected, "every launch must open the Plans tab on Active")
+        XCTAssertEqual(relaunchedSwitch.value as? String, "Active", "every launch must open the Plans tab on Active")
     }
 
     /// Criteria 5 and 6 on the Active side: the default is the newest plan
@@ -2109,10 +2142,10 @@ final class TroveUITests: XCTestCase {
         XCTAssertLessThan(summicron.frame.minY, vox.frame.minY, "Name must put the Summicron above the Vox")
 
         let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
-        switchControl.buttons["Completed"].tap()
+        showSide("Completed", on: switchControl)
         XCTAssertTrue(planRow(in: app, named: "Hasselblad 80mm").waitForExistence(timeout: 5))
         waitForLabel(badge, "Sort by Newest")
-        switchControl.buttons["Active"].tap()
+        showSide("Active", on: switchControl)
         XCTAssertTrue(summicron.waitForExistence(timeout: 5))
         waitForLabel(badge, "Sort by Name")
         XCTAssertLessThan(summicron.frame.minY, vox.frame.minY, "the Active side must come back sorted by Name")
@@ -2150,7 +2183,7 @@ final class TroveUITests: XCTestCase {
         )
         let itemsSwitch = element(in: app, identifiedBy: "items.sideSwitch")
         XCTAssertTrue(itemsSwitch.waitForExistence(timeout: 5), "the Items tab must offer the side switch")
-        itemsSwitch.buttons["Sold"].tap()
+        showSide("Sold", on: itemsSwitch)
         assertSortMenu(
             in: app, badge: "sortOptions.items", screen: "Items' Sold side",
             options: ["Date sold", "Price \u{2193}", "Price \u{2191}", "Paid \u{2193}", "Paid \u{2191}", "Gain \u{2193}", "Gain \u{2191}", "Name"],
@@ -2172,7 +2205,7 @@ final class TroveUITests: XCTestCase {
         )
         let plansSwitch = element(in: app, identifiedBy: "plans.sideSwitch")
         XCTAssertTrue(plansSwitch.waitForExistence(timeout: 5), "the Plans tab must offer the side switch")
-        plansSwitch.buttons["Completed"].tap()
+        showSide("Completed", on: plansSwitch)
         XCTAssertTrue(planRow(in: app, named: "Hasselblad 80mm").waitForExistence(timeout: 5), "Completed must list the bought plan")
         assertSortMenu(
             in: app, badge: "sortOptions.plans", screen: "Plans' Completed side",
@@ -2389,7 +2422,7 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(price.waitForNonExistence(timeout: 5), "Mark as bought must close the sheet")
         XCTAssertTrue(summicron.waitForNonExistence(timeout: 5), "a bought plan leaves Active")
 
-        element(in: app, identifiedBy: "plans.sideSwitch").buttons["Completed"].tap()
+        showSide("Completed", on: element(in: app, identifiedBy: "plans.sideSwitch"))
         XCTAssertTrue(
             planRow(in: app, named: "Summicron 35mm f/2").waitForExistence(timeout: 5),
             "a bought plan lands on Completed"
@@ -2425,7 +2458,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Items"].tap()
         let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5))
-        switchControl.buttons["Sold"].tap()
+        showSide("Sold", on: switchControl)
         XCTAssertTrue(
             soldRow(in: app, named: "Blues Junior").waitForExistence(timeout: 5),
             "deleting the plan must leave the sale toward it standing"
@@ -2442,7 +2475,7 @@ final class TroveUITests: XCTestCase {
 
         let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5))
-        switchControl.buttons["Completed"].tap()
+        showSide("Completed", on: switchControl)
         openDetail(in: app, named: "Hasselblad 80mm")
 
         let soldEntry = soldRow(in: app, named: "NT1-A", precededBy: "Sold")
@@ -2475,7 +2508,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Plans"].tap()
         let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5))
-        switchControl.buttons["Completed"].tap()
+        showSide("Completed", on: switchControl)
         XCTAssertTrue(planRow(in: app, named: "Hasselblad 80mm").waitForExistence(timeout: 5))
 
         app.buttons["Overview"].tap()
@@ -2486,12 +2519,11 @@ final class TroveUITests: XCTestCase {
         card.tap()
 
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the card should land on the Plans tab")
-        let active = switchControl.buttons["Active"]
-        let onActive = expectation(for: NSPredicate(format: "isSelected == true"), evaluatedWith: active)
+        let onActive = expectation(for: NSPredicate(format: "value == %@", "Active"), evaluatedWith: switchControl)
         XCTAssertEqual(
             XCTWaiter.wait(for: [onActive], timeout: 5),
             .completed,
-            "the card must open Plans on Active — Completed reads isSelected \(switchControl.buttons["Completed"].isSelected)"
+            "the card must open Plans on Active — the side toggle reads \(String(describing: switchControl.value))"
         )
     }
 
@@ -2627,7 +2659,7 @@ final class TroveUITests: XCTestCase {
         )
         XCTAssertFalse(summicron.exists, "no plan may stay on Active")
         let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
-        switchControl.buttons["Completed"].tap()
+        showSide("Completed", on: switchControl)
         XCTAssertTrue(
             app.staticTexts["Nothing completed yet"].waitForExistence(timeout: 5),
             "the Completed side must be empty too"
@@ -2646,11 +2678,11 @@ final class TroveUITests: XCTestCase {
         app.buttons["Items"].tap()
         let itemsSwitch = element(in: app, identifiedBy: "items.sideSwitch")
         XCTAssertTrue(itemsSwitch.waitForExistence(timeout: 5))
-        itemsSwitch.buttons["Sold"].tap()
+        showSide("Sold", on: itemsSwitch)
         for name in ["Blues Junior", "NT1-A"] {
             XCTAssertTrue(soldRow(in: app, named: name).waitForExistence(timeout: 5), "the sale of the \(name) must stay")
         }
-        itemsSwitch.buttons["Owned"].tap()
+        showSide("Owned", on: itemsSwitch)
         // An owned row's `.combine`d element — see
         // `testMarkingAWantedItemBoughtMovesItToTheCollection`.
         let hasselblad = app.descendants(matching: .any)

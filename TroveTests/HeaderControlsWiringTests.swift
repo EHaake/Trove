@@ -101,6 +101,13 @@ struct HeaderControlsWiringTests {
     /// "Opens sort options" hint put back → red (T004); the Dashboard's
     /// `moreActions.dashboard` dropped → red (T005); the Dashboard's
     /// `orderOptions.dashboard` dropped → red (T006).
+    ///
+    /// Since T009a (spec Decision 19) the two side toggles too: their
+    /// identifiers are set in `SideToggle`'s two inits and applied in its
+    /// body, so the legs read the identifier off a toggle built through each
+    /// init and the body's modifier, and the file carries no hint. Mutations
+    /// (T009a): `.accessibilityIdentifier(identifier)` dropped from the body
+    /// → red; `.accessibilityHint("Shows the other side")` added → red.
     @Test func everyConvertedHeaderControlKeepsItsIdentifierAndCarriesNoHint() throws {
         for (path, anchor, identifier) in [
             ("Trove/Views/Items/ItemListView.swift", "private var sortControl: some View", "sortOptions.items"),
@@ -124,6 +131,22 @@ struct HeaderControlsWiringTests {
                 !control.contains(".accessibilityHint("),
                 "\(path): the `\(identifier)` control carries a hint again — the system menu announces itself (criterion 11): \(control)"
             )
+        }
+
+        let toggle = try SourceScan.production("Trove/Views/Shared/SideToggle.swift")
+        let toggleBodies = SourceScan.closureBodies(after: "var body: some View", in: toggle)
+        try #require(toggleBodies.count == 1, "SideToggle.swift declares \(toggleBodies.count) bodies, expected exactly 1")
+        let toggleBody = try #require(toggleBodies.first)
+        #expect(
+            toggleBody.contains(".accessibilityIdentifier(identifier)"),
+            "the side toggle no longer applies its identifier: \(toggleBody)"
+        )
+        #expect(!toggle.contains(".accessibilityHint("), "the side toggle carries a hint — its label and value say what it does (criterion 11)")
+        for (identifier, built) in [
+            ("items.sideSwitch", SideToggle(side: ItemListViewModel.Side.owned, select: { _ in }).identifier),
+            ("plans.sideSwitch", SideToggle(side: PlansViewModel.Side.active, select: { _ in }).identifier),
+        ] {
+            #expect(built == identifier, "a side toggle is identified `\(built)` rather than `\(identifier)` — the UI tests find it by it")
         }
     }
 

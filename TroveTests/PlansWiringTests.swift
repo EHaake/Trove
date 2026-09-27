@@ -164,16 +164,20 @@ struct PlansWiringTests {
     /// G19, criterion 5, and `018` G10: the switch reports through
     /// `show(_:)` and is never bound (no `$` projection in its arguments), so
     /// changing side reloads and clears nothing; it stands in the header,
-    /// outside the empty-state branch; and it carries the Plans words, label
-    /// and identifier, read off a switch built through its own
-    /// `init(side:select:)`.
+    /// outside the empty-state branch; and since T009a (spec Decision 19) it
+    /// is the glass `SideToggle`, carrying the Plans words, glyphs, label and
+    /// identifier and asking for the other side, read off a toggle built
+    /// through its own `init(side:select:)`. The toggle's body is
+    /// `ItemListSidesWiringTests`' to read.
     ///
     /// Mutations (018 T007): `SidePicker(side: $viewModel.side, …)` → red;
+    /// the call moved into the empty-state branch → red. Re-run on
+    /// `SideToggle` at T009a: `side: $viewModel.wrappedValue.side` → red;
     /// the call moved into the empty-state branch → red.
     @Test func theSideSwitchReportsThroughShow() throws {
         let code = try SourceScan.production(Self.view)
 
-        let calls = SourceScan.argumentLists(of: "SidePicker", in: code)
+        let calls = SourceScan.argumentLists(of: "SideToggle", in: code)
         try #require(calls.count == 1, "the screen builds \(calls.count) side switches, expected exactly 1")
         #expect(calls[0].contains("viewModel.show($0)"), "the switch doesn't report through `viewModel.show`: \(calls[0])")
         // A `$` projection, not the closure's own `$0`.
@@ -187,14 +191,21 @@ struct PlansWiringTests {
         try #require(branches.count == 1, "PlansView declares \(branches.count) empty-state branches, expected exactly 1")
         let branch = try #require(branches.first)
         #expect(branch.contains("emptyState(reason)"), "the empty-state branch no longer shows the empty state — wrong span?")
-        #expect(!branch.contains("SidePicker("), "the switch is composed inside the empty-state branch, so an emptied side would lose it")
+        #expect(!branch.contains("SideToggle("), "the switch is composed inside the empty-state branch, so an emptied side would lose it")
 
-        let plans = SidePicker(side: PlansViewModel.Side.completed, select: { _ in })
-        #expect(plans.side == .completed)
-        #expect(plans.leading == .active && plans.leadingLabel == SellPlanCopy.active, "the Plans switch's leading segment isn't Active")
-        #expect(plans.trailing == .completed && plans.trailingLabel == SellPlanCopy.completed, "the Plans switch's trailing segment isn't Completed")
-        #expect(plans.accessibilityLabel == SellPlanCopy.sideSwitchLabel, "the Plans switch isn't labelled for VoiceOver")
-        #expect(plans.identifier == "plans.sideSwitch", "the Plans switch's identifier changed — the UI tests find it by it")
+        let active = SideToggle(side: PlansViewModel.Side.active, select: { _ in })
+        let completed = SideToggle(side: PlansViewModel.Side.completed, select: { _ in })
+        #expect(active.side == .active && completed.side == .completed)
+        #expect(active.other == .completed, "a tap on Active doesn't ask for Completed")
+        #expect(completed.other == .active, "a tap on Completed doesn't ask for Active")
+        #expect(
+            active.word(.active) == SellPlanCopy.active && active.word(.completed) == SellPlanCopy.completed,
+            "the Plans toggle's words aren't Active and Completed"
+        )
+        #expect(active.icon(.active) == "clock", "Active's glyph isn't `clock` (Decision 19)")
+        #expect(active.icon(.completed) == "checkmark.circle", "Completed's glyph isn't `checkmark.circle` (Decision 19)")
+        #expect(active.accessibilityLabel == SellPlanCopy.sideSwitchLabel, "the Plans toggle isn't labelled for VoiceOver")
+        #expect(active.identifier == "plans.sideSwitch", "the Plans toggle's identifier changed — the UI tests find it by it")
     }
 
     /// `018` G7 (was 009's G19, P5): neither side's Sort By offers a manual

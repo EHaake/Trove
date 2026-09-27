@@ -90,19 +90,6 @@ struct ItemListView: View {
                     header
                         .padding(.horizontal, theme.metrics.screenGutter)
 
-                    // The switch sits here, in the standing header, rather than
-                    // beside the rows — so it is there over an empty Owned side
-                    // (a person whose only item is now sold) exactly as it is
-                    // over a full one (006 plan §4). Never bound to `side`: a
-                    // choice asks `show(_:)` through the picker's `select`,
-                    // which sets the side and reloads — and since 014 that is
-                    // the whole of it, because each side now keeps its own
-                    // search, chip and sort while the other is visited (014
-                    // plan Q3, replacing 006 Q15). The system segmented
-                    // control since 018 (plan §4).
-                    SidePicker(side: viewModel.side, select: { viewModel.show($0) })
-                        .padding(.horizontal, theme.metrics.screenGutter)
-
                     // Controls for narrowing a list need a list to narrow. On a
                     // first run they were a search field over nothing and a
                     // lone "All" chip, both of which made the screen look like
@@ -113,10 +100,10 @@ struct ItemListView: View {
                     if viewModel.offersNarrowingControls {
                         SearchField(placeholder: "Search name or serial", text: $viewModel.searchText)
                             .padding(.horizontal, theme.metrics.screenGutter)
-                            // The Design pass's `sectionGap` under the switch,
+                            // The Design pass's `sectionGap` under the header,
                             // on top of this stack's own `controlRowGap`. On a
                             // side with nothing to narrow, where nothing follows
-                            // the switch, the stack's bottom padding is the
+                            // the header, the stack's bottom padding is the
                             // whole gap.
                             .padding(.top, theme.metrics.sectionGap - theme.metrics.controlRowGap)
 
@@ -529,12 +516,23 @@ struct ItemListView: View {
             // `overflowControl` stay spelled here rather than moving into
             // `ItemsListHeader` with the layout: this file is what G20's and
             // `ImportWiringTests`' brace-span scans read.
+            //
+            // The side toggle leads the row (018 Decision 19), outside the
+            // narrowing gate — so it is there over an empty Owned side (a
+            // person whose only item is now sold) exactly as over a full one
+            // (006 plan §4). Never bound to `side`: a tap asks `show(_:)`
+            // for the other side, which sets it and reloads — and since 014
+            // that is the whole of it, because each side keeps its own
+            // search, chip and sort while the other is visited (014 plan Q3).
+            // The row keeps its ideal width, so a glass label never wraps.
             HStack(spacing: 8) {
+                SideToggle(side: viewModel.side, select: { viewModel.show($0) })
                 if viewModel.offersNarrowingControls {
                     sortControl
                 }
                 overflowControl
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
     }
 
@@ -543,8 +541,8 @@ struct ItemListView: View {
     /// sold rather than vanishing (spec Decision 13, replacing Decision 11).
     ///
     /// Both branches are one `.monoLabel()` line and neither is conditional,
-    /// so the slot is the same height on either side and the `SidePicker`
-    /// below never moves. Unconditional was never the whole of it, though:
+    /// so the slot is the same height on either side and the list below
+    /// never moves. Unconditional was never the whole of it, though:
     /// the slot is *one* line only because `ItemsListHeader` gives the line
     /// the header's full width (014 plan Q18). While it stood beside the
     /// badges, the width they left it wrapped the Sold summary and pushed

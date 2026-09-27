@@ -6,8 +6,8 @@ import Testing
 
 /// G38 — spec criterion 3 as a height rather than as a sentence: the Items
 /// header is one meta line tall whatever that line says and whatever the
-/// sort badge beside it is called, so the `SidePicker` under it sits at the
-/// same point on both sides.
+/// sort badge beside it is called, so the list under it sits at the same
+/// point on both sides.
 ///
 /// `006` Decision 13 made the meta slot unconditional, and the device pass at
 /// T010 measured that necessary and not sufficient: the Sold summary still
@@ -84,6 +84,13 @@ import Testing
 /// the "…" renders 108 × 109 px, the Owned sort badge (under "Custom")
 /// 245 × 109 and the Sold 305 × 109. `theSortBadgeIsOneWidthForEverySelection`
 /// is retired with P4.
+///
+/// **At `018` T009a** (spec Decision 19) the side toggle joins the row,
+/// leading Sort By, and its own row under the header goes: the badge row
+/// is toggle, sort, "…" as `ItemListView` composes it, and the header's
+/// relation — badge row + 6 + one meta line, on both sides and under every
+/// Owned label — is re-measured with the toggle in it. The three controls
+/// render at one height at 3×, the toggle on every side of both screens.
 @Suite("Items header layout")
 @MainActor
 struct ItemListHeaderLayoutTests {
@@ -107,7 +114,7 @@ struct ItemListHeaderLayoutTests {
     @Test func theHeaderIsOneMetaLineTallForEverySummaryAndEverySortLabel() throws {
         let soldOptions = ItemListViewModel.SoldSortOrder.allCases
         let ownedOptions = ItemListViewModel.SortOrder.allCases
-        let baselineRow = try badgeRowSize(options: soldOptions, selection: .soldDate, label: \.label)
+        let baselineRow = try badgeRowSize(side: .sold, options: soldOptions, selection: .soldDate, label: \.label)
         let baseline = try headerHeight(meta: soldSummary(count: 0, proceeds: 0, realised: 0), trailingSize: baselineRow)
 
         // The proviso as plan Q6 rewrote it (spec Decision 16, T004a): the
@@ -137,6 +144,7 @@ struct ItemListHeaderLayoutTests {
         // about this defect was Sold-only once both sides carry a badge.
         let ownedWidest = try widestLabel(of: ownedOptions.map(\.label))
         let ownedRow = try badgeRowSize(
+            side: .owned,
             options: ownedOptions,
             selection: try #require(ownedOptions.first { $0.label == ownedWidest }),
             label: \.label
@@ -159,6 +167,7 @@ struct ItemListHeaderLayoutTests {
         let soldLarge = try headerHeight(
             meta: soldSummary(count: 999, proceeds: 124_820_000, realised: 11_245_000),
             trailingSize: try badgeRowSize(
+                side: .sold,
                 options: soldOptions,
                 selection: try #require(soldOptions.first { $0.label == soldWidest }),
                 label: \.label
@@ -213,7 +222,7 @@ struct ItemListHeaderLayoutTests {
         let options = ItemListViewModel.SortOrder.allCases
         var rows: [String: CGSize] = [:]
         for selection in options {
-            rows[selection.label] = try badgeRowSize(options: options, selection: selection, label: \.label)
+            rows[selection.label] = try badgeRowSize(side: .owned, options: options, selection: selection, label: \.label)
         }
         let narrowest = try #require(rows.min { $0.value.width < $1.value.width })
         let widest = try #require(rows.max { $0.value.width < $1.value.width })
@@ -251,7 +260,18 @@ struct ItemListHeaderLayoutTests {
     /// 36.67 × 36.33 is the device pass's to check (T009 films the header,
     /// T013 measures the circle); this test carries no tolerance (T005's
     /// decision review).
-    @Test func theTwoBadgesRenderAtOneHeight() throws {
+    ///
+    /// Since T009a (spec Decision 19) the side toggle is the row's third
+    /// control, rendered on every side of both screens against the "…": its
+    /// glyph and word stand in one hidden line of the same label type. Its
+    /// mutation (T009a): the toggle's line box removed → red.
+    @Test func theThreeBadgesRenderAtOneHeight() throws {
+        let toggles = [
+            ("Owned", renderAt3x(SideToggle(side: ItemListViewModel.Side.owned, select: { _ in }))),
+            ("Sold", renderAt3x(SideToggle(side: ItemListViewModel.Side.sold, select: { _ in }))),
+            ("Active", renderAt3x(SideToggle(side: PlansViewModel.Side.active, select: { _ in }))),
+            ("Completed", renderAt3x(SideToggle(side: PlansViewModel.Side.completed, select: { _ in }))),
+        ]
         let overflow = try #require(
             renderAt3x(OverflowMenu { Button("Settings") {} }),
             "ImageRenderer produced nothing to measure for the \"…\" badge."
@@ -273,6 +293,14 @@ struct ItemListHeaderLayoutTests {
             overflow.height == sold.height,
             "the \"…\" renders \(overflow.height) px tall at 3× beside the Sold side's \(sold.height) px sort badge — the two badges are no longer one height"
         )
+        for (side, image) in toggles {
+            let toggle = try #require(image, "ImageRenderer produced nothing to measure for the \(side) toggle.")
+            print("Side toggle at 3× — \(side): \(toggle.width) × \(toggle.height) px")
+            #expect(
+                toggle.height == overflow.height,
+                "the \(side) toggle renders \(toggle.height) px tall at 3× beside the \"…\"'s \(overflow.height) px — the three controls are no longer one height"
+            )
+        }
     }
 
     /// A view rendered at 3×, the device's scale, so a fraction of a point
@@ -312,8 +340,8 @@ struct ItemListHeaderLayoutTests {
         try #require(trailingSlots.count == 1, "the header opens \(trailingSlots.count) trailing slots, expected exactly 1")
         let trailing = try #require(trailingSlots.first)
         #expect(
-            trailing.contains("sortControl") && trailing.contains("overflowControl"),
-            "the badge row isn't in the header's trailing slot: \(trailing)"
+            trailing.contains("SideToggle(") && trailing.contains("sortControl") && trailing.contains("overflowControl"),
+            "the side toggle, Sort By and the \"…\" aren't all in the header's trailing slot — the title row holds the controls since T009a (spec Decision 19): \(trailing)"
         )
         #expect(
             !trailing.contains("metaLine"),
@@ -345,18 +373,20 @@ struct ItemListHeaderLayoutTests {
         ).height
     }
 
-    /// The badge row as `ItemListView` composes it — `SortMenu` over the
-    /// side's real options set to the case's selection, beside `OverflowMenu`,
-    /// 8 pt apart — rendered on its own, which works where rendering it
+    /// The badge row as `ItemListView` composes it — the side's
+    /// `SideToggle` (since T009a), `SortMenu` over the side's real options
+    /// set to the case's selection, and `OverflowMenu`, 8 pt apart — rendered on its own, which works where rendering it
     /// inside the header does not. Over the side's real option set, as it
     /// ships (`018` T005); since T006a (spec Decision 18) the badge is sized
     /// to the selection's text, so the row's width follows the selection.
     private func badgeRowSize<Option: Hashable>(
+        side: ItemListViewModel.Side,
         options: [Option],
         selection: Option,
         label: @escaping (Option) -> String
     ) throws -> CGSize {
         let row = HStack(spacing: 8) {
+            SideToggle(side: side, select: { _ in })
             SortMenu(options: options, selection: selection, label: label) { _ in }
             OverflowMenu { Button("Settings") {} }
         }

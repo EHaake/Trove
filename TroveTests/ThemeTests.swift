@@ -191,6 +191,7 @@ struct NoHardcodedColorsTests {
     private static let systemLabelExemptions: [String: [String]] = [
         "SortMenu.swift": [".tint(.primary)", "Color.primary"],
         "OverflowMenu.swift": [".tint(.primary)"],
+        "SideToggle.swift": [".tint(.primary)"],
     ]
 
     private static let colorTakingModifiers = [

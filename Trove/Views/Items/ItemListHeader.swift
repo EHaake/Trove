@@ -38,11 +38,16 @@ struct ItemsListHeader<Meta: View, Trailing: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top) {
+                // One line, with at least 8 pt before the controls: since
+                // `018` Decision 19 the row carries three glass controls, and
+                // without these the layout squeezed their labels until they
+                // wrapped.
                 Text(title)
                     .font(theme.typography.screenTitle)
                     .foregroundStyle(theme.colors.textPrimary)
+                    .lineLimit(1)
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 trailing
             }

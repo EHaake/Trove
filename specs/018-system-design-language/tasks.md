@@ -861,7 +861,7 @@ Handoff notes for the pause reports:
 
 **Phase 3 pause (2026-09-27).** The person: the switches look better but must use the app's colours and font — measured impossible on the system segmented control — and should leave their own row. Three homes rendered; the person chose the icon + word toggle (Decision 19), with the "Show" group in the "…" menu as the recorded fallback. The 26.5 Sort By artefacts passed without objection. Header margins to revisit after the toggle lands.
 
-- [ ] **T009a — The side toggle: a glass button in the header's control row (Decision 19).**
+- [x] **T009a — The side toggle: a glass button in the header's control row (Decision 19).**
   New `Trove/Views/Shared/SideToggle.swift` replacing `SidePicker.swift`
   (deleted): a `Button` whose label is `HStack(spacing: 8) { Image(systemName:
   icon(side)).font(.system(size: 11, weight: .semibold)); Text(word(side))
@@ -904,6 +904,33 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green; `scripts/verify.sh ui` green (count
   recorded); mutations recorded; header heights on both sides; the person
   looks.
+  **Done (2026-09-27).** `SideToggle<Side: Hashable>`: a `Button` acting
+  `select(other)`, label = hidden mono-11 line box with the SF Symbol +
+  word overlaid (`.frame(height: 0)`), `.glass` → `.tint(.primary)` →
+  `.regular`, label/value/identifier; `SidePicker.swift` deleted. Items and
+  Plans: the toggle leads the trailing `HStack`, the switch row gone, the
+  wrap fix (`lineLimit(1)`, `Spacer(minLength: 8)`, `.fixedSize(horizontal:
+  true, vertical: false)`). ThemeTests + `"SideToggle.swift":
+  [".tint(.primary)"]`. G10 → `theSwitchIsAGlassToggleAskingForTheOtherSide`
+  (values through the inits); G3 toggle legs; G1 `badgeRowSize(side:)`
+  renders all three, `theTwoBadgesRenderAtOneHeight` →
+  `theThreeBadgesRenderAtOneHeight` (four toggles vs "…" at 3×: all 109 px;
+  Owned 79.0, Sold 73.7, Active 85.0, Completed 105.0 wide). Items header
+  57 both sides (control row 200–228 × 37); Plans title row 37. UI: a
+  `showSide(_:on:)` helper taps the toggle by identifier and waits on
+  `value == side`; 19 taps and the four reads converted; the Appearance test
+  keeps its "System" predicate. XCUITest exposes `.accessibilityValue` as
+  the button's `value` string. Mutations, all red: `select(side)`
+  (`ItemListSidesWiringTests.swift:465`); `$…wrappedValue.side` Items
+  (`:311`) / Plans (`PlansWiringTests.swift:185`); the call into the empty
+  branch Items (`:325`, and `ItemListHeaderLayoutTests.swift:342`) / Plans
+  (`:194`); a theme colour (`:483`); the line box removed
+  (`ItemListHeaderLayoutTests.swift:299`, all four; a plain `HStack` variant
+  red for Sold only — the `tag` glyph is 1 px taller than the mono line);
+  identifier dropped (`HeaderControlsWiringTests.swift:140`, `:479`); a hint
+  added (`:144`). `scripts/verify.sh`: green, 1747 in 235. **`scripts/verify.sh
+  ui`: 38 tests, 0 failures, 1002 s.** Notes: the search field keeps its
+  section gap under the header; G39's UI check now measures the title row.
 
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
@@ -1094,3 +1121,6 @@ recorded here too.
 | `sdd-implementer` — T008 | `opus` | ~83k (subagent total) | Done; unit 1747 green; UI suite 38/38 at the phase's final code commit; four mutations recorded |
 | `general-purpose` — T009 films (probe made falsifiable, four sort films, two switch films) | `opus` | ~266k (subagent total) | 27.0 whole on every frame; 26.5 transient 1.54–1.78 s and a stale shadow on Light — both to the person; switches slide with 0 px header drift on both runtimes |
 | `skeptical-reviewer` — Phase 3 review (T006a, T007, T008, T009) | `opus` | ~100k (subagent total) | **approved**, nine notes, none blocking. To the person at this pause: the 26.5 transient's 1.54–1.78 s against "about 1.5 s", and the stale shadow on 26.5 Light (not transient, not named by Decision 18); R2 in plain words. Carried: (after the person answers) `SortMenu.swift`'s doc and plan §1 restated from T009's numbers, the amendment widened if accepted; (T010) plan §1 names Light 918–945 as the probe's proof and says a mid-transient wrong width with the label inside the rim is caught by the extent-vs-frame read, not TEAR; the README records the TEAR count on the 26.5 transient frames at the classes/thresholds actually used; the no-`$` legs' docs say the compiler is the guard and plan §11's G10 mutation column is corrected; the circle leg kept in G4 only; (T011 or T010) the four `isSelected` UI reads gain an `XCTAssertFalse` on the other segment; (T013) the circle's diameter on 27.0 and 26.5 (the README saw 46 wide on 26.5), the add button's frame on 26.5, the brass disc and plus contrast, rows under the button, the root tint on the segmented control, the switches at the largest text size, Reduce Motion on the slide; (close-out) the spec's "Add to wishlist" prose corrected to "Add wanted item" |
+| `general-purpose` — Phase 3 diagnosis (segmented control colour/font probes; four placements) | `opus` | ~170k | The system segmented control takes no font, colour or tint from SwiftUI; placements C/D rendered |
+| `general-purpose` — three homes for the switch rendered | `opus` | ~135k | Icon toggle, "…" menu group, "Show" capsule; the person chose the icon + word toggle (Decision 19) |
+| `sdd-implementer` — T009a | `opus` | ~142k (subagent total) | Done; unit 1747 green; UI 38/38; ten mutations recorded |
