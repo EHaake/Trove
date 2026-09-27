@@ -859,6 +859,52 @@ Handoff notes for the pause reports:
   in the scratchpad for the pause. Films `t009-film-*.mp4`.
   **Phase 3 closes here — pause for the person.**
 
+**Phase 3 pause (2026-09-27).** The person: the switches look better but must use the app's colours and font — measured impossible on the system segmented control — and should leave their own row. Three homes rendered; the person chose the icon + word toggle (Decision 19), with the "Show" group in the "…" menu as the recorded fallback. The 26.5 Sort By artefacts passed without objection. Header margins to revisit after the toggle lands.
+
+- [ ] **T009a — The side toggle: a glass button in the header's control row (Decision 19).**
+  New `Trove/Views/Shared/SideToggle.swift` replacing `SidePicker.swift`
+  (deleted): a `Button` whose label is `HStack(spacing: 8) { Image(systemName:
+  icon(side)).font(.system(size: 11, weight: .semibold)); Text(word(side))
+  .font(SortMenuCopy.labelFont) }` in a hidden mono-11 line box like
+  `OverflowMenu`'s so all three controls are one height; modifiers exactly
+  `OverflowMenu`'s minus the circle: `.buttonStyle(.glass)`, `.tint(.primary)`,
+  `.controlSize(.regular)`, 4 pt vertical label padding; action
+  `select(other)`; `.accessibilityLabel` the existing "Owned or sold" /
+  `SellPlanCopy.sideSwitchLabel`, `.accessibilityValue(word(side))`,
+  identifiers `items.sideSwitch` / `plans.sideSwitch` kept; the two
+  constrained inits carry words and icons (Owned `shippingbox`, Sold `tag`,
+  Active `clock`, Completed `checkmark.circle`). Placement: leading of the
+  sort control in the header's trailing `HStack` on Items and Plans (side,
+  sort, "…"), the switch's own row and its spacing removed on both screens;
+  the trailing `HStack` gets `.fixedSize(horizontal: true, vertical: false)`,
+  `Spacer(minLength: 8)` before it and `.lineLimit(1)` on the title (the
+  render pass found glass labels wrap otherwise). `ThemeTests` exemptions:
+  `"SideToggle.swift": [".tint(.primary)"]`; `MenuPolicyTests` unchanged (no
+  Menu). Tests: G10 rewritten onto `SideToggle` (a `Button`, `select(other)`
+  as its action, no `@Binding`, `.glass`, no theme colour; one call per
+  screen with `viewModel.show`, no `$`, outside the empty-state branch;
+  words/labels/identifiers/icons checked as values through the inits;
+  mutations: the action calling `select(side)` → red; `$viewModel.wrappedValue.side`
+  → red; the call moved into the empty branch → red; a theme colour named →
+  red). G1: `badgeRowSize` renders side + sort + "…"; three badges one
+  height at 3× (mutation: the toggle's line box removed → red); the header
+  relation re-pinned (title row now holds the controls; record the new
+  numbers on both sides). G3 legs for the two identifiers. UI: every test
+  that taps a segment (`buttons["Sold"/"Owned"/"Active"/"Completed"]`
+  inside the switch) taps the toggle by identifier instead and reads the
+  side from the toggle's `value` (record how XCUITest exposes it); the four
+  `isSelected` reads become `value == "Sold"` etc.; `testAppearanceControl…`
+  can return to `segmentedControls.firstMatch` (the Items switch is gone)
+  or stay — say which. Files: `Trove/Views/Shared/SideToggle.swift` (new),
+  `Trove/Views/Shared/SidePicker.swift` (deleted), `Trove/Views/Items/ItemListHeader.swift`,
+  `Trove/Views/Items/ItemListView.swift`, `Trove/Views/Plans/PlansView.swift`,
+  `TroveTests/ItemListSidesWiringTests.swift`, `TroveTests/PlansWiringTests.swift`,
+  `TroveTests/ItemListHeaderLayoutTests.swift`, `TroveTests/HeaderControlsWiringTests.swift`,
+  `TroveTests/ThemeTests.swift`, `TroveUITests/TroveUITests.swift`.
+  **Verify:** `scripts/verify.sh` green; `scripts/verify.sh ui` green (count
+  recorded); mutations recorded; header heights on both sides; the person
+  looks.
+
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
 - [ ] **T010 — Delete the bespoke controls and the tests that guarded only them.**

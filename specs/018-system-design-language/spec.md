@@ -344,6 +344,10 @@ are replaced the same way. No Design pass: nothing new is being designed
    system menu with By value and By count under an **Order by** header,
    the current one checked.
 7. [ ] Owned/Sold and Active/Completed are system segmented controls.
+   *Amended by Decision 19 (2026-09-27): a glass toggle button in the
+   header's control row showing the current side (SF Symbol + word in the
+   app's mono type); tapping it shows the other side; the header above and
+   the rows below do not move when it does; the slide clause is moot.*
    Switching shows the other side; each side keeps its own search, chips
    and sort across a switch (`014` criterion 8's guarantee, restated); the
    header's height and the switch's vertical position are equal on both
@@ -505,6 +509,28 @@ Made by the person on 2026-09-26, at the Phase 2 walkthrough:
     on iOS 26.5 the narrow-to-wide relabel's transient (≤ ~1.5 s, then
     self-correcting) is an accepted, recorded flaw, measured by T009, not
     a failure.
+
+Made by the person on 2026-09-27, at the Phase 3 walkthrough:
+
+19. **The switches leave the segmented control for a glass toggle in the
+    header's control row.** Seen on the device, the system segmented
+    control takes no font and no colour from SwiftUI (measured: SF ~13 pt
+    medium, pure white/black, `.tint` inert), and the person ruled: "the
+    font difference looks like a glaring oversight and we can't ship
+    that." Of three rendered homes they chose **1b**: a glass capsule
+    between Sort By and the "…", styled exactly as the other two (glass,
+    system label colour, mono 11), showing the **current** side as an SF
+    Symbol and its word — Owned `shippingbox`, Sold `tag`, Active
+    `clock`, Completed `checkmark.circle` — and **tapping it shows the
+    other side; it opens no menu.** "Let's see that in action." The
+    switch's own row goes, the header on Items dropping from 121 to
+    74 pt. **Fallback recorded:** "If I decide I don't like it, I do like
+    the 'Show' section in the … menu" — a first `Section("Show")` of two
+    checkmark rows in the overflow menu. Criterion 7 is amended
+    accordingly; the segmented-control slide filmed at T009 is history.
+    The 26.5 Sort By artefacts (the 1.5–1.8 s transient and the Light
+    stale shadow) were shown at the same pause and passed without
+    objection ("Ok!"); recorded as accepted.
 
 ## Proposals (P-items)
 
