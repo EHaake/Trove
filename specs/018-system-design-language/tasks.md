@@ -750,7 +750,7 @@ Handoff notes for the pause reports:
   working `isSelected`. R1 (`.fixedSize()`, hugging) and R2 (tapping the
   showing side no longer reloads) shipped as read — for the pause.
 
-- [ ] **T008 — The add button in prominent glass.**
+- [x] **T008 — The add button in prominent glass.**
   Per plan §5, Q4, R4. **The UI test first, on the drawn disc**: new
   `testTheAddButtonKeepsItsSizeAndPlace` — on Items ("Add item") and the
   Wishlist ("Add wanted item"): the frame 56 × 56 within a point, the
@@ -770,6 +770,24 @@ Handoff notes for the pause reports:
   after the restyle, both frames in the Done note; `scripts/verify.sh ui`
   green at this commit (the phase's last code change), count recorded;
   mutations recorded.
+  **Done (2026-09-27).** UI test first, green on the drawn disc: Items
+  "Add item" (322, 711, 56, 56), Wishlist "Add wanted item" the same,
+  window 402 × 874, gutter 24 read from the header's "…" (`window.maxX −
+  moreActions.maxX`), bottom edge 24 above the tab bar (791). Then
+  `AddButton`: `.glassProminent` → `.buttonBorderShape(.circle)` →
+  `.tint(theme.colors.accentBrass)`, the label framed 42 × 42 (a prominent
+  glass circle is its label + 14), the plus taking the style's foreground,
+  no drawn `Circle()` (there was no shadow to remove); the same frames
+  after, twice. G11 `theAddButtonIsABrassProminentGlassCircleWithNoDrawnDisc`
+  (three modifiers in order, no `Circle(`, no `.foregroundStyle(` — one
+  extra leg for Q4's "the glyph taking the style's foreground").
+  Mutations, all red: `.glassProminent` removed (`HeaderControlsWiringTests.swift:272`);
+  `Circle().fill` put back (`:276`); `.foregroundStyle` put back (`:280`);
+  `.frame(60)` → the UI test red (74 × 74 at (304, 693), `TroveUITests.swift:2337/2338`).
+  `scripts/verify.sh`: green, 1747 tests in 235 suites. The new UI test
+  alone 15 s green. **`scripts/verify.sh ui` at the phase's final code
+  commit: 38 tests, 0 failures, 979 s.** The brass on the glass is the
+  device pass's to see (`ImageRenderer` draws glass as a placeholder).
 
 - [ ] **T009 — The switch's slide and the finished header's sort, filmed. [`general-purpose` agent with simulator tools]**
   Per plan §1 and §9 (G14a, G14b), criteria 1 and 7. At T008's commit (build
@@ -992,3 +1010,4 @@ recorded here too.
 | `general-purpose` — Phase 2 diagnosis on device (circle, text-sized capsule, 26.5 behaviour, `.id` mitigation filmed) | `opus` | ~169k (subagent total) | The look measured; the 26.5 transient (41 pt for 1.1 s, then a snap) filmed; `.id(selection)` removes it but kills the morph on both runtimes. The person kept the morph and accepted the transient → Decision 18, T006a |
 | `sdd-implementer` — T006a | `opus` | ~75k + resumed pass | Done; stopped once on the untestable circle diameter, settled by T005's no-tolerance ruling (verified on device instead); unit 1749 green |
 | `sdd-implementer` — T007 | `opus` | ~93k (subagent total) | Done; unit 1746 green; thirteen switch-driving UI tests green alone; six mutations recorded |
+| `sdd-implementer` — T008 | `opus` | ~83k (subagent total) | Done; unit 1747 green; UI suite 38/38 at the phase's final code commit; four mutations recorded |

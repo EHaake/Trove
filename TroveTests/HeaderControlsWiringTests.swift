@@ -244,4 +244,42 @@ struct HeaderControlsWiringTests {
         #expect(labels[0].contains(".monoLabel("), "the order control's label is no longer the mock's mono text: \(labels[0])")
         #expect(!control.contains(".glass"), "the order control wears glass — it sits in the body, inside a card (Decision 13, P8): \(control)")
     }
+
+    /// G11 (spec Decision 14, plan §5 Q4): the add button is the system's
+    /// prominent glass button — `.glassProminent`, then the circle border
+    /// shape, then the brass tint, in that order — with the plus taking the
+    /// style's own foreground, and the drawn brass disc gone: the file fills
+    /// no `Circle()`.
+    ///
+    /// **This checks spelling only.** Its size and place on both lists are
+    /// `testTheAddButtonKeepsItsSizeAndPlace`'s to guard, and the brass on
+    /// the glass is the device pass's to see (`ImageRenderer` draws a glass
+    /// button as a placeholder).
+    ///
+    /// Mutations (T008): `.buttonStyle(.glassProminent)` removed → red (the
+    /// glass leg); `.background(Circle().fill(theme.colors.accentBrass))`
+    /// put back on the glyph → red (the no-disc leg);
+    /// `.foregroundStyle(theme.colors.background)` put back on the glyph →
+    /// red (the style's-foreground leg).
+    @Test func theAddButtonIsABrassProminentGlassCircleWithNoDrawnDisc() throws {
+        let code = try SourceScan.production("Trove/Views/Shared/AddButton.swift")
+        let anchor = "struct AddButton: View"
+        try #require(code.contains(anchor), "AddButton.swift no longer declares `\(anchor)`")
+        let bodies = SourceScan.closureBodies(after: "var body: some View", in: code)
+        try #require(bodies.count == 1, "AddButton.swift declares \(bodies.count) bodies, expected exactly 1")
+        let body = try #require(bodies.first)
+
+        #expect(
+            body.contains(try Regex(#"\.buttonStyle\(\.glassProminent\)\s*\.buttonBorderShape\(\.circle\)\s*\.tint\(theme\.colors\.accentBrass\)"#)),
+            "the add button isn't a brass prominent glass circle — `.buttonStyle(.glassProminent)`, `.buttonBorderShape(.circle)` and `.tint(theme.colors.accentBrass)` no longer follow one another (spec Decision 14): \(body)"
+        )
+        #expect(
+            !code.contains(try Regex(#"(?:^|[^A-Za-z0-9_])Circle\s*\("#)),
+            "AddButton.swift draws a `Circle()` again — the glass is the surface, the drawn disc is gone (spec Decision 14)"
+        )
+        #expect(
+            !code.contains(".foregroundStyle("),
+            "AddButton.swift sets the plus's foreground — it takes the prominent glass style's own (plan Q4)"
+        )
+    }
 }

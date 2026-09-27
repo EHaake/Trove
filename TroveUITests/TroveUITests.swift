@@ -2297,6 +2297,61 @@ final class TroveUITests: XCTestCase {
         XCTAssertEqual(control.label, "Order categories By count", "choosing By count should reorder the categories by count")
     }
 
+    /// `018` §5 (Decision 14, criterion 16): the add button keeps its size
+    /// and its place on both lists — Items' "Add item" and the Wishlist's
+    /// "Add wanted item" — whatever draws it. Written against the drawn brass
+    /// disc before the restyle to prominent glass, so "its current size and
+    /// place" is a measurement rather than a memory: the button is 56 × 56
+    /// within a point; its trailing edge sits one gutter in from the window's
+    /// trailing edge, the gutter read from the tree as the header's "…"'s
+    /// inset (the header is padded by the same gutter); and its bottom edge
+    /// sits 24 pt above the tab bar's top, recorded from the tree.
+    ///
+    /// Recorded on the iPhone 18 Pro, iOS 27.0, empty collection — the drawn
+    /// disc (HEAD 036a6d5) on both lists: window 402 × 874, button
+    /// (322, 711, 56, 56), the "…" (342, 86.17, 36, 36) so the gutter reads
+    /// 24, tab bar top 791 so the bottom gap reads 24. After the restyle to
+    /// `.glassProminent` (T008), the same on both lists: button
+    /// (322, 711, 56, 56), the "…" and the tab bar unchanged.
+    ///
+    /// Mutation (T008): the glass button's label framed 60 × 60 → red (the
+    /// size leg: 74 × 74 on both lists).
+    @MainActor
+    func testTheAddButtonKeepsItsSizeAndPlace() {
+        let app = launchApp()
+        let window = app.windows.firstMatch
+
+        for (tab, label, overflow) in [
+            ("Items", "Add item", "moreActions.items"),
+            ("Wishlist", "Add wanted item", "moreActions.wishlist"),
+        ] {
+            app.buttons[tab].tap()
+            let button = app.buttons[label]
+            XCTAssertTrue(button.waitForExistence(timeout: 5), "\(tab) must offer \"\(label)\"")
+            let header = app.buttons[overflow]
+            XCTAssertTrue(header.waitForExistence(timeout: 5), "\(tab)'s header must carry its \"…\" to read the gutter from")
+            let tabBar = app.tabBars.firstMatch
+            XCTAssertTrue(tabBar.exists, "the tab bar must be on screen to read the bottom edge against")
+
+            let frame = button.frame
+            print("T008 \(tab) \"\(label)\" frame=\(frame) window=\(window.frame) header=\(header.frame) tabBar=\(tabBar.frame)")
+
+            XCTAssertEqual(frame.width, 56, accuracy: 1, "\(tab)'s \"\(label)\" is \(frame.width) wide, not 56")
+            XCTAssertEqual(frame.height, 56, accuracy: 1, "\(tab)'s \"\(label)\" is \(frame.height) tall, not 56")
+
+            let gutter = window.frame.maxX - header.frame.maxX
+            XCTAssertEqual(gutter, 24, accuracy: 1, "\(tab)'s header \"…\" no longer sits one gutter in — the reading below would be against the wrong edge")
+            XCTAssertEqual(
+                frame.maxX, window.frame.maxX - gutter, accuracy: 1,
+                "\(tab)'s \"\(label)\" trailing edge is at \(frame.maxX), not one gutter (\(gutter)) in from the window's \(window.frame.maxX)"
+            )
+            XCTAssertEqual(
+                tabBar.frame.minY - frame.maxY, 24, accuracy: 1,
+                "\(tab)'s \"\(label)\" bottom edge is at \(frame.maxY), not 24 pt above the tab bar's top (\(tabBar.frame.minY)) where the disc's was"
+            )
+        }
+    }
+
     /// Criterion 14: an Active row's leading swipe offers **Mark as bought…**
     /// (matched alone, never `OR "Buy"` — `015`'s close-out lesson), opening
     /// the purchase sheet seeded from the estimate; Cancel changes nothing,
