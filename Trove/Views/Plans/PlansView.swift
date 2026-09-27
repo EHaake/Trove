@@ -59,10 +59,12 @@ struct PlansView: View {
 
                     // In the standing header, so it is there over an empty
                     // side exactly as over a full one — `ItemListView`'s
-                    // placement. Never bound to `side`: a tap asks `show(_:)`,
-                    // which sets the side and reloads, and clears nothing, so
-                    // each side keeps its own sort (criterion 5).
-                    SideSwitch(side: viewModel.side, select: { viewModel.show($0) })
+                    // placement. Never bound to `side`: a choice asks
+                    // `show(_:)` through the picker's `select`, which sets the
+                    // side and reloads, and clears nothing, so each side keeps
+                    // its own sort (criterion 5). The system segmented control
+                    // since 018 (plan §4).
+                    SidePicker(side: viewModel.side, select: { viewModel.show($0) })
                         .padding(.horizontal, theme.metrics.screenGutter)
                 }
                 .padding(.top, theme.metrics.sectionGap)

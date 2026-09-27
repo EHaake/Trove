@@ -1,51 +1,14 @@
-import CoreGraphics
 import Foundation
-import SwiftUI
 import Testing
 @testable import Trove
 
-/// How the Plans tab is wired (spec `009`). T010 opens it with G18; T011
+/// How the Plans tab is wired (spec `009`). T010 opened it with G18 (gone
+/// with the bespoke switch at `018` T007); T011
 /// adds G19, the screen's view-body facts, as source scans that each
 /// `#require` their anchor.
 @Suite("Plans wiring")
 @MainActor
 struct PlansWiringTests {
-    // MARK: - The side switch (plan §10, Q14)
-
-    /// G18: every label of both side switches fits its half. Each word is
-    /// rendered on a scratch `ImageRenderer` at the font the switch draws it
-    /// in — `SideSwitchMetrics.labelFont`, at both weights, since the active
-    /// half lifts to medium — and must be narrower than the switch's own half
-    /// less 4 pt either side. The words and the widths are read off switches
-    /// built through each screen's own `init(side:select:)`, so a label or a
-    /// half changed in production lands in this measurement rather than being
-    /// typed out here.
-    ///
-    /// Mutation (T010): the Plans half at 50 pt → red on "Completed".
-    @Test func everyLabelOfBothSwitchesFitsItsHalf() throws {
-        let items = SideSwitch(side: ItemListViewModel.Side.owned, select: { _ in })
-        let plans = SideSwitch(side: PlansViewModel.Side.active, select: { _ in })
-
-        let switches: [(name: String, labels: [String], halfWidth: CGFloat)] = [
-            ("Items", [items.leadingLabel, items.trailingLabel], items.halfWidth),
-            ("Plans", [plans.leadingLabel, plans.trailingLabel], plans.halfWidth),
-        ]
-
-        for control in switches {
-            let room = control.halfWidth - 2 * 4
-            for label in control.labels {
-                try #require(!label.isEmpty, "the \(control.name) switch has an empty label")
-                for isActive in [false, true] {
-                    let width = try labelWidth(label, isActive: isActive)
-                    #expect(
-                        CGFloat(width) < room,
-                        "the \(control.name) switch's \"\(label)\" measures \(width) pt at \(isActive ? "medium" : "regular"), not narrower than its \(control.halfWidth) pt half less 4 pt either side (\(room) pt)"
-                    )
-                }
-            }
-        }
-    }
-
     // MARK: - The screen (plan §11, G19)
 
     private static let view = "Trove/Views/Plans/PlansView.swift"
@@ -198,20 +161,40 @@ struct PlansWiringTests {
         #expect(!code.contains("showsThumbnail"), "PlansView.swift still names `showsThumbnail` — the property is gone (QA2)")
     }
 
-    /// G19, criterion 5: the switch reports through `show(_:)` and is never
-    /// bound (no `$` projection in its arguments), so changing side reloads and clears nothing.
+    /// G19, criterion 5, and `018` G10: the switch reports through
+    /// `show(_:)` and is never bound (no `$` projection in its arguments), so
+    /// changing side reloads and clears nothing; it stands in the header,
+    /// outside the empty-state branch; and it carries the Plans words, label
+    /// and identifier, read off a switch built through its own
+    /// `init(side:select:)`.
+    ///
+    /// Mutations (018 T007): `SidePicker(side: $viewModel.side, …)` → red;
+    /// the call moved into the empty-state branch → red.
     @Test func theSideSwitchReportsThroughShow() throws {
         let code = try SourceScan.production(Self.view)
 
-        let calls = SourceScan.argumentLists(of: "SideSwitch", in: code)
+        let calls = SourceScan.argumentLists(of: "SidePicker", in: code)
         try #require(calls.count == 1, "the screen builds \(calls.count) side switches, expected exactly 1")
-        #expect(calls[0].contains("viewModel.show"), "the switch doesn't report through `viewModel.show`: \(calls[0])")
+        #expect(calls[0].contains("viewModel.show($0)"), "the switch doesn't report through `viewModel.show`: \(calls[0])")
         // A `$` projection, not the closure's own `$0`.
         let projection = try Regex(#"\$[A-Za-z_]"#)
         #expect(
             !calls[0].contains(projection),
             "the switch is bound — a side change must go through `show(_:)`: \(calls[0])"
         )
+
+        let branches = SourceScan.closureBodies(after: "if let reason = viewModel.emptyReason", in: code)
+        try #require(branches.count == 1, "PlansView declares \(branches.count) empty-state branches, expected exactly 1")
+        let branch = try #require(branches.first)
+        #expect(branch.contains("emptyState(reason)"), "the empty-state branch no longer shows the empty state — wrong span?")
+        #expect(!branch.contains("SidePicker("), "the switch is composed inside the empty-state branch, so an emptied side would lose it")
+
+        let plans = SidePicker(side: PlansViewModel.Side.completed, select: { _ in })
+        #expect(plans.side == .completed)
+        #expect(plans.leading == .active && plans.leadingLabel == SellPlanCopy.active, "the Plans switch's leading segment isn't Active")
+        #expect(plans.trailing == .completed && plans.trailingLabel == SellPlanCopy.completed, "the Plans switch's trailing segment isn't Completed")
+        #expect(plans.accessibilityLabel == SellPlanCopy.sideSwitchLabel, "the Plans switch isn't labelled for VoiceOver")
+        #expect(plans.identifier == "plans.sideSwitch", "the Plans switch's identifier changed — the UI tests find it by it")
     }
 
     /// `018` G7 (was 009's G19, P5): neither side's Sort By offers a manual
@@ -252,15 +235,5 @@ struct PlansWiringTests {
             code.contains(".onChange(of: viewModel.settledCount) { viewModel.load() }"),
             "the screen doesn't reload when the carry-over has run, so carried-over plans wait for the next visit"
         )
-    }
-
-    // MARK: - The instrument
-
-    /// A label's rendered width at the switch's own type, at 1×.
-    private func labelWidth(_ label: String, isActive: Bool) throws -> Int {
-        try #require(
-            renderBitmap(Text(label).font(SideSwitchMetrics.labelFont(isActive: isActive))),
-            "ImageRenderer produced nothing to measure for \"\(label)\"."
-        ).width
     }
 }

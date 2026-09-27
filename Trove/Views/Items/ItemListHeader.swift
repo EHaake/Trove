@@ -4,7 +4,7 @@ import SwiftUI
 /// the meta line under both.
 ///
 /// Extracted from `ItemListView` at `014`/T010a, when the device pass
-/// measured criterion 3 failing — the Sold side's `SideSwitch` at 168.00 pt
+/// measured criterion 3 failing — the Sold side's switch at 168.00 pt
 /// against the Owned side's 154.33 pt, one mono line apart, as soon as
 /// anything was sold. The cause was this header's old shape: the title and
 /// the meta line stood in a `VStack` *beside* the badges, so the meta line

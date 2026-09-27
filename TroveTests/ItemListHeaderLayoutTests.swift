@@ -6,7 +6,7 @@ import Testing
 
 /// G38 — spec criterion 3 as a height rather than as a sentence: the Items
 /// header is one meta line tall whatever that line says and whatever the
-/// sort badge beside it is called, so the `SideSwitch` under it sits at the
+/// sort badge beside it is called, so the `SidePicker` under it sits at the
 /// same point on both sides.
 ///
 /// `006` Decision 13 made the meta slot unconditional, and the device pass at

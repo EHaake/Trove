@@ -107,7 +107,7 @@ struct SaleCopyTests {
     /// sales — "+$0 vs paid" over nothing sold would state a measurement
     /// where none was made — and the line still exists, which is what keeps
     /// the Sold side's header slot the same height as the Owned side's and
-    /// the `SideSwitch` above it from moving.
+    /// the `SidePicker` below it from moving.
     ///
     /// Mutation: append `realised(deltaCents:)` unconditionally → this reads
     /// "0 sold · $0 · +$0 vs paid" and fails.

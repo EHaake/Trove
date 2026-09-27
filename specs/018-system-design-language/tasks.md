@@ -696,7 +696,7 @@ Handoff notes for the pause reports:
 
 ## Phase 3 — The two switches and the add button · walkthrough: yes — Owned/Sold and Active/Completed are the system segmented control whose glass selection slides while the header holds still, and Sort By's capsule stays whole through a width-changing sort on the finished header (both films are in the report); the add button on Items and the Wishlist is a brass glass disc in the same corner and size, opening the same form; every screen in Light and Dark reads as one language (criterion 15)
 
-- [ ] **T007 — `SidePicker`, and both switches on it.**
+- [x] **T007 — `SidePicker`, and both switches on it.**
   Per plan §4, Q3, R1, R2. New `Trove/Views/Shared/SidePicker.swift` exactly
   as plan §4 declares it, with the two constrained `init(side:select:)`s
   carrying `SideSwitch`'s words, labels and identifiers unchanged;
@@ -723,6 +723,32 @@ Handoff notes for the pause reports:
   `TroveUITests/TroveUITests.swift`.
   **Verify:** `scripts/verify.sh` green; the five changed UI tests green run
   alone; mutations recorded.
+  **Done (2026-09-27).** `SidePicker.swift` exactly per plan §4, the two
+  constrained inits keeping words, labels and identifiers; `SideSwitch.swift`
+  deleted with `SideSwitchMetrics`, `halfWidth` and the brass fill; the
+  call sites change one word; comments naming `SideSwitch` corrected
+  (`ItemListViewModel.swift:272`, `ItemListHeader.swift:7`,
+  `ItemListHeaderLayoutTests.swift:9`, `ItemListSidesWiringTests.swift:378`,
+  `SaleCopyTests.swift:110`; "above it" → "below it" where the switch's
+  position was described). G10: the three Items tests and the Plans test
+  rewritten (words, labels and identifiers checked as values through the
+  inits, not scanned); G18, `labelWidth` and unused imports removed.
+  **Retired by name:** `ItemListSidesWiringTests.theSwitchesSlideIsAtOrUnderTwoTenthsOfASecond`,
+  `theSwitchesFillIsOneMovingRectangle`,
+  `PlansWiringTests.everyLabelOfBothSwitchesFitsItsHalf`. Mutations, all
+  red: `.pickerStyle(.menu)` (`ItemListSidesWiringTests.swift:459`); setter
+  `{ _ in }` (`:455`); `$viewModel.wrappedValue.side` at a call site (a
+  literal `$viewModel.side` cannot compile against `private(set)`) —
+  Items `:309`, Plans `PlansWiringTests.swift:181`; the call moved into the
+  empty-state branch — Items `:323`, Plans `:190`. UI: the four switch
+  reads (at lines 1045, 2043, 2080, 2432 — the task line's numbers were
+  stale) now `.buttons[…].isSelected`; the Appearance test finds the
+  control containing a "System" segment. `scripts/verify.sh`: green, 1746
+  tests in 235 suites (three retired). UI alone: the four changed tests
+  green (87 s) and the nine other switch-driving tests green (328 s).
+  XCUITest reads a segmented `Picker`'s segments as `buttons[…]` with a
+  working `isSelected`. R1 (`.fixedSize()`, hugging) and R2 (tapping the
+  showing side no longer reloads) shipped as read — for the pause.
 
 - [ ] **T008 — The add button in prominent glass.**
   Per plan §5, Q4, R4. **The UI test first, on the drawn disc**: new
@@ -965,3 +991,4 @@ recorded here too.
 | `skeptical-reviewer` — Phase 2 review (T004a, T004b, T005, T006) | `opus` | ~122k (subagent total) | **approved**, seven notes, none blocking. Carried: (T010) `ItemListHeaderLayoutTests`' T005 doc paragraph re-measured to the 109 px equality, `ItemListHeader.swift`'s "system's control size" phrase, T005's Done note names `SortMenu.swift` and `ThemeTests.swift` as touched (authorised by the decision review and R3); (T011) the theme-colour exemption matches an exact count of code lines with comments skipped, and `ExportWiringTests.rowStart` also asserts no `Button`/`Menu`/`Toggle` other than the listed rows; (T013) the ten device checks the review lists — the "…" glyph and spinner colour, the busy capsule's size and inertness, the share sheet after a scope row, Import from the menu, one badge height and a 57 pt header that holds across a switch, the order label's quiet colour and tap area (`.contentShape` went with `.buttonStyle(.plain)`), checkmark colour consistency between the sort and order menus, the chevron-less disabled row, VoiceOver traits, and the sort tests' collection-view shape on 26.x |
 | `general-purpose` — Phase 2 diagnosis on device (circle, text-sized capsule, 26.5 behaviour, `.id` mitigation filmed) | `opus` | ~169k (subagent total) | The look measured; the 26.5 transient (41 pt for 1.1 s, then a snap) filmed; `.id(selection)` removes it but kills the morph on both runtimes. The person kept the morph and accepted the transient → Decision 18, T006a |
 | `sdd-implementer` — T006a | `opus` | ~75k + resumed pass | Done; stopped once on the untestable circle diameter, settled by T005's no-tolerance ruling (verified on device instead); unit 1749 green |
+| `sdd-implementer` — T007 | `opus` | ~93k (subagent total) | Done; unit 1746 green; thirteen switch-driving UI tests green alone; six mutations recorded |

@@ -14,7 +14,7 @@ import Testing
 @Suite("Item list sides wiring")
 struct ItemListSidesWiringTests {
     private nonisolated static let list = "Trove/Views/Items/ItemListView.swift"
-    private nonisolated static let control = "Trove/Views/Items/SideSwitch.swift"
+    private nonisolated static let control = "Trove/Views/Shared/SidePicker.swift"
 
     private func code() throws -> String {
         try SourceScan.production(Self.list)
@@ -289,32 +289,39 @@ struct ItemListSidesWiringTests {
         #expect(!sold.contains(".onMove"), "the Sold side is draggable — its order is the sale dates' (P16)")
     }
 
-    // MARK: - The switch (plan Q15)
+    // MARK: - The switch (plan Q15, 018 G10)
 
     /// The one call site, and the whole of Q15 as the view can express it:
-    /// the switch reports a tap through `show(_:)`, and binds to nothing.
+    /// the switch reports a choice through `show(_:)`, and the screen binds
+    /// nothing — no `$` projection among its arguments (the closure's own
+    /// `$0` aside).
     ///
-    /// Mutation: bind it to a `side` setter (`SideSwitch(side: $viewModel.side)`)
-    /// → both expectations fail.
+    /// Mutation (018 T007): `SidePicker(side: $viewModel.side, …)` → red.
     @Test func theSwitchReportsThroughShowAndBindsToNothing() throws {
         let code = try code()
 
-        let calls = SourceScan.argumentLists(of: "SideSwitch", in: code)
+        let calls = SourceScan.argumentLists(of: "SidePicker", in: code)
         try #require(calls.count == 1, "the screen composes \(calls.count) side switches, expected exactly 1")
         let call = try #require(calls.first)
 
-        #expect(call.contains("viewModel.show"), "the switch doesn't call `show(_:)`: \(call)")
-        #expect(!call.contains("$viewModel.side"), "the switch is bound to `side` itself, skipping the clearing `show(_:)` does: \(call)")
+        #expect(call.contains("viewModel.show($0)"), "the switch doesn't call `show(_:)`: \(call)")
+        let projection = try Regex(#"\$[A-Za-z_]"#)
+        #expect(
+            !call.contains(projection),
+            "the switch is bound to `side` itself, skipping `show(_:)`: \(call)"
+        )
     }
 
     /// Plan §4: the switch lives in the standing header, so it is on screen
-    /// over an empty Owned side exactly as it is over rows. Mutation: move
-    /// the `SideSwitch(` call inside either branch → it lands in this span.
+    /// over an empty Owned side exactly as it is over rows.
+    ///
+    /// Mutation (018 T007): the `SidePicker(` call moved into the empty-state
+    /// branch → red.
     @Test func theSwitchStandsOutsideTheEmptyState() throws {
         let branches = try body(of: "if let reason = viewModel.emptyReason")
 
         #expect(
-            !branches.contains("SideSwitch("),
+            !branches.contains("SidePicker("),
             "the switch is composed inside the empty-state branch, so an emptied side would lose it"
         )
         #expect(
@@ -375,7 +382,7 @@ struct ItemListSidesWiringTests {
 
     /// Spec Decision 13, as the view can express it: neither side's meta line
     /// is conditional, so the slot under the title is there on both sides and
-    /// the `SideSwitch` beneath it cannot jump as the sides change. The
+    /// the `SidePicker` beneath it cannot jump as the sides change. The
     /// person saw exactly that jump at the Phase 5 pause.
     ///
     /// The type carries most of the guarantee — `soldSummaryLine` is a
@@ -426,70 +433,40 @@ struct ItemListSidesWiringTests {
         #expect(state.contains("isAddingItem = true"), "the everything-sold state offers no way to add something new")
     }
 
-    // MARK: - The control itself (criterion 16)
+    // MARK: - The control itself (018 G10, plan §4 and Q3)
 
-    /// What the switch says, and to whom: `SaleCopy`'s two words on screen,
-    /// one identifier, a label for the pair and the selected trait on the half
-    /// that is showing.
-    @Test func theSwitchIsLabelledAndMarksItsActiveHalfSelected() throws {
+    /// The switch is the system segmented control, and its selection is a
+    /// `Binding` whose getter reads the side and whose setter *is* `select` —
+    /// so a choice reaches the screen's `show(_:)` and nothing writes the side
+    /// directly. The body is read whole and compared by whole literals. The
+    /// Items switch's words, VoiceOver label and identifier are read off a
+    /// switch built through its own `init(side:select:)`, so they are values
+    /// rather than spellings.
+    ///
+    /// Mutations (018 T007): `.pickerStyle(.menu)` → red; the binding's
+    /// setter `{ _ in }` → red.
+    @Test func theSwitchIsTheSystemSegmentedControlReportingThroughSelect() throws {
         let code = try SourceScan.production(Self.control)
 
-        #expect(code.contains("SaleCopy.owned"), "the switch types its own \"Owned\"")
-        #expect(code.contains("SaleCopy.sold"), "the switch types its own \"Sold\"")
-        #expect(code.contains("\"items.sideSwitch\""), "the switch carries no identifier")
-        #expect(code.contains("\"Owned or sold\""), "the switch isn't labelled for VoiceOver (criterion 16)")
-        #expect(code.contains(".accessibilityValue("), "the switch doesn't say which side is showing (criterion 16)")
-        #expect(code.contains(".isSelected"), "the active half isn't announced as selected (criterion 16)")
+        let bodies = SourceScan.closureBodies(after: "var body: some View", in: code)
+        try #require(bodies.count == 1, "SidePicker declares \(bodies.count) bodies, expected exactly 1")
+        let body = try #require(bodies.first)
 
+        #expect(
+            body.contains("Picker(accessibilityLabel, selection: Binding(get: { side }, set: select))"),
+            "the switch is not a `Picker` whose selection reads `side` and reports through `select`: \(body)"
+        )
+        #expect(body.contains(".pickerStyle(.segmented)"), "the switch is not the system segmented control: \(body)")
+        #expect(body.contains(".accessibilityIdentifier(identifier)"), "the switch carries no identifier: \(body)")
         // It reports; it never writes. A `@Binding` here would be a second
-        // way to change sides, and the one that skips Q15's clearing.
-        #expect(!code.contains("@Binding"), "the switch binds the side instead of reporting a tap (plan Q15)")
-    }
+        // way to change sides, one that skips `show(_:)`.
+        #expect(!code.contains("@Binding"), "the switch binds the side instead of reporting a choice (plan Q3)")
 
-    /// Spec Decision 13's other half: the slide is fast. T018b measured the
-    /// travel on the simulator frame by frame — at 0.25 s it took 198–222 ms
-    /// of visible travel, and the bound Decision 13 is held to is 0.2 s, the
-    /// rate every other in-page control in the app already moves at.
-    ///
-    /// One constant, both arms: the value is asserted rather than the source
-    /// scanned, so a literal typed back into either arm of the `.animation`
-    /// leaves the constant unused and the travelling arm un-pinned — which
-    /// is what the second half of this test checks.
-    ///
-    /// Mutation: `slideDuration = 0.25` → red.
-    @Test func theSwitchesSlideIsAtOrUnderTwoTenthsOfASecond() throws {
-        #expect(SideSwitchMetrics.slideDuration <= 0.2)
-
-        let code = try SourceScan.production(Self.control)
-        #expect(
-            code.ranges(of: "SideSwitchMetrics.slideDuration").count == 2,
-            "the switch names `SideSwitchMetrics.slideDuration` \(code.ranges(of: "SideSwitchMetrics.slideDuration").count) times, expected 2 — one arm of the animation types its own duration"
-        )
-    }
-
-    /// The fill is **one** rectangle that moves, not one per half appearing
-    /// as the other disappears. T018b measured the difference on the device:
-    /// the paired form is a structural insert-and-remove, which
-    /// `.animation(_:value:)` does not cover, so it cross-faded — the control
-    /// dimming to 22 % halfway across — and ignored its own duration
-    /// entirely (a literal 2 s ease changed nothing). An animatable
-    /// `.offset` is covered, and measures as a real slide: the fill's edge
-    /// crosses in 9 to 11 distinct frames at 60 Hz with the control's
-    /// brightness flat throughout.
-    ///
-    /// Mutation: put the `matchedGeometryEffect` pair back → both
-    /// expectations fail.
-    @Test func theSwitchesFillIsOneMovingRectangle() throws {
-        let code = try SourceScan.production(Self.control)
-
-        #expect(
-            !code.contains("matchedGeometryEffect"),
-            "the fill is paired across the halves again — that form cross-fades rather than sliding, and ignores the animation"
-        )
-        #expect(
-            code.ranges(of: "Rectangle()\n                .fill(theme.colors.accentBrass)").count == 1,
-            "the switch draws \(code.ranges(of: "Rectangle()\n                .fill(theme.colors.accentBrass)").count) brass fills, expected exactly 1 — the one that slides"
-        )
-        #expect(code.contains(".offset(x: side =="), "the fill doesn't move with the side, so nothing about it is animatable")
+        let items = SidePicker(side: ItemListViewModel.Side.sold, select: { _ in })
+        #expect(items.side == .sold)
+        #expect(items.leading == .owned && items.leadingLabel == SaleCopy.owned, "the Items switch's leading segment isn't Owned")
+        #expect(items.trailing == .sold && items.trailingLabel == SaleCopy.sold, "the Items switch's trailing segment isn't Sold")
+        #expect(items.accessibilityLabel == "Owned or sold", "the Items switch isn't labelled for VoiceOver")
+        #expect(items.identifier == "items.sideSwitch", "the Items switch's identifier changed — the UI tests find it by it")
     }
 }

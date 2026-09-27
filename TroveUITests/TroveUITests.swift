@@ -378,8 +378,10 @@ final class TroveUITests: XCTestCase {
         )
 
         // A segmented Picker surfaces as a segmentedControl whose segments are
-        // buttons read by their displayName; selection is `.isSelected`.
-        let control = app.segmentedControls.firstMatch
+        // buttons read by their displayName; selection is `.isSelected`. Found
+        // by its "System" segment rather than as the first segmented control:
+        // since 018 the Items switch behind the sheet is one too.
+        let control = app.segmentedControls.containing(NSPredicate(format: "label == %@", "System")).firstMatch
         XCTAssertTrue(control.waitForExistence(timeout: 5), "the Appearance segmented control must be on the screen")
 
         let system = control.buttons["System"]
@@ -1042,7 +1044,7 @@ final class TroveUITests: XCTestCase {
         // side, not just a figure.
         let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the card should land on the Items tab")
-        XCTAssertEqual(switchControl.value as? String, "Sold", "the card should land on the Sold side, not on Owned")
+        XCTAssertTrue(switchControl.buttons["Sold"].isSelected, "the card should land on the Sold side, not on Owned")
 
         let telecaster = soldRow(in: app, named: "Telecaster")
         let bluesJunior = soldRow(in: app, named: "Blues Junior")
@@ -2040,7 +2042,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Plans"].tap()
         let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the Plans tab must offer the side switch")
-        XCTAssertEqual(switchControl.value as? String, "Active", "the Plans tab must open on Active")
+        XCTAssertTrue(switchControl.buttons["Active"].isSelected, "the Plans tab must open on Active")
 
         XCTAssertTrue(
             app.staticTexts["Fuji X100V"].waitForExistence(timeout: 5),
@@ -2077,7 +2079,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Plans"].tap()
         let relaunchedSwitch = element(in: app, identifiedBy: "plans.sideSwitch")
         XCTAssertTrue(relaunchedSwitch.waitForExistence(timeout: 5))
-        XCTAssertEqual(relaunchedSwitch.value as? String, "Active", "every launch must open the Plans tab on Active")
+        XCTAssertTrue(relaunchedSwitch.buttons["Active"].isSelected, "every launch must open the Plans tab on Active")
     }
 
     /// Criteria 5 and 6 on the Active side: the default is the newest plan
@@ -2429,11 +2431,12 @@ final class TroveUITests: XCTestCase {
         card.tap()
 
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the card should land on the Plans tab")
-        let onActive = expectation(for: NSPredicate(format: "value == %@", "Active"), evaluatedWith: switchControl)
+        let active = switchControl.buttons["Active"]
+        let onActive = expectation(for: NSPredicate(format: "isSelected == true"), evaluatedWith: active)
         XCTAssertEqual(
             XCTWaiter.wait(for: [onActive], timeout: 5),
             .completed,
-            "the card must open Plans on Active — the switch reads \(switchControl.value as? String ?? "nil")"
+            "the card must open Plans on Active — Completed reads isSelected \(switchControl.buttons["Completed"].isSelected)"
         )
     }
 
