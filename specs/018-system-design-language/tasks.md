@@ -789,7 +789,7 @@ Handoff notes for the pause reports:
   commit: 38 tests, 0 failures, 979 s.** The brass on the glass is the
   device pass's to see (`ImageRenderer` draws glass as a placeholder).
 
-- [ ] **T009 — The switch's slide and the finished header's sort, filmed. [`general-purpose` agent with simulator tools]**
+- [x] **T009 — The switch's slide and the finished header's sort, filmed. [`general-purpose` agent with simulator tools]**
   Per plan §1 and §9 (G14a, G14b), criteria 1 and 7. At T008's commit (build
   path and mtime checked), iOS 27.0 and 26.5 (27.0 alone, recorded, if no
   26.5 runtime is installed), with the probe's background-difference mode
@@ -822,6 +822,41 @@ Handoff notes for the pause reports:
   (the Done note is the record for the films).
   **Verify:** the frame tables and verdicts in the Done note — the sort's
   per runtime and per switch, the switches' per control.
+  **Done (2026-09-27, at 3eb39ce, app relinked after the commit).**
+  **Probe made able to fail first:** `bg` mode excludes any pixel within 1
+  px of a label pixel from the capsule; `labelThreshold` dropped; a new
+  last argument `brass|light|dark` selects the label's colour class, since
+  the finished header's label is the system's (white/near-black), not
+  brass. Proof: on T002's 26.5 Light film frames 918–945 the changed probe
+  fires TEAR 6 of 28 at thr 4 (20 of 28 at thr 8; e.g. f936 extent
+  25.0–95.0, label 25.3–95.3, out 2 px) where the old probe read whole 28;
+  on T003's clean 26.5 films TEAR 0 in 111 and 92 frames. On T002's 26.5
+  **Dark** frames 819–864 it still reads whole: there the label ends *on*
+  the rim column (26.3–94.7 in a 24.7–94.7 capsule) and nothing is past
+  it — that finding was the extent (25–95) against the frame (13–108), the
+  calibration column, never `out=`. README records all of it.
+  **The sort on the finished header** (`-seedSold`, boxes 27.0 (226, 81,
+  112 × 46), 26.5 (216, 81, 112 × 46); thr 27.0 Dark 10 / Light 20, 26.5
+  Dark 4 / Light 24). **iOS 27.0: whole on every frame, 0 TEAR, all four
+  switches, both appearances**; settled extents within 0.7 pt of XCUITest's
+  frame; bare gap 87–100 ms. **iOS 26.5, Decision 18's transient on both
+  narrow-to-wide switches, both appearances:** Date → Market ↓ the capsule
+  holds Date's ≈69 pt under the 95 pt label from +0.38 s and snaps right at
+  **+1.70 s** (Dark) / **+1.54 s** (Light); Name → Date sold holds Name's
+  width and is right at **+1.78 s** (Dark) / +1.59 s (Light); every case
+  self-corrects. Wide-to-narrow (Market ↓ → Date, Date sold → Name) clean
+  on Dark; on **26.5 Light the wider capsule's shadow stays behind the
+  narrow badge until the next tap** (left edge 34–36 against 39.3;
+  `t009-26l-f41s.png`) — a second 26.5-only artefact the amendment does
+  not name. **Both for the person at the pause:** the durations run a
+  little past the "about 1.5 s" written into criterion 1's amendment.
+  **The switches** (`-seedPlans`): a slide, not a cut, on all six —
+  27.0 Items Owned → Sold 24 distinct pill positions over 0.40 s, Sold →
+  Owned 26 / 0.43 s, Plans Active → Completed 25 / 0.43 s; 26.5 28 /
+  0.62 s, 22 / 0.35 s, 24 / 0.43 s. Title, meta line, track top and list
+  top: **0 px drift on every frame** on both runtimes (criterion 7). 24
+  screenshots (`t009-{27,26}-{dark,light}-*.png`) and `t009-composite.png`
+  in the scratchpad for the pause. Films `t009-film-*.mp4`.
   **Phase 3 closes here — pause for the person.**
 
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
@@ -1011,3 +1046,4 @@ recorded here too.
 | `sdd-implementer` — T006a | `opus` | ~75k + resumed pass | Done; stopped once on the untestable circle diameter, settled by T005's no-tolerance ruling (verified on device instead); unit 1749 green |
 | `sdd-implementer` — T007 | `opus` | ~93k (subagent total) | Done; unit 1746 green; thirteen switch-driving UI tests green alone; six mutations recorded |
 | `sdd-implementer` — T008 | `opus` | ~83k (subagent total) | Done; unit 1747 green; UI suite 38/38 at the phase's final code commit; four mutations recorded |
+| `general-purpose` — T009 films (probe made falsifiable, four sort films, two switch films) | `opus` | ~266k (subagent total) | 27.0 whole on every frame; 26.5 transient 1.54–1.78 s and a stale shadow on Light — both to the person; switches slide with 0 px header drift on both runtimes |

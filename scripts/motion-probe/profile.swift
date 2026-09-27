@@ -8,7 +8,7 @@ import Foundation
 // trade places. The centroid alone cannot tell them apart, which is why
 // this exists.
 //
-// usage: swift profile.swift <video.mov> <xPt> <yPt> <wPt> <hPt> <fromIndex> <toIndex> [bg [spanThreshold labelThreshold]]
+// usage: swift profile.swift <video.mov> <xPt> <yPt> <wPt> <hPt> <fromIndex> <toIndex> [bg [spanThreshold [brass|light|dark]]]
 //
 // 018 T002 (plan Q14) — `bg`: background-difference mode. The mass is no
 // longer "how brass" a pixel is but its RGB distance from the box's own
@@ -19,10 +19,20 @@ import Foundation
 // above `spanThreshold` (default 10, of 0–441) and not brass — merged into
 // runs, gaps of ≤ 2 px closed, and their extent; and, in a ±2 pt band
 // about the same line, the *label* columns — brass, R − B > 40 — with
-// `out=` counting those beyond the capsule's extent. (`labelThreshold` is
-// accepted for compatibility and unused: colour, not brightness, is what
-// separates a brass label from a grey rim — a brightness band read the
-// morphing droplet's rim highlight as "label" in T002's first pass.)
+// `out=` counting those beyond the capsule's extent. Colour, not
+// brightness, is what separates a brass label from a grey rim — a
+// brightness band read the morphing droplet's rim highlight as "label" in
+// T002's first pass. **018 T009:** a pixel within 1 px (8-neighbour) of a
+// brass pixel is never a capsule pixel either — a label's anti-aliased
+// fringe is differing-and-not-brass, and before this exclusion a label
+// standing past the rim carried its own fringe with it, so the measured
+// capsule grew to cover it and TEAR could not fire (plan §1 As built).
+// The label's colour class is the optional last argument: `brass` (the
+// default, R − B > 40) for a tinted label, or `light` / `dark` for the
+// system glass button's own label since Decision 18 — near-neutral
+// (max − min channel < 30) and every channel above 200 / below 70, which
+// the fill (48 in Dark, 25–50 above a Light background) and the rim's
+// grey highlight never reach.
 // Verdicts: EMPTY — no capsule and no label on the mid-line (the box is
 // bare while the morph is between the panel and the badge); LABEL-ONLY —
 // brass in the band but no capsule column on the mid-line (the label drawn
@@ -40,7 +50,7 @@ let boxPt = CGRect(x: Double(a[2])!, y: Double(a[3])!, width: Double(a[4])!, hei
 let from = Int(a[6])!, to = Int(a[7])!
 let bgMode = a.count > 8 && a[8] == "bg"
 let spanThreshold = a.count > 9 ? Double(a[9])! : 10
-let labelThreshold = a.count > 10 ? Double(a[10])! : 90
+let labelClass = a.count > 10 ? a[10] : "brass"
 
 let asset = AVURLAsset(url: url)
 let sem = DispatchSemaphore(value: 0)
@@ -104,20 +114,44 @@ while let sample = out.copyNextSampleBuffer() {
         // from differing pixels alone (an earlier draft of this mode did
         // that and could not fail). A *label* pixel is brass — R − B > 40,
         // the brass mode's own test — and a *capsule* pixel differs from the
-        // background by more than `spanThreshold` and is not brass. The
+        // background by more than `spanThreshold`, is not brass, and is not
+        // within 1 px of a brass pixel (the fringe; see `nearBrass`). The
         // capsule's extent is its first and last column over the whole box
         // (see below); its mid-line runs (a 3-px band, gaps of ≤ 2 px
         // closed) are printed as information — one on an opaque fill, many on iOS 26.5's
         // see-through Dark fill, where only the rims register. A label pixel
         // in the ±2 pt band outside that extent is counted in `out=`.
-        func isBrass(_ o: Int) -> Bool { Double(bytes[o + 2]) - Double(bytes[o]) > 40 }
+        func isBrass(_ o: Int) -> Bool {
+            let b = Double(bytes[o]), g = Double(bytes[o + 1]), r = Double(bytes[o + 2])
+            switch labelClass {
+            case "light": return min(r, g, b) > 200 && max(r, g, b) - min(r, g, b) < 30
+            case "dark": return max(r, g, b) < 70 && max(r, g, b) - min(r, g, b) < 30
+            default: return r - b > 40
+            }
+        }
+        // T009: the label's fringe is excluded by adjacency, not colour. A
+        // pixel is `nearBrass` if any of its 8 neighbours (or itself) is a
+        // label pixel; a capsule pixel must be differing, not label, and not
+        // nearBrass. Without this the outermost non-label differing pixel
+        // is the fringe of a label past the rim, and the verdict cannot fail.
+        var brass = [Bool](repeating: false, count: bw * bh)
+        for i in 0..<(bw * bh) { brass[i] = isBrass(i * 4) }
+        var nearBrass = [Bool](repeating: false, count: bw * bh)
+        for py in 0..<bh {
+            for px in 0..<bw where brass[py * bw + px] {
+                for ny in max(0, py - 1)...min(bh - 1, py + 1) {
+                    for nx in max(0, px - 1)...min(bw - 1, px + 1) { nearBrass[ny * bw + nx] = true }
+                }
+            }
+        }
+        func isCapsule(_ px: Int, _ py: Int) -> Bool {
+            let i = py * bw + px
+            return !nearBrass[i] && mass(i * 4) > spanThreshold
+        }
         let mid = bh / 2
         var capsuleCols = [Bool](repeating: false, count: bw)
         for px in 0..<bw {
-            for py in max(0, mid - 1)...min(bh - 1, mid + 1) {
-                let o = (py * bw + px) * 4
-                if mass(o) > spanThreshold && !isBrass(o) { capsuleCols[px] = true }
-            }
+            for py in max(0, mid - 1)...min(bh - 1, mid + 1) where isCapsule(px, py) { capsuleCols[px] = true }
         }
         var midRuns: [(Int, Int)] = []
         var x = 0
@@ -139,10 +173,7 @@ while let sample = out.copyNextSampleBuffer() {
         // silhouette's edge — which is what "inside the capsule" means.
         var first = Int.max, last = -1
         for py in 0..<bh {
-            for px in 0..<bw {
-                let o = (py * bw + px) * 4
-                if mass(o) > spanThreshold && !isBrass(o) { first = min(first, px); last = max(last, px) }
-            }
+            for px in 0..<bw where isCapsule(px, py) { first = min(first, px); last = max(last, px) }
         }
         let extent: (Int, Int)? = last < 0 ? nil : (first, last)
         let band = Int((2 * scale).rounded())
