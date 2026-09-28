@@ -173,20 +173,21 @@ struct PlansView: View {
 
             Spacer(minLength: 8)
 
-            // `WishlistView`'s pair, led by the side toggle (018 Decision
-            // 19). Sort is hidden over an empty side, as on the list screens
-            // — there is nothing to order; the "…" always shows, since
-            // Settings is never gated (plan QA3). The toggle is outside that
-            // gate, so it is there over an empty side exactly as over a full
-            // one — `ItemListView`'s placement. Never bound to `side`: a tap
+            // `WishlistView`'s pair with the side toggle between them (018
+            // Decisions 19 and 20): Sort By · toggle · "…". Sort is hidden
+            // over an empty side, as on the list screens — there is nothing
+            // to order; the "…" always shows, since Settings is never gated
+            // (plan QA3). The toggle is outside that gate, beside the "…", so
+            // it is there over an empty side exactly as over a full one and
+            // never moves relative to the "…" — `ItemListView`'s placement. Never bound to `side`: a tap
             // asks `show(_:)` for the other side, which sets it and reloads,
             // and clears nothing, so each side keeps its own sort (criterion
             // 5). The row keeps its ideal width, so a glass label never wraps.
             HStack(spacing: 8) {
-                SideToggle(side: viewModel.side, select: { viewModel.show($0) })
                 if !viewModel.rows.isEmpty {
                     sortControl
                 }
+                SideToggle(side: viewModel.side, select: { viewModel.show($0) })
                 overflowControl
             }
             .fixedSize(horizontal: true, vertical: false)

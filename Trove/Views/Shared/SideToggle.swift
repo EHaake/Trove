@@ -10,15 +10,18 @@ import SwiftUI
 /// only its side and its tap, and every word, glyph, label and identifier
 /// lives here.
 ///
-/// **Styled exactly as `OverflowMenu` is, minus the circle**: the glass
-/// button style, then the system's primary label colour as the button's
-/// tint (the glass style paints its label with the tint, overriding the root
-/// brass tint), then the system's regular control size, with 4 pt of padding
-/// above and below the label. The word is in the badges' label type
-/// (`SortMenuCopy.labelFont`), and the label stands in one hidden line of
-/// that type, so the three controls in the row render at one height
-/// (`ItemListHeaderLayoutTests`, G1). Never a theme colour; `ThemeTests`
-/// lets exactly the one tint line through.
+/// **Styled as `OverflowMenu` is, minus the circle, and brass on the primary
+/// side**: the glass button style, then the button's tint (the glass style
+/// paints its label with the tint, overriding the root brass tint), then the
+/// system's regular control size, with 4 pt of padding above and below the
+/// label. The tint is the app's brass while the leading side shows (Owned,
+/// Active) and the system's primary label colour while the trailing side
+/// shows (Sold, Completed) — spec Decision 20, the one header control that
+/// carries the app's colour, so the primary side reads as such. The word is
+/// in the badges' label type (`SortMenuCopy.labelFont`), and the label
+/// stands in one hidden line of that type, so the three controls in the row
+/// render at one height (`ItemListHeaderLayoutTests`, G1). No other colour
+/// is named here; `ThemeTests` lets exactly the one tint line through.
 ///
 /// **It never writes the side.** `ItemListViewModel.side` is `private(set)`,
 /// so a tap asks `select` for the other side and the screen's `show(_:)`
@@ -37,6 +40,8 @@ struct SideToggle<Side: Hashable>: View {
 
     /// What a tap asks for: the side not showing.
     let select: (Side) -> Void
+
+    @Environment(\.theme) private var theme
 
     /// The side a tap shows.
     var other: Side { side == leading ? trailing : leading }
@@ -72,9 +77,9 @@ struct SideToggle<Side: Hashable>: View {
             .padding(.vertical, 4)
         }
         .buttonStyle(.glass)
-        // Decision 17: the system's label colour as the tint, as on the two
-        // badges beside it.
-        .tint(.primary)
+        // Decision 20: brass on the leading side, the system's label colour
+        // (Decision 17, as on the two badges beside it) on the trailing one.
+        .tint(side == leading ? theme.colors.accentBrass : Color.primary)
         .controlSize(.regular)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityValue(word(side))

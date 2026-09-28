@@ -932,7 +932,7 @@ Handoff notes for the pause reports:
   ui`: 38 tests, 0 failures, 1002 s.** Notes: the search field keeps its
   section gap under the header; G39's UI check now measures the title row.
 
-- [ ] **T009b — The toggle between Sort By and the "…", brass on the primary side (Decision 20).**
+- [x] **T009b — The toggle between Sort By and the "…", brass on the primary side (Decision 20).**
   `ItemListView` and `PlansView`: the trailing `HStack` order becomes sort
   control · `SideToggle` · `overflowControl` (the sort control still inside
   its narrowing gate, so with an empty side the row is toggle · "…" and the
@@ -956,6 +956,22 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green; the three UI tests green alone;
   mutations recorded; the person looks. (Colour on the device is the
   person's look: `ImageRenderer` draws glass as a placeholder.)
+  **Done (2026-09-27).** Row order sort · toggle · "…" on both screens;
+  `SideToggle` reads the theme and tints `side == leading ?
+  theme.colors.accentBrass : Color.primary`; G10 pins the whole ternary and
+  exactly one `theme.colors`; the ThemeTests entry is `["Color.primary"]`
+  and its stale check binds. New `theControlRowIsSortThenToggleThenOverflow`
+  on Items and Plans (a view-body fact). `badgeRowSize` keeps the
+  renderable order with an honest comment: `ImageRenderer` crashes on a
+  glass `Menu` before a glass `Button` in an `HStack`, and an `HStack`'s
+  size is order-invariant, so the numbers hold (rows 200–228 × 37, header
+  57, all badges 109 px at 3×, unchanged). Mutations, all red: ternary
+  inverted (`ItemListSidesWiringTests.swift:478`); a second theme colour
+  (`:489`); the exempted text removed (`ThemeTests.swift:253`); toggle and
+  sort swapped (`:335`, `PlansWiringTests.swift:231`). `scripts/verify.sh`:
+  green, 1749 in 235. UI alone: the three named tests green (40 s, 22 s,
+  23 s). Finding: `xcodebuild` sometimes hangs after a failing run — read
+  the red from the log rather than wait for exit.
 
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
@@ -1149,3 +1165,4 @@ recorded here too.
 | `general-purpose` — Phase 3 diagnosis (segmented control colour/font probes; four placements) | `opus` | ~170k | The system segmented control takes no font, colour or tint from SwiftUI; placements C/D rendered |
 | `general-purpose` — three homes for the switch rendered | `opus` | ~135k | Icon toggle, "…" menu group, "Show" capsule; the person chose the icon + word toggle (Decision 19) |
 | `sdd-implementer` — T009a | `opus` | ~142k (subagent total) | Done; unit 1747 green; UI 38/38; ten mutations recorded |
+| `sdd-implementer` — T009b | `opus` | ~89k + resumed pass | Done; stopped once on the render instrument's order (settled by the standing stand-in ruling; an order scan added); unit 1749 green |

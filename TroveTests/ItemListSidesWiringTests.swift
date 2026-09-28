@@ -314,6 +314,30 @@ struct ItemListSidesWiringTests {
         )
     }
 
+    /// Spec Decision 20: the control row is Sort By, then the side toggle, then
+    /// the "…" — so the toggle sits beside the "…" whether or not Sort By is
+    /// shown, and never moves when it comes and goes. A fact about the view
+    /// body no view-model test can observe.
+    ///
+    /// Mutation (T009b): the toggle and the sort control swapped → red.
+    @Test func theControlRowIsSortThenToggleThenOverflow() throws {
+        let header = try body(of: "private var header: some View")
+        let rows = SourceScan.closureBodies(after: "HStack(spacing: 8)", in: header)
+        try #require(rows.count == 1, "the header composes \(rows.count) control rows, expected exactly 1: \(header)")
+        let row = try #require(rows.first)
+
+        var starts: [String.Index] = []
+        for part in ["sortControl", "SideToggle(", "overflowControl"] {
+            let found = row.ranges(of: part)
+            try #require(found.count == 1, "the control row names `\(part)` \(found.count) times, expected exactly 1: \(row)")
+            starts.append(found[0].lowerBound)
+        }
+        #expect(
+            starts[0] < starts[1] && starts[1] < starts[2],
+            "the control row isn't Sort By, then the side toggle, then the \"…\" (spec Decision 20): \(row)"
+        )
+    }
+
     /// Plan §4: the switch lives in the standing header, so it is on screen
     /// over an empty Owned side exactly as it is over rows.
     ///
@@ -442,13 +466,16 @@ struct ItemListSidesWiringTests {
     /// `select` for the other side — so a choice reaches the screen's
     /// `show(_:)` and nothing writes the side directly. The action is read
     /// whole and compared as a whole literal; the style as `OverflowMenu`'s
-    /// minus the circle, and no theme colour. The Items toggle's words,
+    /// minus the circle, and since T009b (spec Decision 20) the tint the
+    /// ternary over `leading` — brass on the leading side, the system's label
+    /// colour on the trailing — with no other theme colour in the file. The Items toggle's words,
     /// glyphs, VoiceOver label, identifier and the side a tap asks for are
     /// read off a toggle built through its own `init(side:select:)`, so they
     /// are values rather than spellings.
     ///
     /// Mutations (T009a): the action `select(side)` → red; a theme colour
-    /// named in the file → red.
+    /// named in the file → red. (T009b): the ternary's two colours swapped →
+    /// red; a second theme colour named in the file → red.
     @Test func theSwitchIsAGlassToggleAskingForTheOtherSide() throws {
         let code = try SourceScan.production(Self.control)
         let anchor = "struct SideToggle<Side: Hashable>: View"
@@ -469,9 +496,12 @@ struct ItemListSidesWiringTests {
             "the toggle opens a menu — a tap shows the other side (Decision 19): \(body)"
         )
 
+        // Decision 20: brass while the leading side shows, the system's label
+        // colour while the trailing side does — the whole ternary, in that
+        // order, directly after the glass style.
         #expect(
-            body.contains(try Regex(#"\.buttonStyle\(\.glass\)\s*\.tint\(\.primary\)\s*\.controlSize\(\.regular\)"#)),
-            "the toggle isn't `OverflowMenu`'s glass button tinted `.primary` at the regular control size: \(body)"
+            body.contains(try Regex(#"\.buttonStyle\(\.glass\)\s*\.tint\(side == leading \? theme\.colors\.accentBrass : Color\.primary\)\s*\.controlSize\(\.regular\)"#)),
+            "the toggle isn't `OverflowMenu`'s glass button at the regular control size, tinted brass on the leading side and the system's label colour on the trailing one (spec Decision 20): \(body)"
         )
         #expect(!body.contains(".buttonBorderShape("), "the toggle sets a border shape — it is a capsule, the \"…\" alone is a circle: \(body)")
         #expect(body.contains(".accessibilityLabel(accessibilityLabel)"), "the toggle carries no VoiceOver label: \(body)")
@@ -480,7 +510,10 @@ struct ItemListSidesWiringTests {
         // It reports; it never writes. A `@Binding` here would be a second
         // way to change sides, one that skips `show(_:)`.
         #expect(!code.contains("@Binding"), "the toggle binds the side instead of reporting a choice (plan Q3)")
-        #expect(!code.contains("theme.colors"), "SideToggle.swift names a theme colour — the toggle draws no colour of its own")
+        #expect(
+            code.ranges(of: "theme.colors").count == 1,
+            "SideToggle.swift names \(code.ranges(of: "theme.colors").count) theme colours — brass in the tint is the only one it draws (spec Decision 20)"
+        )
 
         let owned = SideToggle(side: ItemListViewModel.Side.owned, select: { _ in })
         let sold = SideToggle(side: ItemListViewModel.Side.sold, select: { _ in })

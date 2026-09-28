@@ -91,6 +91,15 @@ import Testing
 /// relation — badge row + 6 + one meta line, on both sides and under every
 /// Owned label — is re-measured with the toggle in it. The three controls
 /// render at one height at 3×, the toggle on every side of both screens.
+///
+/// **At `018` T009b** (spec Decision 20) the screens' row becomes Sort By,
+/// toggle, "…"; this suite still renders toggle, sort, "…" (see
+/// `badgeRowSize` for why), which is the same size. Heights unchanged: the
+/// badge row 228 × 37 on the Sold side (under "Date sold") and on the Owned
+/// side from 200 × 37 under "Date" to 226 × 37 under "Market ↓"/"Market ↑";
+/// the header 57 pt on both sides and under every Owned label, 53 pt with
+/// no badges, the meta line 14 pt. At 3× the "…" 108 × 109 px, the toggles
+/// 237 (Owned), 221 (Sold), 255 (Active) and 315 (Completed) × 109 px.
 @Suite("Items header layout")
 @MainActor
 struct ItemListHeaderLayoutTests {
@@ -379,6 +388,15 @@ struct ItemListHeaderLayoutTests {
     /// inside the header does not. Over the side's real option set, as it
     /// ships (`018` T005); since T006a (spec Decision 18) the badge is sized
     /// to the selection's text, so the row's width follows the selection.
+    ///
+    /// **Not the shipped order since T009b** (spec Decision 20): the screens
+    /// compose Sort By, then the toggle, then the "…", but `ImageRenderer`
+    /// kills the test process (`precondition failure: invalid type ID`) when a
+    /// glass `Menu` precedes a glass `Button` in the row, even nested in an
+    /// inner `HStack`. An `HStack` at one spacing is the same size in any
+    /// order — the widths summed plus the gaps, the tallest child's height —
+    /// so the numbers hold. The order itself is pinned by the wiring suites'
+    /// `theControlRowIsSortThenToggleThenOverflow`.
     private func badgeRowSize<Option: Hashable>(
         side: ItemListViewModel.Side,
         options: [Option],

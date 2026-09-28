@@ -517,19 +517,20 @@ struct ItemListView: View {
             // `ItemsListHeader` with the layout: this file is what G20's and
             // `ImportWiringTests`' brace-span scans read.
             //
-            // The side toggle leads the row (018 Decision 19), outside the
-            // narrowing gate — so it is there over an empty Owned side (a
-            // person whose only item is now sold) exactly as over a full one
-            // (006 plan §4). Never bound to `side`: a tap asks `show(_:)`
+            // The row is Sort By · side toggle · "…" (018 Decisions 19 and
+            // 20): the toggle sits beside the "…", outside the narrowing gate
+            // — so it is there over an empty Owned side (a person whose only
+            // item is now sold) exactly as over a full one (006 plan §4), and
+            // never moves relative to the "…" when Sort By comes and goes. Never bound to `side`: a tap asks `show(_:)`
             // for the other side, which sets it and reloads — and since 014
             // that is the whole of it, because each side keeps its own
             // search, chip and sort while the other is visited (014 plan Q3).
             // The row keeps its ideal width, so a glass label never wraps.
             HStack(spacing: 8) {
-                SideToggle(side: viewModel.side, select: { viewModel.show($0) })
                 if viewModel.offersNarrowingControls {
                     sortControl
                 }
+                SideToggle(side: viewModel.side, select: { viewModel.show($0) })
                 overflowControl
             }
             .fixedSize(horizontal: true, vertical: false)

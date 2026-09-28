@@ -208,6 +208,32 @@ struct PlansWiringTests {
         #expect(active.identifier == "plans.sideSwitch", "the Plans toggle's identifier changed — the UI tests find it by it")
     }
 
+    /// Spec Decision 20, as on Items: the control row is Sort By, then the
+    /// side toggle, then the "…" — so the toggle sits beside the "…" whether
+    /// or not Sort By is shown. A fact about the view body no view-model test
+    /// can observe.
+    ///
+    /// Mutation (T009b): the toggle and the sort control swapped → red.
+    @Test func theControlRowIsSortThenToggleThenOverflow() throws {
+        let headers = SourceScan.closureBodies(after: "private var header: some View", in: try SourceScan.production(Self.view))
+        try #require(headers.count == 1, "PlansView declares \(headers.count) headers, expected exactly 1")
+        let header = try #require(headers.first)
+        let rows = SourceScan.closureBodies(after: "HStack(spacing: 8)", in: header)
+        try #require(rows.count == 1, "the header composes \(rows.count) control rows, expected exactly 1: \(header)")
+        let row = try #require(rows.first)
+
+        var starts: [String.Index] = []
+        for part in ["sortControl", "SideToggle(", "overflowControl"] {
+            let found = row.ranges(of: part)
+            try #require(found.count == 1, "the control row names `\(part)` \(found.count) times, expected exactly 1: \(row)")
+            starts.append(found[0].lowerBound)
+        }
+        #expect(
+            starts[0] < starts[1] && starts[1] < starts[2],
+            "the control row isn't Sort By, then the side toggle, then the \"…\" (spec Decision 20): \(row)"
+        )
+    }
+
     /// `018` G7 (was 009's G19, P5): neither side's Sort By offers a manual
     /// order, so no row carries the "Drag rows to reorder" subtitle. Both
     /// menus are required, one per side, read from `sortControl`'s body.
