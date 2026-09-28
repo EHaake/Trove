@@ -973,6 +973,24 @@ Handoff notes for the pause reports:
   23 s). Finding: `xcodebuild` sometimes hangs after a failing run — read
   the red from the log rather than wait for exit.
 
+- [ ] **T009c — The toggle's label swaps in one frame (the person's finding, 2026-09-27).**
+  Filmed on 27.0 at 3f36b27: Owned → Sold crossfades the label — for 10
+  frames (~0.10 s) "Owned" (brass) and "Sold" (primary) are drawn
+  superimposed, the glyphs likewise, while the capsule's width slides; Sold
+  → Owned is already a one-frame swap. Candidates filmed:
+  `.contentTransition(.identity)` leaves a glyph overlap and a blank
+  moment; `.id(side)` on the label is worse (0.44 s superimposed);
+  `.animation(nil, value: side)` and `.transaction { $0.animation = nil }`
+  both give a one-frame swap of glyph, word, tint and width with the glass
+  capsule intact. Fix: `.animation(nil, value: side)` on the label `HStack`
+  directly after `.frame(height: 0)` in `SideToggle.swift` — the narrowest
+  of the two. G10 gains a leg pinning that line on the label row (an
+  injection point only film can otherwise reach; mutation: the line
+  removed → red). The diagnosis film of candidate (b) is the evidence
+  (`tog-b.mp4`, f0249 → f0250); T013's device pass looks once more.
+  Files: `Trove/Views/Shared/SideToggle.swift`, `TroveTests/ItemListSidesWiringTests.swift`.
+  **Verify:** `scripts/verify.sh` green; `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch` green alone; the mutation recorded.
+
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
 - [ ] **T010 — Delete the bespoke controls and the tests that guarded only them.**
@@ -1166,3 +1184,4 @@ recorded here too.
 | `general-purpose` — three homes for the switch rendered | `opus` | ~135k | Icon toggle, "…" menu group, "Show" capsule; the person chose the icon + word toggle (Decision 19) |
 | `sdd-implementer` — T009a | `opus` | ~142k (subagent total) | Done; unit 1747 green; UI 38/38; ten mutations recorded |
 | `sdd-implementer` — T009b | `opus` | ~89k + resumed pass | Done; stopped once on the render instrument's order (settled by the standing stand-in ruling; an order scan added); unit 1749 green |
+| `general-purpose` — toggle transition filmed, four fixes tried | `opus` | ~135k | The overlap confirmed (10 frames); `.animation(nil, value: side)` recommended → T009c |
