@@ -532,6 +532,21 @@ Made by the person on 2026-09-27, at the Phase 3 walkthrough:
     stale shadow) were shown at the same pause and passed without
     objection ("Ok!"); recorded as accepted.
 
+20. **The toggle sits between Sort By and the "…", and reads brass on the
+    primary side** (2026-09-27, the same pause): "it should be between
+    the ... and the Order picker. Since the order picker only appears if
+    there are items in the list … the button moves places each time …
+    Both the ... and owned/sold active/completed buttons will always be
+    visible, they should be next to the ..., and Date should be on the
+    leftmost side. Also, can we tint the owned and active selection with
+    the brass color? That way it's more visually clear which is the
+    primary side." So the control row is Sort By · toggle · "…", and the
+    toggle's tint is the app's brass while it shows Owned or Active, the
+    system's label colour while it shows Sold or Completed — the one
+    header control that carries the app's colour, by the person's
+    decision (a narrowing of Decision 15, which stands for Sort By and
+    the "…").
+
 ## Proposals (P-items)
 
 Claude Code's; they become decisions on plan approval unless the person

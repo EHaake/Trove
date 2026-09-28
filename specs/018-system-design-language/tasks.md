@@ -932,6 +932,31 @@ Handoff notes for the pause reports:
   ui`: 38 tests, 0 failures, 1002 s.** Notes: the search field keeps its
   section gap under the header; G39's UI check now measures the title row.
 
+- [ ] **T009b — The toggle between Sort By and the "…", brass on the primary side (Decision 20).**
+  `ItemListView` and `PlansView`: the trailing `HStack` order becomes sort
+  control · `SideToggle` · `overflowControl` (the sort control still inside
+  its narrowing gate, so with an empty side the row is toggle · "…" and the
+  toggle never moves relative to the "…"). `SideToggle`: `.tint(side ==
+  leading ? theme.colors.accentBrass : Color.primary)` in place of
+  `.tint(.primary)` — the file gains `@Environment(\.theme)` (copy
+  `AddButton`'s way of reading it) and may name `theme.colors.accentBrass`
+  for this one modifier; G10's "no theme colour" leg becomes "the tint is
+  the ternary over `leading` with `accentBrass` and `.primary`, and no other
+  colour is named" (mutations: the ternary inverted → red; a second theme
+  colour named → red). `ThemeTests`' `SideToggle.swift` exemption entry
+  updated to the new tint line's exempted text (`Color.primary` or
+  `.primary` as spelled) — verify the stale-entry check still binds. G1's
+  `badgeRowSize` renders the new order (heights unchanged: record). UI: the
+  `showSide` helper is unaffected; run `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch`,
+  G39's test and `testEmptyCollectionOffersImportAndSettingsButNotExport`
+  alone. Files: `Trove/Views/Shared/SideToggle.swift`, `Trove/Views/Items/ItemListView.swift`,
+  `Trove/Views/Plans/PlansView.swift`, `TroveTests/ItemListSidesWiringTests.swift`,
+  `TroveTests/PlansWiringTests.swift`, `TroveTests/ItemListHeaderLayoutTests.swift`,
+  `TroveTests/ThemeTests.swift`.
+  **Verify:** `scripts/verify.sh` green; the three UI tests green alone;
+  mutations recorded; the person looks. (Colour on the device is the
+  person's look: `ImageRenderer` draws glass as a placeholder.)
+
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
 - [ ] **T010 — Delete the bespoke controls and the tests that guarded only them.**
