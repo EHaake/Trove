@@ -475,7 +475,8 @@ struct ItemListSidesWiringTests {
     ///
     /// Mutations (T009a): the action `select(side)` → red; a theme colour
     /// named in the file → red. (T009b): the ternary's two colours swapped →
-    /// red; a second theme colour named in the file → red.
+    /// red; a second theme colour named in the file → red. (T009c): the
+    /// label row's `.animation(nil, value: side)` removed → red.
     @Test func theSwitchIsAGlassToggleAskingForTheOtherSide() throws {
         let code = try SourceScan.production(Self.control)
         let anchor = "struct SideToggle<Side: Hashable>: View"
@@ -502,6 +503,14 @@ struct ItemListSidesWiringTests {
         #expect(
             body.contains(try Regex(#"\.buttonStyle\(\.glass\)\s*\.tint\(side == leading \? theme\.colors\.accentBrass : Color\.primary\)\s*\.controlSize\(\.regular\)"#)),
             "the toggle isn't `OverflowMenu`'s glass button at the regular control size, tinted brass on the leading side and the system's label colour on the trailing one (spec Decision 20): \(body)"
+        )
+        // T009c: the label swaps in one frame. Without this line Owned → Sold
+        // crossfades, both words superimposed for ~0.1 s — only film sees it.
+        let labelRow = ".frame(height: 0)"
+        try #require(body.contains(labelRow), "SideToggle's label row no longer carries `\(labelRow)`: \(body)")
+        #expect(
+            body.contains(try Regex(#"\.frame\(height: 0\)\s*\.animation\(nil, value: side\)"#)),
+            "the toggle's label row isn't followed by `.animation(nil, value: side)` — Owned → Sold crossfades the two words (T009c): \(body)"
         )
         #expect(!body.contains(".buttonBorderShape("), "the toggle sets a border shape — it is a capsule, the \"…\" alone is a circle: \(body)")
         #expect(body.contains(".accessibilityLabel(accessibilityLabel)"), "the toggle carries no VoiceOver label: \(body)")

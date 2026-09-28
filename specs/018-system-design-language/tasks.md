@@ -973,7 +973,7 @@ Handoff notes for the pause reports:
   23 s). Finding: `xcodebuild` sometimes hangs after a failing run — read
   the red from the log rather than wait for exit.
 
-- [ ] **T009c — The toggle's label swaps in one frame (the person's finding, 2026-09-27).**
+- [x] **T009c — The toggle's label swaps in one frame (the person's finding, 2026-09-27).**
   Filmed on 27.0 at 3f36b27: Owned → Sold crossfades the label — for 10
   frames (~0.10 s) "Owned" (brass) and "Sold" (primary) are drawn
   superimposed, the glyphs likewise, while the capsule's width slides; Sold
@@ -990,6 +990,11 @@ Handoff notes for the pause reports:
   (`tog-b.mp4`, f0249 → f0250); T013's device pass looks once more.
   Files: `Trove/Views/Shared/SideToggle.swift`, `TroveTests/ItemListSidesWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch` green alone; the mutation recorded.
+  **Done (2026-09-27).** The line added with its comment; G10's new leg
+  (`.frame(height: 0)` immediately followed by `.animation(nil, value:
+  side)`); mutation: the line removed → red ("the toggle's label row isn't
+  followed by …"). `scripts/verify.sh`: green, 1749 in 235. The UI test
+  alone 40 s green.
 
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
@@ -1185,3 +1190,4 @@ recorded here too.
 | `sdd-implementer` — T009a | `opus` | ~142k (subagent total) | Done; unit 1747 green; UI 38/38; ten mutations recorded |
 | `sdd-implementer` — T009b | `opus` | ~89k + resumed pass | Done; stopped once on the render instrument's order (settled by the standing stand-in ruling; an order scan added); unit 1749 green |
 | `general-purpose` — toggle transition filmed, four fixes tried | `opus` | ~135k | The overlap confirmed (10 frames); `.animation(nil, value: side)` recommended → T009c |
+| `sdd-implementer` — T009c | `opus` | ~35k | Done; unit 1749 green |

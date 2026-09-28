@@ -72,6 +72,8 @@ struct SideToggle<Side: Hashable>: View {
                         .font(SortMenuCopy.labelFont)
                 }
                 .frame(height: 0)
+                // Otherwise Owned → Sold crossfades, both words drawn superimposed for ~0.1 s (filmed, T009c).
+                .animation(nil, value: side)
             }
             // `SortMenu`'s label padding (Decision 17).
             .padding(.vertical, 4)
