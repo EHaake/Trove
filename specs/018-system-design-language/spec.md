@@ -547,6 +547,24 @@ Made by the person on 2026-09-27, at the Phase 3 walkthrough:
     decision (a narrowing of Decision 15, which stands for Sort By and
     the "…").
 
+21. **The toggle is one width for both its sides, and keeps its motion**
+    (2026-09-28, the same pause). Filmed: on Plans, Active → Completed
+    swaps the word in one frame while the glass capsule grows 85 → 105 pt
+    on its own animation, so "Completed" clips past the rim for ~0.17 s;
+    nothing inside SwiftUI's transactions reaches that resize. The person:
+    "making the menu items a fixed width is a good solution, as long as
+    the animations remain" — and "removing the animations entirely isn't
+    a good choice … The animations are a big part of the liquid glass
+    aesthetic." They also reported that the current build shows no
+    animation at all when the toggle is tapped. So the toggle is as wide
+    as its wider side on each screen (Items 79 pt, Plans 105 pt — a
+    narrowing of Decision 17's text-sized capsule for this control only;
+    Sort By stays text-sized), the shorter side centred, and **the swap
+    animates**: the glass press stays, and the icon and word change with
+    a system transition that never draws both words legibly at once
+    (the T009c overlap) and never clips. Which transition is settled by
+    film, not chosen here.
+
 ## Proposals (P-items)
 
 Claude Code's; they become decisions on plan approval unless the person

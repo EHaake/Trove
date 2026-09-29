@@ -996,6 +996,22 @@ Handoff notes for the pause reports:
   followed by …"). `scripts/verify.sh`: green, 1749 in 235. The UI test
   alone 40 s green.
 
+- [ ] **T009d — One width per toggle, and the swap animates (Decision 21; the person's findings, 2026-09-28).**
+  Findings: on Plans, Active → Completed clips "Completed" ~0.17 s while
+  the glass capsule grows (filmed at 61e7ca2; the capsule's resize runs
+  outside SwiftUI transactions — `.animation(nil)`, `.transaction`,
+  `.clipShape` all fail; only a constant width is clean), and the person
+  sees no animation at all on tapping the toggle. Fix: the label's `ZStack`
+  also lays out the other side's icon and word, hidden, so the capsule is
+  the wider side's width on both sides, the visible row centred; T009c's
+  `.animation(nil, value: side)` is replaced by the transition the film
+  picks (no two legible words superimposed, no clipping, the glass press
+  intact on both runtimes). G1/G10 gain legs pinning one width per side
+  on each screen and the hidden other-side row; the T009c leg is
+  rewritten for the new transition. Mutations recorded.
+  Files: `Trove/Views/Shared/SideToggle.swift`, `TroveTests/ItemListSidesWiringTests.swift`, `TroveTests/ItemListHeaderLayoutTests.swift`, `TroveTests/PlansWiringTests.swift`.
+  **Verify:** `scripts/verify.sh` green; the film of the chosen transition on 27.0 and 26.5 both directions on both screens; the mutations recorded.
+
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
 - [ ] **T010 — Delete the bespoke controls and the tests that guarded only them.**
