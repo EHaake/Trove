@@ -1309,7 +1309,7 @@ Handoff notes for the pause reports:
 
 ## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; the person's own checks (the Accessibility Inspector, Reduce Transparency if the simulator can't switch it, the one-language attestation) are named in T013 as their steps, and nothing new is built
 
-- [ ] **T013 — Device pass. [`general-purpose` agent with simulator tools, one dispatch per section; person: Accessibility Inspector, attestation]**
+- [x] **T013 — Device pass. [`general-purpose` agent with simulator tools, one dispatch per section; person: Accessibility Inspector, attestation]**
   Per plan §9 and criteria 2, 3, 4, 8, 11, 15, 16. At the final code commit
   (build path and mtime checked), iOS 27.0, said so. Sections, each its own
   dispatch returning a short pass/fail list: **(1)** every screen in Light
@@ -1336,6 +1336,52 @@ Handoff notes for the pause reports:
   **Verify:** each section's list in the Done note; `scripts/verify.sh all`
   green **twice back to back** at the final commit (criterion 12), both count
   lines recorded.
+  **Done (2026-09-30), on iOS 27.0 (iPhone 18 Pro) with 26.5 (iPhone 17
+  Pro) for the runtime checks; build 13:46:42 of d1a4f0e's code (HEAD
+  18bcce8, docs since).** Screenshots in the session scratchpad
+  (`dp1/`, `dp2/`, `dp3/`). **(1) PASS**: every screen Dark and Light,
+  each menu open; title ink centre = controls' centre (312.5 px) on Items,
+  Plans, Wishlist; three controls 109 px tall at one y; meta line 51/49
+  px; Plans' capsule "Wishlist" with the row "Wishlist order" checked;
+  add button 56 × 56 over rows. In-app Appearance switch Dark → Light →
+  Dark behind Items and behind Plans: pixel-compared to the reference,
+  max channel diff 2, nothing stale. Toggle filmed at 60 fps both
+  screens both appearances: width constant (Items 80 pt, Plans 105.7),
+  blur ~0.33 s with no frame of two legible words, no clipping, the
+  press swell present, brass on Owned/Active. Sizes at 3×: circle 110 ×
+  109 px (36.67 × 36.33 pt), capsules 109 tall, add 168 × 168. On 26.5:
+  the circle 110 px wide (not 46), the toggle and press as on 27.0.
+  Observations (not failures): on 26.5 every trailing control sits 5 pt
+  further from the right edge than on 27.0 (the title's left edge the
+  same); at AX5 text the Items title holds and the Plans title shrinks
+  to ~80 %, all controls on one line; Reduce Motion on (set by
+  `defaults`, confirmed in Settings) the blur still plays — `simctl ui`
+  has no reduce_motion switch; the empty Wishlist's meta line sits 8 pt
+  under the controls (its no-follower split, Decision 22); the Dashboard
+  drill-down keeps `screenTitle` 30 beside a 44.7 pt back circle.
+  **(2) PASS**: Increase Contrast (simctl) and Reduce Transparency
+  (`EnhancedBackgroundContrastEnabled`, confirmed On in Settings and by
+  the opaque tab bar): every capsule label, toggle word (brass 6.4–6.9:1;
+  system colour 16.7–19.9:1), "…" and sort-menu row legible, Dark and
+  Light. **Flag to the person:** the Dark add button's white plus on
+  brass is 2.6:1 (Light's darker brass is 7.4:1). Both settings restored.
+  **(3) PASS**: Items and Wishlist PDF exports reach the share sheet;
+  the spinner is unobservable — at 30 fps the export completes inside
+  the menu's ~0.3 s dismissal morph, during which the "…" is the morphing
+  blob (a control tap-outside shows the same morph); Import from CSV…
+  opens the file importer on Items and the Wishlist, cancelled with the
+  counts unchanged; Plans' menu is Settings only (by design); the Sold
+  side's rows export the sold list; the empty-format row is a single
+  disabled chevron-less row, inert when tapped. **(4) PASS**: under a
+  chip on Sold the scope rows read Owned items / Sold items / Owned and
+  sold (the scope names, not "this view"), each gated by its own rows
+  under the narrowing; a search narrowing Sold to zero dims "Sold
+  items" only; tap-outside dismisses and fires nothing. Criterion 11's
+  traits: not readable from `simctl` — **the person's Accessibility
+  Inspector step** (what the source wires is listed in the section-3/4
+  report). `scripts/verify.sh all` twice back to back at 18bcce8: run 1
+  — unit 1740 in 231, UI 38/38 in 997.7 s; run 2 — unit 1740 in 231, UI
+  38/38 in 996.5 s; both exit 0.
 
 - [ ] **T014 — Close-out. [`sdd-implementer` on an evidence bundle]**
   Per plan §10 and `CLAUDE.md`'s close-out rule: the orchestrator assembles
@@ -1433,3 +1479,6 @@ recorded here too.
 | `sdd-implementer` — T012 | `opus` | ~80k | Done; greps recorded; unit 1740 green |
 | `skeptical-reviewer` — Phase 4 review (T010, T011, T012) | `opus` | ~90k | **fix and re-review**: tokens.md kept the `006` switch's Motion row beside the toggle's (criterion 14) — folded into the new row as history by the orchestrator. Second look, carried: (T013) Voice Control on Plans' "Wishlist" capsule; the brass toggle side in Light, Increase Contrast and Reduce Transparency; menus announce as pop-up buttons. (T014) the retirement table names every deleted test incl. `theOnlySystemMenuIsTheDetailScreensNavBarOverflow`; a DECISIONS entry for the inversion; README. (sweep) the `CLAUDE.md` example's "every header control" vs the toggle and the body-placed order control — the suite's "every '…', sort and order control" is the accurate phrasing, its own amendment commit if changed; `MetaLineSpacing.split`'s `sectionGap` comment vs tokens.md's 22–28; G12 blind spots — a bespoke overlay beside a kept `SortMenu(`, `Button(action:)` spelling, `backgroundPreferenceValue`, explicit `GlassButtonStyle()`; exemption counting by line not occurrence and no block comments; `controlStart` misses `Picker`/`Link`/`ShareLink`; brief.md's "tab bar … open the same menu" and "every control that opens one" wording; tokens.md:702's Q18 history beside the centred meta line |
 | `skeptical-reviewer` — Phase 4 re-review | `opus` | ~25k | **signed off**; the folded history cell's duplicate and its dropped "rows did not cross-fade" note fixed by the orchestrator |
+| `general-purpose` — T013 §1 (screens, appearance switch, toggle films, sizes, 26.5, Dynamic Type, Reduce Motion) | `opus` | ~200k (344 tool uses) | PASS; three observations (26.5's 5 pt trailing offset; Reduce Motion doesn't stop the blur; AX5 fits) |
+| `general-purpose` — T013 §2 (Increase Contrast, Reduce Transparency) | `opus` | ~130k | PASS; the Dark add button's plus 2.6:1 flagged to the person |
+| `general-purpose` — T013 §3–4 (export, import, gates) | `opus` | ~146k | PASS; the spinner unobservable at seed size; criterion 11's traits to the person |
