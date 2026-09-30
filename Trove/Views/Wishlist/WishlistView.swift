@@ -270,9 +270,9 @@ struct WishlistView: View {
         viewModel.totalCount > 0 ? theme.metrics.sectionGap : theme.metrics.listRowGap
     }
 
-    /// `ItemListView`'s header since `018` T009e (spec Decision 22): the
-    /// title's baseline on the controls' bottom edge and the meta line under
-    /// the whole row, midway between it and the search field.
+    /// `ItemListView`'s header since `018` T009e (spec Decisions 22 and 23):
+    /// the title centred on the controls and the meta line under the whole
+    /// row, midway between it and the search field.
     private var header: some View {
         ItemsListHeader(title: "Wishlist", gapBelow: headerGapBelow) {
             Text(summaryLine).monoLabel()

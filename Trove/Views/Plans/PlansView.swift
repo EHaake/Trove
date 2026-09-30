@@ -165,14 +165,11 @@ struct PlansView: View {
     // MARK: - Header
 
     /// The list screens' title row with no meta line under it (018 spec
-    /// Decision 22): the title's baseline on the controls' bottom edge, the
-    /// row the controls' height, so the first row stays where it was.
+    /// Decisions 22 and 23): the title centred on the controls, the row the
+    /// controls' height, so the first row stays where it was.
     private var header: some View {
         TitleRowLayout {
-            Text(SellPlanCopy.tab)
-                .font(theme.typography.screenTitle)
-                .foregroundStyle(theme.colors.textPrimary)
-                .lineLimit(1)
+            ListTitle(SellPlanCopy.tab)
 
             // `WishlistView`'s pair with the side toggle between them (018
             // Decisions 19 and 20): Sort By · toggle · "…". Sort is hidden
@@ -210,13 +207,15 @@ struct PlansView: View {
     /// side's own intent, which sets the order and reloads the rows. No row
     /// carries the reorder subtitle — a plan list has no manual order to drag
     /// into (009 plan P5). The spoken label and the identifier stay; the
-    /// "Opens sort options" hint goes (criterion 11).
+    /// "Opens sort options" hint goes (criterion 11). The Active side's
+    /// capsule reads the order's short `badgeLabel` ("Wishlist" for
+    /// "Wishlist order", Decision 23); the spoken label keeps the full name.
     @ViewBuilder private var sortControl: some View {
         Group {
             switch viewModel.side {
             case .active:
                 SortMenu(options: PlansViewModel.ActiveSortOrder.allCases, selection: viewModel.activeSortOrder,
-                         label: \.label) { viewModel.setActiveSort($0) }
+                         label: \.label, badgeLabel: \.badgeLabel) { viewModel.setActiveSort($0) }
             case .completed:
                 SortMenu(options: PlansViewModel.CompletedSortOrder.allCases, selection: viewModel.completedSortOrder,
                          label: \.label) { viewModel.setCompletedSort($0) }

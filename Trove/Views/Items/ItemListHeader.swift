@@ -28,14 +28,13 @@ struct ItemsListHeader<Meta: View, Trailing: View>: View {
     @ViewBuilder var meta: Meta
     @ViewBuilder var trailing: Trailing
 
-    @Environment(\.theme) private var theme
-
-    /// The title's baseline sits on the controls' bottom edge (spec Decision
-    /// 22), and the meta line sits midway between the title row and what
-    /// follows — so the header's height is the control row, the meta line's
-    /// share of the gap, and one meta line, the same on both sides. G38
-    /// measures it rather than assuming it: that sum on both sides, and the
-    /// same header with an empty trailing slot coming out shorter.
+    /// The title's line box is centred on the controls (spec Decision 23),
+    /// and the meta line sits midway between the title row and what
+    /// follows (Decision 22) — so the header's height is the control row,
+    /// the meta line's share of the gap, and one meta line, the same on both
+    /// sides. G38 measures it rather than assuming it: that sum on both
+    /// sides, and the same header with an empty trailing slot the title's
+    /// own line box in place of the control row.
     ///
     /// One disclosed consequence (plan Q18): VoiceOver now reads title,
     /// badges, meta rather than title, meta, badges. The person confirms it
@@ -43,16 +42,43 @@ struct ItemsListHeader<Meta: View, Trailing: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: MetaLineSpacing.split(before: gapBelow)) {
             TitleRowLayout {
-                Text(title)
-                    .font(theme.typography.screenTitle)
-                    .foregroundStyle(theme.colors.textPrimary)
-                    .lineLimit(1)
+                ListTitle(title)
 
                 trailing
             }
 
             meta
         }
+    }
+}
+
+/// The list screens' page title (`018` spec Decision 23): `listTitle`, on
+/// one line, shrinking to fit the width `TitleRowLayout` leaves it rather
+/// than ending in "…". Items and the Wishlist draw it through
+/// `ItemsListHeader`, Plans in its own title row — one view, so the three
+/// cannot drift apart.
+struct ListTitle: View {
+    /// The least the title shrinks to. Measured at T009f over every sort
+    /// label of the three screens: at 402 pt every title fits at full size;
+    /// at 375 pt Items needs 0.985 under "Date sold", the Wishlist nothing,
+    /// and Plans 0.744 under "Wishlist" (66 pt left for its 88.67 pt title),
+    /// the smallest anywhere — so 0.7, with that margin under it.
+    static let minimumScale: CGFloat = 0.7
+
+    let text: String
+
+    @Environment(\.theme) private var theme
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(theme.typography.listTitle)
+            .foregroundStyle(theme.colors.textPrimary)
+            .lineLimit(1)
+            .minimumScaleFactor(Self.minimumScale)
     }
 }
 
@@ -73,17 +99,22 @@ enum MetaLineSpacing {
     }
 }
 
-/// The header's title row (`018` spec Decision 22): the title at the leading
-/// edge, the trailing controls at their ideal width, and the title's baseline
-/// on the controls' bottom edge.
+/// The header's title row (`018` spec Decisions 22 and 23): the title at the
+/// leading edge, the trailing controls at their ideal width, and the title's
+/// line box centred vertically on the controls' middle.
 ///
-/// A `Layout` because no stack alignment gives this. `.bottom` puts the
-/// title's descender on that edge, not its baseline; an `HStack` aligned on
-/// the baseline grows the row by the title's descent (37 → 44 pt) and moves
-/// every first row under it by the same. Here the row is as tall as the
-/// taller of the controls and the title's baseline — read from the title's
-/// dimensions at runtime, never written down as a font property — and the
-/// descent hangs below the row, into the space above the meta line.
+/// A `Layout` because the row must stay the controls' height whatever the
+/// title's type: an `HStack(alignment: .center)` grows to the taller of the
+/// two, and at the title's size (34 pt, Decision 23) its line box can be the
+/// taller, which would move every first row under it. Here the row reports
+/// the controls' height and the title's line box — read from its dimensions
+/// at runtime, never written down as a font property — overhangs it equally
+/// above and below. With no controls the row is the title's own line box.
+///
+/// Decision 22 put the title's baseline on the controls' bottom edge; the
+/// person found the title too small there beside the glass controls, and
+/// Decision 23 grew it and centred it instead. The meta line under the row
+/// (Decision 22) is unchanged.
 ///
 /// Its subviews are the title, then at most one view for the controls.
 struct TitleRowLayout: Layout {
@@ -101,7 +132,7 @@ struct TitleRowLayout: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let row = measure(width: bounds.width, subviews: subviews)
         subviews.first?.place(
-            at: CGPoint(x: bounds.minX, y: bounds.minY + row.height - row.titleBaseline),
+            at: CGPoint(x: bounds.minX, y: bounds.minY + (row.height - row.titleHeight) / 2),
             anchor: .topLeading,
             proposal: row.titleProposal
         )
@@ -118,7 +149,7 @@ struct TitleRowLayout: Layout {
         let width: CGFloat
         let height: CGFloat
         let titleProposal: ProposedViewSize
-        let titleBaseline: CGFloat
+        let titleHeight: CGFloat
         let controlsSize: CGSize
     }
 
@@ -135,13 +166,13 @@ struct TitleRowLayout: Layout {
         }
 
         let titleProposal = ProposedViewSize(width: max(0, width - gap - controlsSize.width), height: nil)
-        let titleBaseline = subviews.first?.dimensions(in: titleProposal)[.firstTextBaseline] ?? 0
+        let titleHeight = subviews.first?.dimensions(in: titleProposal).height ?? 0
 
         return Row(
             width: width,
-            height: max(controlsSize.height, titleBaseline),
+            height: subviews.count > 1 ? controlsSize.height : titleHeight,
             titleProposal: titleProposal,
-            titleBaseline: titleBaseline,
+            titleHeight: titleHeight,
             controlsSize: controlsSize
         )
     }

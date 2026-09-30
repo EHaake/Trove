@@ -117,6 +117,16 @@ import Testing
 /// the meta line 14 pt. G38's 6 is now `MetaLineSpacing.split(before:)`
 /// over the `sectionGap` a search field follows. The new cases below render
 /// at 3×, exact; see each for its measurements and mutations.
+///
+/// **At `018` T009f** (spec Decision 23) the list screens' title is
+/// `listTitle`, 34 pt, drawn by `ListTitle` and centred on the controls. Its
+/// line box is 37 pt, level with the badge row: the header is still 66 pt on
+/// both sides and under every Owned label, and with no badges it is now
+/// 66 pt too (the title's 37 pt line box in the row's place) where it was
+/// 55 — so the proviso is the measured equality rather than "shorter". The
+/// search field stays at 81 pt, Plans' first card at 52 pt. The title
+/// shrinks to fit rather than truncating where a narrower phone leaves it
+/// less room; the last two cases measure both widths.
 @Suite("Items header layout")
 @MainActor
 struct ItemListHeaderLayoutTests {
@@ -125,6 +135,10 @@ struct ItemListHeaderLayoutTests {
     /// actually given on the device where the switch was row-profiled at
     /// 154.33 pt and 168.00 pt.
     private let contentWidth: CGFloat = 402 - 2 * ThemeMetrics.standard.screenGutter
+
+    /// The same on the 375 pt phones — the narrowest the app runs on, where
+    /// the title has least room beside the controls (spec Decision 23).
+    private let narrowContentWidth: CGFloat = 375 - 2 * ThemeMetrics.standard.screenGutter
 
     /// The header at one meta line, whatever it reads and whatever stands
     /// beside it.
@@ -149,10 +163,15 @@ struct ItemListHeaderLayoutTests {
         // height, and it must do so the same way on both sides: badge row
         // plus the meta line's share of the gap under the header (spec
         // Decision 22, T009e) plus one meta line. The meta line is
-        // measured alone, where it cannot wrap. Stripping the badges out must
-        // then *drop* the height — if it doesn't, the title is driving it
-        // again, and the relationship pinned below describes a header the
-        // screen no longer draws.
+        // measured alone, where it cannot wrap. Stripping the badges out
+        // leaves the title's own line box in the row's place (spec Decision
+        // 23, T009f). Until T009f that came out *shorter* than the badge
+        // row, and the proviso said so; at 34 pt the title's line box is
+        // 37 pt, the badge row's own height, so "shorter" is no longer the
+        // geometry and the proviso is the equality it measures instead: the
+        // title's line box, the same share of the gap, one meta line. A row
+        // that kept any other height with its slot empty — the controls'
+        // zero, a leftover minimum — fails it.
         let withoutBadges = try #require(
             renderBitmap(
                 ItemsListHeader(title: "Items", gapBelow: ThemeMetrics.standard.sectionGap) {
@@ -202,10 +221,14 @@ struct ItemListHeaderLayoutTests {
         )
 
         let soldMetaLine = try metaLineHeight(soldSummary(count: 0, proceeds: 0, realised: 0))
+        let titleLineBox = try #require(
+            renderBitmap(ListTitle("Items").fixedSize()),
+            "ImageRenderer produced nothing to measure for the title alone."
+        ).height
         let metaGap = Int(MetaLineSpacing.split(before: ThemeMetrics.standard.sectionGap))
         let ownedMetaLine = try metaLineHeight("34 items · $18,420 · 3 unvalued")
 
-        print("ItemsListHeader heights at width \(contentWidth) — badge row: \(baselineRow), owned badge row: \(ownedRow), meta line: sold \(soldMetaLine) owned \(ownedMetaLine), baseline: \(baseline), no badges: \(withoutBadges), owned under \"\(ownedWidest)\": \(owned), owned at scale: \(ownedLarge), sold: \(sold), sold at scale under \"\(soldWidest)\": \(soldLarge)")
+        print("ItemsListHeader heights at width \(contentWidth) — badge row: \(baselineRow), owned badge row: \(ownedRow), meta line: sold \(soldMetaLine) owned \(ownedMetaLine), baseline: \(baseline), no badges: \(withoutBadges), title line box: \(titleLineBox), owned under \"\(ownedWidest)\": \(owned), owned at scale: \(ownedLarge), sold: \(sold), sold at scale under \"\(soldWidest)\": \(soldLarge)")
 
         #expect(
             baseline == Int(baselineRow.height) + metaGap + soldMetaLine,
@@ -216,8 +239,8 @@ struct ItemListHeaderLayoutTests {
             "the Owned header measured \(owned) pt against its badge row's \(ownedRow.height) + \(metaGap) + one \(ownedMetaLine) pt meta line — the badge row is no longer what sets the header's height (plan Q6 as rewritten, spec Decision 16)"
         )
         #expect(
-            withoutBadges < baseline,
-            "the header measured \(withoutBadges) pt with no badges against \(baseline) pt with them — stripping the badges didn't lower it, so the title and not the badge row is setting the header's height (plan Q6 as rewritten)"
+            withoutBadges == titleLineBox + metaGap + soldMetaLine,
+            "the header measured \(withoutBadges) pt with no badges against the title's \(titleLineBox) pt line box + \(metaGap) + one \(soldMetaLine) pt meta line — with its trailing slot empty the title row is no longer the title's own height (spec Decision 23)"
         )
         #expect(
             owned == baseline,
@@ -406,26 +429,33 @@ struct ItemListHeaderLayoutTests {
     }
 
 
-    // MARK: - The title row and the meta line (spec Decision 22)
+    // MARK: - The title row and the meta line (spec Decisions 22 and 23)
 
-    /// The title row is the controls' height, and the title's baseline sits on
-    /// their bottom edge (`018` spec Decision 22, T009e): `TitleRowLayout`
-    /// rendered at 3× over the Sold side's measured badge row, with a 1 pt
-    /// marker hung on the title's first baseline. Exact, no tolerance.
+    /// The title row is the controls' height, and the title's line box is
+    /// centred on them (`018` spec Decision 23, T009f; T009e's Decision 22
+    /// had its baseline on their bottom edge): `TitleRowLayout` rendered at
+    /// 3× with the title's line box painted behind it. Exact, no tolerance.
     ///
-    /// Before T009e the row was an `HStack(alignment: .top)`: the controls
-    /// 111 px tall and the title's baseline at 79 px, 32 px above their
-    /// bottom. After: the row 111 px, the baseline at 111 px.
+    /// Two stand-ins. The Sold side's measured badge row is the shipped
+    /// case, and the row must be its height: 111 px, the controls on rows
+    /// 0…110. But the title's line box at 34 pt is 37 pt too, so over that
+    /// row top, centre and bottom placement draw the same pixels (the box on
+    /// rows 0…110 whichever it is). A stand-in 8 pt taller separates them:
+    /// the row 135 px, the box on rows 12…122 — 12 px above and 12 below.
     ///
-    /// Its mutations (T009e): the layout reporting the title's full line box
-    /// under the baseline (44 pt) → red; the title placed at the row's top →
-    /// red.
-    @Test func theTitleRowIsTheControlsHeightWithTheTitleOnTheirBottomEdge() throws {
+    /// Before T009f the title's baseline ended on the controls' last row
+    /// (111 px), its 30 pt line box hanging 7 pt below the row.
+    ///
+    /// Its mutations (T009f): the title placed with its line box on the
+    /// row's bottom edge → red (24 px above, 0 below); at the row's top → red
+    /// (0 above, 24 below); the row reporting the title's height rather than
+    /// the controls' → red (the taller row renders 111 px, not 135).
+    @Test func theTitleRowIsTheControlsHeightWithTheTitleCentredOnThem() throws {
         let row = try badgeRowSize(side: .sold, options: ItemListViewModel.SoldSortOrder.allCases, selection: .soldDate, label: \.label)
         let image = try #require(
             renderAt3x(
                 TitleRowLayout {
-                    markedTitle("Items")
+                    boxedTitle("Items")
                     Probe.controls.colour.frame(width: row.width, height: row.height)
                 }
                 .frame(width: contentWidth)
@@ -433,15 +463,36 @@ struct ItemListHeaderLayoutTests {
             "ImageRenderer produced nothing to measure for the title row."
         )
         let controls = try pixelRows(.controls, in: image)
-        let baseline = try pixelRows(.baseline, in: image)
-        print("Title row at 3× — \(image.width) × \(image.height) px, controls rows \(controls), baseline marker rows \(baseline)")
+        let box = try pixelRows(.titleBox, in: image)
+        print("Title row at 3× — \(image.width) × \(image.height) px, controls rows \(controls), title line box rows \(box)")
         #expect(
             image.height == Int(row.height) * 3 && controls == 0...(image.height - 1),
             "the title row renders \(image.height) px tall at 3× with the controls on rows \(controls), against the controls' \(Int(row.height) * 3) px — the row is no longer the controls' height, so every first row under it moves (spec Decision 22)"
         )
+
+        let tallerHeight = row.height + 8
+        let taller = try #require(
+            renderAt3x(
+                TitleRowLayout {
+                    boxedTitle("Items")
+                    Probe.controls.colour.frame(width: row.width, height: tallerHeight)
+                }
+                .frame(width: contentWidth)
+            ),
+            "ImageRenderer produced nothing to measure for the title row over the taller stand-in."
+        )
+        let tallerControls = try pixelRows(.controls, in: taller)
+        let tallerBox = try pixelRows(.titleBox, in: taller)
+        let above = tallerBox.lowerBound - tallerControls.lowerBound
+        let below = tallerControls.upperBound - tallerBox.upperBound
+        print("Title row over a \(tallerHeight) pt stand-in at 3× — \(taller.width) × \(taller.height) px, controls rows \(tallerControls), title line box rows \(tallerBox), \(above) px above and \(below) px below")
         #expect(
-            baseline.upperBound == controls.upperBound,
-            "the title's baseline ends on pixel row \(baseline.upperBound) at 3× and the controls on \(controls.upperBound) — the title no longer sits on the controls' bottom edge (spec Decision 22)"
+            taller.height == Int(tallerHeight) * 3 && tallerControls == 0...(taller.height - 1),
+            "over a \(tallerHeight) pt stand-in the title row renders \(taller.height) px tall at 3× with the controls on rows \(tallerControls), against \(Int(tallerHeight) * 3) px — the row is no longer the controls' height (spec Decision 23)"
+        )
+        #expect(
+            above == below,
+            "the title's line box sits \(above) px under the controls' top and \(below) px over their bottom at 3× — it is no longer centred on them (spec Decision 23)"
         )
     }
 
@@ -516,9 +567,7 @@ struct ItemListHeaderLayoutTests {
         // the header block and half a row gap of the first row's inset.
         let plans = VStack(alignment: .leading, spacing: 0) {
             TitleRowLayout {
-                Text(SellPlanCopy.tab)
-                    .font(Theme.dark.typography.screenTitle)
-                    .lineLimit(1)
+                ListTitle(SellPlanCopy.tab)
                 Probe.controls.colour.frame(width: plansRow.width, height: plansRow.height)
             }
             .padding(.bottom, metrics.listRowGap + metrics.listRowGap / 2)
@@ -534,6 +583,117 @@ struct ItemListHeaderLayoutTests {
             firstCard == unmoved,
             "Plans' first card starts at \(firstCard) px at 3× against \(unmoved) px before — it moved (spec Decision 22)"
         )
+    }
+
+    // MARK: - The title's size and fit (spec Decision 23)
+
+    /// "Plans" fits at its full 34 pt beside every control row Plans can show
+    /// on a 402 pt phone, and so do Items and the Wishlist beside their
+    /// widest (`018` spec Decision 23, settled by measurement). The reason
+    /// Plans' capsule reads "Wishlist" for the wishlist order: under
+    /// "Wishlist order" the row is 293 pt and leaves the title 53 of the
+    /// 88.67 pt it needs. Each title is drawn through a recording
+    /// `TextRenderer`, which reads the laid-out line as the title was drawn,
+    /// and compared against the same title drawn alone at its ideal size:
+    /// untruncated, every glyph, and a line exactly as tall — so not shrunk.
+    ///
+    /// Measured at T009f (the space the row leaves the title, which needs
+    /// 88.67 pt for "Plans", 87.33 for "Items", 125.67 for "Wishlist"):
+    /// Plans 93 pt under "Wishlist" (row 253), 106 under "Newest"/"Oldest"
+    /// (240), 119 under "Name" (227), 196 on an empty side (150); Items 113
+    /// under "Date sold" (233); the Wishlist 180 under "Alphabetical" (166).
+    ///
+    /// Its mutations (T009f): the wishlist order's capsule label back to
+    /// "Wishlist order" → red (the title shrinks to the floor and truncates
+    /// to "Pl…"); `SortMenu` ignoring its `badgeLabel` → red, the same way.
+    @Test func everyListTitleIsFullSizeOnA402PointPhone() throws {
+        var cases = try plansControlRows().map { ("Plans", $0.name, $0.size) }
+        cases.append(("Items", "its widest row", try itemsWidestRow()))
+        cases.append(("Wishlist", "its widest row", try wishlistWidestRow()))
+        for (title, rowName, row) in cases {
+            let alone = try drawnTitle(ListTitle(title).fixedSize())
+            let inRow = try drawnTitle(
+                TitleRowLayout {
+                    ListTitle(title)
+                    Probe.controls.colour.frame(width: row.width, height: row.height)
+                }
+                .frame(width: contentWidth)
+            )
+            print("\(title) at 402 pt beside \(rowName) (\(row.width) pt): \(inRow.line), alone \(alone.line)")
+            #expect(
+                !inRow.line.truncated && inRow.line.glyphs == title.count,
+                "\(title) beside \(rowName) (\(row.width) pt) on a 402 pt phone is drawn truncated — \(inRow.line) (spec Decision 23)"
+            )
+            #expect(
+                inRow.line.height == alone.line.height,
+                "\(title) beside \(rowName) (\(row.width) pt) on a 402 pt phone is drawn \(inRow.line.height) pt tall against its full \(alone.line.height) pt — it shrank where there is room for it at full size (spec Decision 23)"
+            )
+        }
+    }
+
+    /// On a 375 pt phone the title shrinks to fit rather than ending in "…"
+    /// (`018` spec Decision 23): each screen's title beside its widest
+    /// control row, drawn through a recording `TextRenderer` as the screen
+    /// composes it — Items and the Wishlist through `ItemsListHeader`, Plans
+    /// through its own title row. Untruncated, every glyph drawn, and its ink
+    /// ending before the controls' first pixel column; Plans, the tightest,
+    /// must actually have shrunk, or the case would pass without the scale
+    /// ever engaging.
+    ///
+    /// Measured at T009f (the title's line, typographic ascent + descent,
+    /// against 36.99 pt at full size): Plans under "Wishlist" (row 253 pt,
+    /// 66 pt left) drawn 27.28 pt tall, 65.27 wide — about 25 pt type, scale
+    /// 0.74 against `ListTitle.minimumScale`'s 0.7; Items under "Date sold"
+    /// (233 pt, 86 left) about 33.4 pt; the Wishlist (166 pt, 153 left) at
+    /// full size.
+    ///
+    /// Its mutations (T009f): `ListTitle`'s `.minimumScaleFactor` removed →
+    /// red (Plans and Items truncated).
+    @Test func theTitleShrinksToFitRatherThanTruncatingOnA375PointPhone() throws {
+        let plansRow = try #require(try plansControlRows().max { $0.size.width < $1.size.width })
+        let cases: [(String, CGSize, (CGSize) -> AnyView)] = [
+            ("Plans", plansRow.size, { row in
+                AnyView(TitleRowLayout {
+                    ListTitle(SellPlanCopy.tab)
+                    Probe.controls.colour.frame(width: row.width, height: row.height)
+                })
+            }),
+            ("Items", try itemsWidestRow(), { row in
+                AnyView(ItemsListHeader(title: "Items", gapBelow: ThemeMetrics.standard.sectionGap) {
+                    EmptyView()
+                } trailing: {
+                    Probe.controls.colour.frame(width: row.width, height: row.height)
+                })
+            }),
+            ("Wishlist", try wishlistWidestRow(), { row in
+                AnyView(ItemsListHeader(title: "Wishlist", gapBelow: ThemeMetrics.standard.sectionGap) {
+                    EmptyView()
+                } trailing: {
+                    Probe.controls.colour.frame(width: row.width, height: row.height)
+                })
+            }),
+        ]
+        for (title, row, compose) in cases {
+            let alone = try drawnTitle(ListTitle(title).fixedSize())
+            let drawn = try drawnTitle(compose(row).frame(width: narrowContentWidth))
+            let ink = try #require(inkColumns(in: drawn.image), "\(title) drew no ink at 375 pt")
+            let controlsStart = try #require(firstColumn(of: .controls, in: drawn.image), "no controls stand-in in \(title)'s render")
+            print("\(title) at 375 pt beside its widest row (\(row.width) pt): \(drawn.line), alone \(alone.line) — drawn at about \(34 * drawn.line.height / alone.line.height) pt; ink columns \(ink) px, controls from \(controlsStart) px")
+            #expect(
+                !drawn.line.truncated && drawn.line.glyphs == title.count,
+                "\(title) beside its widest row (\(row.width) pt) on a 375 pt phone is drawn truncated — \(drawn.line) — where it should shrink to fit (spec Decision 23)"
+            )
+            #expect(
+                ink.upperBound < controlsStart,
+                "\(title)'s ink ends on pixel column \(ink.upperBound) at 3× and the controls start on \(controlsStart) — the title runs into them on a 375 pt phone (spec Decision 23)"
+            )
+            if title == "Plans" {
+                #expect(
+                    drawn.line.height < alone.line.height,
+                    "Plans beside its widest row (\(row.width) pt) at 375 pt is drawn at its full \(alone.line.height) pt — it didn't shrink, so this case can't see the scale engage"
+                )
+            }
+        }
     }
 
     // MARK: - The instrument
@@ -658,29 +818,121 @@ struct ItemListHeaderLayoutTests {
         return CGSize(width: image.width, height: image.height)
     }
 
-    /// The screen title with a 1 × 1 pt marker whose bottom edge is the
-    /// title's first baseline: a non-text view's baseline is its bottom, and
-    /// the overlay aligns the two.
-    private func markedTitle(_ title: String) -> some View {
-        Text(title)
-            .font(Theme.dark.typography.screenTitle)
-            .lineLimit(1)
-            .overlay(alignment: Alignment(horizontal: .leading, vertical: .firstTextBaseline)) {
-                Probe.baseline.colour.frame(width: 1, height: 1)
+    /// The list title with its line box painted behind it, so the box's
+    /// first and last pixel rows are the line box's top and bottom.
+    private func boxedTitle(_ title: String) -> some View {
+        ListTitle(title)
+            .background(Probe.titleBox.colour)
+    }
+
+    /// Every control row Plans can show, as `plansBadgeRowSize` renders it:
+    /// the side toggle, Sort By over each order of each side with the
+    /// capsule's short label (spec Decision 23), and the "…" — and a side
+    /// with nothing to sort, which has no Sort By.
+    private func plansControlRows() throws -> [(name: String, size: CGSize)] {
+        func size(_ row: some View, _ name: String) throws -> (name: String, size: CGSize) {
+            let image = try #require(renderBitmap(row), "ImageRenderer produced nothing to measure for Plans' row \(name).")
+            return (name, CGSize(width: image.width, height: image.height))
+        }
+        var rows = [try size(HStack(spacing: 8) {
+            SideToggle(side: PlansViewModel.Side.active, select: { _ in })
+            OverflowMenu { Button("Settings") {} }
+        }, "an empty side")]
+        for order in PlansViewModel.ActiveSortOrder.allCases {
+            rows.append(try size(HStack(spacing: 8) {
+                SideToggle(side: PlansViewModel.Side.active, select: { _ in })
+                SortMenu(options: PlansViewModel.ActiveSortOrder.allCases, selection: order, label: \.label, badgeLabel: \.badgeLabel) { _ in }
+                OverflowMenu { Button("Settings") {} }
+            }, "Active under \"\(order.badgeLabel)\""))
+        }
+        for order in PlansViewModel.CompletedSortOrder.allCases {
+            rows.append(try size(HStack(spacing: 8) {
+                SideToggle(side: PlansViewModel.Side.completed, select: { _ in })
+                SortMenu(options: PlansViewModel.CompletedSortOrder.allCases, selection: order, label: \.label) { _ in }
+                OverflowMenu { Button("Settings") {} }
+            }, "Completed under \"\(order.label)\""))
+        }
+        return rows
+    }
+
+    /// Items' widest control row over both sides' every selection.
+    private func itemsWidestRow() throws -> CGSize {
+        var rows: [CGSize] = []
+        for order in ItemListViewModel.SortOrder.allCases {
+            rows.append(try badgeRowSize(side: .owned, options: ItemListViewModel.SortOrder.allCases, selection: order, label: \.label))
+        }
+        for order in ItemListViewModel.SoldSortOrder.allCases {
+            rows.append(try badgeRowSize(side: .sold, options: ItemListViewModel.SoldSortOrder.allCases, selection: order, label: \.label))
+        }
+        return try #require(rows.max { $0.width < $1.width })
+    }
+
+    /// The Wishlist's widest control row over its every selection.
+    private func wishlistWidestRow() throws -> CGSize {
+        let options = WishlistViewModel.SortOrder.allCases
+        var rows: [CGSize] = []
+        for order in options {
+            let row = HStack(spacing: 8) {
+                SortMenu(options: options, selection: order, label: \.label, manualOrder: .custom) { _ in }
+                OverflowMenu { Button("Settings") {} }
             }
+            let image = try #require(renderBitmap(row), "ImageRenderer produced nothing to measure for the Wishlist's row under \"\(order.label)\".")
+            rows.append(CGSize(width: image.width, height: image.height))
+        }
+        return try #require(rows.max { $0.width < $1.width })
+    }
+
+    /// A view rendered at 3× through `TitleLineRecorder`, with the one text
+    /// line it drew — the title, in every case that calls this, since each
+    /// renders no other text.
+    private func drawnTitle(_ view: some View) throws -> (line: TitleLine, image: CGImage) {
+        let recorder = TitleLineRecorder()
+        let image = try #require(renderAt3x(view.textRenderer(recorder)), "ImageRenderer produced nothing to measure for the title.")
+        let line = try #require(recorder.lines.last, "the title drew no text line")
+        return (line, image)
+    }
+
+    /// The first and last pixel columns holding the title's ink — the dark
+    /// theme's light text, which no probe colour comes near.
+    private func inkColumns(in image: CGImage) -> ClosedRange<Int>? {
+        guard let bitmap = Bitmap(image) else { return nil }
+        var first: Int?
+        var last: Int?
+        for x in 0..<bitmap.width {
+            for y in 0..<bitmap.height {
+                if let pixel = bitmap.pixel(at: CGPoint(x: x, y: y)), pixel.red >= 128, pixel.green >= 128, pixel.blue >= 128 {
+                    if first == nil { first = x }
+                    last = x
+                    break
+                }
+            }
+        }
+        guard let first, let last else { return nil }
+        return first...last
+    }
+
+    /// The first pixel column holding any pixel of `probe`'s colour.
+    private func firstColumn(of probe: Probe, in image: CGImage) -> Int? {
+        guard let bitmap = Bitmap(image) else { return nil }
+        for x in 0..<bitmap.width {
+            for y in 0..<bitmap.height {
+                if let pixel = bitmap.pixel(at: CGPoint(x: x, y: y)), probe.matches(pixel) { return x }
+            }
+        }
+        return nil
     }
 
     /// The pure colours the geometry cases paint their stand-ins in, none of
     /// which the theme's text or background comes near.
     private enum Probe {
-        case controls, meta, following, baseline
+        case controls, meta, following, titleBox
 
         var colour: Color {
             switch self {
             case .controls: Color(red: 1, green: 0, blue: 0)
             case .meta: Color(red: 0, green: 1, blue: 0)
             case .following: Color(red: 1, green: 0, blue: 1)
-            case .baseline: Color(red: 0, green: 0, blue: 1)
+            case .titleBox: Color(red: 0, green: 0, blue: 1)
             }
         }
 
@@ -689,7 +941,7 @@ struct ItemListHeaderLayoutTests {
             case .controls: pixel.red >= 128 && pixel.green < 60 && pixel.blue < 60
             case .meta: pixel.green >= 128 && pixel.red < 60 && pixel.blue < 60
             case .following: pixel.red >= 128 && pixel.blue >= 128 && pixel.green < 60
-            case .baseline: pixel.blue >= 128 && pixel.red < 60 && pixel.green < 60
+            case .titleBox: pixel.blue >= 128 && pixel.red < 60 && pixel.green < 60
             }
         }
     }
@@ -710,5 +962,41 @@ struct ItemListHeaderLayoutTests {
         }
         let top = try #require(first, "no \(probe) pixels in the render")
         return top...(try #require(last))
+    }
+}
+
+/// One laid-out text line as `TitleLineRecorder` saw it drawn: whether the
+/// system truncated it, how many glyphs it drew (an ellipsis is one), and its
+/// typographic height (ascent + descent) and width, in points.
+private nonisolated struct TitleLine: CustomStringConvertible {
+    let truncated: Bool
+    let glyphs: Int
+    let height: CGFloat
+    let width: CGFloat
+
+    var description: String {
+        "\(truncated ? "truncated" : "untruncated"), \(glyphs) glyphs, \(height) × \(width) pt"
+    }
+}
+
+/// A `TextRenderer` that draws its text unchanged and records each line it
+/// is handed (`018` T009f). `Text.Layout` is the one place the system says
+/// whether it truncated a line and which glyphs it laid out — a bitmap alone
+/// can't tell "Plans" shrunk from "Pl…" at the same width. A class, so the
+/// test can read what a renderer value recorded while drawing.
+private nonisolated final class TitleLineRecorder: TextRenderer, @unchecked Sendable {
+    private(set) var lines: [TitleLine] = []
+
+    func draw(layout: Text.Layout, in ctx: inout GraphicsContext) {
+        for line in layout {
+            let bounds = line.typographicBounds
+            lines.append(TitleLine(
+                truncated: layout.isTruncated,
+                glyphs: line.reduce(0) { $0 + $1.count },
+                height: bounds.ascent + bounds.descent,
+                width: bounds.width
+            ))
+            ctx.draw(line)
+        }
     }
 }

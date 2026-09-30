@@ -56,6 +56,11 @@ struct SortMenu<Option: Hashable>: View {
     /// The option whose row carries "Drag rows to reorder" — nil where the
     /// list has no manual order (Items' Sold side, both Plans sides).
     var manualOrder: Option? = nil
+    /// What the capsule calls the selection, where it must be shorter than
+    /// the menu row's name — nil, the row's `label`, everywhere but Plans'
+    /// Active side, whose "Wishlist order" left the page title too little
+    /// room (`018` spec Decision 23). The menu rows keep `label`.
+    var badgeLabel: ((Option) -> String)? = nil
     let select: (Option) -> Void
 
     var body: some View {
@@ -81,8 +86,9 @@ struct SortMenu<Option: Hashable>: View {
                     bar(width: 7)
                     bar(width: 4)
                 }
-                // Sized to the selection's text (Decision 18).
-                Text(label(selection))
+                // Sized to the selection's text (Decision 18), in its short
+                // form where the screen gives one (Decision 23).
+                Text((badgeLabel ?? label)(selection))
                     .font(SortMenuCopy.labelFont)
             }
             // Q6 as overtaken by spec Decision 17: 4 pt above and below the

@@ -255,6 +255,33 @@ struct PlansWiringTests {
         }
     }
 
+    /// `018` spec Decision 23: the Active side's Sort By passes the order's
+    /// short `badgeLabel` to its capsule, the Completed side's does not. The
+    /// short label itself is `PlansViewModelTests`', and what it buys — the
+    /// title at full size — `ItemListHeaderLayoutTests`'; which menu is
+    /// handed it is a view-body fact neither can reach, so it is scanned.
+    ///
+    /// Mutation (T009f): `badgeLabel:` dropped from the Active menu → red.
+    @Test func theActiveCapsuleReadsTheShortLabel() throws {
+        let code = try SourceScan.production(Self.view)
+
+        let controls = SourceScan.closureBodies(after: "private var sortControl: some View", in: code)
+        try #require(controls.count == 1, "PlansView declares \(controls.count) `sortControl`s, expected exactly 1")
+        let control = try #require(controls.first)
+        let menus = SourceScan.argumentLists(of: "SortMenu", in: control)
+        try #require(menus.count == 2, "`sortControl` builds \(menus.count) sort menus, expected 2 — one per side: \(control)")
+        let active = try #require(menus.first { $0.contains("ActiveSortOrder") }, "no Active sort menu: \(control)")
+        let completed = try #require(menus.first { $0.contains("CompletedSortOrder") }, "no Completed sort menu: \(control)")
+        #expect(
+            active.contains("badgeLabel: \\.badgeLabel"),
+            "the Active side's capsule no longer reads the order's short label, so \"Wishlist order\" crowds the title (spec Decision 23): \(active)"
+        )
+        #expect(
+            !completed.contains("badgeLabel:"),
+            "the Completed side's capsule reads a short label it has no order for: \(completed)"
+        )
+    }
+
     /// Plan Q3 and §11: the screen reloads when an import lands and when the
     /// carry-over has run — the second is how carried-over plans appear on a
     /// screen already open. The view model's counters are its own tests';

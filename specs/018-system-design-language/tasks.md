@@ -1096,7 +1096,7 @@ Handoff notes for the pause reports:
   (derived, not measured); the real controls are 36.33 pt, so device
   numbers sit ~1 px off the 37 pt stand-in's.
 
-- [ ] **T009f — The page title bigger, centred on the controls (Decision 23; the person's finding, 2026-09-29).**
+- [x] **T009f — The page title bigger, centred on the controls (Decision 23; the person's finding, 2026-09-29).**
   Finding: on the controls' bottom edge the title (line box 33 pt, caps
   ~20 pt) reads too small beside 36 pt glass controls. Fix:
   `TitleRowLayout` centres the title's line box on the controls' middle
@@ -1126,6 +1126,37 @@ Handoff notes for the pause reports:
   `scratchpad/T009f-centring.patch`.
   Files: `Trove/Views/Items/ItemListHeader.swift`, `Trove/Views/Shared/Theme/ThemeTypography.swift`, `Trove/Views/Plans/PlansView.swift`, `Trove/Views/Shared/SortMenu.swift` (a badge label distinct from the row label, if needed), `TroveTests/ItemListHeaderLayoutTests.swift`, tests and UI tests reading Plans' sort capsule label.
   **Verify:** `scripts/verify.sh` green; the person's look at Items, Plans and Wishlist.
+  **Done (2026-09-29).** `TitleRowLayout` centres the title's line box
+  and proposes it the remaining width; a shared `ListTitle` view (the new
+  `listTitle` token, display semibold 34; one line;
+  `minimumScaleFactor` 0.7 — the smallest scale needed is 0.744, Plans
+  under "Wishlist" at 375) used by `ItemsListHeader` and Plans;
+  `screenTitle` stays 30 for the Dashboard. `SortMenu.badgeLabel`
+  (optional, defaulting to `label`) and `ActiveSortOrder.badgeLabel`
+  ("Wishlist" for the wishlist order); VoiceOver still says "Sort by
+  Wishlist order". At 402 every title is full size (Plans' rows 253 /
+  240 / 227 / 150 leave 93–196 for 88.67); at 375 Plans under "Wishlist"
+  draws at ~25 pt, Items' Sold side at ~33.4, none truncated. Header 66
+  with or without badges (37 + 15 + 14); search field 81, Plans' first
+  card 52, unchanged. G38's proviso is the measured equality. New:
+  `theTitleRowIsTheControlsHeightWithTheTitleCentredOnThem` (a stand-in
+  8 pt taller, since at 34 the line box equals the row),
+  `everyListTitleIsFullSizeOnA402PointPhone`,
+  `theTitleShrinksToFitRatherThanTruncatingOnA375PointPhone` (a recording
+  `TextRenderer` reading `Text.Layout.isTruncated`, plus ink-before-controls),
+  `theCapsuleShortensOnlyTheWishlistOrder` (pure),
+  `theActiveCapsuleReadsTheShortLabel` (scan: which menu gets it).
+  Mutations red: title bottom- or top-aligned (`ItemListHeader.swift:135`
+  → `ItemListHeaderLayoutTests.swift:493`); the row reporting the title's
+  height (`:173` → `:489`); `minimumScaleFactor` removed (`:81` → `:682`,
+  `:691`); the badge label reverted three ways (`PlansViewModel.swift:53`
+  → `PlansViewModelTests.swift:496`; `SortMenu.swift:91` → `:623`, `:627`,
+  `:683`; `PlansView.swift:218` → `PlansWiringTests.swift:275`). **Not
+  red: the token back to 30** — nothing honestly pins 34; carried to T011
+  as a relation leg (`listTitle` renders taller than `screenTitle`).
+  `scripts/verify.sh`: green, 1756 in 235. Carried to T013: the real
+  controls are 36.33 pt, so the 37 pt line box overhangs a third of a
+  point each side; the recorder's odd case at a 26 pt proposal.
 
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
@@ -1330,3 +1361,4 @@ recorded here too.
 | `skeptical-reviewer` — decision review, T009e | `opus` | ~46k | A custom `Layout`; Plans uses it directly; 8/8 on the empty side; one split function; the Wishlist search field's 4 pt move put to the person (accepted) |
 | `sdd-implementer` — T009e, re-dispatch | `opus` | ~110k | Done; unit 1752 green; four mutations recorded |
 | `sdd-implementer` — T009f, first dispatch | `opus` | ~92k | **Stopped on a judgment call**: the fit rule gave 20 pt; small-phone truncation; the Dashboard paths; G38's proviso at 34. Three product questions to the person, all accepted as recommended |
+| `sdd-implementer` — T009f, re-dispatch | `opus` | ~190k | Done; unit 1756 green; mutations recorded, one (the token at 30) not red and carried to T011 |

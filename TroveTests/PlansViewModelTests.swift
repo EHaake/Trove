@@ -485,6 +485,26 @@ struct PlansViewModelTests {
         #expect(viewModel.rows.map(\.name) == ["Echo", "Delta", "Foxtrot"])
     }
 
+    /// `018` spec Decision 23: the Sort By capsule calls the wishlist order
+    /// "Wishlist", so the page title fits beside the controls at full size;
+    /// the menu row, and the spoken label read from `visibleSortLabel`, keep
+    /// "Wishlist order". Every other order's capsule reads its row's name.
+    ///
+    /// Mutation (T009f): the wishlist order's `badgeLabel` back to
+    /// "Wishlist order" → red.
+    @Test func theCapsuleShortensOnlyTheWishlistOrder() throws {
+        #expect(PlansViewModel.ActiveSortOrder.wishlistOrder.badgeLabel == "Wishlist")
+        #expect(PlansViewModel.ActiveSortOrder.wishlistOrder.label == "Wishlist order")
+        for order in PlansViewModel.ActiveSortOrder.allCases where order != .wishlistOrder {
+            #expect(order.badgeLabel == order.label, "the \(order.label) capsule should read its row's name")
+        }
+
+        let context = try makeInMemoryContext()
+        let viewModel = PlansViewModel(modelContext: context, now: { self.now })
+        viewModel.setActiveSort(.wishlistOrder)
+        #expect(viewModel.visibleSortLabel == "Wishlist order")
+    }
+
     /// Criteria 5, 6: a fresh view model opens on Active with both sorts at
     /// Newest.
     @Test func aFreshViewModelOpensOnActiveWithBothSortsNewest() throws {
