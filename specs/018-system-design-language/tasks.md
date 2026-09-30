@@ -1060,7 +1060,15 @@ Handoff notes for the pause reports:
   height legs are re-measured, not loosened; a leg pins that the search
   field's and the first row's y are unchanged (measured before and
   after at 3×, exact). Mutations recorded.
-  Files: `Trove/Views/Items/ItemListHeader.swift`, `Trove/Views/Items/ItemListView.swift`, `Trove/Views/Plans/PlansView.swift`, `Trove/Views/Wishlist/WishlistView.swift`, `TroveTests/ItemListHeaderLayoutTests.swift`.
+  Decision review (2026-09-29, after the implementer stopped): the
+  alignment guide grows the row to 44 (a 7 pt descent) and moves Plans'
+  first card, so the title row is a custom `Layout`; Plans has no meta
+  line and uses the `Layout` directly; the Wishlist composes
+  `ItemsListHeader` (its old stacked header goes) and its search field
+  moves 4 pt to 81, level with Items' — put to the person; the empty
+  Sold side splits 8/8; the split is one static function off a named
+  constant. Plan §4's T009e paragraph has the geometry and the guards.
+  Files: `Trove/Views/Items/ItemListHeader.swift`, `Trove/Views/Items/ItemListView.swift`, `Trove/Views/Plans/PlansView.swift`, `Trove/Views/Wishlist/WishlistView.swift`, `TroveTests/ItemListHeaderLayoutTests.swift`, the `private var header` scans in `ItemListSidesWiringTests.swift` and `PlansWiringTests.swift`, any Wishlist header scan in `HeaderControlsWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; the person's look at Items (both sides), Plans and Wishlist.
 
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes

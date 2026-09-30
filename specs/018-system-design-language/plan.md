@@ -635,6 +635,35 @@ film). **The header's height and the switch's position are equal on both
 sides** — the switch is one control on both sides and the header above it is
 G1's; G39 measures it on screen.
 
+**T009e — the header's geometry under Decision 22 (decision review,
+2026-09-29).** The title's `screenTitle` line box is 33 pt with its first
+baseline at 26 (a 7 pt descent); the control row is 37. An `HStack`
+alignment guide on the baseline would grow the row to 44 and move Plans'
+first card 7 pt, and a 7 pt compensation writes a font property as a
+number, so the title row is a small custom `Layout` (`TitleRowLayout`, in
+`ItemListHeader.swift`): the trailing controls take their ideal width, the
+title the remainder less the 8 pt minimum gap, the row's height is
+max(controls height, title first baseline) read from `LayoutSubviews`
+dimensions at runtime, the controls' bottom and the title's baseline both
+at that height and the descent hanging outside the row. Plans uses the
+`Layout` directly in its own header (no empty meta slot); Items and the
+Wishlist compose `ItemsListHeader`, which is the `Layout` plus the meta
+line — the Wishlist's old stacked header goes. The meta line's split is one
+static function in `ItemListHeader.swift`, `(titleRowToMeta + gap) / 2`
+with the existing 6 named as a constant and the caller passing the gap
+that follows (`sectionGap` above a search field, `listRowGap` on a side
+with nothing to narrow, where the split is 8/8 and the empty state stays
+put); it replaces the stacks' `controlRowGap` spacing above the search
+field with explicit padding (15 < 16, so no negative padding), search →
+chips staying at `controlRowGap`. The Wishlist search field moves 4 pt
+down to 81, level with Items' — put to the person; Decision 22 amended
+if accepted. Guards are rendered, not scanned: the row height equals the
+controls' (37), the title baseline equals the controls' bottom edge, the
+meta's two gaps are equal, the Items search field stays at 81 and Plans'
+first card at 52 (3×, exact). Mutations: the `Layout` reporting the
+title's full box (44) → red; the title top-aligned → red; the split + 1
+→ red; gaps 14/16 → red.
+
 ## 5. The add button
 
 Per Q4. The overlay, its padding and its placement on both lists are
