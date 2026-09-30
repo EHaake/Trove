@@ -466,9 +466,12 @@ struct ItemListSidesWiringTests {
     /// `select` for the other side — so a choice reaches the screen's
     /// `show(_:)` and nothing writes the side directly. The action is read
     /// whole and compared as a whole literal; the style as `OverflowMenu`'s
-    /// minus the circle, and since T009b (spec Decision 20) the tint the
+    /// minus the circle, and since T009b (spec Decision 20) the colour the
     /// ternary over `leading` — brass on the leading side, the system's label
-    /// colour on the trailing — with no other theme colour in the file. The Items toggle's words,
+    /// colour on the trailing — with no other theme colour in the file; since
+    /// T009d (spec Decision 21) that ternary is the showing row's own
+    /// `foregroundStyle`, the row blur-replaced under a 0.3 s smooth
+    /// animation, and both sides' rows laid out hidden beside it. The Items toggle's words,
     /// glyphs, VoiceOver label, identifier and the side a tap asks for are
     /// read off a toggle built through its own `init(side:select:)`, so they
     /// are values rather than spellings.
@@ -476,7 +479,12 @@ struct ItemListSidesWiringTests {
     /// Mutations (T009a): the action `select(side)` → red; a theme colour
     /// named in the file → red. (T009b): the ternary's two colours swapped →
     /// red; a second theme colour named in the file → red. (T009c): the
-    /// label row's `.animation(nil, value: side)` removed → red.
+    /// label row's `.animation(nil, value: side)` removed → red, a leg
+    /// T009d replaced. (T009d): `.blurReplace` → `.opacity` → red;
+    /// `.id(side)` removed → red; `.animation(nil, value: side)` restored in
+    /// place of the smooth animation → red; the smooth animation removed →
+    /// red; either hidden row removed → red; the ternary moved back to the
+    /// button's tint → red.
     @Test func theSwitchIsAGlassToggleAskingForTheOtherSide() throws {
         let code = try SourceScan.production(Self.control)
         let anchor = "struct SideToggle<Side: Hashable>: View"
@@ -497,21 +505,27 @@ struct ItemListSidesWiringTests {
             "the toggle opens a menu — a tap shows the other side (Decision 19): \(body)"
         )
 
-        // Decision 20: brass while the leading side shows, the system's label
-        // colour while the trailing side does — the whole ternary, in that
-        // order, directly after the glass style.
         #expect(
-            body.contains(try Regex(#"\.buttonStyle\(\.glass\)\s*\.tint\(side == leading \? theme\.colors\.accentBrass : Color\.primary\)\s*\.controlSize\(\.regular\)"#)),
-            "the toggle isn't `OverflowMenu`'s glass button at the regular control size, tinted brass on the leading side and the system's label colour on the trailing one (spec Decision 20): \(body)"
+            body.contains(try Regex(#"\.buttonStyle\(\.glass\)\s*\.controlSize\(\.regular\)"#)),
+            "the toggle isn't `OverflowMenu`'s glass button at the regular control size: \(body)"
         )
-        // T009c: the label swaps in one frame. Without this line Owned → Sold
-        // crossfades, both words superimposed for ~0.1 s — only film sees it.
-        let labelRow = ".frame(height: 0)"
-        try #require(body.contains(labelRow), "SideToggle's label row no longer carries `\(labelRow)`: \(body)")
+        #expect(!body.contains(".tint("), "the toggle's colour is back on the button's tint — the showing row carries it (spec Decisions 20 and 21): \(body)")
+        // Decision 21: both sides laid out hidden, so the capsule is the wider
+        // side's width on both sides (G1 measures the width this buys).
+        for hidden in ["row(leading).frame(height: 0).hidden()", "row(trailing).frame(height: 0).hidden()"] {
+            #expect(body.contains(hidden), "the toggle no longer lays out `\(hidden)` — the capsule resizes on a tap and clips the wider word (spec Decision 21): \(body)")
+        }
+        // Decision 20 on the showing row, and Decision 21's swap — the whole
+        // chain, in that order: brass while the leading side shows, the
+        // system's label colour while the trailing side does, a new identity
+        // per side blur-replaced, under a 0.3 s smooth animation on the side.
+        // The transition is film's choice (T009d): an opacity crossfade draws
+        // both words superimposed (T009c) — only film sees it.
         #expect(
-            body.contains(try Regex(#"\.frame\(height: 0\)\s*\.animation\(nil, value: side\)"#)),
-            "the toggle's label row isn't followed by `.animation(nil, value: side)` — Owned → Sold crossfades the two words (T009c): \(body)"
+            body.contains(try Regex(#"row\(side\)\s*\.foregroundStyle\(side == leading \? theme\.colors\.accentBrass : Color\.primary\)\s*\.id\(side\)\s*\.transition\(\.blurReplace\)\s*\}\s*\.frame\(height: 0\)\s*\.animation\(\.smooth\(duration: 0\.3\), value: side\)"#)),
+            "the toggle's showing row isn't brass on the leading side and the system's label colour on the trailing, blur-replaced per side under `.animation(.smooth(duration: 0.3), value: side)` (spec Decisions 20 and 21): \(body)"
         )
+        #expect(!body.contains("animation(nil"), "the toggle's swap is un-animated again — the person sees no motion on a tap (spec Decision 21): \(body)")
         #expect(!body.contains(".buttonBorderShape("), "the toggle sets a border shape — it is a capsule, the \"…\" alone is a circle: \(body)")
         #expect(body.contains(".accessibilityLabel(accessibilityLabel)"), "the toggle carries no VoiceOver label: \(body)")
         #expect(body.contains(".accessibilityValue(word(side))"), "the toggle doesn't speak the side showing as its value: \(body)")
@@ -521,7 +535,7 @@ struct ItemListSidesWiringTests {
         #expect(!code.contains("@Binding"), "the toggle binds the side instead of reporting a choice (plan Q3)")
         #expect(
             code.ranges(of: "theme.colors").count == 1,
-            "SideToggle.swift names \(code.ranges(of: "theme.colors").count) theme colours — brass in the tint is the only one it draws (spec Decision 20)"
+            "SideToggle.swift names \(code.ranges(of: "theme.colors").count) theme colours — brass on the showing row is the only one it draws (spec Decision 20)"
         )
 
         let owned = SideToggle(side: ItemListViewModel.Side.owned, select: { _ in })

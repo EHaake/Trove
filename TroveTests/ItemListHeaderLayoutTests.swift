@@ -100,6 +100,14 @@ import Testing
 /// the header 57 pt on both sides and under every Owned label, 53 pt with
 /// no badges, the meta line 14 pt. At 3× the "…" 108 × 109 px, the toggles
 /// 237 (Owned), 221 (Sold), 255 (Active) and 315 (Completed) × 109 px.
+///
+/// **At `018` T009d** (spec Decision 21) the toggle is the wider side's
+/// width on both sides: at 3× Owned and Sold 237 × 109 px, Active and
+/// Completed 315 × 109 px. The Sold badge row widens to 233 × 37 under
+/// "Date sold"; the Owned rows are unchanged (to 226 × 37 under
+/// "Market ↓"). Heights unchanged: the header 57 pt on both sides and under
+/// every Owned label, 53 pt with no badges, the meta line 14 pt, every
+/// badge 109 px tall at 3×.
 @Suite("Items header layout")
 @MainActor
 struct ItemListHeaderLayoutTests {
@@ -308,6 +316,34 @@ struct ItemListHeaderLayoutTests {
             #expect(
                 toggle.height == overflow.height,
                 "the \(side) toggle renders \(toggle.height) px tall at 3× beside the \"…\"'s \(overflow.height) px — the three controls are no longer one height"
+            )
+        }
+    }
+
+    /// The side toggle is one width on both its sides (`018` spec Decision
+    /// 21, G1): each screen's toggle lays out both sides' glyph and word
+    /// hidden under the showing one, so its glass capsule is the wider side's
+    /// width whichever side shows and never resizes on a tap — the resize
+    /// runs outside SwiftUI's transactions and clipped "Completed" for
+    /// ~0.17 s (filmed, T009d). Each screen's two sides rendered alone at 3×,
+    /// exact equality, no tolerance (the standing G1 ruling).
+    ///
+    /// Its mutations (T009d): the hidden leading row removed → red; the
+    /// hidden trailing row removed → red.
+    @Test func theSideToggleIsOneWidthOnBothSidesOfEachScreen() throws {
+        let screens = [
+            ("Items", "Owned", renderAt3x(SideToggle(side: ItemListViewModel.Side.owned, select: { _ in })),
+             "Sold", renderAt3x(SideToggle(side: ItemListViewModel.Side.sold, select: { _ in }))),
+            ("Plans", "Active", renderAt3x(SideToggle(side: PlansViewModel.Side.active, select: { _ in })),
+             "Completed", renderAt3x(SideToggle(side: PlansViewModel.Side.completed, select: { _ in }))),
+        ]
+        for (screen, leadingName, leadingImage, trailingName, trailingImage) in screens {
+            let leading = try #require(leadingImage, "ImageRenderer produced nothing to measure for the \(leadingName) toggle.")
+            let trailing = try #require(trailingImage, "ImageRenderer produced nothing to measure for the \(trailingName) toggle.")
+            print("Side toggle widths at 3× on \(screen) — \(leadingName): \(leading.width) px, \(trailingName): \(trailing.width) px")
+            #expect(
+                leading.width == trailing.width,
+                "the \(screen) toggle renders \(leading.width) px wide at 3× on \(leadingName) and \(trailing.width) px on \(trailingName) — the capsule resizes on a tap and clips the wider word (spec Decision 21)"
             )
         }
     }

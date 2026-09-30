@@ -187,9 +187,10 @@ struct NoHardcodedColorsTests {
     /// their label takes the system's label colour, which follows the
     /// appearance. The glass style paints its label with the button's tint,
     /// so the colour is the tint; the glyph's bars are colour views so they
-    /// draw at the tint's full strength. The side toggle's tint is that colour
-    /// on its trailing side only, brass on its leading side (Decision 20), so
-    /// its entry is the system colour's spelling inside the ternary.
+    /// draw at the tint's full strength. The side toggle's showing row takes
+    /// that colour as its own `foregroundStyle` on its trailing side only,
+    /// brass on its leading side (Decisions 20 and 21), so its entry is the
+    /// system colour's spelling inside the ternary.
     private static let systemLabelExemptions: [String: [String]] = [
         "SortMenu.swift": [".tint(.primary)", "Color.primary"],
         "OverflowMenu.swift": [".tint(.primary)"],

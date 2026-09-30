@@ -996,7 +996,7 @@ Handoff notes for the pause reports:
   followed by …"). `scripts/verify.sh`: green, 1749 in 235. The UI test
   alone 40 s green.
 
-- [ ] **T009d — One width per toggle, and the swap animates (Decision 21; the person's findings, 2026-09-28).**
+- [x] **T009d — One width per toggle, and the swap animates (Decision 21; the person's findings, 2026-09-28).**
   Findings: on Plans, Active → Completed clips "Completed" ~0.17 s while
   the glass capsule grows (filmed at 61e7ca2; the capsule's resize runs
   outside SwiftUI transactions — `.animation(nil)`, `.transaction`,
@@ -1005,12 +1005,43 @@ Handoff notes for the pause reports:
   also lays out the other side's icon and word, hidden, so the capsule is
   the wider side's width on both sides, the visible row centred; T009c's
   `.animation(nil, value: side)` is replaced by the transition the film
-  picks (no two legible words superimposed, no clipping, the glass press
-  intact on both runtimes). G1/G10 gain legs pinning one width per side
+  picked (2026-09-29, thirteen candidates on 27.0, the winner on 26.5
+  too): the visible row carries its own `.foregroundStyle` (brass on the
+  leading side, `Color.primary` on the trailing), `.id(side)` and
+  `.transition(.blurReplace)`, under `.animation(.smooth(duration: 0.3),
+  value: side)` on an inner `ZStack` — no two legible words superimposed,
+  no clipping, the glass press intact on both runtimes; the person tried
+  the installed build: "Ok looks great!". The film also settled that
+  HEAD's press effect was never lost (a quick tap swells ~2 pt), so only
+  the label changes. G1/G10 gain legs pinning one width per side
   on each screen and the hidden other-side row; the T009c leg is
   rewritten for the new transition. Mutations recorded.
   Files: `Trove/Views/Shared/SideToggle.swift`, `TroveTests/ItemListSidesWiringTests.swift`, `TroveTests/ItemListHeaderLayoutTests.swift`, `TroveTests/PlansWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; the film of the chosen transition on 27.0 and 26.5 both directions on both screens; the mutations recorded.
+  **Done (2026-09-29).** A `row(_:)` helper; both rows hidden at height 0
+  under the mono line; the showing row with its own `.foregroundStyle`
+  ternary, `.id(side)`, `.transition(.blurReplace)`, in an inner `ZStack`
+  at height 0 under `.animation(.smooth(duration: 0.3), value: side)`.
+  The Button's `.tint` dropped: a probe rendered each toggle byte-identical
+  with and without a foreign tint (the renderer does honour a glass tint —
+  rust vs moss differ), so it reached nothing drawn; whether it ever
+  coloured the press highlight is for T013 on the device. New G1
+  `theSideToggleIsOneWidthOnBothSidesOfEachScreen` (each toggle alone at
+  3×, exact): Owned = Sold = 237 px (79 pt), Active = Completed = 315 px
+  (105 pt; Sold was 221); heights unchanged (109 px badges, 57 pt header).
+  G10's toggle legs rewritten: `.buttonStyle(.glass)` directly followed by
+  `.controlSize(.regular)`, no `.tint(`; both hidden rows; one ordered
+  regex over row → ternary → `.id` → `.blurReplace` → `}` →
+  `.frame(height: 0)` → the smooth animation; `animation(nil` absent.
+  Mutations, all red: hidden leading row removed
+  (`ItemListHeaderLayoutTests.swift:345` Items, `ItemListSidesWiringTests.swift:516`);
+  hidden trailing row removed (`:345` Plans, `:516`); `.blurReplace` →
+  `.opacity` (`:524`); `.id(side)` removed (`:524`); `animation(nil` put
+  back (`:524`, `:528`); the smooth animation removed (`:524`); the ternary
+  moved back onto `.tint` (`:508`, `:512`, `:524`). Each hidden-row
+  mutation reds only the screen whose wider word is on that side, so the
+  leg covers both screens. `scripts/verify.sh`: green, 1750 in 235.
+  Finding: a full verify run is 5–7 min here; seven mutations ≈ 45 min.
 
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
@@ -1207,3 +1238,6 @@ recorded here too.
 | `sdd-implementer` — T009b | `opus` | ~89k + resumed pass | Done; stopped once on the render instrument's order (settled by the standing stand-in ruling; an order scan added); unit 1749 green |
 | `general-purpose` — toggle transition filmed, four fixes tried | `opus` | ~135k | The overlap confirmed (10 frames); `.animation(nil, value: side)` recommended → T009c |
 | `sdd-implementer` — T009c | `opus` | ~35k | Done; unit 1749 green |
+| `general-purpose` — Plans clipping filmed, five fixes tried | `opus` | ~165k | Only a constant width is clean; the capsule resize runs outside SwiftUI transactions → Decision 21 |
+| `general-purpose` — T009d films (HEAD's press effect; thirteen swap candidates; 26.5) | `opus` | ~183k | The press was never lost; per-row colour + `.blurReplace` at `.smooth(0.3)` recommended and installed; the person: "Ok looks great!" |
+| `sdd-implementer` — T009d | `opus` | ~70k | Done; unit 1750 green; seven mutations recorded; tint dropped on a render probe |
