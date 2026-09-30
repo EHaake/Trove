@@ -1,8 +1,10 @@
 # 020 — Purchase Provenance
 
-**Status**: **Draft** (2026-09-29) — written with the person in this spec
-session; widened the same day, at their reading, to a new/used preference
-on wishlist entries (Decision 8). The Decisions record below holds every product decision made in
+**Status**: **Approved** (2026-09-29) — written with the person in this
+spec session; widened the same day, at their reading of the first Draft,
+to a new/used preference on wishlist entries (Decision 8), and approved at
+their reading of the second, which confirmed that leaving the preference
+blank is the "no preference" choice (no separate "either" value). The Decisions record below holds every product decision made in
 the conversation; the **P-items** are Claude Code's proposals and become
 decisions on plan approval, as in earlier specs.
 
