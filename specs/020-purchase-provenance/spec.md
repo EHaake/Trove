@@ -1,7 +1,8 @@
 # 020 — Purchase Provenance
 
 **Status**: **Draft** (2026-09-29) — written with the person in this spec
-session. The Decisions record below holds every product decision made in
+session; widened the same day, at their reading, to a new/used preference
+on wishlist entries (Decision 8). The Decisions record below holds every product decision made in
 the conversation; the **P-items** are Claude Code's proposals and become
 decisions on plan approval, as in earlier specs.
 
@@ -11,7 +12,8 @@ conversation).
 
 **Depends on**: `001-core-inventory` (`Item`, its form and page, the
 condition scale), `002-live-market-value` (the condition-to-Reverb mapping
-the market figure filters by), `010-item-management-enhancements` (Copy,
+the market figure filters by, and the wanted item's "used listings"
+figure), `010-item-management-enhancements` (Copy,
 which duplicates an item), `011-data-export` (the items CSV and the PDF),
 `012-data-import` (the items template and its header gate),
 `015-mark-as-bought` (the purchase sheet). It adds no outside service.
@@ -26,8 +28,11 @@ one they made. The only trace the app has today is the **New** condition,
 which says what state an item is in, not how it arrived.
 
 This spec adds one optional fact to every owned item — **bought new** or
-**bought used** — and one grade to the condition scale, **Very Good**,
-between Excellent and Good.
+**bought used** — its twin on every wishlist entry — **looking for new**
+or **looking for used** — and one grade to the condition scale, **Very
+Good**, between Excellent and Good. The wishlist half does real work:
+a wanted item's market figure has always read used listings only, and
+for something you mean to buy new that is the wrong price.
 
 ## What and why
 
@@ -47,7 +52,9 @@ anywhere beyond the item itself. Filtering or grouping the list by new or
 used is `022-grouped-browsing`'s; charting it is `023-dashboard-charts`'s;
 making the importer lenient about how a spreadsheet writes it is
 `021-import-expansion`'s. This spec records the fact and shows it on the
-item, and nothing else reads it yet.
+item. The one thing that reads it is the wishlist half: a wanted item's
+preference chooses which Reverb listings its market figure is drawn
+from, and prefills the purchase sheet when it is bought.
 
 ## Core behavior
 
@@ -91,6 +98,27 @@ item, and nothing else reads it yet.
   (Decision 5).
 - **The Dashboard does not use it.** No figure, card or breakdown changes.
 
+### Looking for new or used (the wishlist)
+
+- Every wishlist entry gains an optional **Looking for** preference with
+  the same two values, **New** and **Used**, and the same not-recorded
+  state, which is what every existing entry is after updating
+  (Decision 8).
+- **Set on the wishlist add/edit form** with the same two chips, neither
+  selected by default, the selected one clearable by tapping it again.
+  Never required.
+- **Shown on the wanted item's page** as **Looking for new** or **Looking
+  for used**; nothing when not recorded.
+- **Copy** on a wishlist entry carries it across.
+- **It shapes the market figure** — see "The market figure" below.
+- **Marking the entry bought prefills the purchase sheet's Bought field**
+  from it: looking for used → Used selected, looking for new → New
+  selected, not recorded → nothing selected. The person can change or
+  clear it before saving; a preference is not a record of what happened
+  (P6).
+- Not shown on wishlist rows, and nothing filters or sorts by it, for the
+  same reasons as Decision 5.
+
 ### Very Good
 
 - The condition scale becomes **New, Excellent, Very Good, Good, Fair,
@@ -108,9 +136,21 @@ item, and nothing else reads it yet.
   has since `002` (Decision 6). The two grades overlap on purpose: nothing
   already graded Good sees its figure move, which is worth more than the
   cleaner split.
-- **New or used does not affect the market figure.** The figure reads the
-  item's condition, which is what a buyer prices; how the owner came by it
-  is not.
+- **Bought new or used does not affect an owned item's market figure.**
+  The figure reads the item's condition, which is what a buyer prices;
+  how the owner came by it is not.
+- **A wanted item's figure follows its Looking for preference**
+  (Decision 9):
+  - **Used** — Reverb's used listings, which is everything that is not
+    new stock. Exactly today's figure.
+  - **New** — Reverb's new-stock listings only (brand new and B-stock).
+  - **Not recorded** — used listings, as today, so **no existing wanted
+    item's figure moves** until the person states a preference.
+- The words follow the figure: wherever a wanted item's market line says
+  "used listings" today, it says **"new listings"** when the preference
+  is New.
+- Changing the preference changes the figure the same way changing an
+  owned item's condition does — no new fetch timing, no new trigger.
 
 ### Sync and privacy
 
@@ -140,7 +180,12 @@ item, and nothing else reads it yet.
 - **The PDF** lists **Bought: New** or **Bought: Used** among an item's
   details; when not recorded the line is omitted, as condition notes are
   when empty (Decision 7).
-- The wishlist CSV is unchanged.
+- **The wishlist CSV gains one column at the end, "Looking For"**,
+  holding `new`, `used` or nothing, read back on import the same way,
+  with older files importing as not recorded. The wishlist template gains
+  it too.
+- **The wishlist PDF** lists **Looking for: New** or **Used** where
+  recorded, and omits it where not.
 
 ## Copy
 
@@ -153,6 +198,11 @@ item, and nothing else reads it yet.
 | CSV header | `Bought` |
 | CSV values | `new`, `used`, empty; condition `very good` |
 | PDF field | **Bought** — **New** / **Used** |
+| Wishlist form field label | **LOOKING FOR** |
+| Wanted item's page | **Looking for new** / **Looking for used** |
+| Wanted market line, New preference | "new listings" wherever it says "used listings" today |
+| Wishlist CSV header | `Looking For` |
+| Wishlist PDF field | **Looking for** — **New** / **Used** |
 
 ## Design requirements
 
@@ -163,6 +213,7 @@ item, and nothing else reads it yet.
   where five might not have. Wrapping is fine; clipping or a chip squeezed
   narrower than its siblings is not. Check it at the narrowest supported
   width.
+- The Looking for chips on the wishlist form match the same chips.
 - On the item's page the Bought line sits **with the purchase details**
   (price, date, place), not with the condition, because it describes the
   purchase, not the state.
@@ -207,10 +258,31 @@ item, and nothing else reads it yet.
     where not, and prints Very Good as **Very Good**.
 18. [ ] Six condition chips lay out without clipping at the narrowest
     supported width, on both the item form and the purchase sheet.
-19. [ ] The Bought value and Very Good sync to a second signed-in device.
+19. [ ] The wishlist add/edit form shows a **Looking for** field with
+    **New** and **Used**, neither selected for a new entry; it saves,
+    reopens selected, clears by tapping the selected chip, and saves
+    unset without a prompt.
+20. [ ] Every wishlist entry that existed before the update opens as not
+    recorded.
+21. [ ] The wanted item's page shows **Looking for new** or **Looking for
+    used**, and nothing when not recorded.
+22. [ ] A wanted item looking for new gets its market figure from Reverb's
+    brand-new and B-stock listings only, and its market line says "new
+    listings"; one looking for used, or not recorded, gets exactly the
+    figure and wording it gets today.
+23. [ ] Marking a wanted item bought preselects the purchase sheet's
+    Bought chip from its preference (nothing when not recorded), and the
+    person can change or clear it before saving.
+24. [ ] Copying a wishlist entry carries its preference.
+25. [ ] The wishlist CSV export ends in a **Looking For** column; importing
+    it restores every preference; an older wishlist file without it still
+    imports, every row not recorded; the wishlist template includes it.
+26. [ ] The wishlist PDF shows **Looking for** where recorded and omits it
+    where not.
+27. [ ] The Bought value, the Looking for preference and Very Good sync to a second signed-in device.
     *(A two-device check; gathered in `specs/SYNC-CHECKS.md` if it cannot
     be run at the close-out.)*
-20. [ ] The CloudKit schema test still validates with the new field.
+28. [ ] The CloudKit schema test still validates with both new fields.
 
 ## Decisions record
 
@@ -236,6 +308,15 @@ item, and nothing else reads it yet.
 7. **One appended CSV column** and a PDF line (follows from Decision 5 and
    `006`'s precedent for adding columns).
 
+8. **A new/used preference on wishlist entries, in this spec** (the
+   person, 2026-09-29, at their reading of the first Draft). Offered as
+   the one natural widening of a narrow spec; accepted. Same two values,
+   optional, no default, not inferred.
+9. **Not recorded keeps today's used-listings figure** (proposed with
+   Decision 8). Reading all listings when unstated would have been the
+   more neutral default, but it would move every existing wanted item's
+   figure on update — the same reasoning as Decision 6.
+
 ### Proposals (P-items, decided at plan approval)
 
 - **P1** — tapping the selected Bought chip clears it.
@@ -245,6 +326,8 @@ item, and nothing else reads it yet.
 - **P4** — an older app version on another device must neither crash on
   nor erase the new data; the plan says how, and whether it can be tested.
 - **P5** — Very Good is written `very good` in the CSV.
+- **P6** — marking a wanted item bought prefills the sheet's Bought chip
+  from its preference, still changeable.
 
 ## Non-goals (explicit)
 
@@ -258,9 +341,9 @@ item, and nothing else reads it yet.
   existing collection is `021`'s round-trip import.
 - **Import leniency beyond the new column and the new grade** — `$`
   prices, other date formats, missing columns, blank rows — `021`.
-- **A new/used preference on wishlist items**, or letting it shape a
-  wanted item's market figure (today a wanted item reads all used
-  listings). Worth a roadmap note, not this spec.
+- **An "either" preference** that reads new and used listings together.
+  Not recorded already means "no preference stated", and it keeps
+  today's used figure (Decision 9).
 - **Re-grading existing items** or changing what New, Excellent, Good,
   Fair or Broken mean.
 
