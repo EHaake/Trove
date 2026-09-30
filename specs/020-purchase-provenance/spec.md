@@ -311,7 +311,8 @@ from, and prefills the purchase sheet when it is bought.
    unchanged** (the person, 2026-09-29). Offered: split Good to Reverb's
    "good" only, for accuracy. Chosen: keep Good on "very good" + "good" so
    no existing figure moves, with Very Good on "very good" alone.
-7. **One appended CSV column** and a PDF line (follows from Decision 5 and
+7. **One appended CSV column** and a PDF line — the PDF half refined by
+   Decision 10 (follows from Decision 5 and
    `006`'s precedent for adding columns).
 
 8. **A new/used preference on wishlist entries, in this spec** (the

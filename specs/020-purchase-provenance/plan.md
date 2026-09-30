@@ -1,6 +1,9 @@
 # 020 — Purchase Provenance — Technical Plan
 
-**Status**: Draft — pending sign-off
+**Status**: **Final** (2026-09-30) — signed off by the `skeptical-reviewer`
+(one review, one re-review, the last blocking item fixed by the orchestrator
+per the loop cap); the P-items and readings are decisions as of this sign-off,
+R1/R2/R3/R6 by the person (spec Decision 10).
 
 Drafted by the `sdd-planner` (Opus 5.5, high effort — per `CLAUDE.md`'s model
 policy, Opus profile, the plan-and-tasks draft row at the implementation tier
@@ -612,7 +615,7 @@ recorded basis Q4; R1's merged row; R6 as the person answered it).
 | G7 | `NewOrUsedCopyTests`: every string by literal; the P1 rule's four cases | any word drifts; the rule returning `tapped` always |
 | G8 | wanted counting: New → `brand-new` + `b-stock` only; nil and Used → today's rule, equal over the fixtures | the preference ignored; New counting `mint` |
 | G9 | `MarketRefresherTests`: both target builders carry `lookingFor`, the re-read wins, the record's flag set for New; `MarketIndexTests`: `listingBasis`; `MarketCopyTests`: the three bases' strings; `MarketLocalSchemaTests` allowlist; `MarketWiringTests`: the section passes `figure.listingBasis(isWanted:` | the `newStockOnly:` argument dropped; `currentTarget` left at `lookingFor: nil`; the section reading `isWanted` alone |
-| G10 | `ItemFormViewModelTests`: nil on a new form; set, save, reopen; clear saves nil; saving nil raises no validation error; `.veryGood` saved and reopened through the form on a second context | `populate` skipping `bought`; a validation case added; the form's save writing the raw value directly |
+| G10 | `ItemFormViewModelTests`: nil on a new form; set, save, reopen; clear saves nil; saving nil raises no validation error; `.veryGood` saved and reopened through the form on a second context, with the refetched stored pair asserted as the literal `("good", "very good")` | `populate` skipping `bought`; a validation case added; the form's save writing the raw value directly |
 | G11 | `PurchaseFormViewModelTests` seed per preference and change/clear; `WishlistPurchaseStoreTests` carries `.used` and nil; the four-host seed test agrees on `bought` | one host passing nil; the store dropping `bought:` |
 | G12 | `WishlistFormViewModelTests`: the three states round-trip, save unset silently | `save()` skipping `lookingFor` |
 | G13 | duplication carries `.used` on both lists; sold-then-returned keeps `.new` | either duplicate dropping the argument; a sale writer clearing it |
@@ -620,7 +623,7 @@ recorded basis Q4; R1's merged row; R6 as the person answered it).
 | G15 | `ProvenanceWiringTests` + the rewritten purchase-sheet order: each form composes `NewOrUsedField` once, in its stated place, with its identifier; the field calls `NewOrUsed.selection(afterTapping:` | a field moved or dropped; a hand-rolled toggle |
 | G16 | the two page rows pass `item.bought` / `item.lookingFor` into `NewOrUsedCopy` | the literal "Bought" restored; the wanted row reading a constant |
 | G17 | CSV: headers, rows, parse, counted defaults, boundaries, the round trip on a second context, the template's last column | a column misplaced; a boundary missing; the commit dropping a field |
-| G18 | PDF: the fields present when recorded, absent when nil, Very Good printed | the nil guard dropped; the label changed |
+| G18 | PDF: an item's date field labelled `Bought new` / `Bought used` when recorded and `Bought` when nil (full label list compared to a literal); the wishlist's Looking for field present when recorded, absent when nil; Very Good printed | the item label reverted to plain `Bought`; the wishlist nil guard dropped |
 | G19 | `DocsSampleTests`: the samples' new columns as the README describes | a sample and its README disagreeing |
 | G20 | the two UI tests, twice back to back | §10's mutations |
 

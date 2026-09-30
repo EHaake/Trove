@@ -1,6 +1,9 @@
 # 020 — Purchase Provenance: Tasks
 
-**Status**: Draft — pending sign-off
+**Status**: **Final** (2026-09-30) — signed off by the `skeptical-reviewer`
+after one review and one re-review; the re-review's one remaining blocking
+item (N1, G10's Very Good leg) fixed directly by the orchestrator per
+`CLAUDE.md`'s review-loop cap, and logged in the tier log.
 
 Drafted against the approved `spec.md` (Approved 2026-09-29) and the draft
 `plan.md` in this directory, for branch `020-purchase-provenance` off `main`
@@ -221,8 +224,11 @@ Everything the person reads is plain language.
   set, saved, reopened → Used; cleared to nil and saved → nil on a second
   context; saving with nil sets no validation error and returns true (criteria
   1–4); `.veryGood` set through the form, saved, and reopened through a new
-  `ItemFormViewModel` on a second context reads `.veryGood` (criterion 10)
-  (mutations: `populate` skipping `bought` → the reopen leg red; `save`
+  `ItemFormViewModel` on a second context reads `.veryGood`, **and the refetched
+  item's stored pair `(conditionRawValue, conditionRefinement)` equals the literal
+  `("good", "very good")`** (criterion 10; the pair assertion is what the last
+  mutation below reaches — the read-back alone stays green under it, since
+  `Condition(rawValue: "very good")` is `.veryGood`) (mutations: `populate` skipping `bought` → the reopen leg red; `save`
   skipping it → red; `save` writing `conditionRawValue = condition.rawValue`
   directly → the Very Good leg red). **G11** — `PurchaseFormViewModelTests`: the seed for each
   of nil, New, Used; changed and cleared before `purchase()` → the purchase
@@ -419,7 +425,9 @@ Everything the person reads is plain language.
   initializer.
   Tests (**G18**, `ExportSchemaTests`): a recorded item's date field is labelled
   the literal `"Bought used"` (and `"Bought new"` for a `.new` fixture), with no
-  second `"Bought"` label anywhere; a nil item's labels are the literal at `:343`
+  second `"Bought"` label — asserted by comparing the **full label list** to a
+  literal, never by a `contains("Bought")` test, since `"Bought from"` contains
+  the word; a nil item's labels are the literal at `:343`
   unchanged; a Very Good item's Condition field reads
   `"Very Good"`; the wishlist's field present and absent the same way (criteria
   17, 26) (mutations: the item label reverted to plain `Bought` → the recorded
@@ -481,7 +489,9 @@ Everything the person reads is plain language.
   all-years line, if the live catalogue produces one, reads "new listings".
   Probe removed before the suites run, the tree confirmed byte-identical to HEAD.
   **(d) Relaunch** and confirm everything set in (a)–(c) survived; then both
-  suites twice.
+  suites twice. The sections run **one after another** on the simulator, never
+  together, and the orchestrator passes (a)–(c)'s returned lists into (d)'s
+  bundle so it knows what was set.
   **[person]** the two new `SYNC-CHECKS.md` steps if two devices and an older
   build are to hand — otherwise they wait in that file (criterion 27).
   **Verify:** each section's pass/fail list recorded in the Done note — the
@@ -572,3 +582,4 @@ escape-hatch misses recorded here too.
 | Plan and tasks draft (`sdd-planner`) | `opus` | 357,111 (85 tool uses, 18.2 min) | Plan-and-tasks draft at the implementation tier, no override (trial continuing from `018`). 15 tasks, 5 phases, 20 guards |
 | Sign-off (`skeptical-reviewer`) | `opus` | 169,310 (44 tool uses, 8.2 min) | Sign off after fixes: 2 blocking (T014 device pass shape vs `CLAUDE.md`; G14 leg (d) vacuous — FlowLayout reports the proposed width), 15 second-look notes |
 | Sign-off fixes (`sdd-planner`, resumed) | `opus` | 386,562 cumulative (38 tool uses, 2.9 min) | Both blocking and 11 second-look notes applied; R1/R2/R3/R6 transcribed by the orchestrator from the person's answers (spec Decision 10) |
+| Sign-off re-review (`skeptical-reviewer`, resumed) | `opus` | 199,198 cumulative (2 tool uses, 1.0 min) | B1 and B2 resolved, R6 consistent; one new blocking item N1 (G10's Very Good leg could not fail under its named mutation) — **fixed directly by the orchestrator** (the stored-pair literal added to T004 and G10), per the loop cap; second-look notes 1–4 applied the same way |
