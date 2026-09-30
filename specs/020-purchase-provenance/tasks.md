@@ -14,11 +14,13 @@ implementer re-reads that file after the sync.
 Very Good case and its storage rule, the `NewOrUsed` type, its copy and the
 clear-on-tap rule. Every later task reads or writes these, and the storage rule
 is data on disk that an older app on another device also reads.
-**Tasks marked `review: per-task`**: **T001** only — the storage rule for Very
+**Tasks marked `review: per-task`**: **T001** — the storage rule for Very
 Good (plan Q2) is what every reader of `condition` inherits, and the one place
-where a plausible-looking simpler version silently fails the spec (P4). Every
+where a plausible-looking simpler version silently fails the spec (P4); and
+**T003** — Decision 9 (no existing wanted item's figure moves) rests on it, and
+Phase 2 has no pause at which the person could notice a moved figure. Every
 other task gets the default one review per phase. An orchestrator left to guess
-guesses "all of them"; this is the one marked.
+guesses "all of them"; these two are the ones marked.
 
 Ordering note: the model first, since the new case breaks two exhaustive
 switches and changes what `conditionRawValue` means; then the copy and the pure
@@ -45,8 +47,8 @@ Cadence (per `CLAUDE.md`'s model policy): each dispatch gets a task bundle
 assembled with shell — task line, plan section, acceptance criteria, files,
 pattern file — and the implementer does not read `plan.md`/`spec.md`/`tasks.md`
 in full; verification is `scripts/verify.sh` and nothing more verbose, re-run by
-the orchestrator for T001 and taken from the implementer's verbatim output
-otherwise; the `skeptical-reviewer` reviews per phase and T001, one review and at
+the orchestrator for T001 and T003 and taken from the implementer's verbatim output
+otherwise; the `skeptical-reviewer` reviews per phase and T001 and T003, one review and at
 most one re-review each, on a bundle cut after `git add -A`; one implementation
 session for the whole spec; the device pass runs in a `general-purpose` agent.
 Everything the person reads is plain language.
@@ -74,7 +76,10 @@ Everything the person reads is plain language.
   gains `.veryGood: ["very-good"]` (`.good` untouched), and
   `ItemExportRecord.init(item:)` reads `item.condition.rawValue` instead of
   `item.conditionRawValue` — grep every other production read of
-  `conditionRawValue` and confirm there is none. `CloudKitSchemaTests` gains a
+  `conditionRawValue` and confirm there is none — and
+  `ItemExportRecord.conditionRawValue` gains a doc comment saying it holds
+  `condition.rawValue` (`"very good"` for Very Good), **not**
+  `Item.conditionRawValue`, so nobody "fixes" it back. `CloudKitSchemaTests` gains a
   doc-comment paragraph naming the three fields.
   Pattern: `Item.condition`/`conditionRawValue` for the storage;
   `WishlistItem.boughtDate` (015 T001) for the field additions and the CloudKit
@@ -82,12 +87,16 @@ Everything the person reads is plain language.
   Tests (`ModelTests`, persisted legs on a second context):
   **G2** — `EnumBackedPropertyTests.conditionRoundTripsThroughItsRawValue`
   **rewritten**, not loosened: it asserts `conditionRawValue == condition.rawValue`,
-  which is now false for Very Good by design; the new version asserts
-  `Item.storage(for:)` for every case and the read-back, plus
+  which is now false for Very Good by design; the new version asserts each
+  case's stored `(conditionRawValue, conditionRefinement)` against a **literal
+  tuple** — `.veryGood` → `("good", "very good")`, every other case →
+  `(rawValue, nil)` — **never against `Item.storage(for:)` itself**, plus the
+  read-back; an unknown refinement (e.g. `"mint"`) over Good reads Good; and
   `Condition.allCases.map { $0.rawValue.capitalized } == ["New", "Excellent",
   "Very Good", "Good", "Fair", "Broken"]` (mutations: the setter writing
   `"very good"` into `conditionRawValue` → red; `veryGood` declared after `good`
-  → red). **G3** — a new suite "Very Good and an app older than 020": a frozen
+  → red; `condition(raw:refinement:)` accepting any non-nil refinement over Good
+  → the unknown-refinement leg red). **G3** — a new suite "Very Good and an app older than 020": a frozen
   five-case replica of the pre-020 enum in the test file, and the pre-020 read
   (`Replica(rawValue: item.conditionRawValue) ?? .excellent`) and form save
   (`item.conditionRawValue = replicaRead.rawValue`, which is what
@@ -127,10 +136,10 @@ Everything the person reads is plain language.
   Per plan §2 and P1. `NewOrUsed.selection(afterTapping:current:)` in
   `NewOrUsed.swift`. New `Trove/Models/NewOrUsedCopy.swift` (`nonisolated enum`,
   no SwiftUI): `boughtLabel`, `lookingForLabel`, `chip(_:)`,
-  `purchaseDateLabel(bought:)` with the strings plan §2 gives.
+  `detailDateRowLabel(bought:)` with the strings plan §2 gives.
   Pattern: `Trove/Models/PurchaseCopy.swift` and `TroveTests/PurchaseCopyTests.swift`.
   Tests: new `TroveTests/NewOrUsedCopyTests.swift` — **G7**: every string by
-  literal, including `purchaseDateLabel(bought: nil) == "Bought"` (today's page
+  literal, including `detailDateRowLabel(bought: nil) == "Bought"` (today's page
   row, P3); the rule's four cases — nil + New → New, New + New → nil, New + Used
   → Used, Used + Used → nil (mutation: return `tapped` always → the two clearing
   cases red).
@@ -148,10 +157,11 @@ Everything the person reads is plain language.
 
 ## Phase 2 — View models, the market and Copy · walkthrough: none — every change here is in a view model, the purchase sheet's seed, Copy or the market's reading of a preference nobody can set yet; no control and no screen changes until Phase 3, and by design (Decision 9) no existing wanted item's figure or wording moves
 
-- [ ] **T003 — A wanted item's figure follows Looking for, and its words follow the figure.**
+- [ ] **T003 — A wanted item's figure follows Looking for, and its words follow the figure. `review: per-task`.**
   Per plan §3, Q4, R3 and R5. `MarketSubject.wanted` becomes
   `wanted(lookingFor: NewOrUsed?)` with `readsNewStockOnly`;
-  `MarketConditionMap.counts` per plan §3; `MarketRefresher.targets(in:)` and
+  `MarketConditionMap.counts` **derived from `subject.readsNewStockOnly`** — one
+  rule, one place, per plan §3; `MarketRefresher.targets(in:)` and
   `currentTarget(for:)` build it from `item.lookingFor`;
   `MarketFigureRecord.isNewStockOnly: Bool = false`;
   `MarketLocalStore.record(_:product:for:newStockOnly:)` with the defaulted
@@ -182,7 +192,9 @@ Everything the person reads is plain language.
   today's two wanted strings unchanged; `MarketLocalSchemaTests`: the allowlist
   gains `isNewStockOnly` (confirm it went red before the edit); `MarketWiringTests`:
   the section passes `figure.listingBasis(isWanted: isWanted)` at both sites
-  (view-body fact). `MarketVocabularyTests` green **unedited**.
+  (view-body fact — and the Done note says plainly that this scan is the whole
+  of the view-layer coverage: the "new listings" wording on screen is untested
+  by any automated check). `MarketVocabularyTests` green **unedited**.
   Files: `Trove/Market/MarketFigure.swift`, `Trove/Market/MarketRefresher.swift`,
   `Trove/Market/MarketLocalModels.swift`, `Trove/Market/MarketLocalStore.swift`,
   `Trove/Market/MarketIndex.swift`, `Trove/Models/MarketCopy.swift`,
@@ -190,8 +202,8 @@ Everything the person reads is plain language.
   `Trove/ViewModels/WishlistDetailViewModel.swift`, the market test files named
   above, and every test file that spells the `.wanted` subject (compile fixes
   only).
-  **Verify:** `scripts/verify.sh` green; mutations recorded; the re-spelled
-  tests listed.
+  **Verify:** `scripts/verify.sh` green (orchestrator re-runs); mutations
+  recorded; the re-spelled tests listed.
 
 - [ ] **T004 — Bought through the item form's view model and the purchase sheet.**
   Per plan §4 and P6, Q8. `ItemFormViewModel.bought` (populate, save, no
@@ -208,8 +220,11 @@ Everything the person reads is plain language.
   Tests: **G10** (`ItemFormViewModelTests`) a new form's `bought` is nil; Used
   set, saved, reopened → Used; cleared to nil and saved → nil on a second
   context; saving with nil sets no validation error and returns true (criteria
-  1–4) (mutations: `populate` skipping `bought` → the reopen leg red; `save`
-  skipping it → red). **G11** — `PurchaseFormViewModelTests`: the seed for each
+  1–4); `.veryGood` set through the form, saved, and reopened through a new
+  `ItemFormViewModel` on a second context reads `.veryGood` (criterion 10)
+  (mutations: `populate` skipping `bought` → the reopen leg red; `save`
+  skipping it → red; `save` writing `conditionRawValue = condition.rawValue`
+  directly → the Very Good leg red). **G11** — `PurchaseFormViewModelTests`: the seed for each
   of nil, New, Used; changed and cleared before `purchase()` → the purchase
   carries what is chosen; `WishlistPurchaseStoreTests`: the created item carries
   `.used`, and nil when nil (criterion 7); the four-host test gains an entry
@@ -252,7 +267,7 @@ Everything the person reads is plain language.
 
   **Phase 2 closes here — `walkthrough: none`; after its review, run on.**
 
-## Phase 3 — Screens · walkthrough: yes — on the item form (More details) a Bought row with New and Used sits just above Condition, neither picked; pick one, save, and the item's page reads "Bought new" or "Bought used" where it said "Bought" beside the date; tap the picked chip again and it clears, and the page goes back to "Bought"; the wishlist form has a Looking for row after "How much do you want it", and the wanted item's page shows "Looking for · New" or "Used" (nothing when unset); marking that item bought opens the sheet with its Bought chip already picked to match, changeable before saving; a matched wanted item set to New shows a figure from new listings after its next refresh, and "new listings" wherever it used to say "used listings"; on a narrow phone the six condition chips wrap without clipping
+## Phase 3 — Screens · walkthrough: yes — on the item form (More details) a Bought row with New and Used sits just above Condition, neither picked; pick one, save, and the item's page reads "Bought new" or "Bought used" where it said "Bought" beside the date; tap the picked chip again and it clears, and the page goes back to "Bought"; the wishlist form has a Looking for row after "How much do you want it", and the wanted item's page shows "Looking for · New" or "Used" (nothing when unset); marking that item bought opens the sheet with its Bought chip already picked to match, changeable before saving; a matched wanted item set to New shows a figure from new listings after its next refresh, and "new listings" wherever it used to say "used listings"; on a narrow phone the six condition chips wrap without clipping; and, the person's own check, Accessibility Inspector or VoiceOver over the Bought and Looking for chips (each announces its word and whether it is selected; a cleared row announces nothing selected) and over the two page rows
 
 - [ ] **T006 — The shared chips, the condition row moved onto them, and criterion 18 measured.**
   Per plan §6 and Q5, Q9. New `Trove/Views/Shared/ChoiceChips.swift` with
@@ -268,7 +283,8 @@ Everything the person reads is plain language.
   `TroveTests/ItemListHeaderLayoutTests.swift` for `ImageRenderer` measurement
   under a real theme.
   Tests: new `TroveTests/ConditionFieldLayoutTests.swift` — **G14**'s legs
-  (a)–(d) from plan §6 at the Q9 width, **measured after the `018` sync** since
+  (a)–(c) from plan §6 at the Q9 width (no whole-field width leg: `FlowLayout`
+  always reports the proposed width, so it would be vacuous), **measured after the `018` sync** since
   `ThemeTypography` is changing there; the Done note records the container width
   used, each chip's measured width and the row count observed (mutations: a
   fixed `.frame(width: 60)` on `ChoiceChip` → leg (b) red; the container proposed
@@ -320,7 +336,7 @@ Everything the person reads is plain language.
 
 - [ ] **T009 — The two pages.**
   Per plan §7, R1, R2 and P3. `ItemDetailView.details`: the date row's label
-  becomes `NewOrUsedCopy.purchaseDateLabel(bought: item.bought)`.
+  becomes `NewOrUsedCopy.detailDateRowLabel(bought: item.bought)`.
   `WishlistDetailView.details`: a third row, `NewOrUsedCopy.lookingForLabel` and
   `item.lookingFor.map(NewOrUsedCopy.chip) ?? ""`, after `Added`, left to the
   existing empty filter.
@@ -341,7 +357,10 @@ Everything the person reads is plain language.
   addressing the new chips by identifier and reading selection through
   `isSelected`; **no seed change**. Mutations: `NewOrUsedField` writing `tapped`
   unconditionally → the clear leg red; one host seeding `lookingFor: nil` → the
-  preselect leg red; the page row back to the literal → red.
+  preselect leg red; the page row back to the literal → red. The Done note names
+  **which host** the preselect mutation reaches — the test buys through the
+  Wishlist row's swipe, so it reaches `WishlistViewModel`'s seed only; the other
+  three hosts' seeds are G11's cross-host unit test, not this one.
   Pattern: `testMarkingAWantedItemBoughtMovesItToTheCollection` (the swipe and
   the sheet), `testAddingAnItemThroughQuickAddPutsItInTheList` (the form).
   Files: `TroveUITests/TroveUITests.swift`.
@@ -349,12 +368,14 @@ Everything the person reads is plain language.
   recorded; `scripts/verify.sh` green; mutations recorded.
 
   **Phase 3 closes here — pause for the person** (walkthrough above). The report
-  also asks, as questions, about R1 (the date row's label carrying "new"/"used"),
-  R2 (the wanted page's row), R3 (a New preference's withheld line keeping "the
-  lowest used asking price") and R5 (the figure changing at the next refresh, not
-  at the edit).
+  also names **the person's own step here**: Accessibility Inspector (or
+  VoiceOver) over the Bought row on the item form and the sheet, the Looking for
+  row on the wishlist form — each chip's spoken name and selected state, a
+  cleared row announcing nothing selected — and the two page rows. R1, R2 and R3
+  were decided by the person before the build (spec Decision 10); the report
+  points them at R5 (the figure changing at the next refresh, not at the edit).
 
-## Phase 4 — CSV, templates, import and PDF · walkthrough: yes — Settings › Templates: the items template now ends in a Bought column and the wishlist template in Looking For; export the collection as CSV and the last column reads new, used or blank, with a Very Good item written "very good"; import that file into an empty collection and every Bought value and Very Good grade comes back; an older export with no Bought column still imports; the collection PDF lists "Bought: New" or "Used" where recorded (next to the existing "Bought" date line) and nothing where not, and prints Very Good; the wishlist PDF lists "Looking for" the same way
+## Phase 4 — CSV, templates, import and PDF · walkthrough: yes — Settings › Templates: the items template now ends in a Bought column and the wishlist template in Looking For; export the collection as CSV and the last column reads new, used or blank, with a Very Good item written "very good"; import that file into an empty collection and every Bought value and Very Good grade comes back; an older export with no Bought column still imports; the collection PDF's date field reads "Bought new" or "Bought used" where recorded and plain "Bought" where not, and prints Very Good; the wishlist PDF lists "Looking for" the same way
 
 - [ ] **T011 — The CSV columns, the templates, and import on both lists.**
   Per plan §8, Q6–Q8. `ItemExportRecord.bought` / `WishlistExportRecord.lookingFor`
@@ -390,16 +411,19 @@ Everything the person reads is plain language.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
 
 - [ ] **T012 — The PDF lines.**
-  Per plan §9 and R6. `PDFEntry.init(record: ItemExportRecord)` appends the
-  Bought field after `Bought from` when recorded; `init(record:
-  WishlistExportRecord)` appends Looking for after `Desire to own` when recorded.
+  Per plan §9 and R6. `PDFEntry.init(record: ItemExportRecord)` labels its
+  existing purchase-date field with `NewOrUsedCopy.detailDateRowLabel(bought:)`
+  (no new item field); `init(record: WishlistExportRecord)` appends Looking for
+  after `Desire to own` when recorded.
   Pattern: the optional `Bought from` and `Condition notes` fields in the same
   initializer.
-  Tests (**G18**, `ExportSchemaTests`): a recorded item's labels gain
-  `"Bought"` (the second one) with value `"New"`; a nil item's labels are the
-  literal at `:343` unchanged; a Very Good item's Condition field reads
+  Tests (**G18**, `ExportSchemaTests`): a recorded item's date field is labelled
+  the literal `"Bought used"` (and `"Bought new"` for a `.new` fixture), with no
+  second `"Bought"` label anywhere; a nil item's labels are the literal at `:343`
+  unchanged; a Very Good item's Condition field reads
   `"Very Good"`; the wishlist's field present and absent the same way (criteria
-  17, 26) (mutation: the nil guard dropped → the unchanged-literal leg red).
+  17, 26) (mutations: the item label reverted to plain `Bought` → the recorded
+  leg red; the wishlist nil guard dropped → the unchanged-literal leg red).
   Files: `Trove/Export/ExportSchema.swift`, `TroveTests/ExportSchemaTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutation recorded.
 
@@ -422,38 +446,47 @@ Everything the person reads is plain language.
   **Verify:** `scripts/verify.sh` green; mutation recorded; then
   `scripts/verify.sh ui` once at the phase end, count recorded.
 
-  **Phase 4 closes here — pause for the person** (walkthrough above). The report
-  asks R6 as a question: the PDF now has two fields labelled "Bought" — the date
-  and New/Used — because that is the spec's wording; the page resolved the same
-  clash by putting "new"/"used" into the date's label.
+  **Phase 4 closes here — pause for the person** (walkthrough above). R6 was
+  decided before the build (spec Decision 10): the PDF's date label carries
+  new/used, as the item page's does.
 
-## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; the person's own checks (Accessibility Inspector, and an older build on a second device) are named in T014 as their steps, and nothing new is built
+## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; nothing new is built. The person's Accessibility Inspector step was taken at the Phase 3 pause, and the older-build, two-device steps wait in `specs/SYNC-CHECKS.md`
 
-- [ ] **T014 — Device pass. [general-purpose agent with simulator tools; person: Accessibility Inspector, two devices]**
-  Per plan §10, criteria 5, 11, 18, 20, 22 and 27. **The upgrade on a persistent
-  store**: build and install `main` on the simulator, add an item graded Good,
-  one graded New and a wanted entry, then build and install this branch over it —
-  each opens not recorded, the grades unchanged (the lightweight migration of
-  three additive fields, which no in-memory test observes). **The chip rows on
-  iPhone SE (3rd generation)** in both appearances — the condition row wrapping
-  unclipped on the item form and the sheet, the Bought and Looking for rows
-  matching it; and confirm from the installed runtimes that no supported iPhone
-  is narrower than 375 pt (plan Q9). **The accessibility tree**: each chip's
-  selected trait, a cleared field reading nothing selected, the fields'
-  container labels. **Instrument, don't eyeball**: a temporary file probe inside
-  `MarketLocalStore.record` logging `newStockOnly` and the reading's count; set a
-  matched wanted item to New and refresh (after the hour) — the probe reads true
-  and the count matches new-stock listings; set it back to Used and refresh —
-  false; removed before the suites run, the tree confirmed byte-identical to
-  HEAD. A New-preference withheld or all-years line, if the live catalogue
-  produces one, reads "new listings". **Relaunch** and confirm everything set
-  survived. Both suites twice. Findings fixed in place if routine and inside the
-  footprint, else returned as a diagnosis; each fix a sub-lettered task.
-  **[person]** Accessibility Inspector over the three fields and the two page
-  rows; and the two new `SYNC-CHECKS.md` steps if two devices and an older build
-  are to hand — otherwise they wait in that file (criterion 27).
-  **Verify:** the Done note records the upgrade result, the measured narrowest
-  width, the probe's lines per action, and `scripts/verify.sh all` green twice.
+- [ ] **T014 — Device pass. [general-purpose agents with simulator tools, one per section]**
+  Per plan §10, criteria 5, 11, 18, 20, 22 and 27. Dispatched as **four
+  separate `general-purpose` sections, each given only its own section below**
+  (never the whole task line), each returning a short **pass/fail list**. **Any
+  failure goes to the `sdd-implementer` as a diagnosis bundle** (the finding,
+  the criterion, the plan section, the files) and is logged as a sub-lettered
+  task; no section fixes anything itself.
+  **(a) The upgrade on a persistent store**: build and install `main` on the
+  simulator, add an item graded Good, one graded New and a wanted entry, then
+  build and install this branch over it — each opens not recorded, the grades
+  unchanged (the lightweight migration of three additive fields, which no
+  in-memory test observes).
+  **(b) iPhone SE (3rd generation) layout**, in both appearances — the condition
+  row wrapping unclipped on the item form and the sheet, the Bought and Looking
+  for rows matching it; and confirm from the installed runtimes that no
+  supported iPhone is narrower than 375 pt (plan Q9). Selected state is **not**
+  this pass's: the UI tests read `isSelected` (G20), and the spoken names were
+  the person's step at the Phase 3 pause.
+  **(c) The market probe** — instrument, don't eyeball: a temporary file probe
+  inside `MarketLocalStore.record` logging `newStockOnly` and the reading's
+  count. The refresher answers `.stillFresh` within the hour of a figure
+  (`MarketRefresher.swift:53-55`), so **do not wait it out**: use **two freshly
+  matched wanted entries, one set to New and one to Used** (or remove and
+  re-match one entry between the two readings) — a fresh match has no figure,
+  so the pick's own refresh fetches. New → the probe reads true and the count
+  matches new-stock listings; Used → false. A New-preference withheld or
+  all-years line, if the live catalogue produces one, reads "new listings".
+  Probe removed before the suites run, the tree confirmed byte-identical to HEAD.
+  **(d) Relaunch** and confirm everything set in (a)–(c) survived; then both
+  suites twice.
+  **[person]** the two new `SYNC-CHECKS.md` steps if two devices and an older
+  build are to hand — otherwise they wait in that file (criterion 27).
+  **Verify:** each section's pass/fail list recorded in the Done note — the
+  upgrade result, the measured narrowest width, the probe's lines per entry —
+  every failure a sub-lettered task, and `scripts/verify.sh all` green twice.
 
 - [ ] **T015 — Close-out.**
   Dispatched to the implementer the model policy's close-out row names
@@ -472,8 +505,10 @@ Everything the person reads is plain language.
   (the disjoint-buckets claim), never editing the shipped line; adds the two
   steps to `specs/SYNC-CHECKS.md` (Part 3, and its "Steps per spec" section);
   updates `README.md`'s item and wishlist bullets; drafts the `ROADMAP.md` entry
-  and status row and the `DECISIONS.md` section (Q2's storage and its cost, R4;
-  the recorded basis, Q4; R1's merged row; R6 as the person answered it) into a
+  and status row and the `DECISIONS.md` section (Q2's storage and its cost, R4,
+  stating that **every future query, predicate, sort or grouping reads
+  `condition` (or both stored fields), never `conditionRawValue` alone** —
+  `022-grouped-browsing` is the likely first consumer; the recorded basis, Q4; R1's merged row; R6 as the person answered it) into a
   file on the branch, to be applied to `main` after the merge; and runs
   `scripts/verify.sh all`. `plan.md` gains **As built** from the same bundle.
   Only then the pre-merge `skeptical-reviewer` sweep over `git diff main...HEAD`
@@ -493,9 +528,9 @@ Everything the person reads is plain language.
 |---|---|---|
 | Phase 1 | | the six-grade condition row and Very Good on a page |
 | Phase 2 | no — `walkthrough: none` | nothing observable; view models, Copy and the market's reading of an unset preference |
-| Phase 3 | | Bought and Looking for on the three forms, the two pages, the sheet's prefill, the New-preference figure |
+| Phase 3 | | Bought and Looking for on the three forms, the two pages, the sheet's prefill, the New-preference figure; the person's Accessibility Inspector / VoiceOver step over the chips and rows |
 | Phase 4 | | the templates, a CSV round trip, an old file, both PDFs |
-| Phase 5 | no — `walkthrough: none` | the device pass; the person's Accessibility Inspector and two-device steps |
+| Phase 5 | no — `walkthrough: none` | the device pass; the person's two-device steps wait in `SYNC-CHECKS.md` |
 
 ## Handoff note
 
@@ -503,7 +538,7 @@ Involvement level: **product owner** (`CLAUDE.md`). Model policy: **Opus
 profile** — every role at `opus`, no dispatch carries a model override, the
 session at `claude-opus-5-5` medium; the plan-and-tasks draft ran at the
 implementation tier under the trial continuing from `018`. Foundational phase:
-**Phase 1**; `review: per-task`: **T001**. Pause cadence: after each phase
+**Phase 1**; `review: per-task`: **T001** and **T003**. Pause cadence: after each phase
 marked `walkthrough: yes` (Phases 1, 3, 4) once its review is signed off; Phases
 2 and 5 run on after their review, their reasons added to the walkthrough list.
 Pause also whenever something unexpected bears on spec adherence.
@@ -515,7 +550,7 @@ Pause also whenever something unexpected bears on spec adherence.
 > implementer the role table names, on a task bundle; verify with
 > `scripts/verify.sh`, then commit. One review and at most one re-review per
 > invocation. The `skeptical-reviewer` reviews after each phase with a phase
-> bundle, and T001 gets its own review as well. Pause for me after Phases 1, 3
+> bundle, and T001 and T003 get their own reviews as well. Pause for me after Phases 1, 3
 > and 4; run straight on after Phases 2 and 5's reviews.
 
 Every pause report is plain language, in this order: why this pause; what can
@@ -535,3 +570,5 @@ escape-hatch misses recorded here too.
 | Task / invocation | Tier | Tokens | Outcome / miss reason |
 |---|---|---|---|
 | Plan and tasks draft (`sdd-planner`) | `opus` | 357,111 (85 tool uses, 18.2 min) | Plan-and-tasks draft at the implementation tier, no override (trial continuing from `018`). 15 tasks, 5 phases, 20 guards |
+| Sign-off (`skeptical-reviewer`) | `opus` | 169,310 (44 tool uses, 8.2 min) | Sign off after fixes: 2 blocking (T014 device pass shape vs `CLAUDE.md`; G14 leg (d) vacuous — FlowLayout reports the proposed width), 15 second-look notes |
+| Sign-off fixes (`sdd-planner`, resumed) | `opus` | 386,562 cumulative (38 tool uses, 2.9 min) | Both blocking and 11 second-look notes applied; R1/R2/R3/R6 transcribed by the orchestrator from the person's answers (spec Decision 10) |

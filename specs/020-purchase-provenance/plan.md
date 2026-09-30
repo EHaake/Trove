@@ -52,18 +52,21 @@ treatment of a guard whose meaning changed.
   pair. So that one row's **label** becomes `Bought new` / `Bought used` when
   recorded and stays `Bought` when not: "BOUGHT NEW · Mar 3, 2024". It sits with
   the date and the place, not with the condition (Design), and when not recorded
-  the page is exactly today's (P3). The person sees it at the Phase 3 pause.
+  the page is exactly today's (P3). **Decided by the person, 2026-09-29, at the
+  spec-conformance questions** (spec Decision 10).
 - **R2 — The wanted item's page gains a `Looking for | New` row** in its
   Details table, after `Added`, omitted when not recorded — the table's own
   label/value shape, which is the nearest honest form of the spec's "Looking for
-  new". Phase 3 pause.
+  new". **Decided by the person, 2026-09-29** (spec Decision 10).
 - **R3 — A New preference changes the words "used listings" and nothing
   else.** `MarketCopy` has two wanted lines that say "used listings" (the
   withheld sentence and the all-years line); both read "new listings" for a
   figure read from new stock. The withheld reading's *second* sentence — "The
   lowest used asking price on Reverb is $1,100." — is Reverb's catalog-wide
   used-low figure, stays true whatever the preference, and the spec's rule names
-  "used listings" only, so it is kept. See the open question in the report.
+  "used listings" only, so it is kept. **Kept by the person's decision,
+  2026-09-29** (spec Decision 10): it says "used" plainly and tells them a used
+  one is available.
 - **R4 — An older copy of the app shows a Very Good item as Good.** Plan Q2's
   storage is what keeps the grade from being reset (P4); its visible cost on a
   device that has not updated is that the item reads **Good** there (its nearest
@@ -77,12 +80,13 @@ treatment of a guard whose meaning changed.
   (Q4) — never "new listings" over a used-listings figure. The history is not
   cleared, exactly as a condition change doesn't clear it, so a row's trend arrow
   may compare across the change once. Phase 3 pause.
-- **R6 — The PDF carries two fields labelled "Bought".** The spec's Copy table
-  fixes the PDF field as **Bought — New / Used**, and the PDF already has a
-  "Bought" field holding the purchase date (`ExportSchema.swift:273`). The plan
-  builds it literally — `Bought 2024-03-03` … `Bought New` — and flags it as an
-  open question in the report, since the page (R1) resolves the same collision
-  differently. Phase 4 pause, whatever the answer.
+- **R6 — The PDF matches the page: the date field's label carries new/used.**
+  The PDF already has a "Bought" field holding the purchase date
+  (`ExportSchema.swift:273`), so a second "Bought — New" field would repeat the
+  label. **Decided by the person, 2026-09-29** (spec Decision 10): as on the item
+  page (R1), that one field's **label** becomes `Bought new` / `Bought used`
+  when recorded and stays `Bought` when not — `Bought used 2024-03-03`. No new
+  PDF field for items; the wishlist PDF still gains its `Looking for` field.
 
 ## Proposed at planning — approved on plan approval unless overturned
 
@@ -270,8 +274,9 @@ static func condition(raw: String, refinement: String?) -> Condition
 `storage(for: .veryGood)` is `("good", "very good")`; every other case is
 `(rawValue, nil)`. `condition(raw:refinement:)` is `Condition(rawValue: raw) ??
 .excellent` (today's fallback, unchanged), refined to `.veryGood` **only when the
-base is `.good`** — so an older app that moves the item to Fair is read as Fair
-whatever refinement is left behind. `Item.init` gains `bought: NewOrUsed? = nil`
+base is `.good` and the refinement is exactly `Condition.veryGood.rawValue`** —
+so an older app that moves the item to Fair is read as Fair whatever refinement
+is left behind, and an unknown refinement over Good reads Good. `Item.init` gains `bought: NewOrUsed? = nil`
 after `year`, and sets the condition through `storage(for:)` rather than writing
 `conditionRawValue` directly.
 
@@ -283,7 +288,10 @@ Two changes forced by the new case in the same task, so the tree never builds
 wrong: `MarketConditionMap.reverbSlugs` gains `.veryGood: ["very-good"]` (the
 switch is exhaustive — criterion 12; `.good` stays `["very-good", "good"]`,
 Decision 6), and `ItemExportRecord.init(item:)` reads
-`item.condition.rawValue` instead of `item.conditionRawValue` (Q2).
+`item.condition.rawValue` instead of `item.conditionRawValue` (Q2) — and
+`ItemExportRecord.conditionRawValue` gains a doc comment saying it holds
+`condition.rawValue` (so `"very good"` for Very Good), **not**
+`Item.conditionRawValue`, so nobody "fixes" the snapshot back to the stored field.
 
 **The CloudKit claim and its test.** All three fields are optional, carry no
 unique constraint and are therefore additive to the store in the field;
@@ -295,7 +303,10 @@ schema, so T001 proves the claim is checked by making one field
 `ModelContext`): the storage rule per case (G2 — `EnumBackedPropertyTests`'
 `conditionRoundTripsThroughItsRawValue` asserts `conditionRawValue ==
 condition.rawValue`, which is now false for one case by design, so it is
-**rewritten** to assert `storage(for:)` per case and the read-back); every
+**rewritten** to assert each case's stored pair against a **literal tuple** —
+`.veryGood` → `("good", "very good")`, every other case → `(rawValue, nil)` —
+never against `Item.storage(for:)` itself, plus the read-back; and a leg that an
+unknown refinement over Good reads Good); every
 case's `rawValue.capitalized` is `New, Excellent, Very Good, Good, Fair, Broken`
 in that order (G2); the older-app replica (G3); a fresh item and wish read nil,
 a row built with only pre-020 fields reads nil and its old grade (criteria 5, 11,
@@ -316,7 +327,7 @@ static func selection(afterTapping tapped: NewOrUsed, current: NewOrUsed?) -> Ne
 `NewOrUsedCopy` (`nonisolated enum`, `PurchaseCopy`'s shape and rules, pinned
 whole by `NewOrUsedCopyTests`): `boughtLabel` ("Bought"), `lookingForLabel`
 ("Looking for"), `chip(_:)` ("New" / "Used"), and
-`purchaseDateLabel(bought:)` — "Bought" when nil, "Bought new" / "Bought used"
+`detailDateRowLabel(bought:)` — "Bought" when nil, "Bought new" / "Bought used"
 otherwise (R1). The CSV headers stay in `ExportSchema`, which is the schema's one
 home. Form labels go through `.monoLabel()`, which uppercases, so the spec's
 **BOUGHT** and **LOOKING FOR** are these strings rendered. G7.
@@ -334,9 +345,11 @@ nonisolated enum MarketSubject: Sendable, Equatable {
 }
 ```
 
-`MarketConditionMap.counts` for `.wanted(let lookingFor)`: `lookingFor == .new ?
-newStockSlugs.contains(slug) : !newStockSlugs.contains(slug)`. `newStockSlugs`
-is `brand-new` and `b-stock` — the spec's "brand new and B-stock".
+`MarketConditionMap.counts` for `.wanted` is derived from the subject's own
+predicate — `subject.readsNewStockOnly ? newStockSlugs.contains(slug) :
+!newStockSlugs.contains(slug)` — so "New means new stock only" is one rule in
+one place, read by both the counting and the recorded flag. `newStockSlugs` is
+`brand-new` and `b-stock` — the spec's "brand new and B-stock".
 
 `MarketRefresher.targets(in:)` and `currentTarget(for:)` build
 `.wanted(lookingFor: item.lookingFor)`. **`currentTarget` is the one that
@@ -370,6 +383,13 @@ wanted strings (R3). `MarketSection`'s two call sites pass
 `figure.listingBasis(isWanted: isWanted)`. Every other `wanted:` function
 (`valueStepTitle`, `useAmount`, `yourValue`) is untouched.
 `MarketVocabularyTests` must stay green unedited.
+
+The strings are `MarketCopyTests`' and the basis mapping is `MarketIndexTests'`;
+that `MarketSection` passes *the figure's* basis into them is a view-body fact no
+view-model test reaches, so G9's source scan pins it — and per the constitution
+that scan is the honest limit of unit coverage: **the "new listings" wording is
+untested at the view layer.** T014's probe observes the recorded basis on a live
+refresh; nothing automated observes the words on screen.
 
 **Testable claims**: G8 (counting per preference; nil and `.used` identical to
 the pre-020 wanted rule — the existing wanted computation tests re-spelled with
@@ -450,16 +470,17 @@ property name, which `WishlistPurchaseWiringTests` anchors on). Placement:
 Q9 width, (a) every one of the six chips rendered alone is narrower than the
 container, (b) every chip is at least its title's rendered width plus the two
 14 pt paddings — so none is squeezed, (c) the six widths plus spacing exceed the
-container, so the test exercises the wrap rather than a trivially wide row, and
-(d) the whole `ConditionField` renders no wider than the container. `FlowLayout`
-places every subview at `sizeThatFits(.unspecified)`, which is why (a) and (b)
-together rule out clipping. Both forms composing `ConditionField(` and neither
+container, so the test exercises the wrap rather than a trivially wide row.
+(a) together with FlowLayout's wrap rule is what rules out clipping;
+FlowLayout always reports the proposed width, so a whole-field width check
+would be vacuous (`FlowLayout.swift:11,17`). `FlowLayout` places every subview
+at `sizeThatFits(.unspecified)`, which with (b) rules out a squeezed chip. Both forms composing `ConditionField(` and neither
 drawing its own `Capsule()` is a view-body fact, pinned by a scan (G14).
 
 ## 7. The two pages
 
 - `ItemDetailView.details`: the date row's label becomes
-  `NewOrUsedCopy.purchaseDateLabel(bought: item.bought)` (R1).
+  `NewOrUsedCopy.detailDateRowLabel(bought: item.bought)` (R1).
 - `WishlistDetailView.details`: a third row
   `(NewOrUsedCopy.lookingForLabel, item.lookingFor.map(NewOrUsedCopy.chip) ?? "", false)`
   after `Added`; the table's existing `.filter { !$0.value.isEmpty }` is the
@@ -498,14 +519,16 @@ differ from the defaults a broken path produces (`015`'s lesson): at least one
 
 ## 9. PDF
 
-`PDFEntry.init(record: ItemExportRecord)` appends
-`PDFField(label: NewOrUsedCopy.boughtLabel, value: NewOrUsedCopy.chip(bought))`
-after `Bought from` when recorded (R6); the Condition field already prints
+`PDFEntry.init(record: ItemExportRecord)` labels its existing purchase-date
+field `NewOrUsedCopy.detailDateRowLabel(bought: record.bought)` — `Bought new` /
+`Bought used` when recorded, `Bought` when not — the same function the item
+page's date row uses, so page and PDF cannot drift (R6); no new item field. The
+Condition field already prints
 `rawValue.capitalized` → **Very Good**. `init(record: WishlistExportRecord)`
 appends `Looking for` after `Desire to own` when recorded. Omitted when nil, as
 empty condition notes are. G18 (criteria 17, 26; `ExportSchemaTests:343`'s
-labels literal gains the new label for a recorded fixture and is unchanged for
-a nil one).
+labels literal reads `Bought used` in the date field's place for a recorded
+fixture and is unchanged for a nil one).
 
 ## 10. UI tests, the device pass and the sync checks
 
@@ -526,20 +549,26 @@ fact through the form, so every existing test keeps its starting state):
 
 `scripts/verify.sh ui` twice back to back at Phase 3's end.
 
-**Device pass** (T014, a `general-purpose` agent — the implementer has no
-simulator tools): the **upgrade on a persistent store** — build and install
-`main`, add two items (one Good, one New) and a wanted entry, then install this
-branch over it and confirm each opens not recorded, grades unchanged (criteria
-5, 11, 20: the lightweight migration of three additive optional fields, which no
-in-memory test observes); the condition row on **iPhone SE (3rd generation)**
-in both appearances, wrapping and unclipped (criterion 18's visual half); the
-accessibility tree's selected traits on both chip fields, including a cleared
-field reading nothing selected; a matched wanted item set to New, refreshed —
-with a **file probe inside `MarketLocalStore.record`** logging the subject's
-`readsNewStockOnly` and the counted listings, removed before the suites run
-(instrument the mechanism, not the screen); relaunch persistence. **The
-person's steps**: Accessibility Inspector over the three fields and the two
-page rows, and the sync checks below.
+**Device pass** (T014, `general-purpose` agents — the implementer has no
+simulator tools), dispatched as **four separate sections, each given only its
+own section and returning a pass/fail list**; any failure goes to the
+`sdd-implementer` as a diagnosis bundle and is logged as a sub-lettered task:
+(a) **the upgrade on a persistent store** — build and install `main`, add two
+items (one Good, one New) and a wanted entry, then install this branch over it
+and confirm each opens not recorded, grades unchanged (criteria 5, 11, 20: the
+lightweight migration of three additive optional fields, which no in-memory
+test observes); (b) the condition row on **iPhone SE (3rd generation)** in both
+appearances, wrapping and unclipped (criterion 18's visual half); (c) **the
+market probe** — a temporary file probe inside `MarketLocalStore.record`
+logging `newStockOnly` and the reading's count, exercised on **two freshly
+matched wanted entries, one set to New and one to Used** (a fresh match has no
+figure, so the refresher's freshness window — `MarketRefresher.swift:53-55`
+returns `.stillFresh` within the hour — never intervenes; remove-and-rematch
+works equally), removed before the suites run (instrument the mechanism, not
+the screen); (d) relaunch persistence. Chip selected state is G20's (the UI
+tests read `isSelected`), not the pass's. **The person's steps**: Accessibility
+Inspector over the three fields and the two page rows at the **Phase 3 pause**,
+and the sync checks below.
 
 **`specs/SYNC-CHECKS.md` gains two steps** under Part 3 (B on the older build),
 drafted here so the close-out copies them: *"3.x — An older app editing an item
@@ -564,15 +593,18 @@ At close-out (T015, on an evidence bundle): criteria ticked with citations —
 and P4's Bought/Looking-for half stated as untested; P-items → decisions in
 `spec.md`; the `002` pointer at `plan.md:193`; the two SYNC-CHECKS steps;
 `README.md`'s item and wishlist bullets; `ROADMAP.md`'s `020` entry and status
-row; `DECISIONS.md` (Q2's storage and its cost R4; the recorded basis Q4; R1's
-merged row; R6 as the person answered it).
+row; `DECISIONS.md` (Q2's storage and its cost R4 — including the rule that **every
+future query, predicate, sort or grouping reads `condition` (or both stored
+fields), never `conditionRawValue` alone**, since that field holds "good" for a
+Very Good item; `022-grouped-browsing` is the likely first consumer; the
+recorded basis Q4; R1's merged row; R6 as the person answered it).
 
 ## 12. Guards that can fail (each with the mutation that turns it red)
 
 | # | Test | Red when |
 |---|---|---|
 | G1 | `CloudKitSchemaTests` over the three new fields | `@Attribute(.unique)` on any one |
-| G2 | `ModelTests`: `storage(for:)` per case and read-back; `allCases.map { $0.rawValue.capitalized }` pinned | the setter writes `"very good"` into `conditionRawValue`; `veryGood` declared after `good` |
+| G2 | `ModelTests`: each case's stored pair against a literal tuple (never against `storage(for:)`) and read-back; an unknown refinement over Good reads Good; `allCases.map { $0.rawValue.capitalized }` pinned | the setter writes `"very good"` into `conditionRawValue`; `veryGood` declared after `good`; any non-nil refinement over Good read as Very Good |
 | G3 | `ModelTests`, the older app: a frozen five-case replica of the pre-020 read (`?? .excellent`) and form save, run over a Very Good item → the replica reads Good, and after its save the item still reads Very Good; a replica move to Fair reads Fair | naïve storage (the replica reads Excellent and its save resets the grade); the refinement honoured whatever the base |
 | G4 | `ModelTests`, second context: `bought`, `lookingFor`, Very Good survive a save; fresh and pre-020 rows read nil and their old grade | the caller's `save()` dropped; a default other than nil |
 | G5 | `MarketFigureComputationTests`: buckets non-empty, union `knownSlugs`, **exactly one** overlap — Very Good ∩ Good = `very-good`; Good's set pinned to `["very-good","good"]`; a Very Good item counts only `very-good` listings | Very Good given `good`; Good narrowed to `good`; any second overlap |
@@ -580,11 +612,11 @@ merged row; R6 as the person answered it).
 | G7 | `NewOrUsedCopyTests`: every string by literal; the P1 rule's four cases | any word drifts; the rule returning `tapped` always |
 | G8 | wanted counting: New → `brand-new` + `b-stock` only; nil and Used → today's rule, equal over the fixtures | the preference ignored; New counting `mint` |
 | G9 | `MarketRefresherTests`: both target builders carry `lookingFor`, the re-read wins, the record's flag set for New; `MarketIndexTests`: `listingBasis`; `MarketCopyTests`: the three bases' strings; `MarketLocalSchemaTests` allowlist; `MarketWiringTests`: the section passes `figure.listingBasis(isWanted:` | the `newStockOnly:` argument dropped; `currentTarget` left at `lookingFor: nil`; the section reading `isWanted` alone |
-| G10 | `ItemFormViewModelTests`: nil on a new form; set, save, reopen; clear saves nil; saving nil raises no validation error | `populate` skipping `bought`; a validation case added |
+| G10 | `ItemFormViewModelTests`: nil on a new form; set, save, reopen; clear saves nil; saving nil raises no validation error; `.veryGood` saved and reopened through the form on a second context | `populate` skipping `bought`; a validation case added; the form's save writing the raw value directly |
 | G11 | `PurchaseFormViewModelTests` seed per preference and change/clear; `WishlistPurchaseStoreTests` carries `.used` and nil; the four-host seed test agrees on `bought` | one host passing nil; the store dropping `bought:` |
 | G12 | `WishlistFormViewModelTests`: the three states round-trip, save unset silently | `save()` skipping `lookingFor` |
 | G13 | duplication carries `.used` on both lists; sold-then-returned keeps `.new` | either duplicate dropping the argument; a sale writer clearing it |
-| G14 | `ConditionFieldLayoutTests` (a)–(d) at 327 pt; both forms compose `ConditionField(` and draw no `Capsule()` | the chip given a fixed narrow width; the container proposed narrower than the widest chip; a chip copy pasted back |
+| G14 | `ConditionFieldLayoutTests` (a)–(c) at 327 pt; both forms compose `ConditionField(` and draw no `Capsule()` | the chip given a fixed narrow width; the container proposed narrower than the widest chip; a chip copy pasted back |
 | G15 | `ProvenanceWiringTests` + the rewritten purchase-sheet order: each form composes `NewOrUsedField` once, in its stated place, with its identifier; the field calls `NewOrUsed.selection(afterTapping:` | a field moved or dropped; a hand-rolled toggle |
 | G16 | the two page rows pass `item.bought` / `item.lookingFor` into `NewOrUsedCopy` | the literal "Bought" restored; the wanted row reading a constant |
 | G17 | CSV: headers, rows, parse, counted defaults, boundaries, the round trip on a second context, the template's last column | a column misplaced; a boundary missing; the commit dropping a field |
@@ -595,6 +627,7 @@ merged row; R6 as the person answered it).
 Every guard is mutation-verified before it lands and the Done note records what
 was broken and what went red; every source scan `#require`s its anchor. What the
 suites cannot reach — the on-disk upgrade, the chips' look on a narrow phone,
-the spoken traits, the figure's basis on a live refresh — is T014's; what no
+the figure's basis on a live refresh — is T014's; the spoken names are the
+person's Accessibility Inspector step at the Phase 3 pause; what no
 agent can reach — an older build on a second device — is the person's, in
 `SYNC-CHECKS.md`, and is stated as untested until then.

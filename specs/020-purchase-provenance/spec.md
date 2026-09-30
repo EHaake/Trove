@@ -93,7 +93,8 @@ from, and prefills the purchase sheet when it is bought.
 ### Where it is shown
 
 - **The item's page** says **Bought new** or **Bought used** alongside the
-  purchase details it already shows. When not recorded, the page says
+  purchase details it already shows — as the label of the row that already
+  reads **Bought** beside the purchase date (Decision 10). When not recorded, the page says
   nothing about it — no dash, no "not recorded" line (P3).
 - **The list rows do not show it.** The rows are already dense, and a
   marker on every row belongs to the list redesign if it belongs anywhere
@@ -109,8 +110,9 @@ from, and prefills the purchase sheet when it is bought.
 - **Set on the wishlist add/edit form** with the same two chips, neither
   selected by default, the selected one clearable by tapping it again.
   Never required.
-- **Shown on the wanted item's page** as **Looking for new** or **Looking
-  for used**; nothing when not recorded.
+- **Shown on the wanted item's page** as a **Looking for — New / Used** row
+  in its details, like the page's other facts; nothing when not recorded
+  (Decision 10).
 - **Copy** on a wishlist entry carries it across.
 - **It shapes the market figure** — see "The market figure" below.
 - **Marking the entry bought prefills the purchase sheet's Bought field**
@@ -179,9 +181,10 @@ from, and prefills the purchase sheet when it is bought.
   money formats — is `021`'s.
 - **The downloadable template** gains the column too, so a file built from
   it today carries new/used from the start.
-- **The PDF** lists **Bought: New** or **Bought: Used** among an item's
-  details; when not recorded the line is omitted, as condition notes are
-  when empty (Decision 7).
+- **The PDF** says it the way the item's page does: the field that already
+  holds the purchase date is labelled **Bought new** or **Bought used**,
+  and plain **Bought** when not recorded — no second field labelled
+  "Bought" (Decisions 7 and 10).
 - **The wishlist CSV gains one column at the end, "Looking For"**,
   holding `new`, `used` or nothing, read back on import the same way,
   with older files importing as not recorded. The wishlist template gains
@@ -195,13 +198,13 @@ from, and prefills the purchase sheet when it is bought.
 |---|---|
 | Form and purchase sheet field label | **BOUGHT** (the mono label style every field uses) |
 | Chips | **New**, **Used** |
-| Item page | **Bought new** / **Bought used** |
+| Item page | **Bought new** / **Bought used** — the label of the existing purchase-date row |
 | Condition chip and page | **Very Good** |
 | CSV header | `Bought` |
 | CSV values | `new`, `used`, empty; condition `very good` |
-| PDF field | **Bought** — **New** / **Used** |
+| PDF, items | the purchase-date field labelled **Bought new** / **Bought used** (plain **Bought** when not recorded) |
 | Wishlist form field label | **LOOKING FOR** |
-| Wanted item's page | **Looking for new** / **Looking for used** |
+| Wanted item's page | a details row, **Looking for** — **New** / **Used** |
 | Wanted market line, New preference | "new listings" wherever it says "used listings" today |
 | Wishlist CSV header | `Looking For` |
 | Wishlist PDF field | **Looking for** — **New** / **Used** |
@@ -234,8 +237,8 @@ from, and prefills the purchase sheet when it is bought.
    validation message.
 5. [ ] Every item that existed before the update opens as not recorded,
    whatever its condition — including items graded New.
-6. [ ] The item's page shows **Bought new** or **Bought used** with the
-   purchase details, and shows nothing about it when not recorded.
+6. [ ] The item's page labels its purchase-date row **Bought new** or
+   **Bought used**, and plain **Bought** when not recorded.
 7. [ ] The Mark as bought sheet shows the same Bought field, unselected;
    the item it creates carries what was picked, or not recorded.
 8. [ ] Copying an item carries its Bought value to the copy.
@@ -256,8 +259,9 @@ from, and prefills the purchase sheet when it is bought.
 15. [ ] An items CSV in the previous layout, without the Bought column,
     still imports, every row not recorded.
 16. [ ] The downloadable items template includes the Bought column.
-17. [ ] The PDF shows **Bought** for items where it is recorded, omits it
-    where not, and prints Very Good as **Very Good**.
+17. [ ] The PDF labels an item's purchase date **Bought new** or **Bought
+    used** where recorded and plain **Bought** where not, with no second
+    "Bought" field, and prints Very Good as **Very Good**.
 18. [ ] Six condition chips lay out without clipping at the narrowest
     supported width, on both the item form and the purchase sheet.
 19. [ ] The wishlist add/edit form shows a **Looking for** field with
@@ -266,8 +270,8 @@ from, and prefills the purchase sheet when it is bought.
     unset without a prompt.
 20. [ ] Every wishlist entry that existed before the update opens as not
     recorded.
-21. [ ] The wanted item's page shows **Looking for new** or **Looking for
-    used**, and nothing when not recorded.
+21. [ ] The wanted item's page shows a **Looking for** row reading **New** or
+    **Used**, and no row when not recorded.
 22. [ ] A wanted item looking for new gets its market figure from Reverb's
     brand-new and B-stock listings only, and its market line says "new
     listings"; one looking for used, or not recorded, gets exactly the
@@ -318,6 +322,16 @@ from, and prefills the purchase sheet when it is bought.
    Decision 8). Reading all listings when unstated would have been the
    more neutral default, but it would move every existing wanted item's
    figure on update — the same reasoning as Decision 6.
+
+10. **How the words sit on the pages and the PDF** (the person, 2026-09-29,
+    answering the plan's four readings before sign-off). The item page folds
+    new/used into the existing purchase-date row's label ("Bought used ·
+    Mar 3, 2024") rather than adding a row; the wanted page uses a details
+    row ("Looking for · New") rather than a sentence; the PDF matches the
+    item page rather than printing a second field labelled "Bought"; and a
+    wanted item looking for new whose new listings are too few keeps the
+    second sentence naming the lowest *used* asking price — it says "used"
+    plainly and is a useful hint.
 
 ### Proposals (P-items, decided at plan approval)
 
