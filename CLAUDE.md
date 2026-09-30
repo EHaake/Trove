@@ -154,8 +154,10 @@ actions" is the rule, `DestructiveColourPolicyTests` the guard.
   The rule is narrow on purpose, and an absolute ban would lose to the
   real problem the pattern solves: some layers genuinely cannot be
   reached any other way. `MenuPolicyTests` is the legitimate shape —
-  "no system menu inside page content" is a fact about view bodies that
-  no view-model test can observe. A scan asserting that a view model
+  "every header control opens a system menu and no view floats a
+  surface of its own" is a fact about view bodies that no view-model
+  test can observe (until `018` the example quoted `013`'s opposite
+  rule, "no system menu inside page content"). A scan asserting that a view model
   sets a particular property is not: that is a behavior, and the
   view-model suite reaches it.
   Two consequences worth stating. **When a source scan is the only
