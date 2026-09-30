@@ -791,9 +791,8 @@ struct SellPlanRow: View {
     }
 
     /// The Design pass's footer strip: a hairline across the card, 40 pt of
-    /// quiet space, and the action right-aligned in the row's own style — a
-    /// bespoke in-page control, not a system menu (`013`, and the spec's
-    /// "system in the bars, bespoke in the page").
+    /// quiet space, and the action right-aligned in the row's own style — one
+    /// plain button, which opens no menu.
     private var markAsSoldStrip: some View {
         Button(action: markAsSold) {
             Text(SaleCopy.markAsSold)

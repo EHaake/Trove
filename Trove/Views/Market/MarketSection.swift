@@ -257,7 +257,7 @@ struct MarketSection: View {
 
     /// Two plain text buttons, not a menu: two items don't earn a menu, and
     /// a menu here would put a destructive-ish action one tap further away
-    /// than the design draws it. `MenuPolicyTests` stays untouched.
+    /// than the design draws it.
     private var matchActions: some View {
         HStack(spacing: theme.metrics.fieldGap) {
             textButton(

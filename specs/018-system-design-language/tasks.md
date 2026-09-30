@@ -1204,7 +1204,7 @@ Handoff notes for the pause reports:
   `DetailOverflowMenu.swift`'s "the app's one system menu" (→ T011).
   `scripts/verify.sh`: green, 1734 in 231 (the four suites gone).
 
-- [ ] **T011 — The policy guard, inverted.**
+- [x] **T011 — The policy guard, inverted.**
   Per plan §7, R6 (criteria 8, 10), and plan Context's constitution
   amendment. **First step, committed on its own before anything else in this
   task** (`CLAUDE.md`'s amendment rule — the constitution changes first,
@@ -1247,6 +1247,32 @@ Handoff notes for the pause reports:
   **Verify:** the `CLAUDE.md` commit precedes the guard's, and
   `git show --stat` of it lists `CLAUDE.md` alone; `scripts/verify.sh` green;
   all five mutations recorded with the failing assertion's message.
+  **Done (2026-09-30).** The `CLAUDE.md` step committed alone first
+  (`git show --stat`: `CLAUDE.md` only). `MenuPolicyTests` is G12a–d: roots
+  derived from `ContentView`, each root's `overflowControl` composing
+  `OverflowMenu(` and its `sortControl`/`orderControl` composing `SortMenu(`
+  or a system `Menu`; `SideToggle` a `Button` with no `Menu`; no anchor
+  preferences under Views/App; glass in exactly the four files once each;
+  no appearance proxy, no `.confirmationDialog`. Plan §7's "Menu { Picker("
+  for the Dashboard is stale — the shipped `orderControl` is Toggle rows
+  (Q8), so no `Picker(` match exists there. Six doc comments corrected,
+  plus two more the implementer found (`SoldStateWiringTests`,
+  `TroveUITests:2008`, by the orchestrator). Carried items done: colour
+  scans on `.wordBoundaryKind(.simple)`; exemptions as exact per-line
+  counts with comments cut; `ExportWiringTests` counts every
+  Button/Menu/Toggle against the listed rows; `listTitle` taller than
+  `screenTitle` (111 vs 98 px); the screens' `split(before:
+  headerGapBelow)` padding scanned; G38's equality mutated; the toggle's
+  brass by side rendered (Owned 901 / Sold 0 / Active 809 / Completed 0
+  px); the Wishlist-empty midway case (24/24, 200 px). Not added: an
+  `XCTAssertFalse` on the toggle reads — they are `value` equalities, so
+  a second assert could never fail alone. Report only: Plans' capsule
+  speaks "Sort by Wishlist order" while showing "Wishlist" (→ T013 Voice
+  Control). Thirteen mutations, all red, messages in the implementer's
+  report (tier log). `scripts/verify.sh`: green, 1740 in 231. Findings:
+  an exempted line can still hide `Color.primary.opacity(0.5)` (the
+  count stays 1); the colour scans now share `SourceScan`'s
+  `//`-in-a-string blind spot.
 
 - [ ] **T012 — The design documents say what the app now does.**
   Per plan §8 (criterion 14). `design/brief.md`: "Menus and chrome" rewritten
@@ -1387,3 +1413,4 @@ recorded here too.
 | `skeptical-reviewer` — Phase 3 re-review (T009a–T009f) | `opus` | ~115k | **fix and re-review**: plan §4 still the segmented design; no phase-end UI run recorded. Both fixed (plan rewritten by `sdd-implementer`, ~90k; UI 38/38 at c1f3d4e). Second look and carried notes in the re-review row |
 | `skeptical-reviewer` — Phase 3 re-review, second pass | `opus` | ~40k | **signed off**. Fixed directly: G15's "ThemeTests unedited" and G12c's body (four files). Second look, carried: (T011) the `listTitle` > `screenTitle` relation leg; a leg for the screens' `split(before: headerGapBelow)` padding (the no-move test renders a copy of the stacking); a mutation against G38's restated equality; a pixel leg for the toggle's brass-by-side; a Wishlist-empty render case; `SortMenu`'s spoken label reads `label` (Voice Control label-in-name: visible "Wishlist" vs spoken "Wishlist order"); plan G13's `showSide` reads have no recorded mutation. (T012) `listTitle`/`screenTitle`, the toggle's colour, width and blur, `TitleRowLayout`, the split rule, the short capsule label. (T013) the ink centre on device, the press highlight without `.tint`, 36.33 vs 37, the empty Wishlist's position, 375 pt at larger Dynamic Type (`TitleRowLayout` can propose zero width), the recorder's 26 pt case, the blur on both runtimes |
 | `sdd-implementer` — T010 | `opus` | ~70k | Done; unit 1734 in 231 green; grep 130 → 0; G3 mutation red |
+| `sdd-implementer` — T011 | `opus` | ~200k | Done; unit 1740 in 231 green; thirteen mutations red (plan §7's five and eight for the carried legs) |

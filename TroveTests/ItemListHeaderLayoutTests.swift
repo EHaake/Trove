@@ -153,6 +153,10 @@ struct ItemListHeaderLayoutTests {
     /// quietly describe last year's header. It is also the case the device
     /// pass found *healthy*: at "0 sold · $0" both sides read 154.33 pt, so a
     /// header that matches this one matches the Owned side.
+    ///
+    /// The empty-slot equality's mutation (T011): `TitleRowLayout` reporting
+    /// the controls' height with no controls → red (29 pt against the
+    /// title's 37 + 15 + 14).
     @Test func theHeaderIsOneMetaLineTallForEverySummaryAndEverySortLabel() throws {
         let soldOptions = ItemListViewModel.SoldSortOrder.allCases
         let ownedOptions = ItemListViewModel.SortOrder.allCases
@@ -384,6 +388,51 @@ struct ItemListHeaderLayoutTests {
         }
     }
 
+    /// The side toggle is brass on its leading side and not on its trailing
+    /// one (`018` spec Decision 20, G1): the showing row's ink is the app's
+    /// `accentBrass` on Owned and Active, and on Sold and Completed no pixel
+    /// comes near it. Rendered at 3×, each side alone; a pixel counts as
+    /// brass within ΔE 0.02 of the token (the slider suite's tolerance for
+    /// ink drawn at full strength). `ItemListSidesWiringTests` pins the
+    /// ternary's spelling; this reads what it draws.
+    ///
+    /// Its mutations (T011): the ternary's trailing arm made
+    /// `theme.colors.accentBrass` → red (Sold and Completed draw brass); its
+    /// leading arm made `Color.primary` → red (Owned and Active draw none).
+    @Test func theSideToggleIsBrassOnTheLeadingSideOnly() throws {
+        let brass = Theme.dark.colors.accentBrass
+        let sides: [(name: String, leading: Bool, image: CGImage?)] = [
+            ("Owned", true, renderAt3x(SideToggle(side: ItemListViewModel.Side.owned, select: { _ in }))),
+            ("Sold", false, renderAt3x(SideToggle(side: ItemListViewModel.Side.sold, select: { _ in }))),
+            ("Active", true, renderAt3x(SideToggle(side: PlansViewModel.Side.active, select: { _ in }))),
+            ("Completed", false, renderAt3x(SideToggle(side: PlansViewModel.Side.completed, select: { _ in }))),
+        ]
+        for side in sides {
+            let image = try #require(side.image, "ImageRenderer produced nothing to measure for the \(side.name) toggle.")
+            let bitmap = try #require(Bitmap(image), "couldn't read the \(side.name) toggle's pixels")
+            var brassPixels = 0
+            for y in 0..<bitmap.height {
+                for x in 0..<bitmap.width {
+                    if let pixel = bitmap.pixel(at: CGPoint(x: x, y: y)), Perceptual.distance(pixel, brass) < 0.02 {
+                        brassPixels += 1
+                    }
+                }
+            }
+            print("Side toggle at 3× — \(side.name): \(brassPixels) brass pixels")
+            if side.leading {
+                #expect(
+                    brassPixels > 0,
+                    "the \(side.name) toggle draws no brass at 3× — the primary side no longer reads as the app's colour (spec Decision 20)"
+                )
+            } else {
+                #expect(
+                    brassPixels == 0,
+                    "the \(side.name) toggle draws \(brassPixels) brass pixels at 3× — only the primary side carries the app's colour (spec Decision 20)"
+                )
+            }
+        }
+    }
+
     /// A view rendered at 3×, the device's scale, so a fraction of a point
     /// shows as whole pixels rather than rounding away.
     private func renderAt3x(_ view: some View) -> CGImage? {
@@ -427,6 +476,33 @@ struct ItemListHeaderLayoutTests {
         #expect(
             !trailing.contains("metaLine"),
             "the meta line is back inside the badges' slot — the wrap this suite measures returns at the call site (plan Q18): \(trailing)"
+        )
+    }
+
+    /// The other half of the composition: `theMetaLineSitsMidwayAndWhatFollowsDoesNotMove`
+    /// renders its own copy of the screens' stacking — the header over the
+    /// screen's padding of `MetaLineSpacing.split(before:)` — since the
+    /// screens can't be rendered here, so a screen that changed its padding
+    /// would move its search field while that test stayed green. Each list
+    /// screen pads its header, exactly once, by the split of the same
+    /// `headerGapBelow` it hands the header (`018` spec Decision 22). A
+    /// view-body fact; the narrowest scan that reaches it — the padding's
+    /// whole argument.
+    ///
+    /// Its mutations (T011): the Wishlist's padding at `split(before:) + 1`
+    /// → red; Items' padding removed → red.
+    @Test(arguments: ["Trove/Views/Items/ItemListView.swift", "Trove/Views/Wishlist/WishlistView.swift"])
+    func eachListScreenPadsItsHeaderWithTheMetaLinesLowerHalf(path: String) throws {
+        let code = try SourceScan.production(path)
+        try #require(
+            code.contains("ItemsListHeader(title:") && code.contains("gapBelow: headerGapBelow)"),
+            "\(path) no longer hands `headerGapBelow` to `ItemsListHeader` — the padding below has no gap to split"
+        )
+        let paddings = SourceScan.argumentLists(of: ".padding", in: code)
+            .filter { $0.contains("MetaLineSpacing") }
+        #expect(
+            paddings == [".bottom, MetaLineSpacing.split(before: headerGapBelow)"],
+            "\(path) pads its header by \(paddings), expected exactly one `.padding(.bottom, MetaLineSpacing.split(before: headerGapBelow))` — the meta line is no longer midway, or what follows the header moved (spec Decision 22)"
         )
     }
 
@@ -522,10 +598,25 @@ struct ItemListHeaderLayoutTests {
     /// and the empty state move); the header's meta spacing at split − 1 and
     /// the stacks' padding at split + 1 (14/16 over a search field) → red on
     /// the equal gaps alone, every position green.
+    ///
+    /// At T011 the Wishlist with nothing to narrow joins: an empty wishlist
+    /// hides Sort By, so its row is the "…" alone (37 pt at 1×), over the row
+    /// gap; its meta line sits 24 px from each neighbour and what follows at
+    /// 200 px, as on Items. Its mutation: `split(before:)` + 1 → red on all
+    /// four cases, this one at 206 px against 200. It reads the same path as
+    /// Items with nothing to narrow at the same row height, so no mutation
+    /// reddens it alone. The screens' own padding is
+    /// `eachListScreenPadsItsHeaderWithTheMetaLinesLowerHalf`'s.
     @Test func theMetaLineSitsMidwayAndWhatFollowsDoesNotMove() throws {
         let metrics = ThemeMetrics.standard
         let itemsRow = try badgeRowSize(side: .sold, options: ItemListViewModel.SoldSortOrder.allCases, selection: .soldDate, label: \.label)
         let wishlistRow = try wishlistBadgeRowSize()
+        // An empty wishlist hides Sort By: the "…" alone (`WishlistView`).
+        let overflowAlone = try #require(
+            renderBitmap(OverflowMenu { Button("Settings") {} }),
+            "ImageRenderer produced nothing to measure for the \"…\" alone."
+        )
+        let wishlistEmptyRow = CGSize(width: overflowAlone.width, height: overflowAlone.height)
         let plansRow = try plansBadgeRowSize()
         let soldLine = soldSummary(count: 4, proceeds: 320_000, realised: 60_000)
         let metaPixels = try #require(renderAt3x(Text(soldLine).monoLabel()), "ImageRenderer produced nothing to measure for the meta line.").height
@@ -534,6 +625,7 @@ struct ItemListHeaderLayoutTests {
             ("Items over a search field", "Items", soldLine, itemsRow, metrics.sectionGap),
             ("Items with nothing to narrow", "Items", soldLine, itemsRow, metrics.listRowGap),
             ("the Wishlist over a search field", "Wishlist", "4 wanted · $4,740", wishlistRow, metrics.sectionGap),
+            ("the Wishlist with nothing to narrow", "Wishlist", "0 wanted · $0", wishlistEmptyRow, metrics.listRowGap),
         ]
         for (name, title, meta, row, gap) in cases {
             let block = VStack(alignment: .leading, spacing: 0) {
@@ -588,6 +680,30 @@ struct ItemListHeaderLayoutTests {
     }
 
     // MARK: - The title's size and fit (spec Decision 23)
+
+    /// The list screens' title is bigger than the Overview's (`018` spec
+    /// Decision 23: 34 pt against 30): `ListTitle` renders a taller line box
+    /// than the same word in `screenTitle`, each alone at 3×. A relation, not
+    /// a pinned number — nothing else in the suite fails with `listTitle`
+    /// back at 30, since every other case measures the title against itself.
+    ///
+    /// Its mutation (T011): `listTitle` back at 30 pt → red (the two line
+    /// boxes equal).
+    @Test func theListTitleRendersTallerThanTheScreenTitle() throws {
+        let list = try #require(
+            renderAt3x(ListTitle("Items").fixedSize()),
+            "ImageRenderer produced nothing to measure for the list title."
+        )
+        let screen = try #require(
+            renderAt3x(Text("Items").font(Theme.dark.typography.screenTitle).fixedSize()),
+            "ImageRenderer produced nothing to measure for the screen title."
+        )
+        print("Titles at 3× — listTitle \(list.width) × \(list.height) px, screenTitle \(screen.width) × \(screen.height) px")
+        #expect(
+            list.height > screen.height,
+            "the list title's line box renders \(list.height) px tall at 3× against the screen title's \(screen.height) px — the list screens' title is no longer the bigger one (spec Decision 23)"
+        )
+    }
 
     /// "Plans" fits at its full 34 pt beside every control row Plans can show
     /// on a 402 pt phone, and so do Items and the Wishlist beside their

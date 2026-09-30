@@ -318,7 +318,9 @@ struct SettingsWiringTests {
     /// `AppearanceChoice.allCases`, labelled from `displayName`. The copy
     /// lives on the model: no typed "System"/"Light"/"Dark" in the view.
     /// Mutation: move `appearanceSection` out of first position → the order
-    /// expectation fires; `.pickerStyle(.menu)` → `MenuPolicyTests` red.
+    /// expectation fires; `.pickerStyle(.menu)` → the segmented expectation
+    /// fires (until `018` `MenuPolicyTests` also went red; a menu picker is
+    /// a system control its new rule allows).
     @Test func theAppearanceSectionLeadsAsASegmentedPickerOverTheChoice() throws {
         let code = try SourceScan.production(Self.settingsView)
         let stacks = SourceScan.closureBodies(

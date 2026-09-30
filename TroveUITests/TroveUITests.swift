@@ -2004,8 +2004,9 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(price.waitForExistence(timeout: 5), "Mark as bought… must open the purchase sheet")
 
         // Criterion 5's condition, which is a row of capsule chips rather
-        // than a picker (a system menu inside page content is what
-        // `MenuPolicyTests` forbids). The chip carries the selected trait,
+        // than a picker (chips, not a menu, by `013`'s design; since `018`
+        // `MenuPolicyTests` guards the header controls, not page content).
+        // The chip carries the selected trait,
         // which is both how VoiceOver says which one is chosen and how this
         // reads the selection back.
         let good = app.buttons["Good"]

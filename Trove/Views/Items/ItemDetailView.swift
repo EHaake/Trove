@@ -112,8 +112,8 @@ struct ItemDetailView: View {
     /// One menu, two sets of rows (criteria 1 and 8): Edit / Mark as sold… /
     /// Delete while the item is owned, Edit sale… / Return to collection… /
     /// Delete once it is sold. Composed once with the rows swapped rather
-    /// than branched into two menus, so the app's one system `Menu` stays
-    /// one (`MenuPolicyTests`).
+    /// than branched into two menus, so the screen's "…" stays one system
+    /// `Menu` (`SoldStateWiringTests`).
     private var overflowMenu: some View {
         DetailOverflowMenu(
             noun: "item",

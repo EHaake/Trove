@@ -73,17 +73,27 @@ struct ExportWiringTests {
     /// boundary so a longer name ending in the same word never counts.
     private let rowStart = #"(?:^|[^A-Za-z0-9_])(Button\("[^"]*"\)|Divider\(\)|exportMenu\(\.[a-z]+\))"#
 
+    /// Any control's opening on a word boundary — a `Button`, a `Menu` or a
+    /// `Toggle`, titled or not — for checking a menu holds no control that
+    /// `rowStart` can't read (`018` T011).
+    private let controlStart = #"(?:^|[^A-Za-z0-9_])(?:Button|Menu|Toggle)\s*[({]"#
+
     /// The content of the one `OverflowMenu` a list's `overflowControl`
-    /// builds, split into one segment per row — each running from its row's
-    /// opening to the next one's — with the row openings in order.
-    private func menuSegments(_ path: String) throws -> (starts: [String], segments: [String]) {
+    /// builds.
+    private func menuContent(_ path: String) throws -> String {
         let code = try SourceScan.production(path)
         let controls = SourceScan.closureBodies(after: "private var overflowControl: some View", in: code)
         try #require(controls.count == 1, "\(path) declares \(controls.count) `overflowControl`s, expected exactly 1")
         let control = try #require(controls.first)
         let menus = SourceScan.closureBodies(after: "OverflowMenu(", in: control)
         try #require(menus.count == 1, "\(path)'s overflowControl builds \(menus.count) OverflowMenus, expected exactly 1: \(control)")
-        let content = try #require(menus.first)
+        return try #require(menus.first)
+    }
+
+    /// That content split into one segment per row — each running from its
+    /// row's opening to the next one's — with the row openings in order.
+    private func menuSegments(_ path: String) throws -> (starts: [String], segments: [String]) {
+        let content = try menuContent(path)
         let matches = content.matches(of: try Regex(rowStart, as: (Substring, Substring).self))
         let starts = matches.map { String($0.output.1) }
         var segments: [String] = []
@@ -103,7 +113,9 @@ struct ExportWiringTests {
     ///
     /// Mutations (T005): see `eachListsMenuCarriesItsRowsInThreeGroupsWithOnlyTheExportsGated`
     /// and `theItemsListsExportRowsAreSubmenusOverEveryScope`, which share
-    /// this reading.
+    /// this reading. The unlisted-control leg's (T011): a
+    /// `Button { viewModel.load() } label: { Text("Refresh") }` after the
+    /// Wishlist's Settings row → red (5 against 4).
     @Test(arguments: menus)
     func eachListBuildsOneMenuFedItsBusyStateWhoseRowsFireEveryIntent(menu: ListMenu) throws {
         let path = menu.path
@@ -117,6 +129,16 @@ struct ExportWiringTests {
         try #require(
             starts == menu.rows.map(\.start),
             "\(path)'s menu rows are \(starts), expected \(menu.rows.map(\.start))"
+        )
+        // A control `rowStart` can't read — `Button { … } label:`,
+        // `Button(action:)`, a `Menu` or a `Toggle` — would ride unread inside
+        // the segment before it, so every control opening in the menu must
+        // be one of the listed `Button("…")` rows (`018` T011).
+        let controls = try menuContent(path).ranges(of: try Regex(controlStart)).count
+        let listed = menu.rows.filter { $0.start.hasPrefix("Button(") }.count
+        #expect(
+            controls == listed,
+            "\(path)'s menu opens \(controls) buttons, menus or toggles, expected exactly its \(listed) listed `Button(\"…\")` rows — a row the list doesn't name is in it"
         )
         for (row, segment) in zip(menu.rows, segments) {
             if let action = row.action {
