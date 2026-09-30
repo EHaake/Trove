@@ -1158,6 +1158,8 @@ Handoff notes for the pause reports:
   controls are 36.33 pt, so the 37 pt line box overhangs a third of a
   point each side; the recorder's odd case at a 26 pt proposal.
 
+**Phase 3 pause (2026-09-27 → 30).** The person tried the app seven times: the switches monochrome, in the wrong font, and taking a whole row (→ Decision 19, T009a, after the segmented control proved unstyleable); the toggle's place and brass (→ Decision 20, T009b); the label crossfade overlap (→ T009c); "Completed" clipping on Plans, and "removing the animations entirely isn't a good choice" (→ Decision 21, T009d: "Ok looks great!"); the meta line crowding the controls (→ Decision 22, T009e, the Wishlist search field's move accepted: "That's fine"); the title too small beside the controls (→ Decision 23, T009f, the three measured recommendations accepted); then: "continue". R2 (tapping the showing side no longer reloads it) is moot: the toggle always flips.
+
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
 - [ ] **T010 — Delete the bespoke controls and the tests that guarded only them.**
