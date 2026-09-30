@@ -565,6 +565,25 @@ Made by the person on 2026-09-27, at the Phase 3 walkthrough:
     (the T009c overlap) and never clips. Which transition is settled by
     film, not chosen here.
 
+22. **The header's title sits on the controls' bottom edge, and the meta
+    line is centred between the title row and what follows** (2026-09-29,
+    the same pause, the person's re-look at the margins with three
+    tightenings rendered): "I like the current horizontal spacing of
+    everything. What I think needs work is the spacing between the text
+    right below the top row … how close the '+$600 vs paid' text is to
+    the menu buttons … center the text between the header and the search
+    bar (don't move the search bar), but also make the bottom line of the
+    'Items' head to be inline with the bottom of the menu buttons. Do the
+    same on Plans and Wishlist." So: the horizontal spacing (gutter,
+    control gap, title-to-controls gap) is unchanged; the title's
+    baseline aligns with the bottom edge of the three glass controls
+    instead of the row being top-aligned; and the meta line sits with
+    equal space above and below it — between the title row and the
+    search field on Items and the Wishlist, between the title row and
+    the first row on Plans and on any side without a search field —
+    with the search field and the first row staying exactly where they
+    are. One line, not two: the meta line keeps its single-line form.
+
 ## Proposals (P-items)
 
 Claude Code's; they become decisions on plan approval unless the person

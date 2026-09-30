@@ -1043,6 +1043,26 @@ Handoff notes for the pause reports:
   leg covers both screens. `scripts/verify.sh`: green, 1750 in 235.
   Finding: a full verify run is 5–7 min here; seven mutations ≈ 45 min.
 
+- [ ] **T009e — The header's title on the controls' bottom edge; the meta line centred (Decision 22; the person's finding, 2026-09-29).**
+  Finding: with three glass controls in the row the meta line ("4 SOLD ·
+  $3,200 · +$600 VS PAID") runs 6 pt under the buttons' bottom edge and
+  reads as crowding them, while 24 pt sits between it and the search
+  field; and the title is top-aligned with taller controls, so its
+  baseline floats above their bottom. Fix, in `ItemListHeader.swift` and
+  the three screens: the title row aligns the title's baseline to the
+  controls' bottom edge (an alignment guide, not `.bottom`, which would
+  put the descender there); the meta line gets equal space above and
+  below — the space between the title row and the search field (Items,
+  Wishlist) or the first row (Plans; Items' Sold side with nothing to
+  narrow) is redistributed, its total unchanged so the search field and
+  first row do not move by a point. Horizontal spacing untouched. G38's
+  literal 6 and the 57 pt doc numbers follow the new geometry; G1's
+  height legs are re-measured, not loosened; a leg pins that the search
+  field's and the first row's y are unchanged (measured before and
+  after at 3×, exact). Mutations recorded.
+  Files: `Trove/Views/Items/ItemListHeader.swift`, `Trove/Views/Items/ItemListView.swift`, `Trove/Views/Plans/PlansView.swift`, `Trove/Views/Wishlist/WishlistView.swift`, `TroveTests/ItemListHeaderLayoutTests.swift`.
+  **Verify:** `scripts/verify.sh` green; the person's look at Items (both sides), Plans and Wishlist.
+
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
 - [ ] **T010 — Delete the bespoke controls and the tests that guarded only them.**
