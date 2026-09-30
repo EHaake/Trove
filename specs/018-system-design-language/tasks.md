@@ -1043,7 +1043,7 @@ Handoff notes for the pause reports:
   leg covers both screens. `scripts/verify.sh`: green, 1750 in 235.
   Finding: a full verify run is 5–7 min here; seven mutations ≈ 45 min.
 
-- [ ] **T009e — The header's title on the controls' bottom edge; the meta line centred (Decision 22; the person's finding, 2026-09-29).**
+- [x] **T009e — The header's title on the controls' bottom edge; the meta line centred (Decision 22; the person's finding, 2026-09-29).**
   Finding: with three glass controls in the row the meta line ("4 SOLD ·
   $3,200 · +$600 VS PAID") runs 6 pt under the buttons' bottom edge and
   reads as crowding them, while 24 pt sits between it and the search
@@ -1070,6 +1070,31 @@ Handoff notes for the pause reports:
   constant. Plan §4's T009e paragraph has the geometry and the guards.
   Files: `Trove/Views/Items/ItemListHeader.swift`, `Trove/Views/Items/ItemListView.swift`, `Trove/Views/Plans/PlansView.swift`, `Trove/Views/Wishlist/WishlistView.swift`, `TroveTests/ItemListHeaderLayoutTests.swift`, the `private var header` scans in `ItemListSidesWiringTests.swift` and `PlansWiringTests.swift`, any Wishlist header scan in `HeaderControlsWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; the person's look at Items (both sides), Plans and Wishlist.
+  **Done (2026-09-29).** `TitleRowLayout` (controls at ideal size, title
+  in the remainder less 8 pt, height = max(controls, title first baseline)
+  read at runtime, the descent hanging under the row); `enum
+  MetaLineSpacing` (`titleRowToMeta = 6`, `split(before:)`) — a caseless
+  enum because a generic type can't hold the static; `ItemsListHeader`
+  gains `gapBelow`. Items and the Wishlist compose it, with
+  `headerGapBelow` = `sectionGap` above a search field, `listRowGap`
+  otherwise; the header carries the lower half as padding and the
+  `listRowGap` bottom padding moved onto the inner search-and-chips
+  stack (the outer one would have made the empty side 8/10). Plans uses
+  the `Layout` directly. At 3×: row 111 px before and after; title
+  baseline 79 → 111 px (on the controls' bottom); Items meta gaps 18/72 →
+  45/45; Items search field 242 px unchanged; Wishlist search field →
+  242; empty Sold side 24/24, empty state 200 unchanged; Plans first card
+  156 unchanged; header 57 → 66 pt (37 + 15 + 14), no badges 53 → 55.
+  New tests `theTitleRowIsTheControlsHeightWithTheTitleOnTheirBottomEdge`,
+  `theMetaLineSitsMidwayAndWhatFollowsDoesNotMove`; G38's 6 is the split.
+  Mutations, all red: the row reporting the title's full box
+  (`ItemListHeader.swift:142` → `ItemListHeaderLayoutTests.swift:438`,
+  `:509`, `:533`, `:210`, `:214`); the title top-aligned (`:104` → `:442`);
+  the split + 1 (`:72` → `:509`, all three stacks); gaps 14/16 (`:44` →
+  `:505`, `:210`, `:214`). `scripts/verify.sh`: green, 1752 in 235.
+  Carried to T013: the empty Wishlist's empty state moves up ~4 pt
+  (derived, not measured); the real controls are 36.33 pt, so device
+  numbers sit ~1 px off the 37 pt stand-in's.
 
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
@@ -1269,3 +1294,7 @@ recorded here too.
 | `general-purpose` — Plans clipping filmed, five fixes tried | `opus` | ~165k | Only a constant width is clean; the capsule resize runs outside SwiftUI transactions → Decision 21 |
 | `general-purpose` — T009d films (HEAD's press effect; thirteen swap candidates; 26.5) | `opus` | ~183k | The press was never lost; per-row colour + `.blurReplace` at `.smooth(0.3)` recommended and installed; the person: "Ok looks great!" |
 | `sdd-implementer` — T009d | `opus` | ~70k | Done; unit 1750 green; seven mutations recorded; tint dropped on a render probe |
+| `general-purpose` — three header tightenings rendered | `opus` | ~88k | The person kept the horizontal spacing and asked for the title on the controls' bottom edge and the meta line centred → Decision 22 |
+| `sdd-implementer` — T009e, first dispatch | `opus` | ~82k | **Stopped on a judgment call**: the 7 pt descent under baseline alignment; Plans has no meta line; the Wishlist's old header shape. Tier miss: the bundle's premises were the orchestrator's arithmetic, not read from the code |
+| `skeptical-reviewer` — decision review, T009e | `opus` | ~46k | A custom `Layout`; Plans uses it directly; 8/8 on the empty side; one split function; the Wishlist search field's 4 pt move put to the person (accepted) |
+| `sdd-implementer` — T009e, re-dispatch | `opus` | ~110k | Done; unit 1752 green; four mutations recorded |

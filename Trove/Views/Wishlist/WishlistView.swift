@@ -73,24 +73,28 @@ struct WishlistView: View {
             theme.colors.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
+                VStack(alignment: .leading, spacing: 0) {
                     header
                         .padding(.horizontal, theme.metrics.screenGutter)
-                        .padding(.bottom, theme.metrics.sectionGap - theme.metrics.controlRowGap)
+                        // The meta line's lower half of `headerGapBelow`, as
+                        // on Items (018 spec Decision 22).
+                        .padding(.bottom, MetaLineSpacing.split(before: headerGapBelow))
 
                     // Controls for narrowing a list need a list to narrow.
                     // On a first run they were a search field over nothing and
                     // a lone "All" chip, both of which made the screen look
                     // like it had lost something rather than not started yet.
                     if viewModel.totalCount > 0 {
-                        SearchField(placeholder: "Search wishlist", text: $viewModel.searchText)
-                            .padding(.horizontal, theme.metrics.screenGutter)
+                        VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
+                            SearchField(placeholder: "Search wishlist", text: $viewModel.searchText)
+                                .padding(.horizontal, theme.metrics.screenGutter)
 
-                        categoryChips
+                            categoryChips
+                        }
+                        .padding(.bottom, theme.metrics.listRowGap)
                     }
                 }
                 .padding(.top, theme.metrics.sectionGap)
-                .padding(.bottom, theme.metrics.listRowGap)
                 .background(theme.colors.background)
 
                 if let reason = viewModel.emptyReason {
@@ -259,17 +263,20 @@ struct WishlistView: View {
 
     // MARK: - Header
 
+    /// What the screen puts under the header: the search field a section gap
+    /// below it, or — over an empty wishlist — the list's row gap (018 spec
+    /// Decision 22). The header centres its meta line in it.
+    private var headerGapBelow: CGFloat {
+        viewModel.totalCount > 0 ? theme.metrics.sectionGap : theme.metrics.listRowGap
+    }
+
+    /// `ItemListView`'s header since `018` T009e (spec Decision 22): the
+    /// title's baseline on the controls' bottom edge and the meta line under
+    /// the whole row, midway between it and the search field.
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Wishlist")
-                    .font(theme.typography.screenTitle)
-                    .foregroundStyle(theme.colors.textPrimary)
-                Text(summaryLine).monoLabel()
-            }
-
-            Spacer()
-
+        ItemsListHeader(title: "Wishlist", gapBelow: headerGapBelow) {
+            Text(summaryLine).monoLabel()
+        } trailing: {
             // The "…" shows regardless of collection size since 012
             // (criterion 1, superseding 011's hide-when-empty); the sort
             // badge still hides — see ItemListView's header note.

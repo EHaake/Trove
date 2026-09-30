@@ -164,14 +164,15 @@ struct PlansView: View {
 
     // MARK: - Header
 
+    /// The list screens' title row with no meta line under it (018 spec
+    /// Decision 22): the title's baseline on the controls' bottom edge, the
+    /// row the controls' height, so the first row stays where it was.
     private var header: some View {
-        HStack(alignment: .top) {
+        TitleRowLayout {
             Text(SellPlanCopy.tab)
                 .font(theme.typography.screenTitle)
                 .foregroundStyle(theme.colors.textPrimary)
                 .lineLimit(1)
-
-            Spacer(minLength: 8)
 
             // `WishlistView`'s pair with the side toggle between them (018
             // Decisions 19 and 20): Sort By · toggle · "…". Sort is hidden

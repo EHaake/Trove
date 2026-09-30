@@ -86,9 +86,15 @@ struct ItemListView: View {
             // too. Losing the running total, the query and the active filter
             // the moment you scroll is what it's there to prevent.
             VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
+                VStack(alignment: .leading, spacing: 0) {
                     header
                         .padding(.horizontal, theme.metrics.screenGutter)
+                        // The meta line's lower half of `headerGapBelow` (018
+                        // spec Decision 22): the header takes the other half
+                        // above the meta line, so the line sits midway and the
+                        // search field — or, on a side with nothing to narrow,
+                        // the empty state — stays where it was.
+                        .padding(.bottom, MetaLineSpacing.split(before: headerGapBelow))
 
                     // Controls for narrowing a list need a list to narrow. On a
                     // first run they were a search field over nothing and a
@@ -98,25 +104,23 @@ struct ItemListView: View {
                     // both sides and the view model owns the reading of it: the
                     // side on screen has something to narrow (014 plan Q10).
                     if viewModel.offersNarrowingControls {
-                        SearchField(placeholder: "Search name or serial", text: $viewModel.searchText)
-                            .padding(.horizontal, theme.metrics.screenGutter)
-                            // The Design pass's `sectionGap` under the header,
-                            // on top of this stack's own `controlRowGap`. On a
-                            // side with nothing to narrow, where nothing follows
-                            // the header, the stack's bottom padding is the
-                            // whole gap.
-                            .padding(.top, theme.metrics.sectionGap - theme.metrics.controlRowGap)
+                        VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
+                            SearchField(placeholder: "Search name or serial", text: $viewModel.searchText)
+                                .padding(.horizontal, theme.metrics.screenGutter)
 
-                        // Full-bleed so chips scroll off the edge rather than
-                        // stopping at the gutter; the gutter moves inside.
-                        categoryChips
+                            // Full-bleed so chips scroll off the edge rather than
+                            // stopping at the gutter; the gutter moves inside.
+                            categoryChips
+                        }
+                        // Only as much space as sits between two rows. A full
+                        // section gap here on top of each card's own padding
+                        // read as a hole between the chips and the list. On a
+                        // side with nothing to narrow the header's own padding
+                        // is the whole gap.
+                        .padding(.bottom, theme.metrics.listRowGap)
                     }
                 }
                 .padding(.top, theme.metrics.sectionGap)
-                // Only as much space as sits between two rows. A full section
-                // gap here on top of each card's own padding read as a hole
-                // between the chips and the list.
-                .padding(.bottom, theme.metrics.listRowGap)
                 .background(theme.colors.background)
 
                 // Outside the scroll view on purpose: there's nothing to
@@ -497,8 +501,15 @@ struct ItemListView: View {
 
     // MARK: - Header
 
+    /// What the screen puts under the header: the search field a section gap
+    /// below it, or — on a side with nothing to narrow — the list's row gap
+    /// (018 spec Decision 22). The header centres its meta line in it.
+    private var headerGapBelow: CGFloat {
+        viewModel.offersNarrowingControls ? theme.metrics.sectionGap : theme.metrics.listRowGap
+    }
+
     private var header: some View {
-        ItemsListHeader(title: "Items") {
+        ItemsListHeader(title: "Items", gapBelow: headerGapBelow) {
             metaLine
         } trailing: {
             // Nothing to sort on an empty list, so the sort badge still

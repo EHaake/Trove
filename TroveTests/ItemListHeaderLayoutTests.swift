@@ -108,6 +108,15 @@ import Testing
 /// "Market ↓"). Heights unchanged: the header 57 pt on both sides and under
 /// every Owned label, 53 pt with no badges, the meta line 14 pt, every
 /// badge 109 px tall at 3×.
+///
+/// **At `018` T009e** (spec Decision 22) the title's baseline sits on the
+/// controls' bottom edge (`TitleRowLayout`) and the meta line midway between
+/// the title row and what follows (`MetaLineSpacing`): the header is the
+/// badge row + 15 + one meta line — 66 pt on both sides and under every
+/// Owned label, 55 pt with no badges (the row falls to the title's baseline),
+/// the meta line 14 pt. G38's 6 is now `MetaLineSpacing.split(before:)`
+/// over the `sectionGap` a search field follows. The new cases below render
+/// at 3×, exact; see each for its measurements and mutations.
 @Suite("Items header layout")
 @MainActor
 struct ItemListHeaderLayoutTests {
@@ -136,16 +145,17 @@ struct ItemListHeaderLayoutTests {
 
         // The proviso as plan Q6 rewrote it (spec Decision 16, T004a): the
         // badges are at the system's control size, taller than the title's
-        // line box, so the badge row — not the title — sets the header's
+        // baseline, so the badge row — not the title — sets the header's
         // height, and it must do so the same way on both sides: badge row
-        // plus the header's 6 pt spacing plus one meta line. The meta line is
+        // plus the meta line's share of the gap under the header (spec
+        // Decision 22, T009e) plus one meta line. The meta line is
         // measured alone, where it cannot wrap. Stripping the badges out must
         // then *drop* the height — if it doesn't, the title is driving it
         // again, and the relationship pinned below describes a header the
         // screen no longer draws.
         let withoutBadges = try #require(
             renderBitmap(
-                ItemsListHeader(title: "Items") {
+                ItemsListHeader(title: "Items", gapBelow: ThemeMetrics.standard.sectionGap) {
                     Text(soldSummary(count: 0, proceeds: 0, realised: 0)).monoLabel()
                 } trailing: {
                     EmptyView()
@@ -192,17 +202,18 @@ struct ItemListHeaderLayoutTests {
         )
 
         let soldMetaLine = try metaLineHeight(soldSummary(count: 0, proceeds: 0, realised: 0))
+        let metaGap = Int(MetaLineSpacing.split(before: ThemeMetrics.standard.sectionGap))
         let ownedMetaLine = try metaLineHeight("34 items · $18,420 · 3 unvalued")
 
         print("ItemsListHeader heights at width \(contentWidth) — badge row: \(baselineRow), owned badge row: \(ownedRow), meta line: sold \(soldMetaLine) owned \(ownedMetaLine), baseline: \(baseline), no badges: \(withoutBadges), owned under \"\(ownedWidest)\": \(owned), owned at scale: \(ownedLarge), sold: \(sold), sold at scale under \"\(soldWidest)\": \(soldLarge)")
 
         #expect(
-            baseline == Int(baselineRow.height) + 6 + soldMetaLine,
-            "the Sold header measured \(baseline) pt against its badge row's \(baselineRow.height) + 6 + one \(soldMetaLine) pt meta line — the badge row is no longer what sets the header's height (plan Q6 as rewritten, spec Decision 16)"
+            baseline == Int(baselineRow.height) + metaGap + soldMetaLine,
+            "the Sold header measured \(baseline) pt against its badge row's \(baselineRow.height) + \(metaGap) + one \(soldMetaLine) pt meta line — the badge row is no longer what sets the header's height (plan Q6 as rewritten, spec Decision 16)"
         )
         #expect(
-            owned == Int(ownedRow.height) + 6 + ownedMetaLine,
-            "the Owned header measured \(owned) pt against its badge row's \(ownedRow.height) + 6 + one \(ownedMetaLine) pt meta line — the badge row is no longer what sets the header's height (plan Q6 as rewritten, spec Decision 16)"
+            owned == Int(ownedRow.height) + metaGap + ownedMetaLine,
+            "the Owned header measured \(owned) pt against its badge row's \(ownedRow.height) + \(metaGap) + one \(ownedMetaLine) pt meta line — the badge row is no longer what sets the header's height (plan Q6 as rewritten, spec Decision 16)"
         )
         #expect(
             withoutBadges < baseline,
@@ -367,7 +378,7 @@ struct ItemListHeaderLayoutTests {
         try #require(headers.count == 1, "ItemListView declares \(headers.count) headers, expected exactly 1")
         let header = try #require(headers.first)
 
-        let anchor = "ItemsListHeader(title: \"Items\")"
+        let anchor = "ItemsListHeader(title: \"Items\", gapBelow: headerGapBelow)"
         try #require(
             header.contains(anchor),
             "the screen's header no longer composes `ItemsListHeader` — this suite would be measuring a view the screen doesn't use: \(header)"
@@ -394,6 +405,137 @@ struct ItemListHeaderLayoutTests {
         )
     }
 
+
+    // MARK: - The title row and the meta line (spec Decision 22)
+
+    /// The title row is the controls' height, and the title's baseline sits on
+    /// their bottom edge (`018` spec Decision 22, T009e): `TitleRowLayout`
+    /// rendered at 3× over the Sold side's measured badge row, with a 1 pt
+    /// marker hung on the title's first baseline. Exact, no tolerance.
+    ///
+    /// Before T009e the row was an `HStack(alignment: .top)`: the controls
+    /// 111 px tall and the title's baseline at 79 px, 32 px above their
+    /// bottom. After: the row 111 px, the baseline at 111 px.
+    ///
+    /// Its mutations (T009e): the layout reporting the title's full line box
+    /// under the baseline (44 pt) → red; the title placed at the row's top →
+    /// red.
+    @Test func theTitleRowIsTheControlsHeightWithTheTitleOnTheirBottomEdge() throws {
+        let row = try badgeRowSize(side: .sold, options: ItemListViewModel.SoldSortOrder.allCases, selection: .soldDate, label: \.label)
+        let image = try #require(
+            renderAt3x(
+                TitleRowLayout {
+                    markedTitle("Items")
+                    Probe.controls.colour.frame(width: row.width, height: row.height)
+                }
+                .frame(width: contentWidth)
+            ),
+            "ImageRenderer produced nothing to measure for the title row."
+        )
+        let controls = try pixelRows(.controls, in: image)
+        let baseline = try pixelRows(.baseline, in: image)
+        print("Title row at 3× — \(image.width) × \(image.height) px, controls rows \(controls), baseline marker rows \(baseline)")
+        #expect(
+            image.height == Int(row.height) * 3 && controls == 0...(image.height - 1),
+            "the title row renders \(image.height) px tall at 3× with the controls on rows \(controls), against the controls' \(Int(row.height) * 3) px — the row is no longer the controls' height, so every first row under it moves (spec Decision 22)"
+        )
+        #expect(
+            baseline.upperBound == controls.upperBound,
+            "the title's baseline ends on pixel row \(baseline.upperBound) at 3× and the controls on \(controls.upperBound) — the title no longer sits on the controls' bottom edge (spec Decision 22)"
+        )
+    }
+
+    /// The meta line sits midway between the title row and what follows, and
+    /// what follows stays where it was (`018` spec Decision 22, T009e). Each
+    /// screen's header block is rendered at 3× as the screen stacks it — the
+    /// header, the screen's padding of `MetaLineSpacing.split(before:)`
+    /// under it, and a stand-in for the search field or the first row — over
+    /// the side's measured badge row; the stacking is this suite's copy of
+    /// the screens', since the screens themselves can't be rendered here.
+    /// "Where it was" is the old stack written out: the row, 6 pt, the meta
+    /// line, then the gap that follows.
+    ///
+    /// Before T009e: the Items search field at 242 px (80.67 pt; the meta line
+    /// is 41 px), the meta line 18 px under the row and 72 px above the
+    /// field; the Wishlist field at 230 px (76.67 pt, its stacked header
+    /// 53 pt); the empty state under an Items side with nothing to narrow at
+    /// 200 px; Plans' first card at 156 px (52 pt). After: Items 242, the
+    /// Wishlist 242 (level with Items, 4 pt lower than before — put to the
+    /// person), the empty state 200, Plans 156; the meta line 45 px from each
+    /// neighbour over a search field and 24 px over nothing to narrow.
+    ///
+    /// Its mutations (T009e): the layout reporting the title's full line box
+    /// → red (every position); `split(before:)` + 1 → red (the search field
+    /// and the empty state move); the header's meta spacing at split − 1 and
+    /// the stacks' padding at split + 1 (14/16 over a search field) → red on
+    /// the equal gaps alone, every position green.
+    @Test func theMetaLineSitsMidwayAndWhatFollowsDoesNotMove() throws {
+        let metrics = ThemeMetrics.standard
+        let itemsRow = try badgeRowSize(side: .sold, options: ItemListViewModel.SoldSortOrder.allCases, selection: .soldDate, label: \.label)
+        let wishlistRow = try wishlistBadgeRowSize()
+        let plansRow = try plansBadgeRowSize()
+        let soldLine = soldSummary(count: 4, proceeds: 320_000, realised: 60_000)
+        let metaPixels = try #require(renderAt3x(Text(soldLine).monoLabel()), "ImageRenderer produced nothing to measure for the meta line.").height
+
+        let cases: [(String, String, String, CGSize, CGFloat)] = [
+            ("Items over a search field", "Items", soldLine, itemsRow, metrics.sectionGap),
+            ("Items with nothing to narrow", "Items", soldLine, itemsRow, metrics.listRowGap),
+            ("the Wishlist over a search field", "Wishlist", "4 wanted · $4,740", wishlistRow, metrics.sectionGap),
+        ]
+        for (name, title, meta, row, gap) in cases {
+            let block = VStack(alignment: .leading, spacing: 0) {
+                ItemsListHeader(title: title, gapBelow: gap) {
+                    Text(meta).monoLabel().background(Probe.meta.colour)
+                } trailing: {
+                    Probe.controls.colour.frame(width: row.width, height: row.height)
+                }
+                .padding(.bottom, MetaLineSpacing.split(before: gap))
+
+                Probe.following.colour.frame(height: metrics.searchFieldHeight)
+            }
+            .frame(width: contentWidth)
+            let image = try #require(renderAt3x(block), "ImageRenderer produced nothing to measure for \(name).")
+            let controls = try pixelRows(.controls, in: image)
+            let metaRows = try pixelRows(.meta, in: image)
+            let following = try pixelRows(.following, in: image)
+            let above = metaRows.lowerBound - (controls.upperBound + 1)
+            let below = following.lowerBound - (metaRows.upperBound + 1)
+            let unmoved = Int((row.height + MetaLineSpacing.titleRowToMeta + gap) * 3) + metaPixels
+            print("\(name) at 3× — controls \(controls), meta \(metaRows), what follows from \(following.lowerBound) px; gaps \(above)/\(below) px, before T009e \(unmoved) px")
+            #expect(
+                above == below,
+                "\(name): the meta line sits \(above) px under the title row and \(below) px over what follows at 3× — it is no longer midway (spec Decision 22)"
+            )
+            #expect(
+                following.lowerBound == unmoved,
+                "\(name): what follows the header starts at \(following.lowerBound) px at 3× against \(unmoved) px before — it moved (spec Decision 22)"
+            )
+        }
+
+        // Plans has no meta line: its title row, then the list's row gap under
+        // the header block and half a row gap of the first row's inset.
+        let plans = VStack(alignment: .leading, spacing: 0) {
+            TitleRowLayout {
+                Text(SellPlanCopy.tab)
+                    .font(Theme.dark.typography.screenTitle)
+                    .lineLimit(1)
+                Probe.controls.colour.frame(width: plansRow.width, height: plansRow.height)
+            }
+            .padding(.bottom, metrics.listRowGap + metrics.listRowGap / 2)
+
+            Probe.following.colour.frame(height: metrics.sellPlanRowMinHeight)
+        }
+        .frame(width: contentWidth)
+        let plansImage = try #require(renderAt3x(plans), "ImageRenderer produced nothing to measure for Plans.")
+        let firstCard = try pixelRows(.following, in: plansImage).lowerBound
+        let unmoved = Int((plansRow.height + metrics.listRowGap + metrics.listRowGap / 2) * 3)
+        print("Plans at 3× — first card from \(firstCard) px, before T009e \(unmoved) px")
+        #expect(
+            firstCard == unmoved,
+            "Plans' first card starts at \(firstCard) px at 3× against \(unmoved) px before — it moved (spec Decision 22)"
+        )
+    }
+
     // MARK: - The instrument
 
     /// The header as the screen composes it: the title, a stand-in for the
@@ -407,7 +549,7 @@ struct ItemListHeaderLayoutTests {
     /// (mutation (b) — render the baseline narrow and watch every case go
     /// red) can be run without restructuring the suite.
     private func headerHeight(meta: String, trailingSize: CGSize, width: CGFloat? = nil) throws -> Int {
-        let header = ItemsListHeader(title: "Items") {
+        let header = ItemsListHeader(title: "Items", gapBelow: ThemeMetrics.standard.sectionGap) {
             Text(meta).monoLabel()
         } trailing: {
             Color.clear.frame(width: trailingSize.width, height: trailingSize.height)
@@ -489,5 +631,84 @@ struct ItemListHeaderLayoutTests {
             }
         }
         return widest
+    }
+
+    /// The Wishlist's control row as `WishlistView` composes it — Sort By and
+    /// the "…", 8 pt apart — rendered on its own, as `badgeRowSize` does.
+    private func wishlistBadgeRowSize() throws -> CGSize {
+        let options = WishlistViewModel.SortOrder.allCases
+        let row = HStack(spacing: 8) {
+            SortMenu(options: options, selection: options[0], label: \.label, manualOrder: .custom) { _ in }
+            OverflowMenu { Button("Settings") {} }
+        }
+        let image = try #require(renderBitmap(row), "ImageRenderer produced nothing to measure for the Wishlist's badge row.")
+        return CGSize(width: image.width, height: image.height)
+    }
+
+    /// Plans' control row on its Active side — the toggle, Sort By and the
+    /// "…", 8 pt apart, in `badgeRowSize`'s renderable order — on its own.
+    private func plansBadgeRowSize() throws -> CGSize {
+        let options = PlansViewModel.ActiveSortOrder.allCases
+        let row = HStack(spacing: 8) {
+            SideToggle(side: PlansViewModel.Side.active, select: { _ in })
+            SortMenu(options: options, selection: options[0], label: \.label) { _ in }
+            OverflowMenu { Button("Settings") {} }
+        }
+        let image = try #require(renderBitmap(row), "ImageRenderer produced nothing to measure for Plans' badge row.")
+        return CGSize(width: image.width, height: image.height)
+    }
+
+    /// The screen title with a 1 × 1 pt marker whose bottom edge is the
+    /// title's first baseline: a non-text view's baseline is its bottom, and
+    /// the overlay aligns the two.
+    private func markedTitle(_ title: String) -> some View {
+        Text(title)
+            .font(Theme.dark.typography.screenTitle)
+            .lineLimit(1)
+            .overlay(alignment: Alignment(horizontal: .leading, vertical: .firstTextBaseline)) {
+                Probe.baseline.colour.frame(width: 1, height: 1)
+            }
+    }
+
+    /// The pure colours the geometry cases paint their stand-ins in, none of
+    /// which the theme's text or background comes near.
+    private enum Probe {
+        case controls, meta, following, baseline
+
+        var colour: Color {
+            switch self {
+            case .controls: Color(red: 1, green: 0, blue: 0)
+            case .meta: Color(red: 0, green: 1, blue: 0)
+            case .following: Color(red: 1, green: 0, blue: 1)
+            case .baseline: Color(red: 0, green: 0, blue: 1)
+            }
+        }
+
+        func matches(_ pixel: RGB8) -> Bool {
+            switch self {
+            case .controls: pixel.red >= 128 && pixel.green < 60 && pixel.blue < 60
+            case .meta: pixel.green >= 128 && pixel.red < 60 && pixel.blue < 60
+            case .following: pixel.red >= 128 && pixel.blue >= 128 && pixel.green < 60
+            case .baseline: pixel.blue >= 128 && pixel.red < 60 && pixel.green < 60
+            }
+        }
+    }
+
+    /// The first and last pixel rows holding any pixel of `probe`'s colour.
+    private func pixelRows(_ probe: Probe, in image: CGImage) throws -> ClosedRange<Int> {
+        let bitmap = try #require(Bitmap(image), "couldn't read the rendered image's pixels")
+        var first: Int?
+        var last: Int?
+        for y in 0..<bitmap.height {
+            for x in 0..<bitmap.width {
+                if let pixel = bitmap.pixel(at: CGPoint(x: x, y: y)), probe.matches(pixel) {
+                    if first == nil { first = y }
+                    last = y
+                    break
+                }
+            }
+        }
+        let top = try #require(first, "no \(probe) pixels in the render")
+        return top...(try #require(last))
     }
 }
