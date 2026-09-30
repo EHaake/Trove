@@ -1111,7 +1111,20 @@ Handoff notes for the pause reports:
   before it is changed. T009e's baseline leg becomes a centre leg; its
   row-height, equal-gaps and no-move legs stay green unchanged.
   Mutations recorded.
-  Files: `Trove/Views/Items/ItemListHeader.swift`, the typography token's file, `TroveTests/ItemListHeaderLayoutTests.swift`, any test pinning the title's size.
+  First dispatch stopped (2026-09-29): the size rule as written gave
+  20 pt — "Plans" already truncates at 30 under "Wishlist order" at 402
+  (53 pt left, 78 needed); 34 truncates Items' Sold side and Plans on
+  375 pt phones; the Dashboard's drill-down paths overflow at 34; and at
+  34 the title's line box is exactly 37, so G38's "no badges is shorter"
+  leg goes red. The person accepted three recommendations (Decision 23's
+  amendment): Plans' capsule reads "Wishlist" for that order, the menu
+  row unchanged; 34 pt with shrink-to-fit (`minimumScaleFactor`, one
+  line, no ellipsis); the Dashboard keeps `screenTitle` at 30 and the
+  list screens take a new token. G38's proviso leg is restated as the
+  measured equality (no-badges header = title line box + split + meta),
+  since "shorter" is no longer the geometry. The centring patch is at
+  `scratchpad/T009f-centring.patch`.
+  Files: `Trove/Views/Items/ItemListHeader.swift`, `Trove/Views/Shared/Theme/ThemeTypography.swift`, `Trove/Views/Plans/PlansView.swift`, `Trove/Views/Shared/SortMenu.swift` (a badge label distinct from the row label, if needed), `TroveTests/ItemListHeaderLayoutTests.swift`, tests and UI tests reading Plans' sort capsule label.
   **Verify:** `scripts/verify.sh` green; the person's look at Items, Plans and Wishlist.
 
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
@@ -1316,3 +1329,4 @@ recorded here too.
 | `sdd-implementer` — T009e, first dispatch | `opus` | ~82k | **Stopped on a judgment call**: the 7 pt descent under baseline alignment; Plans has no meta line; the Wishlist's old header shape. Tier miss: the bundle's premises were the orchestrator's arithmetic, not read from the code |
 | `skeptical-reviewer` — decision review, T009e | `opus` | ~46k | A custom `Layout`; Plans uses it directly; 8/8 on the empty side; one split function; the Wishlist search field's 4 pt move put to the person (accepted) |
 | `sdd-implementer` — T009e, re-dispatch | `opus` | ~110k | Done; unit 1752 green; four mutations recorded |
+| `sdd-implementer` — T009f, first dispatch | `opus` | ~92k | **Stopped on a judgment call**: the fit rule gave 20 pt; small-phone truncation; the Dashboard paths; G38's proviso at 34. Three product questions to the person, all accepted as recommended |

@@ -603,6 +603,15 @@ Made by the person on 2026-09-27, at the Phase 3 walkthrough:
     controls), its letters centred vertically on the controls' middle;
     the row stays the controls' height, so the meta line, the search
     field and the first row do not move.
+    **Settled by measurement the same day**, three recommendations the
+    person accepted ("Yes, go with all three"): (a) Plans' title was
+    already truncated at 30 pt under the "Wishlist order" sort on a
+    402 pt screen, so Plans' Sort By capsule reads "Wishlist" for that
+    order while the menu row keeps "Wishlist order"; (b) the title is
+    34 pt where there is room and shrinks to fit where there is not —
+    the narrower phones — never ending in "…"; (c) the Dashboard's
+    drill-down path title stays at 30 pt, only Items, Plans and the
+    Wishlist grow.
 
 ## Proposals (P-items)
 
