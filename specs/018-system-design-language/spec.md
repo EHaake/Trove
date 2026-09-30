@@ -583,6 +583,10 @@ Made by the person on 2026-09-27, at the Phase 3 walkthrough:
     the first row on Plans and on any side without a search field —
     with the search field and the first row staying exactly where they
     are. One line, not two: the meta line keeps its single-line form.
+    **Amended the same day:** the Wishlist's search field moves 4 pt
+    down, level with Items' (81 pt under the header block's top), so
+    both screens share the same token-derived split; the person: "That's
+    fine." "Don't move the search bar" stands for Items.
 
 ## Proposals (P-items)
 
