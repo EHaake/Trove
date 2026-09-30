@@ -911,7 +911,8 @@ legitimate source-scan shape), each `#require`-ing its anchors:
 - **G12c `glassIsOnlyOnTheHeaderBadgesAndTheAddButton`** (P8, Q5; since T009a the list is four files — `SideToggle.swift` joins it, Decision 19). Every
   `.glass`, `.glassProminent`, `.glassEffect(` and `GlassEffectContainer`
   under `Trove/Views` and `Trove/App` sits in `SortMenu.swift`,
-  `OverflowMenu.swift` or `AddButton.swift`, and each of the three has one.
+  `OverflowMenu.swift`, `SideToggle.swift` or `AddButton.swift`, and each
+  of the four has one.
   Mutation: `.glassEffect()` on `PlansCard` → red.
 - **G12d `noUIKitAppearanceProxyAndNoConfirmationDialog`** (criterion 8, R6).
   No `UI[A-Za-z]+\.appearance(` anywhere under `Trove/` — `import SwiftUI`
@@ -1070,7 +1071,7 @@ retired and why each could go); `scripts/verify.sh all`. Then the pre-merge
 | G12 | `MenuPolicyTests` a–d (§7) | a bespoke sort back on the Wishlist; `DropdownHost` restored; glass on `PlansCard`; an appearance proxy; a confirmation dialog |
 | G13 | UI tests, §9, twice back to back. **The switch legs are the toggle's** (T009a): `showSide(_:on:)` taps it by identifier and waits on its `value`, and the four side reads are `value == "Sold"` etc.; the planned segment leg (tap a segment, read its `.isSelected`) is retired — there are no segments | each new test's own mutation: `manualOrder` on Plans; the order setter not writing; the add button's frame changed. No mutation is recorded against the `showSide` reads |
 | G14 | Films: a — the capsule whole on every frame (criterion 1), at T002 (and T003 if needed) and again at T009 on the finished header; b — **the slide is history** (Decision 19: the segmented control it filmed is gone); its successor is T009d's film of the toggle's blur, thirteen candidates on 27.0 and the winner on 26.5, both directions on both screens — no two legible words at once, no clipping, the glass press intact — looked at once more at T013 | — (measurements; the frame tables are the record) |
-| G15 | Unedited and green: `DestructiveColourPolicyTests` (its site counts recorded), `SoldStateWiringTests.theOverflowMenuHostsExactlyOneSystemMenu`, `SettingsWiringTests.theAppearanceSectionLeadsAsASegmentedPickerOverTheChoice` (comment only), `ReorderWiringTests`, `PullToRefreshTests`, `ExportWiringTests.theShareSheetAndFailureAlertAreWired`, `ThemeTests` | — |
+| G15 | Unedited and green: `DestructiveColourPolicyTests` (its site counts recorded), `SoldStateWiringTests.theOverflowMenuHostsExactlyOneSystemMenu`, `SettingsWiringTests.theAppearanceSectionLeadsAsASegmentedPickerOverTheChoice` (comment only), `ReorderWiringTests`, `PullToRefreshTests`, `ExportWiringTests.theShareSheetAndFailureAlertAreWired`; `ThemeTests` edited after all — the `systemLabelExemptions` list (T004b decision review) with entries for `SortMenu.swift`, `OverflowMenu.swift` and `SideToggle.swift`, each stale-checked | — |
 
 Every guard is mutation-verified before it lands; the Done note records what
 was broken and what went red. Every new or rewritten scan `#require`s its
