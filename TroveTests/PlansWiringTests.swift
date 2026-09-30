@@ -174,7 +174,7 @@ struct PlansWiringTests {
     /// the call moved into the empty-state branch → red. Re-run on
     /// `SideToggle` at T009a: `side: $viewModel.wrappedValue.side` → red;
     /// the call moved into the empty-state branch → red.
-    @Test func theSideSwitchReportsThroughShow() throws {
+    @Test func theSideToggleReportsThroughShow() throws {
         let code = try SourceScan.production(Self.view)
 
         let calls = SourceScan.argumentLists(of: "SideToggle", in: code)

@@ -101,7 +101,7 @@ catches): `MenuPolicyTests.theOnlySystemMenuIsTheDetailScreensNavBarOverflow`
 (G6, T001), `theSwitchReportsThroughShowAndBindsToNothing`,
 `theSwitchStandsOutsideTheEmptyState`, `theSwitchIsLabelledAndMarksItsActiveHalfSelected`
 (G10, T007); `PlansWiringTests.noSortDropdownOffersAManualOrder` (G7, T004),
-`theSideSwitchReportsThroughShow` (G10, T007);
+`theSideToggleReportsThroughShow` (G10, T007);
 `ExportWiringTests.theBadgeOpensTheDropdownWhichFiresEveryIntentAndOpensSettings`,
 `theMenuCarriesFiveItemsInThreeGroups`,
 `theItemsListComposesTheScopeChooserOverEveryScope` (G8, T005);
@@ -708,7 +708,7 @@ Handoff notes for the pause reports:
   `Picker`). Tests: **G10** — rewrite `ItemListSidesWiringTests.theSwitchReportsThroughShowAndBindsToNothing`,
   `theSwitchStandsOutsideTheEmptyState`, and `theSwitchIsLabelledAndMarksItsActiveHalfSelected`
   → `theSwitchIsTheSystemSegmentedControlReportingThroughSelect`, and
-  `PlansWiringTests.theSideSwitchReportsThroughShow` (mutations:
+  `PlansWiringTests.theSideToggleReportsThroughShow` (mutations:
   `.pickerStyle(.menu)` → red; the binding's setter `{ _ in }` → red;
   `$viewModel.side` at a call site → red; the call moved into the empty-state
   branch → red). Retire per the table: `theSwitchesSlideIsAtOrUnderTwoTenthsOfASecond`,
@@ -1166,7 +1166,7 @@ Handoff notes for the pause reports:
 
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
-- [ ] **T010 — Delete the bespoke controls and the tests that guarded only them.**
+- [x] **T010 — Delete the bespoke controls and the tests that guarded only them.**
   Per plan §6, Q13. Delete `Trove/Views/Shared/Dropdown.swift`,
   `DropdownHost.swift`, `OverflowBadge.swift`, `OverflowDropdown.swift`,
   `SortPicker.swift`; `ThemeMetrics.dropdownGap` (declaration and value).
@@ -1187,6 +1187,22 @@ Handoff notes for the pause reports:
   **Verify:** `scripts/verify.sh` green (the build is the proof nothing still
   calls them); the grep's zero recorded; `DestructiveColourPolicyTests`
   unedited, its site counts recorded.
+  **Done (2026-09-30).** Nine files deleted (no `.pbxproj` edit: the
+  project uses file-system-synchronized groups); `dropdownGap` gone with
+  its stale "60 = …" comment; eleven files' comments and names corrected
+  (history kept as "the bespoke '…' badge", live sentences as
+  `OverflowMenu`). Grep: 130 lines in 20 files before → 0 after; one
+  remaining substring hit is `AppRouterTests.showingTheSoldSideSwitchesTabsAndAsksForIt`,
+  a `006` name whose "Switches" is the verb — kept. G3's last leg walks
+  `Trove/Views` for `.accessibilityHint("Opens`; mutation: the hint put
+  back on `SortMenu.swift:108` → red (`HeaderControlsWiringTests.swift:165`).
+  `DestructiveColourPolicyTests` unedited: 15 sites in 9 files before and
+  after — exactly at its floors. Carried notes done: the T005 paragraph
+  (36 vs 37 at 1× is a rounding; 109 px at 3×), the "system's control
+  size" phrase (it was in the test file's proviso comment). Left:
+  `design/tokens.md` still names the retired types (→ T012);
+  `DetailOverflowMenu.swift`'s "the app's one system menu" (→ T011).
+  `scripts/verify.sh`: green, 1734 in 231 (the four suites gone).
 
 - [ ] **T011 — The policy guard, inverted.**
   Per plan §7, R6 (criteria 8, 10), and plan Context's constitution
@@ -1370,3 +1386,4 @@ recorded here too.
 | `sdd-implementer` — T009f, re-dispatch | `opus` | ~190k | Done; unit 1756 green; mutations recorded, one (the token at 30) not red and carried to T011 |
 | `skeptical-reviewer` — Phase 3 re-review (T009a–T009f) | `opus` | ~115k | **fix and re-review**: plan §4 still the segmented design; no phase-end UI run recorded. Both fixed (plan rewritten by `sdd-implementer`, ~90k; UI 38/38 at c1f3d4e). Second look and carried notes in the re-review row |
 | `skeptical-reviewer` — Phase 3 re-review, second pass | `opus` | ~40k | **signed off**. Fixed directly: G15's "ThemeTests unedited" and G12c's body (four files). Second look, carried: (T011) the `listTitle` > `screenTitle` relation leg; a leg for the screens' `split(before: headerGapBelow)` padding (the no-move test renders a copy of the stacking); a mutation against G38's restated equality; a pixel leg for the toggle's brass-by-side; a Wishlist-empty render case; `SortMenu`'s spoken label reads `label` (Voice Control label-in-name: visible "Wishlist" vs spoken "Wishlist order"); plan G13's `showSide` reads have no recorded mutation. (T012) `listTitle`/`screenTitle`, the toggle's colour, width and blur, `TitleRowLayout`, the split rule, the short capsule label. (T013) the ink centre on device, the press highlight without `.tint`, 36.33 vs 37, the empty Wishlist's position, 375 pt at larger Dynamic Type (`TitleRowLayout` can propose zero width), the recorder's 26 pt case, the blur on both runtimes |
+| `sdd-implementer` — T010 | `opus` | ~70k | Done; unit 1734 in 231 green; grep 130 → 0; G3 mutation red |

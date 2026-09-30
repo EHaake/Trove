@@ -17,7 +17,8 @@ import SwiftUI
 /// Decision 17): bespoke inside the page, system in the bars. It lives in
 /// the navigation bar beside the system back chevron, drawn in the
 /// system's circle, and stays the system's — while every menu drawn inside
-/// a page's content is Trove's own `DropdownSurface`. `MenuPolicyTests`
+/// a page's content was Trove's own bespoke dropdown until `018` made those
+/// system menus too (`SortMenu`, `OverflowMenu`). `MenuPolicyTests`
 /// pins this file as the only one that may host a `Menu`.
 ///
 /// This changes how Edit and Delete are *reached*, and nothing else. Each

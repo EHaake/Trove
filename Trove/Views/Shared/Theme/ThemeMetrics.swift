@@ -56,10 +56,6 @@ struct ThemeMetrics: Sendable, Equatable {
     /// Between the search box and the category chip row beneath it. Tighter
     /// than a section gap: the two are one filter control, not two sections.
     let controlRowGap: CGFloat
-    /// Between a header badge's bottom edge and the dropdown it opens (013
-    /// Amendment A). What the lists' old fixed offset resolved to: 60 =
-    /// `sectionGap` 24 + the badge's 30 + this 6.
-    let dropdownGap: CGFloat
 
     /// tokens.md calls these out individually because the Sell Plan row is the
     /// one layout with a future trend indicator to leave room for.
@@ -115,7 +111,6 @@ extension ThemeMetrics {
         calloutEdgeWidth: 2,
         wordmarkTracking: 5,
         controlRowGap: 16,
-        dropdownGap: 6,
         sellPlanRowPaddingVertical: 15,
         sellPlanRowPaddingHorizontal: 14,
         sellPlanRowInternalGap: 12,

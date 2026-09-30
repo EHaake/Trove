@@ -108,6 +108,13 @@ struct HeaderControlsWiringTests {
     /// init and the body's modifier, and the file carries no hint. Mutations
     /// (T009a): `.accessibilityIdentifier(identifier)` dropped from the body
     /// → red; `.accessibilityHint("Shows the other side")` added → red.
+    ///
+    /// Its last leg (T010), once the bespoke badges are gone: no view under
+    /// `Trove/Views` carries an "Opens …" hint at all — the phrase each
+    /// bespoke badge used to announce what it opened — so one can't return on
+    /// a control the legs above don't name. Comments and previews are
+    /// stripped first. Mutation (T010): `.accessibilityHint("Opens sort
+    /// options")` put back on `SortMenu`'s button → red.
     @Test func everyConvertedHeaderControlKeepsItsIdentifierAndCarriesNoHint() throws {
         for (path, anchor, identifier) in [
             ("Trove/Views/Items/ItemListView.swift", "private var sortControl: some View", "sortOptions.items"),
@@ -148,6 +155,14 @@ struct HeaderControlsWiringTests {
         ] {
             #expect(built == identifier, "a side toggle is identified `\(built)` rather than `\(identifier)` — the UI tests find it by it")
         }
+
+        var opensHints: [String] = []
+        for path in try SourceScan.swiftFiles(under: "Trove/Views", minimum: 40) {
+            if try SourceScan.production(path).contains(".accessibilityHint(\"Opens") {
+                opensHints.append(path)
+            }
+        }
+        #expect(opensHints.isEmpty, "a view carries an \"Opens …\" hint again — the system menus announce themselves (criterion 11): \(opensHints)")
     }
 
     /// G4 (criterion 4, plan §2): `OverflowMenu`'s busy branch — while an

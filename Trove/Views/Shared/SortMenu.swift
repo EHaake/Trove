@@ -18,7 +18,7 @@ enum SortMenuCopy {
 /// per option under one "Sort by" header, the current option checked (spec
 /// "Sort By", plan §1).
 ///
-/// Replaces `SortBadge` + `SortDropdown` screen by screen. One per side on a
+/// Replaced the bespoke sort badge and its dropdown screen by screen. One per side on a
 /// two-sided screen, each over its side's own options and selection, so the
 /// label is always the selection of the menu it opens. Generic over
 /// `Hashable` rather than `Identifiable` so the header's render test can
@@ -80,7 +80,7 @@ struct SortMenu<Option: Hashable>: View {
             }
         } label: {
             HStack(spacing: 8) {
-                // The three-bar sort glyph at `SortBadge`'s token widths.
+                // The three-bar sort glyph at the bespoke sort badge's token widths.
                 VStack(alignment: .leading, spacing: 2.5) {
                     bar(width: 10)
                     bar(width: 7)

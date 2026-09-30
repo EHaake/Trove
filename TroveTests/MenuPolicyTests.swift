@@ -3,8 +3,9 @@ import Testing
 @testable import Trove
 
 /// Spec 013 Amendment A, Decision 17 and criterion 27: **bespoke inside the
-/// page, system in the bars.** Every menu drawn inside a page's content is
-/// the app's own `DropdownSurface`; the one system `Menu` left is the
+/// page, system in the bars.** Every menu drawn inside a page's content was
+/// the app's own bespoke dropdown until `018` made those system menus too
+/// (the allowlist below); before it the one system `Menu` was the
 /// detail screens' nav-bar "…" (`DetailOverflowMenu`), which lives in the
 /// bar beside the system back chevron.
 ///

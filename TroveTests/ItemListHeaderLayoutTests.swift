@@ -17,7 +17,7 @@ import Testing
 /// afternoon; the render can, off-device, in a second.
 ///
 /// Every case measures the real ingredients — `SortMenu` and `OverflowMenu`
-/// (`OverflowBadge` until `018` T005) as the trailing row, a `.monoLabel()` line as the meta, the copy composed
+/// (the bespoke "…" badge until `018` T005) as the trailing row, a `.monoLabel()` line as the meta, the copy composed
 /// by `SaleCopy` rather than typed out here — at the width the header is laid
 /// out in on the device criterion 3 was measured on.
 ///
@@ -38,7 +38,7 @@ import Testing
 /// `VStack` beside the badges and every line long enough to wrap goes red;
 /// render the baseline at width 200 instead and **all** of them go red, which
 /// is what proves the instrument can see a wrap at all rather than only
-/// agreeing with itself; fatten `OverflowBadge`'s vertical padding and the
+/// agreeing with itself; fatten the bespoke "…" badge's vertical padding and the
 /// empty-trailing case alone goes red, which is what made the 30 pt proviso
 /// a measurement instead of a claim. T001 (`018`) re-ran all three
 /// on the stand-in, and added a fourth: `SortMenu` at `.controlSize(.large)`
@@ -58,10 +58,10 @@ import Testing
 /// 95 × 37 on the Owned side — 95 wide under every one of its seven
 /// selections — and 102 × 37 on the Sold side; the badge row 145 × 37 on
 /// the Owned side (under "Market ↓") and 152 × 37 on the Sold side (under
-/// "Date sold"), `OverflowBadge` 42 × 30 beside it; the header 57 pt on both
+/// "Date sold"), the bespoke "…" badge 42 × 30 beside it; the header 57 pt on both
 /// sides against 53 pt with no badges, the meta line 14 pt — so 37 + 6 + 14
 /// still holds and the badge row still sets the height. Its mutation: the
-/// label's padding removed → the badge row falls to `OverflowBadge`'s 30 pt,
+/// label's padding removed → the badge row falls to the "…" badge's 30 pt,
 /// the header to 53 pt on both sides, level with the no-badge header, and
 /// all three proviso expectations go red.
 ///
@@ -71,8 +71,10 @@ import Testing
 /// renders 145 × 37 on the Owned side (under "Market ↓") and 152 × 37 on the
 /// Sold side, `OverflowMenu` 42 × 36 beside it; the header 57 pt on both
 /// sides against 53 pt with no badges. The Owned sort badge renders 95 × 37,
-/// the Sold 102 × 37 — so `theTwoBadgesRenderAtOneHeight` reads 36 against
-/// 37.
+/// the Sold 102 × 37 — 36 against 37 at 1×, a third of a point rounded
+/// apart. `theTwoBadgesRenderAtOneHeight` (since T009a
+/// `theThreeBadgesRenderAtOneHeight`) therefore measures at 3×, where the
+/// "…" and both sort badges render 109 px tall, exactly equal.
 ///
 /// **Re-measured at `018` T006a** (spec Decision 18): Sort By sized to its
 /// text, the "…" a glass circle on a 22 pt glyph row. The badge row renders
@@ -82,8 +84,8 @@ import Testing
 /// The header is 57 pt on both sides and under every Owned label, against
 /// 53 pt with no badges, the meta line 14 pt: 37 + 6 + 14 still holds. At 3×
 /// the "…" renders 108 × 109 px, the Owned sort badge (under "Custom")
-/// 245 × 109 and the Sold 305 × 109. `theSortBadgeIsOneWidthForEverySelection`
-/// is retired with P4.
+/// 245 × 109 and the Sold 305 × 109. The case that held Sort By at one width
+/// for every selection is retired with P4.
 ///
 /// **At `018` T009a** (spec Decision 19) the side toggle joins the row,
 /// leading Sort By, and its own row under the header goes: the badge row
@@ -144,8 +146,8 @@ struct ItemListHeaderLayoutTests {
     /// beside it.
     ///
     /// The baseline is the zero-sales line under the Sold side's default
-    /// label, measured rather than remembered as a number (the
-    /// `DropdownPlacementTests` rule) — the title's type, the badges' padding
+    /// label, measured rather than remembered as a number (the rule
+    /// the retired dropdown placement suite kept) — the title's type, the badges' padding
     /// or the mono line's leading could all move it, and every case is a
     /// comparison against this one rather than against a constant that would
     /// quietly describe last year's header. It is also the case the device
@@ -158,9 +160,9 @@ struct ItemListHeaderLayoutTests {
         let baseline = try headerHeight(meta: soldSummary(count: 0, proceeds: 0, realised: 0), trailingSize: baselineRow)
 
         // The proviso as plan Q6 rewrote it (spec Decision 16, T004a): the
-        // badges are at the system's control size, taller than the title's
-        // baseline, so the badge row — not the title — sets the header's
-        // height, and it must do so the same way on both sides: badge row
+        // badges are at `SortMenu`'s `.regular` size and label padding (spec
+        // Decision 17, T004b), so the badge row — not the title — sets the
+        // header's height, and it must do so the same way on both sides: badge row
         // plus the meta line's share of the gap under the header (spec
         // Decision 22, T009e) plus one meta line. The meta line is
         // measured alone, where it cannot wrap. Stripping the badges out
@@ -298,7 +300,7 @@ struct ItemListHeaderLayoutTests {
     /// capsule height on both sides. Measured at 3× with exact equality, each
     /// rendered alone, against both sides' sort badges: at 1× a third of a
     /// point rounds away or up by accident, and a 14 pt glyph row (the height
-    /// `OverflowBadge` used) is exactly that third short.
+    /// the bespoke "…" badge used) is exactly that third short.
     ///
     /// Its mutations (T005): the glyph row back at `.frame(height: 14)` → red;
     /// `OverflowMenu` at `.controlSize(.small)` → red; the hidden line's font

@@ -1110,13 +1110,13 @@ final class TroveUITests: XCTestCase {
         // hiding them. The badge is present and names *this* side's order —
         // "Date sold", not "Date" — the search field is there, and the chips
         // are the sold half's categories only.
-        let soldSortBadge = app.buttons["sortOptions.items"]
-        XCTAssertTrue(soldSortBadge.waitForExistence(timeout: 5), "Sort By must show on the Sold side (014 criterion 3)")
-        waitForLabel(soldSortBadge, "Sort by Date sold")
+        let soldSortMenu = app.buttons["sortOptions.items"]
+        XCTAssertTrue(soldSortMenu.waitForExistence(timeout: 5), "Sort By must show on the Sold side (014 criterion 3)")
+        waitForLabel(soldSortMenu, "Sort by Date sold")
         XCTAssertEqual(
-            soldSortBadge.label,
+            soldSortMenu.label,
             "Sort by Date sold",
-            "the badge must name the Sold side's own default order — it reads \"\(soldSortBadge.label)\""
+            "the badge must name the Sold side's own default order — it reads \"\(soldSortMenu.label)\""
         )
 
         // 014 criterion 3's measured half (G39, plan Q18): the switch's top
@@ -1157,13 +1157,13 @@ final class TroveUITests: XCTestCase {
             "the Owned side should list the item that wasn't sold"
         )
         XCTAssertFalse(soldRow(in: app, named: "Telecaster").exists, "a sold item must not appear on the Owned side")
-        let ownedSortBadge = app.buttons["sortOptions.items"]
-        XCTAssertTrue(ownedSortBadge.waitForExistence(timeout: 5), "Sort By stays on the Owned side")
-        waitForLabel(ownedSortBadge, "Sort by Date")
+        let ownedSortMenu = app.buttons["sortOptions.items"]
+        XCTAssertTrue(ownedSortMenu.waitForExistence(timeout: 5), "Sort By stays on the Owned side")
+        waitForLabel(ownedSortMenu, "Sort by Date")
         XCTAssertEqual(
-            ownedSortBadge.label,
+            ownedSortMenu.label,
             "Sort by Date",
-            "the Owned side's Sort By is unchanged (criterion 7) — it reads \"\(ownedSortBadge.label)\""
+            "the Owned side's Sort By is unchanged (criterion 7) — it reads \"\(ownedSortMenu.label)\""
         )
 
         let ownedSwitchTop = switchControl.frame.minY
@@ -2559,7 +2559,7 @@ final class TroveUITests: XCTestCase {
     /// the Plans tab, with nothing stored, Delete All Sell Plans is there and
     /// dimmed (criterion 22).
     ///
-    /// Its mutation: removing the Plans tab's `OverflowBadge` must turn the
+    /// Its mutation: removing the Plans tab's `OverflowMenu` must turn the
     /// Plans leg's badge assertion red.
     @MainActor
     func testEveryTabsRootReachesSettings() {

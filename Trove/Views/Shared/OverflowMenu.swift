@@ -4,7 +4,7 @@ import SwiftUI
 /// screen writes (spec "The '…' menus", plan §2). Spinner and inert while an
 /// export or import runs.
 ///
-/// Replaces `OverflowBadge` + `OverflowDropdown` (plan Q2). **No shared row
+/// Replaced the bespoke "…" badge and its dropdown (plan Q2). **No shared row
 /// set**: the screen writes its own rows in the `@ViewBuilder` — the Items
 /// list's export rows are submenus, the Wishlist's are buttons, and the
 /// Dashboard's and Plans' menus are one row — so a shared four-row view would

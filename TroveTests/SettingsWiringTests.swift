@@ -247,7 +247,7 @@ struct SettingsWiringTests {
     /// what is a view-body fact no view model can observe — the
     /// `MenuPolicyTests` shape; the behavioural half is the UI test that opens
     /// Settings from all four tabs.
-    /// Mutations (T019): Plans' `OverflowBadge` removed → red; `PlansView`
+    /// Mutations (T019): Plans' bespoke "…" badge removed → red; `PlansView`
     /// taken out of `settingsHosts` → red; the Plans tab's root swapped for
     /// `SellPlanView(…)` in `ContentView` → red. Rewritten at `018` T005 for
     /// the system menu; its mutations: Plans' `OverflowMenu` replaced by a
