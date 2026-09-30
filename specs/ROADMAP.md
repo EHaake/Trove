@@ -715,6 +715,10 @@ actually useful once the app is in daily use.
   all, and declined it as a third value beside New and Used because a
   gift can itself be new or used. A gift stays a zero purchase price.
   How the charts treat zero-price items is `023`'s question.
+  **Widened at the person's reading of the Draft** to a **new/used
+  preference on wishlist entries** ("Looking for new / used"), which
+  also chooses which Reverb listings a wanted item's market figure reads
+  — new stock for New, today's used listings for Used or unstated.
 - **`021-import-expansion`** — **the person's requirement**: they keep
   their collection in **Google Sheets as well as in the app**, so they
   can update it there on their own, and want **interoperability between
