@@ -669,73 +669,128 @@ actually useful once the app is in daily use.
   assumption, and settling `018`'s chrome question first keeps this pass
   from designing surfaces that are about to be replaced.
 - **A collection at real scale — five specs from one conversation**
-  (2026-09-29). The person compiled their own gear into a spreadsheet
-  ahead of importing it: **90 owned items, 7 top-level categories, 25
-  leaf paths**, Photo alone 52 items and two-thirds of the value, 30 of
-  them in a single `Photo/Lenses` leaf. Read against the code, the app
-  does not hold that well — every list is one flat column of ~78 pt
-  cards, the chip row offers one chip per full path (25 here), nothing
-  groups or filters by anything but category, and the Dashboard's
-  breakdown has three swatches assigned by position, so four of seven
-  top-level categories would draw grey. The conversation split the work
-  into the five entries below, each its own spec conversation; `020`
-  was opened first because it is the smallest and should land before
-  the 90-row import, so the rows carry it in one pass rather than 90
-  hand edits.
-- **`020-purchase-provenance`** — whether an item was **bought new or
+  (2026-09-29, a spec session opened on `018`'s branch and moved to its
+  own worktree). The person compiled their own gear into a spreadsheet
+  ahead of importing it and concluded the app "won't be able to manage
+  this amount of gear well." They described **two problems, one
+  informing the other**: how to organise, sort through and display a
+  large collection across categories; and how the Dashboard shows
+  information — statistics and charts that are "easy to understand and
+  pretty to look at," that show the collection "in interesting and fun
+  ways," and that **also help the person navigate and organise** the
+  items rather than only report on them. The Dashboard half may shape
+  the list half, which is why they are separate specs but one
+  conversation.
+
+  **The data that prompted it** (the person's spreadsheet, read in the
+  session): **90 owned items, 7 top-level categories, 25 leaf paths**.
+  Photo is 52 items and two-thirds of the value, 30 of them in a single
+  `Photo/Lenses` leaf; Audio 17; Displays 7; Microphones 5; Instruments
+  4; PC Components 3; Computers 2. Ten purchase places, but eBay alone
+  is 57 items and $52.5k of $85k spent. 57 of the 90 were bought in
+  2025–26. Four items at $0.00 are gifts.
+
+  **The app against it** (read from the code in the session): every list
+  is one flat column of ~78 pt cards with no grouping or sections; the
+  chip row offers one chip per full category path (25 here), so it
+  scrolls sideways past most of them; nothing filters by place,
+  condition, year or desire; the Dashboard's "By category" breakdown
+  groups by the next path segment and drills down, but colours rows by
+  position from three swatches, so four of seven top-level categories
+  would draw grey and a category's colour changes when the sort does;
+  Swift Charts is imported nowhere.
+
+  **Order the person set**: `020` first (smallest, and it should land
+  before the ninety-row import). The rest are each **their own spec
+  conversation**, not settled here; the list and Dashboard ones in
+  particular are expected to be **serious redesigns and design
+  additions**, so each wants a design pass before its spec.
+- **`020-purchase-provenance`** (**spec drafted 2026-09-29**, on branch
+  `020-purchase-provenance`) — whether an item was **bought new or
   used**, which the app has never recorded: the only signal is
-  `Condition.new`, which conflates how it was acquired with the state
-  it is in now. Same spec: **Very Good** joins the condition scale
-  between Excellent and Good (the person's spreadsheet grades ten items
-  that way; Reverb's own scale has it). A **gift** is recorded as a
-  purchase price of zero — the person's four $0.00 rows are gifts — and
-  the person is not sure a gift needs a field of its own; settle that
-  in this spec's conversation, not later.
-- **`021-import-expansion`** — the importer accepts only the app's own
-  template exactly. The person keeps their collection in Google Sheets
-  as well and wants the two to interoperate. Their sheet fails the gate
-  on every count: 10 of the template's 18 columns, prices written
-  `$3,179.95`, dates `5/1/2025`, a condition (Very Good) the scale lacks
-  until `020`, and blank separator rows plus a totals row. Two halves:
-  **lenient reading** of what a spreadsheet actually produces, and a
-  **round trip** — export the whole collection, edit many items in a
-  sheet, re-import to **update the existing items and add the new
-  ones**. The second half is architectural: import today only ever
-  *adds* rows, so it needs a stable identity per item that survives a
-  spreadsheet edit, a rule for matching, and a decision about what an
-  update may overwrite.
-- **`022-grouped-browsing`** — the Items list at 90+ items. The
-  person's starting idea: a **grouped view of top-level categories, each
-  opening into the list with that category's filter already applied**.
-  Candidates the conversation raised, none decided: collapsible
-  sections with per-section totals; a two-level category filter (top
-  level, then leaf) instead of one chip per full path; a compact row;
-  filters by place, condition, year and desire; bulk re-categorising.
-  A serious redesign — expect a Claude Design pass before the spec.
-- **`023-dashboard-charts`** — charts and statistics on the Dashboard
-  that are **navigation as well as display: tapping a segment opens the
-  matching filtered list**, extending the category and unvalued jumps
-  that already exist. Ideas from the person's own data: value split by
-  category with drill-down; spent versus worth now by purchase place
-  (eBay is 57 of 90 items and holds about 95 % of what was paid); an
-  acquisition timeline with cumulative spend (57 of 90 items bought in
-  2025–26); biggest gains and losses; how much value sits at the
-  sell-candidate desire levels. Depends on `022` for the filters the
-  charts jump to, and on **`008-category-colors`** — a real palette
-  for seven-plus top-level categories — which may fold in here. Swift
-  Charts is an Apple framework, so no dependency question arises. A
-  value-over-time chart is **`016`**'s, not this spec's; a collection
-  this size is one more argument for starting `016` early.
-- **Organising by system or brand** — the person's spreadsheet is laid
-  out by **camera system** (Sony, Canon R5, Leica, Nikon Zf,
-  Hasselblad, then tripods and bags), not by category; the app can only
-  say `Photo/Lenses`. The person expects a guitar collector would
-  group by brand instead, so the concept is a second axis that is not
-  always the same thing. Deeper category paths
-  (`Photo/Lenses/Sony E`) work today with no change; a separate
-  kit/system field or tags is the alternative, and an adapter that
-  bridges two systems is the case that separates them. The person has
-  not chosen — its own spec conversation, and it bears on `022`.
+  `Condition.new`, which conflates how it was acquired with the state it
+  is in now. Same spec: **Very Good** joins the condition scale between
+  Excellent and Good, as the person sees it. **Gifts**: the person's
+  four $0.00 rows are gifts; they were unsure a gift needs recording at
+  all, and declined it as a third value beside New and Used because a
+  gift can itself be new or used. A gift stays a zero purchase price.
+  How the charts treat zero-price items is `023`'s question.
+- **`021-import-expansion`** — **the person's requirement**: they keep
+  their collection in **Google Sheets as well as in the app**, so they
+  can update it there on their own, and want **interoperability between
+  the two**. Two halves, both theirs:
+  - **Lenient reading.** Fix the importer to handle what their sheet
+    actually is. Today it accepts only the app's own template exactly,
+    and the sheet fails on every count: 10 of the template's 18 columns
+    (no Condition Notes, Notes, Reverb ID, Year or sale columns), prices
+    written `$3,179.95`, dates `5/1/2025`, a condition (Very Good) the
+    scale lacks until `020`, blank separator rows between groups, and a
+    totals row at the bottom.
+  - **A round trip.** Their example: to change many items at once,
+    **export the full collection, edit it in Google Sheets, and
+    re-import it — updating the items that already exist and adding
+    any that are new.** The person expects this to need **architectural
+    changes**, and it does: import today only ever *adds*, so it needs
+    a stable identity per item that survives a spreadsheet edit, a rule
+    for matching a row to an item (and what happens when a match fails
+    or two rows claim one item), and a decision about what an update
+    may overwrite — photos, the Reverb match and sale fields are not in
+    a sheet the same way. Deletion by omission is an open question the
+    person has not been asked. This is also how Bought (`020`) gets set
+    on an existing collection in bulk.
+- **`022-grouped-browsing`** — the Items list at 90+ items; the
+  person's first-named problem, "how to organize, sort through and
+  display lots of gear across categories better." **The person's own
+  idea**: a **different, grouped view — the top-level categories listed
+  first, each opening into the list with that category's filter already
+  applied** ("something like that" — a direction, not a design).
+  Candidates raised in the session, none decided: collapsible sections
+  with per-section totals; a two-level category filter (top level,
+  then leaf) in place of one chip per full path; a compact row; filters
+  by place, condition, year, desire and (after `020`) new or used;
+  bulk re-categorising. The organising-by-system entry below bears on
+  it. Expected to be a serious redesign — a design pass before the
+  spec.
+- **`023-dashboard-charts`** — **the person's framing**: statistics and
+  charts that are easy to understand, pretty, and fun, **and that you
+  can drill down into** — tapping a chart takes you to the matching
+  subset of a list. They noted the app **already jumps from the
+  Dashboard to a filtered list** (category rows, the unvalued callout,
+  the Sold card), so this is an expansion of an existing idea rather
+  than a new one. **Their examples**: the value split between
+  categories; the total value of items bought from each place; a time
+  chart of when items were acquired and what they are worth. Ideas
+  added in the session from their data: spent versus worth now by place
+  (eBay buys hold about 95 % of what was paid; B&H about 111 %); a
+  cumulative-spend line (57 of 90 bought in 2025–26); biggest gains and
+  losses; how much value sits at the sell-candidate desire levels,
+  which is the app's core loop. Open questions: **zero-price gifts**
+  read as 100 % gain unless the charts treat them apart; a real
+  **palette for seven-plus top-level categories** is `008-category-colors`,
+  which probably folds in here or goes just before; the jumps need
+  filters the list does not have yet (place, year), which is why `022`
+  comes first. Swift Charts is an Apple framework, so no dependency
+  question. A chart of the collection's **value over time** needs
+  `016`'s snapshots, not this spec — and a collection this size is one
+  more argument for starting `016` early. Expected to be a serious
+  redesign — a design pass before the spec.
+- **Organising by system or brand** — spotted in the session: the
+  person's spreadsheet is grouped by **camera system** (Sony, Canon R5,
+  Leica, Nikon Zf, Hasselblad, then tripods and heads, then bags), with
+  blank rows between groups — not by category. The app can only say
+  `Photo/Lenses`, so 30 lenses across five mounts are one pile. **The
+  person agrees it should be supported**, with two observations of
+  their own: in their collection it **only makes sense for the camera
+  gear**, and **someone with a large guitar collection might organise
+  by brand instead** — so the concept is a second, optional axis that
+  means different things in different hobbies, not a fixed "mount"
+  field. **They are not sure yet what the best way is**, and want it as
+  its own spec conversation. Options on the table: deeper category
+  paths (`Photo/Lenses/Sony E`), which work today with no change but
+  split lenses away from each other rather than grouping a kit; a
+  separate kit/system/brand field; or tags. The case that separates
+  them is an adapter bridging two systems (the person owns a TTArtisan
+  M-to-Z). Bears on `022`.
 - **`010-item-management-enhancements`** — Came up right as `001` was
   wrapping up: a request for swipe-left-to-delete on `ItemListView`/
   `WishlistView` rows (standard iOS convention), which grew into wanting
