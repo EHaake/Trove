@@ -1274,7 +1274,7 @@ Handoff notes for the pause reports:
   count stays 1); the colour scans now share `SourceScan`'s
   `//`-in-a-string blind spot.
 
-- [ ] **T012 — The design documents say what the app now does.**
+- [x] **T012 — The design documents say what the app now does.**
   Per plan §8 (criterion 14). `design/brief.md`: "Menus and chrome" rewritten
   to **System controls, Trove content**, recording that it supersedes `013`
   Amendment A's rule and quoting that rule as history; the "no rendered
@@ -1289,6 +1289,22 @@ Handoff notes for the pause reports:
   **Verify:** `grep -c` recorded: `brief.md` names "System controls, Trove
   content" and "superseded"; `tokens.md` names no `DropdownSurface`,
   `OverflowBadge`, "232px" or "Dismiss catcher"; `scripts/verify.sh` green.
+  **Done (2026-09-30).** brief.md: "System controls, Trove content"
+  (3 hits; "superseded" 1) with `013` Amendment A quoted as history and
+  the glass exception added to "no rendered materials". tokens.md: the
+  Sort picker and "…" sections cut to what stays Trove's with what each
+  opens (36.33 pt tall; the circle 36.67 × 36.33); new **List header
+  (`018`)** and **Add button (`018`)** entries; a Sizes row for
+  `listTitle`; the `006` switch rows and the Plans switch/Trailing rows
+  replaced by the side toggle; `DropdownSurface`, `OverflowBadge`,
+  "232px", "Dismiss catcher", `DropdownRow`, `dropdownGap`,
+  `OverflowDropdown` all 0 in both files ("bespoke dropdown (`013`,
+  retired in `018`)" the only history form). Departures from plan §8,
+  each forced by a later decision: four glass controls not three; the
+  toggle's brass a `foregroundStyle`; no hints; the order control
+  without glass. Finding: the code comment on `MetaLineSpacing.split`
+  calls the gap `sectionGap` = 15 while tokens.md's Section gap is 22–28
+  (→ the sweep). `scripts/verify.sh`: green, 1740 in 231.
   **Phase 4 closes here — `walkthrough: none`; after its review, run on.**
 
 ## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; the person's own checks (the Accessibility Inspector, Reduce Transparency if the simulator can't switch it, the one-language attestation) are named in T013 as their steps, and nothing new is built
@@ -1414,3 +1430,4 @@ recorded here too.
 | `skeptical-reviewer` — Phase 3 re-review, second pass | `opus` | ~40k | **signed off**. Fixed directly: G15's "ThemeTests unedited" and G12c's body (four files). Second look, carried: (T011) the `listTitle` > `screenTitle` relation leg; a leg for the screens' `split(before: headerGapBelow)` padding (the no-move test renders a copy of the stacking); a mutation against G38's restated equality; a pixel leg for the toggle's brass-by-side; a Wishlist-empty render case; `SortMenu`'s spoken label reads `label` (Voice Control label-in-name: visible "Wishlist" vs spoken "Wishlist order"); plan G13's `showSide` reads have no recorded mutation. (T012) `listTitle`/`screenTitle`, the toggle's colour, width and blur, `TitleRowLayout`, the split rule, the short capsule label. (T013) the ink centre on device, the press highlight without `.tint`, 36.33 vs 37, the empty Wishlist's position, 375 pt at larger Dynamic Type (`TitleRowLayout` can propose zero width), the recorder's 26 pt case, the blur on both runtimes |
 | `sdd-implementer` — T010 | `opus` | ~70k | Done; unit 1734 in 231 green; grep 130 → 0; G3 mutation red |
 | `sdd-implementer` — T011 | `opus` | ~200k | Done; unit 1740 in 231 green; thirteen mutations red (plan §7's five and eight for the carried legs) |
+| `sdd-implementer` — T012 | `opus` | ~80k | Done; greps recorded; unit 1740 green |

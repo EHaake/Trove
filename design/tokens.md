@@ -196,7 +196,7 @@ background differs from the screen's gets the plate.* That covers list rows
 (resting or swiped open — the swipe-reveal mockup's plain border was
 illustrating the gesture, not final chrome), the detail screens' cards, the
 dashboard's Spent/Gain figures, the search field, photo heroes, the sell
-plan's cards, both dropdowns, and every form field on both forms. A new
+plan's cards, and every form field on both forms. A new
 card gets it by default; *not* having it is what needs a reason.
 
 Four surfaces are deliberately outside the rule, all because they have no
@@ -213,64 +213,81 @@ bevel does the separating, so a border now draws **only** for state — rust
 when a field is invalid, and brass when the category field is focused —
 never as resting chrome.
 
-### Sort picker (`010`) — and the shared dropdown surface (`013` Amendment A)
+### Sort picker (`010`) — a system menu since `018`
 
-Same component now used on both `ItemListView` and `WishlistView`,
-extended to hold four options each rather than redesigned — a compact
-badge showing the current selection, opening a dropdown on tap. Its
-footprint doesn't grow with option count, which is what resolved the
-earlier open question about whether four options would crowd either
-header.
-
-Since `013` Amendment A the dropdown is the **shared surface every
-in-page menu opens** — `DropdownSurface` and `DropdownRow` in code: the
-lists' and the Dashboard's "…" and the Dashboard's category-order
-control draw on it too, differing only in their rows and in whether
-they carry a header. Sort By's rows are the selected/REORDER shape
-below; the additions the other menus need — a group break, a disabled
-row, the placement — follow the table.
+Same component on Items, the Wishlist and Plans — a compact badge showing
+the current selection. Since `018` it is a Liquid Glass button opening
+the system menu (`SortMenu`): one "Sort by" header over checkmark rows,
+the current option checked, and the manual order's row carrying the
+subtitle "Drag rows to reorder" (what the REORDER tag became). The
+system draws the menu — its surface, rows, checkmark and motion — so what
+is recorded here is only what stays Trove's. Until `018` it opened the
+bespoke dropdown (`013`, retired in `018`), whose surface, row and
+placement tokens went with it (see `brief.md`'s *System controls, Trove
+content*).
 
 | Property | Value |
 |---|---|
-| Badge border | `1px solid accentBrass` (`#C79A56`), `3px` radius |
-| Badge padding | `8px 12px` |
-| Badge text | IBM Plex Mono, `11px`, `accentBrass` |
-| Badge sort-icon | three horizontal bars, widths `10px`/`7px`/`4px`, `1.5px` tall, `2.5px` gap, `currentColor` |
-| Dropdown width | `232px` |
-| Dropdown background/border | `surface` (`#201F1D`) / `1px solid divider` (`#3A3B3E`), `3px` radius |
-| Header row — "SORT BY" here, "ORDER BY" on the Dashboard's order dropdown, none on the "…" menus | padding `11px 14px 9px`, IBM Plex Mono `10px`, letter-spacing `0.16em`, `textQuiet` |
-| Row padding | `12px 14px`, `1px solid surfaceInset` top border between rows |
-| Selected row | text `accentBrass`, `13.5px`, background `accentBrassTint` |
-| Selected row, "Custom" specifically | adds a "REORDER" label (IBM Plex Mono `9.5px`, letter-spacing `0.12em`, `textQuiet`) and a `12×12` brass checkmark, `1.6px` stroke — the other three options show no such label |
-| Unselected row | text `textBody` (`rgba(242,237,228,0.75)`), `13.5px` |
-| Group break (`013` A, P10) | the row's own top border drawn in `divider` (`#3A3B3E`) instead of `surfaceInset` — one hairline, three times the separator's contrast on `surface`; the "…" menus' three groups |
-| Disabled row (`013` A, P11) | text `textDisabled` (`rgba(242,237,228,0.35)`) *under* the button's own disabled dimming (a further `0.5` on the alpha, composited in sRGB — measured, not designed); the compound `SettingsActionRow` ships. Inert, dimmed to VoiceOver |
-| Placement (`013` A) | trailing edge at the screen gutter (`24px`), whatever badge opened it; `6px` below the badge (`dropdownGap` — what the lists' old fixed `60px` offset resolved to), or above it when it would run past the tab bar. **Animation** (`013` Decision 20): grows out of the badge — a scale from `0.92` anchored at the badge's trailing edge, with a fade — on `.snappy(duration: 0.25)` opening and `.easeOut(duration: 0.15)` closing; the fade alone under Reduce Motion |
+| Opens | the system menu; Trove supplies only its "Sort by" header, its rows and the one subtitle |
+| Surface | `.buttonStyle(.glass)` at `.controlSize(.regular)` — a glass capsule; no border and no fill of Trove's (`018` Decision 17) |
+| Label colour | the system's primary label colour, as the button's tint — `.tint(.primary)` directly after the glass style, which paints its label with the tint and ignores the label's own foreground; it overrides the root brass tint (`018` Decisions 15, 17) |
+| Label text | IBM Plex Mono `11` (`SortMenuCopy.labelFont`), the current option's name, left-aligned `8` after the glyph |
+| Label padding | `4` above and below; none horizontally of Trove's own — the glass style's insets (12.33 pt left, 13.33 pt right on iOS 27.0) |
+| Height | **36.33 pt** rendered — between the system's two control sizes (Decision 17); the "…" and the side toggle render at the same height (`ItemListHeaderLayoutTests`, G1) |
+| Width | the current option's text (Decision 18). On iOS 26.5 a narrow-to-wide relabel holds the old width for about 1.4 s, then snaps right — an accepted, recorded flaw; iOS 27.0 is clean |
+| Sort glyph | three bars, widths `10`/`7`/`4`, `1.5` tall, `2.5` gap, drawn as primary-coloured views (a shape under the tint drew dimmed on the device) |
+| Short label (Plans) | on Plans' Active side the capsule reads **Wishlist** under the "Wishlist order" sort, the menu row keeping "Wishlist order", so the title keeps its room (`018` Decision 23) |
 
-The "REORDER" label appearing only on the "Custom" row (not on every
-row's selected state generically) is what replaces the old standalone
-button — see `plan.md`'s Resolved decisions.
+### Export badge and menu (`011`) — the "…", a system menu since `018`
 
-### Export badge and menu (`011`)
-
-The "…" overflow control, sitting right of the sort badge on both list
-screens and drawn to its proportions so the pair reads as one control
-family. It shows regardless of collection size since `012` (criterion
-1, superseding `011`'s hide-when-empty rule): its menu carries Import
-and, since `013`, Settings, both always enabled. Since `013` Amendment
-A the same pill sits at the root Dashboard's top-right (P8), holding
-Settings alone.
+The "…" overflow control, right of the other header controls on Items,
+the Wishlist and Plans, and at the root Dashboard's top-right. It shows
+regardless of collection size since `012`. Since `018` it is a Liquid
+Glass circle opening the system menu the screen writes (`OverflowMenu`);
+the system draws the menu, its group breaks, its disabled rows and its
+submenus. From `011` to `013` it was a system `Menu`, as it is again;
+between, it opened the bespoke dropdown (`013`, retired in `018`).
 
 | Property | Value |
 |---|---|
-| Badge border | `1px solid accentBrass`, `3px` radius — the sort badge's |
-| Badge padding | `8px 12px` — the sort badge's |
-| Badge glyph | SF `ellipsis`, `15px` semibold, `accentBrass`, in an `18×14` frame sized against the sort badge's text row |
-| Exporting state | glyph swaps to a small `ProgressView` tinted brass; whole control disabled |
-| Menu | **bespoke since `013` Amendment A** — `OverflowDropdown` on the Sort picker's surface above, opened on the screen's dropdown host: five rows in three groups (the two exports, disabled when the view is empty; Import; Settings), no header row (P9), the group breaks as above. From `011` to `013` it was a system `Menu`, safe from the T029c tear because its label is a constant-size glyph; the amendment's rule — **bespoke inside the page, system in the bars** — ended that, so the two badges side by side open one visual language. `DetailOverflowMenu`, in the navigation bar, is the app's one system menu. |
-| Export rows, Items list (`014` Decision 7, P12) | the two export rows no longer export: each **opens a second dropdown on the same badge**, headed "EXPORT AS CSV" / "EXPORT AS PDF", offering Owned items · Sold items · Owned and sold, each row disabled when it has no rows under the on-screen narrowing. Same surface, same plate, same anchor — the plate stays put and its rows swap (measured at `014`'s device pass: plate top fixed at 115.33 pt across every frame). Dismiss catcher "Dismiss export options". No `Menu` and no `confirmationDialog` (`013` Decision 17); the Wishlist's two rows still export directly |
-| Hint | "Opens more actions" — a button with a hint; SwiftUI has no pop-up trait to give it (`013` Decision 18). The sort badge's is "Opens sort options", the Dashboard order control's "Opens order options" |
-| Dashboard order control (`013` A, P12) | Design's "BY VALUE" label as drawn — `monoLabel` in `textQuiet`, no pill — opening the shared surface under an "ORDER BY" header, the current order tinted and checked, no REORDER tag |
+| Opens | the screen's system menu. **Items**: Export as CSV and Export as PDF, each a submenu of Owned items · Sold items · Owned and sold (`014` Decision 7), each row disabled with nothing under the on-screen narrowing, and a plain disabled row when no scope has any; then Import; then Settings — three groups. **Wishlist**: "Export as CSV…" and "Export as PDF…" as rows that export directly, Import, Settings. **Dashboard** and **Plans**: Settings alone |
+| Surface | `.buttonStyle(.glass)`, `.buttonBorderShape(.circle)`, `.controlSize(.regular)` — a glass circle, as the "…" in an item's detail is (`018` Decision 18) |
+| Size | **36.67 × 36.33 pt**, the sort capsule's height: the glyph row is one hidden line of `SortMenuCopy.labelFont` in a `22`-wide frame with Sort By's `4` padding, and a glass circle's diameter is its label's width + 14.67 |
+| Glyph | SF `ellipsis`, `15` semibold, in `.tint(.primary)` as on Sort By |
+| Busy state | the glyph swaps to a small `ProgressView`; the whole control disabled, spoken "Working" |
+| Accessibility | "More actions", no hint: a menu's button announces itself as a pop-up button, the job "Opens more actions" did for the bespoke badge (`018` criterion 11). Sort By and the Dashboard order control carry no hint either |
+| Dashboard order control (`013` A, P12; `018` Decision 12) | Design's "BY VALUE" label as drawn — `monoLabel` in `textQuiet`, no pill and **no glass** (it sits in the breakdown card, in the body, not on the top row — `018` Decision 13) — opening the system menu: `Section("Order by")` over `Toggle` checkmark rows, the current order checked |
+
+### List header (`018`)
+
+**No design pass** (`018` Decision 10). The Items, Wishlist and Plans
+headers, as `018`'s walkthroughs settled them and its render tests
+measure them; nothing here is a new colour.
+
+| Property | Value |
+|---|---|
+| Title | `listTitle` — Archivo semibold `34`, about the system's large-title size — on one line, shrinking to fit the width the controls leave (`minimumScaleFactor` `0.7`) rather than ending in "…". 0.7 leaves margin under the smallest measured need, Plans under "Wishlist" at 375 pt (0.744). The Dashboard's titles keep `screenTitle` `30` (`018` Decision 23) |
+| Title row | `TitleRowLayout`: the title at the leading edge, the controls at their ideal width, the title's line box centred on the controls' middle. The row is the controls' height, the title overhanging it equally, so a bigger title moves nothing under it; with no controls, the row is the title's own line box (Decision 23, superseding Decision 22's baseline alignment) |
+| Control row | **Sort By · side toggle · "…"** (Decision 20): Sort By only while the side has rows, the toggle and the "…" always, so the two always-present controls never move. The horizontal spacing is unchanged |
+| Meta line | Items and the Wishlist (Plans has none): one line, centred between the title row and what follows — `(6 + gap) / 2` above and below it (`MetaLineSpacing.split`), where `gap` is what the screen leaves under the header, so the search field and the first row did not move (Decision 22) |
+| Search field | **81 pt** under the header block's top on Items and the Wishlist; the Wishlist's moved 4 pt down to Items' (Decision 22, amended) |
+| Height | the side toggle's move into the control row took the switch's own row out: the Items header went from 121 to 74 pt (Decision 19) |
+
+### Add button (`018`)
+
+**No design pass** (`018` Decision 10). The add action on Items and the
+Wishlist kept its size, place, plus, label and identifier; only its
+surface changed (Decision 14, criterion 16): the drawn brass disc and its
+shadow went, and the system's prominent glass is the surface. It is the
+one control that floats over scrolling content, where the glass refracts
+the rows passing under it.
+
+| Property | Value |
+|---|---|
+| Surface | `.buttonStyle(.glassProminent)`, `.buttonBorderShape(.circle)`, tinted `accentBrass` — the one glass control tinted brass, since the brass fill is what marks it as the screen's one prominent action |
+| Size | **56 × 56 pt** rendered, the old disc's, from a `42 × 42` label frame — the prominent circle adds 7 around its label (a 60 frame came out at 74). `testTheAddButtonKeepsItsSizeAndPlace` holds it on both lists |
+| Glyph | SF `plus`, `22` medium, in the style's own foreground |
+| Place | bottom-right, each screen's own `.overlay(alignment: .bottomTrailing)`; the rows scroll under it |
 
 ### Print palette and type scale — PDF export (`011`)
 
@@ -451,6 +468,7 @@ the app bundle, no licensing step needed.
 | Role | Size (pt) |
 |---|---|
 | Screen title | 30 |
+| List title (`018`) | 34, shrinking to fit, floor `0.7` — Items, Plans, the Wishlist |
 | Hero figure | 26–34 (larger for the dashboard's primary total, smaller for secondary figures — exact mapping to be decided per-screen when building) |
 | Form input | 19 |
 | Row title | 14.5–15 |
@@ -676,12 +694,11 @@ the Sold side summary) keep the signed `+$200 vs paid` form.
 
 | Property | Value | As implemented |
 |---|---|---|
-| **Owned / Sold switch** | | |
-| Shape | Sort By badge family: `1px accentBrass` border, `3px` radius, `32` tall | |
-| Halves | two, `62` wide each, no seam, IBM Plex Mono `11`, centred | |
-| Active half | `accentBrass` fill, `background` ink, weight 500 | |
-| Inactive half | no fill, `accentBrass` text, weight 400 | |
-| Placement | its own row under the title block, left-aligned; `controlRowGap` (16) below the meta line; `sectionGap` (24) above the search field on Owned; `15` above the first row on Sold | `014`: **the Owned spacing on both sides** — the Sold side now carries the same search field below the switch, so `sectionGap` (24) is the gap there too, **once anything has been sold** — with nothing sold `offersNarrowingControls` is false, no control sits between the switch and the content, and the `15`-to-the-first-row case no longer arises at all. The meta line above the switch spans the header's full content width with the badges on the title's row (`014` plan Q18), which is what holds the switch's top edge equal: **154.333 pt on both sides**, measured at T010 with zero sales, with `-seedSold` and on a 13-row collection |
+| **Owned / Sold toggle** (`018`, replacing the switch) | | |
+| Shape | a glass capsule in the header's control row, styled as Sort By — `.glass`, `.regular`, `4` label padding, IBM Plex Mono `11` — showing the **current** side as an SF Symbol (`shippingbox` Owned, `tag` Sold; `11` semibold) and its word; a tap shows the other side and opens no menu (`018` Decision 19). **Brass** (`accentBrass`) while Owned shows, the system's label colour while Sold shows — the row's own `foregroundStyle`, not a tint (Decision 20, a narrowing of Decision 15, which stands for Sort By and the "…") | `006`–`017`: a two-half switch in the Sort By badge family, `1px accentBrass` border, `3px` radius, `32` tall |
+| Width | one for both sides, the wider side's — **79 pt** on Items (105 on Plans) — the shorter side centred, so the capsule never resizes (Decision 21) | `006`: two `62`-wide halves, the active one brass-filled with `background` ink |
+| Placement | between Sort By and the "…" (Decision 20); see *List header (`018`)* | `006`–`017`: its own row under the meta line, its top at 154.333 pt on both sides (`014`) |
+| Motion | the glass press, and the showing icon and word blur-replaced (`.blurReplace`) under `.smooth(duration: 0.3)` — never both words legible at once, never clipped (Decision 21, filmed on 27.0 and 26.5) | `006`: the fill slid to the tapped half, `.snappy(duration: 0.2)` |
 | Header on Sold | Sort By and search hidden, "…" stays; the meta line is the sold summary, realised part in moss/rust | `014`: **nothing is hidden** — the search field, the category chips and Sort By render on the Sold side in the Owned side's slots, behind one gate (`offersNarrowingControls`, spelled twice), once anything has been sold; the badge reads that side's own sort ("Date sold" by default) and the chips are the sold categories only, with no Un-valued chip. The meta line is still the sold summary, now full-width under the title-and-badges row (Q18) |
 | Motion | the fill slides to the tapped half, `.snappy(duration: 0.2)`, rows cross-fade; fade only under Reduce Motion (0.25 s at the Design pass, shortened at T018b under spec Decision 13's "fast and smooth") | rows do not cross-fade — the fill's animated `.offset` is the only motion (T015 left the row fade out; Phase 5 review S6; recorded at the sweep) |
 | **Sold row** | | |
@@ -747,7 +764,7 @@ from its twin — both settled by the person at a pause, not by a pass.
 
 **No design pass** (spec Decision 8). `009` added no colour and no
 component: the Plans tab puts together the two-sided list screen (`014`), the
-wishlist row's head, the sort badge, the "…" and its shared dropdown (`013`),
+wishlist row's head, the sort badge and the "…" (`013`; system menus since `018`),
 the swipe actions (`015`), the delete confirmation (`010`), the purchase sheet
 (`015`), and the Dashboard card's chrome (`006`). What it records here is how
 those pieces were put together and the measurements the device pass took
@@ -759,10 +776,9 @@ those pieces were put together and the measurements the device pass took
 | Mark | `TabPlans` — `design/icons/tab-plans.svg`, in the tab set's language (24 viewBox, flat `#000` fills, the `scale(1.2)` group, round-capped `1.5` strokes): a tipped scale — a post on a base carrying a beam that rises to the right, a block at 0.45 opacity on the low end and a solid block on the high end, the wishlist mark's two end shades. The faint block is what's set aside, the solid one what's wanted. Redrawn at spec Decision 19 (T021b), replacing the first mark (a faint square, an arrow and a solid square). Template, vector preserved |
 | Weight | The first mark was **observed at the device pass to carry about half the visual weight of the other three** (an 18.5 × 6.7 pt mark, about 900 ink px), which is why it was redrawn. The tipped scale, rendered at 25 pt @3x with the other three: 21.0 × 18.0 pt, 1,166 ink px, against Overview 21.0 × 17.3 pt / 1,202, Items 19.0 × 19.0 / 1,922 and Wishlist 18.7 × 17.0 / 1,661 (T021b, from the SVGs, not a device screenshot) |
 | **Plans screen header** | |
-| Title | "Plans" in `screenTitle`, fixed while only the rows scroll (`001`'s list rule) |
-| Trailing | `WishlistView`'s `HStack(spacing: 8)`: the Sort badge while the side has rows, then the **"…"** (`OverflowBadge`, `moreActions.plans`) **always**, over an empty side too, since Settings is never gated (spec Decision 17). Its dropdown holds one row, **Settings**. Both badges are one height, so the header is too |
-| Side switch | The Owned/Sold switch's shape, labelled **Active** / **Completed**, with a **69 pt** half, not 62. "Completed" measures 60 pt at 11 pt mono, and 69 is the narrowest whole point that keeps 4 pt either side (measured 5.3 / 6.0 on the device) |
-| Switch top | **134.67 pt** in every state (Active or Completed, empty or full, with the "…" alone or beside Sort) on both simulators. Read from pixels |
+| Title | "Plans" in `listTitle` (`screenTitle` until `018`), fixed while only the rows scroll (`001`'s list rule) |
+| Trailing | the *List header* control row: **Sort By** while the side has rows, the **side toggle**, then the **"…"** (`moreActions.plans`) **always**, over an empty side too, since Settings is never gated (spec Decision 17). Its system menu holds one row, **Settings**. All three controls are one height, so the header is too |
+| Side toggle (`018`) | the Owned / Sold toggle over **Active** (`clock`, brass) / **Completed** (`checkmark.circle`, the system's label colour), **105 pt** wide — "Completed" is the wider side. It replaced the `69 pt`-half switch and its own row, whose top sat at 134.67 pt in every state |
 | **Row** | |
 | Head | `WishlistRow`'s: `RowThumbnail` then name in `rowTitle` / `textPrimary`, category in `monoLabel`, with `rowContentGap` and `rowPadding`, and `.extrudedPlate()` |
 | Picture | **A slot on every row, on both sides** (spec Decision 16, revising Decision 11). An Active row draws the wanted item's photos. A Completed row draws the photos of the item the purchase created, and the placeholder when the purchase recorded none (it came before the record existed) or that item has since been deleted. It never falls back to the wanted entry's own photos |
