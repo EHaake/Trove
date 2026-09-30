@@ -18,14 +18,15 @@ plain words at the pause where it can first be seen.
 Spec 018 reverses `013` Amendment A's rule — *bespoke inside the page, system
 in the bars* — for **System controls, Trove content**. Every "…", Sort By and
 order control opens a **system menu**; the two switches become the **system
-segmented control**; the two header badges become **`.glass` buttons** and the
-add button a **`.glassProminent`** one. Nothing a sort, export, import, switch
-or menu row *does* changes (Non-goals). The spec's first act is a measurement:
+segmented control** (overtaken: a glass side toggle, Decisions 19–21, §4);
+the two header badges become **`.glass` buttons** and the add button a
+**`.glassProminent`** one. Nothing a sort, export, import, switch or menu
+row *does* changes (Non-goals). The spec's first act is a measurement:
 criterion 1 films the sort badge through a width-changing sort before anything
 else is converted, with P4's constant-footprint fallback pre-authorised.
 
 The footprint: **three new production files** (`SortMenu`, `OverflowMenu`,
-`SidePicker`, all in `Trove/Views/Shared/`), **six deleted**
+`SidePicker` — shipped as `SideToggle`, §4 — all in `Trove/Views/Shared/`), **six deleted**
 (`Dropdown.swift`, `DropdownHost.swift`, `OverflowBadge.swift`,
 `OverflowDropdown.swift`, `SortPicker.swift`, `Items/SideSwitch.swift`), and
 changes to the four tab roots (`ItemListView`, `WishlistView`, `PlansView`,
@@ -77,11 +78,16 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   gutter. P7's words are "a segmented control sizes its segments to their
   content"; hugging also keeps the header's footprint the person approved at
   `006`/`014`. Seen at the Phase 3 pause; one modifier to change.
+  **Overtaken (Decisions 19 and 21, T009a/T009d):** the segmented control
+  is gone; the side toggle sits in the header's control row, one width per
+  screen (Items 79 pt, Plans 105 pt), §4.
 - **R2 — Tapping the segment already showing no longer reloads that side.**
   `SideSwitch` called `select` "even for the half already showing"; a
   `Picker`'s binding is set only on a change. Nothing the spec describes
   depends on it, and pull to refresh still reloads. Stated because it is a
   behaviour the old doc comment promised.
+  **Moot since T009a (Decision 19):** the toggle always shows the other
+  side, so there is no tap on the side already showing.
 - **R3 — The badges draw no colour of their own** (P6). The glyph bars and the
   mono label take the glass style's foreground; brass arrives only through
   the root `.tint(accentBrass)` where the style applies it. If the device
@@ -162,6 +168,10 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   { viewModel.show($0) })`: MVVM's rule (intent methods, never raw setters)
   holds, and `ItemListViewModel.side` stays `private(set)`. The guard that
   pinned "binds to nothing" is rewritten to pin exactly that, not relaxed.
+  **Overtaken (spec Decision 19, T009a):** the segmented control proved
+  unstyleable on the device; `SideToggle` replaced `SidePicker` — a glass
+  `Button` whose action is `select(other)`, so there is no binding at all
+  and the MVVM point holds more simply (§4).
 - **Q4. The add button is `.buttonStyle(.glassProminent)`,
   `.buttonBorderShape(.circle)`, `.tint(theme.colors.accentBrass)`**, its
   plus glyph taking the style's foreground, sized so the rendered button is
@@ -285,7 +295,8 @@ New production files:
 
 - `Trove/Views/Shared/SortMenu.swift` (`SortMenu`, `SortMenuCopy`)
 - `Trove/Views/Shared/OverflowMenu.swift`
-- `Trove/Views/Shared/SidePicker.swift`
+- `Trove/Views/Shared/SideToggle.swift` (planned as `SidePicker.swift`, deleted
+  at T009a; §4)
 
 Deleted: `Trove/Views/Shared/Dropdown.swift`, `DropdownHost.swift`,
 `OverflowBadge.swift`, `OverflowDropdown.swift`, `SortPicker.swift`;
@@ -590,79 +601,244 @@ no `.glass`). G13 (a new UI test:
 "Order by" once, By value selected, By count chosen → the control reads "Order
 categories By count").
 
-## 4. `SidePicker` — the two switches
+## 4. `SideToggle` — the two switches
+
+As shipped, spec Decisions 19–21 (T009a–T009d): `Trove/Views/Shared/SideToggle.swift`,
+which replaced the planned `SidePicker` (deleted at T009a; the plan it
+superseded is the last paragraph of this section).
 
 ```swift
-/// 018: a list screen's two sides as the system segmented control — on iOS
-/// 26 a capsule whose selected segment is a glass pill that slides. Reports
-/// a choice through `select` and never writes the side (Q3).
-struct SidePicker<Side: Hashable>: View {
+/// 018: a list screen's two sides as one glass button in the header's
+/// control row — the current side as an SF Symbol and its word; a tap shows
+/// the other side. It opens no menu and never writes the side.
+struct SideToggle<Side: Hashable>: View {
     let side: Side
-    let leading: Side, leadingLabel: String
-    let trailing: Side, trailingLabel: String
+    let leading: Side, leadingLabel: String, leadingIcon: String
+    let trailing: Side, trailingLabel: String, trailingIcon: String
     let accessibilityLabel: String
     let identifier: String
     let select: (Side) -> Void
 
+    @Environment(\.theme) private var theme
+
+    var other: Side { side == leading ? trailing : leading }
+    // word(_:), icon(_:), and row(_:) — HStack(spacing: 8) { the SF Symbol at
+    // .system(size: 11, weight: .semibold); the word in SortMenuCopy.labelFont }
+
     var body: some View {
-        Picker(accessibilityLabel, selection: Binding(get: { side }, set: select)) {
-            Text(leadingLabel).tag(leading)
-            Text(trailingLabel).tag(trailing)
+        Button {
+            select(other)
+        } label: {
+            ZStack {
+                Text(verbatim: "0").font(SortMenuCopy.labelFont).hidden()
+                row(leading).frame(height: 0).hidden()
+                row(trailing).frame(height: 0).hidden()
+                ZStack {
+                    row(side)
+                        .foregroundStyle(side == leading ? theme.colors.accentBrass : Color.primary)
+                        .id(side)
+                        .transition(.blurReplace)
+                }
+                .frame(height: 0)
+                .animation(.smooth(duration: 0.3), value: side)
+            }
+            .padding(.vertical, 4)
         }
-        .pickerStyle(.segmented)
-        .fixedSize()                               // R1
+        .buttonStyle(.glass)
+        .controlSize(.regular)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(word(side))
         .accessibilityIdentifier(identifier)
     }
 }
 ```
 
-The two constrained `init(side:select:)` extensions keep `SideSwitch`'s words,
-labels and identifiers exactly — Owned/Sold, "Owned or sold",
-`items.sideSwitch`; `SellPlanCopy.active`/`completed`,
-`SellPlanCopy.sideSwitchLabel`, `plans.sideSwitch`. `halfWidth`,
-`SideSwitchMetrics` and the brass fill go (P7). **Not themed** — no tint, no
-appearance proxy (Decision 7, `004`'s record). The call sites change one
-word. Each side keeps its own search, chips and sort because `show(_:)` does
-(`014`), untouched.
+**A button, not a picker (Decision 19).** On the device the system segmented
+control took no font and no colour from SwiftUI (SF ~13 pt medium, pure
+white/black, `.tint` inert), so the switch is a glass button showing the
+**current** side — Owned `shippingbox`, Sold `tag`, Active `clock`,
+Completed `checkmark.circle` — whose action is `select(other)`. It opens no
+menu, so `MenuPolicyTests` is unchanged. It never writes the side:
+`ItemListViewModel.side` stays `private(set)`, each call site passes
+`viewModel.side` and a closure calling `viewModel.show`, and each side keeps
+its own search, chips and sort because `show(_:)` does (`014`), untouched.
+A tap always flips, so R2 is moot. The two constrained `init(side:select:)`
+extensions keep `SideSwitch`'s words, labels and identifiers exactly —
+Owned/Sold, "Owned or sold", `items.sideSwitch`;
+`SellPlanCopy.active`/`completed`, `SellPlanCopy.sideSwitchLabel`,
+`plans.sideSwitch` — and add the four icons. `halfWidth`,
+`SideSwitchMetrics` and the brass fill are gone (P7).
 
-**Testable claims.** G10 (`SidePicker.swift` composes `Picker(` with
-`.pickerStyle(.segmented)` and `Binding(get:` whose `set:` is `select`, no
-`@Binding`, the words, label and identifier; each screen composes one
-`SidePicker(` with `viewModel.show` and no `$` projection, outside the
-empty-state branch). G13 (switching by segment, `.isSelected` on the
-segment, both sides' state kept, G39's `minY` equality). G14b (the slide on
-film). **The header's height and the switch's position are equal on both
-sides** — the switch is one control on both sides and the header above it is
-G1's; G39 measures it on screen.
+**The label.** One hidden line of the badges' mono 11 (`Text(verbatim:
+"0")`, as `OverflowMenu`'s glyph row) sets the label's height, so the three
+controls render at one height; the glyphs and words stand over it at height
+0, since the `tag` glyph is 1 px taller than the mono line. **Both sides'
+rows are laid out hidden at height 0**, so the capsule is the wider side's
+width on both sides — **Items 79 pt, Plans 105 pt** — with the shorter word
+centred (Decision 21: the glass capsule's own resize runs outside SwiftUI's
+transactions and clipped "Completed" for ~0.17 s; `.animation(nil)`,
+`.transaction` and `.clipShape` all failed, only a constant width is clean).
+**The showing row carries its own `foregroundStyle` ternary** — the app's
+brass while the leading side shows (Owned, Active), `Color.primary` while
+the trailing side shows (Sold, Completed); Decision 20, the one header
+control that carries the app's colour — plus `.id(side)` and
+`.transition(.blurReplace)`, inside an inner `ZStack` at height 0 under
+`.animation(.smooth(duration: 0.3), value: side)`. The transition was picked
+by film from thirteen candidates on 27.0 and the winner confirmed on 26.5
+(T009d): no two legible words drawn at once (T009c's crossfade overlap), no
+clipping, the glass press intact on both runtimes. T009c's
+`.animation(nil, value: side)` one-frame swap is gone with it.
 
-**T009e — the header's geometry under Decision 22 (decision review,
-2026-09-29).** The title's `screenTitle` line box is 33 pt with its first
-baseline at 26 (a 7 pt descent); the control row is 37. An `HStack`
-alignment guide on the baseline would grow the row to 44 and move Plans'
-first card 7 pt, and a 7 pt compensation writes a font property as a
-number, so the title row is a small custom `Layout` (`TitleRowLayout`, in
-`ItemListHeader.swift`): the trailing controls take their ideal width, the
-title the remainder less the 8 pt minimum gap, the row's height is
-max(controls height, title first baseline) read from `LayoutSubviews`
-dimensions at runtime, the controls' bottom and the title's baseline both
-at that height and the descent hanging outside the row. Plans uses the
-`Layout` directly in its own header (no empty meta slot); Items and the
-Wishlist compose `ItemsListHeader`, which is the `Layout` plus the meta
-line — the Wishlist's old stacked header goes. The meta line's split is one
-static function in `ItemListHeader.swift`, `(titleRowToMeta + gap) / 2`
-with the existing 6 named as a constant and the caller passing the gap
-that follows (`sectionGap` above a search field, `listRowGap` on a side
-with nothing to narrow, where the split is 8/8 and the empty state stays
-put); it replaces the stacks' `controlRowGap` spacing above the search
-field with explicit padding (15 < 16, so no negative padding), search →
-chips staying at `controlRowGap`. The Wishlist search field moves 4 pt
-down to 81, level with Items' — put to the person; Decision 22 amended
-if accepted. Guards are rendered, not scanned: the row height equals the
-controls' (37), the title baseline equals the controls' bottom edge, the
-meta's two gaps are equal, the Items search field stays at 81 and Plans'
-first card at 52 (3×, exact). Mutations: the `Layout` reporting the
-title's full box (44) → red; the title top-aligned → red; the split + 1
-→ red; gaps 14/16 → red.
+**No `.tint`.** T009b tinted the button with the ternary; T009d moved the
+colour onto the row, and a probe then rendered each toggle byte-identical
+with and without a foreign tint (the renderer does honour a glass tint —
+rust and moss differ), so the tint reached nothing drawn and was dropped.
+The file names one theme colour, `theme.colors.accentBrass` in the ternary;
+`ThemeTests` exempts `"SideToggle.swift": ["Color.primary"]`, its stale
+check binding.
+
+**Styled as `OverflowMenu` is, minus the circle** (Decision 17):
+`.buttonStyle(.glass)`, `.controlSize(.regular)`, 4 pt of vertical label
+padding. **Accessibility**: `.accessibilityLabel` the pair's label,
+`.accessibilityValue(word(side))`, the identifier; no hint. XCUITest
+exposes the value as the button's `value` string.
+
+**Placement (Decisions 19 and 20).** The control row on Items and Plans is
+**Sort By · toggle · "…"**; the sort control stays inside its narrowing
+gate, so on an empty side the row is toggle · "…" and the toggle never
+moves relative to the "…". The switch's own row is gone (Items' header 121
+→ 74 pt at the decision; today's numbers are the next paragraph's). The
+title takes `.lineLimit(1)` and at least 8 pt from the controls — glass
+labels wrapped when squeezed — which `TitleRowLayout` now carries.
+
+**Testable claims.**
+- **G10** (`ItemListSidesWiringTests` + `PlansWiringTests`; source scans of
+  an injection point no view-model test reaches): `SideToggle` is a
+  `Button` whose action is `select(other)`, no `@Binding`;
+  `.buttonStyle(.glass)` directly followed by `.controlSize(.regular)`, no
+  `.tint(`; both hidden rows present; one ordered regex over `row(side)` →
+  the `accentBrass`/`Color.primary` ternary → `.id(side)` →
+  `.transition(.blurReplace)` → `}` → `.frame(height: 0)` →
+  `.animation(.smooth(duration: 0.3), value: side)`; `animation(nil`
+  absent; exactly one `theme.colors`; words, labels, identifiers and icons
+  checked as values through the two inits; each screen composes one call
+  with `viewModel.show`, no `$`, outside the empty-state branch; and
+  `theControlRowIsSortThenToggleThenOverflow` on each screen.
+- **G1** (`ItemListHeaderLayoutTests`, rendered at 3×, exact):
+  `badgeRowSize(side:)` renders all three controls (in the renderable order
+  — `ImageRenderer` crashes on a glass `Menu` before a glass `Button` in an
+  `HStack`, and an `HStack`'s size is order-invariant);
+  **one height** — `theThreeBadgesRenderAtOneHeight`, the four toggles and
+  the "…" all 109 px; **one width** —
+  `theSideToggleIsOneWidthOnBothSidesOfEachScreen`, each toggle alone:
+  Owned = Sold = 237 px (79 pt), Active = Completed = 315 px (105 pt).
+- **G3** (`HeaderControlsWiringTests`): `items.sideSwitch` and
+  `plans.sideSwitch` on the toggle, and no hint.
+- **UI**: `showSide(_:on:)` taps the toggle by identifier and waits on its
+  `value == side`; every side switch in the suite goes through it (19 taps
+  at T009a) and the four side reads are `value == "Sold"` etc. G39's UI
+  check measures the title row.
+- **Mutations, all red** (the Done notes carry the lines): the action
+  `select(side)`; `$…wrappedValue.side` at either call site; either call
+  moved into the empty branch; a theme colour named, then a second one; the
+  ternary inverted; the ternary moved back onto `.tint`; `.blurReplace` →
+  `.opacity`; `.id(side)` removed; `animation(nil` put back; the smooth
+  animation removed; the toggle and the sort control swapped; the line box
+  removed (all four toggles; a plain `HStack` reds Sold only); either hidden
+  row removed (reds the screen whose wider word is on that side, so the leg
+  covers both screens); an identifier dropped; a hint added.
+- **Device only**: the press highlight's colour now that `.tint` is gone —
+  whether the tint ever reached it is T013's look; the brass itself
+  (`ImageRenderer` draws glass as a placeholder); and the blur, filmed on
+  27.0 and 26.5 both directions on both screens at T009d, looked at once
+  more at T013.
+
+**T009e–T009f — the header's geometry under Decisions 22 and 23.** The
+title row is a small custom `Layout` (`TitleRowLayout`, in
+`ItemListHeader.swift`; T009e's decision review, 2026-09-29): an `HStack`
+grows to its tallest child — a baseline guide to 44 pt, and at 34 pt a
+centred title's line box — which would move Plans' first card, and
+compensating would write a font property as a number. **As shipped at
+T009f** (Decision 23, superseding Decision 22's baseline alignment): the
+controls take their ideal size at the row's bottom trailing corner; the
+title is proposed the remaining width less the 8 pt minimum gap; the row
+reports **the controls' height** (the title's own line box when the
+trailing slot is empty); and the title's line box, read from its
+dimensions at runtime, is **centred on the controls' middle**, overhanging
+equally above and below, so nothing under the row moves. Plans uses the
+`Layout` directly (no meta line); Items and the Wishlist compose
+`ItemsListHeader`, which is the `Layout` plus the meta line — the
+Wishlist's old stacked header is gone. The meta line's split (Decision 22,
+standing) is `MetaLineSpacing.split(before:)`, `(titleRowToMeta + gap) / 2`
+with `titleRowToMeta = 6` — a caseless enum, because a generic type can't
+hold the static — the gap passed as `ItemsListHeader.gapBelow`:
+`sectionGap` above a search field, `listRowGap` on a side with nothing to
+narrow (8/8, the empty state put). The header carries the lower half as
+padding; the `listRowGap` bottom padding sits on the inner search-and-chips
+stack. The Wishlist search field moved 4 pt down to 81, level with Items'
+(accepted: "That's fine").
+
+**The title.** A shared `ListTitle` view, used by `ItemsListHeader` and by
+Plans' own title row: the new **`listTitle` token (display semibold 34)**,
+one line, `minimumScaleFactor(ListTitle.minimumScale)` with **`minimumScale
+= 0.7`** — sized at Plans under "Wishlist" on a 375 pt phone, which needs
+0.744 (66 pt left for an 88.67 pt title), the smallest anywhere; it never
+ends in "…". **`screenTitle` stays 30** for the Dashboard's drill-down path
+titles, which overflow at 34. Plans' Sort By capsule reads **"Wishlist"**
+for the wishlist order: `SortMenu.badgeLabel` (optional, defaulting to
+`label`) and `ActiveSortOrder.badgeLabel`; the menu row keeps "Wishlist
+order" and VoiceOver still says "Sort by Wishlist order". Measured at 3×: at
+402 pt every title draws full size (Plans' control rows 253 / 240 / 227 /
+150 leave 93–196 pt for 88.67); at 375 pt Plans under "Wishlist" draws at
+~25 pt and Items' Sold side at ~33.4, none truncated. The header is 66 pt
+with or without badges (37 + 15 + 14); the Items and Wishlist search fields
+at 81, Plans' first card at 52, unchanged.
+
+**Guards** (rendered at 3×, exact unless said):
+- `theTitleRowIsTheControlsHeightWithTheTitleCentredOnThem` — the row
+  equals the controls' height and the title's box is centred on them,
+  **on a stand-in 8 pt taller than the controls**, since at 34 pt the
+  title's line box equals the 37 pt row and a centre leg there couldn't
+  tell centred from top- or bottom-aligned.
+- T009e's `theMetaLineSitsMidwayAndWhatFollowsDoesNotMove`, kept green
+  unchanged: the meta line's two gaps equal, the Items search field at 81,
+  Plans' first card at 52.
+- **G38's no-badges proviso restated as equality**: the header with an
+  empty trailing slot equals the title's line box + the split + one meta
+  line — "shorter than with badges" is no longer the geometry.
+- `everyListTitleIsFullSizeOnA402PointPhone` and
+  `theTitleShrinksToFitRatherThanTruncatingOnA375PointPhone` — a recording
+  `TextRenderer` reading `Text.Layout.isTruncated`, plus the title's ink
+  ending before the controls.
+- The short label: `theCapsuleShortensOnlyTheWishlistOrder` (pure) and
+  `theActiveCapsuleReadsTheShortLabel` (a scan: which menu gets it).
+- **Mutations, red**: the title bottom- or top-aligned; the row reporting
+  the title's height; `minimumScaleFactor` removed; the badge label
+  reverted three ways (the view model, `SortMenu`, `PlansView`); and at
+  T009e the split + 1 and gaps 14/16. **Not red: the `listTitle` token
+  back to 30.** Nothing honestly pins 34 — that is a known gap, carried to
+  T011 as a relation leg (`listTitle` renders taller than `screenTitle`).
+- **The ink centre, measured once, not a test**: "I" at 34 pt, ink rows
+  80…149 against the controls' 60…170 at 3× — 0.5 px (0.17 pt) above the
+  controls' middle, inside the 1 pt gate; 0.5–1.5 px at every size tried
+  (30–36).
+- **Carried to T013**: the real controls are 36.33 pt, so the 37 pt line
+  box overhangs a third of a point each side and device numbers sit ~1 px
+  off the stand-in's; the empty Wishlist's empty state moves up ~4 pt
+  (derived, not measured); the recorder's odd case at a 26 pt proposal.
+
+**As planned, superseded (Decision 19, T009a; Decision 23, T009f).** The
+plan specified `SidePicker<Side: Hashable>`: the system segmented `Picker`
+bound through `Binding(get: { side }, set: select)` inside the component,
+`.pickerStyle(.segmented)`, `.fixedSize()` (R1), **not themed** — no tint,
+no appearance proxy (Decision 7, `004`'s record) — with G10 pinning
+`Picker(`, `.pickerStyle(.segmented)` and `Binding(get:`, G13 switching by
+segment and reading `.isSelected` on it, and G14b filming the selection
+pill's slide. The device showed the segmented control unstyleable and
+Decision 19 replaced it; the slide filmed at T009 is history. T009e then
+put the title's first baseline on the controls' bottom edge (guarded as
+"the title baseline equals the controls' bottom edge", mutation "the title
+top-aligned"), which Decision 23's centring replaced at T009f.
 
 ## 5. The add button
 
@@ -726,13 +902,13 @@ legitimate source-scan shape), each `#require`-ing its anchors:
   picker styles**: the draft's "every `.pickerStyle(` is `.segmented` or
   `.inline`" would have banned `.pickerStyle(.menu)` and unstyled pickers,
   which are system controls the rule allows (Decision 12); "no picker of its
-  own" is G12a's positive half and G10's `SidePicker` legs, not a style
+  own" is G12a's positive half and G10's `SideToggle` legs (§4), not a style
   allowlist. Mutation: `DropdownHost.swift` restored from `main` and one host
   re-attached → red. **What it does not claim**: a bespoke control built
   some other way (an `HStack` of buttons with a selected trait) is invisible
   to it; G12a's positive half and review are what catch that, and the plan
   says so rather than implying coverage.
-- **G12c `glassIsOnlyOnTheHeaderBadgesAndTheAddButton`** (P8, Q5). Every
+- **G12c `glassIsOnlyOnTheHeaderBadgesAndTheAddButton`** (P8, Q5; since T009a the list is four files — `SideToggle.swift` joins it, Decision 19). Every
   `.glass`, `.glassProminent`, `.glassEffect(` and `GlassEffectContainer`
   under `Trove/Views` and `Trove/App` sits in `SortMenu.swift`,
   `OverflowMenu.swift` or `AddButton.swift`, and each of the three has one.
@@ -769,8 +945,10 @@ and "Export badge and menu" are cut to what stays Trove's — the glyph, the
 label's type, the badges' one height, the busy spinner, the order control's
 mono label — with one line each saying what the control opens and that the
 system draws the rest; the `006` switch table's shape, halves and motion
-rows and the Plans "Side switch" row become one line each (the system
-segmented control, untinted, hugging its content, R1); the Plans "Trailing"
+rows and the Plans "Side switch" row become one line each (the side toggle
+of §4: a glass button in the control row between Sort By and the "…",
+brass on the Owned and Active sides, one width per screen, the blur swap —
+Decisions 19–21); the Plans "Trailing"
 row stops naming `OverflowBadge`; the row-treatment line's "both dropdowns"
 goes; a short **Add button (`018`)** entry records Q4. Historical element
 briefs under `design/elements/` are left as the records they are. No
@@ -783,8 +961,9 @@ Design pass (Decision 10).
 back to back at the device pass (criterion 12). XCUITest shapes: a system
 menu's rows are `app.buttons[title]`; its header is a static text in the
 system's casing ("Sort by"); a menu is closed by a tap outside it (iOS
-consumes that tap — one helper, one coordinate); a segmented control is found
-by identifier and read by `.buttons["Sold"].isSelected`, never `.value`.
+consumes that tap — one helper, one coordinate); the side toggle is tapped by
+identifier and read by its `value` (its `.accessibilityValue`, the side's
+word), through one helper, `showSide(_:on:)` (T009a, §4).
 
 - Rewritten: `assertMarketSortRows` ("Sort by", closed by the outside tap);
   `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch`;
@@ -795,10 +974,12 @@ by identifier and read by `.buttons["Sold"].isSelected`, never `.value`.
   `testTheExportRowsAreSubmenusGatedByWhatIsOnScreen` (the submenu's three
   rows, the Guitars-narrowed Sold side disabling Owned items);
   the four switch reads at `TroveUITests.swift:~1058, ~2073, ~2110, ~2285`
-  (`.value` → `.isSelected`); `testAppearanceControlDefaultsToDarkAndOffersThreeChoices`
-  finds the control containing a "System" segment rather than
-  `segmentedControls.firstMatch`, which now matches the Items switch behind
-  the sheet.
+  (planned `.value` → `.isSelected`; shipped at T009a as the toggle's
+  `value == "Sold"` etc.), and every switch tap through `showSide(_:on:)`;
+  `testAppearanceControlDefaultsToDarkAndOffersThreeChoices` finds the
+  control containing a "System" segment rather than
+  `segmentedControls.firstMatch` — written when that matched the Items switch
+  behind the sheet, and kept at T009a after the switch stopped being one.
 - Retired: `testAnOpenMenuClosesOnAnyOutsideTapIncludingTheOtherBadge` (P5).
 - New: `testEverySortMenuOffersItsOrdersUnderSortByWithTheCurrentOneChecked`
   (`-uiTesting -seedPlans`: Items Owned, Items Sold, Wishlist, Plans Active
@@ -818,16 +999,17 @@ T008's commit on the same runtimes with the same probe — the Items sort,
 Owned from Date to the widest label and back and Sold from Name to Date
 sold, with the same "whole on every frame" verdict — which is the film
 criterion 1's "absent at the end" rests on, since by then T005 has put the
-glass "…" beside the badge and removed the host; and G14b at T009 — the
-segmented control through Owned → Sold → Owned and Active → Completed: the
-selection's edge takes several distinct frames to cross (a slide, not a
-cut), and the title, meta line and the switch's own top edge, and the list's
-top edge, hold still to within a pixel throughout (criterion 7).
+glass "…" beside the badge and removed the host; and G14b — planned at T009
+as the segmented control's slide, which is history since Decision 19; its
+successor is T009d's film of the side toggle's blur swap, both directions
+on both screens on 27.0 and 26.5 (§4), looked at once more at T013.
 
 **Device pass** (T013, one `general-purpose` dispatch per section, each
 returning a short pass/fail list; the constitution's three habits): (1) every
 screen in Light and Dark — the four headers, the open menus, the switches,
-the add button over rows — screenshots for the person (criteria 8, 15, 16).
+the add button over rows — screenshots for the person (criteria 8, 15, 16);
+the side toggle's press highlight now that it carries no `.tint`, and its
+blur swap once more (§4).
 **The appearance is changed with the app's own Appearance control while the
 app runs**, with the Items and Plans screens behind the Settings sheet, and
 those screens looked at after the sheet closes, in both directions — `004`'s
@@ -841,7 +1023,8 @@ menu opens the file importer** (criterion 2 — no UI test reaches the
 system's document picker; cancelled, the list unchanged); (4) the Items "…"
 on the Sold side under a chip: the scope rows' gates (criterion 3's look). On iOS 27.0, said so. **The person's steps**: the
 Accessibility Inspector over the two badges (pop-up button, no hint), a sort
-menu's rows (the current one selected), both switches (the selected segment)
+menu's rows (the current one selected), both side toggles (the pair's label,
+the showing side as the value)
 and the add button (criterion 11); the walkthrough attestation that every
 screen reads as one language (criterion 15).
 
@@ -859,8 +1042,9 @@ its words describe the old controls; the post-merge draft
 `specs/ROADMAP.md` text (`018`'s entry and status row, and the follow-up
 Decision 11 defers — **the system navigation bar and toolbar on the tab
 roots, placed before `019`**) and the `DECISIONS.md` text (the rule reversed
-and why; the tear measured and its result; the switches system and
-unthemed; glass only on the header badges and the add button; the tests
+and why; the tear measured and its result; the switches a glass side toggle,
+brass on the primary side, after the segmented control proved unstyleable
+(Decisions 19–21); glass only on the header badges and the add button; the tests
 retired and why each could go); `scripts/verify.sh all`. Then the pre-merge
 `skeptical-reviewer` sweep over `git diff main...HEAD`, cut after
 `git add -A`, and the PR marked ready.
@@ -870,19 +1054,22 @@ retired and why each could go); `scripts/verify.sh all`. Then the pre-merge
 | # | Test | Red when |
 |---|---|---|
 | G1 | `ItemListHeaderLayoutTests` (`014` G38, kept; "the two badges one height" compared at 3× with exact equality — a 1× comparison hides up to a point, T005 review): the header one meta line tall under every summary and every sort label, the trailing slot a stand-in sized from a render of the badge row alone (`SortMenu` + `OverflowBadge`, then `OverflowMenu` from T005 — a glass `Menu` in the header's `VStack` crashes `ImageRenderer`, T001 review); the no-badges proviso (or its Q6 rewrite); **the two badges one height** (new); with P4, **one width for every selection** (T003). What the render can't show — the glass once it sits in the header — rests on T002/T009's device frame check and G39 | the meta line back beside the badges; the baseline rendered at 200 pt (the instrument check); `SortMenu` at `.large` (the proviso); `OverflowMenu` at another control size; P4's hidden labels dropped |
+| G1 — the toggle (T009a–T009d) | `ItemListHeaderLayoutTests` (§4): `badgeRowSize(side:)` renders side toggle, Sort By and "…"; `theThreeBadgesRenderAtOneHeight` — the four toggles and the "…" all 109 px at 3×, exact; `theSideToggleIsOneWidthOnBothSidesOfEachScreen` — each toggle alone at 3×, exact: Owned = Sold = 237 px (79 pt), Active = Completed = 315 px (105 pt) | the toggle's mono line box removed (all four; a plain `HStack` reds Sold only); the hidden leading row removed, and the hidden trailing row removed (each reds the screen whose wider word is on that side) |
+| G1 — the title row (T009e–T009f) | `ItemListHeaderLayoutTests` (§4): `theTitleRowIsTheControlsHeightWithTheTitleCentredOnThem` (on a stand-in 8 pt taller than the controls, since at 34 pt the title's line box equals the row); `theMetaLineSitsMidwayAndWhatFollowsDoesNotMove` (the meta line's gaps equal, the search field at 81, Plans' first card at 52); `everyListTitleIsFullSizeOnA402PointPhone` and `theTitleShrinksToFitRatherThanTruncatingOnA375PointPhone` (a recording `TextRenderer` reading `Text.Layout.isTruncated`, plus the ink ending before the controls); `theCapsuleShortensOnlyTheWishlistOrder` (pure) and `theActiveCapsuleReadsTheShortLabel` (scan) | the title bottom- or top-aligned; the row reporting the title's height; `minimumScaleFactor` removed; the badge label reverted in the view model, in `SortMenu`, or in `PlansView`; at T009e, the split + 1 and gaps 14/16. **Not red: the `listTitle` token back to 30** — nothing pins 34; a relation leg (`listTitle` renders taller than `screenTitle`) is carried to T011 |
+| G38 (`014`'s, inside G1) | the no-badges proviso, restated at T009f as the measured **equality**: the header with an empty trailing slot = the title's line box + the meta split + one meta line (66 pt with or without badges); "shorter than with badges" is no longer the geometry | the row reporting the title's full box, and gaps 14/16 (both at T009e, against the geometry before the restatement); no mutation is recorded against the restated equality itself |
 | G2 | `HeaderControlsWiringTests`: `SortMenu` is a `Menu` whose content is a `Section(SortMenuCopy.header)` of `Toggle(` rows in a `ForEach`, `.glass`, no `theme.colors` (spelling only; the check and selected trait are T004's UI test's) | the `Toggle` rows replaced by `Button` rows; `.foregroundStyle(theme.colors.accentBrass)` on the label |
-| G3 | `HeaderControlsWiringTests`: every header control carries its identifier (`sortOptions.items/wishlist/plans`, `moreActions.items/wishlist/plans/dashboard`, `orderOptions.dashboard`) and no hint — per control as each is converted (T001–T006), then, once `OverflowBadge.swift` is gone (T010), no `.accessibilityHint("Opens` anywhere under `Trove/Views` | an identifier dropped; a hint put back |
+| G3 | `HeaderControlsWiringTests`: every header control carries its identifier (`sortOptions.items/wishlist/plans`, `moreActions.items/wishlist/plans/dashboard`, `orderOptions.dashboard`, and from T009a the side toggle's `items.sideSwitch`/`plans.sideSwitch`) and no hint — per control as each is converted (T001–T006), then, once `OverflowBadge.swift` is gone (T010), no `.accessibilityHint("Opens` anywhere under `Trove/Views` | an identifier dropped; a hint put back (on the toggle too, T009a) |
 | G4 | `HeaderControlsWiringTests`: `OverflowMenu`'s busy branch — `ProgressView()`, `.disabled(isBusy)`, "Working"/"More actions"; each list passes `viewModel.isBusy` | `.disabled` removed; `isBusy: false` on Items |
 | G5 | `HeaderControlsWiringTests`: the Dashboard's "…" inside exactly one `if isRoot` span; `orderControl` a `Menu` whose content is a `Section("Order by")` of `Toggle(` rows over `BreakdownOrder.allCases` whose setter writes and calls `load()`, `.monoLabel(`, no `.glass` | the "…" outside the gate; `load()` dropped; `.buttonStyle(.glass)` on the label |
 | G6 | `ItemListSidesWiringTests` (G20 rewritten): `sortControl` inside the narrowing gate, one `SortMenu` per side, Owned over `SortOrder` with `manualOrder: .custom` writing `sortOrder`, Sold over `SoldSortOrder` with no `manualOrder` writing `soldSortOrder` | `manualOrder:` on the Sold menu; the Sold menu writing `sortOrder` |
 | G7 | `PlansWiringTests.noSortMenuOffersAManualOrder`: two `SortMenu`s, neither with `manualOrder:` | `manualOrder: .newest` on one |
 | G8 | `ExportWiringTests` (three rewritten): rows, order, gates, two `Divider()`s, Import and Settings wired and ungated; Items' two submenus over every scope, each row on its own gate, no scope literal, no ellipsis | the PDF row gated on the CSV flag; a submenu exporting `.both` directly; Import gated; "Export as CSV…" on Items |
 | G9 | `SettingsWiringTests.everyTabsRootReachesSettings` (rewritten) | Plans' `OverflowMenu` replaced; its Settings row removed |
-| G10 | `ItemListSidesWiringTests` + `PlansWiringTests`: `SidePicker` segmented, bound through `select`, no `@Binding`; one call per screen with `viewModel.show`, no `$`, outside the empty-state branch | `.pickerStyle(.menu)`; `set: { _ in }`; `$viewModel.side` at a call site; the call moved into the empty branch |
+| G10 | `ItemListSidesWiringTests` + `PlansWiringTests` (§4, rewritten at T009a–T009d onto `SideToggle`): a `Button` whose action is `select(other)`, no `@Binding`; `.buttonStyle(.glass)` directly followed by `.controlSize(.regular)`, no `.tint(`; both hidden rows; one ordered regex over the showing row → the `accentBrass`/`Color.primary` ternary → `.id(side)` → `.transition(.blurReplace)` → `.frame(height: 0)` → `.animation(.smooth(duration: 0.3), value: side)`; no `animation(nil`; exactly one `theme.colors`; words, labels, identifiers and icons as values through the inits; one call per screen with `viewModel.show`, no `$`, outside the empty-state branch; `theControlRowIsSortThenToggleThenOverflow` on each screen | the action `select(side)`; `$…wrappedValue.side` at a call site; the call moved into the empty branch; a second theme colour named; the ternary inverted; the ternary moved back onto `.tint`; `.blurReplace` → `.opacity`; `.id(side)` removed; `animation(nil` put back; the smooth animation removed; either hidden row removed; the toggle and the sort control swapped |
 | G11 | `HeaderControlsWiringTests` + `testTheAddButtonKeepsItsSizeAndPlace` | `.glassProminent` removed; `Circle().fill` back; the button 60 pt |
 | G12 | `MenuPolicyTests` a–d (§7) | a bespoke sort back on the Wishlist; `DropdownHost` restored; glass on `PlansCard`; an appearance proxy; a confirmation dialog |
-| G13 | UI tests, §9, twice back to back | each new test's own mutation: `manualOrder` on Plans; the order setter not writing; the add button's frame changed |
-| G14 | Films: a — the capsule whole on every frame (criterion 1), at T002 (and T003 if needed) and again at T009 on the finished header; b — the selection slides, the header holds (criterion 7), at T009 | — (measurements; the frame tables are the record) |
+| G13 | UI tests, §9, twice back to back. **The switch legs are the toggle's** (T009a): `showSide(_:on:)` taps it by identifier and waits on its `value`, and the four side reads are `value == "Sold"` etc.; the planned segment leg (tap a segment, read its `.isSelected`) is retired — there are no segments | each new test's own mutation: `manualOrder` on Plans; the order setter not writing; the add button's frame changed. No mutation is recorded against the `showSide` reads |
+| G14 | Films: a — the capsule whole on every frame (criterion 1), at T002 (and T003 if needed) and again at T009 on the finished header; b — **the slide is history** (Decision 19: the segmented control it filmed is gone); its successor is T009d's film of the toggle's blur, thirteen candidates on 27.0 and the winner on 26.5, both directions on both screens — no two legible words at once, no clipping, the glass press intact — looked at once more at T013 | — (measurements; the frame tables are the record) |
 | G15 | Unedited and green: `DestructiveColourPolicyTests` (its site counts recorded), `SoldStateWiringTests.theOverflowMenuHostsExactlyOneSystemMenu`, `SettingsWiringTests.theAppearanceSectionLeadsAsASegmentedPickerOverTheChoice` (comment only), `ReorderWiringTests`, `PullToRefreshTests`, `ExportWiringTests.theShareSheetAndFailureAlertAreWired`, `ThemeTests` | — |
 
 Every guard is mutation-verified before it lands; the Done note records what

@@ -1154,9 +1154,13 @@ Handoff notes for the pause reports:
   `:683`; `PlansView.swift:218` → `PlansWiringTests.swift:275`). **Not
   red: the token back to 30** — nothing honestly pins 34; carried to T011
   as a relation leg (`listTitle` renders taller than `screenTitle`).
-  `scripts/verify.sh`: green, 1756 in 235. Carried to T013: the real
-  controls are 36.33 pt, so the 37 pt line box overhangs a third of a
-  point each side; the recorder's odd case at a 26 pt proposal.
+  `scripts/verify.sh`: green, 1756 in 235. Ink centre (the Verify gate):
+  measured in the first dispatch from the pixels of "I" at 34 pt, ink
+  rows 80…149 against the controls' 60…170 at 3× — 0.5 px (0.17 pt)
+  above the controls' middle, within the 1 pt gate; the same at every
+  size tried (30–36: 0.5–1.5 px). Carried to T013: the real controls are
+  36.33 pt, so the 37 pt line box overhangs a third of a point each
+  side; the recorder's odd case at a 26 pt proposal.
 
 **Phase 3 pause (2026-09-27 → 30).** The person tried the app seven times: the switches monochrome, in the wrong font, and taking a whole row (→ Decision 19, T009a, after the segmented control proved unstyleable); the toggle's place and brass (→ Decision 20, T009b); the label crossfade overlap (→ T009c); "Completed" clipping on Plans, and "removing the animations entirely isn't a good choice" (→ Decision 21, T009d: "Ok looks great!"); the meta line crowding the controls (→ Decision 22, T009e, the Wishlist search field's move accepted: "That's fine"); the title too small beside the controls (→ Decision 23, T009f, the three measured recommendations accepted); then: "continue". R2 (tapping the showing side no longer reloads it) is moot: the toggle always flips.
 
