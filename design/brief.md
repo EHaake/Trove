@@ -206,8 +206,8 @@ total, and it never separates from its coverage.
 system's menu, and every control that opens one is the system's control;
 what those controls say and what the pages hold stay Trove's. Sort By,
 the lists', Plans' and the Dashboard's "…", the Dashboard's category
-order, the detail screens' "…" and the tab bar all open the same system
-glass menu, so a "…" in a header, a "…" in a bar and the tab bar wear
+order, the detail screens' "…" and the tab bar wear the same system
+glass, and every menu is the same system menu, so a "…" in a header, a "…" in a bar and the tab bar wear
 and open one language. Two designs for a selection window is the
 inconsistency this rule exists to stop (`018` Decision 12), and no later
 spec brings a second one back.

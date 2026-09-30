@@ -14,8 +14,9 @@ import SwiftUI
 ///
 /// **Styled exactly as `SortMenu` is, in the same order** (spec Decisions 15,
 /// 16 and 17): the glass button style, then the system's primary label colour
-/// as the button's tint — the glass style paints its label with the tint and
-/// ignores the label's own foreground, so the colour has to arrive that way,
+/// as the button's tint — the glass style resolves a hierarchical foreground
+/// such as the primary style against the tint, so on the label it would not
+/// hold (an explicit colour would), and the colour has to arrive that way,
 /// overriding the root brass tint — then the system's regular control size,
 /// with 4 pt of padding above and below the label. The glyph row is one
 /// hidden line of the sort badge's label type (`SortMenuCopy.labelFont`), so

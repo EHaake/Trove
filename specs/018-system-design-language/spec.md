@@ -395,7 +395,8 @@ says so.
    the device**: at the seeded collection's size the export finishes inside
    the menu's ~0.3 s dismissal morph, while the "…" is still the morphing
    glass. The spinner and the inert badge rest on G4's wiring — a view-body
-   fact — and on the export's busy state, which this spec did not change.
+   fact — and on the export's busy state, which this spec did not change:
+   the spinner is untested on screen.
 5. [x] The sort badge opens a system menu with one row per sort option
    under a **Sort by** header, the current sort checked; choosing a row
    applies it and the badge's label names it. The Custom row, where a
@@ -499,7 +500,7 @@ says so.
     `sortControl` made a `Button` showing an `.overlay` of drawn rows, the
     bespoke row put back → red — with plan §7's four other mutations red.
     `CLAUDE.md`'s example was amended first, in its own commit. Known blind
-    spots, carried by the Phase 4 review to the pre-merge sweep: a bespoke
+    spots, carried to `020` (the pre-merge sweep's ruling): a bespoke
     overlay beside a kept `SortMenu(`, the `Button(action:)` spelling,
     `backgroundPreferenceValue`, and an explicit `GlassButtonStyle()`.
 11. [ ] Every badge, switch and control keeps its accessibility
@@ -677,6 +678,11 @@ Made by the person on 2026-09-26, at the second Phase 1 re-look:
     bigger though." Decision 15's colour is reached through the button's
     tint (`.tint(.primary)`), since the glass style paints its label with
     the tint and ignores the label's own foreground.
+    *Narrowed at the sweep, 2026-09-30: what the device showed is that a
+    hierarchical `.foregroundStyle(.primary)` on the label resolves against
+    the button's tint (the reason the shape bars drew dimmed), while an
+    explicit colour holds — the side toggle's brass-or-primary row (Decision
+    20) was measured working on the device.*
 
 Made by the person on 2026-09-26, at the Phase 2 walkthrough:
 
@@ -848,8 +854,8 @@ overrules one here.
   the system's label colour, not the tint.* `004`'s record: "a system control taking the system
   semantic colour is appropriate."
   *Narrowed further by Decision 17 (the system colour reached through
-  `.tint(.primary)`, since the glass style ignores the label's own
-  foreground) and Decision 20 (the side toggle brass on the primary side —
+  `.tint(.primary)`, since a hierarchical `.primary` on the label resolves
+  against the tint — see the sweep's narrowing under Decision 17) and Decision 20 (the side toggle brass on the primary side —
   as built at T009d, a `.foregroundStyle` on its label row rather than a
   tint). The add button keeps the brass tint (Decision 14). No appearance
   proxy anywhere (criterion 8).*

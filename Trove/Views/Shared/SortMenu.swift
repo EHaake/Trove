@@ -27,10 +27,11 @@ enum SortMenuCopy {
 /// **Its label is in the system's primary label colour** (spec Decisions 15
 /// and 17, overtaking R3) — the default monochrome label the guidelines ask
 /// for on Liquid Glass, matching the system menu it opens. The glass style
-/// paints its label with the button's tint and ignores the label's own
-/// foreground, so the colour arrives as the button's tint, set to the
-/// primary style directly after the glass style, overriding the root brass
-/// tint. The glyph's bars are primary-coloured views rather than shapes: a
+/// resolves a hierarchical foreground — the primary style — on its label
+/// against the button's tint, so set on the label it would not hold (an
+/// explicit colour would, as `SideToggle`'s does); the colour arrives as the
+/// button's tint instead, set to the primary style directly after the glass
+/// style, overriding the root brass tint. The glyph's bars are primary-coloured views rather than shapes: a
 /// shape under the hierarchical tint draws dimmed on the device, a colour
 /// view at full strength. Never a theme colour: `HeaderControlsWiringTests`
 /// (G2) pins the tint's place and that this file names no theme colour;
@@ -41,10 +42,11 @@ enum SortMenuCopy {
 /// horizontal padding gives the glyph and the text equal insets (12.33 pt
 /// left, 13.33 pt right on iOS 27.0) with no padding of the app's own. The
 /// price is recorded, not hidden: on iOS 26.5 a menu-driven relabel from a
-/// narrow option to a wider one leaves the capsule at the old width for about
-/// 1.4 s (Date → Market ↓: 41 pt under a 54 pt label from +0.3 s to +1.4 s),
-/// then it snaps to the right width in one frame; wide to narrow morphs
-/// correctly, and iOS 27.0 is clean. Resetting the menu's identity on each
+/// narrow option to a wider one leaves the capsule at the old width for
+/// 1.54–1.78 s as T009 timed it (first seen at T002 as Date → Market ↓: 41 pt
+/// under a 54 pt label), then it snaps to the right width in one frame, and
+/// on 26.5 Light the capsule also leaves a stale shadow; wide to narrow
+/// morphs correctly, and iOS 27.0 is clean. Resetting the menu's identity on each
 /// selection removes that, but it replaces the system's menu-to-button morph
 /// with a crossfade on both runtimes; the person kept the morph — it is the
 /// standard iOS behaviour, and a menu button that looks standard should

@@ -103,7 +103,7 @@ beyond that spec.
   policy that points it, never deleted to get to green.** Blind spots the
   Phase 4 review named (a bespoke overlay beside a kept `SortMenu(`, the
   `Button(action:)` spelling, `backgroundPreferenceValue`, an explicit
-  `GlassButtonStyle()`) went to the pre-merge sweep.
+  `GlassButtonStyle()`) are carried to `020`.
 - **The tear was measured before anything else, and its result decided
   a trade** (criterion 1, P4, Decision 18). `010` T035 took the system
   `Menu` off Sort By because of T029c's tear, so putting it back started
@@ -162,8 +162,10 @@ beyond that spec.
   on a card or on other glass. The glass labels take the system's label
   colour, not brass (Decision 15, matching Apple's guidance to keep colour
   out of Liquid Glass controls) — reached through `.tint(.primary)`,
-  because the glass style paints its label with the tint and ignores the
-  label's own `.foregroundStyle`, which only the device showed.
+  because the glass style resolves a hierarchical `.foregroundStyle(.primary)`
+  on its label against the button's tint (the reason the shape bars drew
+  dimmed) — an explicit colour on the label holds, as the side toggle's
+  brass shows, but `.primary` does not — which only the device showed.
   `NoHardcodedColorsTests` gained a per-file, per-line exemption list with
   a stale-entry check for those lines — a recorded exception to `004`'s
   rule, not a hole in it — and both colour scans moved to a simple word

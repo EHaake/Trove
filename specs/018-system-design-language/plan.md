@@ -33,7 +33,8 @@ changes to the four tab roots (`ItemListView`, `WishlistView`, `PlansView`,
 `DashboardView`), `AddButton`, `ThemeMetrics` (one token out), `ExportCopy`
 (two strings out), and the two design documents. **No model, view model,
 store, service or schema changes** — every sort write moves verbatim from a
-dropdown row's closure into a menu's `select` (Q7). No new dependency, no
+dropdown row's closure into a menu's `select` (Q7). *As built, one view-model
+addition: `PlansViewModel.ActiveSortOrder.badgeLabel` (Decision 23(a)).* No new dependency, no
 `.pbxproj` edit (the root `Trove` and `TroveTests` groups are synchronized
 folders — a new file joins the build by existing; if one doesn't, stop and
 flag).
@@ -435,7 +436,7 @@ was found — and (b) the named frames viewed by eye (T003's Done note lists the
 1's first measurement is met on that evidence**, not on an automatic
 verdict. Before T009's final film the probe is made able to fail: pixels
 adjacent to a brass pixel are excluded from the capsule, and the change is
-shown firing TEAR on T002's 26.5 frames 819–864 before the finished header
+shown firing TEAR on T002's 26.5 Light frames 918–945 before the finished header
 is filmed (T009's task line carries this). Q6 as built: `.regular`, the
 render 29 pt against 28.33 on both runtimes. Q8 as built: `Section` of
 `Toggle` rows; on iOS 26.5 the subtitle is drawn but absent from the
@@ -790,7 +791,9 @@ labels wrapped when squeezed — which `TitleRowLayout` now carries.
   `.animation(.smooth(duration: 0.3), value: side)`; `animation(nil`
   absent; exactly one `theme.colors`; words, labels, identifiers and icons
   checked as values through the two inits; each screen composes one call
-  with `viewModel.show`, no `$`, outside the empty-state branch; and
+  with `viewModel.show`, outside the empty-state branch (the no-`$` leg
+  deleted at the pre-merge sweep: `SideToggle.side` is a `let`, so the
+  compiler rules a binding out and the leg could not fail); and
   `theControlRowIsSortThenToggleThenOverflow` on each screen.
 - **G1** (`ItemListHeaderLayoutTests`, rendered at 3×, exact):
   `badgeRowSize(side:)` renders all three controls (in the renderable order
@@ -957,7 +960,8 @@ legitimate source-scan shape), each `#require`-ing its anchors:
   name** in `ItemListView`, `WishlistView` and `PlansView` — `#require`d to be
   declared exactly once in each, so a renamed or missing control fails
   rather than being skipped — and composes `SortMenu(`; the Dashboard's
-  `orderControl` is required likewise and composes `Menu {` and `Picker(`.
+  `orderControl` is required likewise and composes a system `Menu` (as
+  built, a `Section("Order by")` of `Toggle` rows, Q8 — no `Picker(`).
   `SortMenu.swift` and `OverflowMenu.swift` each compose a `Menu {`;
   `DetailOverflowMenu.swift` still does. **Mutation (criterion 10's "a
   bespoke row put back")**: the Wishlist's `sortControl` becomes a `Button`
@@ -991,7 +995,10 @@ legitimate source-scan shape), each `#require`-ing its anchors:
 
 **Every `Picker(` match in these guards (G2, G5, G10, G12a) is on a word
 boundary** — `(?:^|[^A-Za-z0-9_])Picker\s*\(`, the existing `Menu` regex's
-shape — so `DatePicker(` and `PhotosPicker(` never fire.
+shape — so `DatePicker(` and `PhotosPicker(` never fire. *As built, no
+guard carries a `Picker(` match: G2 and G5 were reworded at Q8 onto
+`Section` of `Toggle` rows, G10 at Decision 19 onto `SideToggle`, and
+G12a's order control composes a `Menu` alone.*
 
 The allowlist and `theOnlySystemMenuIsTheDetailScreensNavBarOverflow` go; the
 doc comments that state the old rule are corrected in the same task (Context).
@@ -1134,7 +1141,7 @@ retired and why each could go); `scripts/verify.sh all`. Then the pre-merge
 | G7 | `PlansWiringTests.noSortMenuOffersAManualOrder`: two `SortMenu`s, neither with `manualOrder:` | `manualOrder: .newest` on one |
 | G8 | `ExportWiringTests` (three rewritten): rows, order, gates, two `Divider()`s, Import and Settings wired and ungated; Items' two submenus over every scope, each row on its own gate, no scope literal, no ellipsis | the PDF row gated on the CSV flag; a submenu exporting `.both` directly; Import gated; "Export as CSV…" on Items |
 | G9 | `SettingsWiringTests.everyTabsRootReachesSettings` (rewritten) | Plans' `OverflowMenu` replaced; its Settings row removed |
-| G10 | `ItemListSidesWiringTests` + `PlansWiringTests` (§4, rewritten at T009a–T009d onto `SideToggle`): a `Button` whose action is `select(other)`, no `@Binding`; `.buttonStyle(.glass)` directly followed by `.controlSize(.regular)`, no `.tint(`; both hidden rows; one ordered regex over the showing row → the `accentBrass`/`Color.primary` ternary → `.id(side)` → `.transition(.blurReplace)` → `.frame(height: 0)` → `.animation(.smooth(duration: 0.3), value: side)`; no `animation(nil`; exactly one `theme.colors`; words, labels, identifiers and icons as values through the inits; one call per screen with `viewModel.show`, no `$`, outside the empty-state branch; `theControlRowIsSortThenToggleThenOverflow` on each screen | the action `select(side)`; `$…wrappedValue.side` at a call site; the call moved into the empty branch; a second theme colour named; the ternary inverted; the ternary moved back onto `.tint`; `.blurReplace` → `.opacity`; `.id(side)` removed; `animation(nil` put back; the smooth animation removed; either hidden row removed; the toggle and the sort control swapped |
+| G10 | `ItemListSidesWiringTests` + `PlansWiringTests` (§4, rewritten at T009a–T009d onto `SideToggle`): a `Button` whose action is `select(other)`, no `@Binding`; `.buttonStyle(.glass)` directly followed by `.controlSize(.regular)`, no `.tint(`; both hidden rows; one ordered regex over the showing row → the `accentBrass`/`Color.primary` ternary → `.id(side)` → `.transition(.blurReplace)` → `.frame(height: 0)` → `.animation(.smooth(duration: 0.3), value: side)`; no `animation(nil`; exactly one `theme.colors`; words, labels, identifiers and icons as values through the inits; one call per screen with `viewModel.show`, outside the empty-state branch (no `$` leg — the compiler's, deleted at the sweep); `theControlRowIsSortThenToggleThenOverflow` on each screen | the action `select(side)`; a call site's `select:` closure emptied (`{ _ in }`); the call moved into the empty branch; a second theme colour named; the ternary inverted; the ternary moved back onto `.tint`; `.blurReplace` → `.opacity`; `.id(side)` removed; `animation(nil` put back; the smooth animation removed; either hidden row removed; the toggle and the sort control swapped |
 | G11 | `HeaderControlsWiringTests` + `testTheAddButtonKeepsItsSizeAndPlace` | `.glassProminent` removed; `Circle().fill` back; the button 60 pt |
 | G12 | `MenuPolicyTests` a–d (§7) | a bespoke sort back on the Wishlist; `DropdownHost` restored; glass on `PlansCard`; an appearance proxy; a confirmation dialog |
 | G13 | UI tests, §9, twice back to back. **The switch legs are the toggle's** (T009a): `showSide(_:on:)` taps it by identifier and waits on its `value`, and the four side reads are `value == "Sold"` etc.; the planned segment leg (tap a segment, read its `.isSelected`) is retired — there are no segments | each new test's own mutation: `manualOrder` on Plans; the order setter not writing; the add button's frame changed. No mutation is recorded against the `showSide` reads |

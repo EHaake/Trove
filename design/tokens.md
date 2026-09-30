@@ -230,11 +230,11 @@ content*).
 |---|---|
 | Opens | the system menu; Trove supplies only its "Sort by" header, its rows and the one subtitle |
 | Surface | `.buttonStyle(.glass)` at `.controlSize(.regular)` — a glass capsule; no border and no fill of Trove's (`018` Decision 17) |
-| Label colour | the system's primary label colour, as the button's tint — `.tint(.primary)` directly after the glass style, which paints its label with the tint and ignores the label's own foreground; it overrides the root brass tint (`018` Decisions 15, 17) |
+| Label colour | the system's primary label colour, as the button's tint — `.tint(.primary)` directly after the glass style, which resolves a hierarchical `.foregroundStyle(.primary)` on its label against the tint (the reason the shape bars drew dimmed) — an explicit colour on the label holds, as the side toggle's shows, but `.primary` does not; it overrides the root brass tint (`018` Decisions 15, 17) |
 | Label text | IBM Plex Mono `11` (`SortMenuCopy.labelFont`), the current option's name, left-aligned `8` after the glyph |
 | Label padding | `4` above and below; none horizontally of Trove's own — the glass style's insets (12.33 pt left, 13.33 pt right on iOS 27.0) |
 | Height | **36.33 pt** rendered — between the system's two control sizes (Decision 17); the "…" and the side toggle render at the same height (`ItemListHeaderLayoutTests`, G1) |
-| Width | the current option's text (Decision 18). On iOS 26.5 a narrow-to-wide relabel holds the old width for about 1.4 s, then snaps right — an accepted, recorded flaw; iOS 27.0 is clean |
+| Width | the current option's text (Decision 18). On iOS 26.5 a narrow-to-wide relabel holds the old width for 1.54–1.78 s (T009's films), then snaps right, and on 26.5 Light leaves a stale shadow — both accepted, recorded flaws (Decision 18, and Decision 19's pause); iOS 27.0 is clean |
 | Sort glyph | three bars, widths `10`/`7`/`4`, `1.5` tall, `2.5` gap, drawn as primary-coloured views (a shape under the tint drew dimmed on the device) |
 | Short label (Plans) | on Plans' Active side the capsule reads **Wishlist** under the "Wishlist order" sort, the menu row keeping "Wishlist order", so the title keeps its room (`018` Decision 23) |
 
@@ -271,7 +271,7 @@ measure them; nothing here is a new colour.
 | Control row | **Sort By · side toggle · "…"** (Decision 20): Sort By only while the side has rows, the toggle and the "…" always, so the two always-present controls never move. The horizontal spacing is unchanged |
 | Meta line | Items and the Wishlist (Plans has none): one line, centred between the title row and what follows — `(6 + gap) / 2` above and below it (`MetaLineSpacing.split`), where `gap` is what the screen leaves under the header, so the search field and the first row did not move (Decision 22) |
 | Search field | **81 pt** under the header block's top on Items and the Wishlist; the Wishlist's moved 4 pt down to Items' (Decision 22, amended) |
-| Height | the side toggle's move into the control row took the switch's own row out: the Items header went from 121 to 74 pt (Decision 19) |
+| Height | the side toggle's move into the control row took the switch's own row out: the Items header went from 121 to 74 pt (Decision 19); as shipped it is 66 pt (37 + 15 + 14) |
 
 ### Add button (`018`)
 

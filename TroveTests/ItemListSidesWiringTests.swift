@@ -292,14 +292,15 @@ struct ItemListSidesWiringTests {
     // MARK: - The switch (plan Q15, 018 G10)
 
     /// The one call site, and the whole of Q15 as the view can express it:
-    /// the switch reports a choice through `show(_:)`, and the screen binds
-    /// nothing — no `$` projection among its arguments (the closure's own
-    /// `$0` aside).
+    /// the switch reports a choice through `show(_:)`. That the screen binds
+    /// nothing is the compiler's to guard, not this test's: `SideToggle.side`
+    /// is a `let` and the view model's `side` is `private(set)`, so neither a
+    /// `$` projection nor a direct write compiles there. The no-`$` leg this
+    /// test carried could not fail for a behavioural reason and was deleted
+    /// at `018`'s pre-merge sweep, with the name's "AndBindsToNothing".
     ///
-    /// Mutation (018 T007): `SidePicker(side: $viewModel.side, …)` → red.
-    /// Re-run on `SideToggle` at T009a: `side: $viewModel.wrappedValue.side`
-    /// → red.
-    @Test func theSwitchReportsThroughShowAndBindsToNothing() throws {
+    /// Mutation (018 sweep): the `select:` closure emptied (`{ _ in }`) → red.
+    @Test func theSwitchReportsThroughShow() throws {
         let code = try code()
 
         let calls = SourceScan.argumentLists(of: "SideToggle", in: code)
@@ -307,11 +308,6 @@ struct ItemListSidesWiringTests {
         let call = try #require(calls.first)
 
         #expect(call.contains("viewModel.show($0)"), "the switch doesn't call `show(_:)`: \(call)")
-        let projection = try Regex(#"\$[A-Za-z_]"#)
-        #expect(
-            !call.contains(projection),
-            "the switch is bound to `side` itself, skipping `show(_:)`: \(call)"
-        )
     }
 
     /// Spec Decision 20: the control row is Sort By, then the side toggle, then

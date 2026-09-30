@@ -162,30 +162,25 @@ struct PlansWiringTests {
     }
 
     /// G19, criterion 5, and `018` G10: the switch reports through
-    /// `show(_:)` and is never bound (no `$` projection in its arguments), so
-    /// changing side reloads and clears nothing; it stands in the header,
+    /// `show(_:)` — never bound, which the compiler guards (`SideToggle.side`
+    /// is a `let`, the view model's `side` `private(set)`; the no-`$` leg was
+    /// deleted at `018`'s pre-merge sweep, since it could not fail for a
+    /// behavioural reason) — so changing side reloads and clears nothing; it stands in the header,
     /// outside the empty-state branch; and since T009a (spec Decision 19) it
     /// is the glass `SideToggle`, carrying the Plans words, glyphs, label and
     /// identifier and asking for the other side, read off a toggle built
     /// through its own `init(side:select:)`. The toggle's body is
     /// `ItemListSidesWiringTests`' to read.
     ///
-    /// Mutations (018 T007): `SidePicker(side: $viewModel.side, …)` → red;
-    /// the call moved into the empty-state branch → red. Re-run on
-    /// `SideToggle` at T009a: `side: $viewModel.wrappedValue.side` → red;
-    /// the call moved into the empty-state branch → red.
+    /// Mutations (018 T007, re-run on `SideToggle` at T009a): the call moved
+    /// into the empty-state branch → red. (018 sweep): the `select:` closure
+    /// emptied (`{ _ in }`) → red.
     @Test func theSideToggleReportsThroughShow() throws {
         let code = try SourceScan.production(Self.view)
 
         let calls = SourceScan.argumentLists(of: "SideToggle", in: code)
         try #require(calls.count == 1, "the screen builds \(calls.count) side switches, expected exactly 1")
         #expect(calls[0].contains("viewModel.show($0)"), "the switch doesn't report through `viewModel.show`: \(calls[0])")
-        // A `$` projection, not the closure's own `$0`.
-        let projection = try Regex(#"\$[A-Za-z_]"#)
-        #expect(
-            !calls[0].contains(projection),
-            "the switch is bound — a side change must go through `show(_:)`: \(calls[0])"
-        )
 
         let branches = SourceScan.closureBodies(after: "if let reason = viewModel.emptyReason", in: code)
         try #require(branches.count == 1, "PlansView declares \(branches.count) empty-state branches, expected exactly 1")

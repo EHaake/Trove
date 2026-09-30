@@ -156,7 +156,7 @@ purchases.
 
 ## Status
 
-Twelve specs shipped: `001-core-inventory` (v1 — item tracking, the
+Fourteen specs shipped: `001-core-inventory` (v1 — item tracking, the
 dashboard, the wishlist, the Sell Plan, CloudKit sync),
 `010-item-management-enhancements` (merged 2026-08-30 — swipe actions,
 drag-to-reorder, duplication, expanded sorting, and a design-depth
@@ -198,7 +198,11 @@ collection carrying its photos, credits and Reverb match, while the sell
 plan built around it survives as a record), and `009-sell-plan-list`
 (merged 2026-09-24 — sell plans as things you create, the Plans tab and
 its Dashboard card, completed plans showing the item they became, and
-Delete all sell plans in Settings).
+Delete all sell plans in Settings), and `018-system-design-language`
+(merged 2026-09-30 — every menu in the app is the system's own, the
+header's Sort By, side toggle and "…" and the add button wear Liquid
+Glass like the tab bar, and the Owned/Sold and Active/Completed switches
+became one glass toggle, brass on the primary side).
 See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.
@@ -277,6 +281,7 @@ specs/
   014-sold-side-parity/  Shipped — Sell on the swipe, and the Sold side's search, chips and sort
   015-mark-as-bought/    Shipped — the purchase: a wanted item becomes an owned one
   009-sell-plan-list/    Sell plans you create, the Plans tab and its Dashboard card
+  018-system-design-language/ Shipped — the system's menus, Liquid Glass on the header's controls
   SYNC-CHECKS.md         Every untested sync check, from all specs, for one pass
   ROADMAP.md             Backlog of future specs
 design/

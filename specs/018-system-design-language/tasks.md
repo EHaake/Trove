@@ -98,7 +98,7 @@ agent holds the simulator. Everything the person reads is plain language.
 catches): `MenuPolicyTests.theOnlySystemMenuIsTheDetailScreensNavBarOverflow`
 (→ G12, T011); `ItemListHeaderLayoutTests` (G1, T001/T005);
 `ItemListSidesWiringTests.oneNarrowingGateCoversBothSidesAndEachSideBringsItsOwnSort`
-(G6, T001), `theSwitchReportsThroughShowAndBindsToNothing`,
+(G6, T001), `theSwitchReportsThroughShow (formerly …AndBindsToNothing; the no-`$` leg deleted at the sweep)`,
 `theSwitchStandsOutsideTheEmptyState`, `theSwitchIsLabelledAndMarksItsActiveHalfSelected`
 (G10, T007); `PlansWiringTests.noSortDropdownOffersAManualOrder` (G7, T004),
 `theSideToggleReportsThroughShow` (G10, T007);
@@ -1504,3 +1504,5 @@ recorded here too.
 | `general-purpose` — T013 §2 (Increase Contrast, Reduce Transparency) | `opus` | ~130k | PASS; the Dark add button's plus 2.6:1 flagged to the person |
 | `general-purpose` — T013 §3–4 (export, import, gates) | `opus` | ~146k | PASS; the spinner unobservable at seed size; criterion 11's traits to the person |
 | `sdd-implementer` — T014 close-out (evidence bundle, no full reads) | `opus` | ~170k | Done; 13/16 criteria ticked, three honestly open; unit 1740, UI 38/38 |
+| `skeptical-reviewer` — pre-merge sweep | `opus` | ~246k | **signed off**, no blocking findings; eight fix-before-ready items (the `CLAUDE.md` example's "every header control" — its own amendment commit; the over-broad "glass ignores the label's foreground" claim narrowed; the 26.5 transient's 1.54–1.78 s; the header's 66 pt in tokens.md; brief.md's tab-bar sentence; the no-`$` legs deleted as compiler-guaranteed; plan §7's `Picker(` and Context's "no view-model changes"; README's `018` on the branch); rulings: `sectionGap` comment not a defect, G12 blind spots carried to `020`, tokens.md:702 history stands. To the person: the Dark add button's plus at 2.6:1 is a regression against the old disc's dark ink and below WCAG 1.4.11's 3:1; the toggle's blur ignoring Reduce Motion is a regression against the old switch's fade-only |
+| `sdd-implementer` — sweep fixes 2–8 | `opus` | ~65k | Done; unit 1740 in 231; the `select:` closure emptied → both `show` legs red; a direct write does not compile (`private(set)`) |
