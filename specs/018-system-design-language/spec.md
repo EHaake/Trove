@@ -311,7 +311,20 @@ are replaced the same way. No Design pass: nothing new is being designed
 
 ## Acceptance criteria
 
-1. [ ] **The T029c tear is measured first, and is absent at the end.** With
+Verified at T014's close-out (2026-09-30) by the unit suite (**1740 tests
+in 231 suites**) and the UI suite (**38 tests**), both green twice back to
+back at 18bcce8 (T013) and once more at the close-out; by the films of T002,
+T003 and T009 (the `scripts/motion-probe/` background-difference mode); and
+by T013's device pass on iOS 27.0, with iOS 26.5 for the runtime checks.
+**Thirteen of the sixteen criteria are ticked. Criteria 8, 11 and 15 are
+not**: 11 and 15 wait on the person's own steps (the Accessibility
+Inspector pass and the one-language attestation), and 8 is met on every
+glass control but one flag the person has not answered — the Dark add
+button's white plus on brass at 2.6:1. Each criterion names what was
+actually verified; where the only witness is a source scan or a render, it
+says so.
+
+1. [x] **The T029c tear is measured first, and is absent at the end.** With
    the sort badge a glass button opening a system menu, switching the
    Items sort between the narrowest and the widest label, on device or
    simulator, filmed frame by frame with the `scripts/motion-probe/`
@@ -324,26 +337,94 @@ are replaced the same way. No Design pass: nothing new is being designed
    on iOS 27.0; on iOS 26.5 a transient wrong width after a narrow-to-wide
    relabel, self-correcting within about 1.5 s, is accepted and recorded
    rather than counted as the tear.*
-2. [ ] Each of the four "…" badges opens a system menu whose rows carry the
+   *Verified by* the films, measured first and last. **T002** (at T001's
+   commit; iOS 27.0 and 26.5, Dark and Light, five switches): whole on every
+   frame on 27.0; on 26.5 the tear in a settled form — after a narrow-to-wide
+   relabel the capsule kept the previous label's width until the next tap
+   (Date → Market ↓ settled at 25.0–95.0 against a true 13.0–108.0). P4
+   applied → **T003** (the constant footprint, re-filmed at 07459bb): whole on
+   every frame on both runtimes and both appearances, every settled extent
+   within 0.7 pt of XCUITest's frame. P4 was then withdrawn by Decision 18
+   (T006a: the capsule sized to its text, the system's morph kept). **T009**
+   (at 3eb39ce, on the finished header, the probe first shown able to fail —
+   TEAR fires on T002's 26.5 Light frames 918–945): **iOS 27.0 whole on every
+   frame, 0 TEAR, all four switches, both appearances**; iOS 26.5 shows
+   Decision 18's transient on both narrow-to-wide switches, self-correcting at
+   +1.54 to +1.78 s, and on Light a stale wider shadow after a wide-to-narrow
+   switch until the next tap. Both sit a little outside the amendment's words
+   (its "about 1.5 s"; the shadow unnamed); both were shown to the person at
+   the Phase 3 pause and passed without objection ("Ok!", recorded under
+   Decision 19). The probe's TEAR verdict could not fire on T002's and T003's
+   films; their evidence is the settled extent against XCUITest's frame and
+   the named frames viewed by eye (plan §1, As built).
+2. [x] Each of the four "…" badges opens a system menu whose rows carry the
    labels, order, groups and enabled gates the bespoke dropdown carried,
    and each row does what it did. On an empty collection the export rows
    are disabled and Import and Settings are not.
-3. [ ] On the Items list, Export as CSV and Export as PDF are submenus
+   *Verified by*: `ExportWiringTests`' three rewritten menu tests (G8 —
+   rows, order, groups and each format's own gate, with every
+   `Button`/`Menu`/`Toggle` counted against the listed rows),
+   `SettingsWiringTests.everyTabsRootReachesSettings` (G9), G3's
+   `moreActions.*` legs; UI `testEmptyCollectionOffersImportAndSettingsButNotExport`
+   (Items and the Wishlist), `testDashboardOffersSettingsAndNothingElse`,
+   `testEveryTabsRootReachesSettings`. Device (T013 §3): Import from CSV…
+   opens the file importer from the Items and Wishlist menus, cancelled with
+   the counts unchanged — the one row no UI test reaches; Plans' menu is
+   Settings alone.
+3. [x] On the Items list, Export as CSV and Export as PDF are submenus
    offering Owned items, Sold items and Owned and sold, each enabled
    exactly when it has rows under the narrowing on screen; choosing one
    exports that scope. The two rows carry no ellipsis. The Wishlist's two
    export rows export directly and keep theirs.
-4. [ ] While an export runs the badge shows its spinner and is inert;
+   *Verified by*: UI `testTheExportRowsAreSubmenusGatedByWhatIsOnScreen`
+   (mutation: the scope rows gated on `canExportCSV` → red); G8's scope legs
+   (a submenu exporting `.both` directly → red; "Export as CSV…" on Items →
+   red). Device (T013 §3–4): the Sold side's rows export the sold list; under
+   a chip the scope rows read Owned items / Sold items / Owned and sold, each
+   gated by its own rows under the narrowing; a search narrowing Sold to zero
+   dims Sold items alone. As built: a format with no rows at all is one
+   disabled row with no chevron rather than a submenu, because iOS 27.0
+   ignores `.disabled` on a nested `Menu` (T005's decision review).
+4. [x] While an export runs the badge shows its spinner and is inert;
    when it finishes the share sheet appears, exactly as today.
-5. [ ] The sort badge opens a system menu with one row per sort option
+   *Verified by*: G4 (`HeaderControlsWiringTests`: `OverflowMenu` swaps
+   the ellipsis for the spinner and is `.disabled(isBusy)`, and Items passes
+   its real busy state — mutations `.disabled(isBusy)` removed and
+   `isBusy: false` on Items → red); device (T013 §3): the Items and Wishlist
+   PDF exports reach the share sheet. **The spinner itself was not seen on
+   the device**: at the seeded collection's size the export finishes inside
+   the menu's ~0.3 s dismissal morph, while the "…" is still the morphing
+   glass. The spinner and the inert badge rest on G4's wiring — a view-body
+   fact — and on the export's busy state, which this spec did not change.
+5. [x] The sort badge opens a system menu with one row per sort option
    under a **Sort by** header, the current sort checked; choosing a row
    applies it and the badge's label names it. The Custom row, where a
    list offers one, carries the subtitle "Drag rows to reorder" and no
    other row carries a subtitle.
-6. [ ] The Dashboard's order control keeps its mono label and opens a
+   *Verified by*: UI `testEverySortMenuOffersItsOrdersUnderSortByWithTheCurrentOneChecked`
+   (every list, both sides: exactly one "Sort by", the current row
+   `isSelected` and the only one, the Custom row's label "Custom, Drag rows to
+   reorder", every other row exactly its name — mutations `manualOrder:
+   .newest` on Plans and the subtitle `Text` removed → red),
+   `testTheSortMenuOffersMarketRows`,
+   `testSortingEachSideReordersTheRowsAndIsKeptAcrossASwitch`; G2 (the
+   `Section` of `Toggle` rows), G6 and G7 (a menu per side; no Plans menu
+   offers a manual order). T002's menu checks on 27.0 and 26.5: one header,
+   one checkmark, and tapping the current row closes the menu with the label
+   unchanged. As built: Plans' capsule reads "Wishlist" for the "Wishlist
+   order" sort, the menu row unchanged (Decision 23(a);
+   `theCapsuleShortensOnlyTheWishlistOrder`,
+   `theActiveCapsuleReadsTheShortLabel`).
+6. [x] The Dashboard's order control keeps its mono label and opens a
    system menu with By value and By count under an **Order by** header,
    the current one checked.
-7. [ ] Owned/Sold and Active/Completed are system segmented controls.
+   *Verified by*: UI `testTheOverviewsOrderMenuOffersValueAndCountUnderOrderBy`
+   (one "Order by", By value selected, By count chosen → "Order categories By
+   count"; mutation: the setter not writing → red); G5's order legs (the
+   setter writes and reloads; no glass on the label); G3's
+   `orderOptions.dashboard`. Device (T013 §1): the menu open in both
+   appearances.
+7. [x] Owned/Sold and Active/Completed are system segmented controls.
    *Amended by Decision 19 (2026-09-27): a glass toggle button in the
    header's control row showing the current side (SF Symbol + word in the
    app's mono type); tapping it shows the other side; the header above and
@@ -354,46 +435,154 @@ are replaced the same way. No Design pass: nothing new is being designed
    sides within a point (`014` G38 and G39, kept). Filmed with the motion
    probe: the selection slides between the segments rather than cutting,
    and the header above and the rows below do not move during it.
+   *Verified by*, as amended: G10
+   `ItemListSidesWiringTests.theSwitchIsAGlassToggleAskingForTheOtherSide`
+   and `PlansWiringTests`' toggle legs (a `Button` acting `select(other)`, no
+   binding, one call per screen with `viewModel.show`, outside the empty
+   state; words, labels, identifiers and icons checked through the inits);
+   `theControlRowIsSortThenToggleThenOverflow` (Decision 20);
+   `theSideToggleIsOneWidthOnBothSidesOfEachScreen` (Decision 21: Items 79 pt,
+   Plans 105 pt); UI `testEachSideKeepsItsOwnSearchChipAndSortAcrossASwitch`
+   (each side keeps its search, chips and sort) and G39's
+   `testTheSoldCardLandsOnTheSoldSideWhichListsSalesMostRecentFirst` (the
+   header's height and the control row's position equal on both sides); G1's
+   header renders (66 pt on both sides). Device (T013 §1): the toggle filmed
+   at 60 fps on both screens in both appearances — its width constant (Items
+   80, Plans 105.7 pt), the blur ~0.33 s with no frame of two legible words,
+   no clipping, the press swell present, brass on Owned and Active. The slide
+   clause is moot; before Decision 19 replaced it, T009 filmed the segmented
+   control's slide on all six switches with 0 px header drift.
 8. [ ] The two switches, the two badges and the add button are not themed
    through any UIKit appearance proxy. Both appearances, Light and Dark, show a
    legible label on every glass control at the system's own colours —
    checked on the device pass in both, and once each under Increase
    Contrast and Reduce Transparency, since `004`'s defect showed only in
    the sheet.
-9. [ ] The bespoke dropdown surface, its host, its placement and anchoring,
+   *Not ticked — met but for one open flag.* No appearance proxy:
+   `MenuPolicyTests` (T011; mutation `UISegmentedControl.appearance()…` in
+   `TroveApp.init` → red). Device (T013 §1–2): every capsule label, toggle
+   word (brass 6.4–6.9:1; the system colour 16.7–19.9:1), "…" and sort-menu
+   row legible in Dark and Light, through an in-app appearance switch (Dark →
+   Light → Dark, nothing stale) and once each under Increase Contrast and
+   Reduce Transparency. **Open with the person**: the add button's white plus
+   on Dark's brass measures 2.6:1 (Light's darker brass 7.4:1). The button is
+   brass by Decision 14 rather than the system's colour; whether 2.6:1 is
+   legible enough is the person's call, and the criterion is ticked when they
+   answer.
+9. [x] The bespoke dropdown surface, its host, its placement and anchoring,
    the overflow dropdown, the sort dropdown and the side switch are
    removed from the app, with the tests that existed only to guard them.
    No screen carries a dropdown host, a dismiss catcher, or a tap-outside
    layer.
-10. [ ] The policy guard is rewritten to hold the new line: no view under
+   *Verified by*: T010 deleted `Dropdown.swift`, `DropdownHost.swift`,
+   `OverflowBadge.swift`, `OverflowDropdown.swift` and `SortPicker.swift` with
+   `ThemeMetrics.dropdownGap`; `SideSwitch.swift` went at T007 and its
+   successor `SidePicker.swift` at T009a. The build is the proof nothing calls
+   them, and a grep for every retired name across `Trove/`, `TroveTests/` and
+   `TroveUITests/` went from 130 lines in 20 files to 0. The four test files
+   that guarded only them are deleted, every test listed by name in
+   `tasks.md`'s retirement table. `MenuPolicyTests` now fails on any anchor
+   preference under `Trove/Views` or `Trove/App` (mutation: `DropdownHost.swift`
+   restored with one host re-attached → red).
+10. [x] The policy guard is rewritten to hold the new line: no view under
     the app draws a menu, picker or segmented switch of its own, and every
     "…", sort and order control opens a system menu. It is the legitimate
     source-scan shape — a fact about view bodies no view-model test can
     see — and it is broken deliberately once (a bespoke row put back)
     to show it goes red.
+    *Verified by*: T011 — `MenuPolicyTests` rewritten as G12a–d: each tab
+    root, derived from `ContentView`, composes `OverflowMenu(` for its "…" and
+    `SortMenu(` or a system `Menu` for its sort or order control; `SideToggle`
+    is a `Button` with no `Menu`; no view floats a surface through anchor
+    preferences; glass in exactly the four control files; no appearance proxy
+    and no `.confirmationDialog`. Broken deliberately — the Wishlist's
+    `sortControl` made a `Button` showing an `.overlay` of drawn rows, the
+    bespoke row put back → red — with plan §7's four other mutations red.
+    `CLAUDE.md`'s example was amended first, in its own commit. Known blind
+    spots, carried by the Phase 4 review to the pre-merge sweep: a bespoke
+    overlay beside a kept `SortMenu(`, the `Button(action:)` spelling,
+    `backgroundPreferenceValue`, and an explicit `GlassButtonStyle()`.
 11. [ ] Every badge, switch and control keeps its accessibility
     identifier; the two menu badges lose their "Opens …" hints and
     announce as pop-up buttons; the switches announce their selected
     segment. Checked with the Accessibility Inspector on the device pass.
-12. [ ] The UI suite's tests that drove the bespoke controls — the sort
+    *Not ticked — the person's step is pending.* Verified off the device:
+    every identifier kept (G3's legs over `sortOptions.*`, `moreActions.*`,
+    `orderOptions.dashboard`, `items.sideSwitch` and `plans.sideSwitch`; the
+    add buttons' labels in `testTheAddButtonKeepsItsSizeAndPlace`); no
+    `.accessibilityHint("Opens` anywhere under `Trove/Views` (G3's last leg;
+    mutation: the hint put back on `SortMenu` → red); the current sort row
+    exposed as selected (T004's UI test on 27.0, T002's accessibility dump);
+    the toggle's side exposed as its value, read by every UI test through
+    `showSide(_:on:)`. **Not verified**: that the menu badges announce as
+    pop-up buttons, and how the toggle announces — neither is readable from
+    `simctl` (T013), so both are the person's Accessibility Inspector pass.
+    Also for that pass: Plans' capsule shows "Wishlist" but speaks "Sort by
+    Wishlist order" (Voice Control's label-in-name), and on iOS 26.5 the Custom
+    row's subtitle is drawn but absent from the accessibility tree. The
+    criterion's "selected segment" is overtaken by Decision 19: the toggle has
+    no segments, and it announces its label with the current side as its
+    value.
+12. [x] The UI suite's tests that drove the bespoke controls — the sort
     rows, the overflow rows, the export-scope chooser, the two-tap
     switching, the side switches — drive the system controls instead and
     pass twice back to back. The two-tap-to-switch test is retired with
     the behaviour: two system menus behind two buttons switch in one tap,
     which is the system's rule and the better one.
-13. [ ] The unit suite passes with no test weakened. Tests deleted under
+    *Verified by*: the sort, overflow and export-scope UI tests rewritten
+    onto the system menus (T001, T004, T005) and the side-switch taps onto the
+    toggle through `showSide(_:on:)` (T007, T009a);
+    `testAnOpenMenuClosesOnAnyOutsideTapIncludingTheOtherBadge` retired with
+    the two-tap rule (T001, P5). `scripts/verify.sh all` twice back to back at
+    18bcce8 (T013): UI 38/38 in 997.7 s and 38/38 in 996.5 s, both exit 0.
+13. [x] The unit suite passes with no test weakened. Tests deleted under
     criterion 9 are listed by name in `tasks.md`, each with the control
     whose removal made it moot.
-14. [ ] `design/brief.md` and `design/tokens.md` say what the app now does,
+    *Verified by*: `scripts/verify.sh` green at every task, ending at **1740
+    tests in 231 suites** (from T011; twice back to back at T013). Every
+    deleted test is listed by name in `tasks.md`'s "Tests retired" table with
+    the control whose removal made it moot, and the rewritten ones beneath it,
+    each Done note recording the mutation the rewrite catches. No guard was
+    loosened: G1's heights were re-measured, never given a tolerance (T005's
+    ruling), and the one mutation that stayed green (the title token back to
+    30, T009f) gained a relation leg at T011.
+14. [x] `design/brief.md` and `design/tokens.md` say what the app now does,
     per "Design documents" above, and the `013` rule is recorded as
     superseded rather than deleted.
+    *Verified by*: T012 — `design/brief.md` names "System controls, Trove
+    content" (3 hits) and records `013` Amendment A's rule as superseded,
+    quoting it as history; its "no rendered materials" section gains the glass
+    exception. `design/tokens.md`: the Sort By and "…" sections cut to what
+    stays Trove's, with what each opens; new List header and Add button
+    (`018`) entries; the `006` switch and Plans switch rows replaced by the
+    side toggle; `DropdownSurface`, `OverflowBadge`, "232px" and "Dismiss
+    catcher" 0 in both files. The Phase 4 review's one blocking finding (the
+    `006` switch's Motion row kept beside the toggle's) was folded in as
+    history before sign-off.
 15. [ ] Every screen is walked in both appearances at the phase pause and
     reads as one language: a "…" in a header, a "…" in a bar and the tab
     bar wear and open the same system glass. The person attests.
-16. [ ] The add button on the Items and Wishlist lists is a prominent glass
+    *Not ticked — the person's attestation is pending.* The person walked
+    the app at three phase pauses (Phase 1 three times, Phase 2 twice, Phase 3
+    seven times), each ending in "continue", and T013 §1 photographed every
+    screen with each menu open in Dark and Light for them. The attestation this
+    criterion asks for — that a "…" in a header, a "…" in a bar and the tab
+    bar read as one system glass — is named in T013 as the person's step and
+    has not yet been given.
+16. [x] The add button on the Items and Wishlist lists is a prominent glass
     button, brass-tinted, in its current size and place, with its label
     and identifier unchanged; it opens the same sheet; the rows scroll
     under it as they do now. Both appearances on the device pass.
+    *Verified by*: UI `testTheAddButtonKeepsItsSizeAndPlace`, green on the
+    drawn disc before the restyle and after it: Items "Add item" and the
+    Wishlist "Add wanted item" both at (322, 711, 56 × 56), the trailing edge
+    at the gutter, 24 pt above the tab bar (mutation: a 60 pt frame → red);
+    G11 `theAddButtonIsABrassProminentGlassCircleWithNoDrawnDisc`
+    (`.glassProminent`, `.buttonBorderShape(.circle)`, the brass `.tint`, no
+    drawn `Circle`, no `.foregroundStyle`). The restyle touched `AddButton`'s
+    label and style only, so its action — the same sheet — is unchanged.
+    Device (T013 §1): 56 × 56 over scrolled rows in both appearances, 168 × 168
+    px at 3×. The Dark plus's contrast is criterion 8's open flag.
 
 ## Decisions record
 
@@ -624,11 +813,18 @@ overrules one here.
   that opens a submenu; an ellipsis promises a further step of another
   kind. Items' two export rows lose theirs; the Wishlist's keep theirs,
   since those rows go straight to the share sheet.
+  *Decided on plan approval; shipped at T005 (criterion 3). A format with
+  no rows at all is one disabled row with no chevron, since iOS 27.0
+  ignores `.disabled` on a nested `Menu`.*
 - **P3 — REORDER becomes a subtitle.** "Drag rows to reorder", drawn by the
   system under the Custom row's title. It keeps the one job the tag had —
   telling the person which order they can drag — in the idiom the system
   menu offers for exactly that, and it is now visible whenever the menu
   is open rather than only once Custom is chosen.
+  *Decided on plan approval, and REORDER's fate by Decision 6; shipped at
+  T001 as a second `Text` in the Custom row's `Toggle` label (an inline
+  `Picker` draws neither header nor subtitle inside a `Menu` — T001's
+  decision review; criterion 5).*
 - **P4 — The tear's fallback is pre-authorised.** *Applied at T003, then
   withdrawn by Decision 18.* If criterion 1's first
   measurement shows T029c's tear behind a system menu, the sort badge
@@ -639,24 +835,39 @@ overrules one here.
   the tear survives even that, the work pauses and the person is asked,
   with the film. The spec does not assume the defect is gone and does not
   assume it is still there; it measures.
+  *The fallback did not ship: it was measured at T003, then removed at
+  T006a; criterion 1 records all three films.*
 - **P5 — One-tap switching between the two badges.** Opening the sort menu
   while the "…" menu is open, or the reverse, is whatever the system does
   with two menus behind two buttons. The bespoke host's two-tap rule and
   its test go with it (criterion 12).
+  *Decided on plan approval; shipped at T001, the two-tap test retired.*
 - **P6 — Glass controls take the system's colours.** Brass `.tint` where
   the system applies it, the system's own label colours otherwise, and no
   appearance proxy. *Amended by Decision 15: the two header badges take
   the system's label colour, not the tint.* `004`'s record: "a system control taking the system
   semantic colour is appropriate."
+  *Narrowed further by Decision 17 (the system colour reached through
+  `.tint(.primary)`, since the glass style ignores the label's own
+  foreground) and Decision 20 (the side toggle brass on the primary side —
+  as built at T009d, a `.foregroundStyle` on its label row rather than a
+  tint). The add button keeps the brass tint (Decision 14). No appearance
+  proxy anywhere (criterion 8).*
 - **P7 — The Plans tab's switch is sized by the system.** `009` sized its
   halves from a render so both labels fit; a segmented control sizes its
   segments to their content. The G18 render test that pinned the halves
   goes with the switch.
+  *Overtaken by Decision 19: no segmented control shipped; the side toggle
+  is one width for both its sides on each screen (Decision 21). G18 was
+  retired at T007.*
 - **P8 — Glass is never stacked and never on a card.** Apple's rule,
   adopted as the app's: a glass control sits on the header's flat surface
   or floats over the scrolling rows, never inside a plate, and no glass
   element overlaps another. This is what keeps Decision 13
   and any later "make it glass" request from drifting onto content.
+  *Decided on plan approval and held: glass on the three header controls
+  and the add button alone, guarded by `MenuPolicyTests` (glass in exactly
+  those four files, T011).*
 
 ## Non-goals (explicit)
 

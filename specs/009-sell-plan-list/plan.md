@@ -318,6 +318,12 @@ close-out, never edited away** (`014/plan.md:704-711` is the pattern):
   the one test reference follows them. Whether **"Completed" fits a 62 pt
   half** at 11 pt mono medium is unknown — the task measures it with a
   scratch render and sets Plans' half width from the measurement (G18).
+  *Superseded by `018-system-design-language` (its spec, Decisions 19–21,
+  P7): `SideSwitch` was replaced at `018` T007 by the system segmented
+  control and then, at the person's walkthrough, by `SideToggle` — a glass
+  button in the header's control row showing the current side, one width
+  for both its sides on each screen (Plans 105 pt). The 69 pt half and
+  G18's render test went with the switch.*
 - **Q15. The tab icon is drawn to match** (Decision 8):
   `design/icons/tab-plans.svg` in the tab set's language (24 viewBox, flat
   `#000` fills, the `scale(1.2)` group, opacity steps as `TabWishlist` uses):

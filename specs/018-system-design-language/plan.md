@@ -459,6 +459,74 @@ both runtimes; the person kept the morph (it is the system's standard
 behaviour) and accepted the 26.5 transient. G1's one-width leg (T003) is
 retired with P4; T009 films the transient and records its duration.
 
+**As built (close-out, T014, 2026-09-30).** What shipped, for whoever
+extends it.
+
+- **The tear, and P4.** T002's first film: iOS 27.0 whole on every frame;
+  iOS 26.5 the tear in a settled form (the capsule held the previous
+  label's width until the next tap). P4 was applied at T003 and re-filmed
+  whole on both runtimes, then withdrawn by Decision 18 at T006a — **P4 did
+  not ship**; the capsule is sized to its text and the system's
+  menu-to-button morph is kept. T009's film on the finished header, with the
+  probe first made able to fail (TEAR fires on T002's 26.5 Light frames
+  918–945): 27.0 whole on every frame, 0 TEAR, both appearances; 26.5 the
+  accepted transient on narrow-to-wide relabels, snapping right at +1.54 to
+  +1.78 s, and on Light a stale wider shadow after wide-to-narrow until the
+  next tap — both shown to the person at the Phase 3 pause and accepted.
+- **The control size.** `.controlSize(.regular)` with 4 pt of vertical
+  padding on each label (Decision 17, T004b, overtaking Q6's `.regular`
+  without padding and Decision 16's `.large`). Every glass control is
+  109 px tall at 3× — **36.33 pt** — on 27.0 and 26.5 alike; the "…" circle
+  is 36.67 × 36.33 (its hidden glyph row 22 pt wide); every control's
+  label is one mono-11 line tall (the "…" and the toggle through a hidden
+  line box), so the three are one height. The side
+  toggle is one width for both its sides on each screen (Items 79 pt,
+  Plans 105 pt in the render; 80 and 105.7 on the device), its swap an
+  `.id(side)` with `.transition(.blurReplace)` under
+  `.animation(.smooth(duration: 0.3), value: side)`, no `.tint` (T009d).
+  The add button is `.glassProminent`, circle, brass `.tint`, its label
+  framed 42 pt so the disc stays 56 × 56.
+- **The header.** `TitleRowLayout` (in `ItemListHeader.swift`) is a custom
+  `Layout`: the controls at their ideal size, the title in the remaining
+  width less 8 pt, the row reporting the controls' height with the title's
+  line box centred on their middle (Decision 23, T009f; T009e's
+  baseline-on-the-bottom-edge alignment was superseded the same day).
+  `MetaLineSpacing` is a caseless enum — a generic type cannot hold a
+  static — with `titleRowToMeta = 6` and `split(before:)`, which centres
+  the meta line between the title row and what follows it without moving
+  the search field or the first row (Decision 22). `listTitle` is a new
+  typography token (display semibold 34, one line, `minimumScaleFactor`
+  0.7) shared through `ListTitle` by Items, the Wishlist and Plans;
+  `screenTitle` stays 30 for the Dashboard's drill-down path. The Items
+  and Wishlist header is 66 pt, with or without its controls (37 + 15 +
+  14); the search field sits at 81 on
+  Items and the Wishlist, Plans' first card at 52. Plans' capsule reads
+  "Wishlist" for the "Wishlist order" sort (`SortMenu.badgeLabel`,
+  `ActiveSortOrder.badgeLabel`).
+- **The subtitle.** A sort menu is `Section(SortMenuCopy.header)` of
+  `Toggle` checkmark rows (Q8, T001's decision review — an inline `Picker`
+  draws neither header nor subtitle inside a `Menu`); the Custom row's
+  "Drag rows to reorder" is a second `Text` in its `Toggle`'s label. iOS
+  27.0 joins it into the row's accessibility label ("Custom, Drag rows to
+  reorder"); 26.5 draws it but leaves it out of the tree.
+- **`isSelected`.** On 27.0 XCUITest exposes the ticked `Toggle` row as
+  `isSelected`, and it is the only selected row (T004). The segmented
+  `Picker` of T007 exposed its segments as `buttons[…]` with a working
+  `isSelected`; since T009a the side is a `Button` whose
+  `.accessibilityValue` XCUITest reads as `value`, and every UI test
+  switches sides through `showSide(_:on:)`, waiting on `value == side`.
+- **G1's render against the device.** `ImageRenderer` crashes on a glass
+  `Menu` in a `VStack` with siblings, so G1 renders the header with a
+  stand-in sized from a render of the control row alone; it draws glass as
+  an opaque placeholder and a glass circle as width × label height, so the
+  circle's diameter and every glass colour are the device's to check. The
+  render's control row is **37 pt** at 1× (109 px at 3×); the device's
+  controls are **36.33 pt** (T013, 109 px at 3×), so device numbers sit
+  about a pixel off the stand-in's and the title's 37 pt line box
+  overhangs the real controls by a third of a point each side. T013
+  measured the title's ink centre on the controls' centre (312.5 px) on
+  Items, Plans and the Wishlist.
+
 **If the tear shows** (T003): the label takes a constant footprint —
 `ZStack(alignment: .leading) { ForEach(options) { Text(label($0)).hidden() };
 Text(label(selection)) }` — sized once to the widest of its menu's options,

@@ -1383,7 +1383,7 @@ Handoff notes for the pause reports:
   — unit 1740 in 231, UI 38/38 in 997.7 s; run 2 — unit 1740 in 231, UI
   38/38 in 996.5 s; both exit 0.
 
-- [ ] **T014 — Close-out. [`sdd-implementer` on an evidence bundle]**
+- [x] **T014 — Close-out. [`sdd-implementer` on an evidence bundle]**
   Per plan §10 and `CLAUDE.md`'s close-out rule: the orchestrator assembles
   the bundle with shell (each criterion with the tests or Done notes that
   satisfied it, the walkthrough list and what the person said at each pause,
@@ -1411,6 +1411,27 @@ Handoff notes for the pause reports:
   (pointers).
   **Verify:** everything committed and pushed; `scripts/verify.sh all` green,
   both count lines recorded here.
+  **Done (2026-09-30).** spec.md: a verification preamble; criteria 1–16
+  each with a *Verified by* paragraph — **13 ticked, three left open with
+  the reason**: 8 (the Dark add button's plus at 2.6:1, flagged to the
+  person), 11 (the person's Accessibility Inspector step), 15 (the
+  person's attestation); 4 ticked on G4's wiring with the device caveat
+  (the spinner finishes inside the menu's dismissal morph); 1 ticked
+  with the 26.5 transient/shadow the person passed. P-items each point
+  at their decision (P4: applied at T003, withdrawn at T006a, Decision
+  18). plan.md §1 **As built** paragraph. Pointers appended in `013`'s
+  spec, `010`'s tasks, `014`'s spec, `009`'s plan (`grep -c` = 1 each).
+  README's "Menus that are the app's own" → "System controls, Trove
+  content", the Amendment A and spec-tree lines corrected.
+  `main-docs-draft.md`: the ROADMAP row and entry, a
+  `020-system-navigation-bars` follow-up placed before `019`, and the
+  DECISIONS.md section in `009`'s shape. The retirement table already
+  names `theOnlySystemMenuIsTheDetailScreensNavBarOverflow` under
+  "Rewritten, not retired" — accurate, since G12a–d replaced it.
+  `scripts/verify.sh all`: UI 38/38 in 995.8 s; unit 1740 in 231 (a
+  second unit-only run, the first's count line having scrolled off).
+  Left for the merge: README's Status count and spec tree gain `018`;
+  `019`'s ROADMAP entry may want an "after `020`" note.
 
 ## Tier log
 
@@ -1482,3 +1503,4 @@ recorded here too.
 | `general-purpose` — T013 §1 (screens, appearance switch, toggle films, sizes, 26.5, Dynamic Type, Reduce Motion) | `opus` | ~200k (344 tool uses) | PASS; three observations (26.5's 5 pt trailing offset; Reduce Motion doesn't stop the blur; AX5 fits) |
 | `general-purpose` — T013 §2 (Increase Contrast, Reduce Transparency) | `opus` | ~130k | PASS; the Dark add button's plus 2.6:1 flagged to the person |
 | `general-purpose` — T013 §3–4 (export, import, gates) | `opus` | ~146k | PASS; the spinner unobservable at seed size; criterion 11's traits to the person |
+| `sdd-implementer` — T014 close-out (evidence bundle, no full reads) | `opus` | ~170k | Done; 13/16 criteria ticked, three honestly open; unit 1740, UI 38/38 |
