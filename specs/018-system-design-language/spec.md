@@ -588,6 +588,22 @@ Made by the person on 2026-09-27, at the Phase 3 walkthrough:
     both screens share the same token-derived split; the person: "That's
     fine." "Don't move the search bar" stands for Items.
 
+23. **The page title is bigger and centred on the controls** (2026-09-29,
+    the same pause, superseding Decision 22's baseline alignment; its
+    centred meta line stands). Seen on the device with the title on the
+    controls' bottom edge: "the title of the page 'Items' or 'Wishlist'
+    etc looks too small compared to the menu icons." Matching the
+    heights exactly was set aside (the controls are already under the
+    44 pt tap size and were sized at Decision 17; letters as tall as the
+    controls need ~50 pt, which does not fit beside three controls), and
+    of three offered the person chose: "go with 2 … If the titles are
+    slightly bigger then it will be better to have them aligned on the
+    center." So the title grows to about the system's large-title size
+    (34 pt, or the largest whole size that fits beside Plans' three
+    controls), its letters centred vertically on the controls' middle;
+    the row stays the controls' height, so the meta line, the search
+    field and the first row do not move.
+
 ## Proposals (P-items)
 
 Claude Code's; they become decisions on plan approval unless the person

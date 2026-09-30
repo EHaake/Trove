@@ -1096,6 +1096,24 @@ Handoff notes for the pause reports:
   (derived, not measured); the real controls are 36.33 pt, so device
   numbers sit ~1 px off the 37 pt stand-in's.
 
+- [ ] **T009f — The page title bigger, centred on the controls (Decision 23; the person's finding, 2026-09-29).**
+  Finding: on the controls' bottom edge the title (line box 33 pt, caps
+  ~20 pt) reads too small beside 36 pt glass controls. Fix:
+  `TitleRowLayout` centres the title's line box on the controls' middle
+  (the row still reports the controls' height, the title overhanging
+  equally above and below, so nothing under the row moves); the screen
+  title grows to 34 pt, or the largest whole size at which "Plans" is
+  not truncated beside its three controls under the widest sort label
+  at 402 pt width — measured, and the 375 pt behaviour reported. The
+  ink (cap-height) centre's offset from the controls' middle is measured
+  and recorded; over 1 pt returns to the orchestrator. Where the title's
+  type is a shared token, every screen using it is listed in the report
+  before it is changed. T009e's baseline leg becomes a centre leg; its
+  row-height, equal-gaps and no-move legs stay green unchanged.
+  Mutations recorded.
+  Files: `Trove/Views/Items/ItemListHeader.swift`, the typography token's file, `TroveTests/ItemListHeaderLayoutTests.swift`, any test pinning the title's size.
+  **Verify:** `scripts/verify.sh` green; the person's look at Items, Plans and Wishlist.
+
 ## Phase 4 — Retire the bespoke code; the policy and the documents · walkthrough: none — deletes files nothing calls since Phase 3, rewords one example in `CLAUDE.md`, rewrites the policy guard and edits the two design documents; nothing on screen changes
 
 - [ ] **T010 — Delete the bespoke controls and the tests that guarded only them.**
