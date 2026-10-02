@@ -20,8 +20,8 @@ struct WishlistPurchaseStoreTests {
     private let boughtOn = Date(timeIntervalSince1970: 1_770_000_000)
     private let now = Date(timeIntervalSince1970: 1_780_000_000)
 
-    private func purchase(_ priceCents: Int = 240_000) -> Purchase {
-        Purchase(date: boughtOn, priceCents: priceCents, location: "Reverb", condition: .good)
+    private func purchase(_ priceCents: Int = 240_000, bought: NewOrUsed? = nil) -> Purchase {
+        Purchase(date: boughtOn, priceCents: priceCents, location: "Reverb", condition: .good, bought: bought)
     }
 
     private let product = MarketProduct(
@@ -94,6 +94,41 @@ struct WishlistPurchaseStoreTests {
         // so a carried-across `desireToOwn` reads differently from the default.
         #expect(bought.desireToKeep == 3, "the wanting scale is not the keeping scale (P5): the initializer's default stands")
         #expect(bought.sortOrder == 8, "the new item goes past the highest position, never at a count of them")
+    }
+
+    // MARK: - 020 G11: bought new or used
+
+    /// 020 G11 (criterion 7). The created item carries the purchase's Bought
+    /// value, or not recorded — read back on a second context.
+    ///
+    /// Each entry's own preference is deliberately the *other* answer: the
+    /// preference only seeds the sheet (P6), and the person may change or
+    /// clear it there (criterion 23). So the `.used` leg is an entry looking
+    /// for new, and the nil leg is an entry looking for used — a store that
+    /// read `wanted.lookingFor` instead of the purchase fails both, and the
+    /// nil is never a default carried across.
+    ///
+    /// Mutation: drop `bought: purchase.bought` from the `Item.init` call →
+    /// the `.used` leg fails.
+    @Test func theBoughtItemCarriesThePurchasesBoughtValueNotTheEntrysPreference() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let lookingForNew = WishlistItem(name: "Rickenbacker 330", lookingFor: .new)
+        let lookingForUsed = WishlistItem(name: "Vox AC15", lookingFor: .used)
+        for wanted in [lookingForNew, lookingForUsed] { context.insert(wanted) }
+        try context.save()
+
+        try WishlistPurchaseStore.markBought(lookingForNew, purchase: purchase(bought: .used), at: now, in: context)
+        try WishlistPurchaseStore.markBought(lookingForUsed, purchase: purchase(bought: nil), at: now, in: context)
+        try context.save()
+
+        let elsewhere = ModelContext(container)
+        let items = try elsewhere.fetch(FetchDescriptor<Item>())
+        let boughtUsed = try #require(items.first { $0.name == "Rickenbacker 330" })
+        #expect(boughtUsed.bought == .used, "the item carries what the sheet recorded")
+        let notRecorded = try #require(items.first { $0.name == "Vox AC15" })
+        #expect(notRecorded.bought == nil, "cleared on the sheet is not recorded, whatever the entry was looking for")
+        #expect(notRecorded.boughtRawValue == nil)
     }
 
     // MARK: - G6: the photos

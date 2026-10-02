@@ -143,6 +143,28 @@ struct ItemFormViewModelCreateTests {
         #expect(viewModel.validationErrors.isEmpty)
     }
 
+    /// 020 G10 (criteria 1, 4): a new form's Bought is not recorded, and it
+    /// saves that way — no validation error, nothing to answer first.
+    ///
+    /// Mutation: add a validation case for a nil `bought` → `save()` returns
+    /// false and the error set is not empty.
+    @Test func startsWithBoughtNotRecordedAndSavesWithoutIt() throws {
+        let container = try makeInMemoryContainer()
+        let viewModel = ItemFormViewModel(modelContext: ModelContext(container))
+        #expect(viewModel.bought == nil)
+
+        viewModel.name = "Fender Telecaster"
+        viewModel.categoryPath = "Music/Guitars"
+        viewModel.purchasePrice = 1_299
+
+        #expect(viewModel.save())
+        #expect(viewModel.validationErrors.isEmpty)
+
+        let stored = try #require(try ModelContext(container).fetch(FetchDescriptor<Item>()).first)
+        #expect(stored.bought == nil)
+        #expect(stored.boughtRawValue == nil)
+    }
+
     @Test func reportsEveryValidationFailureAtOnce() throws {
         let context = try makeInMemoryContext()
         let viewModel = ItemFormViewModel(modelContext: context)
@@ -436,6 +458,88 @@ struct ItemFormViewModelEditTests {
         let after = ModelContext(container)
         let cleared = try #require(try after.fetch(FetchDescriptor<Item>()).first)
         #expect(cleared.year == nil)
+    }
+
+    // MARK: - Bought, and Very Good (020 G10)
+
+    /// 020 G10 (criterion 2): Used picked on the form reaches the store, and
+    /// the item's form reopens with it selected. Both read on a *second*
+    /// context over the same container — the stored value there, and the
+    /// reopened form built on the item refetched there.
+    ///
+    /// Mutations: `save()` skipping `bought` → the stored leg fails (and the
+    /// reopen with it); `populate` skipping `bought` → the reopen leg alone
+    /// fails.
+    @Test func savesBoughtAndReopensWithItSelected() throws {
+        let container = try makeInMemoryContainer()
+        let viewModel = ItemFormViewModel(modelContext: ModelContext(container))
+        viewModel.name = "Martin D-18"
+        viewModel.categoryPath = "Music/Guitars"
+        viewModel.purchasePrice = 1_800
+        viewModel.bought = .used
+        #expect(viewModel.save())
+
+        let reader = ModelContext(container)
+        let stored = try #require(try reader.fetch(FetchDescriptor<Item>()).first)
+        #expect(stored.bought == .used)
+
+        let reopened = ItemFormViewModel(modelContext: reader, editing: stored)
+        #expect(reopened.bought == .used)
+    }
+
+    /// 020 G10 (criterion 3): clearing the field on an item that had one and
+    /// saving stores it as not recorded. The item starts as Used, so the nil
+    /// read back on a second context is a write, never a default left alone.
+    ///
+    /// Mutation: `save()` skipping `bought` → the item is still Used.
+    @Test func clearingBoughtSavesNotRecorded() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let item = Item(name: "Martin D-18", categoryPath: "Music/Guitars", bought: .used)
+        context.insert(item)
+        try context.save()
+
+        let viewModel = ItemFormViewModel(modelContext: context, editing: item)
+        viewModel.bought = nil
+        #expect(viewModel.save())
+        #expect(viewModel.validationErrors.isEmpty)
+
+        let stored = try #require(try ModelContext(container).fetch(FetchDescriptor<Item>()).first)
+        #expect(stored.bought == nil)
+        #expect(stored.boughtRawValue == nil)
+    }
+
+    /// 020 G10 (criterion 10): Very Good picked on the form saves and reopens
+    /// selected — and what reached the store is the pair an older app reads
+    /// as Good, `("good", "very good")`, asserted as literals on a second
+    /// context.
+    ///
+    /// The pair is the leg that matters. A form that wrote
+    /// `conditionRawValue = condition.rawValue` directly would store
+    /// `("very good", nil)`, which this build still reads back as Very Good
+    /// (`Condition(rawValue: "very good")` succeeds) while an older app reads
+    /// it as an unknown grade — so the read-back alone stays green under
+    /// exactly the mistake this guards.
+    ///
+    /// Mutation: `save()` writing `item.conditionRawValue = condition.rawValue`
+    /// in place of `item.condition = condition` → both pair assertions fail,
+    /// the reopen stays green.
+    @Test func veryGoodSavesAsGoodPlusARefinementAndReopensSelected() throws {
+        let container = try makeInMemoryContainer()
+        let viewModel = ItemFormViewModel(modelContext: ModelContext(container))
+        viewModel.name = "Martin D-18"
+        viewModel.categoryPath = "Music/Guitars"
+        viewModel.purchasePrice = 1_800
+        viewModel.condition = .veryGood
+        #expect(viewModel.save())
+
+        let reader = ModelContext(container)
+        let stored = try #require(try reader.fetch(FetchDescriptor<Item>()).first)
+        #expect(stored.conditionRawValue == "good")
+        #expect(stored.conditionRefinement == "very good")
+
+        let reopened = ItemFormViewModel(modelContext: reader, editing: stored)
+        #expect(reopened.condition == .veryGood)
     }
 
     @Test func canClearAnOptionalFieldByBlankingIt() throws {

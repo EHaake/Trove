@@ -492,7 +492,9 @@ final class SellPlanViewModel {
     /// injected clock. No argument: the subject is this plan's own
     /// `wishlistItem`. G12 pins the three hosts equal.
     func makePurchaseFormViewModel() -> PurchaseFormViewModel {
-        PurchaseFormViewModel(estimatedCostCents: estimatedCostCents, now: now)
+        PurchaseFormViewModel(
+            estimatedCostCents: estimatedCostCents, lookingFor: wishlistItem?.lookingFor, now: now
+        )
     }
 
     /// Mark as bought… from the plan: the entry becomes an owned item, its

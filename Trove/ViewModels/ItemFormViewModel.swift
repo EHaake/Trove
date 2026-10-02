@@ -48,6 +48,10 @@ final class ItemFormViewModel {
     var currentValue: Decimal?
     var condition: Condition = .excellent
     var conditionNotes: String = ""
+    /// 020: bought new or used. nil is "not recorded" — where a new form
+    /// starts, and a state it may be saved in: there is deliberately no
+    /// validation case for it (spec Decision 3).
+    var bought: NewOrUsed?
     var notes: String = ""
     var photos: [Photo] = []
 
@@ -125,6 +129,7 @@ final class ItemFormViewModel {
         item.desireToKeep = desireToKeep
         item.condition = condition
         item.conditionNotes = FieldNormalization.nilIfBlank(conditionNotes)
+        item.bought = bought
         item.notes = FieldNormalization.nilIfBlank(notes)
         // Dropped photos are deleted, not just unlinked — see
         // PhotoSelection.orphaned. Captured before the reassignment,
@@ -261,6 +266,7 @@ final class ItemFormViewModel {
         desireToKeep = item.desireToKeep
         condition = item.condition
         conditionNotes = item.conditionNotes ?? ""
+        bought = item.bought
         notes = item.notes ?? ""
         photos = item.photos ?? []
     }

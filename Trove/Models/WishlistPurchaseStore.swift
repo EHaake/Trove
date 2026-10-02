@@ -75,7 +75,10 @@ enum WishlistPurchaseStore {
             condition: purchase.condition,
             notes: wanted.notes,                             // Decision 7
             reverbProductID: wanted.reverbProductID,
-            year: wanted.year
+            year: wanted.year,
+            // 020: what the sheet recorded, never the entry's preference —
+            // the preference only seeds the sheet (P6).
+            bought: purchase.bought
         )
         item.sortOrder = ManualOrderHelper.nextPosition(
             after: (try? context.fetch(FetchDescriptor<Item>())) ?? [])

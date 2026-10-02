@@ -338,7 +338,9 @@ final class WishlistViewModel {
     /// injected clock, so a test can pin it. One seeding rule for all three
     /// hosts; G12 pins them equal.
     func makePurchaseFormViewModel(for wanted: WishlistItem) -> PurchaseFormViewModel {
-        PurchaseFormViewModel(estimatedCostCents: wanted.estimatedCostCents, now: now)
+        PurchaseFormViewModel(
+            estimatedCostCents: wanted.estimatedCostCents, lookingFor: wanted.lookingFor, now: now
+        )
     }
 
     /// Mark as bought… from a row: the entry becomes an owned item and leaves

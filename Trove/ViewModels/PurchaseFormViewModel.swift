@@ -35,6 +35,9 @@ final class PurchaseFormViewModel {
     /// `Item`'s own default, so a bought entry lands with the same value a new
     /// item defaults to.
     var condition: Condition = .excellent
+    /// 020 (P6): seeded from the wanted entry's "looking for" preference, and
+    /// the person's to change or clear before saving. nil is "not recorded".
+    var bought: NewOrUsed?
 
     private(set) var validationErrors: Set<ValidationError> = []
 
@@ -64,10 +67,15 @@ final class PurchaseFormViewModel {
     /// when there is one and stays blank otherwise — `estimatedCostCents` is a
     /// non-optional `Int` whose 0 means "none" (Q7), and a pre-filled 0 cannot
     /// be typed over. Today's date, no place, and the default condition.
-    init(estimatedCostCents: Int, now: @escaping () -> Date = Date.init) {
+    ///
+    /// 020 (P6, Q8): `bought` starts at the entry's preference. `lookingFor`
+    /// is required rather than defaulted, so no host can seed the sheet
+    /// without deciding what it passes.
+    init(estimatedCostCents: Int, lookingFor: NewOrUsed?, now: @escaping () -> Date = Date.init) {
         self.estimatedCostCents = estimatedCostCents
         price = estimatedCostCents == 0 ? nil : Money.amount(fromCents: estimatedCostCents)
         date = now()
+        bought = lookingFor
     }
 
     /// Validates; `nil` with `validationErrors` set, else the purchase to
@@ -80,7 +88,8 @@ final class PurchaseFormViewModel {
             date: date,
             priceCents: Money.cents(from: price),
             location: FieldNormalization.nilIfBlank(location),
-            condition: condition
+            condition: condition,
+            bought: bought
         )
     }
 

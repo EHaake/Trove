@@ -284,7 +284,7 @@ Everything the person reads is plain language.
   R3's reasoning (spec Decision 10) and put to the person at the Phase 3 pause
   as a statement they can overturn.
 
-- [ ] **T004 — Bought through the item form's view model and the purchase sheet.**
+- [x] **T004 — Bought through the item form's view model and the purchase sheet.**
   Per plan §4 and P6, Q8. `ItemFormViewModel.bought` (populate, save, no
   validation). `Purchase.bought`; `PurchaseFormViewModel.bought` and the init
   `init(estimatedCostCents:lookingFor:now:)` — **required** `lookingFor:` —
@@ -324,6 +324,28 @@ Everything the person reads is plain language.
   `TroveTests/WishlistPurchaseStoreTests.swift`,
   `TroveTests/WishlistDetailViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-10-01).** `scripts/verify.sh` green (the implementer's verbatim
+  output): 1773 tests in 234 suites (+7 test functions). G10 is four tests
+  (`startsWithBoughtNotRecordedAndSavesWithoutIt`, `savesBoughtAndReopensWithItSelected`,
+  `clearingBoughtSavesNotRecorded`, `veryGoodSavesAsGoodPlusARefinementAndReopensSelected`);
+  G11 is `seedsBoughtFromThePreference`, `recordsTheBoughtChosenWhenTheSheetIsConfirmed`,
+  `theBoughtItemCarriesThePurchasesBoughtValueNotTheEntrysPreference`, and
+  `everyHostSeedsThePurchaseSheetIdentically` extended with an entry looking for
+  used and a per-host pin. Mutations, each red and restored (tree byte-compared):
+  `populate` skipping `bought` → the reopen leg alone; `save` skipping it → both
+  save tests; `save` writing `conditionRawValue = condition.rawValue` → the
+  stored-pair lines only (the read-back stayed green, which is what the pair
+  assertion is for); a `boughtMissing` validation case → 73 issues, this task's
+  among them; `PlansViewModel` passing `lookingFor: nil` → the four-host test;
+  the init not seeding, and `purchase()` dropping `bought:` → the sheet's tests;
+  the store dropping `bought:` → the store test. "One host passing nil" was run
+  on one host; the per-host pin fired four times under the unseeded init. The
+  store test's fixtures set each entry's preference opposite to what the
+  purchase records, so a store reading the preference fails. Notes: `Purchase`'s
+  memberwise init defaults `bought` to nil, so Q8's "required" binds
+  `PurchaseFormViewModel.init` only; a stale comment in
+  `WishlistPurchaseStoreTests` ("the eleven `Item.init` is passed" — now twelve)
+  left for the sweep; a red run with dozens of failures can pass 600 s.
 
 - [ ] **T005 — Looking for through the wishlist form's view model; both Copies; sale and return.**
   Per plan §4, §5 and P2. `WishlistFormViewModel.lookingFor` (populate, save).
@@ -703,3 +725,4 @@ escape-hatch misses recorded here too.
 | Phase 1 pause finding → decision review (`skeptical-reviewer`) | `opus` | 84,596 (27 tool uses, 5.7 min) | The person rejected the wrapping condition row (spec Decision 11). Recommendation transcribed as plan Amendment A: `ConditionField` copies `CategoryPickerField`'s scrolling row; G14 rewritten around two UI tests; `FlowLayout` deleted; T006 rewritten and marked `review: per-task`. No product question. **Protocol note**: the question was framed in a decision bundle with no code touched, but not inside Plan Mode — its exit needs the person's approval of a technical plan, which the product-owner level does not ask of them. Also: the Phase 1 build had only been installed on the test simulator (iPhone 18 Pro, iOS 27.0); the orchestrator built and launched it on the person's iPhone 17 Pro (26.5) when they asked — a pause report should say which simulator carries the build |
 | T003 (`sdd-implementer`) | `opus` | 165,216 (29 tool uses, 22.7 min) | Done first pass; 12 mutations red and restored. Finding: the 600 s diagnostics wait hits red *single-suite* runs only — red whole-suite runs finish in about a minute, so mutations go against plain `scripts/verify.sh` |
 | T003 per-task review (`skeptical-reviewer`) | `opus` | 55,180 (2 tool uses, 1.7 min) | Signed off, no blocking; 5 second-look notes (in T003's Done note). Its note 2 checked by the orchestrator with one grep: a third "used listings" string exists (`candidateReading`, the match picker) — recorded, goes to the person at the Phase 3 pause |
+| T004 (`sdd-implementer`) | `opus` | 115,960 (19 tool uses, 19.6 min) | Done first pass; 8 mutations in three batched whole-suite runs |

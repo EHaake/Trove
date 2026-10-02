@@ -1,6 +1,6 @@
 import Foundation
 
-/// The four fields a purchase is entered with, read and written as one value.
+/// The five fields a purchase is entered with, read and written as one value.
 ///
 /// The shape `Sale` has in `Trove/Models/Sale.swift`, with one deliberate
 /// difference (plan Q2): there is no `Item.purchase` accessor pair. Unlike a
@@ -13,4 +13,6 @@ nonisolated struct Purchase: Sendable, Equatable {
     var priceCents: Int
     var location: String?
     var condition: Condition
+    /// 020: bought new or used; nil is "not recorded".
+    var bought: NewOrUsed?
 }

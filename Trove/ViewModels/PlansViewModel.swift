@@ -255,7 +255,11 @@ final class PlansViewModel {
     /// seed theirs: the price from the entry's estimate when it has one and
     /// blank when it doesn't, today's date from this screen's clock.
     func makePurchaseFormViewModel(for row: PlanRow) -> PurchaseFormViewModel {
-        PurchaseFormViewModel(estimatedCostCents: entries[row.id]?.estimatedCostCents ?? 0, now: now)
+        PurchaseFormViewModel(
+            estimatedCostCents: entries[row.id]?.estimatedCostCents ?? 0,
+            lookingFor: entries[row.id]?.lookingFor,
+            now: now
+        )
     }
 
     /// Mark as bought… from an active row: `WishlistViewModel.markBought`'s

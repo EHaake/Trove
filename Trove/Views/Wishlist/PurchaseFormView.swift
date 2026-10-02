@@ -348,7 +348,7 @@ struct PurchaseFormView: View {
     Color.clear
         .sheet(isPresented: .constant(true)) {
             PurchaseFormView(
-                viewModel: PurchaseFormViewModel(estimatedCostCents: 240_000),
+                viewModel: PurchaseFormViewModel(estimatedCostCents: 240_000, lookingFor: nil),
                 confirm: { _ in },
                 cancel: {}
             )
