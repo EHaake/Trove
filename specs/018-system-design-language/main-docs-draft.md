@@ -44,7 +44,7 @@ merge date where it says `<merge date>`. Nothing here is live until then.
 
 ### 3. A new entry, placed immediately before `019-foldable-layout`
 
-- **`020-system-navigation-bars`** — the system navigation bar and
+- **`024-system-navigation-bars`** — the system navigation bar and
   toolbar on the tab roots, the step `018` deliberately stopped short of
   (its Decision 11 and first non-goal). `018` put the header's buttons in
   Liquid Glass but kept Trove's own standing header on Items, the
@@ -103,7 +103,7 @@ beyond that spec.
   policy that points it, never deleted to get to green.** Blind spots the
   Phase 4 review named (a bespoke overlay beside a kept `SortMenu(`, the
   `Button(action:)` spelling, `backgroundPreferenceValue`, an explicit
-  `GlassButtonStyle()`) are carried to `020`.
+  `GlassButtonStyle()`) are carried to `024`.
 - **The tear was measured before anything else, and its result decided
   a trade** (criterion 1, P4, Decision 18). `010` T035 took the system
   `Menu` off Sort By because of T029c's tear, so putting it back started
@@ -223,5 +223,5 @@ beyond that spec.
   from the right edge than on 27.0.
 - **What was deferred.** The system navigation bar and toolbar on the tab
   roots (Decision 11) — the fully Apple-shaped header, and the floating
-  bottom search that needs it — are `ROADMAP.md`'s `020`, placed before
+  bottom search that needs it — are `ROADMAP.md`'s `024`, placed before
   `019`.

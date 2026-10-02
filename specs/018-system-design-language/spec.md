@@ -503,7 +503,7 @@ says so.
     `sortControl` made a `Button` showing an `.overlay` of drawn rows, the
     bespoke row put back → red — with plan §7's four other mutations red.
     `CLAUDE.md`'s example was amended first, in its own commit. Known blind
-    spots, carried to `020` (the pre-merge sweep's ruling): a bespoke
+    spots, carried to `024` (the pre-merge sweep's ruling): a bespoke
     overlay beside a kept `SortMenu(`, the `Button(action:)` spelling,
     `backgroundPreferenceValue`, and an explicit `GlassButtonStyle()`.
 11. [x] Every badge, switch and control keeps its accessibility

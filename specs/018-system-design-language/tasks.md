@@ -1424,16 +1424,18 @@ Handoff notes for the pause reports:
   README's "Menus that are the app's own" → "System controls, Trove
   content", the Amendment A and spec-tree lines corrected.
   `main-docs-draft.md`: the ROADMAP row and entry, a
-  `020-system-navigation-bars` follow-up placed before `019`, and the
+  `024-system-navigation-bars` follow-up placed before `019`, and the
   DECISIONS.md section in `009`'s shape. The retirement table already
   names `theOnlySystemMenuIsTheDetailScreensNavBarOverflow` under
   "Rewritten, not retired" — accurate, since G12a–d replaced it.
   `scripts/verify.sh all`: UI 38/38 in 995.8 s; unit 1740 in 231 (a
   second unit-only run, the first's count line having scrolled off).
   Left for the merge: README's Status count and spec tree gain `018`;
-  `019`'s ROADMAP entry may want an "after `020`" note.
+  `019`'s ROADMAP entry may want an "after `024`" note.
 
 **Close-out pause (2026-09-30 → 10-01).** The person's steps and answers: the Accessibility Inspector — "All as expected" (criterion 11 ticked); the one-language attestation — "All looks good enough for now. We might do another design pass later, but it looks great for now." (criterion 15 ticked); the Dark add button's plus at 2.6:1 — "Looks fine" (criterion 8 ticked); the toggle's blur under Reduce Motion — "Leave it." Both recorded as spec Decision 24. All sixteen criteria ticked. The session's model changed to `claude-opus-5-5` at this pause (the person, `/model`), which is the session tier `CLAUDE.md` names; the earlier turns ran on Fable 5.1 at medium per the opening prompt.
+
+**At the merge (2026-10-01).** The follow-up Decision 11 defers was drafted as `020-system-navigation-bars`; `main`'s roadmap had taken `020`–`023` on 2026-09-29, after this branch was cut, so it is renumbered `024-system-navigation-bars` everywhere on the branch (still placed before `019` in the roadmap). The person: "Merge the PR and commit the decisions log text to main directly. This is always fine to do. Documentation updates do not need their own branch." — written into `CLAUDE.md`'s Git conventions in its own commit before the merge.
 
 ## Tier log
 
@@ -1506,5 +1508,5 @@ recorded here too.
 | `general-purpose` — T013 §2 (Increase Contrast, Reduce Transparency) | `opus` | ~130k | PASS; the Dark add button's plus 2.6:1 flagged to the person |
 | `general-purpose` — T013 §3–4 (export, import, gates) | `opus` | ~146k | PASS; the spinner unobservable at seed size; criterion 11's traits to the person |
 | `sdd-implementer` — T014 close-out (evidence bundle, no full reads) | `opus` | ~170k | Done; 13/16 criteria ticked, three honestly open; unit 1740, UI 38/38 |
-| `skeptical-reviewer` — pre-merge sweep | `opus` | ~246k | **signed off**, no blocking findings; eight fix-before-ready items (the `CLAUDE.md` example's "every header control" — its own amendment commit; the over-broad "glass ignores the label's foreground" claim narrowed; the 26.5 transient's 1.54–1.78 s; the header's 66 pt in tokens.md; brief.md's tab-bar sentence; the no-`$` legs deleted as compiler-guaranteed; plan §7's `Picker(` and Context's "no view-model changes"; README's `018` on the branch); rulings: `sectionGap` comment not a defect, G12 blind spots carried to `020`, tokens.md:702 history stands. To the person: the Dark add button's plus at 2.6:1 is a regression against the old disc's dark ink and below WCAG 1.4.11's 3:1; the toggle's blur ignoring Reduce Motion is a regression against the old switch's fade-only |
+| `skeptical-reviewer` — pre-merge sweep | `opus` | ~246k | **signed off**, no blocking findings; eight fix-before-ready items (the `CLAUDE.md` example's "every header control" — its own amendment commit; the over-broad "glass ignores the label's foreground" claim narrowed; the 26.5 transient's 1.54–1.78 s; the header's 66 pt in tokens.md; brief.md's tab-bar sentence; the no-`$` legs deleted as compiler-guaranteed; plan §7's `Picker(` and Context's "no view-model changes"; README's `018` on the branch); rulings: `sectionGap` comment not a defect, G12 blind spots carried to `024`, tokens.md:702 history stands. To the person: the Dark add button's plus at 2.6:1 is a regression against the old disc's dark ink and below WCAG 1.4.11's 3:1; the toggle's blur ignoring Reduce Motion is a regression against the old switch's fade-only |
 | `sdd-implementer` — sweep fixes 2–8 | `opus` | ~65k | Done; unit 1740 in 231; the `select:` closure emptied → both `show` legs red; a direct write does not compile (`private(set)`) |
