@@ -665,7 +665,8 @@ final class ItemListViewModel {
             notes: original.notes,
             photos: (original.photos ?? []).map {
                 Photo(imageData: $0.imageData, source: $0.source, sortOrder: $0.sortOrder)
-            }
+            },
+            bought: original.bought
         )
         modelContext.insert(copy)
 

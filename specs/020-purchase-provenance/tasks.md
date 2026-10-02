@@ -347,7 +347,7 @@ Everything the person reads is plain language.
   `WishlistPurchaseStoreTests` ("the eleven `Item.init` is passed" — now twelve)
   left for the sweep; a red run with dozens of failures can pass 600 s.
 
-- [ ] **T005 — Looking for through the wishlist form's view model; both Copies; sale and return.**
+- [x] **T005 — Looking for through the wishlist form's view model; both Copies; sale and return.**
   Per plan §4, §5 and P2. `WishlistFormViewModel.lookingFor` (populate, save).
   `ItemListViewModel.duplicate(id:)` passes `bought: original.bought`
   (**`ItemListViewModel.swift` is changed by `018` — re-read after the sync**);
@@ -368,6 +368,22 @@ Everything the person reads is plain language.
   `TroveTests/WishlistFormViewModelTests.swift`, `TroveTests/ItemDuplicationTests.swift`,
   `TroveTests/WishlistDuplicationTests.swift`, `TroveTests/ItemSaleStoreTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-10-01).** `scripts/verify.sh` green (the implementer's verbatim
+  output): 1779 tests in 234 suites (+6 test functions). G12:
+  `startsWithLookingForNotRecordedAndSavesWithoutIt`,
+  `savesLookingForAndReopensWithItSelected(value:)` over both values,
+  `clearingLookingForSavesNotRecorded` (which first asserts the form opened as
+  Used). G13: `theCopyCarriesBought`, `theCopyCarriesLookingFor`,
+  `markThenReturnLeavesBoughtUnchanged`, each on a second context from a non-nil
+  value. Mutations, red and restored (`cmp` against a backup): `save()` skipping
+  `lookingFor`, either `duplicate` dropping its argument, `returnToCollection`
+  clearing `bought` → exactly the nine expected issues; `populate` skipping it →
+  the reopen and clear legs; a validation case on nil → 61 issues, this task's
+  among them. No production code for sale and return. **Criterion 20 at this
+  layer** rests on "a new form is nil" and "an unset save stores nil" — an "old
+  entry reopens as nil" assertion was written and removed as a carried-across
+  nil; the on-disk half is T014(a)'s. For the sweep: neither `duplicate` passes
+  `year` or `reverbProductID` — predates this spec, not checked whether intended.
 
   **Phase 2 closes here — `walkthrough: none`; after its review, run on.**
 
@@ -726,3 +742,4 @@ escape-hatch misses recorded here too.
 | T003 (`sdd-implementer`) | `opus` | 165,216 (29 tool uses, 22.7 min) | Done first pass; 12 mutations red and restored. Finding: the 600 s diagnostics wait hits red *single-suite* runs only — red whole-suite runs finish in about a minute, so mutations go against plain `scripts/verify.sh` |
 | T003 per-task review (`skeptical-reviewer`) | `opus` | 55,180 (2 tool uses, 1.7 min) | Signed off, no blocking; 5 second-look notes (in T003's Done note). Its note 2 checked by the orchestrator with one grep: a third "used listings" string exists (`candidateReading`, the match picker) — recorded, goes to the person at the Phase 3 pause |
 | T004 (`sdd-implementer`) | `opus` | 115,960 (19 tool uses, 19.6 min) | Done first pass; 8 mutations in three batched whole-suite runs |
+| T005 (`sdd-implementer`) | `opus` | 83,102 (18 tool uses, 28.6 min) | Done first pass; 6 mutations in three whole-suite runs. Two foreground calls hit the 600 s tool limit and finished in the background |

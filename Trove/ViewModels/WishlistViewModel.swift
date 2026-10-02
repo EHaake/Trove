@@ -301,7 +301,8 @@ final class WishlistViewModel {
             photos: (original.photos ?? []).map {
                 Photo(imageData: $0.imageData, source: $0.source, sortOrder: $0.sortOrder)
             },
-            plannedSaleItems: []
+            plannedSaleItems: [],
+            lookingFor: original.lookingFor
         )
         modelContext.insert(copy)
 

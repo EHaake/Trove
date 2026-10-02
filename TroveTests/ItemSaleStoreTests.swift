@@ -290,6 +290,32 @@ struct ItemSaleStoreTests {
         )
     }
 
+    /// 020 G13 (criterion 9). Neither direction writes `bought`: an item
+    /// bought New, sold and then returned still reads New. No code makes
+    /// this so — the writers touch the four sale fields and nothing else —
+    /// which is why it is pinned: a later edit that clears it goes red. The
+    /// item starts as New, never unrecorded, so a cleared field can't pass.
+    ///
+    /// Mutation: `returnToCollection` setting `item.bought = nil` → the
+    /// returned item reads nil.
+    @Test func markThenReturnLeavesBoughtUnchanged() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000, bought: .new)
+        context.insert(item)
+        try context.save()
+
+        try ItemSaleStore.markSold(item, sale: sale(), toward: nil, at: now, in: context)
+        try context.save()
+        ItemSaleStore.returnToCollection(item, at: now.addingTimeInterval(120))
+        try context.save()
+
+        let elsewhere = ModelContext(container)
+        let returned = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first)
+        #expect(!returned.isSold)
+        #expect(returned.bought == .new, "selling and returning never touch Bought")
+    }
+
     /// Plan Q13: each of the three is a change to the item row, so each bumps
     /// `updatedAt`.
     @Test func allThreeWritersBumpUpdatedAt() throws {
