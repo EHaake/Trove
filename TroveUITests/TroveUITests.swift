@@ -2767,4 +2767,196 @@ final class TroveUITests: XCTestCase {
             thenDragTo: start.withOffset(CGVector(dx: app.frame.width * 0.4, dy: 0))
         )
     }
+
+    // MARK: - 020 Purchase provenance
+
+    /// `020` criterion 18 on the item form (G14, plan §6 Amendment A): the six
+    /// condition chips are **one row that scrolls sideways**, and the row
+    /// opens with the selected grade in view.
+    ///
+    /// Four legs, on an item this test adds itself:
+    /// (i) all six chips exist at one `minY` and one height — one row, not two;
+    /// (ii) `Broken` is **not** hittable before any sideways gesture — the row
+    /// overflows the screen, so it is neither squeezed to fit nor trivially
+    /// wide enough;
+    /// (iii) after a `swipeLeft()` on a chip `Broken` is hittable, takes a tap
+    /// and comes back selected — the row scrolls;
+    /// (iv) saved as Broken and reopened, `Broken` is hittable and inside the
+    /// window before any sideways gesture — the row opened on it.
+    ///
+    /// **`isHittable` and `frame` are read before any `tap()`**, since `tap()`
+    /// may scroll an element into view by itself. The only gestures ahead of a
+    /// reading are `app.swipeUp()`s that bring the row up from below the fold;
+    /// they move the form, never the row.
+    ///
+    /// The *look* of the chip cut off at the screen edge is not tested here or
+    /// anywhere.
+    ///
+    /// Mutations: the row's `HStack` swapped for a two-row layout → (i) red;
+    /// the `ScrollView` removed, a plain `HStack` → (ii) red;
+    /// `.scrollDisabled(true)` → (iii) red; the `.onAppear` scroll deleted →
+    /// (iv) red.
+    @MainActor
+    func testTheConditionRowIsOneScrollingRowAndOpensOnTheSelectedGrade() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        let name = "Rolleiflex \(UUID().uuidString.prefix(6))"
+        addItem(to: app, named: name)
+        openDetail(in: app, named: name)
+
+        openEditForm(in: app)
+        bringTheConditionRowOnScreen(in: app)
+        assertTheConditionRowIsOneScrollingRow(in: app, on: "the item form")
+
+        // (iv) Saved as Broken — leg (iii) tapped it — and reopened.
+        app.buttons["Save changes"].tap()
+        XCTAssertTrue(
+            app.buttons["Save changes"].waitForNonExistence(timeout: 5),
+            "The edit form stayed up — the save was probably rejected by validation"
+        )
+
+        openEditForm(in: app)
+        bringTheConditionRowOnScreen(in: app)
+
+        let broken = conditionChip("Broken", in: app)
+        XCTAssertTrue(broken.exists, "the reopened form must show the condition row")
+        let isHittable = broken.isHittable
+        let frame = broken.frame
+        XCTAssertTrue(broken.isSelected, "the item was saved as Broken, so the reopened form must select it")
+        XCTAssertTrue(
+            isHittable,
+            "(iv) the row must open with the selected grade in view — Broken sits at \(frame) in a window \(app.frame) and can't be tapped without scrolling to it"
+        )
+        XCTAssertTrue(
+            app.frame.contains(frame),
+            "(iv) the row must open with the selected grade in view — Broken sits at \(frame), outside the window \(app.frame)"
+        )
+    }
+
+    /// `020` criterion 18 on the Mark as bought sheet: legs (i)–(iii) of
+    /// `testTheConditionRowIsOneScrollingRowAndOpensOnTheSelectedGrade`, on
+    /// the other screen the row appears on.
+    ///
+    /// No leg (iv) here: the sheet always seeds Excellent, the second chip,
+    /// so there is no non-default grade for it to open on. If the sheet is
+    /// ever seeded with another grade, leg (iv) is owed here too.
+    ///
+    /// Mutations: as legs (i)–(iii) above — the field is the same one.
+    @MainActor
+    func testThePurchaseSheetsConditionRowIsOneScrollingRow() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSellPlan"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Wishlist"].tap()
+        let summicron = app.staticTexts["Summicron 35mm f/2"]
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "the seed's one wanted item must be on the Wishlist")
+
+        openLeadingSwipe(on: summicron, in: app)
+
+        let buy = app.buttons
+            .matching(NSPredicate(format: "label == %@", "Mark as bought\u{2026}"))
+            .firstMatch
+        XCTAssertTrue(buy.waitForExistence(timeout: 5), "the leading swipe must offer Mark as bought…")
+        buy.tap()
+
+        XCTAssertTrue(
+            app.textFields["purchase.sheet.price"].waitForExistence(timeout: 5),
+            "Mark as bought… must open the purchase sheet"
+        )
+
+        assertTheConditionRowIsOneScrollingRow(in: app, on: "the purchase sheet")
+    }
+
+    /// The six grades in the row's order, as the chips read.
+    private static let conditionTitles = ["New", "Excellent", "Very Good", "Good", "Fair", "Broken"]
+
+    /// One condition chip, by its grade's word.
+    ///
+    /// Matched on the label **and** on carrying no identifier: the Bought
+    /// field's two chips read "New" and "Used" too, and are told apart from
+    /// the condition row's by the identifier they carry and these don't.
+    @MainActor
+    private func conditionChip(_ title: String, in app: XCUIApplication) -> XCUIElement {
+        app.buttons
+            .matching(NSPredicate(format: "label == %@ AND identifier == ''", title))
+            .firstMatch
+    }
+
+    /// Legs (i)–(iii) of criterion 18, on whichever screen is showing the
+    /// condition row at its opening position with Excellent selected. Ends
+    /// with Broken tapped and selected.
+    @MainActor
+    private func assertTheConditionRowIsOneScrollingRow(in app: XCUIApplication, on screen: String) {
+        let chips = Self.conditionTitles.map { conditionChip($0, in: app) }
+        for (title, chip) in zip(Self.conditionTitles, chips) {
+            XCTAssertTrue(chip.waitForExistence(timeout: 5), "\(screen) must offer the \(title) condition chip")
+        }
+
+        // Every reading below is taken here, before any gesture on the row.
+        let frames = chips.map(\.frame)
+        let excellent = chips[1]
+        let broken = chips[5]
+        let excellentIsHittable = excellent.isHittable
+        let brokenIsHittable = broken.isHittable
+        let layout = zip(Self.conditionTitles, frames).map { "\($0) \($1)" }.joined(separator: ", ")
+
+        // (i) One row.
+        for (title, frame) in zip(Self.conditionTitles, frames) {
+            XCTAssertEqual(
+                frame.minY, frames[0].minY, accuracy: 0.5,
+                "(i) on \(screen) the \(title) chip isn't on the first chip's row — the row must never wrap: \(layout)"
+            )
+            XCTAssertEqual(
+                frame.height, frames[0].height, accuracy: 0.5,
+                "(i) on \(screen) the \(title) chip isn't the first chip's height: \(layout)"
+            )
+        }
+
+        // (ii) The row overflows. Excellent being hittable is what makes
+        // Broken's not being so mean anything: the row is on screen.
+        XCTAssertTrue(
+            excellentIsHittable,
+            "on \(screen) the condition row isn't on screen, so nothing below can be read off it: \(layout)"
+        )
+        XCTAssertFalse(
+            brokenIsHittable,
+            "(ii) on \(screen) Broken can be tapped before any scrolling — the six chips fit the window \(app.frame), so the row is squeezed or doesn't overflow: \(layout)"
+        )
+
+        // (iii) The row scrolls.
+        excellent.swipeLeft()
+        XCTAssertTrue(
+            broken.isHittable,
+            "(iii) on \(screen) Broken still can't be tapped after swiping the row left — it sits at \(broken.frame) in a window \(app.frame)"
+        )
+        broken.tap()
+        XCTAssertTrue(broken.isSelected, "(iii) on \(screen) the tapped Broken chip must come back selected")
+    }
+
+    /// The item page's "…" → Edit, waiting for the form with More details
+    /// open — which an edit form opens by itself.
+    @MainActor
+    private func openEditForm(in app: XCUIApplication) {
+        let menu = app.buttons["More actions for this item"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5), "the item page must offer its overflow menu")
+        menu.tap()
+        let edit = app.buttons["Edit"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 5), "an owned item's menu must offer Edit")
+        edit.tap()
+        XCTAssertTrue(
+            app.buttons["Hide more details"].waitForExistence(timeout: 5),
+            "the edit form must open with More details showing"
+        )
+    }
+
+    /// The condition row sits below the fold on the edit form. Swipes the
+    /// form up until the field directly beneath the row can be tapped — a
+    /// vertical gesture, which cannot move a row that scrolls sideways.
+    @MainActor
+    private func bringTheConditionRowOnScreen(in app: XCUIApplication) {
+        scrollUntilHittable(app.textFields["Condition notes"], in: app)
+    }
 }

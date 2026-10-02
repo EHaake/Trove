@@ -345,12 +345,7 @@ struct ItemFormView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
-                Text("Condition").monoLabel()
-                FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
-                    ForEach(Condition.allCases, id: \.self, content: conditionChip)
-                }
-            }
+            ConditionField(label: "Condition", selection: $viewModel.condition)
 
             labelledField("Condition notes") {
                 plainTextField("Any specifics", label: "Condition notes", text: $viewModel.conditionNotes)
@@ -379,34 +374,6 @@ struct ItemFormView: View {
             }
         }
         .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-
-    private func conditionChip(_ condition: Condition) -> some View {
-        let isSelected = viewModel.condition == condition
-
-        return Button {
-            viewModel.condition = condition
-        } label: {
-            Text(condition.rawValue.capitalized)
-                .font(theme.typography.secondary)
-                .foregroundStyle(isSelected ? theme.colors.accentBrass : theme.colors.textBody)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .background(
-                    Capsule().fill(isSelected ? theme.colors.accentBrassTint : Color.clear)
-                )
-                .overlay(
-                    Capsule().strokeBorder(
-                        isSelected ? theme.colors.accentBrass : theme.colors.divider,
-                        lineWidth: theme.metrics.hairline
-                    )
-                )
-                // A clear fill doesn't hit-test: without this an unselected
-                // chip's padding took no tap (009 T014a).
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
     // MARK: - Save

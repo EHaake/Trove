@@ -389,7 +389,7 @@ Everything the person reads is plain language.
 
 ## Phase 3 — Screens · walkthrough: yes — on the item form (More details) a Bought row with New and Used sits just above Condition, neither picked; pick one, save, and the item's page reads "Bought new" or "Bought used" where it said "Bought" beside the date; tap the picked chip again and it clears, and the page goes back to "Bought"; the wishlist form has a Looking for row after "How much do you want it", and the wanted item's page shows "Looking for · New" or "Used" (nothing when unset); marking that item bought opens the sheet with its Bought chip already picked to match, changeable before saving; a matched wanted item set to New shows a figure from new listings after its next refresh, and "new listings" wherever it used to say "used listings"; the six condition chips sit on one line you can slide sideways, on the item form and on the Mark as bought sheet; a chip is cut off at the edge of the screen to show there is more; an item saved as Fair or Broken reopens with that chip already in view; and, the person's own check, Accessibility Inspector or VoiceOver over the Bought and Looking for chips (each announces its word and whether it is selected; a cleared row announces nothing selected) and over the two page rows
 
-- [ ] **T006 — The shared chips, the condition row as one scrolling row, and criterion 18 guarded. `review: per-task`.**
+- [x] **T006 — The shared chips, the condition row as one scrolling row, and criterion 18 guarded. `review: per-task`.**
   *(Rewritten 2026-10-01 — plan Amendment A, spec Decision 11; nothing of the
   earlier wording was built.)* Per plan §6, Q5, Q9. New
   `Trove/Views/Shared/ChoiceChips.swift` with `ChoiceChip` (extracted
@@ -447,6 +447,39 @@ Everything the person reads is plain language.
   `scripts/verify.sh ui` green once** — the scroll-on-appear and the existing
   chip taps are mechanisms to instrument, not reason about; the orchestrator
   re-runs both before committing. Mutations and the measured widths recorded.
+  **Done (2026-10-02).** Both suites green, re-run by the orchestrator
+  (`scripts/verify.sh all`): **1784 unit tests in 236 suites** (new suites
+  "Condition field layout", "Provenance wiring") and **40 UI tests, 0
+  failures** (38 → 40). Per-task review: signed off, no blocking findings.
+  **Measured** (3× render, dark theme): New 53.33, Excellent 79.67, Very Good
+  86.00, Good 58.00, Fair 49.00, Broken 68.33 pt; six with 8 pt spacing =
+  **434.33 pt** — past 327 by 107.33, past 354 by 80.33, past 392 by 42.33, so
+  the row scrolls on every iPhone. **"Good" ends 301 pt from the row's start**,
+  53 pt inside the 354 pt field; the existing `buttons["Good"]` taps passed.
+  **Leg (iv) passed with `onAppear`** — the `ScrollPosition` fallback was not
+  built. **The look of the cut-off chip at the edge is untested** (the
+  `.scrollClipDisabled()` scan pins a spelling); at rest on a 402 pt screen it
+  is 12 pt of Broken's rounded end. Mutations, red and restored (`diff -q`
+  against saved copies): `.frame(width: 60)` on `ChoiceChip` → (b), three
+  chips; `chipSpacing = 24` → (d); `.scrollClipDisabled()` removed, a
+  hand-rolled toggle in `NewOrUsedField`, the old chip pasted back into both
+  forms → the three scans; a two-row `LazyHGrid` → (i) on both UI tests; the
+  `ScrollView` removed → (ii) on both (chips squeezed to 43.7–58 pt); 
+  `.scrollDisabled(true)` → (iii) on both; the `.onAppear` scroll deleted →
+  (iv). **As built**: the UI tests address a condition chip by
+  `label == %@ AND identifier == ''`, since T007 puts a second "New" on both
+  screens; the item-form test runs on the **edit** form and swipes up until the
+  row is on screen, asserting Excellent is hittable so "Broken is not" cannot
+  pass off screen; no vertical padding on the chip `HStack`. Notes carried
+  forward: leg (ii) rests on a 12 pt margin on the pinned 402 pt device — a
+  wider window turns it red with nothing broken; whether the inner
+  `scrollTo` nudges the outer form is not instrumented (a probe goes into
+  T010); `NewOrUsedField` has no caller yet, so its clear-on-tap wiring is a
+  scan until T007–T010; its container may read the field label twice to
+  VoiceOver (the person's step at the Phase 3 pause); the Mark as bought sheet
+  draws at 0.96 scale at its medium detent on iOS 27; the scan's doc comment
+  claims a "composed twice or not at all" mutation that was not run; other
+  prose naming `FlowLayout` is for the sweep.
 
 - [ ] **T007 — Bought on the item form and the purchase sheet.**
   Per plan §6. `ItemFormView.optionalFields`: `NewOrUsedField(label:
@@ -745,3 +778,5 @@ escape-hatch misses recorded here too.
 | T005 (`sdd-implementer`) | `opus` | 83,102 (18 tool uses, 28.6 min) | Done first pass; 6 mutations in three whole-suite runs. Two foreground calls hit the 600 s tool limit and finished in the background |
 | Phase 2 review (`skeptical-reviewer`) | `opus` | 62,185 (6 tool uses, 1.7 min) | Signed off, no blocking. Second-look notes for the sweep: (1) no test drives `markBought` with a Very Good purchase and asserts the stored pair on a second context (correct by construction through `Item.init`); (2) UI suite owed at the phase's final commit — run by the orchestrator, row below; (3) `Purchase`'s memberwise init defaults `bought`; (4) criterion 7 says the sheet's Bought field is "unselected" while 23 preselects it from a preference — built to 23 and P6; the wording goes to the person at the Phase 3 pause; (5) stale comments: "three hosts"/"G12 pins" on three `makePurchaseFormViewModel` docs and the host test, "the eleven `Item.init` is passed"; (6) the two "starts not recorded" tests' stored-nil lines are default nils — not save coverage; (7) "one host passing nil" was mutated on `PlansViewModel` only. Went outside the bundle for three greps on the Very Good question |
 | Phase 2 end, UI suite (orchestrator, 2026-10-02) | `claude-opus-5-5` medium | — | `scripts/verify.sh ui` at `58bb664`: 38 tests, 0 failures (1015 s). Phase 2 runs on to Phase 3 (`walkthrough: none`) |
+| T006 (`sdd-implementer`) | `opus` | 157,689 (38 tool uses, 66.7 min — the UI suite, seven red single-method UI runs and a red unit run at ~10 min each) | Done first pass; 12 mutations. Finding: red runs now take about ten minutes whether whole-suite or single-method |
+| T006 per-task review (`skeptical-reviewer`) | `opus` | 62,213 (3 tool uses, 2.7 min) | Signed off, no blocking; 8 second-look notes (in T006's Done note). Orchestrator re-ran `scripts/verify.sh all`: 1784 unit, 40 UI, green |

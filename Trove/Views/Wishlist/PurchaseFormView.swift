@@ -9,7 +9,7 @@ import SwiftUI
 /// price — and this spec's non-goals forbid changing the sale sheet. So this
 /// copies `SaleFormView`'s chrome, which `SaleFormView` itself copied from
 /// `ItemFormView`, the house precedent for exactly this; the condition row is
-/// `ItemFormView`'s `FlowLayout` of capsules, copied the same way.
+/// the `ConditionField` both forms share (020), one scrolling row of capsules.
 ///
 /// It is hosted from the wishlist, the wanted-entry page and the Sell Plan,
 /// and it writes nothing itself: confirming hands
@@ -249,47 +249,13 @@ struct PurchaseFormView: View {
         }
     }
 
-    /// `ItemFormView`'s condition row, copied (Q8): a label over a flow of
-    /// capsules, one per case. Not a picker: chosen while `013`'s rule
-    /// forbade a system menu inside page content, which `018` reversed
-    /// (`MenuPolicyTests`); the capsules stay as the form's design.
+    /// `ItemFormView`'s condition row — the same shared `ConditionField`
+    /// (020 plan §6), one sideways-scrolling row of capsules, one per case.
+    /// Not a picker: chosen while `013`'s rule forbade a system menu inside
+    /// page content, which `018` reversed (`MenuPolicyTests`); the capsules
+    /// stay as the form's design.
     private var conditionField: some View {
-        VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
-            Text(PurchaseCopy.conditionLabel).monoLabel()
-            FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
-                ForEach(Condition.allCases, id: \.self, content: conditionChip)
-            }
-        }
-    }
-
-    /// The selected trait is load-bearing twice over: it is how VoiceOver says
-    /// which condition is chosen, and how a UI test reads the selection.
-    private func conditionChip(_ condition: Condition) -> some View {
-        let isSelected = viewModel.condition == condition
-
-        return Button {
-            viewModel.condition = condition
-        } label: {
-            Text(condition.rawValue.capitalized)
-                .font(theme.typography.secondary)
-                .foregroundStyle(isSelected ? theme.colors.accentBrass : theme.colors.textBody)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .background(
-                    Capsule().fill(isSelected ? theme.colors.accentBrassTint : Color.clear)
-                )
-                .overlay(
-                    Capsule().strokeBorder(
-                        isSelected ? theme.colors.accentBrass : theme.colors.divider,
-                        lineWidth: theme.metrics.hairline
-                    )
-                )
-                // A clear fill doesn't hit-test: without this an unselected
-                // chip's padding took no tap (009 T014a).
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        ConditionField(label: PurchaseCopy.conditionLabel, selection: $viewModel.condition)
     }
 
     // MARK: - Shared field chrome
