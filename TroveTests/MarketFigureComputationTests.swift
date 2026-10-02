@@ -168,15 +168,54 @@ struct MarketFigureComputationTests {
         #expect(wanted.lowCents == 120)
     }
 
-    @Test func theConditionBucketsAreDisjointAndNonEmpty() {
-        var seen: Set<String> = []
+    /// 020/G5, spec Decision 6. Until 020 the buckets were disjoint; Very
+    /// Good now reads `very-good` and Good keeps reading `very-good` and
+    /// `good`, so nothing already graded Good sees its figure move. That is
+    /// the **one** overlap, pinned here by name so a second can't arrive
+    /// unnoticed — every other pair of grades still shares nothing.
+    @Test func theConditionBucketsOverlapOnlyWhereVeryGoodMeetsGood() {
+        var union: Set<String> = []
         for condition in Condition.allCases {
             let slugs = MarketConditionMap.reverbSlugs(for: condition)
             #expect(!slugs.isEmpty, "\(condition) maps to nothing")
-            #expect(seen.isDisjoint(with: slugs), "\(condition) shares a slug with an earlier bucket")
-            seen.formUnion(slugs)
+            union.formUnion(slugs)
         }
-        #expect(seen == MarketConditionMap.knownSlugs, "a known slug belongs to no owned condition, or a bucket names an unknown one")
+        #expect(union == MarketConditionMap.knownSlugs, "a known slug belongs to no owned condition, or a bucket names an unknown one")
+
+        var overlaps: [Set<Condition>: Set<String>] = [:]
+        let conditions = Condition.allCases
+        for (index, first) in conditions.enumerated() {
+            for second in conditions[(index + 1)...] {
+                let shared = MarketConditionMap.reverbSlugs(for: first)
+                    .intersection(MarketConditionMap.reverbSlugs(for: second))
+                if !shared.isEmpty { overlaps[[first, second]] = shared }
+            }
+        }
+        #expect(overlaps == [[.veryGood, .good]: ["very-good"]])
+
+        #expect(MarketConditionMap.reverbSlugs(for: .good) == ["very-good", "good"])
+    }
+
+    /// 020, criterion 12: the same listings, read by the two grades. Very
+    /// Good counts the `very-good` listings only; Good counts those and the
+    /// `good` ones, exactly as before 020. The prices are disjoint by slug so
+    /// the low and the high say *which* listings counted, not just how many.
+    @Test func aVeryGoodItemCountsOnlyVeryGoodListingsAndAGoodItemCountsBoth() throws {
+        let listings = set([
+            listing(300, "very-good"), listing(310, "very-good"), listing(320, "very-good"),
+            listing(100, "good"), listing(110, "good"), listing(120, "good"),
+            listing(500, "excellent"), listing(50, "fair"),
+        ])
+
+        let veryGood = try figure(compute(.owned(condition: .veryGood), over: listings, product: product))
+        #expect(veryGood.count == 3)
+        #expect(veryGood.lowCents == 300)
+        #expect(veryGood.highCents == 320)
+
+        let good = try figure(compute(.owned(condition: .good), over: listings, product: product))
+        #expect(good.count == 6)
+        #expect(good.lowCents == 100)
+        #expect(good.highCents == 320)
     }
 
     @Test func truncationIsCarriedOntoTheFigure() throws {

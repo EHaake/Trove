@@ -47,6 +47,10 @@ final class WishlistItem {
     /// `PurchaseUndoTests`).
     var boughtDate: Date?
 
+    /// 020: `NewOrUsed.rawValue` for which the person is looking for, or nil —
+    /// not recorded. Every entry that predates 020 reads nil (Decision 3).
+    var lookingForRawValue: String?
+
     /// 009: when this wanted item's sell plan was created, or nil when it has
     /// none. **The one plan predicate** — a plan is a stored fact, never
     /// inferred from the selection (spec Decision 1). Written only by
@@ -116,6 +120,11 @@ final class WishlistItem {
 
     var hasSellPlan: Bool { sellPlanCreatedAt != nil }
 
+    var lookingFor: NewOrUsed? {
+        get { lookingForRawValue.flatMap(NewOrUsed.init(rawValue:)) }
+        set { lookingForRawValue = newValue?.rawValue }
+    }
+
     /// 009: an older row the carry-over has yet to reach that will become a plan
     /// when it does — unchecked, with a selection or a sold-toward history. **The
     /// carry-over's own predicate** (`SellPlanStore.carryOver` reads it), and
@@ -136,7 +145,8 @@ final class WishlistItem {
         photos: [Photo]? = [],
         plannedSaleItems: [Item]? = [],
         reverbProductID: Int? = nil,
-        year: Int? = nil
+        year: Int? = nil,
+        lookingFor: NewOrUsed? = nil
     ) {
         self.name = name
         self.categoryPath = categoryPath
@@ -149,6 +159,7 @@ final class WishlistItem {
         self.plannedSaleItems = plannedSaleItems
         self.reverbProductID = reverbProductID
         self.year = year
+        self.lookingForRawValue = lookingFor?.rawValue
         self.createdAt = .now
         self.sellPlanCheckedAt = .now
     }

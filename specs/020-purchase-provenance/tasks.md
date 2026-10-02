@@ -60,7 +60,7 @@ Everything the person reads is plain language.
 
 ## Phase 1 — Foundations: the two facts and Very Good (**foundational**) · walkthrough: yes — on the item form (under More details) and on the Mark as bought sheet the condition row now reads New, Excellent, Very Good, Good, Fair, Broken and wraps onto a second line on a narrow phone; an item saved as Very Good reopens with Very Good selected and its page reads "Very Good"; nothing else in the app looks different yet
 
-- [ ] **T001 — `NewOrUsed`, the three stored fields, Very Good and its storage rule. `review: per-task`.**
+- [x] **T001 — `NewOrUsed`, the three stored fields, Very Good and its storage rule. `review: per-task`.**
   Per plan §1, Q1–Q3 and P4. New `Trove/Models/NewOrUsed.swift`
   (`nonisolated enum NewOrUsed: String, CaseIterable, Sendable { case new, used }`).
   `Condition` gains `case veryGood = "very good"` **between `excellent` and
@@ -134,6 +134,37 @@ Everything the person reads is plain language.
   (comment).
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every mutation
   recorded verbatim; the new suite in the count.
+  **Done (2026-10-01).** `scripts/verify.sh` green, re-run by the orchestrator:
+  1751 tests in 233 suites (was 1740 / 231; new suites "Very Good and an app
+  older than 020" and "Bought, looking for and Very Good on the models").
+  Per-task review: signed off, no blocking findings. **Two rewritten tests were
+  renamed** because their old names became false:
+  `conditionRoundTripsThroughItsRawValue` → `conditionRoundTripsThroughItsStoredPair`,
+  `theConditionBucketsAreDisjointAndNonEmpty` →
+  `theConditionBucketsOverlapOnlyWhereVeryGoodMeetsGood` — plan §1/§12 and this
+  line cite the old names. **Grep**: no production code outside `Item.swift`
+  reads or writes `Item.conditionRawValue` (the remaining hits are the export
+  record's own field); one test double, `SellPlanViewModelTests.swift:1207`,
+  still snapshots it — harmless until fed a Very Good item, logged for the sweep.
+  Mutations, each red then restored (tree byte-compared): naïve storage → G2's
+  stored-pair test, G3's replica (reads Excellent, save resets) and G4 red;
+  Very Good given `good`, Good narrowed to `good`, `fair` added to Broken → G5
+  red; any non-nil refinement over Good → the unknown-refinement leg red; the
+  refinement honoured whatever the base → G3's Fair leg red; `veryGood` declared
+  after `good` → the order literal red; export back on `item.conditionRawValue`
+  → G6 red; `@Attribute(.unique)` on `boughtRawValue` → `CloudKitSchemaTests`
+  **and** `TwoStoreContainerTests` red (as `015` T001 found); an init default
+  of `.new` → the fresh-row legs red. **G4's mutation as this line words it
+  ("refetch put back on the same context and the save dropped") stays green**
+  — it is the known false-pass shape; the guard was verified by the guard
+  table's wording instead (the save dropped, refetch still on a second context
+  → 6 issues). G3 runs in memory (it tests the read/write rule; the persisted
+  leg is G4's). For the sweep: G3 cannot see the iCloud leg — "still Very Good
+  after the older app's save" also needs that app's export to leave
+  `conditionRefinement` intact, so the `SYNC-CHECKS.md` step must include a
+  Very Good item edited on the older build (plan §10's draft does); and
+  `aRowWithOnlyOlderFieldsReadsNotRecordedAndItsOldGrade`'s nil legs are a
+  carried-across nil — criteria 5, 11, 20 rest on T014's on-disk upgrade, not on it.
 
 - [ ] **T002 — `NewOrUsedCopy` and the clear-on-tap rule.**
   Per plan §2 and P1. `NewOrUsed.selection(afterTapping:current:)` in
@@ -584,3 +615,5 @@ escape-hatch misses recorded here too.
 | Sign-off fixes (`sdd-planner`, resumed) | `opus` | 386,562 cumulative (38 tool uses, 2.9 min) | Both blocking and 11 second-look notes applied; R1/R2/R3/R6 transcribed by the orchestrator from the person's answers (spec Decision 10) |
 | Sign-off re-review (`skeptical-reviewer`, resumed) | `opus` | 199,198 cumulative (2 tool uses, 1.0 min) | B1 and B2 resolved, R6 consistent; one new blocking item N1 (G10's Very Good leg could not fail under its named mutation) — **fixed directly by the orchestrator** (the stored-pair literal added to T004 and G10), per the loop cap; second-look notes 1–4 applied the same way |
 | Sync with `main` after `018` merged (orchestrator, 2026-10-01) | `claude-opus-5-5` medium | — | `main` merged in clean (71 commits, no conflicts); `scripts/verify.sh` green, 1740 tests in 231 suites. Every file, test and symbol `plan.md`/`tasks.md` names still exists; the files `018` and this plan share (`ItemDetailView`, `MarketSection`, `PurchaseFormView`, `PlansViewModel`, `ItemListViewModel`, `ItemListHeaderLayoutTests`, `ThemeTypography`, `TroveUITests`) changed in comments or outside the lines this plan edits — nothing retired or reshaped, no decision review needed |
+| T001 (`sdd-implementer`) | `opus` | 130,312 (15 tool uses, 37.1 min) | Done first pass; 11 mutations red and restored. Verification runs after touching `Item.swift` take 3+ min each |
+| T001 per-task review (`skeptical-reviewer`) | `opus` | 54,410 (3 tool uses, 1.8 min) | Signed off, no blocking; 7 second-look notes (recorded in T001's Done note). Ran one grep beyond the bundle — the production-reads check the implementer's report lacked |

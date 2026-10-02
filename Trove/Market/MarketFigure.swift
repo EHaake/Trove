@@ -7,10 +7,15 @@ nonisolated enum MarketSubject: Sendable, Equatable {
     case wanted
 }
 
-/// Trove's five conditions against Reverb's condition slugs (spec P2,
+/// Trove's conditions against Reverb's condition slugs (spec P2,
 /// plan Q1), verified against the recorded fixtures — every slug seen on
 /// the Telecaster's 337 listings is in `knownSlugs`, and
 /// `MarketFigureComputationTests` keeps it that way.
+///
+/// 020, Decision 6: Very Good reads `very-good` alone, and Good keeps
+/// reading `very-good` and `good` as it has since 002 — the one overlap
+/// between two buckets, on purpose, so nothing already graded Good sees its
+/// figure move.
 ///
 /// `b-stock` sits with new stock: unused dealer inventory with cosmetic
 /// flaws, priced with mint on the oracle product. "Used", for a wanted
@@ -28,6 +33,7 @@ nonisolated enum MarketConditionMap {
         switch condition {
         case .new: ["brand-new", "b-stock", "mint", "mint-inventory"]
         case .excellent: ["excellent"]
+        case .veryGood: ["very-good"]
         case .good: ["very-good", "good"]
         case .fair: ["fair"]
         case .broken: ["poor", "non-functioning"]

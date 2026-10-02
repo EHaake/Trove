@@ -22,6 +22,10 @@ nonisolated struct ItemExportRecord: Sendable {
     let purchaseLocation: String?
     let currentValueCents: Int?
     let desireToKeep: Int
+    /// 020: `Item.condition.rawValue` — `"very good"` for Very Good — and
+    /// **not** `Item.conditionRawValue`, which stores Very Good as `"good"`
+    /// beside a refinement (020 plan Q2). The CSV and the PDF read the grade
+    /// from here, so do not "fix" the snapshot back to the stored field.
     let conditionRawValue: String
     let conditionNotes: String?
     let serialNumber: String?
@@ -171,7 +175,7 @@ extension ItemExportRecord {
             purchaseLocation: item.purchaseLocation,
             currentValueCents: item.currentValueCents,
             desireToKeep: item.desireToKeep,
-            conditionRawValue: item.conditionRawValue,
+            conditionRawValue: item.condition.rawValue,
             conditionNotes: item.conditionNotes,
             serialNumber: item.serialNumber,
             notes: item.notes,

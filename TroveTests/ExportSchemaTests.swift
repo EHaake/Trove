@@ -492,6 +492,23 @@ struct ExportSchemaTests {
         #expect(record.firstPhotoID == nil)
     }
 
+    /// 020/G6 (plan Q2): the snapshot carries the grade, not the stored
+    /// field. A Very Good item stores `"good"` in `conditionRawValue` — the
+    /// first expectation is that fact, so the fixture differs from what the
+    /// broken path produces — and its record must still say `"very good"`,
+    /// which is what the CSV writes and import reads back. Mutation:
+    /// `init(item:)` back on `item.conditionRawValue` → the record says
+    /// `"good"` → red.
+    @Test func aVeryGoodItemsRecordCarriesTheGradeNotTheStoredField() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Leica M6", categoryPath: "Photography/Cameras", condition: .veryGood)
+        context.insert(item)
+        try #require(item.conditionRawValue == "good")
+
+        let record = ItemExportRecord(item: item)
+        #expect(record.conditionRawValue == "very good")
+    }
+
     /// 006: the snapshot reads the sale through `Item.sale`, the one place
     /// the pair is assembled — an owned item's four fields stay nil, and a
     /// sold one's arrive together. Mutation: read `item.soldDate` alone and
