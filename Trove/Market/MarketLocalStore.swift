@@ -70,7 +70,10 @@ enum MarketLocalStore {
     /// One refresh's outcome: the figure row upserted, a history point
     /// appended when the reading has a median (Decision 23), the trend
     /// recomputed from the whole history, and the snapshot refreshed.
-    static func record(_ reading: MarketReading, product: MarketProduct, for key: MarketSubjectKey, in context: ModelContext) throws {
+    /// `newStockOnly` records which listings the reading was computed over
+    /// (020, Q4) — the refresher passes its subject's own predicate; every
+    /// owned reading is the default.
+    static func record(_ reading: MarketReading, product: MarketProduct, for key: MarketSubjectKey, newStockOnly: Bool = false, in context: ModelContext) throws {
         let fetchedAt: Date
         switch reading {
         case .figure(let figure): fetchedAt = figure.fetchedAt
@@ -83,6 +86,7 @@ enum MarketLocalStore {
         row.productID = product.id
         row.fetchedAt = fetchedAt
         row.usedLowCents = product.usedLowCents
+        row.isNewStockOnly = newStockOnly
 
         switch reading {
         case .figure(let figure):

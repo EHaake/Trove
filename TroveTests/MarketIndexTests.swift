@@ -55,11 +55,12 @@ struct MarketIndexTests {
 
     // MARK: - resolve
 
-    private func value(median: Int?, at: Date, trend: MarketTrend? = nil) -> MarketSnapshotValue {
+    private func value(median: Int?, at: Date, trend: MarketTrend? = nil, newStockOnly: Bool = false) -> MarketSnapshotValue {
         let record = MarketFigureRecord(subjectID: UUID(), subjectKind: .owned, productID: 126_161, fetchedAt: at)
         record.medianCents = median
         record.count = median == nil ? 1 : 5
         record.trendRawValue = trend?.rawValue
+        record.isNewStockOnly = newStockOnly
         return MarketSnapshotValue(record: record)
     }
 
@@ -104,6 +105,22 @@ struct MarketIndexTests {
             guard case .matched(let display) = MarketSectionState.resolve(productID: 1, figure: figure, snapshot: nil, now: now) else { throw TestFailure("not matched") }
             #expect(display.reading == .stale(fetchedAt: t0))
         }
+    }
+
+    // MARK: - The listing basis (020, Q4)
+
+    /// The section's words name the listings the figure *shown* was read
+    /// from: a wanted item's figure says "new" only when the record says it
+    /// was read from new stock, "used" otherwise, and an owned item's figure
+    /// names its condition whatever the record carries.
+    @Test func theListingBasisIsReadOffTheFigure() {
+        let fromEverythingElse = value(median: 140_000, at: t0)
+        let fromNewStock = value(median: 140_000, at: t0, newStockOnly: true)
+
+        #expect(fromNewStock.listingBasis(isWanted: true) == .new)
+        #expect(fromEverythingElse.listingBasis(isWanted: true) == .used)
+        #expect(fromEverythingElse.listingBasis(isWanted: false) == .inCondition)
+        #expect(fromNewStock.listingBasis(isWanted: false) == .inCondition)
     }
 
     // MARK: - The summary's current trend (003 §2)

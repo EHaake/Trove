@@ -204,7 +204,7 @@ Everything the person reads is plain language.
 
 ## Phase 2 — View models, the market and Copy · walkthrough: none — every change here is in a view model, the purchase sheet's seed, Copy or the market's reading of a preference nobody can set yet; no control and no screen changes until Phase 3, and by design (Decision 9) no existing wanted item's figure or wording moves
 
-- [ ] **T003 — A wanted item's figure follows Looking for, and its words follow the figure. `review: per-task`.**
+- [x] **T003 — A wanted item's figure follows Looking for, and its words follow the figure. `review: per-task`.**
   Per plan §3, Q4, R3 and R5. `MarketSubject.wanted` becomes
   `wanted(lookingFor: NewOrUsed?)` with `readsNewStockOnly`;
   `MarketConditionMap.counts` **derived from `subject.readsNewStockOnly`** — one
@@ -251,6 +251,38 @@ Everything the person reads is plain language.
   only).
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); mutations
   recorded; the re-spelled tests listed.
+  **Done (2026-10-01).** `scripts/verify.sh` green, re-run by the orchestrator:
+  1766 tests in 234 suites (+10 test functions). Per-task review: signed off, no
+  blocking findings. **Decision 9's evidence** — re-spelled
+  `.wanted(lookingFor: nil)` and otherwise unchanged, all green with their
+  original numbers: `MarketFigureComputationTests.aWantedItemReadsEveryUsedListingInDollars`
+  (72 / 149_999 / 100_000 / 325_000), `.anUnknownSlugIsOutForAnOwnedItemAndInForAWantedOne`,
+  `.newStockNeverCountsForAWantedItem`, and
+  `MarketRefresherTests.targetsAreTheMatchedOwnedInCustomOrderThenTheMatchedWanted`.
+  Two `MarketCopyTests` took the signature's compile fix (`basis:` for `wanted:`)
+  with their expected strings untouched. `MarketVocabularyTests` unedited.
+  **As built**: the store function is `record(_:product:for:newStockOnly:in:)`
+  (the plan omits the trailing `in:`); the flag is written on withheld readings
+  too. Mutations, each red and restored (tree hash-compared): `mint` counted for
+  New, the preference ignored (72 against the fixtures' 187 new-stock listings),
+  Used reading new stock too → G8 red; the `newStockOnly:` argument dropped,
+  `currentTarget` left at `lookingFor: nil` (the re-read leg and the plain New
+  test), `targets(in:)` left at nil, the store only ever setting the flag →
+  `MarketRefresherTests` red; the allowlist without `isNewStockOnly` → red;
+  `listingBasis` ignoring the flag, or ignoring `isWanted` → `MarketIndexTests`
+  red; the New strings saying "used listings" → `MarketCopyTests` red; the
+  section reading `isWanted` alone → the scan red at both sites. **The
+  `MarketWiringTests` scan is the whole of the view-layer coverage: the "new
+  listings" wording on screen is untested by any automated check.** For the
+  sweep and T014: the on-disk migration of `MarketFigureRecord.isNewStockOnly`
+  is untested (added to T014(a) below); `aPreferenceChangedDuringTheFetchIsTheOneComputed`
+  waits on the gate without a bound, so a regression there hangs rather than
+  reddens. **A third string says "used listings"**: the match picker's
+  candidate line, `MarketCopy.candidateReading` ("No used listings" / "Lowest
+  used asking price …") — a Reverb catalogue fact about the candidate product,
+  shown when matching any item, not a wanted item's market line; left as is on
+  R3's reasoning (spec Decision 10) and put to the person at the Phase 3 pause
+  as a statement they can overturn.
 
 - [ ] **T004 — Bought through the item form's view model and the purchase sheet.**
   Per plan §4 and P6, Q8. `ItemFormViewModel.bought` (populate, save, no
@@ -543,6 +575,11 @@ Everything the person reads is plain language.
   build and install this branch over it — each opens not recorded, the grades
   unchanged (the lightweight migration of three additive fields, which no
   in-memory test observes).
+  *(Added at T003's review.)* Before the upgrade, match the wanted entry on
+  `main` so it carries a figure; after it, that figure still shows and its words
+  still say "used listings" — the local market store gained
+  `MarketFigureRecord.isNewStockOnly`, and a store that failed to open would
+  drop every existing figure until the next refresh (Decision 9).
   **(b) iPhone SE (3rd generation) layout**, in both appearances, on the item
   form and the sheet *(Amendment A)*: the six condition chips on one line; a
   chip visibly cut off at the screen edge; the row slides by finger to Broken;
@@ -664,3 +701,5 @@ escape-hatch misses recorded here too.
 | T002 (`sdd-implementer`) | `opus` | 48,794 (19 tool uses, 31.4 min — 16.5 of it the UI suite, 10.5 the red mutation run) | Done first pass; no deviations |
 | Phase 1 review (`skeptical-reviewer`) | `opus` | 55,690 (2 tool uses, 1.3 min) | Signed off, no blocking. Second-look notes carried forward: (1) a direct write of `"very good"` into `conditionRawValue` reads Very Good on this build, so every later save-path test (form, sheet, duplicate, import) asserts the stored pair `("good", "very good")` on a second context — T004's G10 already does; add to T011's round trip; (2) today's item-page row is the literal `"Bought"` (`ItemDetailView.details`, confirmed by the orchestrator at the sync), so `detailDateRowLabel(nil)` matches it — T009 replaces that literal; (3) T011 pins `Looking For` by literal (it differs from the label by one capital on purpose); (4) a stale refinement brings Very Good back if an older app moves Good → Fair → Good — R4's stated edge, one line for the `SYNC-CHECKS.md` step; (5) plan §1/§12 still cite the two renamed tests — for the close-out; (6) G7's strings were not mutated, only the rule (literal equality cannot be vacuous); (7) `SellPlanViewModelTests.swift:1207` double, for the sweep |
 | Phase 1 pause finding → decision review (`skeptical-reviewer`) | `opus` | 84,596 (27 tool uses, 5.7 min) | The person rejected the wrapping condition row (spec Decision 11). Recommendation transcribed as plan Amendment A: `ConditionField` copies `CategoryPickerField`'s scrolling row; G14 rewritten around two UI tests; `FlowLayout` deleted; T006 rewritten and marked `review: per-task`. No product question. **Protocol note**: the question was framed in a decision bundle with no code touched, but not inside Plan Mode — its exit needs the person's approval of a technical plan, which the product-owner level does not ask of them. Also: the Phase 1 build had only been installed on the test simulator (iPhone 18 Pro, iOS 27.0); the orchestrator built and launched it on the person's iPhone 17 Pro (26.5) when they asked — a pause report should say which simulator carries the build |
+| T003 (`sdd-implementer`) | `opus` | 165,216 (29 tool uses, 22.7 min) | Done first pass; 12 mutations red and restored. Finding: the 600 s diagnostics wait hits red *single-suite* runs only — red whole-suite runs finish in about a minute, so mutations go against plain `scripts/verify.sh` |
+| T003 per-task review (`skeptical-reviewer`) | `opus` | 55,180 (2 tool uses, 1.7 min) | Signed off, no blocking; 5 second-look notes (in T003's Done note). Its note 2 checked by the orchestrator with one grep: a third "used listings" string exists (`candidateReading`, the match picker) — recorded, goes to the person at the Phase 3 pause |

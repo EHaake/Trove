@@ -429,7 +429,7 @@ final class WishlistDetailViewModel {
         let target = MarketRefreshTarget(
             key: MarketSubjectKey(subjectID: item.id, kind: .wanted),
             productID: candidate.id,
-            subject: .wanted,
+            subject: .wanted(lookingFor: item.lookingFor),
             year: item.year
         )
         let refresher = MarketRefresher(modelContext: modelContext, service: marketService, now: now)
@@ -521,7 +521,7 @@ final class WishlistDetailViewModel {
         let target = MarketRefreshTarget(
             key: MarketSubjectKey(subjectID: item.id, kind: .wanted),
             productID: productID,
-            subject: .wanted,
+            subject: .wanted(lookingFor: item.lookingFor),
             year: item.year
         )
         // Only a `.current` reading shows a figure, and the unreachable

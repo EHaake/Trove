@@ -18,6 +18,7 @@ struct MarketSnapshotValue: Equatable, Sendable {
     let trend: MarketTrend?
     let yearFilter: Int?
     let isAllYearsFallback: Bool
+    let isNewStockOnly: Bool
 
     init(record: MarketFigureRecord) {
         productID = record.productID
@@ -33,6 +34,12 @@ struct MarketSnapshotValue: Equatable, Sendable {
         trend = record.trendRawValue.flatMap(MarketTrend.init(rawValue:))
         yearFilter = record.yearFilter
         isAllYearsFallback = record.isAllYearsFallback
+        isNewStockOnly = record.isNewStockOnly
+    }
+
+    /// Which listings the section's words should name for this figure (Q4).
+    func listingBasis(isWanted: Bool) -> MarketCopy.ListingBasis {
+        isWanted ? (isNewStockOnly ? .new : .used) : .inCondition
     }
 
     /// The median a surface may use — nil when withheld or no longer
