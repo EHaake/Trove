@@ -166,7 +166,7 @@ Everything the person reads is plain language.
   `aRowWithOnlyOlderFieldsReadsNotRecordedAndItsOldGrade`'s nil legs are a
   carried-across nil — criteria 5, 11, 20 rest on T014's on-disk upgrade, not on it.
 
-- [ ] **T002 — `NewOrUsedCopy` and the clear-on-tap rule.**
+- [x] **T002 — `NewOrUsedCopy` and the clear-on-tap rule.**
   Per plan §2 and P1. `NewOrUsed.selection(afterTapping:current:)` in
   `NewOrUsed.swift`. New `Trove/Models/NewOrUsedCopy.swift` (`nonisolated enum`,
   no SwiftUI): `boughtLabel`, `lookingForLabel`, `chip(_:)`,
@@ -183,6 +183,16 @@ Everything the person reads is plain language.
   recorded. Then `scripts/verify.sh ui` once at the phase end, count recorded —
   the chip row gained a sixth chip and the existing UI tests tap condition chips
   by label.
+  **Done (2026-10-01).** `scripts/verify.sh` green: 1756 tests in 234 suites
+  (new suite "New or used copy", 5 tests). G7 mutation: the rule's body changed
+  to `tapped` → `tappingTheSelectedChipClearsIt` red on both clearing cases (2
+  issues), the selecting cases green; restored, full suite green again. Only
+  the rule was mutated — the strings rest on their literal comparisons.
+  Phase-end UI run: `scripts/verify.sh ui` green, **38 tests, 0 failures**
+  (994 s) — no existing UI test tripped on the sixth condition chip. Process
+  notes: a red single-suite run takes ~10.5 min (xcodebuild waits 600 s on
+  simulator diagnostics) and the UI suite ~16.5 min, so both need running in
+  the background.
 
   **Phase 1 closes here — pause for the person** (walkthrough above; the phase
   review first). The report also says, as a statement the person can overturn,
@@ -617,3 +627,4 @@ escape-hatch misses recorded here too.
 | Sync with `main` after `018` merged (orchestrator, 2026-10-01) | `claude-opus-5-5` medium | — | `main` merged in clean (71 commits, no conflicts); `scripts/verify.sh` green, 1740 tests in 231 suites. Every file, test and symbol `plan.md`/`tasks.md` names still exists; the files `018` and this plan share (`ItemDetailView`, `MarketSection`, `PurchaseFormView`, `PlansViewModel`, `ItemListViewModel`, `ItemListHeaderLayoutTests`, `ThemeTypography`, `TroveUITests`) changed in comments or outside the lines this plan edits — nothing retired or reshaped, no decision review needed |
 | T001 (`sdd-implementer`) | `opus` | 130,312 (15 tool uses, 37.1 min) | Done first pass; 11 mutations red and restored. Verification runs after touching `Item.swift` take 3+ min each |
 | T001 per-task review (`skeptical-reviewer`) | `opus` | 54,410 (3 tool uses, 1.8 min) | Signed off, no blocking; 7 second-look notes (recorded in T001's Done note). Ran one grep beyond the bundle — the production-reads check the implementer's report lacked |
+| T002 (`sdd-implementer`) | `opus` | 48,794 (19 tool uses, 31.4 min — 16.5 of it the UI suite, 10.5 the red mutation run) | Done first pass; no deviations |

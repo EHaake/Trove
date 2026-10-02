@@ -6,4 +6,9 @@ import Foundation
 nonisolated enum NewOrUsed: String, CaseIterable, Sendable {
     case new
     case used
+
+    /// P1: tapping the chip already selected clears the field; any other tap selects.
+    static func selection(afterTapping tapped: NewOrUsed, current: NewOrUsed?) -> NewOrUsed? {
+        current == tapped ? nil : tapped
+    }
 }
