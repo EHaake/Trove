@@ -60,7 +60,18 @@ struct ThemeTypography: Sendable, Equatable {
     /// Set to `false` to render the whole app on system faces.
     static let customFontsInstalled = true
 
+    /// The Dashboard's title — its drill-down path — at 30 pt. The list
+    /// screens' titles grew past it (`listTitle`); this one stayed, since the
+    /// deeper category paths overflow the header at 34 (`018` spec Decision
+    /// 23, settled by measurement).
     let screenTitle: Font
+    /// The list screens' page title — Items, Plans, the Wishlist — at 34 pt,
+    /// about the system's large-title size, in `screenTitle`'s family and
+    /// weight (`018` spec Decision 23). Grown so it no longer reads small
+    /// beside the header's glass controls, and centred on them
+    /// (`TitleRowLayout`); where a narrower phone leaves it too little room
+    /// it shrinks to fit rather than ending in "…" (`ListTitle`).
+    let listTitle: Font
     /// The dashboard's total, and only that. tokens.md caps hero figures at 34
     /// but calls out "larger for the dashboard's primary total"; measured off
     /// Design's mock it's about double the secondary figures beside it.
@@ -78,7 +89,7 @@ struct ThemeTypography: Sendable, Equatable {
     /// No new size: it reuses tokens.md's 19pt step (the form-input row) on the
     /// display face at semibold, which is the difference between a heading and
     /// a field. `screenTitle` would be wrong on the list screens, where the
-    /// fixed header above is already carrying a 30pt title and a second one
+    /// fixed header above is already carrying a 34pt title and a second one
     /// under it reads as two screens stacked.
     let emptyStateTitle: Font
     let rowTitle: Font
@@ -141,6 +152,7 @@ extension ThemeTypography {
     /// per-screen as those screens get built.
     static let standard = ThemeTypography(
         screenTitle: font(.display, size: 30, weight: .semibold),
+        listTitle: font(.display, size: 34, weight: .semibold),
         heroFigureDashboard: font(.display, size: 68, weight: .semibold),
         heroFigureSymbol: font(.display, size: 28, weight: .semibold),
         wordmark: font(.display, size: 20, weight: .semibold),

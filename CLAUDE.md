@@ -154,8 +154,10 @@ actions" is the rule, `DestructiveColourPolicyTests` the guard.
   The rule is narrow on purpose, and an absolute ban would lose to the
   real problem the pattern solves: some layers genuinely cannot be
   reached any other way. `MenuPolicyTests` is the legitimate shape —
-  "no system menu inside page content" is a fact about view bodies that
-  no view-model test can observe. A scan asserting that a view model
+  "every '…', sort and order control opens a system menu and no view
+  floats a surface of its own" is a fact about view bodies that no
+  view-model test can observe (until `018` the example quoted `013`'s
+  opposite rule, "no system menu inside page content"). A scan asserting that a view model
   sets a particular property is not: that is a behavior, and the
   view-model suite reaches it.
   Two consequences worth stating. **When a source scan is the only
@@ -622,15 +624,19 @@ orchestrator re-runs the command itself before committing.
   that's finer-grained than useful here.
 - **Never commit code directly to `main`.** All implementation work
   happens on a spec branch. **One documented exception, amended
-  2026-09-19 at the person's instruction: `specs/ROADMAP.md` may be
-  committed straight to `main`.** The roadmap is a backlog, not part of
-  any spec's deliverable — an entry added or re-read between specs
-  belongs to no branch, and routing it through one produces a pull
-  request whose entire diff is prose that needs no review. The
-  exception is exactly that one file: anything touching code, a test,
-  or a spec's own `spec.md`/`plan.md`/`tasks.md` still takes a branch,
-  and a roadmap edit made *during* a spec still rides that spec's
-  branch rather than jumping to `main`.
+  2026-09-19 at the person's instruction and widened 2026-10-01:
+  documentation-only changes may be committed straight to `main`** —
+  `specs/ROADMAP.md`, `DECISIONS.md`, `README.md` and prose like them
+  ("Documentation updates do not need their own branch", at `018`'s
+  merge; until then the exception was the roadmap alone). The roadmap
+  is a backlog, not part of any spec's deliverable — an entry added or
+  re-read between specs belongs to no branch — and the same holds for
+  the decisions log and the README once a spec has merged: routing
+  them through a branch produces a pull request whose entire diff is
+  prose that needs no review. The exception stops at prose: anything
+  touching code, a test, or a spec's own `spec.md`/`plan.md`/`tasks.md`
+  still takes a branch, and a documentation edit made *during* a spec
+  still rides that spec's branch rather than jumping to `main`.
 - Opening the pull request early, as a **draft**, right after the branch
   is pushed, is fine and even encouraged — it gives a running diff to
   review on GitHub alongside each phase, separate from your own summary.

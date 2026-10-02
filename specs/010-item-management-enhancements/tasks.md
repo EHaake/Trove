@@ -1113,6 +1113,13 @@ designs added. Decisions, all theirs, recorded before execution:
       from the reviewer's own Inspector pass performing a Move
       action — the store and screen agree, which is the feature
       working, not a defect.)
+      *Superseded by `018-system-design-language` (its spec, criteria 1
+      and 5): Sort By is a system `Menu` again — a glass capsule over a
+      "Sort by" section of checkmark rows — and T029c's tear was measured
+      before anything else was converted. It is gone on iOS 27.0; on iOS
+      26.5 a narrow-to-wide relabel leaves the capsule at the old width
+      for about 1.5 s before it snaps right, accepted by the person
+      (`018` Decision 18). `SortPicker.swift` was deleted at `018` T010.*
 - [x] **T036** — Swipe-action iconography (Edit, Duplicate, Delete) —
       already added to `design/icons/`; this task is wiring them into
       the actual swipe-action buttons from T023/T024/T015, not designing

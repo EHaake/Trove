@@ -42,6 +42,14 @@ reads as a rendered physical material or a literal control — the
 boundary moved from "no depth at all" to "depth without literal
 materiality," not to "anything goes."
 
+**One exception, from `018`: the system's Liquid Glass**, on the
+system's own controls and on the four controls of Trove's that wear it —
+Sort By, the "…", the side toggle on a list screen's top row, and the
+add button floating over the rows — never on content. It is the
+platform's functional layer rather than a material Trove renders, and it
+goes only where Apple puts it; *System controls, Trove content* below is
+the rule.
+
 ## Palette
 
 Dark-first. Every color below should be treated as a semantic token
@@ -192,18 +200,52 @@ destructive one. The dashboard's market line stays in the mono meta
 register with only the amount lifted, so it cannot be mistaken for the
 total, and it never separates from its coverage.
 
-## Menus and chrome
+## System controls, Trove content
 
-**Bespoke inside the page, system in the bars** (`013` Amendment A).
-Every menu drawn inside a page's content — Sort By, the lists' and the
-Dashboard's "…", the Dashboard's category-order control — is Trove's own
-dropdown surface (tokens.md's Sort picker), never a system menu: iOS
-26's glass is a rendered material the skeuomorphism rule above keeps out
-of the page, and two badges side by side must open one visual language.
-The bars are the system's: the tab bar, the navigation bar's back
-chevron and the detail screens' "…" beside it, a sheet's Done. That a
-"…" in a bar and a "…" in a header open different-looking menus is what
-the layer boundary buys; `MenuPolicyTests` holds the line.
+**System controls, Trove content** (`018`). Every menu in the app is the
+system's menu, and every control that opens one is the system's control;
+what those controls say and what the pages hold stay Trove's. Sort By,
+the lists', Plans' and the Dashboard's "…", the Dashboard's category
+order, the detail screens' "…" and the tab bar wear the same system
+glass, and every menu is the same system menu, so a "…" in a header, a "…" in a bar and the tab bar wear
+and open one language. Two designs for a selection window is the
+inconsistency this rule exists to stop (`018` Decision 12), and no later
+spec brings a second one back.
+
+Glass goes where Apple puts it: on the functional layer that floats over
+content, never on content itself, used sparingly, and never glass on
+glass. So four of Trove's own controls wear it, all on a list screen's
+top row or floating over its rows: **Sort By**, a glass capsule sized to
+its text; the **"…"**, a glass circle, as the one in an item's detail
+is; the **side toggle** between them (Owned / Sold, Active / Completed),
+a glass capsule showing the current side that shows the other when
+tapped; and the **add button**, prominent glass tinted brass. The three
+on the top row read in the system's label colour — the default
+monochrome label the guidelines ask for on glass, matching the menu they
+open — except the toggle's primary side, Owned or Active, which reads
+brass so it is plain which side is primary. The add button's brass fill
+says it is the screen's one prominent action. Their words keep Trove's
+voice and type, IBM Plex Mono: the system's segmented control, which
+takes no font or colour from the app, was tried for the toggle and
+retired for exactly that (`018` Decision 19).
+
+What sits in the body keeps Trove's drawing: the search field, the
+Dashboard's "BY VALUE" order label inside its card, the cards, the rows
+and their plates. The bars are the system's, as they always were — the
+tab bar, the navigation bar's back chevron and the detail screens' "…",
+a sheet's Done. `MenuPolicyTests` holds the line, now pointed the other
+way: no bespoke menu surface inside a page.
+
+**This rule superseded `013` Amendment A.** From `013` to `018` the rule
+was the reverse, and read, in its words: "**Bespoke inside the page, system
+in the bars.** Every menu drawn inside a page's content — Sort By, the
+lists' and the Dashboard's '…', the Dashboard's category-order control —
+is Trove's own dropdown surface, never a system menu: iOS 26's glass is
+a rendered material the skeuomorphism rule above keeps out of the page,
+and two badges side by side must open one visual language." `018`
+reversed it at the person's instruction — full iOS standard, Liquid
+Glass wherever it belongs — and the bespoke dropdown (`013`, retired in
+`018`) went with it.
 
 ## Voice
 

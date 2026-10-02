@@ -139,18 +139,24 @@ purchases.
   wanted item and sale where it was), and About — the Reverb attribution, the contact address and
   the privacy policy.
 - **Appearance** — a System / Light / Dark choice in Settings, where Light is a paper-ground variant of the same brass/moss/rust identity rather than a new palette, System follows the device live, and the choice is stored per-device (Dark by default, so an existing install updates to exactly today's look).
-- **Menus that are the app's own** — every menu inside a page (Sort
-  By, every tab's "…" badge, the dashboard's category order) opens one
-  shared dropdown surface in Trove's own type and tokens, growing out
-  of its badge; the one system menu left is in the navigation bar,
-  where the system's chrome belongs.
+- **System controls, Trove content** — every menu in the app is the
+  system's: Sort By, every tab's "…" and the dashboard's category order
+  open iOS's own menu, drawn and animated by iOS like the one in an
+  item's navigation bar. The buttons in each tab's header wear Liquid
+  Glass like the tab bar — Sort By sized to its label, the "…" a glass
+  circle, and on Items and Plans a side toggle between them that shows
+  Owned or Sold (Active or Completed) and flips to the other side on a
+  tap — and the add button is a brass glass disc. Everything else is
+  Trove's own drawing: the headers' type and meta lines, the cards, rows
+  and chips, the desire dial, the gauge and the value slider. (`013`'s
+  bespoke in-page dropdown was retired by `018`.)
 - **iCloud sync** across your own devices via CloudKit, with real
   handling for the window between signing in and your existing
   collection actually finishing its first download.
 
 ## Status
 
-Twelve specs shipped: `001-core-inventory` (v1 — item tracking, the
+Fourteen specs shipped: `001-core-inventory` (v1 — item tracking, the
 dashboard, the wishlist, the Sell Plan, CloudKit sync),
 `010-item-management-enhancements` (merged 2026-08-30 — swipe actions,
 drag-to-reorder, duplication, expanded sorting, and a design-depth
@@ -163,7 +169,8 @@ and tested sample files), and `013-settings-menu` (merged 2026-09-02
 — the Settings sheet with export-everything, the templates, iCloud
 status, Delete All and About, reached from every root's "…"; and, by
 its Amendment A, the dashboard's "…" and every in-page menu on one
-bespoke dropdown surface), `002-live-market-value` (merged
+bespoke dropdown surface, since retired by `018` for the system's own
+menus), `002-live-market-value` (merged
 2026-09-05 — a Reverb asking-price indicator beside your own value:
 pick the match, set your value from the asking prices on a slider, and
 see the median on the detail, the rows, a sort and the dashboard, with
@@ -191,7 +198,11 @@ collection carrying its photos, credits and Reverb match, while the sell
 plan built around it survives as a record), and `009-sell-plan-list`
 (merged 2026-09-24 — sell plans as things you create, the Plans tab and
 its Dashboard card, completed plans showing the item they became, and
-Delete all sell plans in Settings).
+Delete all sell plans in Settings), and `018-system-design-language`
+(merged 2026-10-01 — every menu in the app is the system's own, the
+header's Sort By, side toggle and "…" and the add button wear Liquid
+Glass like the tab bar, and the Owned/Sold and Active/Completed switches
+became one glass toggle, brass on the primary side).
 See
 [`specs/ROADMAP.md`](specs/ROADMAP.md) for what's shipped, what's in
 progress, and what's next.
@@ -261,7 +272,7 @@ specs/
   010-item-management-enhancements/  Shipped — item management + design refresh
   011-data-export/       Shipped — CSV + PDF export, canonical schema
   012-data-import/       Shipped — CSV import against that schema
-  013-settings-menu/     Shipped — Settings, and the bespoke in-page menus
+  013-settings-menu/     Shipped — Settings, and the in-page menus (bespoke until 018)
   002-live-market-value/ Shipped — Reverb asking prices beside your value
   003-trend-aware-sell-plan/ Shipped — the trend-aware Sell Plan
   004-themes/            Shipped — light mode and the appearance choice
@@ -270,6 +281,7 @@ specs/
   014-sold-side-parity/  Shipped — Sell on the swipe, and the Sold side's search, chips and sort
   015-mark-as-bought/    Shipped — the purchase: a wanted item becomes an owned one
   009-sell-plan-list/    Sell plans you create, the Plans tab and its Dashboard card
+  018-system-design-language/ Shipped — the system's menus, Liquid Glass on the header's controls
   SYNC-CHECKS.md         Every untested sync check, from all specs, for one pass
   ROADMAP.md             Backlog of future specs
 design/

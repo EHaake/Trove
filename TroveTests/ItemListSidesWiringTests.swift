@@ -14,7 +14,7 @@ import Testing
 @Suite("Item list sides wiring")
 struct ItemListSidesWiringTests {
     private nonisolated static let list = "Trove/Views/Items/ItemListView.swift"
-    private nonisolated static let control = "Trove/Views/Items/SideSwitch.swift"
+    private nonisolated static let control = "Trove/Views/Shared/SideToggle.swift"
 
     private func code() throws -> String {
         try SourceScan.production(Self.list)
@@ -50,16 +50,18 @@ struct ItemListSidesWiringTests {
 
     /// G20, the header as one control set over two sides (criteria 3 and 7):
     /// the narrowing gate is spelled once, in two places, and reads the view
-    /// model's rule rather than the side; the search field and the sort badge
-    /// are each composed once and both sit inside it; the host carries one
-    /// menu per side, each writing its own selection; and `apply` writes
-    /// nothing before it has crossed to the side it is narrowing.
+    /// model's rule rather than the side; the search field and the sort control
+    /// are each composed once and both sit inside it; the sort control is one
+    /// `SortMenu` per side, each writing its own selection, the Owned one
+    /// alone carrying the manual order (`018` G6); and `apply` writes nothing
+    /// before it has crossed to the side it is narrowing.
     ///
     /// Mutations: put a `viewModel.side == .owned` clause back on either gate
     /// → red (the gate count and the no-side-in-the-header expectation);
     /// move `viewModel.searchText = ""` back above `switch request` → red
-    /// (the pre-switch span); delete either arm of the host's `case .sort:`
-    /// → red (the dropdown count).
+    /// (the pre-switch span); `manualOrder:` on the Sold menu → red; the
+    /// Sold menu writing `viewModel.sortOrder` → red (T001); the Sold menu
+    /// writing both orders → red (T004).
     @Test func oneNarrowingGateCoversBothSidesAndEachSideBringsItsOwnSort() throws {
         let code = try code()
 
@@ -98,41 +100,57 @@ struct ItemListSidesWiringTests {
             "the screen names `sortControl` \(code.ranges(of: "sortControl").count) times — its declaration plus one gated use is two"
         )
 
-        // The one badge names whichever side's order is showing, rather than
-        // the Owned side's through both (plan §6).
-        let badge = try body(of: "private var sortControl: some View")
+        // The control names whichever side's order is showing, aloud, rather
+        // than the Owned side's through both (014 plan §6).
+        let control = try body(of: "private var sortControl: some View")
         #expect(
-            badge.contains("viewModel.visibleSortLabel") && !badge.contains("viewModel.sortOrder"),
-            "the sort badge reads a side's order directly instead of the visible label: \(badge)"
+            control.contains(".accessibilityLabel(\"Sort by \\(viewModel.visibleSortLabel)\")"),
+            "the sort control's spoken label reads a side's order directly instead of the visible label: \(control)"
         )
 
-        // The host's sort case: one menu per side, over that side's own
-        // options, writing that side's own selection.
-        let sortCase = SourceScan.closureBodies(after: "case .sort:", in: code)
-        try #require(sortCase.count == 1, "the host opens \(sortCase.count) spans for `case .sort:`, expected exactly 1")
-        let sorts = try #require(sortCase.first)
+        // One menu per side, over that side's own options, writing that
+        // side's own selection (018 plan §1, G6).
         #expect(
-            sorts.ranges(of: "SortDropdown(").count == 2,
-            "`case .sort:` composes \(sorts.ranges(of: "SortDropdown(").count) sort menus, expected 2 — one per side"
+            control.ranges(of: "SortMenu(").count == 2,
+            "`sortControl` composes \(control.ranges(of: "SortMenu(").count) sort menus, expected 2 — one per side"
         )
-        let owned = try #require(
-            SourceScan.argumentLists(of: "SortDropdown", in: sorts).first { $0.contains("SortOrder.allCases") && !$0.contains("SoldSortOrder.allCases") },
-            "no menu over the Owned side's orders: \(sorts)"
+        // A `case` has no braces to span, so the branches are cut at their
+        // own labels: Owned runs to the Sold label, Sold to the end.
+        let ownedCase = try #require(control.range(of: "case .owned:"), "`sortControl` has no Owned branch: \(control)")
+        let soldCase = try #require(control.range(of: "case .sold:"), "`sortControl` has no Sold branch: \(control)")
+        try #require(ownedCase.upperBound <= soldCase.lowerBound, "`sortControl`'s Sold branch comes before its Owned branch — the cut below assumes the other order")
+        let owned = String(control[ownedCase.upperBound..<soldCase.lowerBound])
+        let sold = String(control[soldCase.upperBound...])
+        let ownedMenu = try #require(
+            SourceScan.argumentLists(of: "SortMenu", in: owned).first,
+            "the Owned branch composes no `SortMenu`: \(owned)"
         )
-        #expect(owned.contains("selection: viewModel.sortOrder"), "the Owned menu doesn't show the Owned side's selection: \(owned)")
-        let sold = try #require(
-            SourceScan.argumentLists(of: "SortDropdown", in: sorts).first { $0.contains("SoldSortOrder.allCases") },
-            "no menu over the Sold side's orders: \(sorts)"
+        #expect(ownedMenu.contains("options: ItemListViewModel.SortOrder.allCases"), "the Owned menu isn't over the Owned side's orders: \(ownedMenu)")
+        #expect(ownedMenu.contains("selection: viewModel.sortOrder"), "the Owned menu doesn't show the Owned side's selection: \(ownedMenu)")
+        #expect(ownedMenu.contains("manualOrder: .custom"), "the Owned menu's Custom row lost its reorder subtitle (P3): \(ownedMenu)")
+        let ownedSelect = try #require(
+            SourceScan.closureBodies(after: ownedMenu, in: owned).first,
+            "the Owned menu selects nothing"
         )
-        #expect(sold.contains("selection: viewModel.soldSortOrder"), "the Sold menu doesn't show the Sold side's selection: \(sold)")
-        #expect(sold.contains("isManualOrder: { _ in false }"), "the Sold menu tags an option REORDER — there is no manual order on that side (P16)")
-        let soldSelection = try #require(
-            SourceScan.closureBodies(after: sold, in: sorts).first,
+        #expect(
+            ownedSelect.contains("viewModel.sortOrder = $0") && !ownedSelect.contains("soldSortOrder"),
+            "the Owned menu writes something other than the Owned side's order: \(ownedSelect)"
+        )
+
+        let soldMenu = try #require(
+            SourceScan.argumentLists(of: "SortMenu", in: sold).first,
+            "the Sold branch composes no `SortMenu`: \(sold)"
+        )
+        #expect(soldMenu.contains("options: ItemListViewModel.SoldSortOrder.allCases"), "the Sold menu isn't over the Sold side's orders: \(soldMenu)")
+        #expect(soldMenu.contains("selection: viewModel.soldSortOrder"), "the Sold menu doesn't show the Sold side's selection: \(soldMenu)")
+        #expect(!soldMenu.contains("manualOrder:"), "the Sold menu gives a row the reorder subtitle — there is no manual order on that side (P16): \(soldMenu)")
+        let soldSelect = try #require(
+            SourceScan.closureBodies(after: soldMenu, in: sold).first,
             "the Sold menu selects nothing"
         )
         #expect(
-            soldSelection.contains("viewModel.soldSortOrder = option"),
-            "the Sold menu writes something other than the Sold side's order: \(soldSelection)"
+            soldSelect.contains("viewModel.soldSortOrder = $0") && !soldSelect.contains("viewModel.sortOrder"),
+            "the Sold menu writes something other than the Sold side's order: \(soldSelect)"
         )
 
         // Nothing in `apply` runs before the switch: a clear up here would
@@ -271,32 +289,61 @@ struct ItemListSidesWiringTests {
         #expect(!sold.contains(".onMove"), "the Sold side is draggable — its order is the sale dates' (P16)")
     }
 
-    // MARK: - The switch (plan Q15)
+    // MARK: - The switch (plan Q15, 018 G10)
 
     /// The one call site, and the whole of Q15 as the view can express it:
-    /// the switch reports a tap through `show(_:)`, and binds to nothing.
+    /// the switch reports a choice through `show(_:)`. That the screen binds
+    /// nothing is the compiler's to guard, not this test's: `SideToggle.side`
+    /// is a `let` and the view model's `side` is `private(set)`, so neither a
+    /// `$` projection nor a direct write compiles there. The no-`$` leg this
+    /// test carried could not fail for a behavioural reason and was deleted
+    /// at `018`'s pre-merge sweep, with the name's "AndBindsToNothing".
     ///
-    /// Mutation: bind it to a `side` setter (`SideSwitch(side: $viewModel.side)`)
-    /// → both expectations fail.
-    @Test func theSwitchReportsThroughShowAndBindsToNothing() throws {
+    /// Mutation (018 sweep): the `select:` closure emptied (`{ _ in }`) → red.
+    @Test func theSwitchReportsThroughShow() throws {
         let code = try code()
 
-        let calls = SourceScan.argumentLists(of: "SideSwitch", in: code)
+        let calls = SourceScan.argumentLists(of: "SideToggle", in: code)
         try #require(calls.count == 1, "the screen composes \(calls.count) side switches, expected exactly 1")
         let call = try #require(calls.first)
 
-        #expect(call.contains("viewModel.show"), "the switch doesn't call `show(_:)`: \(call)")
-        #expect(!call.contains("$viewModel.side"), "the switch is bound to `side` itself, skipping the clearing `show(_:)` does: \(call)")
+        #expect(call.contains("viewModel.show($0)"), "the switch doesn't call `show(_:)`: \(call)")
+    }
+
+    /// Spec Decision 20: the control row is Sort By, then the side toggle, then
+    /// the "…" — so the toggle sits beside the "…" whether or not Sort By is
+    /// shown, and never moves when it comes and goes. A fact about the view
+    /// body no view-model test can observe.
+    ///
+    /// Mutation (T009b): the toggle and the sort control swapped → red.
+    @Test func theControlRowIsSortThenToggleThenOverflow() throws {
+        let header = try body(of: "private var header: some View")
+        let rows = SourceScan.closureBodies(after: "HStack(spacing: 8)", in: header)
+        try #require(rows.count == 1, "the header composes \(rows.count) control rows, expected exactly 1: \(header)")
+        let row = try #require(rows.first)
+
+        var starts: [String.Index] = []
+        for part in ["sortControl", "SideToggle(", "overflowControl"] {
+            let found = row.ranges(of: part)
+            try #require(found.count == 1, "the control row names `\(part)` \(found.count) times, expected exactly 1: \(row)")
+            starts.append(found[0].lowerBound)
+        }
+        #expect(
+            starts[0] < starts[1] && starts[1] < starts[2],
+            "the control row isn't Sort By, then the side toggle, then the \"…\" (spec Decision 20): \(row)"
+        )
     }
 
     /// Plan §4: the switch lives in the standing header, so it is on screen
-    /// over an empty Owned side exactly as it is over rows. Mutation: move
-    /// the `SideSwitch(` call inside either branch → it lands in this span.
+    /// over an empty Owned side exactly as it is over rows.
+    ///
+    /// Mutation (018 T007): the `SidePicker(` call moved into the empty-state
+    /// branch → red. Re-run on `SideToggle` at T009a → red.
     @Test func theSwitchStandsOutsideTheEmptyState() throws {
         let branches = try body(of: "if let reason = viewModel.emptyReason")
 
         #expect(
-            !branches.contains("SideSwitch("),
+            !branches.contains("SideToggle("),
             "the switch is composed inside the empty-state branch, so an emptied side would lose it"
         )
         #expect(
@@ -357,7 +404,7 @@ struct ItemListSidesWiringTests {
 
     /// Spec Decision 13, as the view can express it: neither side's meta line
     /// is conditional, so the slot under the title is there on both sides and
-    /// the `SideSwitch` beneath it cannot jump as the sides change. The
+    /// the list beneath it cannot jump as the sides change. The
     /// person saw exactly that jump at the Phase 5 pause.
     ///
     /// The type carries most of the guarantee — `soldSummaryLine` is a
@@ -408,70 +455,94 @@ struct ItemListSidesWiringTests {
         #expect(state.contains("isAddingItem = true"), "the everything-sold state offers no way to add something new")
     }
 
-    // MARK: - The control itself (criterion 16)
+    // MARK: - The control itself (018 G10, plan §4 and Q3, Decision 19)
 
-    /// What the switch says, and to whom: `SaleCopy`'s two words on screen,
-    /// one identifier, a label for the pair and the selected trait on the half
-    /// that is showing.
-    @Test func theSwitchIsLabelledAndMarksItsActiveHalfSelected() throws {
+    /// Since `018` T009a (spec Decision 19) the switch is one glass button in
+    /// the header's control row showing the current side, and a tap asks
+    /// `select` for the other side — so a choice reaches the screen's
+    /// `show(_:)` and nothing writes the side directly. The action is read
+    /// whole and compared as a whole literal; the style as `OverflowMenu`'s
+    /// minus the circle, and since T009b (spec Decision 20) the colour the
+    /// ternary over `leading` — brass on the leading side, the system's label
+    /// colour on the trailing — with no other theme colour in the file; since
+    /// T009d (spec Decision 21) that ternary is the showing row's own
+    /// `foregroundStyle`, the row blur-replaced under a 0.3 s smooth
+    /// animation, and both sides' rows laid out hidden beside it. The Items toggle's words,
+    /// glyphs, VoiceOver label, identifier and the side a tap asks for are
+    /// read off a toggle built through its own `init(side:select:)`, so they
+    /// are values rather than spellings.
+    ///
+    /// Mutations (T009a): the action `select(side)` → red; a theme colour
+    /// named in the file → red. (T009b): the ternary's two colours swapped →
+    /// red; a second theme colour named in the file → red. (T009c): the
+    /// label row's `.animation(nil, value: side)` removed → red, a leg
+    /// T009d replaced. (T009d): `.blurReplace` → `.opacity` → red;
+    /// `.id(side)` removed → red; `.animation(nil, value: side)` restored in
+    /// place of the smooth animation → red; the smooth animation removed →
+    /// red; either hidden row removed → red; the ternary moved back to the
+    /// button's tint → red.
+    @Test func theSwitchIsAGlassToggleAskingForTheOtherSide() throws {
         let code = try SourceScan.production(Self.control)
+        let anchor = "struct SideToggle<Side: Hashable>: View"
+        try #require(code.contains(anchor), "SideToggle.swift no longer declares `\(anchor)`")
 
-        #expect(code.contains("SaleCopy.owned"), "the switch types its own \"Owned\"")
-        #expect(code.contains("SaleCopy.sold"), "the switch types its own \"Sold\"")
-        #expect(code.contains("\"items.sideSwitch\""), "the switch carries no identifier")
-        #expect(code.contains("\"Owned or sold\""), "the switch isn't labelled for VoiceOver (criterion 16)")
-        #expect(code.contains(".accessibilityValue("), "the switch doesn't say which side is showing (criterion 16)")
-        #expect(code.contains(".isSelected"), "the active half isn't announced as selected (criterion 16)")
+        let bodies = SourceScan.closureBodies(after: "var body: some View", in: code)
+        try #require(bodies.count == 1, "SideToggle declares \(bodies.count) bodies, expected exactly 1")
+        let body = try #require(bodies.first)
 
+        // A `Button`, and no menu: a tap shows the other side (Decision 19).
+        let actions = SourceScan.closureBodies(after: "Button", in: body)
+        try #require(actions.count == 1, "SideToggle's body builds \(actions.count) buttons, expected exactly 1: \(body)")
+        let action = try #require(actions.first).trimmingCharacters(in: .whitespacesAndNewlines)
+        #expect(action == "select(other)", "a tap doesn't ask for the other side — the action reads `\(action)`")
+        // Word-bounded, so `SortMenuCopy` (the label type) doesn't match.
+        #expect(
+            !body.contains(try Regex(#"(?:^|[^A-Za-z0-9_])Menu\s*[{(]"#)),
+            "the toggle opens a menu — a tap shows the other side (Decision 19): \(body)"
+        )
+
+        #expect(
+            body.contains(try Regex(#"\.buttonStyle\(\.glass\)\s*\.controlSize\(\.regular\)"#)),
+            "the toggle isn't `OverflowMenu`'s glass button at the regular control size: \(body)"
+        )
+        #expect(!body.contains(".tint("), "the toggle's colour is back on the button's tint — the showing row carries it (spec Decisions 20 and 21): \(body)")
+        // Decision 21: both sides laid out hidden, so the capsule is the wider
+        // side's width on both sides (G1 measures the width this buys).
+        for hidden in ["row(leading).frame(height: 0).hidden()", "row(trailing).frame(height: 0).hidden()"] {
+            #expect(body.contains(hidden), "the toggle no longer lays out `\(hidden)` — the capsule resizes on a tap and clips the wider word (spec Decision 21): \(body)")
+        }
+        // Decision 20 on the showing row, and Decision 21's swap — the whole
+        // chain, in that order: brass while the leading side shows, the
+        // system's label colour while the trailing side does, a new identity
+        // per side blur-replaced, under a 0.3 s smooth animation on the side.
+        // The transition is film's choice (T009d): an opacity crossfade draws
+        // both words superimposed (T009c) — only film sees it.
+        #expect(
+            body.contains(try Regex(#"row\(side\)\s*\.foregroundStyle\(side == leading \? theme\.colors\.accentBrass : Color\.primary\)\s*\.id\(side\)\s*\.transition\(\.blurReplace\)\s*\}\s*\.frame\(height: 0\)\s*\.animation\(\.smooth\(duration: 0\.3\), value: side\)"#)),
+            "the toggle's showing row isn't brass on the leading side and the system's label colour on the trailing, blur-replaced per side under `.animation(.smooth(duration: 0.3), value: side)` (spec Decisions 20 and 21): \(body)"
+        )
+        #expect(!body.contains("animation(nil"), "the toggle's swap is un-animated again — the person sees no motion on a tap (spec Decision 21): \(body)")
+        #expect(!body.contains(".buttonBorderShape("), "the toggle sets a border shape — it is a capsule, the \"…\" alone is a circle: \(body)")
+        #expect(body.contains(".accessibilityLabel(accessibilityLabel)"), "the toggle carries no VoiceOver label: \(body)")
+        #expect(body.contains(".accessibilityValue(word(side))"), "the toggle doesn't speak the side showing as its value: \(body)")
+        #expect(body.contains(".accessibilityIdentifier(identifier)"), "the toggle carries no identifier: \(body)")
         // It reports; it never writes. A `@Binding` here would be a second
-        // way to change sides, and the one that skips Q15's clearing.
-        #expect(!code.contains("@Binding"), "the switch binds the side instead of reporting a tap (plan Q15)")
-    }
-
-    /// Spec Decision 13's other half: the slide is fast. T018b measured the
-    /// travel on the simulator frame by frame — at 0.25 s it took 198–222 ms
-    /// of visible travel, and the bound Decision 13 is held to is 0.2 s, the
-    /// rate every other in-page control in the app already moves at.
-    ///
-    /// One constant, both arms: the value is asserted rather than the source
-    /// scanned, so a literal typed back into either arm of the `.animation`
-    /// leaves the constant unused and the travelling arm un-pinned — which
-    /// is what the second half of this test checks.
-    ///
-    /// Mutation: `slideDuration = 0.25` → red.
-    @Test func theSwitchesSlideIsAtOrUnderTwoTenthsOfASecond() throws {
-        #expect(SideSwitchMetrics.slideDuration <= 0.2)
-
-        let code = try SourceScan.production(Self.control)
+        // way to change sides, one that skips `show(_:)`.
+        #expect(!code.contains("@Binding"), "the toggle binds the side instead of reporting a choice (plan Q3)")
         #expect(
-            code.ranges(of: "SideSwitchMetrics.slideDuration").count == 2,
-            "the switch names `SideSwitchMetrics.slideDuration` \(code.ranges(of: "SideSwitchMetrics.slideDuration").count) times, expected 2 — one arm of the animation types its own duration"
+            code.ranges(of: "theme.colors").count == 1,
+            "SideToggle.swift names \(code.ranges(of: "theme.colors").count) theme colours — brass on the showing row is the only one it draws (spec Decision 20)"
         )
-    }
 
-    /// The fill is **one** rectangle that moves, not one per half appearing
-    /// as the other disappears. T018b measured the difference on the device:
-    /// the paired form is a structural insert-and-remove, which
-    /// `.animation(_:value:)` does not cover, so it cross-faded — the control
-    /// dimming to 22 % halfway across — and ignored its own duration
-    /// entirely (a literal 2 s ease changed nothing). An animatable
-    /// `.offset` is covered, and measures as a real slide: the fill's edge
-    /// crosses in 9 to 11 distinct frames at 60 Hz with the control's
-    /// brightness flat throughout.
-    ///
-    /// Mutation: put the `matchedGeometryEffect` pair back → both
-    /// expectations fail.
-    @Test func theSwitchesFillIsOneMovingRectangle() throws {
-        let code = try SourceScan.production(Self.control)
-
-        #expect(
-            !code.contains("matchedGeometryEffect"),
-            "the fill is paired across the halves again — that form cross-fades rather than sliding, and ignores the animation"
-        )
-        #expect(
-            code.ranges(of: "Rectangle()\n                .fill(theme.colors.accentBrass)").count == 1,
-            "the switch draws \(code.ranges(of: "Rectangle()\n                .fill(theme.colors.accentBrass)").count) brass fills, expected exactly 1 — the one that slides"
-        )
-        #expect(code.contains(".offset(x: side =="), "the fill doesn't move with the side, so nothing about it is animatable")
+        let owned = SideToggle(side: ItemListViewModel.Side.owned, select: { _ in })
+        let sold = SideToggle(side: ItemListViewModel.Side.sold, select: { _ in })
+        #expect(owned.side == .owned && sold.side == .sold)
+        #expect(owned.other == .sold, "a tap on Owned doesn't ask for Sold")
+        #expect(sold.other == .owned, "a tap on Sold doesn't ask for Owned")
+        #expect(owned.word(.owned) == SaleCopy.owned && owned.word(.sold) == SaleCopy.sold, "the Items toggle's words aren't Owned and Sold")
+        #expect(owned.icon(.owned) == "shippingbox", "Owned's glyph isn't `shippingbox` (Decision 19)")
+        #expect(owned.icon(.sold) == "tag", "Sold's glyph isn't `tag` (Decision 19)")
+        #expect(owned.accessibilityLabel == "Owned or sold", "the Items toggle isn't labelled for VoiceOver")
+        #expect(owned.identifier == "items.sideSwitch", "the Items toggle's identifier changed — the UI tests find it by it")
     }
 }

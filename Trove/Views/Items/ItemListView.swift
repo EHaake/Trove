@@ -2,34 +2,12 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Which file the export chooser is choosing a scope for (014 plan Q17).
-/// Private to this screen: the two rows open the same surface under two
-/// headers, and nothing outside this file needs to name the pair.
+/// Which file an export submenu writes (014 plan Q17; since `018` plan Q9 the
+/// two "…" rows `exportMenu(_:)` builds). Private to this screen: nothing
+/// outside this file needs to name the pair.
 private enum ExportFormat: Hashable {
     case csv
     case pdf
-}
-
-/// The header's dropdowns. One optional of this type is the screen's
-/// whole open-menu state, which is what makes "one open at a time" true by
-/// type rather than by coordination (013 Amendment A) — and since 014 it is
-/// what makes the export chooser a *replacement* for the overflow rather
-/// than a second plate over them: the "…" rows set this to `.exportScope`,
-/// one change in one transaction, so the plate stays and its rows swap.
-private enum HeaderDropdown: Hashable {
-    case sort
-    case overflow
-    /// The scope chooser the two export rows open (014 Decision 7, spec P12).
-    case exportScope(ExportFormat)
-
-    /// What the tap-outside layer calls itself to VoiceOver.
-    var dismissLabel: String {
-        switch self {
-        case .sort: "Dismiss sort options"
-        case .overflow: "Dismiss more actions"
-        case .exportScope: "Dismiss export options"
-        }
-    }
 }
 
 /// Browse owned gear, per `design/screens/Trove Item List.png`.
@@ -64,13 +42,6 @@ struct ItemListView: View {
     /// The un-valued chip's scroll id. Not a category path, so it can't
     /// collide with one — no real path is empty *and* prefixed like this.
     private static let unvaluedChipID = "\u{0}unvalued"
-
-    /// Which header dropdown is open — Sort By or the "…" — or neither.
-    /// Owned here rather than by a badge because the dropdown floats over
-    /// the whole screen and dismisses on any outside tap, both beyond the
-    /// header's reach; one optional, so only one can be open (T035, then
-    /// 013 Amendment A).
-    @State private var openDropdown: HeaderDropdown?
 
     /// Whether 012's file picker is up. View state, not view-model state:
     /// the picker is pure navigation — the view model's flow starts when a
@@ -115,20 +86,15 @@ struct ItemListView: View {
             // too. Losing the running total, the query and the active filter
             // the moment you scroll is what it's there to prevent.
             VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
+                VStack(alignment: .leading, spacing: 0) {
                     header
                         .padding(.horizontal, theme.metrics.screenGutter)
-
-                    // The switch sits here, in the standing header, rather than
-                    // beside the rows — so it is there over an empty Owned side
-                    // (a person whose only item is now sold) exactly as it is
-                    // over a full one (006 plan §4). Never bound to `side`: a
-                    // tap asks `show(_:)`, which sets the side and reloads —
-                    // and since 014 that is the whole of it, because each side
-                    // now keeps its own search, chip and sort while the other
-                    // is visited (014 plan Q3, replacing 006 Q15).
-                    SideSwitch(side: viewModel.side, select: { viewModel.show($0) })
-                        .padding(.horizontal, theme.metrics.screenGutter)
+                        // The meta line's lower half of `headerGapBelow` (018
+                        // spec Decision 22): the header takes the other half
+                        // above the meta line, so the line sits midway and the
+                        // search field — or, on a side with nothing to narrow,
+                        // the empty state — stays where it was.
+                        .padding(.bottom, MetaLineSpacing.split(before: headerGapBelow))
 
                     // Controls for narrowing a list need a list to narrow. On a
                     // first run they were a search field over nothing and a
@@ -138,25 +104,23 @@ struct ItemListView: View {
                     // both sides and the view model owns the reading of it: the
                     // side on screen has something to narrow (014 plan Q10).
                     if viewModel.offersNarrowingControls {
-                        SearchField(placeholder: "Search name or serial", text: $viewModel.searchText)
-                            .padding(.horizontal, theme.metrics.screenGutter)
-                            // The Design pass's `sectionGap` under the switch,
-                            // on top of this stack's own `controlRowGap`. On a
-                            // side with nothing to narrow, where nothing follows
-                            // the switch, the stack's bottom padding is the
-                            // whole gap.
-                            .padding(.top, theme.metrics.sectionGap - theme.metrics.controlRowGap)
+                        VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
+                            SearchField(placeholder: "Search name or serial", text: $viewModel.searchText)
+                                .padding(.horizontal, theme.metrics.screenGutter)
 
-                        // Full-bleed so chips scroll off the edge rather than
-                        // stopping at the gutter; the gutter moves inside.
-                        categoryChips
+                            // Full-bleed so chips scroll off the edge rather than
+                            // stopping at the gutter; the gutter moves inside.
+                            categoryChips
+                        }
+                        // Only as much space as sits between two rows. A full
+                        // section gap here on top of each card's own padding
+                        // read as a hole between the chips and the list. On a
+                        // side with nothing to narrow the header's own padding
+                        // is the whole gap.
+                        .padding(.bottom, theme.metrics.listRowGap)
                     }
                 }
                 .padding(.top, theme.metrics.sectionGap)
-                // Only as much space as sits between two rows. A full section
-                // gap here on top of each card's own padding read as a hole
-                // between the chips and the list.
-                .padding(.bottom, theme.metrics.listRowGap)
                 .background(theme.colors.background)
 
                 // Outside the scroll view on purpose: there's nothing to
@@ -344,79 +308,6 @@ struct ItemListView: View {
             }
         } message: {
             Text(viewModel.importAlertMessage)
-        }
-        // The header's dropdowns float over the whole screen from here —
-        // T035's screen-level float-and-catcher, now the shared host
-        // (013 Amendment A): it finds the open badge by its anchor, so the
-        // header needn't reach over the rows below it, and it closes on
-        // any outside tap. Placed after the add button's overlay so the
-        // dropdown draws above it.
-        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
-            switch dropdown {
-            case .sort:
-                // One badge, one host, two menus — the side on screen picks
-                // which orders it offers, and each writes its own selection
-                // (014 plan §6). Nothing is shared between them but the
-                // drawing.
-                switch viewModel.side {
-                case .owned:
-                    SortDropdown(
-                        options: ItemListViewModel.SortOrder.allCases,
-                        selection: viewModel.sortOrder,
-                        label: \.label,
-                        isManualOrder: { $0 == .custom }
-                    ) { option in
-                        // The row has already closed the dropdown.
-                        viewModel.sortOrder = option
-                        viewModel.load()
-                    }
-                case .sold:
-                    // No REORDER tag: the Sold side has no manual order to
-                    // drag into (P16), so no option is the manual one.
-                    SortDropdown(
-                        options: ItemListViewModel.SoldSortOrder.allCases,
-                        selection: viewModel.soldSortOrder,
-                        label: \.label,
-                        isManualOrder: { _ in false }
-                    ) { option in
-                        viewModel.soldSortOrder = option
-                        viewModel.load()
-                    }
-                }
-            case .overflow:
-                // Since 014 the two export rows don't export: they open the
-                // scope chooser (Decision 7, spec P12). The row has already
-                // dismissed the dropdown, so setting the identifier here
-                // nets to one `.overflow → .exportScope` change in one
-                // transaction — the plate stays put and its rows swap.
-                OverflowDropdown(
-                    canExportCSV: viewModel.canExportCSV,
-                    canExportPDF: viewModel.canExportPDF,
-                    exportCSV: { openDropdown = .exportScope(.csv) },
-                    exportPDF: { openDropdown = .exportScope(.pdf) },
-                    importCSV: { isPickingImportFile = true },
-                    openSettings: { isShowingSettings = true }
-                )
-            case .exportScope(let format):
-                // The same surface and rows the "…" is made of, under its own
-                // header — the Dashboard's ORDER BY pattern (P12). One row per
-                // scope, in the enum's order, each enabled exactly when it has
-                // rows under the narrowing on screen; the scope travels into
-                // the intent, so neither this view nor the chooser knows which
-                // half a file holds.
-                DropdownSurface(title: format == .csv ? ExportCopy.scopeTitleCSV : ExportCopy.scopeTitlePDF) {
-                    ForEach(ItemListViewModel.ExportScope.allCases) { scope in
-                        DropdownRow(title: scope.label, isEnabled: viewModel.canExport(scope)) {
-                            Task {
-                                switch format {
-                                case .csv: await viewModel.exportCSV(scope: scope)
-                                case .pdf: await viewModel.exportPDF(scope: scope)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -610,8 +501,15 @@ struct ItemListView: View {
 
     // MARK: - Header
 
+    /// What the screen puts under the header: the search field a section gap
+    /// below it, or — on a side with nothing to narrow — the list's row gap
+    /// (018 spec Decision 22). The header centres its meta line in it.
+    private var headerGapBelow: CGFloat {
+        viewModel.offersNarrowingControls ? theme.metrics.sectionGap : theme.metrics.listRowGap
+    }
+
     private var header: some View {
-        ItemsListHeader(title: "Items") {
+        ItemsListHeader(title: "Items", gapBelow: headerGapBelow) {
             metaLine
         } trailing: {
             // Nothing to sort on an empty list, so the sort badge still
@@ -629,12 +527,24 @@ struct ItemListView: View {
             // `overflowControl` stay spelled here rather than moving into
             // `ItemsListHeader` with the layout: this file is what G20's and
             // `ImportWiringTests`' brace-span scans read.
+            //
+            // The row is Sort By · side toggle · "…" (018 Decisions 19 and
+            // 20): the toggle sits beside the "…", outside the narrowing gate
+            // — so it is there over an empty Owned side (a person whose only
+            // item is now sold) exactly as over a full one (006 plan §4), and
+            // never moves relative to the "…" when Sort By comes and goes. Never bound to `side`: a tap asks `show(_:)`
+            // for the other side, which sets it and reloads — and since 014
+            // that is the whole of it, because each side keeps its own
+            // search, chip and sort while the other is visited (014 plan Q3).
+            // The row keeps its ideal width, so a glass label never wraps.
             HStack(spacing: 8) {
                 if viewModel.offersNarrowingControls {
                     sortControl
                 }
+                SideToggle(side: viewModel.side, select: { viewModel.show($0) })
                 overflowControl
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
     }
 
@@ -643,8 +553,8 @@ struct ItemListView: View {
     /// sold rather than vanishing (spec Decision 13, replacing Decision 11).
     ///
     /// Both branches are one `.monoLabel()` line and neither is conditional,
-    /// so the slot is the same height on either side and the `SideSwitch`
-    /// below never moves. Unconditional was never the whole of it, though:
+    /// so the slot is the same height on either side and the list below
+    /// never moves. Unconditional was never the whole of it, though:
     /// the slot is *one* line only because `ItemsListHeader` gives the line
     /// the header's full width (014 plan Q18). While it stood beside the
     /// badges, the width they left it wrapped the Sold summary and pushed
@@ -682,25 +592,57 @@ struct ItemListView: View {
     }
 
     /// 011's export menu grown into 012's overflow, with 013's Settings at
-    /// the bottom — since Amendment A a badge that opens `OverflowDropdown`
-    /// on the screen's host. The async intents fire into Tasks and
-    /// `isBusy` drives the spinner; Import opens the file picker and
-    /// Settings opens its sheet rather than an intent — navigation is view
-    /// state here.
+    /// the bottom — since `018` a system menu again (plan §2). The two export
+    /// rows are submenus over the three scopes (`exportMenu(_:)`, plan Q9),
+    /// Import opens the file picker and Settings opens its sheet rather than
+    /// an intent — navigation is view state here. `isBusy` drives the
+    /// spinner.
     private var overflowControl: some View {
-        OverflowBadge(isBusy: viewModel.isBusy) {
-            openDropdown = .overflow
+        OverflowMenu(isBusy: viewModel.isBusy) {
+            exportMenu(.csv)
+            exportMenu(.pdf)
+            Divider()
+            Button("Import from CSV…") { isPickingImportFile = true }
+            Divider()
+            Button("Settings") { isShowingSettings = true }
         }
-        .dropdownAnchor(HeaderDropdown.overflow)
-        // The chooser the export rows open is anchored here too: the host
-        // draws a dropdown only for an identifier that has an anchor, and
-        // the chooser replaces the overflow on this same badge (plan Q17).
-        // Three tags on one badge: `dropdownAnchor` is a transform, so each
-        // adds its entry to what the badge already publishes rather than
-        // replacing it (the key's `reduce` merges siblings, not stacked tags).
-        .dropdownAnchor(HeaderDropdown.exportScope(.csv))
-        .dropdownAnchor(HeaderDropdown.exportScope(.pdf))
         .accessibilityIdentifier("moreActions.items")
+    }
+
+    /// One export row of the "…" as a submenu (014 Decision 7, `018` plan
+    /// Q9): one row per scope, in the enum's order, each enabled exactly when
+    /// it has rows under the narrowing on screen. The scope travels into the
+    /// intent, so neither this view nor the menu knows which half a file
+    /// holds. Its title carries no ellipsis: iOS draws a chevron there, and
+    /// the ellipsis means a further step that is not a menu (spec P2).
+    ///
+    /// While no scope has rows the row is a plain disabled button under the
+    /// same title rather than a disabled submenu: a `Menu`'s `.disabled` is
+    /// not honoured inside a system menu on iOS 27.0 — the submenu stayed
+    /// enabled and opened onto three dimmed rows (T005), where criterion 2
+    /// asks for the export row itself to be disabled.
+    @ViewBuilder
+    private func exportMenu(_ format: ExportFormat) -> some View {
+        let title = format == .csv ? "Export as CSV" : "Export as PDF"
+        let isEnabled = format == .csv ? viewModel.canExportCSV : viewModel.canExportPDF
+        if isEnabled {
+            Menu(title) {
+                ForEach(ItemListViewModel.ExportScope.allCases) { scope in
+                    Button(scope.label) {
+                        Task {
+                            switch format {
+                            case .csv: await viewModel.exportCSV(scope: scope)
+                            case .pdf: await viewModel.exportPDF(scope: scope)
+                            }
+                        }
+                    }
+                    .disabled(!viewModel.canExport(scope))
+                }
+            }
+        } else {
+            Button(title) {}
+                .disabled(true)
+        }
     }
 
     /// Design's "34 ITEMS · $18,420", plus a count of what the total leaves
@@ -716,20 +658,26 @@ struct ItemListView: View {
         return parts.joined(separator: " · ")
     }
 
-    /// T035's badge — see `SortBadge` for why this stopped being a system
-    /// `Menu` (the T029c saga in one sentence: UIKit animated the Menu
-    /// label's bounds beyond SwiftUI's reach; a custom control has no such
-    /// machinery, so the badge simply hugs its label again).
-    /// Since 014 the badge reads `visibleSortLabel` rather than either side's
-    /// order directly: one control over two selections, so the side on screen
-    /// is the one it names — and the one it names aloud (014 plan §6).
-    private var sortControl: some View {
-        SortBadge(label: viewModel.visibleSortLabel) {
-            openDropdown = .sort
+    /// Sort By as a system menu again (`018` plan §1): one `SortMenu` per
+    /// side, each over that side's own orders and writing that side's own
+    /// selection, so the badge's label is always the selection of the menu
+    /// it opens. The Sold side has no manual order to drag into (P16), so
+    /// no row there carries the reorder subtitle. The spoken label still
+    /// reads `visibleSortLabel` and the identifier stays; the "Opens sort
+    /// options" hint goes — a system menu's button announces itself as a
+    /// pop-up button (criterion 11).
+    @ViewBuilder private var sortControl: some View {
+        Group {
+            switch viewModel.side {
+            case .owned:
+                SortMenu(options: ItemListViewModel.SortOrder.allCases, selection: viewModel.sortOrder,
+                         label: \.label, manualOrder: .custom) { viewModel.sortOrder = $0; viewModel.load() }
+            case .sold:
+                SortMenu(options: ItemListViewModel.SoldSortOrder.allCases, selection: viewModel.soldSortOrder,
+                         label: \.label) { viewModel.soldSortOrder = $0; viewModel.load() }
+            }
         }
-        .dropdownAnchor(HeaderDropdown.sort)
         .accessibilityLabel("Sort by \(viewModel.visibleSortLabel)")
-        .accessibilityHint("Opens sort options")
         .accessibilityIdentifier("sortOptions.items")
     }
 

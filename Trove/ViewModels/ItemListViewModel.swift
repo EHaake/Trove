@@ -269,7 +269,7 @@ final class ItemListViewModel {
     ///
     /// Non-optional on purpose: the header renders this in the same slot the
     /// Owned side's item stats occupy, and the reason Decision 13 exists is
-    /// that an absent line let the `SideSwitch` above it jump as the sides
+    /// that an absent line let the switch below it jump as the sides
     /// changed. A `String?` here would put that jump one `if let` away; the
     /// type is what rules it out. The zero wording itself lives in
     /// `SaleCopy`, not here.

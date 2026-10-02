@@ -567,6 +567,12 @@ Made by the person, 2026-09-18, at the Phase 2 pause:
    its non-goal "a sold-items PDF". The how was settled by a decision review
    at the top tier (plan §4a, Q14–Q17) and approved by the person the same
    day.
+   *Superseded in its mechanism by `018-system-design-language` (its spec,
+   criterion 3 and P2): the scope is no longer chosen on a second dropdown
+   on the same badge (P12 below) but in two system submenus — Export as CSV
+   and Export as PDF, without their ellipses — each offering Owned items,
+   Sold items and Owned and sold, gated as before. The decision itself
+   (both formats, from the Items list only) stands.*
 
 Proposed at drafting, 2026-09-16, by Claude Code (these become decisions on
 plan approval):
