@@ -570,7 +570,7 @@ Everything the person reads is plain language.
   the *date* row rather than another row of the table, and the wanted row's
   position after `Added` — T010 asserts the label beside the date.
 
-- [ ] **T010 — The UI tests, run twice.**
+- [x] **T010 — The UI tests, run twice.**
   Per plan §10 (**G20**). `testBoughtIsSetClearedAndShownOnTheItemsPage` and
   `testLookingForPrefillsThePurchaseSheet` exactly as plan §10 walks them,
   addressing the new chips by identifier and reading selection through
@@ -585,6 +585,28 @@ Everything the person reads is plain language.
   Files: `TroveUITests/TroveUITests.swift`.
   **Verify:** `scripts/verify.sh ui` green **twice back to back**, both counts
   recorded; `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-10-02).** `scripts/verify.sh ui` green **twice back to back: 42
+  tests, 0 failures** (1145.9 s and 1145.1 s; 40 → 42); `scripts/verify.sh`
+  green, 1790 tests in 236 suites (the implementer's verbatim output; a
+  comment-only edit to T006's test followed the two full runs and that method
+  was re-run green). Mutations, single-method runs, red and restored
+  (`git diff --stat` showing only the UI test file): `NewOrUsedField` writing
+  the tapped value unconditionally → the clear leg red (3 failures); 
+  `WishlistViewModel.makePurchaseFormViewModel(for:)` seeding `lookingFor: nil`
+  → the preselect leg red — **that is the only host this test reaches** (it buys
+  through the Wishlist row's swipe; the other three are G11's unit test); the
+  item page's label back to the literal → red. **As built**: a `DetailRow` is one
+  combined accessibility element labelled `"<label>, <value>"`, so the test
+  pins `"Bought used, <today>"` — the label **on the date row** — and
+  `"Looking for, Used"`; the date string is computed in the runner, so a run
+  straddling midnight would fail falsely. The outer-form probe went into T006's
+  leg (iv): the reopened edit form of a Broken item still opens at its top
+  (`Name` hittable before any scroll; shown able to fail by a test-side scroll,
+  no production mutation). **On the Mark as bought sheet no scroll was needed**:
+  at the opening detent on the 402 × 874 simulator both Bought chips sit at
+  y 709–742 and the condition chips at y 786–819, above the fold. The add-form
+  walk taps the Used chip before typing (with the keyboard up the scroll helper
+  overshoots); the Summicron is edited through the Wishlist row's leading swipe.
 
   **Phase 3 closes here — pause for the person** (walkthrough above). The report
   also names **the person's own step here**: Accessibility Inspector (or
@@ -822,3 +844,4 @@ escape-hatch misses recorded here too.
 | T007 (`sdd-implementer`) | `opus` | 102,934 (29 tool uses, 38.6 min — three red runs at ~11 min each) | Done first pass; three mutation sets |
 | T008 (`sdd-implementer`) | `opus` | 61,286 (15 tool uses, 5.7 min) | Done first pass; two mutation runs at about a minute each (a warm build — the ~11 min red runs are not constant) |
 | T009 (`sdd-implementer`) | `opus` | 55,492 (11 tool uses, 3.7 min) | Done first pass; two mutations in one run |
+| T010 (`sdd-implementer`) | `opus` | 111,861 (33 tool uses, 73.0 min — two full UI runs at 19 min, three red single-method runs with the ~10 min hang) | Done; one first-run failure of its own test (keyboard-up scroll overshoot) fixed by reordering the walk |
