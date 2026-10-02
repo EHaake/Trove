@@ -4,7 +4,9 @@
 spec session; widened the same day, at their reading of the first Draft,
 to a new/used preference on wishlist entries (Decision 8), and approved at
 their reading of the second, which confirmed that leaving the preference
-blank is the "no preference" choice (no separate "either" value). The Decisions record below holds every product decision made in
+blank is the "no preference" choice (no separate "either" value). **Amended
+2026-10-01** at the Phase 1 pause (Decision 11): the condition chips sit on one
+row that scrolls sideways and never wrap. The Decisions record below holds every product decision made in
 the conversation; the **P-items** are Claude Code's proposals and become
 decisions on plan approval, as in earlier specs.
 
@@ -214,10 +216,14 @@ from, and prefills the purchase sheet when it is bought.
 - The Bought chips **match the condition chips** exactly — size, stroke,
   selected tint — so the form reads as one system. Two chips need no
   wrapping.
-- Six condition chips now **wrap onto a second row** on narrow phones
-  where five might not have. Wrapping is fine; clipping or a chip squeezed
-  narrower than its siblings is not. Check it at the narrowest supported
-  width.
+- The six condition chips sit on **one row that scrolls sideways**, on
+  every screen the row appears (the item form and the Mark as bought
+  sheet). **The row never wraps onto a second line**, and no chip is
+  squeezed narrower than its words need. Where the row runs past the
+  screen, a chip cut off at the edge shows there is more to scroll to, and
+  the row opens with the selected grade in view. Check it at the narrowest
+  supported width. *(Amended 2026-10-01, Decision 11 — until then this
+  read "wrapping onto a second row is fine".)*
 - The Looking for chips on the wishlist form match the same chips.
 - On the item's page the Bought line sits **with the purchase details**
   (price, date, place), not with the condition, because it describes the
@@ -262,8 +268,11 @@ from, and prefills the purchase sheet when it is bought.
 17. [ ] The PDF labels an item's purchase date **Bought new** or **Bought
     used** where recorded and plain **Bought** where not, with no second
     "Bought" field, and prints Very Good as **Very Good**.
-18. [ ] Six condition chips lay out without clipping at the narrowest
-    supported width, on both the item form and the purchase sheet.
+18. [ ] The six condition chips sit on a single row that scrolls
+    sideways, on both the item form and the purchase sheet: the row never
+    wraps, no chip is squeezed, every grade can be reached by scrolling at
+    the narrowest supported width, and the row opens with the selected
+    grade in view. *(Amended 2026-10-01, Decision 11.)*
 19. [ ] The wishlist add/edit form shows a **Looking for** field with
     **New** and **Used**, neither selected for a new entry; it saves,
     reopens selected, clears by tapping the selected chip, and saves
@@ -333,6 +342,18 @@ from, and prefills the purchase sheet when it is bought.
     wanted item looking for new whose new listings are too few keeps the
     second sentence naming the lowest *used* asking price — it says "used"
     plainly and is a useful hint.
+
+11. **Six grades on one scrolling row, never two rows** (the person,
+    2026-10-01, at the Phase 1 pause, on seeing the six chips wrap on an
+    iPhone 17 Pro: "the condition selections span 2 rows, which isn't
+    good"). Offered: keep six grades on one row that scrolls sideways;
+    drop Very Good and go back to five; or scroll now and revisit the
+    number of grades in a later spec. Chosen: six grades, one scrolling
+    row, "in all of the places it appears". Proposed with it and not
+    objected to: a chip showing at the edge so the row reads as
+    scrollable, and the row opening scrolled to the selected grade. This
+    replaces the first Draft's "wrapping is fine". The Bought and Looking
+    for rows have two chips and do not scroll.
 
 ### Proposals (P-items, decided at plan approval)
 
