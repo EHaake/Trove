@@ -235,30 +235,46 @@ final class TroveUITests: XCTestCase {
     /// (`ImportWiringTests`) can't provide: proof a person can actually
     /// get there. Re-nesting the overflow control inside the
     /// `totalCount > 0` gate must turn this red.
+    ///
+    /// Since `018` (criteria 2 and 3) the "…" is a system menu on both
+    /// lists: the Items list's export rows are submenus titled without the
+    /// ellipsis (spec P2), the Wishlist's export directly and keep theirs.
     @MainActor
     func testEmptyCollectionOffersImportAndSettingsButNotExport() {
         let app = launchApp()
-        app.buttons["Items"].tap()
 
-        // By identifier: the Dashboard has a "More actions" badge too since
-        // 013 Amendment A, and a label query could match the wrong tab.
-        let badge = app.buttons["moreActions.items"]
-        XCTAssertTrue(
-            badge.waitForExistence(timeout: 5),
-            "the overflow badge must exist on an empty collection"
-        )
-        badge.tap()
+        for (tab, identifier, exports, notExports) in [
+            ("Items", "moreActions.items", ["Export as CSV", "Export as PDF"], ["Export as CSV…", "Export as PDF…"]),
+            ("Wishlist", "moreActions.wishlist", ["Export as CSV…", "Export as PDF…"], ["Export as CSV", "Export as PDF"]),
+        ] {
+            app.buttons[tab].tap()
 
-        let importButton = app.buttons["Import from CSV…"]
-        XCTAssertTrue(importButton.waitForExistence(timeout: 5), "the menu should open")
-        XCTAssertTrue(importButton.isEnabled, "Import must be enabled on an empty collection")
-        XCTAssertTrue(app.buttons["Settings"].isEnabled, "Settings must be enabled on an empty collection")
-        XCTAssertFalse(app.buttons["Get Blank Template…"].exists, "the template left the menu for Settings")
-        // `isEnabled` on a missing element is false, so existence comes
-        // first or a deleted menu item would pass as "disabled".
-        for title in ["Export as CSV…", "Export as PDF…"] {
-            XCTAssertTrue(app.buttons[title].exists, "\(title) should still be in the menu")
-            XCTAssertFalse(app.buttons[title].isEnabled, "\(title) should disable when empty")
+            // By identifier: the Dashboard has a "More actions" badge too since
+            // 013 Amendment A, and a label query could match the wrong tab.
+            let badge = app.buttons[identifier]
+            XCTAssertTrue(
+                badge.waitForExistence(timeout: 5),
+                "the \(tab) tab's overflow badge must exist on an empty collection"
+            )
+            badge.tap()
+
+            let importButton = app.buttons["Import from CSV…"]
+            XCTAssertTrue(importButton.waitForExistence(timeout: 5), "the \(tab) tab's menu should open")
+            XCTAssertTrue(importButton.isEnabled, "Import must be enabled on an empty collection (\(tab))")
+            XCTAssertTrue(app.buttons["Settings"].isEnabled, "Settings must be enabled on an empty collection (\(tab))")
+            XCTAssertFalse(app.buttons["Get Blank Template…"].exists, "the template left the \(tab) tab's menu for Settings")
+            // `isEnabled` on a missing element is false, so existence comes
+            // first or a deleted menu item would pass as "disabled".
+            for title in exports {
+                XCTAssertTrue(app.buttons[title].exists, "\(title) should still be in the \(tab) tab's menu")
+                XCTAssertFalse(app.buttons[title].isEnabled, "\(title) should disable when empty (\(tab))")
+            }
+            for title in notExports {
+                XCTAssertFalse(app.buttons[title].exists, "the \(tab) tab's menu titles an export row \"\(title)\" (spec P2)")
+            }
+
+            tapOutsideMenu(in: app)
+            XCTAssertTrue(importButton.waitForNonExistence(timeout: 5), "the \(tab) tab's menu should close")
         }
     }
 
@@ -291,59 +307,6 @@ final class TroveUITests: XCTestCase {
         app.buttons["Done"].tap()
         XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Done should dismiss Settings")
         XCTAssertTrue(badge.isHittable, "Done should return to the Dashboard")
-    }
-
-    /// 013 Amendment A, criterion 24 as Decision 19 fixed it: while a
-    /// dropdown is open, a tap anywhere outside it — the other badge
-    /// included — only closes it; the next tap opens. One item is added
-    /// through the quick-add path so the sort badge exists at all. Its own
-    /// mutation: a tap-outside layer that no longer closes must turn the
-    /// first pair red.
-    @MainActor
-    func testAnOpenMenuClosesOnAnyOutsideTapIncludingTheOtherBadge() {
-        let app = launchApp()
-        XCTAssertTrue(app.staticTexts["Nothing tracked yet"].waitForExistence(timeout: 5), "Expected the first-run dashboard.")
-        app.buttons["Items"].tap()
-
-        let addButton = app.buttons["Add item"]
-        XCTAssertTrue(addButton.waitForExistence(timeout: 5))
-        addButton.tap()
-        let nameField = app.textFields["Name"]
-        XCTAssertTrue(nameField.waitForExistence(timeout: 5), "The add-item sheet didn't present")
-        nameField.tap()
-        nameField.typeText("Rolleiflex")
-        let categoryField = app.textFields["Category"]
-        categoryField.tap()
-        categoryField.typeText("Photography/Cameras")
-        let priceField = app.textFields["Price paid"]
-        priceField.tap()
-        priceField.typeText("1850")
-        app.buttons["Save item"].tap()
-        XCTAssertTrue(app.buttons["Save item"].waitForNonExistence(timeout: 5), "The sheet stayed up")
-
-        let sortBadge = app.buttons["sortOptions.items"]
-        XCTAssertTrue(sortBadge.waitForExistence(timeout: 5), "one item is enough for the sort badge to show")
-        let overflowBadge = app.buttons["moreActions.items"]
-        XCTAssertTrue(overflowBadge.waitForExistence(timeout: 5))
-        // Captured before anything opens: while a dropdown is open the badge
-        // sits under the tap-outside layer, and a coordinate tap is how a
-        // person's finger lands there regardless.
-        let overflowCentre = overflowBadge.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-
-        sortBadge.tap()
-        let sortHeader = app.staticTexts["SORT BY"]
-        XCTAssertTrue(sortHeader.waitForExistence(timeout: 5), "Sort By should open")
-
-        // The other badge, while Sort By is open: closes, opens nothing.
-        overflowCentre.tap()
-        XCTAssertTrue(sortHeader.waitForNonExistence(timeout: 5), "the tap on the other badge must close Sort By")
-        XCTAssertFalse(app.buttons["Import from CSV…"].exists, "…and must not open the overflow in the same tap (Decision 19)")
-
-        // The next tap opens.
-        overflowCentre.tap()
-        XCTAssertTrue(app.buttons["Import from CSV…"].waitForExistence(timeout: 5), "the second tap opens the overflow")
-        app.buttons["Dismiss more actions"].tap()
-        XCTAssertTrue(app.buttons["Import from CSV…"].waitForNonExistence(timeout: 5), "the labelled catcher closes it")
     }
 
     /// 013's behavioral half for criteria 3, 7, 8 and 11 on a fresh
@@ -415,8 +378,11 @@ final class TroveUITests: XCTestCase {
         )
 
         // A segmented Picker surfaces as a segmentedControl whose segments are
-        // buttons read by their displayName; selection is `.isSelected`.
-        let control = app.segmentedControls.firstMatch
+        // buttons read by their displayName; selection is `.isSelected`. Found
+        // by its "System" segment rather than as the first segmented control,
+        // so it can only ever be this control: the Items switch behind the
+        // sheet was one too from 018 T007 until T009a made it a button.
+        let control = app.segmentedControls.containing(NSPredicate(format: "label == %@", "System")).firstMatch
         XCTAssertTrue(control.waitForExistence(timeout: 5), "the Appearance segmented control must be on the screen")
 
         let system = control.buttons["System"]
@@ -539,6 +505,9 @@ final class TroveUITests: XCTestCase {
     ///
     /// Its mutation: removing the `.marketFigure` case from either list's
     /// `SortOrder` must turn this red.
+    ///
+    /// `018`: both legs drive the system menu — the Items sort from T001, the
+    /// Wishlist's from T004.
     @MainActor
     func testTheSortMenuOffersMarketRows() {
         let app = launchApp()
@@ -828,6 +797,38 @@ final class TroveUITests: XCTestCase {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
 
+    /// Shows a list screen's `side` through its side toggle (`018` spec
+    /// Decision 19): one glass button showing the current side, whose tap
+    /// shows the other. The side is read from the toggle's accessibility
+    /// value — the current side's word — so the helper checks the toggle is
+    /// showing the other side first (a tap on the side already showing would
+    /// leave it), taps, and waits for the value to read `side`.
+    @MainActor
+    private func showSide(
+        _ side: String,
+        on toggle: XCUIElement,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "the screen must offer the side toggle", file: file, line: line)
+        XCTAssertNotEqual(
+            toggle.value as? String,
+            side,
+            "the toggle already shows \(side) — a tap would show the other side",
+            file: file,
+            line: line
+        )
+        toggle.tap()
+        let reads = expectation(for: NSPredicate(format: "value == %@", side), evaluatedWith: toggle)
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [reads], timeout: 5),
+            .completed,
+            "the side toggle still reads \(String(describing: toggle.value)) rather than \(side)",
+            file: file,
+            line: line
+        )
+    }
+
     /// Waits until `element` reads `label` — the gate the frame readings in
     /// G39 stand behind. A frame read while the badge still names the other
     /// side's order is a frame from before the header relaid out, so the two
@@ -886,13 +887,24 @@ final class TroveUITests: XCTestCase {
             line: line
         )
         badge.tap()
+        // `018`: a system menu under one header, in the system's casing
+        // (`SortMenuCopy.header`) — exactly one: one section header, not two
+        // (plan Q8).
+        let header = app.staticTexts["Sort by"]
         XCTAssertTrue(
-            app.staticTexts["SORT BY"].waitForExistence(timeout: 5),
+            header.waitForExistence(timeout: 5),
             "\(screen)'s Sort By should open",
             file: file,
             line: line
         )
-        // The dropdown row's title, as `MarketCopy.sortDescending` and
+        XCTAssertEqual(
+            app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Sort by")).count,
+            1,
+            "\(screen)'s Sort By should carry exactly one \"Sort by\" header",
+            file: file,
+            line: line
+        )
+        // The menu row's title, as `MarketCopy.sortDescending` and
         // `sortAscending` spell it — a UI-test target can't import the app,
         // so the copy is repeated here and `MarketCopyTests` pins the source.
         for title in ["Market \u{2193}", "Market \u{2191}"] {
@@ -903,13 +915,23 @@ final class TroveUITests: XCTestCase {
                 line: line
             )
         }
-        app.buttons["Dismiss sort options"].tap()
+        tapOutsideMenu(in: app)
         XCTAssertTrue(
-            app.staticTexts["SORT BY"].waitForNonExistence(timeout: 5),
+            header.waitForNonExistence(timeout: 5),
             "\(screen)'s Sort By should close",
             file: file,
             line: line
         )
+    }
+
+    /// Closes an open system menu the way a person does: one tap outside it.
+    /// iOS consumes that tap rather than passing it through, and the point is
+    /// fixed — over the screen's title, top left, clear of a menu opening
+    /// down from a trailing header badge — so every caller closes a menu the
+    /// same way (`018` plan §9).
+    @MainActor
+    private func tapOutsideMenu(in app: XCUIApplication) {
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.1)).tap()
     }
 
     /// Adds one item through the real form — the same steps
@@ -1088,13 +1110,13 @@ final class TroveUITests: XCTestCase {
         // hiding them. The badge is present and names *this* side's order —
         // "Date sold", not "Date" — the search field is there, and the chips
         // are the sold half's categories only.
-        let soldSortBadge = app.buttons["sortOptions.items"]
-        XCTAssertTrue(soldSortBadge.waitForExistence(timeout: 5), "Sort By must show on the Sold side (014 criterion 3)")
-        waitForLabel(soldSortBadge, "Sort by Date sold")
+        let soldSortMenu = app.buttons["sortOptions.items"]
+        XCTAssertTrue(soldSortMenu.waitForExistence(timeout: 5), "Sort By must show on the Sold side (014 criterion 3)")
+        waitForLabel(soldSortMenu, "Sort by Date sold")
         XCTAssertEqual(
-            soldSortBadge.label,
+            soldSortMenu.label,
             "Sort by Date sold",
-            "the badge must name the Sold side's own default order — it reads \"\(soldSortBadge.label)\""
+            "the badge must name the Sold side's own default order — it reads \"\(soldSortMenu.label)\""
         )
 
         // 014 criterion 3's measured half (G39, plan Q18): the switch's top
@@ -1129,19 +1151,19 @@ final class TroveUITests: XCTestCase {
 
         // One tap back to Owned, which is a different list with its own
         // selection under the same controls.
-        switchControl.buttons["Owned"].tap()
+        showSide("Owned", on: switchControl)
         XCTAssertTrue(
             app.staticTexts["Leica M6"].waitForExistence(timeout: 5),
             "the Owned side should list the item that wasn't sold"
         )
         XCTAssertFalse(soldRow(in: app, named: "Telecaster").exists, "a sold item must not appear on the Owned side")
-        let ownedSortBadge = app.buttons["sortOptions.items"]
-        XCTAssertTrue(ownedSortBadge.waitForExistence(timeout: 5), "Sort By stays on the Owned side")
-        waitForLabel(ownedSortBadge, "Sort by Date")
+        let ownedSortMenu = app.buttons["sortOptions.items"]
+        XCTAssertTrue(ownedSortMenu.waitForExistence(timeout: 5), "Sort By stays on the Owned side")
+        waitForLabel(ownedSortMenu, "Sort by Date")
         XCTAssertEqual(
-            ownedSortBadge.label,
+            ownedSortMenu.label,
             "Sort by Date",
-            "the Owned side's Sort By is unchanged (criterion 7) — it reads \"\(ownedSortBadge.label)\""
+            "the Owned side's Sort By is unchanged (criterion 7) — it reads \"\(ownedSortMenu.label)\""
         )
 
         let ownedSwitchTop = switchControl.frame.minY
@@ -1181,7 +1203,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Items"].tap()
         let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the Items tab must offer the side switch")
-        switchControl.buttons["Sold"].tap()
+        showSide("Sold", on: switchControl)
 
         // Criterion 6, from the control rather than from the model: the Sold
         // side's Sort By offers its own orders, and Price ↑ puts the
@@ -1190,7 +1212,7 @@ final class TroveUITests: XCTestCase {
         let badge = app.buttons["sortOptions.items"]
         XCTAssertTrue(badge.waitForExistence(timeout: 5), "the Sold side must offer Sort By")
         badge.tap()
-        XCTAssertTrue(app.staticTexts["SORT BY"].waitForExistence(timeout: 5), "the Sold side's Sort By should open")
+        XCTAssertTrue(app.staticTexts["Sort by"].waitForExistence(timeout: 5), "the Sold side's Sort By should open")
         app.buttons["Price \u{2191}"].tap()
 
         let telecaster = soldRow(in: app, named: "Telecaster")
@@ -1218,7 +1240,7 @@ final class TroveUITests: XCTestCase {
 
         // Criterion 7, the first direction: the Owned side is untouched by
         // any of it — empty field, its own row, its own sort.
-        switchControl.buttons["Owned"].tap()
+        showSide("Owned", on: switchControl)
         XCTAssertTrue(
             app.staticTexts["Leica M6"].waitForExistence(timeout: 5),
             "the Owned side's own row must show — the Sold side's query is not this side's"
@@ -1239,7 +1261,7 @@ final class TroveUITests: XCTestCase {
         // Criterion 7, the other direction: the Sold side comes back exactly
         // as it was left — the typed query still in the field, the rows still
         // narrowed by it, the badge still on the order that was picked.
-        switchControl.buttons["Sold"].tap()
+        showSide("Sold", on: switchControl)
         XCTAssertTrue(telecaster.waitForExistence(timeout: 5), "the Sold side's narrowing must survive the round trip")
         XCTAssertEqual(field.value as? String, "tele", "the Sold side's query must survive the round trip")
         XCTAssertFalse(bluesJunior.exists, "the Sold side must come back narrowed, not whole")
@@ -1369,25 +1391,23 @@ final class TroveUITests: XCTestCase {
         )
     }
 
-    /// `014` criterion 14's behavioral half on the seeded sold collection: the
-    /// "…" menu's two export rows don't export, they open the scope chooser
-    /// (Decision 7, plan Q17) — three rows, each enabled exactly when it has
-    /// rows under the narrowing *on screen*, with its own labelled catcher.
+    /// `014` criterion 14's behavioral half on the seeded sold collection, as
+    /// `018` criterion 3 rewrote it: the "…" menu's two export rows are
+    /// submenus (plan Q9) — three rows each, each enabled exactly when it has
+    /// rows under the narrowing *on screen*.
     ///
     /// The gate is read where only the device can show it: the Sold side under
     /// the Guitars chip has a sold guitar and no owned one, so "Owned items"
     /// must come back present-and-disabled rather than missing. `isEnabled` is
     /// false for an element that doesn't exist, so existence is asserted first
-    /// in every case here — a chooser that drew two rows would otherwise read
+    /// in every case here — a submenu that drew two rows would otherwise read
     /// as one correctly disabled.
     ///
-    /// Its mutations: gating the chooser's rows on `viewModel.canExportCSV`
-    /// (the menu row's widest-scope gate) instead of `canExport(scope)` must
-    /// turn "Owned items" red under the Guitars chip; wiring the menu's
-    /// "Export as CSV…" straight to an export instead of to the chooser must
-    /// turn the rows' existence red.
+    /// Its mutation (T005): the scope rows gated on `viewModel.canExportCSV`
+    /// (the submenu's widest-scope gate) instead of `canExport(scope)` must
+    /// turn "Owned items" red under the Guitars chip.
     @MainActor
-    func testTheExportRowsOpenAScopeChooserGatedByWhatIsOnScreen() {
+    func testTheExportRowsAreSubmenusGatedByWhatIsOnScreen() {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTesting", "-seedSold"]
         app.launch()
@@ -1401,37 +1421,27 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(badge.waitForExistence(timeout: 5), "the Items list must offer its overflow badge")
         badge.tap()
 
-        let exportPDF = app.buttons["Export as PDF\u{2026}"]
+        let exportPDF = app.buttons["Export as PDF"]
         XCTAssertTrue(exportPDF.waitForExistence(timeout: 5), "the overflow should open")
         exportPDF.tap()
 
-        // The chooser replaced the menu on the same badge: its header, its
-        // three rows all enabled (the whole seed is in scope, unnarrowed),
-        // and none of the menu's own rows left behind.
-        XCTAssertTrue(
-            app.staticTexts["EXPORT AS PDF"].waitForExistence(timeout: 5),
-            "Export as PDF\u{2026} must open the scope chooser under its own header"
-        )
+        // The submenu's three rows, all enabled: the whole seed is in scope,
+        // unnarrowed.
+        let owned = app.buttons["Owned items"]
+        XCTAssertTrue(owned.waitForExistence(timeout: 5), "Export as PDF must open its submenu")
         for title in ["Owned items", "Sold items", "Owned and sold"] {
-            XCTAssertTrue(app.buttons[title].exists, "the PDF chooser must offer \(title)")
+            XCTAssertTrue(app.buttons[title].exists, "the PDF submenu must offer \(title)")
             XCTAssertTrue(app.buttons[title].isEnabled, "\(title) has rows in the unnarrowed seed, so it must be enabled")
         }
-        XCTAssertFalse(
-            app.buttons["Import from CSV\u{2026}"].exists,
-            "the chooser replaces the menu's rows rather than sitting over them (plan Q17)"
-        )
 
-        app.buttons["Dismiss export options"].tap()
-        XCTAssertTrue(
-            app.buttons["Owned items"].waitForNonExistence(timeout: 5),
-            "the chooser's own labelled catcher must close it"
-        )
+        tapOutsideMenu(in: app)
+        XCTAssertTrue(owned.waitForNonExistence(timeout: 5), "the outside tap must close the menu")
 
         // The Sold side, narrowed to guitars: the seed's one guitar is sold,
         // so the owned scope has nothing to write under what's on screen.
         let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5), "the Items tab must offer the side switch")
-        switchControl.buttons["Sold"].tap()
+        showSide("Sold", on: switchControl)
         let guitars = app.buttons["Guitars"]
         XCTAssertTrue(guitars.waitForExistence(timeout: 5), "the Sold side's chips are the sold half's categories")
         guitars.tap()
@@ -1441,33 +1451,28 @@ final class TroveUITests: XCTestCase {
         )
 
         badge.tap()
-        let exportCSV = app.buttons["Export as CSV\u{2026}"]
+        let exportCSV = app.buttons["Export as CSV"]
         XCTAssertTrue(exportCSV.waitForExistence(timeout: 5), "the overflow should open on the Sold side")
-        XCTAssertTrue(exportCSV.isEnabled, "the menu row opens the chooser, so it is enabled while any scope has rows")
+        XCTAssertTrue(exportCSV.isEnabled, "the submenu is enabled while any scope has rows")
         exportCSV.tap()
 
-        XCTAssertTrue(
-            app.staticTexts["EXPORT AS CSV"].waitForExistence(timeout: 5),
-            "Export as CSV\u{2026} must open the scope chooser"
-        )
-        let owned = app.buttons["Owned items"]
-        XCTAssertTrue(owned.exists, "a scope with no rows stays in the chooser, disabled — it must not vanish")
+        XCTAssertTrue(owned.waitForExistence(timeout: 5), "a scope with no rows stays in the submenu, disabled — it must not vanish")
         XCTAssertFalse(
             owned.isEnabled,
-            "no owned guitar is on screen, so Owned items must be disabled (criterion 14)"
+            "no owned guitar is on screen, so Owned items must be disabled (criterion 3)"
         )
         for title in ["Sold items", "Owned and sold"] {
-            XCTAssertTrue(app.buttons[title].exists, "the CSV chooser must offer \(title)")
+            XCTAssertTrue(app.buttons[title].exists, "the CSV submenu must offer \(title)")
             XCTAssertTrue(app.buttons[title].isEnabled, "\(title) carries the sold guitar, so it must be enabled")
         }
 
-        // Picking a scope closes the chooser and hands off to the share
-        // sheet, which is the device pass's to look at — no existing UI test
+        // Picking a scope closes the menu and hands off to the share sheet,
+        // which is the device pass's to look at — no existing UI test
         // asserts one.
         app.buttons["Sold items"].tap()
         XCTAssertTrue(
             owned.waitForNonExistence(timeout: 5),
-            "picking a scope must close the chooser"
+            "picking a scope must close the menu"
         )
     }
 
@@ -1533,7 +1538,7 @@ final class TroveUITests: XCTestCase {
         )
 
         let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
-        switchControl.buttons["Sold"].tap()
+        showSide("Sold", on: switchControl)
         let row = soldRow(in: app, named: name)
         XCTAssertTrue(row.waitForExistence(timeout: 5), "the sold item must be on the Sold side")
         XCTAssertTrue(row.label.contains("$500"), "the row reads \"\(row.label)\"")
@@ -1567,7 +1572,7 @@ final class TroveUITests: XCTestCase {
             app.staticTexts["Nothing sold yet."].waitForExistence(timeout: 5),
             "the last sale was returned, so the Sold side is empty again"
         )
-        switchControl.buttons["Owned"].tap()
+        showSide("Owned", on: switchControl)
         XCTAssertTrue(
             app.staticTexts[name].waitForExistence(timeout: 5),
             "the returned item should be back in the collection"
@@ -1999,8 +2004,9 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(price.waitForExistence(timeout: 5), "Mark as bought… must open the purchase sheet")
 
         // Criterion 5's condition, which is a row of capsule chips rather
-        // than a picker (a system menu inside page content is what
-        // `MenuPolicyTests` forbids). The chip carries the selected trait,
+        // than a picker (chips, not a menu, by `013`'s design; since `018`
+        // `MenuPolicyTests` guards the header controls, not page content).
+        // The chip carries the selected trait,
         // which is both how VoiceOver says which one is chosen and how this
         // reads the selection back.
         let good = app.buttons["Good"]
@@ -2089,7 +2095,7 @@ final class TroveUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Nikon FM2"].exists, "a bought item with no plan is on neither side")
         XCTAssertFalse(app.staticTexts["Hasselblad 80mm"].exists, "a bought plan belongs to Completed")
 
-        switchControl.buttons["Completed"].tap()
+        showSide("Completed", on: switchControl)
         let hasselblad = planRow(in: app, named: "Hasselblad 80mm")
         XCTAssertTrue(hasselblad.waitForExistence(timeout: 5), "Completed must list the bought plan")
         XCTAssertTrue(hasselblad.label.contains("Bought"), "the Hasselblad's row reads \"\(hasselblad.label)\"")
@@ -2113,7 +2119,9 @@ final class TroveUITests: XCTestCase {
     /// Criteria 5 and 6 on the Active side: the default is the newest plan
     /// first (the Vox, two days old, above the Summicron, three), **Name**
     /// reverses that pair, and the selection survives a visit to Completed.
-    /// Driven through the badge and the dropdown on screen.
+    /// Driven through the badge and its system menu on screen (`018`): the
+    /// row is a button titled with its order, and choosing it closes the
+    /// menu.
     @MainActor
     func testSortingEachSideReordersTheRowsAndIsKeptAcrossASwitch() {
         let app = launchPlans()
@@ -2129,19 +2137,253 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(badge.waitForExistence(timeout: 5), "the Active side must offer Sort By")
         XCTAssertEqual(badge.label, "Sort by Newest")
         badge.tap()
-        XCTAssertTrue(app.staticTexts["SORT BY"].waitForExistence(timeout: 5), "the Plans Sort By should open")
+        XCTAssertTrue(app.staticTexts["Sort by"].waitForExistence(timeout: 5), "the Plans Sort By should open")
         app.buttons["Name"].tap()
         waitForLabel(badge, "Sort by Name")
         XCTAssertLessThan(summicron.frame.minY, vox.frame.minY, "Name must put the Summicron above the Vox")
 
         let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
-        switchControl.buttons["Completed"].tap()
+        showSide("Completed", on: switchControl)
         XCTAssertTrue(planRow(in: app, named: "Hasselblad 80mm").waitForExistence(timeout: 5))
         waitForLabel(badge, "Sort by Newest")
-        switchControl.buttons["Active"].tap()
+        showSide("Active", on: switchControl)
         XCTAssertTrue(summicron.waitForExistence(timeout: 5))
         waitForLabel(badge, "Sort by Name")
         XCTAssertLessThan(summicron.frame.minY, vox.frame.minY, "the Active side must come back sorted by Name")
+    }
+
+    /// `018` criterion 5 on every sort menu in the app, over the seeded Plans
+    /// collection (`-seedPlans` leaves rows on all five): Items' Owned and
+    /// Sold sides, the Wishlist, and both Plans sides. Each opens under
+    /// exactly one "Sort by" header, offers one row per order, and checks the
+    /// default and nothing else; the Custom row carries "Drag rows to
+    /// reorder" on the two lists with a manual order, and no row does on the
+    /// other three.
+    ///
+    /// What XCUITest exposes, found here (plan §9's open question): the
+    /// checked row is `isSelected` (the `Toggle` row's Selected trait), and on
+    /// the iOS 27.0 runtime the subtitle is joined into the row's label —
+    /// "Custom, Drag rows to reorder" — rather than exposed as a static text
+    /// of its own. On iOS 26.5 the subtitle is drawn but absent from the tree
+    /// (T002), so this test's subtitle legs speak for the 27.0 runtime the UI
+    /// suite runs on. The header is counted by an exact label, so the badge's
+    /// own "Sort by Date" never matches.
+    ///
+    /// Mutations (T004): `manualOrder: .newest` on a Plans menu → red (the
+    /// Newest row's label); the subtitle `Text` removed from `SortMenu` → red
+    /// (the Custom row's label).
+    @MainActor
+    func testEverySortMenuOffersItsOrdersUnderSortByWithTheCurrentOneChecked() {
+        let app = launchPlans()
+
+        app.buttons["Items"].tap()
+        assertSortMenu(
+            in: app, badge: "sortOptions.items", screen: "Items' Owned side",
+            options: ["Custom", "Date", "Value \u{2193}", "Value \u{2191}", "Market \u{2193}", "Market \u{2191}", "Desire"],
+            current: "Date", manualOrder: "Custom"
+        )
+        let itemsSwitch = element(in: app, identifiedBy: "items.sideSwitch")
+        XCTAssertTrue(itemsSwitch.waitForExistence(timeout: 5), "the Items tab must offer the side switch")
+        showSide("Sold", on: itemsSwitch)
+        assertSortMenu(
+            in: app, badge: "sortOptions.items", screen: "Items' Sold side",
+            options: ["Date sold", "Price \u{2193}", "Price \u{2191}", "Paid \u{2193}", "Paid \u{2191}", "Gain \u{2193}", "Gain \u{2191}", "Name"],
+            current: "Date sold", manualOrder: nil
+        )
+
+        app.buttons["Wishlist"].tap()
+        assertSortMenu(
+            in: app, badge: "sortOptions.wishlist", screen: "the Wishlist",
+            options: ["Custom", "Cost \u{2191}", "Cost \u{2193}", "Market \u{2193}", "Market \u{2191}", "Desire", "Alphabetical"],
+            current: "Custom", manualOrder: "Custom"
+        )
+
+        app.buttons["Plans"].tap()
+        assertSortMenu(
+            in: app, badge: "sortOptions.plans", screen: "Plans' Active side",
+            options: ["Newest", "Oldest", "Name", "Wishlist order"],
+            current: "Newest", manualOrder: nil
+        )
+        let plansSwitch = element(in: app, identifiedBy: "plans.sideSwitch")
+        XCTAssertTrue(plansSwitch.waitForExistence(timeout: 5), "the Plans tab must offer the side switch")
+        showSide("Completed", on: plansSwitch)
+        XCTAssertTrue(planRow(in: app, named: "Hasselblad 80mm").waitForExistence(timeout: 5), "Completed must list the bought plan")
+        assertSortMenu(
+            in: app, badge: "sortOptions.plans", screen: "Plans' Completed side",
+            options: ["Newest", "Oldest", "Name"],
+            current: "Newest", manualOrder: nil
+        )
+    }
+
+    /// Opens one sort menu and reads it whole: one "Sort by", exactly one
+    /// row per order and no other row, each labelled exactly its name (the manual order's with its subtitle
+    /// joined, as iOS 27.0 exposes it), exactly `current` selected, and no
+    /// subtitle anywhere when the list has no manual order. Closed by the
+    /// outside tap.
+    @MainActor
+    private func assertSortMenu(
+        in app: XCUIApplication,
+        badge identifier: String,
+        screen: String,
+        options: [String],
+        current: String,
+        manualOrder: String?,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let subtitle = "Drag rows to reorder"
+        let badge = app.buttons[identifier]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "\(screen) must offer Sort By", file: file, line: line)
+        badge.tap()
+        let header = app.staticTexts["Sort by"]
+        XCTAssertTrue(header.waitForExistence(timeout: 5), "\(screen)'s Sort By should open", file: file, line: line)
+        XCTAssertEqual(
+            app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Sort by")).count,
+            1,
+            "\(screen)'s Sort By should carry exactly one \"Sort by\" header",
+            file: file,
+            line: line
+        )
+
+        // The menu's rows are the cells of the one collection view holding the
+        // header (iOS 27.0 draws a system menu as a collection view of cells,
+        // each wrapping its row's button), so a row nobody listed, or a row
+        // drawn twice, changes the count.
+        let menus = app.collectionViews.containing(NSPredicate(format: "label == %@", "Sort by"))
+        XCTAssertEqual(menus.count, 1, "\(screen)'s Sort By should be one menu", file: file, line: line)
+        XCTAssertEqual(
+            menus.firstMatch.cells.count,
+            options.count,
+            "\(screen)'s Sort By should carry exactly one row per order",
+            file: file,
+            line: line
+        )
+
+        var selected: [String] = []
+        for option in options {
+            let rows = app.buttons
+                .matching(NSPredicate(format: "label == %@ OR label BEGINSWITH %@", option, "\(option), "))
+            XCTAssertEqual(rows.count, 1, "\(screen)'s Sort By should carry exactly one \(option) row", file: file, line: line)
+            let row = rows.firstMatch
+            guard row.exists else {
+                XCTFail("\(screen)'s Sort By has no \(option) row", file: file, line: line)
+                continue
+            }
+            let expected = option == manualOrder ? "\(option), \(subtitle)" : option
+            XCTAssertEqual(row.label, expected, "\(screen)'s \(option) row", file: file, line: line)
+            if row.isSelected { selected.append(option) }
+        }
+        XCTAssertEqual(selected, [current], "\(screen)'s Sort By should check its default and nothing else", file: file, line: line)
+
+        if manualOrder == nil {
+            XCTAssertEqual(
+                app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", subtitle)).count,
+                0,
+                "\(screen) has no manual order, so no row carries \"\(subtitle)\"",
+                file: file,
+                line: line
+            )
+        }
+
+        tapOutsideMenu(in: app)
+        XCTAssertTrue(header.waitForNonExistence(timeout: 5), "\(screen)'s Sort By should close", file: file, line: line)
+    }
+
+    /// Criterion 6 (`018` plan §3): the Overview's order control opens the
+    /// system menu under exactly one "Order by" header, By value and By
+    /// count its rows, By value checked by default and the only row checked;
+    /// choosing By count closes the menu and the control then reads "Order
+    /// categories By count". The seeded collection has owned items with
+    /// categories, so the breakdown card and its control are on screen. The
+    /// header is counted by an exact label, so the control's own "Order
+    /// categories By value" never matches.
+    ///
+    /// Mutation (T006): the row's setter not writing the order → red (the
+    /// control still reads "By value").
+    @MainActor
+    func testTheOverviewsOrderMenuOffersValueAndCountUnderOrderBy() {
+        let app = launchPlans()
+        app.buttons["Overview"].tap()
+
+        let control = app.buttons["orderOptions.dashboard"]
+        XCTAssertTrue(control.waitForExistence(timeout: 5), "the Overview must offer the order control on a seeded collection")
+        XCTAssertEqual(control.label, "Order categories By value", "the order control starts on By value")
+        control.tap()
+
+        let header = app.staticTexts["Order by"]
+        XCTAssertTrue(header.waitForExistence(timeout: 5), "the order menu should open")
+        XCTAssertEqual(
+            app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Order by")).count,
+            1,
+            "the order menu should carry exactly one \"Order by\" header"
+        )
+
+        var selected: [String] = []
+        for option in ["By value", "By count"] {
+            let rows = app.buttons.matching(NSPredicate(format: "label == %@", option))
+            XCTAssertEqual(rows.count, 1, "the order menu should carry exactly one \(option) row")
+            if rows.firstMatch.exists, rows.firstMatch.isSelected { selected.append(option) }
+        }
+        XCTAssertEqual(selected, ["By value"], "the order menu should check By value and nothing else")
+
+        app.buttons.matching(NSPredicate(format: "label == %@", "By count")).firstMatch.tap()
+        XCTAssertTrue(header.waitForNonExistence(timeout: 5), "choosing an order should close the menu")
+        XCTAssertEqual(control.label, "Order categories By count", "choosing By count should reorder the categories by count")
+    }
+
+    /// `018` §5 (Decision 14, criterion 16): the add button keeps its size
+    /// and its place on both lists — Items' "Add item" and the Wishlist's
+    /// "Add wanted item" — whatever draws it. Written against the drawn brass
+    /// disc before the restyle to prominent glass, so "its current size and
+    /// place" is a measurement rather than a memory: the button is 56 × 56
+    /// within a point; its trailing edge sits one gutter in from the window's
+    /// trailing edge, the gutter read from the tree as the header's "…"'s
+    /// inset (the header is padded by the same gutter); and its bottom edge
+    /// sits 24 pt above the tab bar's top, recorded from the tree.
+    ///
+    /// Recorded on the iPhone 18 Pro, iOS 27.0, empty collection — the drawn
+    /// disc (HEAD 036a6d5) on both lists: window 402 × 874, button
+    /// (322, 711, 56, 56), the "…" (342, 86.17, 36, 36) so the gutter reads
+    /// 24, tab bar top 791 so the bottom gap reads 24. After the restyle to
+    /// `.glassProminent` (T008), the same on both lists: button
+    /// (322, 711, 56, 56), the "…" and the tab bar unchanged.
+    ///
+    /// Mutation (T008): the glass button's label framed 60 × 60 → red (the
+    /// size leg: 74 × 74 on both lists).
+    @MainActor
+    func testTheAddButtonKeepsItsSizeAndPlace() {
+        let app = launchApp()
+        let window = app.windows.firstMatch
+
+        for (tab, label, overflow) in [
+            ("Items", "Add item", "moreActions.items"),
+            ("Wishlist", "Add wanted item", "moreActions.wishlist"),
+        ] {
+            app.buttons[tab].tap()
+            let button = app.buttons[label]
+            XCTAssertTrue(button.waitForExistence(timeout: 5), "\(tab) must offer \"\(label)\"")
+            let header = app.buttons[overflow]
+            XCTAssertTrue(header.waitForExistence(timeout: 5), "\(tab)'s header must carry its \"…\" to read the gutter from")
+            let tabBar = app.tabBars.firstMatch
+            XCTAssertTrue(tabBar.exists, "the tab bar must be on screen to read the bottom edge against")
+
+            let frame = button.frame
+            print("T008 \(tab) \"\(label)\" frame=\(frame) window=\(window.frame) header=\(header.frame) tabBar=\(tabBar.frame)")
+
+            XCTAssertEqual(frame.width, 56, accuracy: 1, "\(tab)'s \"\(label)\" is \(frame.width) wide, not 56")
+            XCTAssertEqual(frame.height, 56, accuracy: 1, "\(tab)'s \"\(label)\" is \(frame.height) tall, not 56")
+
+            let gutter = window.frame.maxX - header.frame.maxX
+            XCTAssertEqual(gutter, 24, accuracy: 1, "\(tab)'s header \"…\" no longer sits one gutter in — the reading below would be against the wrong edge")
+            XCTAssertEqual(
+                frame.maxX, window.frame.maxX - gutter, accuracy: 1,
+                "\(tab)'s \"\(label)\" trailing edge is at \(frame.maxX), not one gutter (\(gutter)) in from the window's \(window.frame.maxX)"
+            )
+            XCTAssertEqual(
+                tabBar.frame.minY - frame.maxY, 24, accuracy: 1,
+                "\(tab)'s \"\(label)\" bottom edge is at \(frame.maxY), not 24 pt above the tab bar's top (\(tabBar.frame.minY)) where the disc's was"
+            )
+        }
     }
 
     /// Criterion 14: an Active row's leading swipe offers **Mark as bought…**
@@ -2181,7 +2423,7 @@ final class TroveUITests: XCTestCase {
         XCTAssertTrue(price.waitForNonExistence(timeout: 5), "Mark as bought must close the sheet")
         XCTAssertTrue(summicron.waitForNonExistence(timeout: 5), "a bought plan leaves Active")
 
-        element(in: app, identifiedBy: "plans.sideSwitch").buttons["Completed"].tap()
+        showSide("Completed", on: element(in: app, identifiedBy: "plans.sideSwitch"))
         XCTAssertTrue(
             planRow(in: app, named: "Summicron 35mm f/2").waitForExistence(timeout: 5),
             "a bought plan lands on Completed"
@@ -2217,7 +2459,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Items"].tap()
         let switchControl = element(in: app, identifiedBy: "items.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5))
-        switchControl.buttons["Sold"].tap()
+        showSide("Sold", on: switchControl)
         XCTAssertTrue(
             soldRow(in: app, named: "Blues Junior").waitForExistence(timeout: 5),
             "deleting the plan must leave the sale toward it standing"
@@ -2234,7 +2476,7 @@ final class TroveUITests: XCTestCase {
 
         let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5))
-        switchControl.buttons["Completed"].tap()
+        showSide("Completed", on: switchControl)
         openDetail(in: app, named: "Hasselblad 80mm")
 
         let soldEntry = soldRow(in: app, named: "NT1-A", precededBy: "Sold")
@@ -2267,7 +2509,7 @@ final class TroveUITests: XCTestCase {
         app.buttons["Plans"].tap()
         let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
         XCTAssertTrue(switchControl.waitForExistence(timeout: 5))
-        switchControl.buttons["Completed"].tap()
+        showSide("Completed", on: switchControl)
         XCTAssertTrue(planRow(in: app, named: "Hasselblad 80mm").waitForExistence(timeout: 5))
 
         app.buttons["Overview"].tap()
@@ -2282,7 +2524,7 @@ final class TroveUITests: XCTestCase {
         XCTAssertEqual(
             XCTWaiter.wait(for: [onActive], timeout: 5),
             .completed,
-            "the card must open Plans on Active — the switch reads \(switchControl.value as? String ?? "nil")"
+            "the card must open Plans on Active — the side toggle reads \(String(describing: switchControl.value))"
         )
     }
 
@@ -2318,7 +2560,7 @@ final class TroveUITests: XCTestCase {
     /// the Plans tab, with nothing stored, Delete All Sell Plans is there and
     /// dimmed (criterion 22).
     ///
-    /// Its mutation: removing the Plans tab's `OverflowBadge` must turn the
+    /// Its mutation: removing the Plans tab's `OverflowMenu` must turn the
     /// Plans leg's badge assertion red.
     @MainActor
     func testEveryTabsRootReachesSettings() {
@@ -2418,7 +2660,7 @@ final class TroveUITests: XCTestCase {
         )
         XCTAssertFalse(summicron.exists, "no plan may stay on Active")
         let switchControl = element(in: app, identifiedBy: "plans.sideSwitch")
-        switchControl.buttons["Completed"].tap()
+        showSide("Completed", on: switchControl)
         XCTAssertTrue(
             app.staticTexts["Nothing completed yet"].waitForExistence(timeout: 5),
             "the Completed side must be empty too"
@@ -2437,11 +2679,11 @@ final class TroveUITests: XCTestCase {
         app.buttons["Items"].tap()
         let itemsSwitch = element(in: app, identifiedBy: "items.sideSwitch")
         XCTAssertTrue(itemsSwitch.waitForExistence(timeout: 5))
-        itemsSwitch.buttons["Sold"].tap()
+        showSide("Sold", on: itemsSwitch)
         for name in ["Blues Junior", "NT1-A"] {
             XCTAssertTrue(soldRow(in: app, named: name).waitForExistence(timeout: 5), "the sale of the \(name) must stay")
         }
-        itemsSwitch.buttons["Owned"].tap()
+        showSide("Owned", on: itemsSwitch)
         // An owned row's `.combine`d element — see
         // `testMarkingAWantedItemBoughtMovesItToTheCollection`.
         let hasselblad = app.descendants(matching: .any)

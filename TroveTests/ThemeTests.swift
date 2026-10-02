@@ -163,6 +163,30 @@ struct ThemeCompositionTests {
 /// active `Theme` is all a future light mode needs. That claim is only true
 /// while it stays true, and it degrades the moment one view reaches for a
 /// literal — so it gets checked rather than asserted, per CLAUDE.md.
+///
+/// **One recorded exception** (`018` Decisions 15 and 17): the glass header
+/// controls are system controls, and their label takes the system's label
+/// colour — `.primary`, which follows the appearance on its own — rather
+/// than the root brass tint or any theme colour. `systemLabelExemptions`
+/// names each such text by file with the exact number of code lines that
+/// carry it; both scans honour it, a line is let through only if it is
+/// clean once the named text is taken out, so nothing else in that file and
+/// that text in no other file gets past, and an entry carried on any other
+/// number of code lines — none, or one more — fails the scan that would
+/// otherwise flag it rather than lingering or stretching (`018` T011).
+///
+/// Both scans read code lines only, comments cut (`SourceScan.stripComments`
+/// per line): a colour named in prose is not a colour drawn, and a comment
+/// must not count towards an exemption's lines. Their word boundaries are
+/// `.simple` (`018` T011): Swift `Regex`'s default `\b` is the Unicode word
+/// boundary, which does not break inside `primary.opacity`, so
+/// `Color.primary.opacity(0)` and `.foregroundStyle(.red.opacity(0.5))`
+/// passed both scans until then.
+///
+/// Mutations (T011): `.background(Color.primary.opacity(0))` and
+/// `.foregroundStyle(.red.opacity(0.5))` on `PlansCard` → each scan red on
+/// its line; a second `.tint(.primary)` line in `OverflowMenu` → red (the
+/// entry carried on 2 code lines, expected 1).
 @Suite("No hardcoded colors in views")
 struct NoHardcodedColorsTests {
     /// `Color.clear` is absence of color rather than a palette choice, so it's
@@ -171,6 +195,21 @@ struct NoHardcodedColorsTests {
         "red", "blue", "green", "yellow", "orange", "purple", "pink", "brown",
         "gray", "grey", "black", "white", "cyan", "mint", "teal", "indigo",
         "primary", "secondary", "accentColor",
+    ]
+
+    /// Decisions 15 and 17 (018): glass header controls are system controls;
+    /// their label takes the system's label colour, which follows the
+    /// appearance. The glass style paints its label with the button's tint,
+    /// so the colour is the tint; the glyph's bars are colour views so they
+    /// draw at the tint's full strength. The side toggle's showing row takes
+    /// that colour as its own `foregroundStyle` on its trailing side only,
+    /// brass on its leading side (Decisions 20 and 21), so its entry is the
+    /// system colour's spelling inside the ternary. Each text maps to the
+    /// number of code lines in its file that carry it.
+    private static let systemLabelExemptions: [String: [String: Int]] = [
+        "SortMenu.swift": [".tint(.primary)": 1, "Color.primary": 1],
+        "OverflowMenu.swift": [".tint(.primary)": 1],
+        "SideToggle.swift": ["Color.primary": 1],
     ]
 
     private static let colorTakingModifiers = [
@@ -215,45 +254,73 @@ struct NoHardcodedColorsTests {
     /// always a space, dot or paren in real calls.
     @Test func noViewConstructsAColorDirectly() throws {
         let names = Self.systemColorNames.joined(separator: "|")
-        let constructed = try Regex(#"\bColor\("#)
-        let named = try Regex(#"Color\.(\#(names))\b"#)
+        let constructed = try Regex(#"\bColor\("#).wordBoundaryKind(.simple)
+        let named = try Regex(#"Color\.(\#(names))\b"#).wordBoundaryKind(.simple)
 
-        var violations: [String] = []
-        for file in try swiftFilesToCheck() {
-            let source = try String(contentsOf: file, encoding: .utf8)
-            for (offset, line) in source.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
-                let text = String(line)
-                if text.firstMatch(of: constructed) != nil || text.firstMatch(of: named) != nil {
-                    violations.append("\(file.lastPathComponent):\(offset + 1): \(text.trimmingCharacters(in: .whitespaces))")
-                }
-            }
+        let (violations, miscounted) = try scan { text in
+            text.firstMatch(of: constructed) != nil || text.firstMatch(of: named) != nil
         }
 
         #expect(
             violations.isEmpty,
             "Views must read colors from Theme, not build them:\n\(violations.joined(separator: "\n"))"
         )
+        for entry in miscounted {
+            Issue.record("exemption \(entry) — the entry no longer describes its file: it lets nothing through and should go, or it lets an extra line through (018 Decisions 15 and 17)")
+        }
     }
 
     @Test func noViewPassesASystemColorToAColorTakingModifier() throws {
         let names = Self.systemColorNames.joined(separator: "|")
         let modifiers = Self.colorTakingModifiers.joined(separator: "|")
-        let shorthand = try Regex(#"(\#(modifiers))\(\s*\.(\#(names))\b"#)
+        let shorthand = try Regex(#"(\#(modifiers))\(\s*\.(\#(names))\b"#).wordBoundaryKind(.simple)
 
-        var violations: [String] = []
-        for file in try swiftFilesToCheck() {
-            let source = try String(contentsOf: file, encoding: .utf8)
-            for (offset, line) in source.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
-                let text = String(line)
-                if text.firstMatch(of: shorthand) != nil {
-                    violations.append("\(file.lastPathComponent):\(offset + 1): \(text.trimmingCharacters(in: .whitespaces))")
-                }
-            }
-        }
+        let (violations, miscounted) = try scan { $0.firstMatch(of: shorthand) != nil }
 
         #expect(
             violations.isEmpty,
             "Views must read colors from Theme, not use system colors:\n\(violations.joined(separator: "\n"))"
         )
+        for entry in miscounted {
+            Issue.record("exemption \(entry) — the entry no longer describes its file: it lets nothing through and should go, or it lets an extra line through (018 Decisions 15 and 17)")
+        }
+    }
+
+    /// Every view code line `flags` reports, less the lines
+    /// `systemLabelExemptions` lets through: a flagged line passes only if it
+    /// is clean once its file's exempted texts are taken out of it, so an
+    /// exempted text never carries another colour through on the same line.
+    /// `miscounted` is every entry this scan would itself flag (the entry's
+    /// text trips `flags`) carried on a number of flagged code lines other
+    /// than its own — the other scan is responsible for the rest.
+    private func scan(flags: (String) -> Bool) throws -> (violations: [String], miscounted: [String]) {
+        var violations: [String] = []
+        var carried: [String: Int] = [:]
+        for file in try swiftFilesToCheck() {
+            let name = file.lastPathComponent
+            let exemptions = (Self.systemLabelExemptions[name] ?? [:]).keys.sorted()
+            let source = try String(contentsOf: file, encoding: .utf8)
+            for (offset, line) in source.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
+                let text = SourceScan.stripComments(String(line))
+                guard flags(text) else { continue }
+                var rest = text
+                for entry in exemptions where rest.contains(entry) {
+                    rest = rest.replacing(entry, with: "")
+                    carried["\(name): \(entry)", default: 0] += 1
+                }
+                if flags(rest) {
+                    violations.append("\(name):\(offset + 1): \(text.trimmingCharacters(in: .whitespaces))")
+                }
+            }
+        }
+        let miscounted = Self.systemLabelExemptions.keys.sorted().flatMap { name in
+            (Self.systemLabelExemptions[name] ?? [:]).sorted { $0.key < $1.key }
+                .filter { flags($0.key) }
+                .compactMap { entry, lines -> String? in
+                    let seen = carried["\(name): \(entry)"] ?? 0
+                    return seen == lines ? nil : "\(name): \(entry) is carried on \(seen) code lines, expected exactly \(lines)"
+                }
+        }
+        return (violations, miscounted)
     }
 }

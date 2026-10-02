@@ -1,28 +1,12 @@
 import SwiftData
 import SwiftUI
 
-/// The header's dropdowns. An optional of this type is the screen's whole
-/// open-menu state — the list screens' shape (013 Amendment A): Sort By, and
-/// since Amendment A the "…" holding Settings (009 plan QA3, revising R6).
-private enum HeaderDropdown: Hashable {
-    case sort
-    case overflow
-
-    /// What the tap-outside layer calls itself to VoiceOver.
-    var dismissLabel: String {
-        switch self {
-        case .sort: "Dismiss sort options"
-        case .overflow: "Dismiss more actions"
-        }
-    }
-}
-
 /// The Plans tab (009 plan §11): every sell plan, split into the ones still
 /// waiting on their purchase and the ones whose wanted item has been bought.
 ///
 /// `WishlistView`'s file shape with only what the spec asks for — a fixed
-/// header with the sort badge and the "…", the Active / Completed switch under
-/// it, then the empty state or the rows. The "…" holds Settings alone (plan
+/// header with the Active / Completed toggle, the sort badge and the "…",
+/// then the empty state or the rows. The "…" holds Settings alone (plan
 /// QA3, Amendment A's criterion 21 — every tab reaches Settings). No search,
 /// no category chips, no summary line, and no money anywhere (plan Q8,
 /// criterion 8). The row value alone doesn't guarantee that — a row's
@@ -31,9 +15,6 @@ private enum HeaderDropdown: Hashable {
 /// `theScreenDrawsNoMoneyAndReachesNoStore`.
 struct PlansView: View {
     @State private var viewModel: PlansViewModel
-
-    /// Which header dropdown is open, or neither — see `ItemListView`'s twin.
-    @State private var openDropdown: HeaderDropdown?
 
     /// The row whose Buy swipe is open in the purchase sheet (plan Q13) —
     /// `WishlistView`'s `itemBeingBought` staging, over the plan's row.
@@ -74,14 +55,6 @@ struct PlansView: View {
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
                     header
-                        .padding(.horizontal, theme.metrics.screenGutter)
-
-                    // In the standing header, so it is there over an empty
-                    // side exactly as over a full one — `ItemListView`'s
-                    // placement. Never bound to `side`: a tap asks `show(_:)`,
-                    // which sets the side and reloads, and clears nothing, so
-                    // each side keeps its own sort (criterion 5).
-                    SideSwitch(side: viewModel.side, select: { viewModel.show($0) })
                         .padding(.horizontal, theme.metrics.screenGutter)
                 }
                 .padding(.top, theme.metrics.sectionGap)
@@ -187,89 +160,68 @@ struct PlansView: View {
             // appearance switch follows — see `ItemListView`'s twin.
             .preferredColorScheme(appearanceStore.choice.sheetColorScheme(device: systemColorScheme))
         }
-        // The header's dropdowns, through the shared host (013 Amendment A).
-        // Sort By is one badge over two selections: the side on screen picks
-        // which orders it offers and which it writes. No REORDER tag on
-        // either — a plan list has no manual order to drag into (plan P5).
-        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
-            switch dropdown {
-            case .overflow:
-                // Settings alone (plan QA3): plans are in no export, so
-                // Export and Import stay the lists'. A one-row menu, as on
-                // the Dashboard (013 P13).
-                DropdownSurface {
-                    DropdownRow(title: "Settings") {
-                        isShowingSettings = true
-                    }
-                }
-            case .sort:
-                switch viewModel.side {
-                case .active:
-                    SortDropdown(
-                        options: PlansViewModel.ActiveSortOrder.allCases,
-                        selection: viewModel.activeSortOrder,
-                        label: \.label,
-                        isManualOrder: { _ in false }
-                    ) { option in
-                        // The row has already closed the dropdown. The intent
-                        // sets this side's order and reloads the rows.
-                        viewModel.setActiveSort(option)
-                    }
-                case .completed:
-                    SortDropdown(
-                        options: PlansViewModel.CompletedSortOrder.allCases,
-                        selection: viewModel.completedSortOrder,
-                        label: \.label,
-                        isManualOrder: { _ in false }
-                    ) { option in
-                        viewModel.setCompletedSort(option)
-                    }
-                }
-            }
-        }
     }
 
     // MARK: - Header
 
+    /// The list screens' title row with no meta line under it (018 spec
+    /// Decisions 22 and 23): the title centred on the controls, the row the
+    /// controls' height, so the first row stays where it was.
     private var header: some View {
-        HStack(alignment: .top) {
-            Text(SellPlanCopy.tab)
-                .font(theme.typography.screenTitle)
-                .foregroundStyle(theme.colors.textPrimary)
+        TitleRowLayout {
+            ListTitle(SellPlanCopy.tab)
 
-            Spacer()
-
-            // `WishlistView`'s pair. Sort is hidden over an empty side, as on
-            // the list screens — there is nothing to order; the "…" always
-            // shows, since Settings is never gated (plan QA3).
+            // `WishlistView`'s pair with the side toggle between them (018
+            // Decisions 19 and 20): Sort By · toggle · "…". Sort is hidden
+            // over an empty side, as on the list screens — there is nothing
+            // to order; the "…" always shows, since Settings is never gated
+            // (plan QA3). The toggle is outside that gate, beside the "…", so
+            // it is there over an empty side exactly as over a full one and
+            // never moves relative to the "…" — `ItemListView`'s placement. Never bound to `side`: a tap
+            // asks `show(_:)` for the other side, which sets it and reloads,
+            // and clears nothing, so each side keeps its own sort (criterion
+            // 5). The row keeps its ideal width, so a glass label never wraps.
             HStack(spacing: 8) {
                 if !viewModel.rows.isEmpty {
                     sortControl
                 }
+                SideToggle(side: viewModel.side, select: { viewModel.show($0) })
                 overflowControl
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
     }
 
-    /// Never busy: nothing runs from this tab. The badge only opens the
-    /// one-row menu on the host — the Dashboard's twin.
+    /// Never busy: nothing runs from this tab. Settings alone (plan QA3):
+    /// plans are in no export, so Export and Import stay the lists'. A
+    /// one-row system menu since `018` (plan §2), as on the Dashboard.
     private var overflowControl: some View {
-        OverflowBadge(isBusy: false) {
-            openDropdown = .overflow
+        OverflowMenu(isBusy: false) {
+            Button("Settings") { isShowingSettings = true }
         }
-        .dropdownAnchor(HeaderDropdown.overflow)
         .accessibilityIdentifier("moreActions.plans")
     }
 
-    /// T035's badge — `ItemListView`'s twin, naming the side on screen's
-    /// selection.
-    private var sortControl: some View {
-        SortBadge(label: viewModel.visibleSortLabel) {
-            openDropdown = .sort
+    /// Sort By as a system menu (`018` plan §1) — `ItemListView`'s twin: one
+    /// `SortMenu` per side, each over that side's own orders and calling that
+    /// side's own intent, which sets the order and reloads the rows. No row
+    /// carries the reorder subtitle — a plan list has no manual order to drag
+    /// into (009 plan P5). The spoken label and the identifier stay; the
+    /// "Opens sort options" hint goes (criterion 11). The Active side's
+    /// capsule reads the order's short `badgeLabel` ("Wishlist" for
+    /// "Wishlist order", Decision 23); the spoken label keeps the full name.
+    @ViewBuilder private var sortControl: some View {
+        Group {
+            switch viewModel.side {
+            case .active:
+                SortMenu(options: PlansViewModel.ActiveSortOrder.allCases, selection: viewModel.activeSortOrder,
+                         label: \.label, badgeLabel: \.badgeLabel) { viewModel.setActiveSort($0) }
+            case .completed:
+                SortMenu(options: PlansViewModel.CompletedSortOrder.allCases, selection: viewModel.completedSortOrder,
+                         label: \.label) { viewModel.setCompletedSort($0) }
+            }
         }
-        .dropdownAnchor(HeaderDropdown.sort)
         .accessibilityLabel("Sort by \(viewModel.visibleSortLabel)")
-        .accessibilityHint("Opens sort options")
         .accessibilityIdentifier("sortOptions.plans")
     }
 

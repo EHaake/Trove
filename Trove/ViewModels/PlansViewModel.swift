@@ -42,6 +42,18 @@ final class PlansViewModel {
             case .wishlistOrder: "Wishlist order"
             }
         }
+
+        /// What the Sort By capsule calls this — `label` but for the
+        /// wishlist order, which the capsule shortens to "Wishlist" so the
+        /// page title fits beside the controls at its full size on a 402 pt
+        /// phone (`018` spec Decision 23). The menu row keeps `label`, and
+        /// so does the capsule's spoken label.
+        var badgeLabel: String {
+            switch self {
+            case .wishlistOrder: "Wishlist"
+            case .newest, .oldest, .name: label
+            }
+        }
     }
 
     /// The Completed side's Sort By (plan Q9). "Newest"/"Oldest" read the

@@ -580,6 +580,18 @@ person):
     badge's label still snaps, and its border with it (the T029c
     lesson). The exact system presentation isn't replicable, being
     private; its feel is the target.
+    *Superseded by `018-system-design-language` (its spec, Decisions 1–5,
+    12 and 13, and criteria 2, 5, 6, 9 and 10): the rule of Decision 17
+    is reversed to **system controls, Trove content** — every "…", Sort By
+    and order control opens a system menu, the header's buttons wear
+    Liquid Glass, and `MenuPolicyTests` now guards the opposite line. The
+    hints of Decision 18 are gone (the badges announce as pop-up buttons);
+    Decision 19's two taps are the system's one (`018` P5, criterion 12);
+    Decision 20's grow-from-badge animation left with the bespoke
+    dropdown, the system menu's own morph in its place. Criterion 27 no
+    longer holds as written: every menu in the app is the system's. The
+    record above is kept as history; `design/brief.md` quotes the rule as
+    superseded.*
 
 ## Acceptance criteria
 

@@ -41,6 +41,7 @@ about sync is listed there.
 | `014-sold-side-parity` | **Shipped** — merged to `main` 2026-09-19 via [PR #25](https://github.com/EHaake/Trove/pull/25); all tasks through T011's close-out done (2026-09-18), every criterion verified — criterion 12 attested by the person with Accessibility Inspector on 2026-09-19, so the spec closes with no partials; eleven tasks with eleven sub-lettered additions (T009a–T009i for Decision 7's export scope and the dropdown-anchor defect it uncovered, T010a for the device pass's criterion-3 finding, T010b for the Phase 2b sweep), **1540 unit tests in 208 suites** and **23 UI tests** green, the UI suite twice back to back. Thirteen of fourteen criteria verified with per-criterion records in `spec.md` and **one honest partial named** (criterion 12's Accessibility Inspector sweep is the person's step). The two things `006` left the person fighting — **Mark as sold…** hidden in a menu, and a Sold side with no way to find anything in it — answered by a Sell action on the leading swipe and the Owned side's search, chips and sort on Sold, each side keeping its own. The person's Phase 2 reading added Decision 7 mid-spec: exports from the Items list now choose owned, sold or both, for either format, with a "Sold Items" PDF of its own. Two claims the work falsified are recorded in `plan.md`'s **As built** — a header equality that held only while nothing sat beside it (the device pass measured it 13.67 pt out, and two guards now hold it), and an `anchorPreference` that silently dropped two of three dropdown anchors. The session moved to the stepped-down Opus model at the person's instruction from T010 on; its tier log is in `tasks.md`. |
 | `015-mark-as-bought` | **Shipped** — merged to `main` 2026-09-21 via [PR #29](https://github.com/EHaake/Trove/pull/29); all tasks through T013's close-out done (2026-09-21); thirteen tasks with eight sub-lettered additions (T006a from the Phase 1 review, T011a from the Phase 2 review, T011b and T012a–c from the person's two pauses, T012d–e from the review that followed), **1622 unit tests in 224 suites** and **25 UI tests** green, the UI suite twice back to back. Fourteen of fifteen criteria verified with per-criterion records in `spec.md` and **one honest partial named** (the two-device sync check — nobody has run it and no agent can). The buying half of the core loop, which the app had never had: **Mark as bought…** from the wishlist swipe, the wanted item's menu and its Sell Plan, one sheet for price, date, place and condition, and an item that carries the entry's photos, credits, category, Reverb match, year and notes across. The wanted entry is **marked, not deleted**, so the sell plan built around it survives as the record that it was carried out — which finally gives `009-sell-plan-list` a definition of "active". No undo, by the person's decision. The Phase 1 review caught that a purchase could happen **twice** (a second `Item`, and the first purchase's marker overwritten) — visible only at phase level, fixed in the one writer. The person's two pauses added four changes mid-spec: sentence case on the comparison line, at the Phase 2 pause; then at the walkthrough, a word instead of a bag glyph on the Sell Plan, an alert when a purchase is refused, and a saved sell plan leaving a trace on the wanted item's page. |
 | `009-sell-plan-list` | **Shipped** — merged to `main` 2026-09-24 via [PR #30](https://github.com/EHaake/Trove/pull/30); every task through T016's close-out and the pre-merge sweep done (2026-09-23); twenty-one tasks (T001–T021, Amendment A's T017–T021 among them) with seven sub-lettered additions (T009a–T009d from the Phase 3 walkthrough, T014a from the Phase 4 walkthrough, T021a from the Phase 4A walkthrough, T021b for the Plans tab icon the person chose after the device pass), **1746 unit tests in 234 suites** and **36 UI tests** green at the close-out, both suites twice back to back (the final counts are in `tasks.md`). Twenty of twenty-three criteria verified with per-criterion records in `spec.md`; **criteria 17, 20 and 22 stay unticked** because their sync halves are untested — the person cannot run a two-device pass yet, and every sync step is gathered in `specs/SYNC-CHECKS.md` for one later pass. The person's Accessibility Inspector and VoiceOver pass is done. **A sell plan becomes a thing you create**, stored on the wanted item, active until the thing is bought and completed after, rather than inferred from whichever candidates are ticked — which is what let a plan survive every item on it selling. Existing plans carry over **once, recorded on each row**, so a plan deleted on one device cannot be resurrected by another. A **fourth tab**, Plans, lists Active and Completed with a sort each, a Buy swipe, a delete swipe and a read-only record for a completed plan, and a Dashboard card counts the active ones. The person's walkthroughs added **Amendment A** mid-spec: Delete as its own rust button on the Sell Plan, two app-wide standards (a destructive action is always rust — a `CLAUDE.md` amendment; a card responds anywhere in its box), completed rows showing the bought item's picture through a new purchase record, Settings from every tab, and Delete All Sell Plans. |
+| `018-system-design-language` | **Shipped** — merged to `main` 2026-10-01 via [PR #32](https://github.com/EHaake/Trove/pull/32); every task through T014's close-out and the pre-merge sweep done (2026-09-30); fourteen tasks (T001–T014) with nine sub-lettered additions, every one from the person's walkthroughs (T004a–T004b at the Phase 1 pause, T006a at Phase 2, T009a–T009f at Phase 3), **1740 unit tests in 231 suites** and **38 UI tests** green at the close-out, both suites twice back to back (the counts are in `tasks.md`). Thirteen of sixteen criteria verified with per-criterion records in `spec.md`; **criteria 8, 11 and 15 wait on the person** — the Dark add button's plus at 2.6:1, the Accessibility Inspector pass, and the one-language attestation *(update this sentence at the merge if the person has answered)*. **The rule `013` wrote is reversed, in the open: system controls, Trove content.** Every menu in the app is now the system's, the header's buttons wear Liquid Glass like the tab bar, and `MenuPolicyTests` guards the new line after `CLAUDE.md`'s example of it was reworded in its own commit. The spec measured T029c's tear before converting anything (gone on iOS 27.0; a self-correcting transient on 26.5 that the person accepted to keep the system's morph). The system segmented control proved unstyleable, so the Owned/Sold and Active/Completed switches became a glass side toggle, brass on the primary side. Six bespoke files and four test suites retired. The system navigation bar and toolbar on the tab roots are the next spec, `020`, before `019`. |
 
 ## Future specs
 
@@ -594,46 +595,55 @@ actually useful once the app is in daily use.
   foldable horizontally, and a plausible scoping merges them. Kept separate
   because this one is an accessibility obligation the app owes today and
   the other waits on hardware.
-- **`018-system-design-language`** — deciding, once, how much of Apple's
-  design language the app wears. The occasion is a real inconsistency: the
-  Dashboard and both list screens open the app's **own** dropdown surface
-  from their "…", while the item and wishlist detail screens open a
-  **system** `Menu` from the nav bar, and the tab bar at the bottom is a
-  plain system `TabView` wearing iOS 26's liquid glass. Three different
-  looks for the same gesture.
+- **`018-system-design-language`** (**Shipped 2026-10-01** via
+  [PR #32](https://github.com/EHaake/Trove/pull/32) — see
+  `specs/018-system-design-language/` for the full record) — deciding,
+  once, how much of Apple's design language the app wears. The occasion
+  was a real inconsistency: the list screens and the Dashboard opened the
+  app's own dropdown from their "…", the detail screens a system menu from
+  the navigation bar, and the tab bar wore iOS 26's glass — three looks for
+  one gesture, produced on purpose by `013` Amendment A's rule (*bespoke
+  inside the page, system in the bars*) and enforced by `MenuPolicyTests`.
+  **What shipped: system controls, Trove content.** Sort By, every "…" and
+  the Dashboard's order control open the system's menu; the three header
+  controls (Sort By sized to its label, a side toggle, the "…" as a glass
+  circle) and the add button wear Liquid Glass; the headers' type, the
+  cards, rows, chips, dial, gauge and slider stay Trove's. The rule and its
+  guard were rewritten together — `CLAUDE.md`'s example first, in its own
+  commit — never deleted to get green. Two things were settled by
+  measurement: T029c's tear, filmed first (clean on 27.0; on 26.5 a
+  transient of about 1.5–1.8 s that the person accepted to keep the
+  system's menu-to-button morph), and the system segmented control, which
+  takes no font and no colour from SwiftUI and so became a glass toggle
+  showing the current side, brass on Owned and Active. The person's
+  walkthroughs also moved the page title to 34 pt centred on the controls
+  and centred the meta line beneath them. **Settled with the person at the close-out:** the Dark add
+  button's white plus on brass at 2.6:1 ("Looks fine") and the toggle's
+  blur playing under Reduce Motion ("Leave it") are accepted as shipped,
+  with a later design pass left possible; on iOS 26.5 every trailing
+  control sits 5 pt further from the edge than on 27.0 (an observation).
 
-  **That split is not an accident, and this entry exists to reverse a
-  decision rather than fix a bug.** `013` Amendment A, Decision 17 and
-  criterion 27 set the standing rule — *bespoke inside the page, system in
-  the bars* — and it is enforced: `MenuPolicyTests` walks every file under
-  `Trove/Views` and `Trove/App` and **fails the build if a system menu
-  appears inside page content**, allowlisting `DetailOverflowMenu.swift`
-  alone. The guard is pointed the opposite way from where this spec wants
-  to go, so adopting system menus means rewriting the policy and its test
-  together, deliberately and in the open — not quietly deleting a red test,
-  which `CLAUDE.md` forbids for good reason.
+- **`024-system-navigation-bars`** — the system navigation bar and
+  toolbar on the tab roots, the step `018` deliberately stopped short of
+  (its Decision 11 and first non-goal). `018` put the header's buttons in
+  Liquid Glass but kept Trove's own standing header on Items, the
+  Wishlist, Plans and the Dashboard: the title, the meta line and the
+  three controls in a row the app lays out itself (`TitleRowLayout`,
+  `MetaLineSpacing`, the `listTitle` token). The fully Apple-shaped
+  answer is the title in a navigation bar and Sort By, the side toggle
+  and the "…" in an iOS 26 toolbar, which also unlocks iOS 26's floating
+  bottom search (it needs the navigation bar above, which is why `018`
+  left the search field in the body). It is a redesign of every list's
+  top, and the questions are real ones: where the meta line lives when
+  the title is the system's; whether a large title collapsing on scroll
+  suits screens this short; what becomes of the headers' measured
+  geometry and of `MenuPolicyTests`' header-control legs once the
+  controls are toolbar items; and whether the iOS 26.5 artefacts `018`
+  accepted (the Sort By transient, the 5 pt trailing offset) survive in a
+  system toolbar. **Settle this before `019`**, for the same reason `018`
+  came first: a foldable layout should not be drawn around a header that
+  is about to be replaced.
 
-  The person's position, recorded 2026-09-19: lean **system**, because the
-  tab bar already wears liquid glass, because more default iOS means less
-  bespoke surface to build and maintain, and because it keeps the app
-  conformant with Apple's current language. The honest counterweight, so
-  the spec conversation has both halves: the rule reaches further than the
-  "…" menus — `SideSwitch` (the Owned/Sold switch), the Sell Plan's own
-  control and `SortPicker` are all bespoke *under this same rule*, so
-  "go system" plausibly means a system `Picker` where `006` and `014` spent
-  real effort measuring a 19.7 pt jump and a `matchedGeometryEffect`
-  stutter out of a custom one. `013` also records that the person found the
-  still dropdown **stiff**, which is why it grows out of the badge with a
-  fade, and `OverflowDropdown` carries group breaks the system menu it
-  replaced had none of. Those are things a system menu will not do.
-
-  So the question to settle is not "system or bespoke" in the abstract but
-  **where the line falls now**: menus and pickers to the system, with the
-  app's identity carried by type, colour and the content of the cards
-  rather than by the chrome, is one coherent answer — and probably the one
-  the lean above points at. Worth a Claude Design pass, since it changes
-  how most of the app looks. **Settle this before `019`**, so a foldable
-  layout is not drawn around bespoke surfaces that are then thrown away.
 - **`019-foldable-layout`** — a design for the foldable iPhone Duo,
   announced for release soon (noted 2026-09-19). The occasion is new
   hardware; the work underneath it is adaptive layout, which this app has
@@ -669,73 +679,132 @@ actually useful once the app is in daily use.
   assumption, and settling `018`'s chrome question first keeps this pass
   from designing surfaces that are about to be replaced.
 - **A collection at real scale — five specs from one conversation**
-  (2026-09-29). The person compiled their own gear into a spreadsheet
-  ahead of importing it: **90 owned items, 7 top-level categories, 25
-  leaf paths**, Photo alone 52 items and two-thirds of the value, 30 of
-  them in a single `Photo/Lenses` leaf. Read against the code, the app
-  does not hold that well — every list is one flat column of ~78 pt
-  cards, the chip row offers one chip per full path (25 here), nothing
-  groups or filters by anything but category, and the Dashboard's
-  breakdown has three swatches assigned by position, so four of seven
-  top-level categories would draw grey. The conversation split the work
-  into the five entries below, each its own spec conversation; `020`
-  was opened first because it is the smallest and should land before
-  the 90-row import, so the rows carry it in one pass rather than 90
-  hand edits.
-- **`020-purchase-provenance`** — whether an item was **bought new or
+  (2026-09-29, a spec session opened on `018`'s branch and moved to its
+  own worktree). The person compiled their own gear into a spreadsheet
+  ahead of importing it and concluded the app "won't be able to manage
+  this amount of gear well." They described **two problems, one
+  informing the other**: how to organise, sort through and display a
+  large collection across categories; and how the Dashboard shows
+  information — statistics and charts that are "easy to understand and
+  pretty to look at," that show the collection "in interesting and fun
+  ways," and that **also help the person navigate and organise** the
+  items rather than only report on them. The Dashboard half may shape
+  the list half, which is why they are separate specs but one
+  conversation.
+
+  **The data that prompted it** (the person's spreadsheet, read in the
+  session): **90 owned items, 7 top-level categories, 25 leaf paths**.
+  Photo is 52 items and two-thirds of the value, 30 of them in a single
+  `Photo/Lenses` leaf; Audio 17; Displays 7; Microphones 5; Instruments
+  4; PC Components 3; Computers 2. Ten purchase places, but eBay alone
+  is 57 items and $52.5k of $85k spent. 57 of the 90 were bought in
+  2025–26. Four items at $0.00 are gifts.
+
+  **The app against it** (read from the code in the session): every list
+  is one flat column of ~78 pt cards with no grouping or sections; the
+  chip row offers one chip per full category path (25 here), so it
+  scrolls sideways past most of them; nothing filters by place,
+  condition, year or desire; the Dashboard's "By category" breakdown
+  groups by the next path segment and drills down, but colours rows by
+  position from three swatches, so four of seven top-level categories
+  would draw grey and a category's colour changes when the sort does;
+  Swift Charts is imported nowhere.
+
+  **Order the person set**: `020` first (smallest, and it should land
+  before the ninety-row import). The rest are each **their own spec
+  conversation**, not settled here; the list and Dashboard ones in
+  particular are expected to be **serious redesigns and design
+  additions**, so each wants a design pass before its spec.
+- **`020-purchase-provenance`** (**spec drafted 2026-09-29**, on branch
+  `020-purchase-provenance`) — whether an item was **bought new or
   used**, which the app has never recorded: the only signal is
-  `Condition.new`, which conflates how it was acquired with the state
-  it is in now. Same spec: **Very Good** joins the condition scale
-  between Excellent and Good (the person's spreadsheet grades ten items
-  that way; Reverb's own scale has it). A **gift** is recorded as a
-  purchase price of zero — the person's four $0.00 rows are gifts — and
-  the person is not sure a gift needs a field of its own; settle that
-  in this spec's conversation, not later.
-- **`021-import-expansion`** — the importer accepts only the app's own
-  template exactly. The person keeps their collection in Google Sheets
-  as well and wants the two to interoperate. Their sheet fails the gate
-  on every count: 10 of the template's 18 columns, prices written
-  `$3,179.95`, dates `5/1/2025`, a condition (Very Good) the scale lacks
-  until `020`, and blank separator rows plus a totals row. Two halves:
-  **lenient reading** of what a spreadsheet actually produces, and a
-  **round trip** — export the whole collection, edit many items in a
-  sheet, re-import to **update the existing items and add the new
-  ones**. The second half is architectural: import today only ever
-  *adds* rows, so it needs a stable identity per item that survives a
-  spreadsheet edit, a rule for matching, and a decision about what an
-  update may overwrite.
-- **`022-grouped-browsing`** — the Items list at 90+ items. The
-  person's starting idea: a **grouped view of top-level categories, each
-  opening into the list with that category's filter already applied**.
-  Candidates the conversation raised, none decided: collapsible
-  sections with per-section totals; a two-level category filter (top
-  level, then leaf) instead of one chip per full path; a compact row;
-  filters by place, condition, year and desire; bulk re-categorising.
-  A serious redesign — expect a Claude Design pass before the spec.
-- **`023-dashboard-charts`** — charts and statistics on the Dashboard
-  that are **navigation as well as display: tapping a segment opens the
-  matching filtered list**, extending the category and unvalued jumps
-  that already exist. Ideas from the person's own data: value split by
-  category with drill-down; spent versus worth now by purchase place
-  (eBay is 57 of 90 items and holds about 95 % of what was paid); an
-  acquisition timeline with cumulative spend (57 of 90 items bought in
-  2025–26); biggest gains and losses; how much value sits at the
-  sell-candidate desire levels. Depends on `022` for the filters the
-  charts jump to, and on **`008-category-colors`** — a real palette
-  for seven-plus top-level categories — which may fold in here. Swift
-  Charts is an Apple framework, so no dependency question arises. A
-  value-over-time chart is **`016`**'s, not this spec's; a collection
-  this size is one more argument for starting `016` early.
-- **Organising by system or brand** — the person's spreadsheet is laid
-  out by **camera system** (Sony, Canon R5, Leica, Nikon Zf,
-  Hasselblad, then tripods and bags), not by category; the app can only
-  say `Photo/Lenses`. The person expects a guitar collector would
-  group by brand instead, so the concept is a second axis that is not
-  always the same thing. Deeper category paths
-  (`Photo/Lenses/Sony E`) work today with no change; a separate
-  kit/system field or tags is the alternative, and an adapter that
-  bridges two systems is the case that separates them. The person has
-  not chosen — its own spec conversation, and it bears on `022`.
+  `Condition.new`, which conflates how it was acquired with the state it
+  is in now. Same spec: **Very Good** joins the condition scale between
+  Excellent and Good, as the person sees it. **Gifts**: the person's
+  four $0.00 rows are gifts; they were unsure a gift needs recording at
+  all, and declined it as a third value beside New and Used because a
+  gift can itself be new or used. A gift stays a zero purchase price.
+  How the charts treat zero-price items is `023`'s question.
+  **Widened at the person's reading of the Draft** to a **new/used
+  preference on wishlist entries** ("Looking for new / used"), which
+  also chooses which Reverb listings a wanted item's market figure reads
+  — new stock for New, today's used listings for Used or unstated.
+- **`021-import-expansion`** — **the person's requirement**: they keep
+  their collection in **Google Sheets as well as in the app**, so they
+  can update it there on their own, and want **interoperability between
+  the two**. Two halves, both theirs:
+  - **Lenient reading.** Fix the importer to handle what their sheet
+    actually is. Today it accepts only the app's own template exactly,
+    and the sheet fails on every count: 10 of the template's 18 columns
+    (no Condition Notes, Notes, Reverb ID, Year or sale columns), prices
+    written `$3,179.95`, dates `5/1/2025`, a condition (Very Good) the
+    scale lacks until `020`, blank separator rows between groups, and a
+    totals row at the bottom.
+  - **A round trip.** Their example: to change many items at once,
+    **export the full collection, edit it in Google Sheets, and
+    re-import it — updating the items that already exist and adding
+    any that are new.** The person expects this to need **architectural
+    changes**, and it does: import today only ever *adds*, so it needs
+    a stable identity per item that survives a spreadsheet edit, a rule
+    for matching a row to an item (and what happens when a match fails
+    or two rows claim one item), and a decision about what an update
+    may overwrite — photos, the Reverb match and sale fields are not in
+    a sheet the same way. Deletion by omission is an open question the
+    person has not been asked. This is also how Bought (`020`) gets set
+    on an existing collection in bulk.
+- **`022-grouped-browsing`** — the Items list at 90+ items; the
+  person's first-named problem, "how to organize, sort through and
+  display lots of gear across categories better." **The person's own
+  idea**: a **different, grouped view — the top-level categories listed
+  first, each opening into the list with that category's filter already
+  applied** ("something like that" — a direction, not a design).
+  Candidates raised in the session, none decided: collapsible sections
+  with per-section totals; a two-level category filter (top level,
+  then leaf) in place of one chip per full path; a compact row; filters
+  by place, condition, year, desire and (after `020`) new or used;
+  bulk re-categorising. The organising-by-system entry below bears on
+  it. Expected to be a serious redesign — a design pass before the
+  spec.
+- **`023-dashboard-charts`** — **the person's framing**: statistics and
+  charts that are easy to understand, pretty, and fun, **and that you
+  can drill down into** — tapping a chart takes you to the matching
+  subset of a list. They noted the app **already jumps from the
+  Dashboard to a filtered list** (category rows, the unvalued callout,
+  the Sold card), so this is an expansion of an existing idea rather
+  than a new one. **Their examples**: the value split between
+  categories; the total value of items bought from each place; a time
+  chart of when items were acquired and what they are worth. Ideas
+  added in the session from their data: spent versus worth now by place
+  (eBay buys hold about 95 % of what was paid; B&H about 111 %); a
+  cumulative-spend line (57 of 90 bought in 2025–26); biggest gains and
+  losses; how much value sits at the sell-candidate desire levels,
+  which is the app's core loop. Open questions: **zero-price gifts**
+  read as 100 % gain unless the charts treat them apart; a real
+  **palette for seven-plus top-level categories** is `008-category-colors`,
+  which probably folds in here or goes just before; the jumps need
+  filters the list does not have yet (place, year), which is why `022`
+  comes first. Swift Charts is an Apple framework, so no dependency
+  question. A chart of the collection's **value over time** needs
+  `016`'s snapshots, not this spec — and a collection this size is one
+  more argument for starting `016` early. Expected to be a serious
+  redesign — a design pass before the spec.
+- **Organising by system or brand** — spotted in the session: the
+  person's spreadsheet is grouped by **camera system** (Sony, Canon R5,
+  Leica, Nikon Zf, Hasselblad, then tripods and heads, then bags), with
+  blank rows between groups — not by category. The app can only say
+  `Photo/Lenses`, so 30 lenses across five mounts are one pile. **The
+  person agrees it should be supported**, with two observations of
+  their own: in their collection it **only makes sense for the camera
+  gear**, and **someone with a large guitar collection might organise
+  by brand instead** — so the concept is a second, optional axis that
+  means different things in different hobbies, not a fixed "mount"
+  field. **They are not sure yet what the best way is**, and want it as
+  its own spec conversation. Options on the table: deeper category
+  paths (`Photo/Lenses/Sony E`), which work today with no change but
+  split lenses away from each other rather than grouping a kit; a
+  separate kit/system/brand field; or tags. The case that separates
+  them is an adapter bridging two systems (the person owns a TTArtisan
+  M-to-Z). Bears on `022`.
 - **`010-item-management-enhancements`** — Came up right as `001` was
   wrapping up: a request for swipe-left-to-delete on `ItemListView`/
   `WishlistView` rows (standard iOS convention), which grew into wanting

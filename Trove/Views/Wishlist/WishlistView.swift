@@ -2,22 +2,6 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The header's two dropdowns. One optional of this type is the screen's
-/// whole open-menu state, which is what makes "one open at a time" true by
-/// type rather than by coordination (013 Amendment A).
-private enum HeaderDropdown: Hashable {
-    case sort
-    case overflow
-
-    /// What the tap-outside layer calls itself to VoiceOver.
-    var dismissLabel: String {
-        switch self {
-        case .sort: "Dismiss sort options"
-        case .overflow: "Dismiss more actions"
-        }
-    }
-}
-
 /// Browse the wishlist, per `design/screens/Trove Wishlist List.png`.
 ///
 /// Follows the item list's standing layout rule from plan.md — title, summary,
@@ -36,10 +20,6 @@ struct WishlistView: View {
     @State private var viewModel: WishlistViewModel
     @State private var isAddingItem = false
     @State private var selectedItemID: UUID?
-
-    /// Which header dropdown is open — Sort By or the "…" — or neither;
-    /// see ItemListView's twin for why the screen owns it.
-    @State private var openDropdown: HeaderDropdown?
 
     /// Whether 012's file picker is up — see `ItemListView`'s twin.
     @State private var isPickingImportFile = false
@@ -93,24 +73,28 @@ struct WishlistView: View {
             theme.colors.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
+                VStack(alignment: .leading, spacing: 0) {
                     header
                         .padding(.horizontal, theme.metrics.screenGutter)
-                        .padding(.bottom, theme.metrics.sectionGap - theme.metrics.controlRowGap)
+                        // The meta line's lower half of `headerGapBelow`, as
+                        // on Items (018 spec Decision 22).
+                        .padding(.bottom, MetaLineSpacing.split(before: headerGapBelow))
 
                     // Controls for narrowing a list need a list to narrow.
                     // On a first run they were a search field over nothing and
                     // a lone "All" chip, both of which made the screen look
                     // like it had lost something rather than not started yet.
                     if viewModel.totalCount > 0 {
-                        SearchField(placeholder: "Search wishlist", text: $viewModel.searchText)
-                            .padding(.horizontal, theme.metrics.screenGutter)
+                        VStack(alignment: .leading, spacing: theme.metrics.controlRowGap) {
+                            SearchField(placeholder: "Search wishlist", text: $viewModel.searchText)
+                                .padding(.horizontal, theme.metrics.screenGutter)
 
-                        categoryChips
+                            categoryChips
+                        }
+                        .padding(.bottom, theme.metrics.listRowGap)
                     }
                 }
                 .padding(.top, theme.metrics.sectionGap)
-                .padding(.bottom, theme.metrics.listRowGap)
                 .background(theme.colors.background)
 
                 if let reason = viewModel.emptyReason {
@@ -275,49 +259,24 @@ struct WishlistView: View {
         } message: {
             Text(viewModel.importAlertMessage)
         }
-        // The header's dropdowns — the same shared host as ItemListView's,
-        // for the same reach reasons (013 Amendment A).
-        .dropdownHost(open: $openDropdown, dismissLabel: \.dismissLabel) { dropdown in
-            switch dropdown {
-            case .sort:
-                SortDropdown(
-                    options: WishlistViewModel.SortOrder.allCases,
-                    selection: viewModel.sortOrder,
-                    label: \.label,
-                    isManualOrder: { $0 == .custom }
-                ) { option in
-                    // The row has already closed the dropdown.
-                    viewModel.sortOrder = option
-                    viewModel.load()
-                }
-            case .overflow:
-                OverflowDropdown(
-                    // One flag into both gates: a wishlist has no sold half,
-                    // so its CSV and its PDF cover exactly the same rows.
-                    canExportCSV: viewModel.canExport,
-                    canExportPDF: viewModel.canExport,
-                    exportCSV: { Task { await viewModel.exportCSV() } },
-                    exportPDF: { Task { await viewModel.exportPDF() } },
-                    importCSV: { isPickingImportFile = true },
-                    openSettings: { isShowingSettings = true }
-                )
-            }
-        }
     }
 
     // MARK: - Header
 
+    /// What the screen puts under the header: the search field a section gap
+    /// below it, or — over an empty wishlist — the list's row gap (018 spec
+    /// Decision 22). The header centres its meta line in it.
+    private var headerGapBelow: CGFloat {
+        viewModel.totalCount > 0 ? theme.metrics.sectionGap : theme.metrics.listRowGap
+    }
+
+    /// `ItemListView`'s header since `018` T009e (spec Decisions 22 and 23):
+    /// the title centred on the controls and the meta line under the whole
+    /// row, midway between it and the search field.
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Wishlist")
-                    .font(theme.typography.screenTitle)
-                    .foregroundStyle(theme.colors.textPrimary)
-                Text(summaryLine).monoLabel()
-            }
-
-            Spacer()
-
+        ItemsListHeader(title: "Wishlist", gapBelow: headerGapBelow) {
+            Text(summaryLine).monoLabel()
+        } trailing: {
             // The "…" shows regardless of collection size since 012
             // (criterion 1, superseding 011's hide-when-empty); the sort
             // badge still hides — see ItemListView's header note.
@@ -330,12 +289,22 @@ struct WishlistView: View {
         }
     }
 
-    /// 012's overflow — ItemListView's twin.
+    /// 012's overflow — ItemListView's twin, a system menu since `018` (plan
+    /// §2). The two export rows export directly and keep their ellipsis
+    /// (spec P2): a wishlist has no sold half, so there is no scope to
+    /// choose, and one flag gates both — its CSV and its PDF cover exactly
+    /// the same rows.
     private var overflowControl: some View {
-        OverflowBadge(isBusy: viewModel.isBusy) {
-            openDropdown = .overflow
+        OverflowMenu(isBusy: viewModel.isBusy) {
+            Button("Export as CSV…") { Task { await viewModel.exportCSV() } }
+                .disabled(!viewModel.canExport)
+            Button("Export as PDF…") { Task { await viewModel.exportPDF() } }
+                .disabled(!viewModel.canExport)
+            Divider()
+            Button("Import from CSV…") { isPickingImportFile = true }
+            Divider()
+            Button("Settings") { isShowingSettings = true }
         }
-        .dropdownAnchor(HeaderDropdown.overflow)
         .accessibilityIdentifier("moreActions.wishlist")
     }
 
@@ -346,16 +315,16 @@ struct WishlistView: View {
             + viewModel.totalEstimatedCostCents.formattedAsWholeCurrency(currencyCode: "USD")
     }
 
-    /// T035's badge — one control on both screens; see `SortBadge` and
-    /// ItemListView's twin for the note on why the system `Menu` left.
+    /// Sort By as a system menu (`018` plan §1) — `ItemListView`'s Owned
+    /// side: one `SortMenu` over the wishlist's orders, Custom's row carrying
+    /// the reorder subtitle. The spoken label and the identifier stay; the
+    /// "Opens sort options" hint goes — a system menu's button announces
+    /// itself as a pop-up button (criterion 11).
     private var sortControl: some View {
-        SortBadge(label: viewModel.sortOrder.label) {
-            openDropdown = .sort
-        }
-        .dropdownAnchor(HeaderDropdown.sort)
-        .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
-        .accessibilityHint("Opens sort options")
-        .accessibilityIdentifier("sortOptions.wishlist")
+        SortMenu(options: WishlistViewModel.SortOrder.allCases, selection: viewModel.sortOrder,
+                 label: \.label, manualOrder: .custom) { viewModel.sortOrder = $0; viewModel.load() }
+            .accessibilityLabel("Sort by \(viewModel.sortOrder.label)")
+            .accessibilityIdentifier("sortOptions.wishlist")
     }
 
     // MARK: - Rows

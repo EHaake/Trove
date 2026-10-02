@@ -250,8 +250,9 @@ struct PurchaseFormView: View {
     }
 
     /// `ItemFormView`'s condition row, copied (Q8): a label over a flow of
-    /// capsules, one per case. Not a picker — a system menu inside page
-    /// content is what `MenuPolicyTests` forbids.
+    /// capsules, one per case. Not a picker: chosen while `013`'s rule
+    /// forbade a system menu inside page content, which `018` reversed
+    /// (`MenuPolicyTests`); the capsules stay as the form's design.
     private var conditionField: some View {
         VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
             Text(PurchaseCopy.conditionLabel).monoLabel()

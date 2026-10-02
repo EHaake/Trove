@@ -1,51 +1,14 @@
-import CoreGraphics
 import Foundation
-import SwiftUI
 import Testing
 @testable import Trove
 
-/// How the Plans tab is wired (spec `009`). T010 opens it with G18; T011
+/// How the Plans tab is wired (spec `009`). T010 opened it with G18 (gone
+/// with the bespoke switch at `018` T007); T011
 /// adds G19, the screen's view-body facts, as source scans that each
 /// `#require` their anchor.
 @Suite("Plans wiring")
 @MainActor
 struct PlansWiringTests {
-    // MARK: - The side switch (plan §10, Q14)
-
-    /// G18: every label of both side switches fits its half. Each word is
-    /// rendered on a scratch `ImageRenderer` at the font the switch draws it
-    /// in — `SideSwitchMetrics.labelFont`, at both weights, since the active
-    /// half lifts to medium — and must be narrower than the switch's own half
-    /// less 4 pt either side. The words and the widths are read off switches
-    /// built through each screen's own `init(side:select:)`, so a label or a
-    /// half changed in production lands in this measurement rather than being
-    /// typed out here.
-    ///
-    /// Mutation (T010): the Plans half at 50 pt → red on "Completed".
-    @Test func everyLabelOfBothSwitchesFitsItsHalf() throws {
-        let items = SideSwitch(side: ItemListViewModel.Side.owned, select: { _ in })
-        let plans = SideSwitch(side: PlansViewModel.Side.active, select: { _ in })
-
-        let switches: [(name: String, labels: [String], halfWidth: CGFloat)] = [
-            ("Items", [items.leadingLabel, items.trailingLabel], items.halfWidth),
-            ("Plans", [plans.leadingLabel, plans.trailingLabel], plans.halfWidth),
-        ]
-
-        for control in switches {
-            let room = control.halfWidth - 2 * 4
-            for label in control.labels {
-                try #require(!label.isEmpty, "the \(control.name) switch has an empty label")
-                for isActive in [false, true] {
-                    let width = try labelWidth(label, isActive: isActive)
-                    #expect(
-                        CGFloat(width) < room,
-                        "the \(control.name) switch's \"\(label)\" measures \(width) pt at \(isActive ? "medium" : "regular"), not narrower than its \(control.halfWidth) pt half less 4 pt either side (\(room) pt)"
-                    )
-                }
-            }
-        }
-    }
-
     // MARK: - The screen (plan §11, G19)
 
     private static let view = "Trove/Views/Plans/PlansView.swift"
@@ -198,38 +161,120 @@ struct PlansWiringTests {
         #expect(!code.contains("showsThumbnail"), "PlansView.swift still names `showsThumbnail` — the property is gone (QA2)")
     }
 
-    /// G19, criterion 5: the switch reports through `show(_:)` and is never
-    /// bound (no `$` projection in its arguments), so changing side reloads and clears nothing.
-    @Test func theSideSwitchReportsThroughShow() throws {
+    /// G19, criterion 5, and `018` G10: the switch reports through
+    /// `show(_:)` — never bound, which the compiler guards (`SideToggle.side`
+    /// is a `let`, the view model's `side` `private(set)`; the no-`$` leg was
+    /// deleted at `018`'s pre-merge sweep, since it could not fail for a
+    /// behavioural reason) — so changing side reloads and clears nothing; it stands in the header,
+    /// outside the empty-state branch; and since T009a (spec Decision 19) it
+    /// is the glass `SideToggle`, carrying the Plans words, glyphs, label and
+    /// identifier and asking for the other side, read off a toggle built
+    /// through its own `init(side:select:)`. The toggle's body is
+    /// `ItemListSidesWiringTests`' to read.
+    ///
+    /// Mutations (018 T007, re-run on `SideToggle` at T009a): the call moved
+    /// into the empty-state branch → red. (018 sweep): the `select:` closure
+    /// emptied (`{ _ in }`) → red.
+    @Test func theSideToggleReportsThroughShow() throws {
         let code = try SourceScan.production(Self.view)
 
-        let calls = SourceScan.argumentLists(of: "SideSwitch", in: code)
+        let calls = SourceScan.argumentLists(of: "SideToggle", in: code)
         try #require(calls.count == 1, "the screen builds \(calls.count) side switches, expected exactly 1")
-        #expect(calls[0].contains("viewModel.show"), "the switch doesn't report through `viewModel.show`: \(calls[0])")
-        // A `$` projection, not the closure's own `$0`.
-        let projection = try Regex(#"\$[A-Za-z_]"#)
+        #expect(calls[0].contains("viewModel.show($0)"), "the switch doesn't report through `viewModel.show`: \(calls[0])")
+
+        let branches = SourceScan.closureBodies(after: "if let reason = viewModel.emptyReason", in: code)
+        try #require(branches.count == 1, "PlansView declares \(branches.count) empty-state branches, expected exactly 1")
+        let branch = try #require(branches.first)
+        #expect(branch.contains("emptyState(reason)"), "the empty-state branch no longer shows the empty state — wrong span?")
+        #expect(!branch.contains("SideToggle("), "the switch is composed inside the empty-state branch, so an emptied side would lose it")
+
+        let active = SideToggle(side: PlansViewModel.Side.active, select: { _ in })
+        let completed = SideToggle(side: PlansViewModel.Side.completed, select: { _ in })
+        #expect(active.side == .active && completed.side == .completed)
+        #expect(active.other == .completed, "a tap on Active doesn't ask for Completed")
+        #expect(completed.other == .active, "a tap on Completed doesn't ask for Active")
         #expect(
-            !calls[0].contains(projection),
-            "the switch is bound — a side change must go through `show(_:)`: \(calls[0])"
+            active.word(.active) == SellPlanCopy.active && active.word(.completed) == SellPlanCopy.completed,
+            "the Plans toggle's words aren't Active and Completed"
+        )
+        #expect(active.icon(.active) == "clock", "Active's glyph isn't `clock` (Decision 19)")
+        #expect(active.icon(.completed) == "checkmark.circle", "Completed's glyph isn't `checkmark.circle` (Decision 19)")
+        #expect(active.accessibilityLabel == SellPlanCopy.sideSwitchLabel, "the Plans toggle isn't labelled for VoiceOver")
+        #expect(active.identifier == "plans.sideSwitch", "the Plans toggle's identifier changed — the UI tests find it by it")
+    }
+
+    /// Spec Decision 20, as on Items: the control row is Sort By, then the
+    /// side toggle, then the "…" — so the toggle sits beside the "…" whether
+    /// or not Sort By is shown. A fact about the view body no view-model test
+    /// can observe.
+    ///
+    /// Mutation (T009b): the toggle and the sort control swapped → red.
+    @Test func theControlRowIsSortThenToggleThenOverflow() throws {
+        let headers = SourceScan.closureBodies(after: "private var header: some View", in: try SourceScan.production(Self.view))
+        try #require(headers.count == 1, "PlansView declares \(headers.count) headers, expected exactly 1")
+        let header = try #require(headers.first)
+        let rows = SourceScan.closureBodies(after: "HStack(spacing: 8)", in: header)
+        try #require(rows.count == 1, "the header composes \(rows.count) control rows, expected exactly 1: \(header)")
+        let row = try #require(rows.first)
+
+        var starts: [String.Index] = []
+        for part in ["sortControl", "SideToggle(", "overflowControl"] {
+            let found = row.ranges(of: part)
+            try #require(found.count == 1, "the control row names `\(part)` \(found.count) times, expected exactly 1: \(row)")
+            starts.append(found[0].lowerBound)
+        }
+        #expect(
+            starts[0] < starts[1] && starts[1] < starts[2],
+            "the control row isn't Sort By, then the side toggle, then the \"…\" (spec Decision 20): \(row)"
         )
     }
 
-    /// G19, P5: neither side's Sort By offers a manual order, so no row is
-    /// tagged REORDER. Both dropdowns are required, one per side.
+    /// `018` G7 (was 009's G19, P5): neither side's Sort By offers a manual
+    /// order, so no row carries the "Drag rows to reorder" subtitle. Both
+    /// menus are required, one per side, read from `sortControl`'s body.
     ///
-    /// Mutation (T011): a `SortDropdown` with `isManualOrder: { _ in true }`
-    /// → red.
-    @Test func noSortDropdownOffersAManualOrder() throws {
+    /// Mutation (T004): `manualOrder: .newest` on one menu → red.
+    @Test func noSortMenuOffersAManualOrder() throws {
         let code = try SourceScan.production(Self.view)
 
-        let dropdowns = SourceScan.argumentLists(of: "SortDropdown", in: code)
-        try #require(dropdowns.count == 2, "the screen builds \(dropdowns.count) sort dropdowns, expected 2 — one per side")
-        for dropdown in dropdowns {
+        let controls = SourceScan.closureBodies(after: "private var sortControl: some View", in: code)
+        try #require(controls.count == 1, "PlansView declares \(controls.count) `sortControl`s, expected exactly 1")
+        let control = try #require(controls.first)
+        let menus = SourceScan.argumentLists(of: "SortMenu", in: control)
+        try #require(menus.count == 2, "`sortControl` builds \(menus.count) sort menus, expected 2 — one per side: \(control)")
+        for menu in menus {
             #expect(
-                dropdown.contains("isManualOrder: { _ in false }"),
-                "a Plans sort dropdown can tag an option REORDER — a plan list has no manual order (P5): \(dropdown)"
+                !menu.contains("manualOrder:"),
+                "a Plans sort menu gives a row the reorder subtitle — a plan list has no manual order (P5): \(menu)"
             )
         }
+    }
+
+    /// `018` spec Decision 23: the Active side's Sort By passes the order's
+    /// short `badgeLabel` to its capsule, the Completed side's does not. The
+    /// short label itself is `PlansViewModelTests`', and what it buys — the
+    /// title at full size — `ItemListHeaderLayoutTests`'; which menu is
+    /// handed it is a view-body fact neither can reach, so it is scanned.
+    ///
+    /// Mutation (T009f): `badgeLabel:` dropped from the Active menu → red.
+    @Test func theActiveCapsuleReadsTheShortLabel() throws {
+        let code = try SourceScan.production(Self.view)
+
+        let controls = SourceScan.closureBodies(after: "private var sortControl: some View", in: code)
+        try #require(controls.count == 1, "PlansView declares \(controls.count) `sortControl`s, expected exactly 1")
+        let control = try #require(controls.first)
+        let menus = SourceScan.argumentLists(of: "SortMenu", in: control)
+        try #require(menus.count == 2, "`sortControl` builds \(menus.count) sort menus, expected 2 — one per side: \(control)")
+        let active = try #require(menus.first { $0.contains("ActiveSortOrder") }, "no Active sort menu: \(control)")
+        let completed = try #require(menus.first { $0.contains("CompletedSortOrder") }, "no Completed sort menu: \(control)")
+        #expect(
+            active.contains("badgeLabel: \\.badgeLabel"),
+            "the Active side's capsule no longer reads the order's short label, so \"Wishlist order\" crowds the title (spec Decision 23): \(active)"
+        )
+        #expect(
+            !completed.contains("badgeLabel:"),
+            "the Completed side's capsule reads a short label it has no order for: \(completed)"
+        )
     }
 
     /// Plan Q3 and §11: the screen reloads when an import lands and when the
@@ -249,15 +294,5 @@ struct PlansWiringTests {
             code.contains(".onChange(of: viewModel.settledCount) { viewModel.load() }"),
             "the screen doesn't reload when the carry-over has run, so carried-over plans wait for the next visit"
         )
-    }
-
-    // MARK: - The instrument
-
-    /// A label's rendered width at the switch's own type, at 1×.
-    private func labelWidth(_ label: String, isActive: Bool) throws -> Int {
-        try #require(
-            renderBitmap(Text(label).font(SideSwitchMetrics.labelFont(isActive: isActive))),
-            "ImageRenderer produced nothing to measure for \"\(label)\"."
-        ).width
     }
 }

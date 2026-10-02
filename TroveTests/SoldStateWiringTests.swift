@@ -77,7 +77,8 @@ struct SoldStateWiringTests {
 
     /// One menu composition, with the rows swapped by `isSold` — criterion
     /// 8's "exactly Edit sale…, Return to collection… and Delete", and the
-    /// reason `MenuPolicyTests` still sees one system `Menu`.
+    /// reason `MenuPolicyTests` (G12a) sees `DetailOverflowMenu` compose one
+    /// system `Menu`.
     @Test func theMenuIsComposedOnceWithItsRowsSwappedByTheSoldFlag() throws {
         let code = try SourceScan.production(Self.detail)
 
@@ -96,9 +97,10 @@ struct SoldStateWiringTests {
         )
     }
 
-    /// `DetailOverflowMenu` stays the app's one system `Menu` — the existing
-    /// allowlist (`MenuPolicyTests`) re-confirmed from the other side, so a
-    /// second menu added for the sold rows fails here as well as there.
+    /// `DetailOverflowMenu` stays one system `Menu` (since `018` the header
+    /// controls are system menus too, so `MenuPolicyTests` no longer keeps
+    /// an allowlist) — re-confirmed from this side, so a second menu added
+    /// for the sold rows fails here.
     @Test func theOverflowMenuHostsExactlyOneSystemMenu() throws {
         let code = try SourceScan.production(Self.menu)
         let menus = code.ranges(of: "Menu {").count
