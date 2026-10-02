@@ -69,7 +69,7 @@ merge date where it says `<merge date>`. Nothing here is live until then.
 
 ## `DECISIONS.md` — a new section, after `009`'s
 
-## System controls, Trove content (`018`, complete 2026-09-30)
+## System controls, Trove content (`018`, complete 2026-10-01)
 
 The product decisions are numbered 1–23 (plus the P-items) in
 `specs/018-system-design-language/spec.md`. Decisions 15–23 came from the
@@ -209,15 +209,18 @@ beyond that spec.
   `MenuPolicyTests`' old test was rewritten, not retired. No surviving
   guard was loosened: the header's heights were re-measured at every
   change and never given a tolerance.
-- **Left open for the person at the close-out.** The Dark add button's
-  white plus on brass measures 2.6:1 (Light's darker brass 7.4:1).
-  Reduce Motion does not stop the toggle's blur. On iOS 26.5 every
-  trailing header control sits 5 pt further from the right edge than on
-  27.0. The Accessibility Inspector pass (the badges as pop-up buttons,
-  the toggle's announcement, Plans' "Wishlist" capsule speaking "Sort by
-  Wishlist order") and the attestation that every screen reads as one
-  language are the person's steps. *(Update at the merge with the
-  person's answers.)*
+- **Settled with the person at the close-out (2026-10-01).** The Dark
+  add button's white plus on brass measures 2.6:1 (Light's darker brass
+  7.4:1) — under the 3:1 guideline and a change from the old disc's
+  dark ink; the person: "Looks fine." Reduce Motion does not stop the
+  toggle's blur, where the old switch faded only; the person: "Leave
+  it." Both accepted as shipped (spec Decision 24), with a later design
+  pass left possible. The Accessibility Inspector pass came back "All as
+  expected" (the badges as pop-up buttons, the toggle's label and value,
+  Plans' "Wishlist" capsule speaking "Sort by Wishlist order"), and the
+  one-language attestation was given. Still an observation, not a
+  decision: on iOS 26.5 every trailing header control sits 5 pt further
+  from the right edge than on 27.0.
 - **What was deferred.** The system navigation bar and toolbar on the tab
   roots (Decision 11) — the fully Apple-shaped header, and the floating
   bottom search that needs it — are `ROADMAP.md`'s `020`, placed before

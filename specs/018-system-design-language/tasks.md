@@ -1433,6 +1433,8 @@ Handoff notes for the pause reports:
   Left for the merge: README's Status count and spec tree gain `018`;
   `019`'s ROADMAP entry may want an "after `020`" note.
 
+**Close-out pause (2026-09-30 → 10-01).** The person's steps and answers: the Accessibility Inspector — "All as expected" (criterion 11 ticked); the one-language attestation — "All looks good enough for now. We might do another design pass later, but it looks great for now." (criterion 15 ticked); the Dark add button's plus at 2.6:1 — "Looks fine" (criterion 8 ticked); the toggle's blur under Reduce Motion — "Leave it." Both recorded as spec Decision 24. All sixteen criteria ticked. The session's model changed to `claude-opus-5-5` at this pause (the person, `/model`), which is the session tier `CLAUDE.md` names; the earlier turns ran on Fable 5.1 at medium per the opening prompt.
+
 ## Tier log
 
 `CLAUDE.md`'s model policy, **Opus profile** (reconciled 2026-09-24): every

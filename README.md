@@ -199,7 +199,7 @@ plan built around it survives as a record), and `009-sell-plan-list`
 (merged 2026-09-24 — sell plans as things you create, the Plans tab and
 its Dashboard card, completed plans showing the item they became, and
 Delete all sell plans in Settings), and `018-system-design-language`
-(merged 2026-09-30 — every menu in the app is the system's own, the
+(merged 2026-10-01 — every menu in the app is the system's own, the
 header's Sort By, side toggle and "…" and the add button wear Liquid
 Glass like the tab bar, and the Owned/Sold and Active/Completed switches
 became one glass toggle, brass on the primary side).

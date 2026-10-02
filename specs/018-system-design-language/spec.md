@@ -316,11 +316,11 @@ in 231 suites**) and the UI suite (**38 tests**), both green twice back to
 back at 18bcce8 (T013) and once more at the close-out; by the films of T002,
 T003 and T009 (the `scripts/motion-probe/` background-difference mode); and
 by T013's device pass on iOS 27.0, with iOS 26.5 for the runtime checks.
-**Thirteen of the sixteen criteria are ticked. Criteria 8, 11 and 15 are
-not**: 11 and 15 wait on the person's own steps (the Accessibility
-Inspector pass and the one-language attestation), and 8 is met on every
-glass control but one flag the person has not answered — the Dark add
-button's white plus on brass at 2.6:1. Each criterion names what was
+**All sixteen criteria are ticked.** Thirteen were ticked at the close-out
+(2026-09-30); 8, 11 and 15 on the person's answers the next day — the
+Accessibility Inspector pass ("All as expected"), the one-language
+attestation, and the Dark add button's white plus on brass at 2.6:1
+accepted as shipped ("Looks fine", Decision 24). Each criterion names what was
 actually verified; where the only witness is a source scan or a render, it
 says so.
 
@@ -453,13 +453,16 @@ says so.
    no clipping, the press swell present, brass on Owned and Active. The slide
    clause is moot; before Decision 19 replaced it, T009 filmed the segmented
    control's slide on all six switches with 0 px header drift.
-8. [ ] The two switches, the two badges and the add button are not themed
+8. [x] The two switches, the two badges and the add button are not themed
    through any UIKit appearance proxy. Both appearances, Light and Dark, show a
    legible label on every glass control at the system's own colours —
    checked on the device pass in both, and once each under Increase
    Contrast and Reduce Transparency, since `004`'s defect showed only in
    the sheet.
-   *Not ticked — met but for one open flag.* No appearance proxy:
+   *Ticked 2026-10-01 on the person's answer: the Dark add button's white
+   plus on brass at 2.6:1, put to them as below WCAG 1.4.11's 3:1 and a
+   regression against the old disc's dark ink — "Looks fine." Accepted
+   as shipped.* No appearance proxy:
    `MenuPolicyTests` (T011; mutation `UISegmentedControl.appearance()…` in
    `TroveApp.init` → red). Device (T013 §1–2): every capsule label, toggle
    word (brass 6.4–6.9:1; the system colour 16.7–19.9:1), "…" and sort-menu
@@ -503,11 +506,13 @@ says so.
     spots, carried to `020` (the pre-merge sweep's ruling): a bespoke
     overlay beside a kept `SortMenu(`, the `Button(action:)` spelling,
     `backgroundPreferenceValue`, and an explicit `GlassButtonStyle()`.
-11. [ ] Every badge, switch and control keeps its accessibility
+11. [x] Every badge, switch and control keeps its accessibility
     identifier; the two menu badges lose their "Opens …" hints and
     announce as pop-up buttons; the switches announce their selected
     segment. Checked with the Accessibility Inspector on the device pass.
-    *Not ticked — the person's step is pending.* Verified off the device:
+    *Ticked 2026-10-01: the person ran the Accessibility Inspector over
+    the Sort By and "…" controls, a sort menu's rows, both toggles and
+    the add button — "All as expected."* Verified off the device:
     every identifier kept (G3's legs over `sortOptions.*`, `moreActions.*`,
     `orderOptions.dashboard`, `items.sideSwitch` and `plans.sideSwitch`; the
     add buttons' labels in `testTheAddButtonKeepsItsSizeAndPlace`); no
@@ -560,10 +565,12 @@ says so.
     catcher" 0 in both files. The Phase 4 review's one blocking finding (the
     `006` switch's Motion row kept beside the toggle's) was folded in as
     history before sign-off.
-15. [ ] Every screen is walked in both appearances at the phase pause and
+15. [x] Every screen is walked in both appearances at the phase pause and
     reads as one language: a "…" in a header, a "…" in a bar and the tab
     bar wear and open the same system glass. The person attests.
-    *Not ticked — the person's attestation is pending.* The person walked
+    *Ticked 2026-10-01, the person's attestation: "All looks good enough
+    for now. We might do another design pass later, but it looks great
+    for now."* The person walked
     the app at three phase pauses (Phase 1 three times, Phase 2 twice, Phase 3
     seven times), each ending in "continue", and T013 §1 photographed every
     screen with each menu open in Dark and Light for them. The attestation this
@@ -807,6 +814,15 @@ Made by the person on 2026-09-27, at the Phase 3 walkthrough:
     the narrower phones — never ending in "…"; (c) the Dashboard's
     drill-down path title stays at 30 pt, only Items, Plans and the
     Wishlist grow.
+
+24. **Two flags accepted as shipped at the close-out** (2026-10-01). The
+    Dark add button's white plus on the brass disc measures 2.6:1 —
+    under the 3:1 guideline for a meaningful icon, and a change from the
+    old disc's dark ink: "Looks fine." The side toggle's blur plays with
+    Reduce Motion on, where the old switch faded only: "Leave it." Both
+    stand as shipped; either can be revisited in a later design pass,
+    which the person said may come ("We might do another design pass
+    later").
 
 ## Proposals (P-items)
 
