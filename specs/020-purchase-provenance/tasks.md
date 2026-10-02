@@ -521,7 +521,7 @@ Everything the person reads is plain language.
   sheet now has five rows — whether Condition still sits above the fold at the
   medium detent is unmeasured.
 
-- [ ] **T008 — Looking for on the wishlist form.**
+- [x] **T008 — Looking for on the wishlist form.**
   Per plan §6. `WishlistFormView`: a `lookingForField` —
   `NewOrUsedField(label: NewOrUsedCopy.lookingForLabel, identifier: "lookingFor",
   selection: $viewModel.lookingFor)` — directly after `desireField`.
@@ -531,6 +531,16 @@ Everything the person reads is plain language.
   Files: `Trove/Views/Wishlist/WishlistFormView.swift`,
   `TroveTests/ProvenanceWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutation recorded.
+  **Done (2026-10-02).** `scripts/verify.sh` green (the implementer's verbatim
+  output): 1788 tests in 236 suites (+2):
+  `theWishlistFormsLookingForFieldIsTheSharedFieldOnceWithItsLabelAndIdentifier`,
+  `theWishlistFormsLookingForFieldSitsDirectlyAfterDesireAndBeforeThePhotos`.
+  Mutations, red and restored: moved below the photos, mislabelled, wrong
+  identifier, composed twice → all five expectations, each on its own line;
+  dropped from `body` and hand-rolled as a `Toggle` → both anchors' `#require`s.
+  The scan pins "directly after `desireField`" and "somewhere before
+  `PhotoPickerField(`". That the chips appear, select, clear and save
+  (criterion 19) is T010's and the walkthrough's, not these scans'.
 
 - [ ] **T009 — The two pages.**
   Per plan §7, R1, R2 and P3. `ItemDetailView.details`: the date row's label
@@ -799,3 +809,4 @@ escape-hatch misses recorded here too.
 | T006 (`sdd-implementer`) | `opus` | 157,689 (38 tool uses, 66.7 min — the UI suite, seven red single-method UI runs and a red unit run at ~10 min each) | Done first pass; 12 mutations. Finding: red runs now take about ten minutes whether whole-suite or single-method |
 | T006 per-task review (`skeptical-reviewer`) | `opus` | 62,213 (3 tool uses, 2.7 min) | Signed off, no blocking; 8 second-look notes (in T006's Done note). Orchestrator re-ran `scripts/verify.sh all`: 1784 unit, 40 UI, green |
 | T007 (`sdd-implementer`) | `opus` | 102,934 (29 tool uses, 38.6 min — three red runs at ~11 min each) | Done first pass; three mutation sets |
+| T008 (`sdd-implementer`) | `opus` | 61,286 (15 tool uses, 5.7 min) | Done first pass; two mutation runs at about a minute each (a warm build — the ~11 min red runs are not constant) |

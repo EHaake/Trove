@@ -4,8 +4,9 @@ import Testing
 
 /// `020` G14's and G15's source scans (plan §6). Facts about view bodies
 /// only, which no view-model test can observe: which chip component a form
-/// composes, where the Bought field sits and what it is identified by, and
-/// that the shared fields carry the two calls the design rests on. What the
+/// composes, where the Bought and Looking for fields sit and what each is
+/// identified by, and that the shared fields carry the two calls the design
+/// rests on. What the
 /// chips *do* is elsewhere — that the row is one row, overflows,
 /// scrolls and opens on the selected grade is the UI suite's; that tapping
 /// the selected chip clears the field is `NewOrUsed`'s own tests'.
@@ -21,6 +22,7 @@ import Testing
 struct ProvenanceWiringTests {
     private nonisolated static let itemForm = "Trove/Views/Items/ItemFormView.swift"
     private nonisolated static let purchaseSheet = "Trove/Views/Wishlist/PurchaseFormView.swift"
+    private nonisolated static let wishlistForm = "Trove/Views/Wishlist/WishlistFormView.swift"
     private nonisolated static let chips = "Trove/Views/Shared/ChoiceChips.swift"
 
     /// Both forms draw the condition row through the one shared field, and
@@ -133,6 +135,79 @@ struct ProvenanceWiringTests {
         #expect(
             next.hasPrefix("ConditionField("),
             "the Bought field isn't directly above the condition row — what follows it is:\n\(next.prefix(120))"
+        )
+    }
+
+    // MARK: - Where Looking for is set (G15)
+
+    /// The wishlist form's `lookingForField` is the shared `NewOrUsedField`,
+    /// composed exactly once in the file, under the Looking for label and the
+    /// "lookingFor" identifier — what addresses its chips ("lookingFor.new",
+    /// "lookingFor.used"), since the purchase sheet this entry leads to has a
+    /// Bought field with the same two words.
+    ///
+    /// Where the field sits is the next test's.
+    ///
+    /// Mutations: build `lookingForField` from anything else → the anchor
+    /// `#require` fails; compose the shared field a second time → red; give
+    /// it another label or identifier → red.
+    @Test func theWishlistFormsLookingForFieldIsTheSharedFieldOnceWithItsLabelAndIdentifier() throws {
+        let code = try SourceScan.production(Self.wishlistForm)
+
+        let declarations = SourceScan.closureBodies(after: "private var lookingForField: some View", in: code)
+        let fields = declarations.flatMap { SourceScan.argumentLists(of: "NewOrUsedField", in: $0) }
+        let field = try #require(
+            fields.first,
+            "\(Self.wishlistForm)'s `lookingForField` doesn't compose `NewOrUsedField(` — or isn't declared at all"
+        )
+
+        let composed = SourceScan.argumentLists(of: "NewOrUsedField", in: code).count
+        #expect(
+            composed == 1,
+            "\(Self.wishlistForm) composes `NewOrUsedField(` \(composed) times, expected exactly 1"
+        )
+
+        #expect(
+            field.contains("label: NewOrUsedCopy.lookingForLabel"),
+            "\(Self.wishlistForm)'s Looking for field isn't labelled from `NewOrUsedCopy.lookingForLabel`:\n\(field)"
+        )
+        #expect(
+            field.contains("identifier: \"lookingFor\""),
+            "\(Self.wishlistForm)'s Looking for field doesn't carry the \"lookingFor\" identifier its chips are addressed by:\n\(field)"
+        )
+    }
+
+    /// On the wishlist form Looking for sits directly after the desire gauge
+    /// and before the photos (plan §6). Directly — nothing is composed
+    /// between the gauge and it — so a field moved up the form fails here as
+    /// one moved below the photos does.
+    ///
+    /// Mutations: move the field below `PhotoPickerField` → red, on both
+    /// expectations; drop it from the body → the anchor `#require` fails.
+    @Test func theWishlistFormsLookingForFieldSitsDirectlyAfterDesireAndBeforeThePhotos() throws {
+        let code = try SourceScan.production(Self.wishlistForm)
+
+        let bodies = SourceScan.closureBodies(after: "var body: some View", in: code)
+        try #require(
+            bodies.count == 1,
+            "\(Self.wishlistForm) declares `body` \(bodies.count) times, expected exactly 1"
+        )
+        let body = try #require(bodies.first)
+
+        let around = body.components(separatedBy: "lookingForField")
+        try #require(
+            around.count == 2,
+            "the wishlist form's body composes `lookingForField` \(around.count - 1) times, expected exactly 1"
+        )
+
+        let previous = around[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        #expect(
+            previous.hasSuffix("desireField"),
+            "the Looking for field isn't directly after `desireField` — what precedes it is:\n\(previous.suffix(120))"
+        )
+        #expect(
+            around[1].contains("PhotoPickerField("),
+            "the Looking for field isn't before `PhotoPickerField(` — what follows it is:\n\(around[1].prefix(200))"
         )
     }
 
