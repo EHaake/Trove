@@ -41,6 +41,7 @@ about sync is listed there.
 | `014-sold-side-parity` | **Shipped** — merged to `main` 2026-09-19 via [PR #25](https://github.com/EHaake/Trove/pull/25); all tasks through T011's close-out done (2026-09-18), every criterion verified — criterion 12 attested by the person with Accessibility Inspector on 2026-09-19, so the spec closes with no partials; eleven tasks with eleven sub-lettered additions (T009a–T009i for Decision 7's export scope and the dropdown-anchor defect it uncovered, T010a for the device pass's criterion-3 finding, T010b for the Phase 2b sweep), **1540 unit tests in 208 suites** and **23 UI tests** green, the UI suite twice back to back. Thirteen of fourteen criteria verified with per-criterion records in `spec.md` and **one honest partial named** (criterion 12's Accessibility Inspector sweep is the person's step). The two things `006` left the person fighting — **Mark as sold…** hidden in a menu, and a Sold side with no way to find anything in it — answered by a Sell action on the leading swipe and the Owned side's search, chips and sort on Sold, each side keeping its own. The person's Phase 2 reading added Decision 7 mid-spec: exports from the Items list now choose owned, sold or both, for either format, with a "Sold Items" PDF of its own. Two claims the work falsified are recorded in `plan.md`'s **As built** — a header equality that held only while nothing sat beside it (the device pass measured it 13.67 pt out, and two guards now hold it), and an `anchorPreference` that silently dropped two of three dropdown anchors. The session moved to the stepped-down Opus model at the person's instruction from T010 on; its tier log is in `tasks.md`. |
 | `015-mark-as-bought` | **Shipped** — merged to `main` 2026-09-21 via [PR #29](https://github.com/EHaake/Trove/pull/29); all tasks through T013's close-out done (2026-09-21); thirteen tasks with eight sub-lettered additions (T006a from the Phase 1 review, T011a from the Phase 2 review, T011b and T012a–c from the person's two pauses, T012d–e from the review that followed), **1622 unit tests in 224 suites** and **25 UI tests** green, the UI suite twice back to back. Fourteen of fifteen criteria verified with per-criterion records in `spec.md` and **one honest partial named** (the two-device sync check — nobody has run it and no agent can). The buying half of the core loop, which the app had never had: **Mark as bought…** from the wishlist swipe, the wanted item's menu and its Sell Plan, one sheet for price, date, place and condition, and an item that carries the entry's photos, credits, category, Reverb match, year and notes across. The wanted entry is **marked, not deleted**, so the sell plan built around it survives as the record that it was carried out — which finally gives `009-sell-plan-list` a definition of "active". No undo, by the person's decision. The Phase 1 review caught that a purchase could happen **twice** (a second `Item`, and the first purchase's marker overwritten) — visible only at phase level, fixed in the one writer. The person's two pauses added four changes mid-spec: sentence case on the comparison line, at the Phase 2 pause; then at the walkthrough, a word instead of a bag glyph on the Sell Plan, an alert when a purchase is refused, and a saved sell plan leaving a trace on the wanted item's page. |
 | `009-sell-plan-list` | **Shipped** — merged to `main` 2026-09-24 via [PR #30](https://github.com/EHaake/Trove/pull/30); every task through T016's close-out and the pre-merge sweep done (2026-09-23); twenty-one tasks (T001–T021, Amendment A's T017–T021 among them) with seven sub-lettered additions (T009a–T009d from the Phase 3 walkthrough, T014a from the Phase 4 walkthrough, T021a from the Phase 4A walkthrough, T021b for the Plans tab icon the person chose after the device pass), **1746 unit tests in 234 suites** and **36 UI tests** green at the close-out, both suites twice back to back (the final counts are in `tasks.md`). Twenty of twenty-three criteria verified with per-criterion records in `spec.md`; **criteria 17, 20 and 22 stay unticked** because their sync halves are untested — the person cannot run a two-device pass yet, and every sync step is gathered in `specs/SYNC-CHECKS.md` for one later pass. The person's Accessibility Inspector and VoiceOver pass is done. **A sell plan becomes a thing you create**, stored on the wanted item, active until the thing is bought and completed after, rather than inferred from whichever candidates are ticked — which is what let a plan survive every item on it selling. Existing plans carry over **once, recorded on each row**, so a plan deleted on one device cannot be resurrected by another. A **fourth tab**, Plans, lists Active and Completed with a sort each, a Buy swipe, a delete swipe and a read-only record for a completed plan, and a Dashboard card counts the active ones. The person's walkthroughs added **Amendment A** mid-spec: Delete as its own rust button on the Sell Plan, two app-wide standards (a destructive action is always rust — a `CLAUDE.md` amendment; a card responds anywhere in its box), completed rows showing the bought item's picture through a new purchase record, Settings from every tab, and Delete All Sell Plans. |
+| `018-system-design-language` | **Shipped** — merged to `main` 2026-10-01 via [PR #32](https://github.com/EHaake/Trove/pull/32); every task through T014's close-out and the pre-merge sweep done (2026-09-30); fourteen tasks (T001–T014) with nine sub-lettered additions, every one from the person's walkthroughs (T004a–T004b at the Phase 1 pause, T006a at Phase 2, T009a–T009f at Phase 3), **1740 unit tests in 231 suites** and **38 UI tests** green at the close-out, both suites twice back to back (the counts are in `tasks.md`). Thirteen of sixteen criteria verified with per-criterion records in `spec.md`; **criteria 8, 11 and 15 wait on the person** — the Dark add button's plus at 2.6:1, the Accessibility Inspector pass, and the one-language attestation *(update this sentence at the merge if the person has answered)*. **The rule `013` wrote is reversed, in the open: system controls, Trove content.** Every menu in the app is now the system's, the header's buttons wear Liquid Glass like the tab bar, and `MenuPolicyTests` guards the new line after `CLAUDE.md`'s example of it was reworded in its own commit. The spec measured T029c's tear before converting anything (gone on iOS 27.0; a self-correcting transient on 26.5 that the person accepted to keep the system's morph). The system segmented control proved unstyleable, so the Owned/Sold and Active/Completed switches became a glass side toggle, brass on the primary side. Six bespoke files and four test suites retired. The system navigation bar and toolbar on the tab roots are the next spec, `020`, before `019`. |
 
 ## Future specs
 
@@ -594,46 +595,55 @@ actually useful once the app is in daily use.
   foldable horizontally, and a plausible scoping merges them. Kept separate
   because this one is an accessibility obligation the app owes today and
   the other waits on hardware.
-- **`018-system-design-language`** — deciding, once, how much of Apple's
-  design language the app wears. The occasion is a real inconsistency: the
-  Dashboard and both list screens open the app's **own** dropdown surface
-  from their "…", while the item and wishlist detail screens open a
-  **system** `Menu` from the nav bar, and the tab bar at the bottom is a
-  plain system `TabView` wearing iOS 26's liquid glass. Three different
-  looks for the same gesture.
+- **`018-system-design-language`** (**Shipped 2026-10-01** via
+  [PR #32](https://github.com/EHaake/Trove/pull/32) — see
+  `specs/018-system-design-language/` for the full record) — deciding,
+  once, how much of Apple's design language the app wears. The occasion
+  was a real inconsistency: the list screens and the Dashboard opened the
+  app's own dropdown from their "…", the detail screens a system menu from
+  the navigation bar, and the tab bar wore iOS 26's glass — three looks for
+  one gesture, produced on purpose by `013` Amendment A's rule (*bespoke
+  inside the page, system in the bars*) and enforced by `MenuPolicyTests`.
+  **What shipped: system controls, Trove content.** Sort By, every "…" and
+  the Dashboard's order control open the system's menu; the three header
+  controls (Sort By sized to its label, a side toggle, the "…" as a glass
+  circle) and the add button wear Liquid Glass; the headers' type, the
+  cards, rows, chips, dial, gauge and slider stay Trove's. The rule and its
+  guard were rewritten together — `CLAUDE.md`'s example first, in its own
+  commit — never deleted to get green. Two things were settled by
+  measurement: T029c's tear, filmed first (clean on 27.0; on 26.5 a
+  transient of about 1.5–1.8 s that the person accepted to keep the
+  system's menu-to-button morph), and the system segmented control, which
+  takes no font and no colour from SwiftUI and so became a glass toggle
+  showing the current side, brass on Owned and Active. The person's
+  walkthroughs also moved the page title to 34 pt centred on the controls
+  and centred the meta line beneath them. **Settled with the person at the close-out:** the Dark add
+  button's white plus on brass at 2.6:1 ("Looks fine") and the toggle's
+  blur playing under Reduce Motion ("Leave it") are accepted as shipped,
+  with a later design pass left possible; on iOS 26.5 every trailing
+  control sits 5 pt further from the edge than on 27.0 (an observation).
 
-  **That split is not an accident, and this entry exists to reverse a
-  decision rather than fix a bug.** `013` Amendment A, Decision 17 and
-  criterion 27 set the standing rule — *bespoke inside the page, system in
-  the bars* — and it is enforced: `MenuPolicyTests` walks every file under
-  `Trove/Views` and `Trove/App` and **fails the build if a system menu
-  appears inside page content**, allowlisting `DetailOverflowMenu.swift`
-  alone. The guard is pointed the opposite way from where this spec wants
-  to go, so adopting system menus means rewriting the policy and its test
-  together, deliberately and in the open — not quietly deleting a red test,
-  which `CLAUDE.md` forbids for good reason.
+- **`024-system-navigation-bars`** — the system navigation bar and
+  toolbar on the tab roots, the step `018` deliberately stopped short of
+  (its Decision 11 and first non-goal). `018` put the header's buttons in
+  Liquid Glass but kept Trove's own standing header on Items, the
+  Wishlist, Plans and the Dashboard: the title, the meta line and the
+  three controls in a row the app lays out itself (`TitleRowLayout`,
+  `MetaLineSpacing`, the `listTitle` token). The fully Apple-shaped
+  answer is the title in a navigation bar and Sort By, the side toggle
+  and the "…" in an iOS 26 toolbar, which also unlocks iOS 26's floating
+  bottom search (it needs the navigation bar above, which is why `018`
+  left the search field in the body). It is a redesign of every list's
+  top, and the questions are real ones: where the meta line lives when
+  the title is the system's; whether a large title collapsing on scroll
+  suits screens this short; what becomes of the headers' measured
+  geometry and of `MenuPolicyTests`' header-control legs once the
+  controls are toolbar items; and whether the iOS 26.5 artefacts `018`
+  accepted (the Sort By transient, the 5 pt trailing offset) survive in a
+  system toolbar. **Settle this before `019`**, for the same reason `018`
+  came first: a foldable layout should not be drawn around a header that
+  is about to be replaced.
 
-  The person's position, recorded 2026-09-19: lean **system**, because the
-  tab bar already wears liquid glass, because more default iOS means less
-  bespoke surface to build and maintain, and because it keeps the app
-  conformant with Apple's current language. The honest counterweight, so
-  the spec conversation has both halves: the rule reaches further than the
-  "…" menus — `SideSwitch` (the Owned/Sold switch), the Sell Plan's own
-  control and `SortPicker` are all bespoke *under this same rule*, so
-  "go system" plausibly means a system `Picker` where `006` and `014` spent
-  real effort measuring a 19.7 pt jump and a `matchedGeometryEffect`
-  stutter out of a custom one. `013` also records that the person found the
-  still dropdown **stiff**, which is why it grows out of the badge with a
-  fade, and `OverflowDropdown` carries group breaks the system menu it
-  replaced had none of. Those are things a system menu will not do.
-
-  So the question to settle is not "system or bespoke" in the abstract but
-  **where the line falls now**: menus and pickers to the system, with the
-  app's identity carried by type, colour and the content of the cards
-  rather than by the chrome, is one coherent answer — and probably the one
-  the lean above points at. Worth a Claude Design pass, since it changes
-  how most of the app looks. **Settle this before `019`**, so a foldable
-  layout is not drawn around bespoke surfaces that are then thrown away.
 - **`019-foldable-layout`** — a design for the foldable iPhone Duo,
   announced for release soon (noted 2026-09-19). The occasion is new
   hardware; the work underneath it is adaptive layout, which this app has
