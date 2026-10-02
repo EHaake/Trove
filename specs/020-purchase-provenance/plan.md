@@ -18,6 +18,21 @@ sign-off** — none is a product fork the plan decides, each is stated so the
 reviewer can overturn it, and each goes to the person in plain words at the
 pause named.
 
+## Amendment A — the condition row is one scrolling row (2026-10-01)
+
+At the Phase 1 pause the person saw the six chips wrap on an iPhone 17 Pro and
+decided: six grades, **one row that scrolls sideways, never two** (spec Decision
+11). The `skeptical-reviewer`'s decision review chose the shape below; §6, G14,
+§10's section (b) and T006 are rewritten in place, each marked. What it replaced:
+a `FlowLayout` row and a G14 built around the wrap. `ConditionField` copies the
+scrolling chip row `CategoryPickerField` already ships in the same form
+(`CategoryPickerField.swift:76-95`, and `ItemListView.categoryChips`): the house
+pattern, with the scroll-to-selected the spec now asks for. Options rejected: a
+row clipped at the gutter (the cut-off chip is then an accident of width);
+negative padding or `.contentMargins` (the gutter in two places); `ViewThatFits`
+(a `ScrollView` whose content fits already does not scroll, and six chips never
+fit an iPhone). `FlowLayout.swift` has no user after this and is deleted.
+
 ## Context
 
 Spec 020 adds one optional fact to every owned item (**Bought**: new or used),
@@ -443,8 +458,13 @@ criterion 9 is pinned by a test so a future edit that clears them goes red. G13.
 /// selected trait that VoiceOver and the UI tests read.
 struct ChoiceChip: View { let title: String; let isSelected: Bool; let action: () -> Void }
 
-/// The condition row: a mono label over a `FlowLayout` of one chip per case.
-struct ConditionField: View { let label: String; @Binding var selection: Condition }
+/// The condition row: a mono label over ONE sideways-scrolling row of one chip
+/// per case (spec Decision 11, Amendment A) — `CategoryPickerField`'s row, copied:
+/// ScrollViewReader { ScrollView(.horizontal, showsIndicators: false) {
+///   HStack(spacing: Self.chipSpacing) { ChoiceChip(…).id(condition) } }
+///   .scrollClipDisabled()
+///   .onAppear { proxy.scrollTo(selection, anchor: .center) } }   // no animation
+struct ConditionField: View { static let chipSpacing: CGFloat = 8; let label: String; @Binding var selection: Condition }
 
 /// Bought / Looking for: a mono label over two chips in an `HStack(spacing: 8)`
 /// (two need no wrapping). Tapping goes through `NewOrUsed.selection(afterTapping:current:)`.
@@ -468,17 +488,57 @@ property name, which `WishlistPurchaseWiringTests` anchors on). Placement:
 - **Wishlist form**: a `lookingForField` (`identifier: "lookingFor"`) directly
   after `desireField`.
 
-**Criterion 18, measured** (`ConditionFieldLayoutTests`, the
-`ItemListHeaderLayoutTests` `ImageRenderer` pattern, under a real theme): at the
-Q9 width, (a) every one of the six chips rendered alone is narrower than the
-container, (b) every chip is at least its title's rendered width plus the two
-14 pt paddings — so none is squeezed, (c) the six widths plus spacing exceed the
-container, so the test exercises the wrap rather than a trivially wide row.
-(a) together with FlowLayout's wrap rule is what rules out clipping;
-FlowLayout always reports the proposed width, so a whole-field width check
-would be vacuous (`FlowLayout.swift:11,17`). `FlowLayout` places every subview
-at `sizeThatFits(.unspecified)`, which with (b) rules out a squeezed chip. Both forms composing `ConditionField(` and neither
-drawing its own `Capsule()` is a view-body fact, pinned by a scan (G14).
+**The row (Amendment A).** Its frame stays inside the gutter: at offset 0 the
+first chip lines up with the label and with the Bought row above it.
+`.scrollClipDisabled()` lets chips draw through the gutter to the screen edge,
+and because `chipSpacing` (8) is less than `screenGutter` (24) a chip is always
+visible in the gutter on any side that has more to scroll to — the spec's "chip
+cut off at the edge", with the field knowing nothing of the gutter. Both forms
+pad their inner `VStack`, not the `ScrollView`, so the nearest clip is the screen
+or sheet edge. The row scrolls to the selected chip on appear only, never on a
+selection change. If leg (iv) below goes red with `onAppear`, the routine
+fallback inside T006 is an initial `ScrollPosition(id:anchor:)` state — no new
+decision. `FlowLayout.swift` is deleted with its last user; `design/tokens.md`'s
+Condition row is rewritten and says Decision 11 supersedes the wrapped chips in
+`design/screens/Trove Item Form.png`.
+
+**Criterion 18, guarded in three places** (Amendment A — replaces the wrap's
+measured legs (a)–(c)):
+
+- **Unit, `ConditionFieldLayoutTests`** — chips rendered alone with
+  `ImageRenderer` under a real theme, never the `ScrollView` (a static render
+  cannot observe scrolling): **(b)** each of the six `ChoiceChip`s is at least
+  its title's rendered width plus the two 14 pt paddings — none squeezed;
+  **(d)** `ConditionField.chipSpacing` is less than the theme's `screenGutter` —
+  the premise of the peek arithmetic, not its look. Recorded, not asserted: each
+  chip's width, the six-chip total with spacing, and that total against 327, 354
+  and 392 pt. (The wrap's legs (a) and (c) lose their job: a scroll view reaches
+  any chip at any width.)
+- **UI, `testTheConditionRowIsOneScrollingRowAndOpensOnTheSelectedGrade`** (item
+  form; builds its own item, no seed change): **(i)** with More details open all
+  six chips exist with equal `frame.minY` and height — one row; **(ii)** `Broken`
+  is **not** hittable before any gesture — the row overflows, so it is neither
+  squeezed nor trivially wide; **(iii)** after `swipeLeft()` on a chip `Broken`
+  is hittable, taps, and reads `isSelected`; **(iv)** save, reopen the edit form,
+  More details: before any gesture `Broken.isHittable` and its frame lies inside
+  the window. `isHittable` and `frame` are read **before** any `tap()`, since
+  `tap()` may scroll the element into view by itself.
+- **UI, `testThePurchaseSheetsConditionRowIsOneScrollingRow`**: legs (i)–(iii) on
+  the Mark as bought sheet.
+- **Scan, `ProvenanceWiringTests`**: both forms compose `ConditionField(` exactly
+  once and draw no `Capsule()`; `ChoiceChips.swift` carries
+  `.scrollClipDisabled()`. No scan for `ScrollView(.horizontal` (the UI test
+  reaches that behaviour) and none for "no `FlowLayout(`" (the type is deleted;
+  the compiler is the guard).
+
+**Stated untested**: the *look* of the peek (the `.scrollClipDisabled()` scan
+pins a spelling — per `CLAUDE.md` that is untested; it stays with eyes at the
+Phase 3 walkthrough and T014(b)); anything at 375 pt (the UI suite runs on the
+pinned iPhone 18 Pro only — reachability at the narrowest width is by
+construction plus T014(b)); scroll-to-selected on the sheet for a non-default
+grade (the sheet always seeds Excellent — if that ever changes, leg (iv) is owed
+there); Dynamic Type sizes; a finger starting in the 24 pt gutter (the peeking
+part of a chip is outside the scroll view's bounds, as on the category row).
 
 ## 7. The two pages
 
@@ -561,7 +621,9 @@ items (one Good, one New) and a wanted entry, then install this branch over it
 and confirm each opens not recorded, grades unchanged (criteria 5, 11, 20: the
 lightweight migration of three additive optional fields, which no in-memory
 test observes); (b) the condition row on **iPhone SE (3rd generation)** in both
-appearances, wrapping and unclipped (criterion 18's visual half); (c) **the
+appearances — one line, a chip cut off at the screen edge, sliding to Broken, a
+Broken item reopening with Broken in view (criterion 18's visual half,
+Amendment A); (c) **the
 market probe** — a temporary file probe inside `MarketLocalStore.record`
 logging `newStockOnly` and the reading's count, exercised on **two freshly
 matched wanted entries, one set to New and one to Used** (a fresh match has no
@@ -619,7 +681,7 @@ recorded basis Q4; R1's merged row; R6 as the person answered it).
 | G11 | `PurchaseFormViewModelTests` seed per preference and change/clear; `WishlistPurchaseStoreTests` carries `.used` and nil; the four-host seed test agrees on `bought` | one host passing nil; the store dropping `bought:` |
 | G12 | `WishlistFormViewModelTests`: the three states round-trip, save unset silently | `save()` skipping `lookingFor` |
 | G13 | duplication carries `.used` on both lists; sold-then-returned keeps `.new` | either duplicate dropping the argument; a sale writer clearing it |
-| G14 | `ConditionFieldLayoutTests` (a)–(c) at 327 pt; both forms compose `ConditionField(` and draw no `Capsule()` | the chip given a fixed narrow width; the container proposed narrower than the widest chip; a chip copy pasted back |
+| G14 | *(Amendment A)* `ConditionFieldLayoutTests` (b), (d); the two UI tests' legs (i)–(iv); scan: both forms compose `ConditionField(` once, no `Capsule()`, and the field carries `.scrollClipDisabled()` | `.frame(width: 60)` on `ChoiceChip` → (b) red · `chipSpacing = 24` → (d) red · the `HStack` swapped for a two-row layout → (i) red · the `ScrollView` removed (plain `HStack`) → (ii) red · `.scrollDisabled(true)` → (iii) red · the `.onAppear` scroll deleted → (iv) red · a chip copy pasted back, or `.scrollClipDisabled()` removed → scan red |
 | G15 | `ProvenanceWiringTests` + the rewritten purchase-sheet order: each form composes `NewOrUsedField` once, in its stated place, with its identifier; the field calls `NewOrUsed.selection(afterTapping:` | a field moved or dropped; a hand-rolled toggle |
 | G16 | the two page rows pass `item.bought` / `item.lookingFor` into `NewOrUsedCopy` | the literal "Bought" restored; the wanted row reading a constant |
 | G17 | CSV: headers, rows, parse, counted defaults, boundaries, the round trip on a second context, the template's last column | a column misplaced; a boundary missing; the commit dropping a field |

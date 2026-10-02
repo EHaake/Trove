@@ -21,7 +21,10 @@ is data on disk that an older app on another device also reads.
 Good (plan Q2) is what every reader of `condition` inherits, and the one place
 where a plausible-looking simpler version silently fails the spec (P4); and
 **T003** — Decision 9 (no existing wanted item's figure moves) rests on it, and
-Phase 2 has no pause at which the person could notice a moved figure. Every
+Phase 2 has no pause at which the person could notice a moved figure; and
+**T006** (added 2026-10-01, plan Amendment A) — the person rejected the wrapping
+row at the Phase 1 pause, the first G14 had a vacuous leg caught at sign-off, and
+T007–T010 build on the component. Every
 other task gets the default one review per phase. An orchestrator left to guess
 guesses "all of them"; these two are the ones marked.
 
@@ -58,7 +61,7 @@ Everything the person reads is plain language.
 
 ---
 
-## Phase 1 — Foundations: the two facts and Very Good (**foundational**) · walkthrough: yes — on the item form (under More details) and on the Mark as bought sheet the condition row now reads New, Excellent, Very Good, Good, Fair, Broken and wraps onto a second line on a narrow phone; an item saved as Very Good reopens with Very Good selected and its page reads "Very Good"; nothing else in the app looks different yet
+## Phase 1 — Foundations: the two facts and Very Good (**foundational**) · walkthrough: yes — on the item form (under More details) and on the Mark as bought sheet the condition row now reads New, Excellent, Very Good, Good, Fair, Broken and wraps onto a second line on a narrow phone *(the wrap was rejected at this pause — spec Decision 11; the row is rebuilt as one scrolling row in T006)*; an item saved as Very Good reopens with Very Good selected and its page reads "Very Good"; nothing else in the app looks different yet
 
 - [x] **T001 — `NewOrUsed`, the three stored fields, Very Good and its storage rule. `review: per-task`.**
   Per plan §1, Q1–Q3 and P4. New `Trove/Models/NewOrUsed.swift`
@@ -314,39 +317,66 @@ Everything the person reads is plain language.
 
   **Phase 2 closes here — `walkthrough: none`; after its review, run on.**
 
-## Phase 3 — Screens · walkthrough: yes — on the item form (More details) a Bought row with New and Used sits just above Condition, neither picked; pick one, save, and the item's page reads "Bought new" or "Bought used" where it said "Bought" beside the date; tap the picked chip again and it clears, and the page goes back to "Bought"; the wishlist form has a Looking for row after "How much do you want it", and the wanted item's page shows "Looking for · New" or "Used" (nothing when unset); marking that item bought opens the sheet with its Bought chip already picked to match, changeable before saving; a matched wanted item set to New shows a figure from new listings after its next refresh, and "new listings" wherever it used to say "used listings"; on a narrow phone the six condition chips wrap without clipping; and, the person's own check, Accessibility Inspector or VoiceOver over the Bought and Looking for chips (each announces its word and whether it is selected; a cleared row announces nothing selected) and over the two page rows
+## Phase 3 — Screens · walkthrough: yes — on the item form (More details) a Bought row with New and Used sits just above Condition, neither picked; pick one, save, and the item's page reads "Bought new" or "Bought used" where it said "Bought" beside the date; tap the picked chip again and it clears, and the page goes back to "Bought"; the wishlist form has a Looking for row after "How much do you want it", and the wanted item's page shows "Looking for · New" or "Used" (nothing when unset); marking that item bought opens the sheet with its Bought chip already picked to match, changeable before saving; a matched wanted item set to New shows a figure from new listings after its next refresh, and "new listings" wherever it used to say "used listings"; the six condition chips sit on one line you can slide sideways, on the item form and on the Mark as bought sheet; a chip is cut off at the edge of the screen to show there is more; an item saved as Fair or Broken reopens with that chip already in view; and, the person's own check, Accessibility Inspector or VoiceOver over the Bought and Looking for chips (each announces its word and whether it is selected; a cleared row announces nothing selected) and over the two page rows
 
-- [ ] **T006 — The shared chips, the condition row moved onto them, and criterion 18 measured.**
-  Per plan §6 and Q5, Q9. New `Trove/Views/Shared/ChoiceChips.swift` with
-  `ChoiceChip` (extracted **verbatim** from `ItemFormView.conditionChip` — no
-  visual change), `ConditionField(label:selection:)` and
-  `NewOrUsedField(label:identifier:selection:)` exactly as plan §6 specifies
+- [ ] **T006 — The shared chips, the condition row as one scrolling row, and criterion 18 guarded. `review: per-task`.**
+  *(Rewritten 2026-10-01 — plan Amendment A, spec Decision 11; nothing of the
+  earlier wording was built.)* Per plan §6, Q5, Q9. New
+  `Trove/Views/Shared/ChoiceChips.swift` with `ChoiceChip` (extracted
+  **verbatim** from `ItemFormView.conditionChip` — no visual change),
+  `ConditionField(label:selection:)` **as plan §6 now specifies** — a mono label
+  over `ScrollViewReader { ScrollView(.horizontal, showsIndicators: false) {
+  HStack(spacing: Self.chipSpacing) { ChoiceChip(…).id(condition) } }
+  .scrollClipDisabled().onAppear { proxy.scrollTo(selection, anchor: .center) } }`,
+  no animation, `static let chipSpacing: CGFloat = 8`, scrolling on appear only —
+  and `NewOrUsedField(label:identifier:selection:)` exactly as plan §6 specifies
   (the field calls `NewOrUsed.selection(afterTapping:current:)`; chips identified
   `"<identifier>.new"`/`".used"`; the field an accessibility container labelled
-  with its field label). `ItemFormView` and `PurchaseFormView` replace their
-  private chip copies with `ConditionField` — `PurchaseFormView` keeps its
-  `conditionField` property name.
-  Pattern: `ItemFormView.conditionChip` and its `FlowLayout` row;
-  `TroveTests/ItemListHeaderLayoutTests.swift` for `ImageRenderer` measurement
-  under a real theme.
-  Tests: new `TroveTests/ConditionFieldLayoutTests.swift` — **G14**'s legs
-  (a)–(c) from plan §6 at the Q9 width (no whole-field width leg: `FlowLayout`
-  always reports the proposed width, so it would be vacuous), **measured after the `018` sync** since
-  `ThemeTypography` is changing there; the Done note records the container width
-  used, each chip's measured width and the row count observed (mutations: a
-  fixed `.frame(width: 60)` on `ChoiceChip` → leg (b) red; the container proposed
-  narrower than the widest chip → leg (a) red). New
+  with its field label; an `HStack`, it does not scroll). `ItemFormView` and
+  `PurchaseFormView` replace their private chip copies and `FlowLayout` rows with
+  `ConditionField` — `PurchaseFormView` keeps its `conditionField` property name.
+  **Delete `Trove/Views/Shared/FlowLayout.swift`** (no user remains; synchronized
+  folders, no `.pbxproj` edit), fix the `FlowLayout` comment at
+  `PurchaseFormView.swift:12`, and rewrite `design/tokens.md`'s Condition row,
+  saying Decision 11 supersedes the wrapped chips in
+  `design/screens/Trove Item Form.png`. If leg (iv) goes red with `onAppear`, the
+  fallback is an initial `ScrollPosition(id:anchor:)` state — routine, no new
+  decision.
+  Pattern: `CategoryPickerField.swift:76-95` (the row and the scroll-on-appear);
+  `ItemFormView.conditionChip` (the chip);
+  `TroveTests/ItemListHeaderLayoutTests.swift` (`ImageRenderer` under a real
+  theme); `testAddingAnItemThroughQuickAddPutsItInTheList` and
+  `testMarkingAWantedItemBoughtMovesItToTheCollection` (the UI walks).
+  Tests — **G14** as plan §6 and §12 now give it, every mutation run and
+  recorded: new `TroveTests/ConditionFieldLayoutTests.swift`, legs (b) and (d),
+  chips rendered alone, widths and the six-chip total recorded against 327, 354
+  and 392 pt (mutations: `.frame(width: 60)` on `ChoiceChip` → (b) red;
+  `chipSpacing = 24` → (d) red); new UI tests
+  `testTheConditionRowIsOneScrollingRowAndOpensOnTheSelectedGrade` (legs (i)–(iv),
+  item form, its own item, no seed change) and
+  `testThePurchaseSheetsConditionRowIsOneScrollingRow` (legs (i)–(iii)), reading
+  `isHittable` and `frame` **before** any `tap()` (mutations: a two-row layout →
+  (i) red; the `ScrollView` removed → (ii) red; `.scrollDisabled(true)` → (iii)
+  red; the `.onAppear` scroll deleted → (iv) red); new
   `TroveTests/ProvenanceWiringTests.swift`: both forms compose `ConditionField(`
-  exactly once and contain no `Capsule()` (mutation: paste the old chip back into
-  either form → red); `NewOrUsedField` calls `NewOrUsed.selection(afterTapping:`
-  (mutation: a hand-rolled toggle → red). `MenuPolicyTests` and every existing
-  `WishlistPurchaseWiringTests` test green unedited.
+  exactly once and contain no `Capsule()`, and `ChoiceChips.swift` carries
+  `.scrollClipDisabled()` (mutations: paste the old chip back into either form →
+  red; remove `.scrollClipDisabled()` → red); `NewOrUsedField` calls
+  `NewOrUsed.selection(afterTapping:` (mutation: a hand-rolled toggle → red).
+  `MenuPolicyTests` and every existing `WishlistPurchaseWiringTests` test green
+  unedited. The Done note records: the six widths and the total; where "Good"
+  ends against the 354 pt field (the existing `buttons["Good"]` taps depend on
+  it); whether (iv) passed with `onAppear` or needed the fallback; and that the
+  look of the peek is untested.
   Files: `Trove/Views/Shared/ChoiceChips.swift` (new),
+  `Trove/Views/Shared/FlowLayout.swift` (deleted),
   `Trove/Views/Items/ItemFormView.swift`, `Trove/Views/Wishlist/PurchaseFormView.swift`,
-  `TroveTests/ConditionFieldLayoutTests.swift` (new),
-  `TroveTests/ProvenanceWiringTests.swift` (new).
-  **Verify:** `scripts/verify.sh` green, both new suites in the count; mutations
-  and the measured widths recorded.
+  `design/tokens.md`, `TroveTests/ConditionFieldLayoutTests.swift` (new),
+  `TroveTests/ProvenanceWiringTests.swift` (new), `TroveUITests/TroveUITests.swift`.
+  **Verify:** `scripts/verify.sh` green, both new unit suites in the count, **and
+  `scripts/verify.sh ui` green once** — the scroll-on-appear and the existing
+  chip taps are mechanisms to instrument, not reason about; the orchestrator
+  re-runs both before committing. Mutations and the measured widths recorded.
 
 - [ ] **T007 — Bought on the item form and the purchase sheet.**
   Per plan §6. `ItemFormView.optionalFields`: `NewOrUsedField(label:
@@ -513,12 +543,16 @@ Everything the person reads is plain language.
   build and install this branch over it — each opens not recorded, the grades
   unchanged (the lightweight migration of three additive fields, which no
   in-memory test observes).
-  **(b) iPhone SE (3rd generation) layout**, in both appearances — the condition
-  row wrapping unclipped on the item form and the sheet, the Bought and Looking
-  for rows matching it; and confirm from the installed runtimes that no
-  supported iPhone is narrower than 375 pt (plan Q9). Selected state is **not**
-  this pass's: the UI tests read `isSelected` (G20), and the spoken names were
-  the person's step at the Phase 3 pause.
+  **(b) iPhone SE (3rd generation) layout**, in both appearances, on the item
+  form and the sheet *(Amendment A)*: the six condition chips on one line; a
+  chip visibly cut off at the screen edge; the row slides by finger to Broken;
+  an item saved as Broken reopens with Broken in view (the one deterministic
+  check kept here, because the UI suite does not run at 375 pt); the Bought and
+  Looking for rows start at the same left edge with the same chip size. Confirm
+  from the installed runtimes that no supported iPhone is narrower than 375 pt
+  (plan Q9). Selected state is **not** this pass's: the UI tests read
+  `isSelected` (G20), and the spoken names were the person's step at the
+  Phase 3 pause.
   **(c) The market probe** — instrument, don't eyeball: a temporary file probe
   inside `MarketLocalStore.record` logging `newStockOnly` and the reading's
   count. The refresher answers `.stillFresh` within the hour of a figure
@@ -577,7 +611,7 @@ Everything the person reads is plain language.
 
 | Phase | Paused? | What to try |
 |---|---|---|
-| Phase 1 | | the six-grade condition row and Very Good on a page |
+| Phase 1 | yes | the six-grade condition row and Very Good on a page. **The person (2026-10-01)**: the sixth grade is there, but the row spanning two lines "isn't good" → spec Decision 11 (one scrolling row, six grades kept), plan Amendment A, T006 rewritten |
 | Phase 2 | no — `walkthrough: none` | nothing observable; view models, Copy and the market's reading of an unset preference |
 | Phase 3 | | Bought and Looking for on the three forms, the two pages, the sheet's prefill, the New-preference figure; the person's Accessibility Inspector / VoiceOver step over the chips and rows |
 | Phase 4 | | the templates, a CSV round trip, an old file, both PDFs |
@@ -589,7 +623,7 @@ Involvement level: **product owner** (`CLAUDE.md`). Model policy: **Opus
 profile** — every role at `opus`, no dispatch carries a model override, the
 session at `claude-opus-5-5` medium; the plan-and-tasks draft ran at the
 implementation tier under the trial continuing from `018`. Foundational phase:
-**Phase 1**; `review: per-task`: **T001** and **T003**. Pause cadence: after each phase
+**Phase 1**; `review: per-task`: **T001**, **T003** and (from 2026-10-01) **T006**. Pause cadence: after each phase
 marked `walkthrough: yes` (Phases 1, 3, 4) once its review is signed off; Phases
 2 and 5 run on after their review, their reasons added to the walkthrough list.
 Pause also whenever something unexpected bears on spec adherence.
@@ -629,3 +663,4 @@ escape-hatch misses recorded here too.
 | T001 per-task review (`skeptical-reviewer`) | `opus` | 54,410 (3 tool uses, 1.8 min) | Signed off, no blocking; 7 second-look notes (recorded in T001's Done note). Ran one grep beyond the bundle — the production-reads check the implementer's report lacked |
 | T002 (`sdd-implementer`) | `opus` | 48,794 (19 tool uses, 31.4 min — 16.5 of it the UI suite, 10.5 the red mutation run) | Done first pass; no deviations |
 | Phase 1 review (`skeptical-reviewer`) | `opus` | 55,690 (2 tool uses, 1.3 min) | Signed off, no blocking. Second-look notes carried forward: (1) a direct write of `"very good"` into `conditionRawValue` reads Very Good on this build, so every later save-path test (form, sheet, duplicate, import) asserts the stored pair `("good", "very good")` on a second context — T004's G10 already does; add to T011's round trip; (2) today's item-page row is the literal `"Bought"` (`ItemDetailView.details`, confirmed by the orchestrator at the sync), so `detailDateRowLabel(nil)` matches it — T009 replaces that literal; (3) T011 pins `Looking For` by literal (it differs from the label by one capital on purpose); (4) a stale refinement brings Very Good back if an older app moves Good → Fair → Good — R4's stated edge, one line for the `SYNC-CHECKS.md` step; (5) plan §1/§12 still cite the two renamed tests — for the close-out; (6) G7's strings were not mutated, only the rule (literal equality cannot be vacuous); (7) `SellPlanViewModelTests.swift:1207` double, for the sweep |
+| Phase 1 pause finding → decision review (`skeptical-reviewer`) | `opus` | 84,596 (27 tool uses, 5.7 min) | The person rejected the wrapping condition row (spec Decision 11). Recommendation transcribed as plan Amendment A: `ConditionField` copies `CategoryPickerField`'s scrolling row; G14 rewritten around two UI tests; `FlowLayout` deleted; T006 rewritten and marked `review: per-task`. No product question. **Protocol note**: the question was framed in a decision bundle with no code touched, but not inside Plan Mode — its exit needs the person's approval of a technical plan, which the product-owner level does not ask of them. Also: the Phase 1 build had only been installed on the test simulator (iPhone 18 Pro, iOS 27.0); the orchestrator built and launched it on the person's iPhone 17 Pro (26.5) when they asked — a pause report should say which simulator carries the build |
