@@ -2,11 +2,12 @@ import Foundation
 import Testing
 @testable import Trove
 
-/// `020` G14's and G15's source scans (plan §6). Facts about view bodies
-/// only, which no view-model test can observe: which chip component a form
-/// composes, where the Bought and Looking for fields sit and what each is
-/// identified by, and that the shared fields carry the two calls the design
-/// rests on. What the
+/// `020` G14's, G15's and G16's source scans (plan §6 and §7). Facts about
+/// view bodies only, which no view-model test can observe: which chip
+/// component a form composes, where the Bought and Looking for fields sit and
+/// what each is identified by, that the shared fields carry the two calls the
+/// design rests on, and that each page's Details row is built from its own
+/// item's field. What the
 /// chips *do* is elsewhere — that the row is one row, overflows,
 /// scrolls and opens on the selected grade is the UI suite's; that tapping
 /// the selected chip clears the field is `NewOrUsed`'s own tests'.
@@ -24,6 +25,8 @@ struct ProvenanceWiringTests {
     private nonisolated static let purchaseSheet = "Trove/Views/Wishlist/PurchaseFormView.swift"
     private nonisolated static let wishlistForm = "Trove/Views/Wishlist/WishlistFormView.swift"
     private nonisolated static let chips = "Trove/Views/Shared/ChoiceChips.swift"
+    private nonisolated static let itemPage = "Trove/Views/Items/ItemDetailView.swift"
+    private nonisolated static let wishlistPage = "Trove/Views/Wishlist/WishlistDetailView.swift"
 
     /// Both forms draw the condition row through the one shared field, and
     /// neither draws a capsule of its own — which is what makes "the chips
@@ -211,7 +214,59 @@ struct ProvenanceWiringTests {
         )
     }
 
+    // MARK: - What the two pages show (G16)
+
+    /// The item's page labels a Details row from the item's own `bought`:
+    /// "Bought new", "Bought used", or plain "Bought" when not recorded. The
+    /// words are `NewOrUsedCopyTests'`; that the page hands the function
+    /// *this item's* field is a fact about the view body, where the rows are
+    /// built.
+    ///
+    /// **This scan and the next are the whole of the unit coverage for the
+    /// two rows.** What a person sees on the page is the UI suite's.
+    ///
+    /// Mutation: the literal `"Bought"` restored in place of the call → red.
+    @Test func theItemPagesDateRowIsLabelledFromTheItemsBoughtField() throws {
+        let details = try detailsBody(in: Self.itemPage, of: "Item")
+
+        #expect(
+            details.contains("NewOrUsedCopy.detailDateRowLabel(bought: item.bought)"),
+            "\(Self.itemPage)'s `details(for:)` doesn't label a row from `NewOrUsedCopy.detailDateRowLabel(bought: item.bought)`:\n\(details)"
+        )
+    }
+
+    /// The wanted item's page builds one Details row under the Looking for
+    /// label, and its value is the item's own `lookingFor` put through
+    /// `NewOrUsedCopy.chip` — empty when not recorded, which the table's
+    /// existing empty-value filter drops (P3).
+    ///
+    /// Mutation: the row's value reading a constant → red.
+    @Test func theWantedPagesLookingForRowReadsTheItemsLookingForField() throws {
+        let details = try detailsBody(in: Self.wishlistPage, of: "WishlistItem")
+
+        let around = details.components(separatedBy: "NewOrUsedCopy.lookingForLabel")
+        try #require(
+            around.count == 2,
+            "\(Self.wishlistPage)'s `details(for:)` builds a row under `NewOrUsedCopy.lookingForLabel` \(around.count - 1) times, expected exactly 1"
+        )
+
+        let value = around[1].drop(while: { $0 == "," || $0.isWhitespace })
+        #expect(
+            value.hasPrefix("item.lookingFor.map(NewOrUsedCopy.chip)"),
+            "the wanted page's Looking for row doesn't read `item.lookingFor` — its value is:\n\(value.prefix(120))"
+        )
+    }
+
     // MARK: - Private
+
+    /// The body of the one `details(for:)` a page declares for `model`.
+    private func detailsBody(in path: String, of model: String) throws -> String {
+        let code = try SourceScan.production(path)
+        let header = "private func details(for item: \(model)) -> some View"
+        let bodies = SourceScan.closureBodies(after: header, in: code)
+        try #require(bodies.count == 1, "\(path) declares `\(header)` \(bodies.count) times, expected exactly 1")
+        return try #require(bodies.first)
+    }
 
     /// The body of the one declaration in `ChoiceChips.swift` that opens with
     /// `header`.

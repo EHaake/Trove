@@ -542,7 +542,7 @@ Everything the person reads is plain language.
   `PhotoPickerField(`". That the chips appear, select, clear and save
   (criterion 19) is T010's and the walkthrough's, not these scans'.
 
-- [ ] **T009 — The two pages.**
+- [x] **T009 — The two pages.**
   Per plan §7, R1, R2 and P3. `ItemDetailView.details`: the date row's label
   becomes `NewOrUsedCopy.detailDateRowLabel(bought: item.bought)`.
   `WishlistDetailView.details`: a third row, `NewOrUsedCopy.lookingForLabel` and
@@ -558,6 +558,17 @@ Everything the person reads is plain language.
   `Trove/Views/Wishlist/WishlistDetailView.swift`,
   `TroveTests/ProvenanceWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-10-02).** `scripts/verify.sh` green (the implementer's verbatim
+  output): 1790 tests in 236 suites (+2):
+  `theItemPagesDateRowIsLabelledFromTheItemsBoughtField`,
+  `theWantedPagesLookingForRowReadsTheItemsLookingForField`. Mutations, red and
+  restored in one run, one issue each: the literal `"Bought"` restored; the
+  wanted row's value a constant `"New"`. **These two scans are the whole of the
+  unit coverage for the rows** — they pin that each page hands its own item's
+  field to `NewOrUsedCopy` inside `details(for:)` and cannot see what is drawn;
+  T010's UI test observes the rows. Not pinned by a scan: that the label sits on
+  the *date* row rather than another row of the table, and the wanted row's
+  position after `Added` — T010 asserts the label beside the date.
 
 - [ ] **T010 — The UI tests, run twice.**
   Per plan §10 (**G20**). `testBoughtIsSetClearedAndShownOnTheItemsPage` and
@@ -810,3 +821,4 @@ escape-hatch misses recorded here too.
 | T006 per-task review (`skeptical-reviewer`) | `opus` | 62,213 (3 tool uses, 2.7 min) | Signed off, no blocking; 8 second-look notes (in T006's Done note). Orchestrator re-ran `scripts/verify.sh all`: 1784 unit, 40 UI, green |
 | T007 (`sdd-implementer`) | `opus` | 102,934 (29 tool uses, 38.6 min — three red runs at ~11 min each) | Done first pass; three mutation sets |
 | T008 (`sdd-implementer`) | `opus` | 61,286 (15 tool uses, 5.7 min) | Done first pass; two mutation runs at about a minute each (a warm build — the ~11 min red runs are not constant) |
+| T009 (`sdd-implementer`) | `opus` | 55,492 (11 tool uses, 3.7 min) | Done first pass; two mutations in one run |
