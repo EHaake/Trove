@@ -481,7 +481,7 @@ Everything the person reads is plain language.
   claims a "composed twice or not at all" mutation that was not run; other
   prose naming `FlowLayout` is for the sweep.
 
-- [ ] **T007 — Bought on the item form and the purchase sheet.**
+- [x] **T007 — Bought on the item form and the purchase sheet.**
   Per plan §6. `ItemFormView.optionalFields`: `NewOrUsedField(label:
   NewOrUsedCopy.boughtLabel, identifier: "bought", selection: $viewModel.bought)`
   directly above the condition row. `PurchaseFormView`: a `boughtField` between
@@ -502,6 +502,24 @@ Everything the person reads is plain language.
   `TroveTests/ProvenanceWiringTests.swift`,
   `TroveTests/WishlistPurchaseWiringTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-10-02).** `scripts/verify.sh` green (the implementer's verbatim
+  output): 1786 tests in 236 suites (+2). G15:
+  `eachFormComposesTheBoughtFieldOnceWithItsLabelAndIdentifier(path:)` over both
+  forms and `theItemFormsBoughtFieldSitsDirectlyAboveItsConditionRow`. The
+  sheet's order test is rewritten and renamed
+  `theFiveFieldsAndTheComparisonLineAppearInTheSpecsOrder`; the `"Note"` scan
+  green and unchanged. Mutations, red and restored (`cmp` against a backup):
+  moved below Condition on both forms → the placement and order tests; dropped
+  from both → the anchors' `#require`s; moved up the section with a wrong
+  identifier, composed twice, mislabelled, declared but never placed → every
+  leg. **As built**: the item-form test pins "directly above" (nothing composed
+  between the field and `ConditionField(`), so a modifier chained on the field
+  would redden it; the sheet's identifier is `"bought"` like the item form's
+  (its other identifiers are prefixed `purchase.sheet.`; the two screens are
+  never up together). Neither form's `selection:` binding is pinned by a scan —
+  T010's UI tests observe it. For the phase-end UI run and the walkthrough: the
+  sheet now has five rows — whether Condition still sits above the fold at the
+  medium detent is unmeasured.
 
 - [ ] **T008 — Looking for on the wishlist form.**
   Per plan §6. `WishlistFormView`: a `lookingForField` —
@@ -780,3 +798,4 @@ escape-hatch misses recorded here too.
 | Phase 2 end, UI suite (orchestrator, 2026-10-02) | `claude-opus-5-5` medium | — | `scripts/verify.sh ui` at `58bb664`: 38 tests, 0 failures (1015 s). Phase 2 runs on to Phase 3 (`walkthrough: none`) |
 | T006 (`sdd-implementer`) | `opus` | 157,689 (38 tool uses, 66.7 min — the UI suite, seven red single-method UI runs and a red unit run at ~10 min each) | Done first pass; 12 mutations. Finding: red runs now take about ten minutes whether whole-suite or single-method |
 | T006 per-task review (`skeptical-reviewer`) | `opus` | 62,213 (3 tool uses, 2.7 min) | Signed off, no blocking; 8 second-look notes (in T006's Done note). Orchestrator re-ran `scripts/verify.sh all`: 1784 unit, 40 UI, green |
+| T007 (`sdd-implementer`) | `opus` | 102,934 (29 tool uses, 38.6 min — three red runs at ~11 min each) | Done first pass; three mutation sets |

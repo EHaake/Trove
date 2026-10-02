@@ -345,6 +345,11 @@ struct ItemFormView: View {
                 }
             }
 
+            // 020 (plan §6): bought new or used, directly above the condition
+            // row so the two chip rows sit together and Condition keeps its
+            // notes beneath it. Unselected until the person says.
+            NewOrUsedField(label: NewOrUsedCopy.boughtLabel, identifier: "bought", selection: $viewModel.bought)
+
             ConditionField(label: "Condition", selection: $viewModel.condition)
 
             labelledField("Condition notes") {

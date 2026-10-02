@@ -24,13 +24,20 @@ struct WishlistPurchaseWiringTests {
     /// host and learns nothing about what became of it.
     private nonisolated static let purchaseHosts = [list, detail, plan, plans]
 
-    /// The spec's field order, twice over: the five elements are *declared* in
-    /// that order, and the sheet's one column *composes* them in that order —
-    /// two different edits, and either alone would move the comparison line
-    /// out from under the price it comments on.
+    /// The spec's field order, twice over: the six elements — five fields
+    /// and the comparison line — are *declared* in that order, and the
+    /// sheet's one column *composes* them in that order — two different
+    /// edits, and either alone would move the comparison line out from under
+    /// the price it comments on, or the Bought chips away from the condition
+    /// chips they sit above.
     ///
-    /// Mutation: swap any two of the five, in either place → red.
-    @Test func theFiveElementsAppearInTheSpecsOrder() throws {
+    /// **Rewritten in `020` (T007, guard G15), to the rule rather than
+    /// loosened to it.** The sheet gained a fifth field, Bought, between
+    /// Bought from and Condition (020 plan §6), so both lists gained it in
+    /// that place; as `015` wrote it this pinned four fields and the line.
+    ///
+    /// Mutation: swap any two of the six, in either place → red.
+    @Test func theFiveFieldsAndTheComparisonLineAppearInTheSpecsOrder() throws {
         let code = try SourceScan.production(Self.sheet)
 
         try expectAscending(
@@ -39,6 +46,7 @@ struct WishlistPurchaseWiringTests {
                 "PurchaseCopy.purchaseDateLabel",
                 "viewModel.comparisonLine",
                 "PurchaseCopy.boughtFromLabel",
+                "NewOrUsedCopy.boughtLabel",
                 "PurchaseCopy.conditionLabel",
             ],
             in: code,
@@ -53,7 +61,7 @@ struct WishlistPurchaseWiringTests {
         let column = try #require(columns.first)
 
         try expectAscending(
-            ["priceAndDate", "comparison", "boughtFromField", "conditionField"],
+            ["priceAndDate", "comparison", "boughtFromField", "boughtField", "conditionField"],
             in: column,
             what: "the sheet's fields, composed"
         )
@@ -75,7 +83,7 @@ struct WishlistPurchaseWiringTests {
         )
         #expect(
             !code.contains("Note"),
-            "the purchase sheet has a note field — the spec's four fields are the whole sheet"
+            "the purchase sheet has a note field — the spec's five fields are the whole sheet"
         )
         #expect(
             !code.contains("ModelContext") && !code.contains("modelContext"),

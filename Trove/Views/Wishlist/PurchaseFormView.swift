@@ -36,7 +36,9 @@ import SwiftUI
 /// left behind for someone to wire back up by accident.
 ///
 /// Every word comes from `PurchaseCopy`, never typed here, so the sheet and
-/// the rest of the spec's surfaces cannot drift apart.
+/// the rest of the spec's surfaces cannot drift apart — bar the Bought
+/// field's (020), which come from `NewOrUsedCopy` for the same reason: the
+/// item form shows the same field.
 struct PurchaseFormView: View {
     @State private var viewModel: PurchaseFormViewModel
     private let confirm: (Purchase) -> Void
@@ -74,14 +76,15 @@ struct PurchaseFormView: View {
                             comparison
                         }
                         boughtFromField
+                        boughtField
                         conditionField
                     }
                     .padding(.horizontal, theme.metrics.screenGutter)
                     .padding(.top, theme.metrics.sectionGap)
                     .padding(.bottom, theme.metrics.sectionGap)
                 }
-                // Four short fields don't fill the medium detent, and a form
-                // that rubber-bands over empty space reads as broken.
+                // A few short fields needn't fill the detent, and a form that
+                // rubber-bands over empty space reads as broken.
                 .scrollBounceBehavior(.basedOnSize)
             }
             // No navigation title at all — see the note above. The inline
@@ -247,6 +250,15 @@ struct PurchaseFormView: View {
                 text: $viewModel.location
             )
         }
+    }
+
+    /// Bought new or used (020 plan §6) — the shared `NewOrUsedField`, the
+    /// one `ItemFormView` composes, between Bought from and Condition so the
+    /// two chip rows sit together. Which chip opens selected, if either, is
+    /// the view model's (it seeds from what the wanted entry was looking
+    /// for); this only places the field.
+    private var boughtField: some View {
+        NewOrUsedField(label: NewOrUsedCopy.boughtLabel, identifier: "bought", selection: $viewModel.bought)
     }
 
     /// `ItemFormView`'s condition row — the same shared `ConditionField`

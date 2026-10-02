@@ -4,8 +4,9 @@ import Testing
 
 /// `020` G14's and G15's source scans (plan §6). Facts about view bodies
 /// only, which no view-model test can observe: which chip component a form
-/// composes, and that the shared fields carry the two calls the design rests
-/// on. What the chips *do* is elsewhere — that the row is one row, overflows,
+/// composes, where the Bought field sits and what it is identified by, and
+/// that the shared fields carry the two calls the design rests on. What the
+/// chips *do* is elsewhere — that the row is one row, overflows,
 /// scrolls and opens on the selected grade is the UI suite's; that tapping
 /// the selected chip clears the field is `NewOrUsed`'s own tests'.
 ///
@@ -68,6 +69,70 @@ struct ProvenanceWiringTests {
         #expect(
             field.contains("NewOrUsed.selection(afterTapping:"),
             "`NewOrUsedField` doesn't call `NewOrUsed.selection(afterTapping:current:)`:\n\(field)"
+        )
+    }
+
+    // MARK: - Where Bought is set (G15)
+
+    /// Each form that records how the thing was bought composes the shared
+    /// `NewOrUsedField` exactly once, under the Bought label and the "bought"
+    /// identifier. The identifier is what addresses the chips ("bought.new",
+    /// "bought.used"): the condition row on the same screen has a "New" chip
+    /// too, so a label cannot tell the two apart.
+    ///
+    /// Where the field sits is the next test's on the item form, and
+    /// `WishlistPurchaseWiringTests`' order test's on the purchase sheet.
+    ///
+    /// Mutations: drop the field from either form → the anchor `#require`
+    /// fails; compose it twice → red; give it another label or identifier →
+    /// red.
+    @Test(arguments: [itemForm, purchaseSheet])
+    func eachFormComposesTheBoughtFieldOnceWithItsLabelAndIdentifier(path: String) throws {
+        let code = try SourceScan.production(path)
+
+        let fields = SourceScan.argumentLists(of: "NewOrUsedField", in: code)
+        let field = try #require(fields.first, "\(path) doesn't compose `NewOrUsedField(` at all")
+        #expect(fields.count == 1, "\(path) composes `NewOrUsedField(` \(fields.count) times, expected exactly 1")
+
+        #expect(
+            field.contains("label: NewOrUsedCopy.boughtLabel"),
+            "\(path)'s Bought field isn't labelled from `NewOrUsedCopy.boughtLabel`:\n\(field)"
+        )
+        #expect(
+            field.contains("identifier: \"bought\""),
+            "\(path)'s Bought field doesn't carry the \"bought\" identifier its chips are addressed by:\n\(field)"
+        )
+    }
+
+    /// On the item form the Bought field sits directly above the condition
+    /// row, inside More details: the two chip rows read together, and
+    /// Condition keeps its notes beneath it (plan §6). Directly — nothing is
+    /// composed between the two — so a field moved up the section fails here
+    /// as one moved below Condition does.
+    ///
+    /// Mutations: move the field below Condition → red; move it anywhere
+    /// else in More details → red; drop it → the anchor `#require` fails.
+    @Test func theItemFormsBoughtFieldSitsDirectlyAboveItsConditionRow() throws {
+        let code = try SourceScan.production(Self.itemForm)
+
+        let sections = SourceScan.closureBodies(after: "private var optionalFields: some View", in: code)
+        try #require(
+            sections.count == 1,
+            "\(Self.itemForm) declares `optionalFields` \(sections.count) times, expected exactly 1"
+        )
+        let section = try #require(sections.first)
+
+        let fields = SourceScan.argumentLists(of: "NewOrUsedField", in: section)
+        try #require(
+            fields.count == 1,
+            "More details composes `NewOrUsedField(` \(fields.count) times, expected exactly 1"
+        )
+        let call = try #require(section.range(of: "NewOrUsedField(\(fields[0]))"))
+
+        let next = section[call.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+        #expect(
+            next.hasPrefix("ConditionField("),
+            "the Bought field isn't directly above the condition row — what follows it is:\n\(next.prefix(120))"
         )
     }
 
