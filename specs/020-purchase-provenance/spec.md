@@ -245,8 +245,10 @@ from, and prefills the purchase sheet when it is bought.
    whatever its condition — including items graded New.
 6. [ ] The item's page labels its purchase-date row **Bought new** or
    **Bought used**, and plain **Bought** when not recorded.
-7. [ ] The Mark as bought sheet shows the same Bought field, unselected;
-   the item it creates carries what was picked, or not recorded.
+7. [ ] The Mark as bought sheet shows the same Bought field, unselected
+   unless the entry has a Looking for preference (criterion 23); the item
+   it creates carries what was picked, or not recorded. *(Wording amended
+   2026-10-03, Decision 12.)*
 8. [ ] Copying an item carries its Bought value to the copy.
 9. [ ] Selling an item and returning it to the collection leaves its Bought
    value unchanged.
@@ -354,6 +356,14 @@ from, and prefills the purchase sheet when it is bought.
     scrollable, and the row opening scrolled to the selected grade. This
     replaces the first Draft's "wrapping is fine". The Bought and Looking
     for rows have two chips and do not scroll.
+
+12. **Two readings confirmed at the Phase 3 pause** (the person,
+    2026-10-03: "Everything looks good and I like your suggestions").
+    The match picker's candidate line ("Lowest used asking price …" /
+    "No used listings") keeps saying "used" for a wanted item looking for
+    New — a fact about Reverb's catalogue, the same reasoning as Decision
+    10's kept sentence. And criterion 7 gains "unless the entry has a
+    Looking for preference", so it agrees with criterion 23 and P6.
 
 ### Proposals (P-items, decided at plan approval)
 
