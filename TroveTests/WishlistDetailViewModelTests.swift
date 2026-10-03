@@ -1593,6 +1593,7 @@ struct WishlistPurchaseHostTests {
         _ name: String,
         category: String = "Photography/Lenses",
         costCents: Int,
+        lookingFor: NewOrUsed? = nil,
         into context: ModelContext
     ) -> WishlistItem {
         let wanted = WishlistItem(
@@ -1607,7 +1608,8 @@ struct WishlistPurchaseHostTests {
             desireToOwn: 1,
             sortOrder: 7,
             reverbProductID: 9_112,
-            year: 1971
+            year: 1971,
+            lookingFor: lookingFor
         )
         context.insert(wanted)
         return wanted
@@ -1632,13 +1634,28 @@ struct WishlistPurchaseHostTests {
     /// price where the others leave the field blank — the one distinction the
     /// `006` P1 rule rests on, and the one a `?? 0` slipped into any host
     /// would break.
+    ///
+    /// 020 G11 (P6, criterion 23): and an entry looking for **used**, on
+    /// which all four hosts must seed the sheet's Bought field `.used`. Used
+    /// rather than not recorded, because nil is what a host that forgot the
+    /// preference passes — four hosts agreeing on nil proves nothing. The
+    /// other two entries record no preference, so a host that hardcoded
+    /// `.used` fails on them.
+    ///
+    /// Mutation: any one host passing `lookingFor: nil` → that host's `.used`
+    /// assertion fails, and its agreement with the page (or, for the page
+    /// itself, all three hosts' agreement with it).
     @Test func everyHostSeedsThePurchaseSheetIdentically() throws {
         let context = try makeInMemoryContext()
         let estimated = insertWanted("Summicron 35mm f/2", costCents: 240_000, into: context)
         let unestimated = insertWanted("Vox AC15 Custom", category: "Music/Amps", costCents: 0, into: context)
+        let lookingForUsed = insertWanted(
+            "Rolleiflex 2.8F", category: "Photography/Cameras", costCents: 180_000, lookingFor: .used, into: context
+        )
         // The Plans tab's subject is a row, and only a planned entry is one.
         SellPlanStore.create(for: estimated, at: plannedOn)
         SellPlanStore.create(for: unestimated, at: plannedOn)
+        SellPlanStore.create(for: lookingForUsed, at: plannedOn)
         try context.save()
 
         let list = WishlistViewModel(modelContext: context, now: { self.now })
@@ -1646,7 +1663,8 @@ struct WishlistPurchaseHostTests {
         let plans = PlansViewModel(modelContext: context, now: { self.now })
         plans.load()
 
-        for subject in [estimated, unestimated] {
+        let subjects: [(WishlistItem, NewOrUsed?)] = [(estimated, nil), (unestimated, nil), (lookingForUsed, .used)]
+        for (subject, lookingFor) in subjects {
             let page = WishlistDetailViewModel(modelContext: context, itemID: subject.id, now: { self.now })
             page.load()
             let fromPage = page.makePurchaseFormViewModel()
@@ -1680,10 +1698,19 @@ struct WishlistPurchaseHostTests {
                 #expect(fromPage.date == form.date, "\(subject.name): the page and \(host) seed the same date")
                 #expect(fromPage.location == form.location)
                 #expect(fromPage.condition == form.condition)
+                #expect(fromPage.bought == form.bought, "\(subject.name): the page and \(host) seed the same Bought")
                 #expect(
                     fromPage.comparisonLine == form.comparisonLine,
                     "\(subject.name): the page and \(host) compare against the same estimate"
                 )
+            }
+
+            // Pinned per host, so four hosts agreeing on the wrong thing
+            // still fails — and so the failure names the host.
+            for (host, form) in [
+                ("the page", fromPage), ("the list", fromList), ("the plan", fromPlan), ("the Plans tab", fromPlans),
+            ] {
+                #expect(form.bought == lookingFor, "\(subject.name): \(host) seeds Bought from the entry's preference")
             }
         }
 

@@ -22,6 +22,10 @@ nonisolated struct ItemExportRecord: Sendable {
     let purchaseLocation: String?
     let currentValueCents: Int?
     let desireToKeep: Int
+    /// 020: `Item.condition.rawValue` — `"very good"` for Very Good — and
+    /// **not** `Item.conditionRawValue`, which stores Very Good as `"good"`
+    /// beside a refinement (020 plan Q2). The CSV and the PDF read the grade
+    /// from here, so do not "fix" the snapshot back to the stored field.
     let conditionRawValue: String
     let conditionNotes: String?
     let serialNumber: String?
@@ -42,6 +46,12 @@ nonisolated struct ItemExportRecord: Sendable {
     let salePriceCents: Int?
     let saleLocation: String?
     let saleNote: String?
+    /// 020: bought new or used — the appended `Bought` column (plan §8).
+    /// `var … = nil`, not `let`, so the record fixtures that predate the
+    /// column compile unchanged (Q8); both production builders — `init(item:)`
+    /// and `ImportSchema.itemsPreview` — pass it explicitly, and the round
+    /// trip through the commit catches either one dropping it.
+    var bought: NewOrUsed? = nil
 
     /// The display-order first photo, chosen at snapshot time on the main
     /// actor (plan.md: `PhotoSelection.inDisplayOrder` is the one definition
@@ -76,6 +86,9 @@ nonisolated struct WishlistExportRecord: Sendable {
     /// As on `ItemExportRecord` (002).
     let reverbProductID: Int?
     let year: Int?
+    /// 020: which the person is looking for — the appended `Looking For`
+    /// column. `var … = nil` for the reason `ItemExportRecord.bought` gives.
+    var lookingFor: NewOrUsed? = nil
     let firstPhotoID: PersistentIdentifier?
     /// As on `ItemExportRecord` (005).
     let firstPhotoAttribution: StockPhotoAttribution?
@@ -171,7 +184,7 @@ extension ItemExportRecord {
             purchaseLocation: item.purchaseLocation,
             currentValueCents: item.currentValueCents,
             desireToKeep: item.desireToKeep,
-            conditionRawValue: item.conditionRawValue,
+            conditionRawValue: item.condition.rawValue,
             conditionNotes: item.conditionNotes,
             serialNumber: item.serialNumber,
             notes: item.notes,
@@ -181,6 +194,7 @@ extension ItemExportRecord {
             salePriceCents: sale?.priceCents,
             saleLocation: sale?.location,
             saleNote: sale?.note,
+            bought: item.bought,
             firstPhotoID: leadingPhoto?.persistentModelID,
             firstPhotoAttribution: leadingPhoto?.attribution
         )
@@ -203,6 +217,7 @@ extension WishlistExportRecord {
             notes: item.notes,
             reverbProductID: item.reverbProductID,
             year: item.year,
+            lookingFor: item.lookingFor,
             firstPhotoID: leadingPhoto?.persistentModelID,
             firstPhotoAttribution: leadingPhoto?.attribution
         )
@@ -269,8 +284,11 @@ extension PDFEntry {
                 isMono: record.currentValueCents != nil
             ),
             PDFField(label: "Currency", value: record.currencyCode, isMono: true),
+            // 020 R6: the one date field's label carries new/used — the same
+            // function the item page's date row uses, so page and PDF cannot
+            // drift; no second "Bought" field.
             PDFField(
-                label: "Bought",
+                label: NewOrUsedCopy.detailDateRowLabel(bought: record.bought),
                 value: ExportSchema.day(from: record.purchaseDate, timeZone: timeZone),
                 isMono: true
             ),
@@ -300,23 +318,29 @@ extension PDFEntry {
     /// See `init(record: ItemExportRecord, ...)` — wishlist vocabulary, and
     /// the same carve-out: no Reverb identifier, no year, no market figure.
     nonisolated init(record: WishlistExportRecord, timeZone: TimeZone = .current) {
+        var fields: [PDFField] = [
+            PDFField(
+                label: "Estimated cost",
+                value: record.estimatedCostCents.formattedAsWholeCurrency(currencyCode: record.currencyCode),
+                isMono: true
+            ),
+            PDFField(label: "Currency", value: record.currencyCode, isMono: true),
+            PDFField(label: "Desire to own", value: "\(record.desireToOwn) / 3", isMono: true),
+        ]
+        // 020: omitted when not recorded, as empty condition notes are.
+        if let lookingFor = record.lookingFor {
+            fields.append(PDFField(label: NewOrUsedCopy.lookingForLabel, value: NewOrUsedCopy.chip(lookingFor)))
+        }
+        fields.append(PDFField(
+            label: "Added",
+            value: ExportSchema.day(from: record.createdAt, timeZone: timeZone),
+            isMono: true
+        ))
+
         self.init(
             eyebrow: record.categoryPath.split(separator: "/").joined(separator: " · "),
             name: record.name,
-            fields: [
-                PDFField(
-                    label: "Estimated cost",
-                    value: record.estimatedCostCents.formattedAsWholeCurrency(currencyCode: record.currencyCode),
-                    isMono: true
-                ),
-                PDFField(label: "Currency", value: record.currencyCode, isMono: true),
-                PDFField(label: "Desire to own", value: "\(record.desireToOwn) / 3", isMono: true),
-                PDFField(
-                    label: "Added",
-                    value: ExportSchema.day(from: record.createdAt, timeZone: timeZone),
-                    isMono: true
-                ),
-            ],
+            fields: fields,
             notes: (record.notes?.isEmpty == false) ? record.notes : nil,
             photoID: record.firstPhotoID,
             photoCredit: Self.credit(for: record.firstPhotoAttribution)
@@ -342,17 +366,20 @@ nonisolated enum ExportSchema {
     /// never renamed, reordered or removed, which is what lets the import
     /// gate accept a file written by an older Trove. `Reverb Product ID`
     /// and `Year` are 002's two appended columns; `Sold Date`, `Sale Price`,
-    /// `Sold At` and `Sale Note` are 006's four, appended the same way.
+    /// `Sold At` and `Sale Note` are 006's four, appended the same way, and
+    /// `Bought` is 020's one.
     static let itemHeaders = [
         "Name", "Category", "Purchase Price", "Currency", "Purchase Date",
         "Purchase Location", "Current Value", "Desire to Keep", "Condition",
         "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
-        "Year", "Sold Date", "Sale Price", "Sold At", "Sale Note",
+        "Year", "Sold Date", "Sale Price", "Sold At", "Sale Note", "Bought",
     ]
 
+    /// `Looking For` — capital F, unlike the form's "Looking for" label — is
+    /// 020's appended column; a header is a column name, not copy.
     static let wishlistHeaders = [
         "Name", "Category", "Estimated Cost", "Currency", "Desire to Own",
-        "Added", "Notes", "Reverb Product ID", "Year",
+        "Added", "Notes", "Reverb Product ID", "Year", "Looking For",
     ]
 
     /// Every column count at which a shipped layout ended, oldest first —
@@ -362,11 +389,14 @@ nonisolated enum ExportSchema {
     /// only when a *released* layout ends, never speculatively: an entry
     /// that never shipped would accept a file Trove never wrote. 14 is the
     /// layout 002 through 005 shipped, before 006 appended the four sale
-    /// columns.
-    static let itemSchemaBoundaries = [12, 14]
+    /// columns. 18 is the layout 006 through 019 shipped, before 020
+    /// appended `Bought`.
+    static let itemSchemaBoundaries = [12, 14, 18]
 
-    /// See `itemSchemaBoundaries` — 7 is the shipped wishlist layout.
-    static let wishlistSchemaBoundaries = [7]
+    /// See `itemSchemaBoundaries` — 7 is the wishlist layout 011/012
+    /// shipped, before 002 appended `Reverb Product ID` and `Year`; 9 is the
+    /// layout 002 through 019 shipped, before 020 appended `Looking For`.
+    static let wishlistSchemaBoundaries = [7, 9]
 
     /// Money as the schema writes it: plain decimal, always two places, dot
     /// separator, no symbol, no grouping. Pure integer arithmetic — no locale
@@ -426,6 +456,8 @@ nonisolated enum ExportSchema {
             record.salePriceCents.map { money(cents: $0) } ?? "",
             record.saleLocation ?? "",
             record.saleNote ?? "",
+            // 020: `new`, `used`, or blank for not recorded — never a guess.
+            record.bought?.rawValue ?? "",
         ]
     }
 
@@ -441,6 +473,8 @@ nonisolated enum ExportSchema {
             record.notes ?? "",
             record.reverbProductID.map(String.init) ?? "",
             record.year.map(String.init) ?? "",
+            // 020: as `Bought` on the items row.
+            record.lookingFor?.rawValue ?? "",
         ]
     }
 

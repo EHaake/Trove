@@ -20,11 +20,11 @@ step's count is the guard against doing that by accident.
 | Export filename | `Trove-Items-YYYY-MM-DD.csv` | `Trove-Wishlist-YYYY-MM-DD.csv` |
 | Sold-only filename | `Trove-Sold-Items-YYYY-MM-DD.csv` | — |
 | Template filename | `Trove-Items-Template.csv` | `Trove-Wishlist-Template.csv` |
-| Columns | 18 | 9 |
+| Columns | 19 | 10 |
 
 An export from the Items screen asks which rows to include first — **owned
 items**, **sold items**, or **owned and sold** — so there are three possible
-files, all on the 18-column layout below. Owned and owned-and-sold are both
+files, all on the 19-column layout below. Owned and owned-and-sold are both
 written as `Trove-Items-YYYY-MM-DD.csv`; only the sold-only file takes the
 `Trove-Sold-Items` name. In a sold-only file every row has the four sale
 columns filled, and its rows are in date-sold order, most recent first —
@@ -41,14 +41,17 @@ alert points you to the right screen.
 ## Items columns
 
 The header row must contain exactly these names, in this order — with
-two kept exceptions. A header that stops after the twelfth column
-(`Notes`) is the layout Trove wrote before it knew about Reverb, and one
+three kept exceptions. A header that stops after the twelfth column
+(`Notes`) is the layout Trove wrote before it knew about Reverb, one
 that stops after the fourteenth (`Year`) is the layout it wrote before
-it could mark something sold. Both still import: the newer columns
-simply arrive blank, so every file an older Trove ever exported still
-reads. The wishlist keeps the same door open for a header that stops
-after its seventh column. Nothing else is accepted — a header one column
-short of any of those widths fails like any other mismatch.
+it could mark something sold, and one that stops after the eighteenth
+(`Sale Note`) is the layout it wrote before it recorded whether you
+bought new or used. All three still import: the newer columns simply
+arrive blank, so every file an older Trove ever exported still reads.
+The wishlist keeps the same door open for a header that stops after its
+seventh column (before Reverb) or its ninth (`Year`, before `Looking
+For`). Nothing else is accepted — a header one column short of any of
+those widths fails like any other mismatch.
 
 | # | Column | Format | If blank | If unreadable |
 |---|--------|--------|----------|---------------|
@@ -60,7 +63,7 @@ short of any of those widths fails like any other mismatch.
 | 6 | `Purchase Location` | text | empty | — |
 | 7 | `Current Value` | plain number | **not yet valued** (not zero) | not yet valued † |
 | 8 | `Desire to Keep` | whole number `1`–`5` | `3` † | `3` † |
-| 9 | `Condition` | `new` / `excellent` / `good` / `fair` / `broken` (any casing) | `excellent` † | `excellent` † |
+| 9 | `Condition` | `new` / `excellent` / `very good` / `good` / `fair` / `broken` (any casing; `very good` with its space) | `excellent` † | `excellent` † |
 | 10 | `Condition Notes` | text | empty | — |
 | 11 | `Serial Number` | text | empty | — |
 | 12 | `Notes` | text, line breaks fine inside quotes | empty | — |
@@ -70,6 +73,7 @@ short of any of those widths fails like any other mismatch.
 | 16 | `Sale Price` | plain number, e.g. `700.00` — what it sold for | still owned | still owned ‡ |
 | 17 | `Sold At` | text — who or where you sold it to | empty | kept only with the pair ‡ |
 | 18 | `Sale Note` | text | empty | kept only with the pair ‡ |
+| 19 | `Bought` | `new` / `used` (any casing) — whether you bought it new or used | not recorded | not recorded † |
 
 † counted and shown in the confirmation as a field that will use a
 default. Blank optional fields (and a blank currency) import
@@ -78,7 +82,7 @@ Value` means "not yet valued," which Trove treats differently from
 worth zero. A blank match or year is the same kind of ordinary answer:
 the item just isn't matched, or its year isn't known.
 
-‡ the last four columns are a set: `Sold Date` and `Sale Price` together
+‡ the four sale columns (15–18) are a set: `Sold Date` and `Sale Price` together
 make the row a sold item, and blank for an item you still own. Either
 one alone is dropped — the item imports as still owned, and the row
 counts **one** field falling back to a default, however many of the four
@@ -104,6 +108,7 @@ neither the CSV nor the PDF.
 | 7 | `Notes` | text | empty | — |
 | 8 | `Reverb Product ID` | positive whole number, as above | no match | no match † |
 | 9 | `Year` | four digits, as above | no year | no year † |
+| 10 | `Looking For` | `new` / `used` (any casing) — whether you're after it new or used | not recorded | not recorded † |
 
 ## Rows that are skipped
 
@@ -133,7 +138,10 @@ lists the first five skipped rows with reasons, then "and N more."
   Anything else (including a date your spreadsheet "helpfully"
   rewrote as `3/9/26`) falls back to today, counted. Dates are read
   as calendar days in your current time zone.
-- **Condition** matches its five words in any casing.
+- **Condition** matches its six words in any casing. `very good` is
+  two words with one space between them, the way Trove writes it —
+  `Very Good` reads, `verygood` and `very-good` don't and fall back to
+  `excellent`, counted.
 - **Currency** is any three letters, stored uppercased. Trove's v1
   displays everything as USD; the code is kept with the item.
 - **`Reverb Product ID`** is a positive whole number — digits only,
@@ -145,6 +153,11 @@ lists the first five skipped rows with reasons, then "and N more."
   year the piece was *made*, not the year of the design it copies: a
   2023 reissue of a 1961 model is `2023`. Anything else reads as no
   year, counted; blank means the year isn't known.
+- **`Bought`** (items) and **`Looking For`** (wishlist) are `new` or
+  `used`, in any casing. Blank means not recorded and imports silently —
+  it's an ordinary answer, like a blank year. Anything
+  else (`second-hand`, `refurb`, `y`) also reads as not recorded, but is
+  counted.
 - **The sale is a pair.** `Sold Date` and `Sale Price` have to be
   readable *together* for the row to import as a sold item — a date in
   `yyyy-MM-dd` and a price in the money format above, with `0` allowed
@@ -166,8 +179,8 @@ says so:
 
 - The header row doesn't match the template (missing, renamed,
   extra, or reordered columns). The exceptions are the older, narrower
-  layouts described above — 12 or 14 items columns, 7 wishlist
-  columns — which still import.
+  layouts described above — 12, 14 or 18 items columns, 7 or 9
+  wishlist columns — which still import.
 - The file isn't UTF-8 text (see the Excel note below).
 - An unclosed quote — one runaway `"` swallows the rest of the file,
   so there is nothing safe to salvage.

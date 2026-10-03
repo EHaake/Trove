@@ -1137,6 +1137,43 @@ struct WishlistViewModelCommitTests {
         #expect(saved[1].year == nil)
     }
 
+    /// 020/G17 (criterion 25): live wanted entries → export records → CSV
+    /// bytes → the real parse pipeline → the commit → a SECOND context,
+    /// restoring every Looking for preference — `.used`, `.new` and nil, so
+    /// a dropped field cannot pass. Mutation: drop `lookingFor:` from the
+    /// commit → the used and new entries read nil → red.
+    @Test func commitRestoresLookingForThroughTheCSV() async throws {
+        let zone = TimeZone(identifier: "UTC")!
+        let sourceContext = try makeInMemoryContext()
+        let used = WishlistItem(name: "OM-1", categoryPath: "Photography/Cameras", lookingFor: .used)
+        let new = WishlistItem(name: "Deluxe Reverb", categoryPath: "Music/Amps", lookingFor: .new)
+        let unrecorded = WishlistItem(name: "Big Muff", categoryPath: "Music/Pedals")
+        for wish in [used, new, unrecorded] { sourceContext.insert(wish) }
+        try sourceContext.save()
+
+        let table = ExportSchema.wishlistTable(
+            [used, new, unrecorded].map { WishlistExportRecord(item: $0) }, timeZone: zone
+        )
+        let preview = try ImportSchema.wishlistPreview(
+            from: try CSVParser.parse(CSVWriter.write(table)), timeZone: zone
+        )
+        try #require(preview.defaultedFieldCount == 0)
+
+        let container = try makeInMemoryContainer()
+        let viewModel = WishlistViewModel(
+            modelContext: ModelContext(container),
+            importService: ImportServiceSpy(wishlist: .success(preview))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        let saved = try ModelContext(container).fetch(
+            FetchDescriptor<WishlistItem>(sortBy: [SortDescriptor(\.sortOrder)])
+        )
+        #expect(saved.map(\.name) == ["OM-1", "Deluxe Reverb", "Big Muff"])
+        #expect(saved.map(\.lookingFor) == [.used, .new, nil])
+    }
+
     @Test func commitAppendsAndRestoresCreatedAtFromAdded() async throws {
         // Second-context verification — see the items twin's note (T018's
         // audit: a same-context refetch passes with `save()` deleted).

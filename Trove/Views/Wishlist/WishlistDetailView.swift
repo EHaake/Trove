@@ -369,6 +369,7 @@ struct WishlistDetailView: View {
         let rows: [(label: String, value: String, isMono: Bool)] = [
             ("Category", viewModel.categorySegments.joined(separator: " · "), false),
             ("Added", item.createdAt.formatted(date: .abbreviated, time: .omitted), true),
+            (NewOrUsedCopy.lookingForLabel, item.lookingFor.map(NewOrUsedCopy.chip) ?? "", false),
         ].filter { !$0.value.isEmpty }
 
         if !rows.isEmpty {

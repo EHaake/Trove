@@ -1456,6 +1456,55 @@ struct ItemListViewModelCommitTests {
         #expect(saved[1].sale == nil)
     }
 
+    /// 020/G17 (criteria 13–14): live items → export records → CSV bytes →
+    /// the real parse pipeline → the commit → a SECOND context, restoring
+    /// every Bought value and the Very Good grade. Fixtures carry `.used`,
+    /// `.new` and nil, so neither a dropped field (nil everywhere) nor an
+    /// invented one can pass. The Very Good row asserts the stored pair as
+    /// well as the grade: a raw `"very good"` in `conditionRawValue` would
+    /// read back as Very Good while breaking an older app.
+    ///
+    /// Mutations: drop `bought: record.bought` from the commit → the used
+    /// and new rows read nil → red; `init(item:)` writing
+    /// `item.conditionRawValue` → the file says `good` → red.
+    @Test func commitRestoresBoughtAndVeryGoodThroughTheCSV() async throws {
+        let zone = TimeZone(identifier: "UTC")!
+        let sourceContext = try makeInMemoryContext()
+        let used = Item(name: "Leica M6", categoryPath: "Photography/Cameras", condition: .veryGood, bought: .used)
+        let new = Item(name: "Strat", categoryPath: "Music/Guitars", condition: .excellent, bought: .new)
+        let unrecorded = Item(name: "Blues Junior", categoryPath: "Music/Amps", condition: .good)
+        for item in [used, new, unrecorded] { sourceContext.insert(item) }
+        try sourceContext.save()
+
+        let table = ExportSchema.itemsTable(
+            [used, new, unrecorded].map { ItemExportRecord(item: $0) }, timeZone: zone
+        )
+        let preview = try ImportSchema.itemsPreview(
+            from: try CSVParser.parse(CSVWriter.write(table)), timeZone: zone
+        )
+        try #require(preview.defaultedFieldCount == 0)
+
+        let container = try makeInMemoryContainer()
+        let viewModel = ItemListViewModel(
+            modelContext: ModelContext(container),
+            importService: ImportServiceSpy(items: .success(preview))
+        )
+        await viewModel.importCSV(from: dummyURL)
+        await viewModel.confirmImport()?.value
+
+        let saved = try ModelContext(container).fetch(
+            FetchDescriptor<Item>(sortBy: [SortDescriptor(\.sortOrder)])
+        )
+        #expect(saved.map(\.name) == ["Leica M6", "Strat", "Blues Junior"])
+        #expect(saved.map(\.bought) == [.used, .new, nil])
+        #expect(saved[0].condition == .veryGood)
+        #expect(saved[0].conditionRawValue == "good")
+        #expect(saved[0].conditionRefinement == "very good")
+        #expect(saved[1].condition == .excellent)
+        #expect(saved[2].condition == .good)
+        #expect(saved[2].conditionRefinement == nil)
+    }
+
     @Test func thePlacementBaseIsComputedAtCommitTimeNotParseTime() async throws {
         let context = try makeInMemoryContext()
         let viewModel = ItemListViewModel(

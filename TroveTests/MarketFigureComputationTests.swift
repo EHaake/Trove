@@ -64,7 +64,7 @@ struct MarketFigureComputationTests {
 
     @Test func aWantedItemReadsEveryUsedListingInDollars() throws {
         let (listings, product) = try telecaster()
-        let figure = try figure(compute(.wanted, over: listings, product: product))
+        let figure = try figure(compute(.wanted(lookingFor: nil), over: listings, product: product))
 
         #expect(figure.count == 72)
         #expect(figure.medianCents == 149_999)
@@ -156,27 +156,122 @@ struct MarketFigureComputationTests {
     @Test func anUnknownSlugIsOutForAnOwnedItemAndInForAWantedOne() throws {
         let listings = set([listing(100), listing(110), listing(120), listing(130, "player-grade")])
         let owned = try figure(compute(.owned(condition: .excellent), over: listings, product: product))
-        let wanted = try figure(compute(.wanted, over: listings, product: product))
+        let wanted = try figure(compute(.wanted(lookingFor: nil), over: listings, product: product))
         #expect(owned.count == 3)
         #expect(wanted.count == 4)
     }
 
     @Test func newStockNeverCountsForAWantedItem() throws {
         let listings = set([listing(100, "brand-new"), listing(110, "b-stock"), listing(120, "mint"), listing(130, "good"), listing(140, "fair")])
-        let wanted = try figure(compute(.wanted, over: listings, product: product))
+        let wanted = try figure(compute(.wanted(lookingFor: nil), over: listings, product: product))
         #expect(wanted.count == 3)
         #expect(wanted.lowCents == 120)
     }
 
-    @Test func theConditionBucketsAreDisjointAndNonEmpty() {
-        var seen: Set<String> = []
+    // MARK: - Looking for (020, Decision 9, G8)
+
+    /// New reads `brand-new` and `b-stock` and nothing else — not `mint`,
+    /// which an *owned* New item does count, and not a slug Reverb adds
+    /// later. Used and not recorded read everything that is not new stock,
+    /// the rule before 020. The prices are disjoint by slug and the two
+    /// sides differ in size, so count, low and high each say which side
+    /// was read.
+    @Test func aWantedItemLookingForNewCountsBrandNewAndBStockOnly() throws {
+        let listings = set([
+            listing(200, "brand-new"), listing(210, "brand-new"), listing(190, "b-stock"), listing(220, "b-stock"),
+            listing(120, "mint"), listing(125, "mint-inventory"), listing(130, "good"), listing(140, "fair"), listing(150, "player-grade"),
+        ])
+
+        let new = try figure(compute(.wanted(lookingFor: .new), over: listings, product: product))
+        #expect(new.count == 4)
+        #expect(new.lowCents == 190)
+        #expect(new.highCents == 220)
+
+        for lookingFor in [NewOrUsed.used, nil] {
+            let used = try figure(compute(.wanted(lookingFor: lookingFor), over: listings, product: product))
+            #expect(used.count == 5, "\(String(describing: lookingFor))")
+            #expect(used.lowCents == 120, "\(String(describing: lookingFor))")
+            #expect(used.highCents == 150, "\(String(describing: lookingFor))")
+        }
+    }
+
+    /// Decision 9 over the recording: used and not recorded give one and the
+    /// same reading, and it is the oracle's wanted figure from before 020 —
+    /// so no existing wanted item's figure moves. New is checked against the
+    /// raw fixture by an independent rule, not by calling the map under test.
+    @Test func overTheRecordingUsedAndNotRecordedReadThePre020FigureAndNewReadsNewStock() throws {
+        let (listings, product) = try telecaster()
+
+        let notRecorded = compute(.wanted(lookingFor: nil), over: listings, product: product)
+        let used = compute(.wanted(lookingFor: .used), over: listings, product: product)
+        #expect(used == notRecorded)
+        let usedFigure = try figure(used)
+        #expect(usedFigure.count == 72)
+        #expect(usedFigure.medianCents == 149_999)
+        #expect(usedFigure.lowCents == 100_000)
+        #expect(usedFigure.highCents == 325_000)
+
+        let newStock = listings.listings
+            .filter { $0.currency == "USD" && ($0.conditionSlug == "brand-new" || $0.conditionSlug == "b-stock") }
+            .map(\.priceCents)
+            .sorted()
+        try #require(newStock.count >= 3)
+        try #require(newStock.count != 72, "the two sides must differ in size for the count to say which was read")
+
+        let new = try figure(compute(.wanted(lookingFor: .new), over: listings, product: product))
+        #expect(new.count == newStock.count)
+        #expect(new.lowCents == newStock.first)
+        #expect(new.highCents == newStock.last)
+    }
+
+    /// 020/G5, spec Decision 6. Until 020 the buckets were disjoint; Very
+    /// Good now reads `very-good` and Good keeps reading `very-good` and
+    /// `good`, so nothing already graded Good sees its figure move. That is
+    /// the **one** overlap, pinned here by name so a second can't arrive
+    /// unnoticed — every other pair of grades still shares nothing.
+    @Test func theConditionBucketsOverlapOnlyWhereVeryGoodMeetsGood() {
+        var union: Set<String> = []
         for condition in Condition.allCases {
             let slugs = MarketConditionMap.reverbSlugs(for: condition)
             #expect(!slugs.isEmpty, "\(condition) maps to nothing")
-            #expect(seen.isDisjoint(with: slugs), "\(condition) shares a slug with an earlier bucket")
-            seen.formUnion(slugs)
+            union.formUnion(slugs)
         }
-        #expect(seen == MarketConditionMap.knownSlugs, "a known slug belongs to no owned condition, or a bucket names an unknown one")
+        #expect(union == MarketConditionMap.knownSlugs, "a known slug belongs to no owned condition, or a bucket names an unknown one")
+
+        var overlaps: [Set<Condition>: Set<String>] = [:]
+        let conditions = Condition.allCases
+        for (index, first) in conditions.enumerated() {
+            for second in conditions[(index + 1)...] {
+                let shared = MarketConditionMap.reverbSlugs(for: first)
+                    .intersection(MarketConditionMap.reverbSlugs(for: second))
+                if !shared.isEmpty { overlaps[[first, second]] = shared }
+            }
+        }
+        #expect(overlaps == [[.veryGood, .good]: ["very-good"]])
+
+        #expect(MarketConditionMap.reverbSlugs(for: .good) == ["very-good", "good"])
+    }
+
+    /// 020, criterion 12: the same listings, read by the two grades. Very
+    /// Good counts the `very-good` listings only; Good counts those and the
+    /// `good` ones, exactly as before 020. The prices are disjoint by slug so
+    /// the low and the high say *which* listings counted, not just how many.
+    @Test func aVeryGoodItemCountsOnlyVeryGoodListingsAndAGoodItemCountsBoth() throws {
+        let listings = set([
+            listing(300, "very-good"), listing(310, "very-good"), listing(320, "very-good"),
+            listing(100, "good"), listing(110, "good"), listing(120, "good"),
+            listing(500, "excellent"), listing(50, "fair"),
+        ])
+
+        let veryGood = try figure(compute(.owned(condition: .veryGood), over: listings, product: product))
+        #expect(veryGood.count == 3)
+        #expect(veryGood.lowCents == 300)
+        #expect(veryGood.highCents == 320)
+
+        let good = try figure(compute(.owned(condition: .good), over: listings, product: product))
+        #expect(good.count == 6)
+        #expect(good.lowCents == 100)
+        #expect(good.highCents == 320)
     }
 
     @Test func truncationIsCarriedOntoTheFigure() throws {

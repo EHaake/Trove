@@ -2767,4 +2767,459 @@ final class TroveUITests: XCTestCase {
             thenDragTo: start.withOffset(CGVector(dx: app.frame.width * 0.4, dy: 0))
         )
     }
+
+    // MARK: - 020 Purchase provenance
+
+    /// `020` criterion 18 on the item form (G14, plan §6 Amendment A): the six
+    /// condition chips are **one row that scrolls sideways**, and the row
+    /// opens with the selected grade in view.
+    ///
+    /// Four legs, on an item this test adds itself:
+    /// (i) all six chips exist at one `minY` and one height — one row, not two;
+    /// (ii) `Broken` is **not** hittable before any sideways gesture — the row
+    /// overflows the screen, so it is neither squeezed to fit nor trivially
+    /// wide enough;
+    /// (iii) after a `swipeLeft()` on a chip `Broken` is hittable, takes a tap
+    /// and comes back selected — the row scrolls;
+    /// (iv) saved as Broken and reopened, `Broken` is hittable and inside the
+    /// window before any sideways gesture — the row opened on it — and the
+    /// form's Name field is hittable before any gesture at all: opening on the
+    /// selected grade moved the row, not the form around it (`020` T010).
+    ///
+    /// **`isHittable` and `frame` are read before any `tap()`**, since `tap()`
+    /// may scroll an element into view by itself. The only gestures ahead of a
+    /// reading are `app.swipeUp()`s that bring the row up from below the fold;
+    /// they move the form, never the row.
+    ///
+    /// The *look* of the chip cut off at the screen edge is not tested here or
+    /// anywhere.
+    ///
+    /// Mutations: the row's `HStack` swapped for a two-row layout → (i) red;
+    /// the `ScrollView` removed, a plain `HStack` → (ii) red;
+    /// `.scrollDisabled(true)` → (iii) red; the `.onAppear` scroll deleted →
+    /// (iv) red.
+    @MainActor
+    func testTheConditionRowIsOneScrollingRowAndOpensOnTheSelectedGrade() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        let name = "Rolleiflex \(UUID().uuidString.prefix(6))"
+        addItem(to: app, named: name)
+        openDetail(in: app, named: name)
+
+        openEditForm(in: app)
+        bringTheConditionRowOnScreen(in: app)
+        assertTheConditionRowIsOneScrollingRow(in: app, on: "the item form")
+
+        // (iv) Saved as Broken — leg (iii) tapped it — and reopened.
+        app.buttons["Save changes"].tap()
+        XCTAssertTrue(
+            app.buttons["Save changes"].waitForNonExistence(timeout: 5),
+            "The edit form stayed up — the save was probably rejected by validation"
+        )
+
+        openEditForm(in: app)
+        // Before any scroll: the row's scroll-to-selected on appear must move
+        // the row and never the form it sits in. Broken is the far end of the
+        // row, the grade that asks the most of that scroll — so the form's
+        // first field still being under a finger is the probe.
+        XCTAssertTrue(
+            app.textFields["Name"].isHittable,
+            "(iv) the reopened form must still open at its top — the Name field sits at \(app.textFields["Name"].frame) in a window \(app.frame), so opening on the selected grade moved the form as well as the row"
+        )
+        bringTheConditionRowOnScreen(in: app)
+
+        let broken = conditionChip("Broken", in: app)
+        XCTAssertTrue(broken.exists, "the reopened form must show the condition row")
+        let isHittable = broken.isHittable
+        let frame = broken.frame
+        XCTAssertTrue(broken.isSelected, "the item was saved as Broken, so the reopened form must select it")
+        XCTAssertTrue(
+            isHittable,
+            "(iv) the row must open with the selected grade in view — Broken sits at \(frame) in a window \(app.frame) and can't be tapped without scrolling to it"
+        )
+        XCTAssertTrue(
+            app.frame.contains(frame),
+            "(iv) the row must open with the selected grade in view — Broken sits at \(frame), outside the window \(app.frame)"
+        )
+    }
+
+    /// `020` criterion 18 on the Mark as bought sheet: legs (i)–(iii) of
+    /// `testTheConditionRowIsOneScrollingRowAndOpensOnTheSelectedGrade`, on
+    /// the other screen the row appears on.
+    ///
+    /// No leg (iv) here: the sheet always seeds Excellent, the second chip,
+    /// so there is no non-default grade for it to open on. If the sheet is
+    /// ever seeded with another grade, leg (iv) is owed here too.
+    ///
+    /// Mutations: as legs (i)–(iii) above — the field is the same one.
+    @MainActor
+    func testThePurchaseSheetsConditionRowIsOneScrollingRow() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSellPlan"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        app.buttons["Wishlist"].tap()
+        let summicron = app.staticTexts["Summicron 35mm f/2"]
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "the seed's one wanted item must be on the Wishlist")
+
+        openLeadingSwipe(on: summicron, in: app)
+
+        let buy = app.buttons
+            .matching(NSPredicate(format: "label == %@", "Mark as bought\u{2026}"))
+            .firstMatch
+        XCTAssertTrue(buy.waitForExistence(timeout: 5), "the leading swipe must offer Mark as bought…")
+        buy.tap()
+
+        XCTAssertTrue(
+            app.textFields["purchase.sheet.price"].waitForExistence(timeout: 5),
+            "Mark as bought… must open the purchase sheet"
+        )
+
+        assertTheConditionRowIsOneScrollingRow(in: app, on: "the purchase sheet")
+    }
+
+    /// `020` criteria 1, 2, 3 and 6 on the item form and the item's page
+    /// (G20, plan §10), on an item this test adds itself:
+    /// the add form's **Bought** field opens with neither chip selected; Used
+    /// takes a tap and comes back selected; saved, the page's purchase-date
+    /// row reads **Bought used**; the edit form reopens with Used selected;
+    /// tapping the selected chip clears the field; saved again, the row reads
+    /// plain **Bought**.
+    ///
+    /// The Bought field's chips are addressed by identifier — the condition
+    /// row directly beneath it has a "New" chip of its own — and the selection
+    /// is read through `isSelected`, the trait `ChoiceChip` carries.
+    ///
+    /// **The label is asserted on the date row, not on the page.** `DetailRow`
+    /// is one `.combine`d element, so the row's label is "<label>, <value>":
+    /// matching the whole of it says the words sit on the row carrying the
+    /// purchase date, where a bare "Bought used" anywhere on the page would
+    /// not.
+    ///
+    /// **The clear leg is the only place a view's clear-on-tap wiring is
+    /// observed** — `NewOrUsed.selection(afterTapping:current:)` is unit
+    /// tested, the field calling it is not — so it reads both chips after the
+    /// tap.
+    ///
+    /// Mutations: `NewOrUsedField` writing the tapped value unconditionally →
+    /// the clear leg red; `ItemDetailView`'s row label back to the literal
+    /// "Bought" → the "Bought used" row red.
+    @MainActor
+    func testBoughtIsSetClearedAndShownOnTheItemsPage() {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        let name = "Rolleiflex \(UUID().uuidString.prefix(6))"
+
+        app.buttons["Items"].tap()
+        let addButton = app.buttons["Add item"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5))
+        addButton.tap()
+
+        let nameField = app.textFields["Name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5), "The add-item sheet didn't present")
+        // The form's purchase date opens on today, formatted as the page's
+        // row formats it.
+        let today = Date.now.formatted(date: .abbreviated, time: .omitted)
+
+        // The Bought field lives behind the disclosure, so it isn't in the
+        // hierarchy until it's open.
+        app.buttons["Show more details"].tap()
+
+        let boughtNew = app.buttons["bought.new"]
+        let boughtUsed = app.buttons["bought.used"]
+        XCTAssertTrue(boughtNew.waitForExistence(timeout: 5), "criterion 1: the item form must offer Bought's New chip")
+        XCTAssertTrue(boughtUsed.exists, "criterion 1: the item form must offer Bought's Used chip")
+        XCTAssertFalse(boughtNew.isSelected, "criterion 1: a new item's Bought field opens with New unselected")
+        XCTAssertFalse(boughtUsed.isSelected, "criterion 1: a new item's Bought field opens with Used unselected")
+
+        // The chip before the three required fields, not after: once a field
+        // has the keyboard up, a swipe long enough to clear it throws the
+        // Bought row past the top of the form.
+        scrollUntilHittable(boughtUsed, in: app)
+        boughtUsed.tap()
+        XCTAssertTrue(boughtUsed.isSelected, "criterion 2: the tapped Used chip must come back selected")
+        XCTAssertFalse(boughtNew.isSelected, "criterion 2: picking Used must leave New unselected")
+
+        nameField.tap()
+        nameField.typeText(name)
+
+        let categoryField = app.textFields["Category"]
+        categoryField.tap()
+        categoryField.typeText("Photography/Cameras")
+
+        let priceField = app.textFields["Price paid"]
+        priceField.tap()
+        priceField.typeText("1850")
+
+        app.buttons["Save item"].tap()
+        XCTAssertTrue(
+            app.buttons["Save item"].waitForNonExistence(timeout: 5),
+            "The sheet stayed up — the save was probably rejected by validation"
+        )
+
+        openDetail(in: app, named: name)
+        let boughtUsedRow = detailRow(in: app, reading: "Bought used, \(today)")
+        XCTAssertTrue(
+            boughtUsedRow.waitForExistence(timeout: 5),
+            "criterion 6: the purchase-date row of an item bought used must read \"Bought used, \(today)\" — the page's Bought rows read \(detailRowLabels(in: app, beginning: "Bought"))"
+        )
+
+        // Criterion 2's other half: the edit form reopens on what was saved.
+        openEditForm(in: app)
+        XCTAssertTrue(boughtUsed.waitForExistence(timeout: 5), "the edit form must offer the Bought field")
+        XCTAssertTrue(boughtUsed.isSelected, "criterion 2: the item was saved as bought used, so the reopened form must select Used")
+        XCTAssertFalse(boughtNew.isSelected, "criterion 2: the reopened form must not select New")
+
+        // Criterion 3: tapping the selected chip clears the field — neither
+        // chip selected, read off both.
+        scrollUntilHittable(boughtUsed, in: app)
+        boughtUsed.tap()
+        XCTAssertFalse(boughtUsed.isSelected, "criterion 3: tapping the selected Used chip must clear it")
+        XCTAssertFalse(boughtNew.isSelected, "criterion 3: clearing Used must not select New")
+
+        app.buttons["Save changes"].tap()
+        XCTAssertTrue(
+            app.buttons["Save changes"].waitForNonExistence(timeout: 5),
+            "The edit form stayed up — the save was probably rejected by validation"
+        )
+
+        XCTAssertTrue(
+            detailRow(in: app, reading: "Bought, \(today)").waitForExistence(timeout: 5),
+            "criteria 3 and 6: once cleared, the purchase-date row must read plain \"Bought, \(today)\" — the page's Bought rows read \(detailRowLabels(in: app, beginning: "Bought"))"
+        )
+        XCTAssertFalse(
+            boughtUsedRow.exists,
+            "criterion 3: the cleared item must be stored as not recorded, so no row reads \"Bought used\""
+        )
+    }
+
+    /// `020` criteria 19, 21, 23 and 7 on the seeded Sell Plan collection
+    /// (`-seedSellPlan`, unchanged — its one wanted item, "Summicron 35mm
+    /// f/2", carries no preference, and this test sets one through the form):
+    /// the wishlist form's **Looking for** field opens unselected and saves
+    /// Used; the wanted item's page gains a **Looking for** row reading
+    /// **Used**; the row's Mark as bought… sheet opens with Bought's Used chip
+    /// already selected; New is picked instead, and the item the sheet creates
+    /// reads **Bought new**.
+    ///
+    /// Each value differs from what a broken path would produce: the
+    /// preselected chip is Used where an unseeded sheet shows neither, and the
+    /// bought item is New where a sheet that ignored the tap would carry Used
+    /// across.
+    ///
+    /// **Which host this reaches:** the sheet is opened from the Wishlist
+    /// row's swipe, so the seed under test is
+    /// `WishlistViewModel.makePurchaseFormViewModel(for:)` and no other. The
+    /// other three hosts' seeds are G11's cross-host unit test.
+    ///
+    /// Mutation: that method seeding `lookingFor: nil` → the preselect leg
+    /// red.
+    @MainActor
+    func testLookingForPrefillsThePurchaseSheet() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSellPlan"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        let wanted = "Summicron 35mm f/2"
+
+        app.buttons["Wishlist"].tap()
+        let summicron = app.staticTexts[wanted]
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "the seed's one wanted item must be on the Wishlist")
+
+        openLeadingSwipe(on: summicron, in: app)
+        let edit = app.buttons["Edit"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 5), "the leading swipe didn't open")
+        edit.tap()
+        XCTAssertTrue(app.buttons["Save changes"].waitForExistence(timeout: 5), "Edit must open the wishlist form")
+
+        let lookingForNew = app.buttons["lookingFor.new"]
+        let lookingForUsed = app.buttons["lookingFor.used"]
+        XCTAssertTrue(lookingForNew.waitForExistence(timeout: 5), "criterion 19: the wishlist form must offer Looking for's New chip")
+        XCTAssertTrue(lookingForUsed.exists, "criterion 19: the wishlist form must offer Looking for's Used chip")
+        XCTAssertFalse(lookingForNew.isSelected, "the seeded entry carries no preference, so New opens unselected")
+        XCTAssertFalse(lookingForUsed.isSelected, "the seeded entry carries no preference, so Used opens unselected")
+
+        scrollUntilHittable(lookingForUsed, in: app)
+        lookingForUsed.tap()
+        XCTAssertTrue(lookingForUsed.isSelected, "criterion 19: the tapped Used chip must come back selected")
+        XCTAssertFalse(lookingForNew.isSelected, "criterion 19: picking Used must leave New unselected")
+
+        app.buttons["Save changes"].tap()
+        XCTAssertTrue(
+            app.buttons["Save changes"].waitForNonExistence(timeout: 5),
+            "The wishlist form stayed up — the save was probably rejected by validation"
+        )
+
+        // Criterion 21: the wanted item's page says it, as one row.
+        openDetail(in: app, named: wanted)
+        XCTAssertTrue(
+            detailRow(in: app, reading: "Looking for, Used").waitForExistence(timeout: 5),
+            "criterion 21: the wanted item's page must show a row reading \"Looking for, Used\" — its Looking for rows read \(detailRowLabels(in: app, beginning: "Looking for"))"
+        )
+        app.buttons["Back"].tap()
+
+        // Criterion 23: bought through the Wishlist row's swipe, the sheet
+        // opens with the preference already picked.
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "Back must return to the Wishlist")
+        openLeadingSwipe(on: summicron, in: app)
+        let buy = app.buttons
+            .matching(NSPredicate(format: "label == %@", "Mark as bought\u{2026}"))
+            .firstMatch
+        XCTAssertTrue(buy.waitForExistence(timeout: 5), "the leading swipe must offer Mark as bought…")
+        buy.tap()
+
+        let price = app.textFields["purchase.sheet.price"]
+        XCTAssertTrue(price.waitForExistence(timeout: 5), "Mark as bought… must open the purchase sheet")
+        // The sheet's date opens on today, formatted as the page's row
+        // formats it.
+        let today = Date.now.formatted(date: .abbreviated, time: .omitted)
+
+        let boughtNew = app.buttons["bought.new"]
+        let boughtUsed = app.buttons["bought.used"]
+        XCTAssertTrue(boughtUsed.waitForExistence(timeout: 5), "criterion 7: the purchase sheet must offer the Bought field")
+        XCTAssertTrue(boughtNew.exists, "criterion 7: the purchase sheet must offer Bought's New chip")
+        // No scroll ahead of the reading or the tap: the sheet has five
+        // fields now, and at its opening detent the Bought chips and the
+        // condition row beneath them are both on screen (measured at T010 on
+        // the suite's simulator — the chips at y 709–742 and the condition
+        // chips at 786–819 in an 874-point window).
+        XCTAssertTrue(
+            boughtUsed.isSelected,
+            "criterion 23: the entry is looking for Used, so the sheet must open with Bought's Used chip selected"
+        )
+        XCTAssertFalse(boughtNew.isSelected, "criterion 23: the sheet must not preselect New")
+
+        // …and the person can change it before saving.
+        boughtNew.tap()
+        XCTAssertTrue(boughtNew.isSelected, "criterion 23: the tapped New chip must come back selected")
+        XCTAssertFalse(boughtUsed.isSelected, "criterion 23: picking New must unselect the preselected Used")
+
+        app.buttons["purchase.sheet.confirm"].tap()
+        XCTAssertTrue(price.waitForNonExistence(timeout: 5), "Mark as bought must close the sheet")
+
+        // Criteria 7 and 6: the item the sheet created carries what was
+        // picked — New, not the Used it was seeded with.
+        app.buttons["Items"].tap()
+        openDetail(in: app, named: wanted)
+        XCTAssertTrue(
+            detailRow(in: app, reading: "Bought new, \(today)").waitForExistence(timeout: 5),
+            "criterion 7: the item bought as New must read \"Bought new, \(today)\" on its purchase-date row — the page's Bought rows read \(detailRowLabels(in: app, beginning: "Bought"))"
+        )
+    }
+
+    /// One row of a detail page's field table. `DetailRow` is a single
+    /// `.combine`d element, so its label is "<label>, <value>" — matched
+    /// whole, which is what ties a label to the value it sits beside. Matched
+    /// across every type, as the owned row is in
+    /// `testMarkingAWantedItemBoughtMovesItToTheCollection`.
+    @MainActor
+    private func detailRow(in app: XCUIApplication, reading text: String) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", text))
+            .firstMatch
+    }
+
+    /// What the page's rows beginning `prefix` actually read — for a failure
+    /// message, so a red `detailRow` assertion says what was there instead.
+    @MainActor
+    private func detailRowLabels(in app: XCUIApplication, beginning prefix: String) -> [String] {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", prefix))
+            .allElementsBoundByIndex
+            .map(\.label)
+    }
+
+    /// The six grades in the row's order, as the chips read.
+    private static let conditionTitles = ["New", "Excellent", "Very Good", "Good", "Fair", "Broken"]
+
+    /// One condition chip, by its grade's word.
+    ///
+    /// Matched on the label **and** on carrying no identifier: the Bought
+    /// field's two chips read "New" and "Used" too, and are told apart from
+    /// the condition row's by the identifier they carry and these don't.
+    @MainActor
+    private func conditionChip(_ title: String, in app: XCUIApplication) -> XCUIElement {
+        app.buttons
+            .matching(NSPredicate(format: "label == %@ AND identifier == ''", title))
+            .firstMatch
+    }
+
+    /// Legs (i)–(iii) of criterion 18, on whichever screen is showing the
+    /// condition row at its opening position with Excellent selected. Ends
+    /// with Broken tapped and selected.
+    @MainActor
+    private func assertTheConditionRowIsOneScrollingRow(in app: XCUIApplication, on screen: String) {
+        let chips = Self.conditionTitles.map { conditionChip($0, in: app) }
+        for (title, chip) in zip(Self.conditionTitles, chips) {
+            XCTAssertTrue(chip.waitForExistence(timeout: 5), "\(screen) must offer the \(title) condition chip")
+        }
+
+        // Every reading below is taken here, before any gesture on the row.
+        let frames = chips.map(\.frame)
+        let excellent = chips[1]
+        let broken = chips[5]
+        let excellentIsHittable = excellent.isHittable
+        let brokenIsHittable = broken.isHittable
+        let layout = zip(Self.conditionTitles, frames).map { "\($0) \($1)" }.joined(separator: ", ")
+
+        // (i) One row.
+        for (title, frame) in zip(Self.conditionTitles, frames) {
+            XCTAssertEqual(
+                frame.minY, frames[0].minY, accuracy: 0.5,
+                "(i) on \(screen) the \(title) chip isn't on the first chip's row — the row must never wrap: \(layout)"
+            )
+            XCTAssertEqual(
+                frame.height, frames[0].height, accuracy: 0.5,
+                "(i) on \(screen) the \(title) chip isn't the first chip's height: \(layout)"
+            )
+        }
+
+        // (ii) The row overflows. Excellent being hittable is what makes
+        // Broken's not being so mean anything: the row is on screen.
+        XCTAssertTrue(
+            excellentIsHittable,
+            "on \(screen) the condition row isn't on screen, so nothing below can be read off it: \(layout)"
+        )
+        XCTAssertFalse(
+            brokenIsHittable,
+            "(ii) on \(screen) Broken can be tapped before any scrolling — the six chips fit the window \(app.frame), so the row is squeezed or doesn't overflow: \(layout)"
+        )
+
+        // (iii) The row scrolls.
+        excellent.swipeLeft()
+        XCTAssertTrue(
+            broken.isHittable,
+            "(iii) on \(screen) Broken still can't be tapped after swiping the row left — it sits at \(broken.frame) in a window \(app.frame)"
+        )
+        broken.tap()
+        XCTAssertTrue(broken.isSelected, "(iii) on \(screen) the tapped Broken chip must come back selected")
+    }
+
+    /// The item page's "…" → Edit, waiting for the form with More details
+    /// open — which an edit form opens by itself.
+    @MainActor
+    private func openEditForm(in app: XCUIApplication) {
+        let menu = app.buttons["More actions for this item"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5), "the item page must offer its overflow menu")
+        menu.tap()
+        let edit = app.buttons["Edit"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 5), "an owned item's menu must offer Edit")
+        edit.tap()
+        XCTAssertTrue(
+            app.buttons["Hide more details"].waitForExistence(timeout: 5),
+            "the edit form must open with More details showing"
+        )
+    }
+
+    /// The condition row sits below the fold on the edit form. Swipes the
+    /// form up until the field directly beneath the row can be tapped — a
+    /// vertical gesture, which cannot move a row that scrolls sideways.
+    @MainActor
+    private func bringTheConditionRowOnScreen(in app: XCUIApplication) {
+        scrollUntilHittable(app.textFields["Condition notes"], in: app)
+    }
 }

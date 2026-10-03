@@ -43,24 +43,42 @@ nonisolated enum MarketCopy {
         "as of \(MarketAge.description(of: fetchedAt, at: now))"
     }
 
+    /// Which listings a figure was read from, so the words can name them
+    /// (020, Q4): an owned item's condition, a wanted item's used listings,
+    /// or — looking for new — new stock.
+    enum ListingBasis: Equatable {
+        case inCondition
+        case used
+        case new
+    }
+
     static let withheldOwned = "Too few listings in this condition to say."
     static let withheldWanted = "Too few used listings to say."
+    static let withheldWantedNew = "Too few new listings to say."
 
     /// The withheld reading, with the catalog's lowest used asking price
     /// when it has one (spec Decision 6; the second sentence drops when the
-    /// catalog offers none — plan Q7).
-    static func withheld(usedLowCents: Int?, wanted: Bool) -> String {
-        let first = wanted ? withheldWanted : withheldOwned
+    /// catalog offers none — plan Q7). The second sentence says "used"
+    /// whatever the basis: it is Reverb's catalog-wide used low, and stays
+    /// true for a figure read from new stock (020, R3, Decision 10).
+    static func withheld(usedLowCents: Int?, basis: ListingBasis) -> String {
+        let first = switch basis {
+        case .inCondition: withheldOwned
+        case .used: withheldWanted
+        case .new: withheldWantedNew
+        }
         guard let usedLowCents else { return first }
         return "\(first) The lowest used asking price on Reverb is \(median(cents: usedLowCents))."
     }
 
     /// Decision 29: narrowing by year left fewer than three, so every year
     /// counted — said above the figure.
-    static func allYearsFallback(year: Int, wanted: Bool) -> String {
-        wanted
-            ? "Too few \(year) used listings \u{2014} all years shown."
-            : "Too few \(year) listings in this condition \u{2014} all years shown."
+    static func allYearsFallback(year: Int, basis: ListingBasis) -> String {
+        switch basis {
+        case .inCondition: "Too few \(year) listings in this condition \u{2014} all years shown."
+        case .used: "Too few \(year) used listings \u{2014} all years shown."
+        case .new: "Too few \(year) new listings \u{2014} all years shown."
+        }
     }
 
     static let refreshDue = "A refresh is due."

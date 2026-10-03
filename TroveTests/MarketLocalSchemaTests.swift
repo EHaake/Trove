@@ -78,7 +78,7 @@ struct MarketLocalSchemaTests {
                 "subjectID", "subjectKindRawValue", "productID", "fetchedAt", "count",
                 "medianCents", "lowCents", "highCents", "p10Cents", "p90Cents",
                 "usedLowCents", "isTruncated", "trendRawValue",
-                "yearFilter", "isAllYearsFallback",
+                "yearFilter", "isAllYearsFallback", "isNewStockOnly",
             ],
             "MarketHistoryPoint": ["subjectID", "fetchedAt", "medianCents", "lowCents", "highCents", "count"],
             "MarketMatchSnapshot": ["subjectID", "productID", "slug", "title", "usedLowCents", "takenAt"],

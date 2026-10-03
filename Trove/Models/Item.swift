@@ -39,9 +39,21 @@ final class Item {
     /// enforced in the view model, not the schema.
     var desireToKeep: Int = 3
 
-    /// Backing store for ``condition``. See plan.md's naming convention:
-    /// predicates and sort descriptors can only see this, not `condition`.
+    /// Backing store for ``condition`` — one of the five grades an app older
+    /// than 020 knows. **Not** `condition.rawValue` for Very Good, which is
+    /// stored here as `"good"`: read `condition`. See plan.md's naming
+    /// convention: predicates and sort descriptors can only see this, not
+    /// `condition`.
     var conditionRawValue: String = Condition.excellent.rawValue
+
+    /// 020 (plan Q2, spec P4): "very good" beside a `conditionRawValue` of
+    /// "good", nil otherwise. An older app never sees it, reads Good, and writes
+    /// Good back, so its edits cannot reset the grade.
+    var conditionRefinement: String?
+
+    /// 020: `NewOrUsed.rawValue`, or nil — not recorded. Every item that
+    /// predates 020 reads nil (Decision 3).
+    var boughtRawValue: String?
 
     var conditionNotes: String?
     var notes: String?
@@ -119,8 +131,34 @@ final class Item {
     var plannedForWishlistItems: [WishlistItem]? = []
 
     var condition: Condition {
-        get { Condition(rawValue: conditionRawValue) ?? .excellent }
-        set { conditionRawValue = newValue.rawValue }
+        get { Self.condition(raw: conditionRawValue, refinement: conditionRefinement) }
+        set { (conditionRawValue, conditionRefinement) = Self.storage(for: newValue) }
+    }
+
+    var bought: NewOrUsed? {
+        get { boughtRawValue.flatMap(NewOrUsed.init(rawValue:)) }
+        set { boughtRawValue = newValue?.rawValue }
+    }
+
+    /// The storage rule, both directions — the one place it is written.
+    /// Very Good is Good plus a refinement; every other grade is its own raw
+    /// value and no refinement.
+    static func storage(for condition: Condition) -> (raw: String, refinement: String?) {
+        switch condition {
+        case .veryGood: (Condition.good.rawValue, Condition.veryGood.rawValue)
+        case .new, .excellent, .good, .fair, .broken: (condition.rawValue, nil)
+        }
+    }
+
+    /// An unknown raw value reads Excellent, as it always has. The refinement
+    /// counts **only** over a base of Good and only when it is exactly Very
+    /// Good's raw value — so an older app that moves the item to Fair is read
+    /// as Fair whatever refinement it left behind, and an unknown refinement
+    /// over Good reads Good.
+    static func condition(raw: String, refinement: String?) -> Condition {
+        let base = Condition(rawValue: raw) ?? .excellent
+        if base == .good, refinement == Condition.veryGood.rawValue { return .veryGood }
+        return base
     }
 
     /// What the item is worth now against what it cost, or `nil` while it
@@ -151,7 +189,8 @@ final class Item {
         sortOrder: Int = 0,
         photos: [Photo]? = [],
         reverbProductID: Int? = nil,
-        year: Int? = nil
+        year: Int? = nil,
+        bought: NewOrUsed? = nil
     ) {
         let now = Date.now
         self.name = name
@@ -163,13 +202,14 @@ final class Item {
         self.purchaseLocation = purchaseLocation
         self.currentValueCents = currentValueCents
         self.desireToKeep = desireToKeep
-        self.conditionRawValue = condition.rawValue
+        (self.conditionRawValue, self.conditionRefinement) = Self.storage(for: condition)
         self.conditionNotes = conditionNotes
         self.notes = notes
         self.sortOrder = sortOrder
         self.photos = photos
         self.reverbProductID = reverbProductID
         self.year = year
+        self.boughtRawValue = bought?.rawValue
         self.createdAt = now
         self.updatedAt = now
     }

@@ -121,7 +121,9 @@ final class WishlistDetailViewModel {
     /// argument: the subject is the entry this screen holds. G12 pins the
     /// three hosts equal.
     func makePurchaseFormViewModel() -> PurchaseFormViewModel {
-        PurchaseFormViewModel(estimatedCostCents: item?.estimatedCostCents ?? 0, now: now)
+        PurchaseFormViewModel(
+            estimatedCostCents: item?.estimatedCostCents ?? 0, lookingFor: item?.lookingFor, now: now
+        )
     }
 
     /// Mark as bought…: the entry becomes an owned item, and this screen's
@@ -429,7 +431,7 @@ final class WishlistDetailViewModel {
         let target = MarketRefreshTarget(
             key: MarketSubjectKey(subjectID: item.id, kind: .wanted),
             productID: candidate.id,
-            subject: .wanted,
+            subject: .wanted(lookingFor: item.lookingFor),
             year: item.year
         )
         let refresher = MarketRefresher(modelContext: modelContext, service: marketService, now: now)
@@ -521,7 +523,7 @@ final class WishlistDetailViewModel {
         let target = MarketRefreshTarget(
             key: MarketSubjectKey(subjectID: item.id, kind: .wanted),
             productID: productID,
-            subject: .wanted,
+            subject: .wanted(lookingFor: item.lookingFor),
             year: item.year
         )
         // Only a `.current` reading shows a figure, and the unreachable

@@ -39,6 +39,12 @@ import Testing
 /// T017 observed SwiftData make two one-way links, not pair the record with
 /// `Item`'s other to-one into `WishlistItem`. `WishlistPurchaseStoreTests`
 /// reads both ends back on a second context.
+///
+/// The fifth is `020`'s three fields — `Item.conditionRefinement`,
+/// `Item.boughtRawValue` and `WishlistItem.lookingForRawValue`: each an
+/// optional `String` with no default and no unique constraint, additive to the
+/// same store — and T001 proved it the same way, declaring
+/// `@Attribute(.unique) var boughtRawValue: String?` turns this test red.
 @Suite("CloudKit schema compatibility")
 struct CloudKitSchemaTests {
     @Test func schemaMeetsCloudKitRequirements() throws {

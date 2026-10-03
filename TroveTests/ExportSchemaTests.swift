@@ -18,11 +18,13 @@ struct ExportSchemaTests {
             "Name", "Category", "Purchase Price", "Currency", "Purchase Date",
             "Purchase Location", "Current Value", "Desire to Keep", "Condition",
             "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
-            "Year", "Sold Date", "Sale Price", "Sold At", "Sale Note",
+            "Year", "Sold Date", "Sale Price", "Sold At", "Sale Note", "Bought",
         ])
+        // `Looking For` with a capital F, on purpose: a header is a column
+        // name, and the form's "Looking for" label is copy (020).
         #expect(ExportSchema.wishlistHeaders == [
             "Name", "Category", "Estimated Cost", "Currency", "Desire to Own",
-            "Added", "Notes", "Reverb Product ID", "Year",
+            "Added", "Notes", "Reverb Product ID", "Year", "Looking For",
         ])
     }
 
@@ -51,10 +53,23 @@ struct ExportSchemaTests {
             "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
             "Year",
         ])
+        // 020's boundaries: the eighteen names 006 through 019 shipped and
+        // the nine wishlist names 002 through 019 shipped, before `Bought`
+        // and `Looking For` were appended.
+        #expect(Array(ExportSchema.itemHeaders.prefix(18)) == [
+            "Name", "Category", "Purchase Price", "Currency", "Purchase Date",
+            "Purchase Location", "Current Value", "Desire to Keep", "Condition",
+            "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
+            "Year", "Sold Date", "Sale Price", "Sold At", "Sale Note",
+        ])
+        #expect(Array(ExportSchema.wishlistHeaders.prefix(9)) == [
+            "Name", "Category", "Estimated Cost", "Currency", "Desire to Own",
+            "Added", "Notes", "Reverb Product ID", "Year",
+        ])
         // The boundaries name those widths, oldest first — and only widths a
         // release actually ended at, so a speculative entry turns this red.
-        #expect(ExportSchema.itemSchemaBoundaries == [12, 14])
-        #expect(ExportSchema.wishlistSchemaBoundaries == [7])
+        #expect(ExportSchema.itemSchemaBoundaries == [12, 14, 18])
+        #expect(ExportSchema.wishlistSchemaBoundaries == [7, 9])
         // Append-only: a boundary is always shorter than the live layout.
         #expect(ExportSchema.itemSchemaBoundaries.allSatisfy { $0 < ExportSchema.itemHeaders.count })
         #expect(
@@ -159,7 +174,7 @@ struct ExportSchemaTests {
         #expect(row == [
             "Leica M6", "Photography/Cameras", "2900.00", "USD", "2026-03-09",
             "KEH", "3450.50", "5", "excellent", "New seals", "2244668", "Body only",
-            "160322", "1984", "", "", "", "",
+            "160322", "1984", "", "", "", "", "",
         ])
         #expect(row.count == ExportSchema.itemHeaders.count)
     }
@@ -273,6 +288,65 @@ struct ExportSchemaTests {
         )
     }
 
+    /// 020/G17 (criterion 13): `Bought` is the row's last cell — `new`,
+    /// `used`, or blank for not recorded — and everything before it is the
+    /// unrecorded row's own bytes, unmoved.
+    @Test func theBoughtCellIsTheLastAndCarriesNewUsedOrNothing() throws {
+        let headers = ExportSchema.itemHeaders
+        var used = saleFixture()
+        used.bought = .used
+        var new = saleFixture()
+        new.bought = .new
+
+        let blankRow = ExportSchema.row(from: saleFixture())
+        let usedRow = ExportSchema.row(from: used)
+        let newRow = ExportSchema.row(from: new)
+        #expect(try cell(usedRow, "Bought", of: headers) == "used")
+        #expect(try cell(newRow, "Bought", of: headers) == "new")
+        #expect(try cell(blankRow, "Bought", of: headers) == "")
+        #expect(usedRow.last == "used")
+        #expect(usedRow.count == headers.count)
+        #expect(Array(usedRow.dropLast()) == Array(blankRow.dropLast()))
+    }
+
+    /// 020/P5 (criterion 13): Very Good is written the way every grade is —
+    /// its raw value, lower case with its space — from a live item, whose
+    /// stored field says `"good"`.
+    @Test func veryGoodIsWrittenAsVeryGood() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Leica M6", categoryPath: "Photography/Cameras", condition: .veryGood)
+        context.insert(item)
+        try #require(item.conditionRawValue == "good")
+
+        let row = ExportSchema.row(from: ItemExportRecord(item: item))
+        #expect(try cell(row, "Condition", of: ExportSchema.itemHeaders) == "very good")
+    }
+
+    /// 020/G17 (criterion 25): the wishlist twin — `Looking For` last,
+    /// `new`, `used` or blank.
+    @Test func theLookingForCellIsTheLastAndCarriesNewUsedOrNothing() throws {
+        let headers = ExportSchema.wishlistHeaders
+        func record(_ lookingFor: NewOrUsed?) -> WishlistExportRecord {
+            WishlistExportRecord(
+                name: "Vox AC15", categoryPath: "Music/Amps", estimatedCostCents: 105_000,
+                currencyCode: "USD", desireToOwn: 3,
+                createdAt: Date(timeIntervalSince1970: 1_700_000_000), notes: nil,
+                reverbProductID: 232, year: 2019, lookingFor: lookingFor,
+                firstPhotoID: nil, firstPhotoAttribution: nil
+            )
+        }
+
+        let usedRow = ExportSchema.row(from: record(.used))
+        let newRow = ExportSchema.row(from: record(.new))
+        let blankRow = ExportSchema.row(from: record(nil))
+        #expect(try cell(usedRow, "Looking For", of: headers) == "used")
+        #expect(try cell(newRow, "Looking For", of: headers) == "new")
+        #expect(try cell(blankRow, "Looking For", of: headers) == "")
+        #expect(newRow.last == "new")
+        #expect(newRow.count == headers.count)
+        #expect(Array(newRow.dropLast()) == Array(blankRow.dropLast()))
+    }
+
     @Test func wishlistRowCarriesEveryColumnInHeaderOrder() throws {
         let newYork = gregorian(in: "America/New_York")
         let added = try #require(newYork.date(from: DateComponents(year: 2026, month: 8, day: 30)))
@@ -293,7 +367,7 @@ struct ExportSchemaTests {
         let row = ExportSchema.row(from: record, timeZone: zone("America/New_York"))
         #expect(row == [
             "Vox AC15", "Music/Amps", "1050.00", "USD", "3", "2026-08-30", "",
-            "232", "2019",
+            "232", "2019", "",
         ])
         #expect(row.count == ExportSchema.wishlistHeaders.count)
     }
@@ -454,6 +528,74 @@ struct ExportSchemaTests {
         #expect(entry.notes == "Custom, not C2")
     }
 
+    /// 020/G18 (criterion 17): the one date field's label carries new/used —
+    /// `Bought used` / `Bought new` when recorded, plain `Bought` when not —
+    /// with no second "Bought" field. Compared as the full label list,
+    /// never a `contains("Bought")`, since "Bought from" holds the word.
+    /// Very Good prints as Very Good. Mutation: the label reverted to plain
+    /// `"Bought"` → the recorded legs red.
+    @Test func itemEntryDateFieldIsLabelledBoughtNewOrUsed() {
+        func record(_ bought: NewOrUsed?) -> ItemExportRecord {
+            var record = saleFixture()
+            record.bought = bought
+            return record
+        }
+
+        let used = PDFEntry(record: record(.used)).fields.map(\.label)
+        #expect(used == [
+            "Paid", "Worth now", "Currency", "Bought used", "Bought from",
+            "Desire to keep", "Condition", "Serial number",
+        ])
+        let new = PDFEntry(record: record(.new)).fields.map(\.label)
+        #expect(new == [
+            "Paid", "Worth now", "Currency", "Bought new", "Bought from",
+            "Desire to keep", "Condition", "Serial number",
+        ])
+        let unrecorded = PDFEntry(record: record(nil)).fields.map(\.label)
+        #expect(unrecorded == [
+            "Paid", "Worth now", "Currency", "Bought", "Bought from",
+            "Desire to keep", "Condition", "Serial number",
+        ])
+
+        let veryGood = ItemExportRecord(
+            name: "Leica M6", categoryPath: "Photography/Cameras",
+            purchasePriceCents: 290_000, currencyCode: "USD",
+            purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+            purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
+            conditionRawValue: "very good", conditionNotes: nil, serialNumber: nil,
+            notes: nil, reverbProductID: nil, year: nil,
+            soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
+            firstPhotoID: nil, firstPhotoAttribution: nil
+        )
+        let condition = PDFEntry(record: veryGood).fields.first { $0.label == "Condition" }
+        #expect(condition?.value == "Very Good")
+    }
+
+    /// 020/G18 (criterion 26): the wishlist entry carries `Looking for` after
+    /// `Desire to own` when recorded and omits it when not. Mutation: the nil
+    /// guard dropped (the field always drawn, blank when nil) → the
+    /// unrecorded leg red.
+    @Test func wishlistEntryCarriesLookingForOnlyWhenRecorded() {
+        func record(_ lookingFor: NewOrUsed?) -> WishlistExportRecord {
+            WishlistExportRecord(
+                name: "Vox AC15", categoryPath: "Music/Amps", estimatedCostCents: 105_000,
+                currencyCode: "USD", desireToOwn: 3,
+                createdAt: Date(timeIntervalSince1970: 1_700_000_000), notes: nil,
+                reverbProductID: nil, year: nil, lookingFor: lookingFor,
+                firstPhotoID: nil, firstPhotoAttribution: nil
+            )
+        }
+
+        let used = PDFEntry(record: record(.used)).fields
+        #expect(used.map(\.label) == ["Estimated cost", "Currency", "Desire to own", "Looking for", "Added"])
+        #expect(used[3].value == "Used")
+        let new = PDFEntry(record: record(.new)).fields
+        #expect(new.map(\.label) == ["Estimated cost", "Currency", "Desire to own", "Looking for", "Added"])
+        #expect(new[3].value == "New")
+        let unrecorded = PDFEntry(record: record(nil)).fields.map(\.label)
+        #expect(unrecorded == ["Estimated cost", "Currency", "Desire to own", "Added"])
+    }
+
     // MARK: - Model → record mapping (T002)
 
     @Test func itemRecordCarriesEveryFieldFromTheModel() throws {
@@ -490,6 +632,23 @@ struct ExportSchemaTests {
         #expect(record.serialNumber == "2244668")
         #expect(record.notes == "Body only")
         #expect(record.firstPhotoID == nil)
+    }
+
+    /// 020/G6 (plan Q2): the snapshot carries the grade, not the stored
+    /// field. A Very Good item stores `"good"` in `conditionRawValue` — the
+    /// first expectation is that fact, so the fixture differs from what the
+    /// broken path produces — and its record must still say `"very good"`,
+    /// which is what the CSV writes and import reads back. Mutation:
+    /// `init(item:)` back on `item.conditionRawValue` → the record says
+    /// `"good"` → red.
+    @Test func aVeryGoodItemsRecordCarriesTheGradeNotTheStoredField() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Leica M6", categoryPath: "Photography/Cameras", condition: .veryGood)
+        context.insert(item)
+        try #require(item.conditionRawValue == "good")
+
+        let record = ItemExportRecord(item: item)
+        #expect(record.conditionRawValue == "very good")
     }
 
     /// 006: the snapshot reads the sale through `Item.sale`, the one place

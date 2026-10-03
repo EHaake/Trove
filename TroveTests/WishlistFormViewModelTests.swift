@@ -409,4 +409,78 @@ struct WishlistFormSaveTests {
 
         #expect(viewModel.desireToOwn == 3)
     }
+
+    // MARK: - Looking for (020 G12)
+
+    /// 020 G12 (criteria 19, 20): a new form's Looking for is not recorded,
+    /// and it saves that way — no validation error, nothing to answer first.
+    ///
+    /// Mutation: add a validation case for a nil `lookingFor` → `save()`
+    /// returns false and the error set is not empty.
+    @Test func startsWithLookingForNotRecordedAndSavesWithoutIt() throws {
+        let container = try makeInMemoryContainer()
+        let viewModel = WishlistFormViewModel(modelContext: ModelContext(container))
+        #expect(viewModel.lookingFor == nil)
+
+        viewModel.name = "Vox AC15 Custom"
+        viewModel.categoryPath = "Music/Amps"
+        viewModel.estimatedCost = 1_050
+
+        #expect(viewModel.save())
+        #expect(viewModel.validationErrors.isEmpty)
+
+        let stored = try #require(try fetchAll(ModelContext(container)).first)
+        #expect(stored.lookingFor == nil)
+        #expect(stored.lookingForRawValue == nil)
+    }
+
+    /// 020 G12 (criterion 19): each value picked on the form reaches the
+    /// store, and the entry's form reopens with it selected. Both read on a
+    /// *second* context over the same container — the stored value there, and
+    /// the reopened form built on the entry refetched there.
+    ///
+    /// Mutations: `save()` skipping `lookingFor` → the stored leg fails (and
+    /// the reopen with it); `populate` skipping `lookingFor` → the reopen leg
+    /// alone fails.
+    @Test(arguments: NewOrUsed.allCases)
+    func savesLookingForAndReopensWithItSelected(value: NewOrUsed) throws {
+        let container = try makeInMemoryContainer()
+        let viewModel = WishlistFormViewModel(modelContext: ModelContext(container))
+        viewModel.name = "Summicron 35mm f/2"
+        viewModel.categoryPath = "Photography/Lenses"
+        viewModel.estimatedCost = 2_400
+        viewModel.lookingFor = value
+        #expect(viewModel.save())
+
+        let reader = ModelContext(container)
+        let stored = try #require(try fetchAll(reader).first)
+        #expect(stored.lookingFor == value)
+
+        let reopened = WishlistFormViewModel(modelContext: reader, editing: stored)
+        #expect(reopened.lookingFor == value)
+    }
+
+    /// 020 G12 (criterion 19): clearing the field on an entry that had one
+    /// and saving stores it as not recorded. The entry starts as Used, so the
+    /// nil read back on a second context is a write, never a default left
+    /// alone.
+    ///
+    /// Mutation: `save()` skipping `lookingFor` → the entry is still Used.
+    @Test func clearingLookingForSavesNotRecorded() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let existing = WishlistItem(name: "Summicron 35mm f/2", categoryPath: "Photography/Lenses", lookingFor: .used)
+        context.insert(existing)
+        try context.save()
+
+        let viewModel = WishlistFormViewModel(modelContext: context, editing: existing)
+        #expect(viewModel.lookingFor == .used)
+        viewModel.lookingFor = nil
+        #expect(viewModel.save())
+        #expect(viewModel.validationErrors.isEmpty)
+
+        let stored = try #require(try fetchAll(ModelContext(container)).first)
+        #expect(stored.lookingFor == nil)
+        #expect(stored.lookingForRawValue == nil)
+    }
 }

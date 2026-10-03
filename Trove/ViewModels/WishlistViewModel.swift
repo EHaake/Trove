@@ -301,7 +301,8 @@ final class WishlistViewModel {
             photos: (original.photos ?? []).map {
                 Photo(imageData: $0.imageData, source: $0.source, sortOrder: $0.sortOrder)
             },
-            plannedSaleItems: []
+            plannedSaleItems: [],
+            lookingFor: original.lookingFor
         )
         modelContext.insert(copy)
 
@@ -338,7 +339,9 @@ final class WishlistViewModel {
     /// injected clock, so a test can pin it. One seeding rule for all three
     /// hosts; G12 pins them equal.
     func makePurchaseFormViewModel(for wanted: WishlistItem) -> PurchaseFormViewModel {
-        PurchaseFormViewModel(estimatedCostCents: wanted.estimatedCostCents, now: now)
+        PurchaseFormViewModel(
+            estimatedCostCents: wanted.estimatedCostCents, lookingFor: wanted.lookingFor, now: now
+        )
     }
 
     /// Mark as bought… from a row: the entry becomes an owned item and leaves
@@ -570,7 +573,9 @@ final class WishlistViewModel {
                     // As on the items side (002/T016a): the match and the
                     // year come back with the row.
                     reverbProductID: record.reverbProductID,
-                    year: record.year
+                    year: record.year,
+                    // 020: and so does `Looking For`.
+                    lookingFor: record.lookingFor
                 )
                 // Assigned after construction deliberately: the init hard-sets
                 // `.now` and has no parameter — `Added` restores when the want

@@ -86,6 +86,30 @@ struct ItemDuplicationTests {
         }
     }
 
+    /// 020 G13 (criterion 8): the copy is of the same item, bought the same
+    /// way. The original is set to Used — never left unrecorded — so a copy
+    /// that drops the field reads nil and fails, and both rows are read on a
+    /// second context.
+    ///
+    /// Mutation: `duplicate(id:)` without `bought: original.bought` → the
+    /// copy reads nil.
+    @Test func theCopyCarriesBought() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let original = makeOriginal(in: context)
+        original.bought = .used
+        try context.save()
+
+        let viewModel = ItemListViewModel(modelContext: context)
+        viewModel.load()
+        viewModel.duplicate(id: original.id)
+
+        let items = try ModelContext(container).fetch(FetchDescriptor<Item>())
+        let copy = try #require(items.first { $0.id != original.id })
+        #expect(copy.bought == .used)
+        #expect(try #require(items.first { $0.id == original.id }).bought == .used, "The original keeps its own")
+    }
+
     @Test func sellPlanMembershipIsNotInherited() throws {
         let container = try makeInMemoryContainer()
         let context = ModelContext(container)

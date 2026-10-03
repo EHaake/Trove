@@ -9,7 +9,7 @@ import SwiftUI
 /// price — and this spec's non-goals forbid changing the sale sheet. So this
 /// copies `SaleFormView`'s chrome, which `SaleFormView` itself copied from
 /// `ItemFormView`, the house precedent for exactly this; the condition row is
-/// `ItemFormView`'s `FlowLayout` of capsules, copied the same way.
+/// the `ConditionField` both forms share (020), one scrolling row of capsules.
 ///
 /// It is hosted from the wishlist, the wanted-entry page and the Sell Plan,
 /// and it writes nothing itself: confirming hands
@@ -36,7 +36,9 @@ import SwiftUI
 /// left behind for someone to wire back up by accident.
 ///
 /// Every word comes from `PurchaseCopy`, never typed here, so the sheet and
-/// the rest of the spec's surfaces cannot drift apart.
+/// the rest of the spec's surfaces cannot drift apart — bar the Bought
+/// field's (020), which come from `NewOrUsedCopy` for the same reason: the
+/// item form shows the same field.
 struct PurchaseFormView: View {
     @State private var viewModel: PurchaseFormViewModel
     private let confirm: (Purchase) -> Void
@@ -74,14 +76,15 @@ struct PurchaseFormView: View {
                             comparison
                         }
                         boughtFromField
+                        boughtField
                         conditionField
                     }
                     .padding(.horizontal, theme.metrics.screenGutter)
                     .padding(.top, theme.metrics.sectionGap)
                     .padding(.bottom, theme.metrics.sectionGap)
                 }
-                // Four short fields don't fill the medium detent, and a form
-                // that rubber-bands over empty space reads as broken.
+                // A few short fields needn't fill the detent, and a form that
+                // rubber-bands over empty space reads as broken.
                 .scrollBounceBehavior(.basedOnSize)
             }
             // No navigation title at all — see the note above. The inline
@@ -249,47 +252,22 @@ struct PurchaseFormView: View {
         }
     }
 
-    /// `ItemFormView`'s condition row, copied (Q8): a label over a flow of
-    /// capsules, one per case. Not a picker: chosen while `013`'s rule
-    /// forbade a system menu inside page content, which `018` reversed
-    /// (`MenuPolicyTests`); the capsules stay as the form's design.
-    private var conditionField: some View {
-        VStack(alignment: .leading, spacing: theme.metrics.fieldGap) {
-            Text(PurchaseCopy.conditionLabel).monoLabel()
-            FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
-                ForEach(Condition.allCases, id: \.self, content: conditionChip)
-            }
-        }
+    /// Bought new or used (020 plan §6) — the shared `NewOrUsedField`, the
+    /// one `ItemFormView` composes, between Bought from and Condition so the
+    /// two chip rows sit together. Which chip opens selected, if either, is
+    /// the view model's (it seeds from what the wanted entry was looking
+    /// for); this only places the field.
+    private var boughtField: some View {
+        NewOrUsedField(label: NewOrUsedCopy.boughtLabel, identifier: "bought", selection: $viewModel.bought)
     }
 
-    /// The selected trait is load-bearing twice over: it is how VoiceOver says
-    /// which condition is chosen, and how a UI test reads the selection.
-    private func conditionChip(_ condition: Condition) -> some View {
-        let isSelected = viewModel.condition == condition
-
-        return Button {
-            viewModel.condition = condition
-        } label: {
-            Text(condition.rawValue.capitalized)
-                .font(theme.typography.secondary)
-                .foregroundStyle(isSelected ? theme.colors.accentBrass : theme.colors.textBody)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .background(
-                    Capsule().fill(isSelected ? theme.colors.accentBrassTint : Color.clear)
-                )
-                .overlay(
-                    Capsule().strokeBorder(
-                        isSelected ? theme.colors.accentBrass : theme.colors.divider,
-                        lineWidth: theme.metrics.hairline
-                    )
-                )
-                // A clear fill doesn't hit-test: without this an unselected
-                // chip's padding took no tap (009 T014a).
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    /// `ItemFormView`'s condition row — the same shared `ConditionField`
+    /// (020 plan §6), one sideways-scrolling row of capsules, one per case.
+    /// Not a picker: chosen while `013`'s rule forbade a system menu inside
+    /// page content, which `018` reversed (`MenuPolicyTests`); the capsules
+    /// stay as the form's design.
+    private var conditionField: some View {
+        ConditionField(label: PurchaseCopy.conditionLabel, selection: $viewModel.condition)
     }
 
     // MARK: - Shared field chrome
@@ -348,7 +326,7 @@ struct PurchaseFormView: View {
     Color.clear
         .sheet(isPresented: .constant(true)) {
             PurchaseFormView(
-                viewModel: PurchaseFormViewModel(estimatedCostCents: 240_000),
+                viewModel: PurchaseFormViewModel(estimatedCostCents: 240_000, lookingFor: nil),
                 confirm: { _ in },
                 cancel: {}
             )
