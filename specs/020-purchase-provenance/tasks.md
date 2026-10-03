@@ -671,7 +671,7 @@ Everything the person reads is plain language.
   `SettingsViewModel`). Note: the docs samples are 18- and 9-column files and
   now import only through the new boundaries — T013's concern.
 
-- [ ] **T012 — The PDF lines.**
+- [x] **T012 — The PDF lines.**
   Per plan §9 and R6. `PDFEntry.init(record: ItemExportRecord)` labels its
   existing purchase-date field with `NewOrUsedCopy.detailDateRowLabel(bought:)`
   (no new item field); `init(record: WishlistExportRecord)` appends Looking for
@@ -689,6 +689,14 @@ Everything the person reads is plain language.
   leg red; the wishlist nil guard dropped → the unchanged-literal leg red).
   Files: `Trove/Export/ExportSchema.swift`, `TroveTests/ExportSchemaTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutation recorded.
+  **Done (2026-10-03).** `scripts/verify.sh` green (the implementer's verbatim
+  output): 1804 tests in 236 suites (+2): `itemEntryDateFieldIsLabelledBoughtNewOrUsed`
+  (full label list against a literal for `.used`, `.new` and nil, and Very Good
+  printed "Very Good") and `wishlistEntryCarriesLookingForOnlyWhenRecorded`. The
+  existing nil literals unchanged and green. Mutations in one run, red and
+  restored: the item label back to plain "Bought" → the recorded legs red, the
+  nil leg green; the wishlist nil guard dropped → the new unrecorded leg and the
+  existing four-field test red.
 
 - [ ] **T013 — The CSV reference, the samples, and their test.**
   Per plan §11. `docs/csv-reference.md`: items row 19 `Bought`, wishlist row 10
@@ -868,3 +876,4 @@ escape-hatch misses recorded here too.
 | Phase 3 review (`skeptical-reviewer`) | `opus` | 64,611 (3 tool uses, 2.3 min) | Signed off, no blocking. Second-look notes: (1) criterion 19's reopen-selected, clear and save-unset legs on the **wishlist** form are in no UI test — added to the person's walkthrough at this pause; (2) criterion 21's "no row when not recorded" has no automated check (`?? "Not recorded"` would stay green) — walkthrough, and one assertion owed at the sweep; (3) criteria 7/23's no-preference and clear legs on the sheet are unit-tested (G11) but not observed in the UI suite — walkthrough; (4) criteria 5 and 20 (existing rows open not recorded) named in the walkthrough, T014(a) the on-disk evidence; (5) the Name-hittable probe may read before a lazy `onAppear` fires — "the form doesn't jump" is a walkthrough item, not proven; (6) placement is scan + walkthrough; (7) the pause report says "Looking for" with its value beside it, no dot; (8) the sheet's fifth row leaves the condition chips at y 819 of 874 on the pinned simulator — on a shorter phone Condition is likely below the fold at the medium detent, still reachable by scrolling; for the person's eye and T014(b) |
 | Phase 3 pause (orchestrator, 2026-10-03) | `claude-opus-5-5` medium | — | Build installed on the person's iPhone 17 Pro (iOS 26.5) for the walkthrough. Attested; spec Decision 12 recorded; criterion 7's wording amended. The Accessibility Inspector step is covered by "everything looks good" — not reported separately |
 | T011 (`sdd-implementer`) | `opus` | 133,452 (33 tool uses, 11.6 min) | Done first pass; four required mutations in two runs |
+| T012 (`sdd-implementer`) | `opus` | 47,806 (13 tool uses, 14.5 min — one red run at ~11 min) | Done first pass |

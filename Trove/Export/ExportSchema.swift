@@ -284,8 +284,11 @@ extension PDFEntry {
                 isMono: record.currentValueCents != nil
             ),
             PDFField(label: "Currency", value: record.currencyCode, isMono: true),
+            // 020 R6: the one date field's label carries new/used — the same
+            // function the item page's date row uses, so page and PDF cannot
+            // drift; no second "Bought" field.
             PDFField(
-                label: "Bought",
+                label: NewOrUsedCopy.detailDateRowLabel(bought: record.bought),
                 value: ExportSchema.day(from: record.purchaseDate, timeZone: timeZone),
                 isMono: true
             ),
@@ -315,23 +318,29 @@ extension PDFEntry {
     /// See `init(record: ItemExportRecord, ...)` — wishlist vocabulary, and
     /// the same carve-out: no Reverb identifier, no year, no market figure.
     nonisolated init(record: WishlistExportRecord, timeZone: TimeZone = .current) {
+        var fields: [PDFField] = [
+            PDFField(
+                label: "Estimated cost",
+                value: record.estimatedCostCents.formattedAsWholeCurrency(currencyCode: record.currencyCode),
+                isMono: true
+            ),
+            PDFField(label: "Currency", value: record.currencyCode, isMono: true),
+            PDFField(label: "Desire to own", value: "\(record.desireToOwn) / 3", isMono: true),
+        ]
+        // 020: omitted when not recorded, as empty condition notes are.
+        if let lookingFor = record.lookingFor {
+            fields.append(PDFField(label: NewOrUsedCopy.lookingForLabel, value: NewOrUsedCopy.chip(lookingFor)))
+        }
+        fields.append(PDFField(
+            label: "Added",
+            value: ExportSchema.day(from: record.createdAt, timeZone: timeZone),
+            isMono: true
+        ))
+
         self.init(
             eyebrow: record.categoryPath.split(separator: "/").joined(separator: " · "),
             name: record.name,
-            fields: [
-                PDFField(
-                    label: "Estimated cost",
-                    value: record.estimatedCostCents.formattedAsWholeCurrency(currencyCode: record.currencyCode),
-                    isMono: true
-                ),
-                PDFField(label: "Currency", value: record.currencyCode, isMono: true),
-                PDFField(label: "Desire to own", value: "\(record.desireToOwn) / 3", isMono: true),
-                PDFField(
-                    label: "Added",
-                    value: ExportSchema.day(from: record.createdAt, timeZone: timeZone),
-                    isMono: true
-                ),
-            ],
+            fields: fields,
             notes: (record.notes?.isEmpty == false) ? record.notes : nil,
             photoID: record.firstPhotoID,
             photoCredit: Self.credit(for: record.firstPhotoAttribution)

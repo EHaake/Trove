@@ -528,6 +528,74 @@ struct ExportSchemaTests {
         #expect(entry.notes == "Custom, not C2")
     }
 
+    /// 020/G18 (criterion 17): the one date field's label carries new/used —
+    /// `Bought used` / `Bought new` when recorded, plain `Bought` when not —
+    /// with no second "Bought" field. Compared as the full label list,
+    /// never a `contains("Bought")`, since "Bought from" holds the word.
+    /// Very Good prints as Very Good. Mutation: the label reverted to plain
+    /// `"Bought"` → the recorded legs red.
+    @Test func itemEntryDateFieldIsLabelledBoughtNewOrUsed() {
+        func record(_ bought: NewOrUsed?) -> ItemExportRecord {
+            var record = saleFixture()
+            record.bought = bought
+            return record
+        }
+
+        let used = PDFEntry(record: record(.used)).fields.map(\.label)
+        #expect(used == [
+            "Paid", "Worth now", "Currency", "Bought used", "Bought from",
+            "Desire to keep", "Condition", "Serial number",
+        ])
+        let new = PDFEntry(record: record(.new)).fields.map(\.label)
+        #expect(new == [
+            "Paid", "Worth now", "Currency", "Bought new", "Bought from",
+            "Desire to keep", "Condition", "Serial number",
+        ])
+        let unrecorded = PDFEntry(record: record(nil)).fields.map(\.label)
+        #expect(unrecorded == [
+            "Paid", "Worth now", "Currency", "Bought", "Bought from",
+            "Desire to keep", "Condition", "Serial number",
+        ])
+
+        let veryGood = ItemExportRecord(
+            name: "Leica M6", categoryPath: "Photography/Cameras",
+            purchasePriceCents: 290_000, currencyCode: "USD",
+            purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+            purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
+            conditionRawValue: "very good", conditionNotes: nil, serialNumber: nil,
+            notes: nil, reverbProductID: nil, year: nil,
+            soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
+            firstPhotoID: nil, firstPhotoAttribution: nil
+        )
+        let condition = PDFEntry(record: veryGood).fields.first { $0.label == "Condition" }
+        #expect(condition?.value == "Very Good")
+    }
+
+    /// 020/G18 (criterion 26): the wishlist entry carries `Looking for` after
+    /// `Desire to own` when recorded and omits it when not. Mutation: the nil
+    /// guard dropped (the field always drawn, blank when nil) → the
+    /// unrecorded leg red.
+    @Test func wishlistEntryCarriesLookingForOnlyWhenRecorded() {
+        func record(_ lookingFor: NewOrUsed?) -> WishlistExportRecord {
+            WishlistExportRecord(
+                name: "Vox AC15", categoryPath: "Music/Amps", estimatedCostCents: 105_000,
+                currencyCode: "USD", desireToOwn: 3,
+                createdAt: Date(timeIntervalSince1970: 1_700_000_000), notes: nil,
+                reverbProductID: nil, year: nil, lookingFor: lookingFor,
+                firstPhotoID: nil, firstPhotoAttribution: nil
+            )
+        }
+
+        let used = PDFEntry(record: record(.used)).fields
+        #expect(used.map(\.label) == ["Estimated cost", "Currency", "Desire to own", "Looking for", "Added"])
+        #expect(used[3].value == "Used")
+        let new = PDFEntry(record: record(.new)).fields
+        #expect(new.map(\.label) == ["Estimated cost", "Currency", "Desire to own", "Looking for", "Added"])
+        #expect(new[3].value == "New")
+        let unrecorded = PDFEntry(record: record(nil)).fields.map(\.label)
+        #expect(unrecorded == ["Estimated cost", "Currency", "Desire to own", "Added"])
+    }
+
     // MARK: - Model → record mapping (T002)
 
     @Test func itemRecordCarriesEveryFieldFromTheModel() throws {
