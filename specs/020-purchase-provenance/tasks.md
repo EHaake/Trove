@@ -618,7 +618,7 @@ Everything the person reads is plain language.
 
 ## Phase 4 — CSV, templates, import and PDF · walkthrough: yes — Settings › Templates: the items template now ends in a Bought column and the wishlist template in Looking For; export the collection as CSV and the last column reads new, used or blank, with a Very Good item written "very good"; import that file into an empty collection and every Bought value and Very Good grade comes back; an older export with no Bought column still imports; the collection PDF's date field reads "Bought new" or "Bought used" where recorded and plain "Bought" where not, and prints Very Good; the wishlist PDF lists "Looking for" the same way
 
-- [ ] **T011 — The CSV columns, the templates, and import on both lists.**
+- [x] **T011 — The CSV columns, the templates, and import on both lists.**
   Per plan §8, Q6–Q8. `ItemExportRecord.bought` / `WishlistExportRecord.lookingFor`
   as `var … = nil`, filled by each `init(item:)`; the two header arrays appended;
   the two row functions appended; `itemSchemaBoundaries = [12, 14, 18]`,
@@ -650,6 +650,26 @@ Everything the person reads is plain language.
   `aTroveExportRoundTripsLosslessly` / `aWishlistExportRoundTripsLosslessly`
   shapes, carried through the commit).
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-10-03).** `scripts/verify.sh` green (the implementer's verbatim
+  output): 1802 tests in 236 suites (+12). **The round trip through the commit
+  lives in the commit suites** (`ItemListViewModelCommitTests.commitRestoresBoughtAndVeryGoodThroughTheCSV`,
+  `WishlistViewModelCommitTests.commitRestoresLookingForThroughTheCSV`, `006`'s
+  precedent): `.used`/Very Good, `.new` and nil through record, CSV, parse,
+  preview and commit, refetched on a second context, asserting the stored pair
+  `("good", "very good")`. **Pinned literals that change with the schema**,
+  updated not loosened, after a run showing exactly these red and nothing else:
+  both header arrays, both row literals (a trailing `""`), both boundary arrays,
+  and `theTwoLegacyItemWidthsPassAndTheWidthsBetweenThemDoNot` (full width 19,
+  plus a new 18-prefix check). The 12- and 14-column tests unedited and green.
+  The fixture helpers `cells()`/`wishlistCells()` gained the two keys (their
+  `byHeader[$0]!` would crash otherwise). Mutations, red and restored (`cmp`):
+  a boundary dropped → the 18- and 9-column files rejected, the wrong-list test
+  and the docs samples red; the export row on `item.conditionRawValue` → the CSV
+  cell, the round trip's pair and G6; the unreadable case not counted → red on
+  both lists; a commit dropping its field → both round trips. The template
+  check parses the header bytes built from the pinned arrays (not through
+  `SettingsViewModel`). Note: the docs samples are 18- and 9-column files and
+  now import only through the new boundaries — T013's concern.
 
 - [ ] **T012 — The PDF lines.**
   Per plan §9 and R6. `PDFEntry.init(record: ItemExportRecord)` labels its
@@ -847,3 +867,4 @@ escape-hatch misses recorded here too.
 | T010 (`sdd-implementer`) | `opus` | 111,861 (33 tool uses, 73.0 min — two full UI runs at 19 min, three red single-method runs with the ~10 min hang) | Done; one first-run failure of its own test (keyboard-up scroll overshoot) fixed by reordering the walk |
 | Phase 3 review (`skeptical-reviewer`) | `opus` | 64,611 (3 tool uses, 2.3 min) | Signed off, no blocking. Second-look notes: (1) criterion 19's reopen-selected, clear and save-unset legs on the **wishlist** form are in no UI test — added to the person's walkthrough at this pause; (2) criterion 21's "no row when not recorded" has no automated check (`?? "Not recorded"` would stay green) — walkthrough, and one assertion owed at the sweep; (3) criteria 7/23's no-preference and clear legs on the sheet are unit-tested (G11) but not observed in the UI suite — walkthrough; (4) criteria 5 and 20 (existing rows open not recorded) named in the walkthrough, T014(a) the on-disk evidence; (5) the Name-hittable probe may read before a lazy `onAppear` fires — "the form doesn't jump" is a walkthrough item, not proven; (6) placement is scan + walkthrough; (7) the pause report says "Looking for" with its value beside it, no dot; (8) the sheet's fifth row leaves the condition chips at y 819 of 874 on the pinned simulator — on a shorter phone Condition is likely below the fold at the medium detent, still reachable by scrolling; for the person's eye and T014(b) |
 | Phase 3 pause (orchestrator, 2026-10-03) | `claude-opus-5-5` medium | — | Build installed on the person's iPhone 17 Pro (iOS 26.5) for the walkthrough. Attested; spec Decision 12 recorded; criterion 7's wording amended. The Accessibility Inspector step is covered by "everything looks good" — not reported separately |
+| T011 (`sdd-implementer`) | `opus` | 133,452 (33 tool uses, 11.6 min) | Done first pass; four required mutations in two runs |

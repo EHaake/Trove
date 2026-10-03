@@ -202,10 +202,19 @@ nonisolated enum ImportSchema {
         return value
     }
 
-    /// Condition matched case-insensitively against the five known raw
-    /// values (criterion 8) — a hand-typed "Excellent" works.
+    /// Condition matched case-insensitively against the six known raw
+    /// values (criterion 8) — a hand-typed "Excellent" works, and so does
+    /// "Very Good", whose raw value carries its space (020, P5).
     static func condition(from field: String) -> Condition? {
         Condition(rawValue: field.lowercased())
+    }
+
+    /// Bought new or used, and looking for new or used (020, Q6): `new` or
+    /// `used` in any letter case. Anything else is nil, which the field
+    /// policy turns into a counted default — or, for a blank cell, a silent
+    /// "not recorded".
+    static func newOrUsed(from field: String) -> NewOrUsed? {
+        NewOrUsed(rawValue: field.lowercased())
     }
 
     /// Currency: exactly three ASCII letters, stored uppercased. The model
@@ -345,6 +354,7 @@ nonisolated enum ImportSchema {
         let salePriceColumn = column("Sale Price")
         let soldAtColumn = column("Sold At")
         let saleNoteColumn = column("Sale Note")
+        let boughtColumn = column("Bought")
 
         var validated: [ValidatedRow<ItemExportRecord>] = []
         var skipped: [SkippedRow] = []
@@ -491,6 +501,19 @@ nonisolated enum ImportSchema {
                 }
             }
 
+            // 020 (Q6): the `Reverb Product ID` split — blank is "not
+            // recorded" and silent, an unreadable cell is counted.
+            let boughtCell = FieldNormalization.trimmed(cells[boughtColumn])
+            let bought: NewOrUsed?
+            if boughtCell.isEmpty {
+                bought = nil
+            } else if let parsed = newOrUsed(from: boughtCell) {
+                bought = parsed
+            } else {
+                bought = nil
+                defaulted += 1
+            }
+
             let record = ItemExportRecord(
                 name: name,
                 categoryPath: FieldNormalization.trimmed(cells[categoryColumn]),
@@ -510,6 +533,7 @@ nonisolated enum ImportSchema {
                 salePriceCents: salePriceCents,
                 saleLocation: saleLocation,
                 saleNote: saleNote,
+                bought: bought,
                 firstPhotoID: nil,
                 firstPhotoAttribution: nil
             )
@@ -525,7 +549,7 @@ nonisolated enum ImportSchema {
         )
     }
 
-    /// The wishlist pipeline — `itemsPreview`'s twin over the nine-column
+    /// The wishlist pipeline — `itemsPreview`'s twin over the ten-column
     /// table. Deliberately a parallel implementation, not shared machinery:
     /// each function reads as its spec table, and the tables genuinely
     /// differ (`Added` restores `createdAt`; desire runs 1–3 defaulting
@@ -550,6 +574,7 @@ nonisolated enum ImportSchema {
         let notesColumn = column("Notes")
         let reverbColumn = column("Reverb Product ID")
         let yearColumn = column("Year")
+        let lookingForColumn = column("Looking For")
 
         var validated: [ValidatedRow<WishlistExportRecord>] = []
         var skipped: [SkippedRow] = []
@@ -632,6 +657,18 @@ nonisolated enum ImportSchema {
                 defaulted += 1
             }
 
+            // 020 (Q6): as `Bought` in `itemsPreview`.
+            let lookingForCell = FieldNormalization.trimmed(cells[lookingForColumn])
+            let lookingFor: NewOrUsed?
+            if lookingForCell.isEmpty {
+                lookingFor = nil
+            } else if let parsed = newOrUsed(from: lookingForCell) {
+                lookingFor = parsed
+            } else {
+                lookingFor = nil
+                defaulted += 1
+            }
+
             let record = WishlistExportRecord(
                 name: name,
                 categoryPath: FieldNormalization.trimmed(cells[categoryColumn]),
@@ -642,6 +679,7 @@ nonisolated enum ImportSchema {
                 notes: FieldNormalization.nilIfBlank(cells[notesColumn]),
                 reverbProductID: productID,
                 year: wantedYear,
+                lookingFor: lookingFor,
                 firstPhotoID: nil,
                 firstPhotoAttribution: nil
             )

@@ -573,7 +573,9 @@ final class WishlistViewModel {
                     // As on the items side (002/T016a): the match and the
                     // year come back with the row.
                     reverbProductID: record.reverbProductID,
-                    year: record.year
+                    year: record.year,
+                    // 020: and so does `Looking For`.
+                    lookingFor: record.lookingFor
                 )
                 // Assigned after construction deliberately: the init hard-sets
                 // `.now` and has no parameter — `Added` restores when the want

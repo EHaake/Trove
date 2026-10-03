@@ -18,11 +18,13 @@ struct ExportSchemaTests {
             "Name", "Category", "Purchase Price", "Currency", "Purchase Date",
             "Purchase Location", "Current Value", "Desire to Keep", "Condition",
             "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
-            "Year", "Sold Date", "Sale Price", "Sold At", "Sale Note",
+            "Year", "Sold Date", "Sale Price", "Sold At", "Sale Note", "Bought",
         ])
+        // `Looking For` with a capital F, on purpose: a header is a column
+        // name, and the form's "Looking for" label is copy (020).
         #expect(ExportSchema.wishlistHeaders == [
             "Name", "Category", "Estimated Cost", "Currency", "Desire to Own",
-            "Added", "Notes", "Reverb Product ID", "Year",
+            "Added", "Notes", "Reverb Product ID", "Year", "Looking For",
         ])
     }
 
@@ -51,10 +53,23 @@ struct ExportSchemaTests {
             "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
             "Year",
         ])
+        // 020's boundaries: the eighteen names 006 through 019 shipped and
+        // the nine wishlist names 002 through 019 shipped, before `Bought`
+        // and `Looking For` were appended.
+        #expect(Array(ExportSchema.itemHeaders.prefix(18)) == [
+            "Name", "Category", "Purchase Price", "Currency", "Purchase Date",
+            "Purchase Location", "Current Value", "Desire to Keep", "Condition",
+            "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
+            "Year", "Sold Date", "Sale Price", "Sold At", "Sale Note",
+        ])
+        #expect(Array(ExportSchema.wishlistHeaders.prefix(9)) == [
+            "Name", "Category", "Estimated Cost", "Currency", "Desire to Own",
+            "Added", "Notes", "Reverb Product ID", "Year",
+        ])
         // The boundaries name those widths, oldest first — and only widths a
         // release actually ended at, so a speculative entry turns this red.
-        #expect(ExportSchema.itemSchemaBoundaries == [12, 14])
-        #expect(ExportSchema.wishlistSchemaBoundaries == [7])
+        #expect(ExportSchema.itemSchemaBoundaries == [12, 14, 18])
+        #expect(ExportSchema.wishlistSchemaBoundaries == [7, 9])
         // Append-only: a boundary is always shorter than the live layout.
         #expect(ExportSchema.itemSchemaBoundaries.allSatisfy { $0 < ExportSchema.itemHeaders.count })
         #expect(
@@ -159,7 +174,7 @@ struct ExportSchemaTests {
         #expect(row == [
             "Leica M6", "Photography/Cameras", "2900.00", "USD", "2026-03-09",
             "KEH", "3450.50", "5", "excellent", "New seals", "2244668", "Body only",
-            "160322", "1984", "", "", "", "",
+            "160322", "1984", "", "", "", "", "",
         ])
         #expect(row.count == ExportSchema.itemHeaders.count)
     }
@@ -273,6 +288,65 @@ struct ExportSchemaTests {
         )
     }
 
+    /// 020/G17 (criterion 13): `Bought` is the row's last cell — `new`,
+    /// `used`, or blank for not recorded — and everything before it is the
+    /// unrecorded row's own bytes, unmoved.
+    @Test func theBoughtCellIsTheLastAndCarriesNewUsedOrNothing() throws {
+        let headers = ExportSchema.itemHeaders
+        var used = saleFixture()
+        used.bought = .used
+        var new = saleFixture()
+        new.bought = .new
+
+        let blankRow = ExportSchema.row(from: saleFixture())
+        let usedRow = ExportSchema.row(from: used)
+        let newRow = ExportSchema.row(from: new)
+        #expect(try cell(usedRow, "Bought", of: headers) == "used")
+        #expect(try cell(newRow, "Bought", of: headers) == "new")
+        #expect(try cell(blankRow, "Bought", of: headers) == "")
+        #expect(usedRow.last == "used")
+        #expect(usedRow.count == headers.count)
+        #expect(Array(usedRow.dropLast()) == Array(blankRow.dropLast()))
+    }
+
+    /// 020/P5 (criterion 13): Very Good is written the way every grade is —
+    /// its raw value, lower case with its space — from a live item, whose
+    /// stored field says `"good"`.
+    @Test func veryGoodIsWrittenAsVeryGood() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Leica M6", categoryPath: "Photography/Cameras", condition: .veryGood)
+        context.insert(item)
+        try #require(item.conditionRawValue == "good")
+
+        let row = ExportSchema.row(from: ItemExportRecord(item: item))
+        #expect(try cell(row, "Condition", of: ExportSchema.itemHeaders) == "very good")
+    }
+
+    /// 020/G17 (criterion 25): the wishlist twin — `Looking For` last,
+    /// `new`, `used` or blank.
+    @Test func theLookingForCellIsTheLastAndCarriesNewUsedOrNothing() throws {
+        let headers = ExportSchema.wishlistHeaders
+        func record(_ lookingFor: NewOrUsed?) -> WishlistExportRecord {
+            WishlistExportRecord(
+                name: "Vox AC15", categoryPath: "Music/Amps", estimatedCostCents: 105_000,
+                currencyCode: "USD", desireToOwn: 3,
+                createdAt: Date(timeIntervalSince1970: 1_700_000_000), notes: nil,
+                reverbProductID: 232, year: 2019, lookingFor: lookingFor,
+                firstPhotoID: nil, firstPhotoAttribution: nil
+            )
+        }
+
+        let usedRow = ExportSchema.row(from: record(.used))
+        let newRow = ExportSchema.row(from: record(.new))
+        let blankRow = ExportSchema.row(from: record(nil))
+        #expect(try cell(usedRow, "Looking For", of: headers) == "used")
+        #expect(try cell(newRow, "Looking For", of: headers) == "new")
+        #expect(try cell(blankRow, "Looking For", of: headers) == "")
+        #expect(newRow.last == "new")
+        #expect(newRow.count == headers.count)
+        #expect(Array(newRow.dropLast()) == Array(blankRow.dropLast()))
+    }
+
     @Test func wishlistRowCarriesEveryColumnInHeaderOrder() throws {
         let newYork = gregorian(in: "America/New_York")
         let added = try #require(newYork.date(from: DateComponents(year: 2026, month: 8, day: 30)))
@@ -293,7 +367,7 @@ struct ExportSchemaTests {
         let row = ExportSchema.row(from: record, timeZone: zone("America/New_York"))
         #expect(row == [
             "Vox AC15", "Music/Amps", "1050.00", "USD", "3", "2026-08-30", "",
-            "232", "2019",
+            "232", "2019", "",
         ])
         #expect(row.count == ExportSchema.wishlistHeaders.count)
     }
