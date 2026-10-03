@@ -698,7 +698,7 @@ Everything the person reads is plain language.
   nil leg green; the wishlist nil guard dropped → the new unrecorded leg and the
   existing four-field test red.
 
-- [ ] **T013 — The CSV reference, the samples, and their test.**
+- [x] **T013 — The CSV reference, the samples, and their test.**
   Per plan §11. `docs/csv-reference.md`: items row 19 `Bought`, wishlist row 10
   `Looking For`, the Condition row's six words with `very good`'s space, the
   field-formats bullets, and the kept-exceptions paragraph naming the 18- and
@@ -716,6 +716,17 @@ Everything the person reads is plain language.
   `TroveTests/DocsSampleTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutation recorded; then
   `scripts/verify.sh ui` once at the phase end, count recorded.
+  **Done (2026-10-03).** `scripts/verify.sh` green: 1804 tests in 236 suites
+  (G19 is assertions added inside the two existing sample tests, no new
+  functions); phase-end `scripts/verify.sh ui`: **42 tests, 0 failures**
+  (1167.9 s) — the implementer's verbatim output. `items-full.csv`: Bought on
+  all 12 rows, six `new` and six `used`; the Summicron regraded `very good`.
+  `wishlist.csv`: Deluxe Reverb `new`, GFX 50R and Space Echo `used`, Ortofon
+  blank. Mutation in one run — one Bought cell blanked, the Summicron back to
+  `good`, one Looking For cell blanked → each assertion red on its own line;
+  samples restored (`cmp`). Beyond the line: the ‡ note now says "the four sale
+  columns (15–18)", no longer last; the whole-file-failure list names 12, 14 or
+  18 and 7 or 9 columns. Legacy samples untouched.
 
   **Phase 4 closes here — pause for the person** (walkthrough above). R6 was
   decided before the build (spec Decision 10): the PDF's date label carries
@@ -877,3 +888,4 @@ escape-hatch misses recorded here too.
 | Phase 3 pause (orchestrator, 2026-10-03) | `claude-opus-5-5` medium | — | Build installed on the person's iPhone 17 Pro (iOS 26.5) for the walkthrough. Attested; spec Decision 12 recorded; criterion 7's wording amended. The Accessibility Inspector step is covered by "everything looks good" — not reported separately |
 | T011 (`sdd-implementer`) | `opus` | 133,452 (33 tool uses, 11.6 min) | Done first pass; four required mutations in two runs |
 | T012 (`sdd-implementer`) | `opus` | 47,806 (13 tool uses, 14.5 min — one red run at ~11 min) | Done first pass |
+| T013 (`sdd-implementer`) | `opus` | 62,605 (23 tool uses, 24.5 min — the phase-end UI run 19.5) | Done first pass |
