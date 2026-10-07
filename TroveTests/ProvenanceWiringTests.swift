@@ -32,8 +32,8 @@ struct ProvenanceWiringTests {
     /// neither draws a capsule of its own — which is what makes "the chips
     /// match" structural rather than a thing to eyeball.
     ///
-    /// Mutations: paste the old private chip back into either form → red
-    /// (its `Capsule()`); compose the field twice, or not at all → red.
+    /// Mutation: paste the old private chip back into either form → red
+    /// (its `Capsule()`).
     @Test(arguments: [itemForm, purchaseSheet])
     func eachFormComposesTheSharedConditionFieldOnceAndDrawsNoChipOfItsOwn(path: String) throws {
         let code = try SourceScan.production(path)

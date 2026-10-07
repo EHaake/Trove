@@ -275,8 +275,10 @@ from, and prefills the purchase sheet when it is bought.
 6. [x] The item's page labels its purchase-date row **Bought new** or
    **Bought used**, and plain **Bought** when not recorded.
    *Verified by* `NewOrUsedCopyTests`, which pins the three labels word for
-   word; the UI test, which reads "Bought used", "Bought" and "Bought new" on
-   the date row in turn; and a source check that the page's date row takes its
+   word; two UI tests — `testBoughtIsSetClearedAndShownOnTheItemsPage` reads
+   "Bought used" and then plain "Bought" on the date row, and
+   `testLookingForPrefillsThePurchaseSheet` reads "Bought new" with the date
+   on the item it buys; and a source check that the page's date row takes its
    label from the item's Bought value
    (`theItemPagesDateRowIsLabelledFromTheItemsBoughtField`).
 7. [x] The Mark as bought sheet shows the same Bought field, unselected
@@ -300,7 +302,9 @@ from, and prefills the purchase sheet when it is bought.
     `ModelTests.theScaleReadsInOrderWithVeryGoodBetweenExcellentAndGood`;
     `ItemFormViewModelTests.veryGoodSavesAsGoodPlusARefinementAndReopensSelected`;
     a source check that both screens draw the one shared condition row over the
-    whole scale; the UI tests, which read the six titles in order; and the
+    whole scale; the UI tests, which find the six chips by name on the item
+    form and on the purchase sheet and check that their left edges run left to
+    right in the order New, Excellent, Very Good, Good, Fair, Broken; and the
     device pass, which saw the six chips in order on both forms. Very Good on
     an item's page was part of the person's Phase 1 walkthrough (2026-10-01:
     the sixth grade is there).
@@ -384,10 +388,13 @@ from, and prefills the purchase sheet when it is bought.
     **Used**, and no row when not recorded.
     *Verified by* a source check that the page's row reads the entry's
     preference (`theWantedPagesLookingForRowReadsTheItemsLookingForField`) and
-    the UI test, which reads "Looking for, Used" on the page. "No row when not
-    recorded" was seen on the device pass (after the upgrade and again after a
-    relaunch) and in the person's Phase 3 walkthrough; **no automated test
-    asserts it**, which is noted for the pre-merge review.
+    the UI test `testLookingForPrefillsThePurchaseSheet`, which reads
+    "Looking for, Used" on the page once the preference is set — and, before
+    setting it, opens the same entry's page, waits for its Added row, and
+    finds no row beginning "Looking for" (that check was added after the
+    pre-merge review). "No row when not recorded" was also seen on the device
+    pass (after the upgrade and again after a relaunch) and in the person's
+    Phase 3 walkthrough.
 22. [x] A wanted item looking for new gets its market figure from Reverb's
     brand-new and B-stock listings only, and its market line says "new
     listings"; one looking for used, or not recorded, gets exactly the
@@ -395,7 +402,10 @@ from, and prefills the purchase sheet when it is bought.
     *Verified by* `MarketFigureComputationTests` (looking for new counts
     brand-new and B-stock listings only; used and not recorded give exactly the
     figure they gave before this spec, over the recorded Reverb responses);
-    `MarketRefresherTests`;
+    `MarketRefresherTests`, including the case of too few new listings
+    (`aWantedItemLookingForNewWithTooFewNewListingsIsWithheldAndRecordedSo`:
+    two new listings among five used give no figure, and the saved reading is
+    still marked as read from new stock — added after the pre-merge review);
     `MarketCopyTests.aFigureReadFromNewStockSaysNewListings` and
     `.theTwoWantedStringsFromBefore020AreUnchanged`;
     `MarketIndexTests.theListingBasisIsReadOffTheFigure`; and one source check,
@@ -535,7 +545,12 @@ Claude Code's proposals. Each became a decision when the plan was approved
     does not reset it: the item is still Very Good on an updated device. A
     test replays what the older app does on reading and on saving
     ("Very Good and an app older than 020"), and it fails if Very Good is
-    stored the simple way. One edge is known and accepted: if the older
+    stored the simple way. What that test is, exactly: a frozen copy of the
+    older app's read and save, run in memory. It shows that the older app's
+    own code never resets the grade to Excellent. Whether an older app's
+    iCloud sync leaves the extra field that marks Very Good intact is the
+    same unverified claim as for Bought and Looking for below, and it waits
+    on step 3.11 with them. One edge is known and accepted: if the older
     device moves the item to another grade and back to Good, it reads Very
     Good again on an updated device.
   - **Bought and Looking for — untested until the two-device pass.** An

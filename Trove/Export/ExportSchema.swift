@@ -389,13 +389,13 @@ nonisolated enum ExportSchema {
     /// only when a *released* layout ends, never speculatively: an entry
     /// that never shipped would accept a file Trove never wrote. 14 is the
     /// layout 002 through 005 shipped, before 006 appended the four sale
-    /// columns. 18 is the layout 006 through 019 shipped, before 020
+    /// columns. 18 is the layout 006 through 018 shipped, before 020
     /// appended `Bought`.
     static let itemSchemaBoundaries = [12, 14, 18]
 
     /// See `itemSchemaBoundaries` — 7 is the wishlist layout 011/012
     /// shipped, before 002 appended `Reverb Product ID` and `Year`; 9 is the
-    /// layout 002 through 019 shipped, before 020 appended `Looking For`.
+    /// layout 002 through 018 shipped, before 020 appended `Looking For`.
     static let wishlistSchemaBoundaries = [7, 9]
 
     /// Money as the schema writes it: plain decimal, always two places, dot

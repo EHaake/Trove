@@ -1714,7 +1714,7 @@ struct WishlistPurchaseHostTests {
             }
         }
 
-        // Pinned, so three hosts agreeing on the wrong thing still fails.
+        // Pinned, so four hosts agreeing on the wrong thing still fails.
         // $2,400 rather than the cents, today rather than the entry's own
         // dates, and — the P1 distinction — nil rather than 0.
         let estimatedRow = try #require(list.items.first { $0.id == estimated.id })

@@ -269,6 +269,42 @@ struct MarketRefresherTests {
         #expect(row.isNewStockOnly)
     }
 
+    /// Criterion 22's other state, too few new listings to say: two new-stock
+    /// listings among five used is under `minimumCount`, so the reading is
+    /// withheld — and the saved record still says it was read from new stock,
+    /// which is what lets the section say "Too few new listings to say."
+    /// Read on a second context.
+    ///
+    /// Five used on purpose: a refresher that ignored the preference would
+    /// count them and return a figure, so the withheld count of 2 says which
+    /// side was read.
+    ///
+    /// Mutation: `row.isNewStockOnly = newStockOnly` moved into `record`'s
+    /// `.figure` branch → red.
+    @Test func aWantedItemLookingForNewWithTooFewNewListingsIsWithheldAndRecordedSo() async throws {
+        let w = try wantedWorld(lookingFor: .new)
+        let target = try #require(try MarketRefresher.targets(in: w.context).first)
+        let listings = [
+            MarketListing(priceCents: 200_000, currency: "USD", conditionSlug: "brand-new", year: nil),
+            MarketListing(priceCents: 190_000, currency: "USD", conditionSlug: "b-stock", year: nil),
+            MarketListing(priceCents: 100_000, currency: "USD", conditionSlug: "good", year: nil),
+            MarketListing(priceCents: 110_000, currency: "USD", conditionSlug: "good", year: nil),
+            MarketListing(priceCents: 120_000, currency: "USD", conditionSlug: "good", year: nil),
+            MarketListing(priceCents: 130_000, currency: "USD", conditionSlug: "excellent", year: nil),
+            MarketListing(priceCents: 90_000, currency: "USD", conditionSlug: "fair", year: nil),
+        ]
+        let twoNewAmongUsed = MarketListings(listings: listings, reportedTotal: listings.count, isTruncated: false)
+        let refresher = MarketRefresher(modelContext: w.context, service: try spy(listings: [.success(twoNewAmongUsed)]), now: { self.t0 })
+
+        let outcome = await refresher.refresh(target)
+
+        #expect(outcome == .refreshed(.withheld(count: 2, usedLowCents: 100_000, fetchedAt: t0, yearScope: .any)))
+        let row = try #require(try MarketLocalStore.figure(for: w.item.id, in: ModelContext(w.container)))
+        #expect(row.count == 2)
+        #expect(row.medianCents == nil)
+        #expect(row.isNewStockOnly, "a withheld reading still records which listings it was read from")
+    }
+
     /// The re-read decides (plan §3): the caller's target says "not
     /// recorded", the person switches to New while the fetch is in flight,
     /// and the figure is the New one — computed and recorded.

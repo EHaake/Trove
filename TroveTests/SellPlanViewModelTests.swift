@@ -1204,7 +1204,7 @@ struct SellPlanRecordTests {
                 purchasePriceCents: item.purchasePriceCents,
                 currentValueCents: item.currentValueCents,
                 desireToKeep: item.desireToKeep,
-                conditionRawValue: item.conditionRawValue,
+                conditionRawValue: item.condition.rawValue,
                 soldDate: item.soldDate,
                 salePriceCents: item.salePriceCents,
                 soldTowardID: item.soldTowardWishlistItem?.id,

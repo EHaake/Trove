@@ -118,8 +118,8 @@ final class WishlistDetailViewModel {
     /// Plan's are (plan Q10): the price from this entry's estimated cost when
     /// it has one and blank when it doesn't — never a pre-filled $0, the 006
     /// P1 rule — and today's date from this screen's injected clock. No
-    /// argument: the subject is the entry this screen holds. G12 pins the
-    /// three hosts equal.
+    /// argument: the subject is the entry this screen holds.
+    /// `everyHostSeedsThePurchaseSheetIdentically` pins the four hosts equal.
     func makePurchaseFormViewModel() -> PurchaseFormViewModel {
         PurchaseFormViewModel(
             estimatedCostCents: item?.estimatedCostCents ?? 0, lookingFor: item?.lookingFor, now: now

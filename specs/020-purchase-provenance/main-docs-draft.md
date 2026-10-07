@@ -19,7 +19,7 @@ section if the README's status paragraph is handled some other way.
 
 ### 1. The status table — a new last row, after `018-system-design-language`
 
-| `020-purchase-provenance` | **Shipped** — merged to `main` `<merge date>` via [PR #33](https://github.com/EHaake/Trove/pull/33); every task through T015's close-out and the pre-merge sweep done (2026-10-06); fifteen tasks (T001–T015) with no sub-lettered additions — the two phase-pause findings became spec Decisions 11 and 12 rather than fix tasks, and the device pass found no failure — **1804 unit tests in 236 suites** and **42 UI tests** green at the close-out, and both suites twice back to back after the device pass (the counts are in `tasks.md`). Twenty-seven of twenty-eight criteria verified with per-criterion records in `spec.md`; **one honest partial named**: criterion 27 (Bought, Looking for and Very Good reaching a second signed-in device) stays unticked until `specs/SYNC-CHECKS.md` steps 3.11 and 3.12 are run, and with it the half of P4 no test here can reach — whether an older copy of the app editing a row keeps Bought and Looking for. **Bought new or used** on every owned item and **Looking for new or used** on every wishlist entry, both optional, never defaulted and never inferred from condition; **Very Good** joins the condition scale between Excellent and Good, and the six grades sit on **one row that scrolls sideways** (the person's call at the Phase 1 pause, on seeing them wrap). A wanted item looking for new reads its market figure from Reverb's new stock and says "new listings"; used or unstated keeps exactly the figure it had. Marking a wanted item bought prefills the sheet from the preference. One appended CSV column on each list, files from before it still importing; the PDF and the item's page carry new/used in the purchase-date row's label. No figure and no grade moved on update — checked by upgrading in place on a device. |
+| `020-purchase-provenance` | **Shipped** — merged to `main` `<merge date>` via [PR #33](https://github.com/EHaake/Trove/pull/33); every task through T015's close-out and the pre-merge sweep done (2026-10-06); fifteen tasks (T001–T015) and one sub-lettered addition (T015a, the pre-merge sweep's fix round) — the two phase-pause findings became spec Decisions 11 and 12 rather than fix tasks, and the device pass found no failure — **1805 unit tests in 236 suites** and **42 UI tests** green after the pre-merge sweep's fix round (1804 at the close-out), and both suites twice back to back after the device pass (the counts are in `tasks.md`). Twenty-seven of twenty-eight criteria verified with per-criterion records in `spec.md`; **one honest partial named**: criterion 27 (Bought, Looking for and Very Good reaching a second signed-in device) stays unticked until `specs/SYNC-CHECKS.md` steps 3.11 and 3.12 are run, and with it the half of P4 no test here can reach — whether an older copy of the app editing a row keeps Bought and Looking for. **Bought new or used** on every owned item and **Looking for new or used** on every wishlist entry, both optional, never defaulted and never inferred from condition; **Very Good** joins the condition scale between Excellent and Good, and the six grades sit on **one row that scrolls sideways** (the person's call at the Phase 1 pause, on seeing them wrap). A wanted item looking for new reads its market figure from Reverb's new stock and says "new listings"; used or unstated keeps exactly the figure it had. Marking a wanted item bought prefills the sheet from the preference. One appended CSV column on each list, files from before it still importing; the PDF and the item's page carry new/used in the purchase-date row's label. No figure and no grade moved on update — checked by upgrading in place on a device. |
 
 ### 2. The `020` backlog entry, rewritten as shipped (replaces the whole entry)
 
@@ -67,9 +67,10 @@ section if the README's status paragraph is handled some other way.
 ### 3. No change to `021`'s entry
 
 `021-import-expansion` already carries the person's words from the Phase 4
-pause (2026-10-06) and the facts of their own spreadsheet — it was
-committed to `main` then. Nothing to apply here; it is named so nobody
-goes looking.
+pause (2026-10-06) and the facts of their own spreadsheet — that edit was
+committed on this branch (`6bcf950`), so it rides the branch and reaches
+`main` with the merge. Nothing to apply here; it is named so nobody goes
+looking.
 
 ---
 
@@ -124,9 +125,8 @@ what reaches beyond that spec.
   `condition` (or both stored fields), never `conditionRawValue` alone**,
   because that field says "good" for a Very Good item.
   `022-grouped-browsing` is the likely first consumer. At the close-out
-  no production code outside `Item.swift` touched the raw field; one test
-  double still snapshots it (`SellPlanViewModelTests`), harmless until it
-  is fed a Very Good item. The claim "an older app neither resets nor
+  no production code outside `Item.swift` touched the raw field. The
+  claim "an older app neither resets nor
   misreads it" is a test, not a sentence: a frozen five-grade replica of
   the pre-`020` read and save ("Very Good and an app older than 020"),
   red under the naïve storage. It runs in memory and cannot see the

@@ -845,16 +845,28 @@ No `.pbxproj` edit, no new dependency, no constitution amendment.
 
 ### Open for the pre-merge sweep (none blocking)
 
-- `SellPlanViewModelTests.swift:1207`'s test double snapshots
-  `item.conditionRawValue` — harmless until fed a Very Good item.
+**Closed in the fix round after the sweep (T015a, 2026-10-06).** The
+`SellPlanViewModelTests` test double that snapshotted `item.conditionRawValue`
+now reads `item.condition.rawValue`, so its bullet is gone from this list. The
+stale comments below are corrected, all but the last. The "019" in the comments
+naming the layouts earlier releases wrote now reads 018, the last spec that
+shipped one. And three guards the sweep asked for exist, each
+mutation-verified: a withheld new-stock reading records its flag
+(`aWantedItemLookingForNewWithTooFewNewListingsIsWithheldAndRecordedSo`), an
+entry with no preference shows no Looking for row
+(`testLookingForPrefillsThePurchaseSheet`), and the six condition chips run
+left to right in the scale's order on both screens
+(`assertTheConditionRowIsOneScrollingRow`). What remains below is what the
+sweep judged fine to leave.
+
 - No test drives `markBought` with a Very Good purchase and asserts the stored
   pair (correct by construction through `Item.init`).
 - `aPreferenceChangedDuringTheFetchIsTheOneComputed` waits on its gate without
   a bound: it would hang rather than redden.
-- Stale comments: "three hosts" / "G12 pins" on three
+- Stale comments — **corrected at T015a**: "three hosts" / "G12 pins" on three
   `makePurchaseFormViewModel` docs and the host test; "the eleven `Item.init`
   is passed" in `WishlistPurchaseStoreTests`; a scan's doc comment claiming a
-  "composed twice or not at all" mutation that was not run; and
+  "composed twice or not at all" mutation that was not run. **Still open**:
   `theTwoLegacyItemWidthsPassAndTheWidthsBetweenThemDoNot` now covers three
   widths.
 - Neither `duplicate` passes `year` or `reverbProductID` (predates `020`; not

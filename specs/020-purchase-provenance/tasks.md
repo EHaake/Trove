@@ -798,7 +798,7 @@ Everything the person reads is plain language.
   Reverb" disclosure on a scratch simulator for a test name. **[person]** the
   two `SYNC-CHECKS.md` steps wait in that file (criterion 27).
 
-- [ ] **T015 — Close-out.**
+- [x] **T015 — Close-out.**
   Dispatched to the implementer the model policy's close-out row names
   (`sdd-implementer`), on a **close-out bundle** the orchestrator assembles with
   shell: each acceptance criterion with the test names or Done notes that
@@ -829,6 +829,34 @@ Everything the person reads is plain language.
   **Verify:** `grep -c "Superseded in part by \`020\`" specs/002-live-market-value/plan.md`
   returns 1; `scripts/verify.sh all` green with both count lines recorded here;
   the sweep signed off or its findings resolved.
+  **Done (2026-10-06).** Close-out on the evidence bundle: criteria 1–26 and 28
+  ticked with a record each, **27 unticked — an honest partial**; P-items
+  replaced with decisions; `plan.md` **As built**; the `002` pointer
+  (`grep -c` → 1); `SYNC-CHECKS.md` steps 3.11 (placed straight after 3.1, since
+  it needs B on the old build) and 3.12; `README.md`; `main-docs-draft.md` for
+  `main` after the merge. `scripts/verify.sh all` green: **1804 unit tests in 236
+  suites, 42 UI tests, 0 failures.** Pre-merge sweep: **signed off, no blocking
+  findings**, seven fixes asked for → T015a.
+
+- [x] **T015a — The pre-merge sweep's fix round.**
+  Seven fixes from the sweep, none blocking: a refresher test that a **withheld**
+  new-stock reading records its flag (`aWantedItemLookingForNewWithTooFewNewListingsIsWithheldAndRecordedSo`
+  — the state where "Too few new listings to say." shows; mutation: the
+  assignment moved into the figure branch → that test alone red); criterion
+  21's "no row when not recorded" asserted in `testLookingForPrefillsThePurchaseSheet`
+  (mutation: `?? "Not recorded"` → red); the six condition chips' left-to-right
+  order asserted in the shared UI helper (mutation: `veryGood` declared after
+  `good` → red, run through the purchase-sheet caller); `design/tokens.md`'s
+  sheet Fields row; spec P4 saying the Very Good half is a replica run in
+  memory, its sync leg waiting on step 3.11 with the other two; wording
+  corrections (`019` → `018` in seven comments, four hosts not three, twelve
+  `Item.init` arguments, an unrun mutation claim dropped, criteria 6/10/21/22's
+  records, the roadmap restatement riding this branch); the
+  `SellPlanViewModelTests` double reading `item.condition.rawValue`.
+  **Done (2026-10-06).** `scripts/verify.sh all` once on the final tree:
+  **1805 unit tests in 236 suites, 42 UI tests, 0 failures** (the implementer's
+  verbatim output). Re-review (findings and fix diff only): **signed off**. No
+  production logic changed — comments only in four production files.
 
 ---
 
@@ -912,3 +940,7 @@ escape-hatch misses recorded here too.
 | T014 (c) market probe (`general-purpose`) | `opus` | 154,547 (99 tool uses, 5.3 min) | 4/4 pass; probe removed, tree identical to HEAD |
 | T014 (d) relaunch (`general-purpose`) | `opus` | 116,588 (55 tool uses, 2.5 min) | All pass; both scratch simulators shut down. Four sections: 585,061 tokens, 27.6 min — against the skill's single 319-turn pass |
 | T015 close-out (`sdd-implementer`, on the evidence bundle) | `opus` | 134,020 (21 tool uses, 27.8 min — 20 of it `verify.sh all`; about 15 turns) | Done: criteria 1–26 and 28 ticked with records, 27 an unticked partial; As built; the `002` pointer (grep → 1); SYNC-CHECKS 3.11 and 3.12; README; `main-docs-draft.md`. `scripts/verify.sh all` green: 1804 unit in 236 suites, 42 UI. Bundle miss: the "As-built facts" block was cut mid-sentence, so it read narrow ranges of `tasks.md` — next time include the whole Done notes for the per-task-reviewed tasks |
+| Pre-merge sweep (`skeptical-reviewer`) | `opus` | 218,719 (30 tool uses, 5.2 min) | Signed off, no blocking. Verified the close-out (every cited test exists; 27 honestly partial; no production read of `Item.conditionRawValue` outside `Item.swift`; all seven creation paths and four `.wanted` sites carry the new fields; no probe left). Seven fixes before merge → T015a. One thing for the person: an ordinary figure line names no listing basis, so a New preference shows "58 listed" with no word saying new |
+| T015a sweep fix round (`sdd-implementer`) | `opus` | 113,428 (23 tool uses, 40.9 min) | All seven done; three mutations red and restored; `verify.sh all` green at 1805 / 42 |
+| Sweep re-review (`skeptical-reviewer`) | `opus` | 50,263 (2 tool uses, 1.6 min) | Signed off. Loop cap reached — its notes are logged here, two fixed by the orchestrator as bookkeeping (the draft status row's count attribution; this file's T015a entry). **Left open, none blocking**: older `015` comments elsewhere still say "three hosts"; the "Too few new listings" sentence was never seen on screen (the stored flag is now tested, the words are a scan); the draft status row's P4 summary names only Bought and Looking for while the spec now puts Very Good's sync leg with them; `usedLowCents: 100_000` in the new refresher test is unexplained in its comment; 6d's sentence cites "G11" by number; `plan.md` says the chip-order guard was mutated "on both screens" — it was mutated through the purchase-sheet caller; `theTwoLegacyItemWidths…` covers three widths; neither `duplicate` carries `year` or `reverbProductID` (predates `020` — a question for the person or a `fix/` branch) |
+| **Spec total (dispatches)** | `opus` | ≈ 3.2 M tokens across 32 dispatches (13 implementer, 12 reviewer, 4 device-pass, 1 decision review, plus planning's 2 before this session) | Compare `018`'s log before treating any policy change as settled. No escape-hatch use; no failed verification; one review round beyond first pass (the sweep's fix round) |

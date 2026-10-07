@@ -53,8 +53,8 @@ struct ExportSchemaTests {
             "Condition Notes", "Serial Number", "Notes", "Reverb Product ID",
             "Year",
         ])
-        // 020's boundaries: the eighteen names 006 through 019 shipped and
-        // the nine wishlist names 002 through 019 shipped, before `Bought`
+        // 020's boundaries: the eighteen names 006 through 018 shipped and
+        // the nine wishlist names 002 through 018 shipped, before `Bought`
         // and `Looking For` were appended.
         #expect(Array(ExportSchema.itemHeaders.prefix(18)) == [
             "Name", "Category", "Purchase Price", "Currency", "Purchase Date",

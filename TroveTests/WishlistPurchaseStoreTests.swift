@@ -43,10 +43,11 @@ struct WishlistPurchaseStoreTests {
 
     // MARK: - G5: the item the purchase creates
 
-    /// G5 (spec P3–P5, criterion 7). The thirteen fields the new item settles:
-    /// the eleven `Item.init` is passed, plus `desireToKeep` left at the
+    /// G5 (spec P3–P5, criterion 7). The fourteen fields the new item settles:
+    /// the twelve `Item.init` is passed, plus `desireToKeep` left at the
     /// initializer's default (P5 — the wanting scale is not the keeping scale)
-    /// and `sortOrder`.
+    /// and `sortOrder`. The twelfth argument, `bought`, is 020 G11's test
+    /// below; the other thirteen are asserted here.
     ///
     /// The existing items' positions carry a deliberate gap (0, 3, 7): a
     /// `nextPosition` written as a *count* would put the new item on rung 3,

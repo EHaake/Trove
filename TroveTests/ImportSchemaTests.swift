@@ -472,7 +472,7 @@ struct ImportSchemaTests {
         }
     }
 
-    /// Criterion 15: an 18-column items file — everything 006 through 019
+    /// Criterion 15: an 18-column items file — everything 006 through 018
     /// wrote — imports, its sale intact and nothing counted, and the column
     /// it never had arrives as not recorded. The 18 boundary also bounds a
     /// row: a stray 19th cell is extra columns, never read as `Bought`.
@@ -502,7 +502,7 @@ struct ImportSchemaTests {
     }
 
     /// Criterion 25's older-file half: a 9-column wishlist file — what 002
-    /// through 019 wrote — imports with every row not recorded, and its
+    /// through 018 wrote — imports with every row not recorded, and its
     /// 9 boundary bounds a row the same way. Mutation: drop 9 from
     /// `wishlistSchemaBoundaries` → rejected → red.
     @Test func aNineColumnWishlistFileImportsWithNothingRecorded() throws {
@@ -827,7 +827,7 @@ struct ImportSchemaTests {
     // MARK: - The sale columns and the pair rule (006/T006)
 
     /// G26: the widths the gate accepts are exactly the shipped ones — 19
-    /// (020's layout), 18 (006–019's), 14 (002–005's) and 12 (011/012's) —
+    /// (020's layout), 18 (006–018's), 14 (002–005's) and 12 (011/012's) —
     /// and the widths *between* them are not. 13 and 17 are each one column
     /// short of a shipped boundary, which is what a truncated file looks
     /// like; accepting them would silently blank whatever the file lost.

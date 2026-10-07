@@ -3005,6 +3005,11 @@ final class TroveUITests: XCTestCase {
     /// already selected; New is picked instead, and the item the sheet creates
     /// reads **Bought new**.
     ///
+    /// Before any of that, criterion 21's other half: the seeded entry's page
+    /// is opened while it still carries no preference, and has **no row
+    /// beginning "Looking for"** — read only after the page's Added row has
+    /// appeared.
+    ///
     /// Each value differs from what a broken path would produce: the
     /// preselected chip is Used where an unseeded sheet shows neither, and the
     /// bought item is New where a sheet that ignored the tap would carry Used
@@ -3015,8 +3020,9 @@ final class TroveUITests: XCTestCase {
     /// `WishlistViewModel.makePurchaseFormViewModel(for:)` and no other. The
     /// other three hosts' seeds are G11's cross-host unit test.
     ///
-    /// Mutation: that method seeding `lookingFor: nil` → the preselect leg
-    /// red.
+    /// Mutations: that method seeding `lookingFor: nil` → the preselect leg
+    /// red; `WishlistDetailView`'s Looking for row falling back to
+    /// `"Not recorded"` in place of `""` → the no-row leg red.
     @MainActor
     func testLookingForPrefillsThePurchaseSheet() {
         let app = XCUIApplication()
@@ -3029,6 +3035,25 @@ final class TroveUITests: XCTestCase {
         app.buttons["Wishlist"].tap()
         let summicron = app.staticTexts[wanted]
         XCTAssertTrue(summicron.waitForExistence(timeout: 5), "the seed's one wanted item must be on the Wishlist")
+
+        // Criterion 21's other half, before anything is set: the seeded entry
+        // carries no preference, so its page has no Looking for row at all.
+        // Read only once a row the page always has ("Added, <date>") is up,
+        // so the empty answer is the page's and not a page still arriving.
+        openDetail(in: app, named: wanted)
+        XCTAssertTrue(
+            app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label BEGINSWITH %@", "Added, "))
+                .firstMatch
+                .waitForExistence(timeout: 5),
+            "the wanted item's page must show its Added row before its rows can be read"
+        )
+        XCTAssertEqual(
+            detailRowLabels(in: app, beginning: "Looking for"), [],
+            "criterion 21: an entry with no preference must show no Looking for row — never a dash or a placeholder"
+        )
+        app.buttons["Back"].tap()
+        XCTAssertTrue(summicron.waitForExistence(timeout: 5), "Back must return to the Wishlist")
 
         openLeadingSwipe(on: summicron, in: app)
         let edit = app.buttons["Edit"]
@@ -3151,6 +3176,11 @@ final class TroveUITests: XCTestCase {
     /// Legs (i)–(iii) of criterion 18, on whichever screen is showing the
     /// condition row at its opening position with Excellent selected. Ends
     /// with Broken tapped and selected.
+    ///
+    /// And criterion 10's order, on both screens that call this: the chips are
+    /// looked up by title in `conditionTitles`' order, and their leading edges
+    /// must ascend in it. Mutation: `veryGood` declared after `good` in
+    /// `Condition` → red.
     @MainActor
     private func assertTheConditionRowIsOneScrollingRow(in app: XCUIApplication, on screen: String) {
         let chips = Self.conditionTitles.map { conditionChip($0, in: app) }
@@ -3165,6 +3195,13 @@ final class TroveUITests: XCTestCase {
         let excellentIsHittable = excellent.isHittable
         let brokenIsHittable = broken.isHittable
         let layout = zip(Self.conditionTitles, frames).map { "\($0) \($1)" }.joined(separator: ", ")
+
+        // Criterion 10: the six grades run left to right in the scale's order.
+        let leadingEdges = frames.map(\.minX)
+        XCTAssertTrue(
+            zip(leadingEdges, leadingEdges.dropFirst()).allSatisfy { $0 < $1 },
+            "on \(screen) the six condition chips must run New, Excellent, Very Good, Good, Fair, Broken from left to right: \(layout)"
+        )
 
         // (i) One row.
         for (title, frame) in zip(Self.conditionTitles, frames) {

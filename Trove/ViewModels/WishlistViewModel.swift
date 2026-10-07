@@ -336,8 +336,8 @@ final class WishlistViewModel {
     /// and the Sell Plan seed their own (plan Q10): the price from the entry's
     /// estimated cost when it has one and blank when it doesn't — never a
     /// pre-filled $0, the 006 P1 rule — and today's date from this screen's
-    /// injected clock, so a test can pin it. One seeding rule for all three
-    /// hosts; G12 pins them equal.
+    /// injected clock, so a test can pin it. One seeding rule for all four
+    /// hosts; `everyHostSeedsThePurchaseSheetIdentically` pins them equal.
     func makePurchaseFormViewModel(for wanted: WishlistItem) -> PurchaseFormViewModel {
         PurchaseFormViewModel(
             estimatedCostCents: wanted.estimatedCostCents, lookingFor: wanted.lookingFor, now: now
