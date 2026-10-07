@@ -822,7 +822,7 @@ Everything the person reads is plain language.
 | Phase 1 | yes | the six-grade condition row and Very Good on a page. **The person (2026-10-01)**: the sixth grade is there, but the row spanning two lines "isn't good" → spec Decision 11 (one scrolling row, six grades kept), plan Amendment A, T006 rewritten |
 | Phase 2 | no — `walkthrough: none` | nothing observable; view models, Copy and the market's reading of an unset preference |
 | Phase 3 | yes | Bought and Looking for on the three forms, the two pages, the sheet's prefill, the New-preference figure; the scrolling condition row; the person's Accessibility Inspector / VoiceOver step. **The person (2026-10-03)**: "Everything looks good and I like your suggestions. Continue" — the two readings put to them (the match picker keeps "used"; criterion 7's wording) accepted as spec Decision 12 |
-| Phase 4 | | the templates, a CSV round trip, an old file, both PDFs |
+| Phase 4 | yes | the templates, a CSV round trip, an old file, both PDFs. **The person (2026-10-06)**: no finding against the phase; asked whether their own spreadsheet (`My-Gear.csv`) would import — it would not (the header gate, `$` prices, `M/D/YYYY` dates), which is `021`'s; they chose to keep it there ("we'll handle it in the next spec. Continue here"). `ROADMAP.md`'s `021` entry carries their words and the file's facts |
 | Phase 5 | no — `walkthrough: none` | the device pass; the person's two-device steps wait in `SYNC-CHECKS.md` |
 
 ## Handoff note
