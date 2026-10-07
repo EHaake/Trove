@@ -734,7 +734,7 @@ Everything the person reads is plain language.
 
 ## Phase 5 — Verification and close-out · walkthrough: none — the device pass and the documents; nothing new is built. The person's Accessibility Inspector step was taken at the Phase 3 pause, and the older-build, two-device steps wait in `specs/SYNC-CHECKS.md`
 
-- [ ] **T014 — Device pass. [general-purpose agents with simulator tools, one per section]**
+- [x] **T014 — Device pass. [general-purpose agents with simulator tools, one per section]**
   Per plan §10, criteria 5, 11, 18, 20, 22 and 27. Dispatched as **four
   separate `general-purpose` sections, each given only its own section below**
   (never the whole task line), each returning a short **pass/fail list**. **Any
@@ -780,6 +780,23 @@ Everything the person reads is plain language.
   **Verify:** each section's pass/fail list recorded in the Done note — the
   upgrade result, the measured narrowest width, the probe's lines per entry —
   every failure a sub-lettered task, and `scripts/verify.sh all` green twice.
+  **Done (2026-10-06).** Four `general-purpose` sections, one after another,
+  on two scratch simulators (`Trove020-Pass`, iPhone 17 Pro, and `Trove020-SE`,
+  iPhone SE 3rd generation, both iOS 26.5); **no failure, so no sub-lettered
+  task**. Then `scripts/verify.sh all` **twice back to back, both green: 1804
+  unit tests in 236 suites and 42 UI tests, 0 failures** (1159.5 s and 1130.1 s).
+  - **(a) Upgrade** (fresh iPhone 17 Pro simulator, iOS 26.5, persistent store, no launch arguments; `main`'s build then this build installed over it, binaries confirmed by md5): all six checks pass — three rows survive; Good stays Good, New stays New; both pages read plain "Bought"; both forms open with neither Bought chip selected and six condition chips on one scrolling line; the wishlist entry has no Looking for row and an unselected field; the entry's live Reverb figure ("$800 · 67 listed") is unchanged after the upgrade.
+  - **(b) iPhone SE 3rd gen (375 pt), light and dark**: all seven checks pass — one line, nothing squeezed; slides to Broken; a Broken item reopens with the form at its top and Broken in view; Bought and Looking for rows share the condition row's left edge and chip shape. Narrowest supported iPhone on both installed runtimes is 375 pt (plan Q9 holds). Observations: the cut-off chip at rest is Fair with ~85 % showing — a thin cue; on the SE the Mark as bought sheet shows Bought at its opening size but Condition is below the fold; unselected chip outlines are faint in light appearance; when slid, chips run off the left screen edge with no margin.
+  - **(c) Market probe** (temporary file probe in `MarketLocalStore.record`, removed, tree byte-identical to HEAD, clean build reinstalled): see criterion 22. Observations on the pre-existing estimate sheet with a new-stock reading: the "median" label overprints "$439" when the median equals the low end; the hint "Drag toward the high end if yours is in better shape than most" reads oddly for a wanted, new-stock figure; the match picker still says "used" (accepted — spec Decision 12).
+  - **(d) Relaunch**: everything set in (a)–(c) survived a terminate and relaunch on both simulators.
+  Process notes: section (b) sent one stray tap to the other scratch simulator
+  by omitting the device (no effect seen; later sections passed the device on
+  every call); the app's own Appearance setting defaults to Dark and overrides
+  the simulator's, so light was reached through Settings → System; the
+  simulator tool's own screenshots lag — `simctl io screenshot` was used for
+  evidence; section (a) accepted the app's first-use "sends this item's name to
+  Reverb" disclosure on a scratch simulator for a test name. **[person]** the
+  two `SYNC-CHECKS.md` steps wait in that file (criterion 27).
 
 - [ ] **T015 — Close-out.**
   Dispatched to the implementer the model policy's close-out row names
@@ -890,3 +907,7 @@ escape-hatch misses recorded here too.
 | T012 (`sdd-implementer`) | `opus` | 47,806 (13 tool uses, 14.5 min — one red run at ~11 min) | Done first pass |
 | T013 (`sdd-implementer`) | `opus` | 62,605 (23 tool uses, 24.5 min — the phase-end UI run 19.5) | Done first pass |
 | Phase 4 review (`skeptical-reviewer`) | `opus` | 66,161 (3 tool uses, 1.2 min) | Signed off, no blocking. Second-look notes: (1) the template test builds bytes from the header arrays, not through Settings — checked by the orchestrator: `SettingsViewModelTests` already pins that Settings stages templates from `ExportSchema.itemHeaders`/`wishlistHeaders` (`:288`, `:605`), so criterion 16 is covered end to end; (2) `theTwoLegacyItemWidthsPassAndTheWidthsBetweenThemDoNot` now covers three widths — a stale name, for the sweep; (3) the wishlist's width 8 being rejected is not shown in this diff (likely an older test) — for the sweep; (4) the wishlist PDF's Looking for field is not mono, unlike its neighbours — for the person's eye; (5) T011's round trips live in the two view-model commit suites, outside the Files line, disclosed |
+| T014 (a) upgrade (`general-purpose`) | `opus` | 146,172 (173 tool uses, 10.2 min) | 6/6 pass |
+| T014 (b) iPhone SE layout (`general-purpose`) | `opus` | 167,754 (163 tool uses, 9.6 min) | 7/7 pass in both appearances; Q9 confirmed (375 pt) |
+| T014 (c) market probe (`general-purpose`) | `opus` | 154,547 (99 tool uses, 5.3 min) | 4/4 pass; probe removed, tree identical to HEAD |
+| T014 (d) relaunch (`general-purpose`) | `opus` | 116,588 (55 tool uses, 2.5 min) | All pass; both scratch simulators shut down. Four sections: 585,061 tokens, 27.6 min — against the skill's single 319-turn pass |
