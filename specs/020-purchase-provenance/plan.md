@@ -3,7 +3,9 @@
 **Status**: **Final** (2026-09-30) — signed off by the `skeptical-reviewer`
 (one review, one re-review, the last blocking item fixed by the orchestrator
 per the loop cap); the P-items and readings are decisions as of this sign-off,
-R1/R2/R3/R6 by the person (spec Decision 10).
+R1/R2/R3/R6 by the person (spec Decision 10). **As built** (close-out,
+2026-10-06) is the last section of this file; nothing above it was rewritten
+at the close-out.
 
 Drafted by the `sdd-planner` (Opus 5.5, high effort — per `CLAUDE.md`'s model
 policy, Opus profile, the plan-and-tasks draft row at the implementation tier
@@ -696,3 +698,177 @@ the figure's basis on a live refresh — is T014's; the spoken names are the
 person's Accessibility Inspector step at the Phase 3 pause; what no
 agent can reach — an older build on a second device — is the person's, in
 `SYNC-CHECKS.md`, and is stated as untested until then.
+
+## As built (close-out, T015, 2026-10-06)
+
+What shipped, for whoever extends it. Written from the close-out's evidence
+bundle; the sections above keep their text, and where this section and they
+disagree, this one is what the code does.
+
+**The count.** Fifteen tasks (T001–T015), no sub-lettered additions: the two
+phase-pause findings became spec Decisions 11 and 12, and the device pass found
+no failure. **1804 unit tests in 236 suites and 42 UI tests**, both suites
+twice back to back after the device pass (T014) and once more at the close-out.
+No `.pbxproj` edit, no new dependency, no constitution amendment.
+
+- **Very Good's storage (Q2), and the rule it leaves behind.**
+  `Item.conditionRawValue` holds one of the five grades an older app knows;
+  `Item.conditionRefinement` holds `"very good"` beside `"good"` and is nil
+  otherwise, so a Very Good item's stored pair is `("good", "very good")`. Any
+  other refinement over Good reads Good, and a refinement is honoured only over
+  Good. At T001 no production code outside `Item.swift` read or wrote
+  `conditionRawValue` (the export record's own field of that name is filled
+  from `condition`). **Every future query, predicate, sort or grouping reads
+  `condition` (or both stored fields), never `conditionRawValue` alone** — that
+  field says "good" for a Very Good item. `022-grouped-browsing` is the likely
+  first consumer. One thing follows for tests: a direct write of `"very good"`
+  into `conditionRawValue` also reads Very Good on this build, so a save-path
+  test that only reads `condition` back cannot tell the two storages apart —
+  the form, the import round trip and G10 assert the stored pair as a literal
+  on a second context.
+- **Two tests named above were renamed at T001** because their old names became
+  false: `conditionRoundTripsThroughItsRawValue` →
+  `conditionRoundTripsThroughItsStoredPair`, and
+  `theConditionBucketsAreDisjointAndNonEmpty` →
+  `theConditionBucketsOverlapOnlyWhereVeryGoodMeetsGood`. §1 and §12 still
+  cite the old names. `002`'s plan carries the pointer for the
+  second ("Superseded in part by `020`", beside its disjoint-buckets sentence).
+- **The market store (§3, Q4).** The function is
+  `record(_:product:for:newStockOnly:in:)` — §3 spells it without the trailing
+  `in:`. `MarketFigureRecord.isNewStockOnly` is written on withheld readings
+  too, so the "too few listings" sentence also names the stock it was read
+  from. The section's words come off the figure (`figure.listingBasis(isWanted:)`),
+  never off the entry's live preference. Checked live at T014(c), one Reverb
+  product read both ways: New → `newStockOnly=true`, 58 listed, $439–$670;
+  Used → `false`, 35 listed, $168–$440; the counts on screen matched.
+- **Amendment A as shipped (§6).** `Trove/Views/Shared/ChoiceChips.swift` holds
+  `ChoiceChip` (extracted verbatim from `ItemFormView.conditionChip`),
+  `ConditionField(label:selection:)` and
+  `NewOrUsedField(label:identifier:selection:)`. `ConditionField` is a mono
+  label over `ScrollViewReader { ScrollView(.horizontal, showsIndicators:
+  false) { HStack(spacing: chipSpacing) { ChoiceChip(…).id(condition) } }
+  .scrollClipDisabled().onAppear { proxy.scrollTo(selection, anchor: .center) } }`
+  — `chipSpacing` 8, no animation, no vertical padding on the `HStack`, and it
+  scrolls on appear only. **Leg (iv) passed with `onAppear`; the
+  `ScrollPosition(id:anchor:)` fallback was not built.** `NewOrUsedField` is an
+  `HStack` of two chips that does not scroll, calls
+  `NewOrUsed.selection(afterTapping:current:)`, and identifies its chips
+  `"<identifier>.new"` / `".used"`. `FlowLayout.swift` is deleted.
+- **Measured chip widths** (3× render, dark theme): New 53.33, Excellent 79.67,
+  Very Good 86.00, Good 58.00, Fair 49.00, Broken 68.33 pt; six with 8 pt
+  spacing are **434.33 pt** — past 327 by 107.33, past 354 by 80.33 and past
+  392 by 42.33, so the row scrolls on every iPhone. "Good" ends 301 pt from the
+  row's start, 53 pt inside the 354 pt field, which is why the existing
+  `buttons["Good"]` taps still land. Q9 held at T014(b): the narrowest
+  supported iPhone on both installed runtimes is 375 pt.
+- **The sheet's identifier.** The Mark as bought sheet's Bought field is
+  identified `"bought"`, the same as the item form's — its other identifiers
+  are prefixed `purchase.sheet.`. The two screens are never up together. The
+  item-form placement scan pins "directly above" (nothing composed between the
+  field and `ConditionField(`), so a modifier chained onto the field would
+  redden it with nothing broken. Neither form's `selection:` binding is pinned
+  by a scan; the UI tests observe it.
+- **The UI tests' shape (§10).** A condition chip is addressed by
+  `label == %@ AND identifier == ''`, since the Bought field puts a second
+  "New" on both screens. The item-form scrolling test runs on the **edit**
+  form, swipes up until the row is on screen and asserts Excellent is hittable
+  first, so "Broken is not hittable" cannot pass with the row off screen; it
+  reads `isHittable` and `frame` before any `tap()`. A `DetailRow` is one
+  combined accessibility element labelled `"<label>, <value>"`, so the page
+  assertions are `"Bought used, <date>"` on the date row and
+  `"Looking for, Used"`. Two fragilities, both false reds and neither a false
+  green: the date string is computed in the test runner, so a run straddling
+  midnight fails; and leg (ii) rests on a 12 pt margin on the pinned 402 pt
+  simulator, so a wider window turns it red. The reopened edit form of a Broken
+  item still opens at its top (`Name` hittable before any scroll).
+- **The CSV round trips (§8) live in the two view-model commit suites** —
+  `ItemListViewModelCommitTests.commitRestoresBoughtAndVeryGoodThroughTheCSV`
+  and `WishlistViewModelCommitTests.commitRestoresLookingForThroughTheCSV` —
+  outside T011's Files line, disclosed at the Phase 4 review. Each exports,
+  imports and refetches on a second context; the items one asserts the stored
+  pair `("good", "very good")`.
+- **The template check.** `ImportSchemaTests.theTemplatesEndInBoughtAndLookingFor`
+  builds the template's bytes from the header arrays, not through Settings.
+  What closes the loop is `SettingsViewModelTests`, which already pinned that
+  Settings stages its templates from `ExportSchema.itemHeaders` and
+  `wishlistHeaders` — so criterion 16 is covered end to end by the pair, not by
+  either alone.
+- **Two test shapes caught and corrected.** (1) G4's mutation as T001's line
+  worded it — "refetch put back on the same context and the save dropped" —
+  **stays green**: it is the known false-pass shape (a same-context refetch
+  hands back unsaved changes). The guard was verified by §12's wording instead:
+  the save dropped with the refetch still on a second context, six issues.
+  (2) The carried-across nil: a row built in a test reads "not recorded"
+  whatever the app does, so `aRowWithOnlyOlderFieldsReadsNotRecordedAndItsOldGrade`'s
+  nil legs are not evidence for criteria 5, 11 and 20, and an "old entry
+  reopens as nil" assertion written in Phase 2 was removed for the same reason.
+  Those three criteria rest on T014(a)'s upgrade in place on a persistent
+  store. Before any of that, the sign-off had found G14's leg (d) vacuous under
+  the original `FlowLayout` (it reports the proposed width) and G10's Very Good
+  leg unable to fail under its named mutation; both were fixed in the plan
+  before T001.
+- **The device pass (T014), four dispatches, one section each.** (a) Upgrade in
+  place from `main`'s build, binaries confirmed by md5: three rows survive,
+  Good stays Good, New stays New, both pages read plain "Bought", both forms
+  open with neither chip selected, the pre-update wishlist entry has no Looking
+  for row, and its live figure ("$800 · 67 listed") is unchanged — which is
+  also the on-disk check of `MarketFigureRecord.isNewStockOnly` arriving on an
+  existing local store. (b) iPhone SE 3rd generation, 375 pt, light and dark:
+  one line, nothing squeezed, slides to Broken, a Broken item reopens with
+  Broken in view. (c) The live probe above; the temporary file probe in
+  `MarketLocalStore.record` was removed and the tree was byte-identical to
+  HEAD. (d) Everything set in (a)–(c) survived a terminate and relaunch.
+
+### What is untested
+
+- **Criterion 27, and P4's Bought / Looking for half.** No two-device run.
+  Whether an app older than `020` editing a row keeps Bought and Looking for
+  rests on CloudKit's additive-schema behaviour, which no test here can reach;
+  `specs/SYNC-CHECKS.md` steps 3.11 (older build on B) and 3.12 (both on the
+  new build) carry it. P4's Very Good half *is* tested — G3's frozen replica of
+  the pre-020 read and save — but G3 runs in memory and cannot see the iCloud
+  leg, which is why 3.11 edits a Very Good item on the older build.
+- **R4's edge**, stated and not solved: an older build moving a Very Good item
+  off Good and back to Good leaves the refinement in place, so it reads Very
+  Good again here.
+- **The look of the cut-off chip.** `.scrollClipDisabled()` is pinned by a scan,
+  which pins a spelling. At rest on a 402 pt screen the cue is 12 pt of
+  Broken's rounded end; on the 375 pt SE it is Fair with about 85 % showing.
+- **"No row when not recorded" on the wanted page** (criterion 21) has no
+  automated assertion — a `?? "Not recorded"` would stay green. Seen at
+  T014(a) and (d) and in the person's walkthrough.
+- **The wording on the Market section itself** is covered at the view layer by
+  one scan (`theSectionsListingWordsFollowTheFigureShown`) and T014(c)'s live
+  look. The "Too few new listings" sentence was not seen live.
+- **The wishlist form's reopen, clear and save-unset legs, and the sheet's
+  clear leg**, are view-model tests and the person's walkthrough, not UI tests.
+
+### Open for the pre-merge sweep (none blocking)
+
+- `SellPlanViewModelTests.swift:1207`'s test double snapshots
+  `item.conditionRawValue` — harmless until fed a Very Good item.
+- No test drives `markBought` with a Very Good purchase and asserts the stored
+  pair (correct by construction through `Item.init`).
+- `aPreferenceChangedDuringTheFetchIsTheOneComputed` waits on its gate without
+  a bound: it would hang rather than redden.
+- Stale comments: "three hosts" / "G12 pins" on three
+  `makePurchaseFormViewModel` docs and the host test; "the eleven `Item.init`
+  is passed" in `WishlistPurchaseStoreTests`; a scan's doc comment claiming a
+  "composed twice or not at all" mutation that was not run; and
+  `theTwoLegacyItemWidthsPassAndTheWidthsBetweenThemDoNot` now covers three
+  widths.
+- Neither `duplicate` passes `year` or `reverbProductID` (predates `020`; not
+  checked whether intended).
+- The wishlist's width 8 being rejected is not shown in `020`'s diff.
+
+### Seen on the device pass, for the person's eye
+
+On the SE the Mark as bought sheet shows Bought at its opening size with
+Condition below the fold; unselected chip outlines are faint in light
+appearance; when the condition row is slid, chips run off the left screen edge
+with no margin; the wishlist PDF's Looking for field is not set in mono like
+its neighbours. On the estimate sheet, which predates this spec, a new-stock
+reading shows the "median" label overprinting "$439" when the median equals
+the low end, and the hint "Drag toward the high end if yours is in better
+shape than most" reads oddly for a wanted, new-stock figure. The match picker
+still says "used" — accepted, spec Decision 12.

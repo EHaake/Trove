@@ -1,12 +1,16 @@
 # 020 — Purchase Provenance
 
-**Status**: **Approved** (2026-09-29) — written with the person in this
+**Status**: **Complete** (2026-10-06, the close-out) — criteria 1–26 and 28
+are verified, each with its record under **Acceptance criteria**; criterion
+27 (sync to a second device) is unticked, an honest partial, until the
+two-device pass in `specs/SYNC-CHECKS.md`. **Approved** (2026-09-29) — written with the person in this
 spec session; widened the same day, at their reading of the first Draft,
 to a new/used preference on wishlist entries (Decision 8), and approved at
 their reading of the second, which confirmed that leaving the preference
 blank is the "no preference" choice (no separate "either" value). **Amended
 2026-10-01** at the Phase 1 pause (Decision 11): the condition chips sit on one
-row that scrolls sideways and never wrap. The Decisions record below holds every product decision made in
+row that scrolls sideways and never wrap. **Amended 2026-10-03** at the Phase 3
+pause (Decision 12). The Decisions record below holds every product decision made in
 the conversation; the **P-items** are Claude Code's proposals and become
 decisions on plan approval, as in earlier specs.
 
@@ -233,73 +237,217 @@ from, and prefills the purchase sheet when it is bought.
 
 ## Acceptance criteria
 
-1. [ ] The add/edit item form shows a **Bought** field with **New** and
+1. [x] The add/edit item form shows a **Bought** field with **New** and
    **Used**, neither selected for a new item.
-2. [ ] Picking New or Used and saving stores it; reopening the item's form
+   *Verified by*
+   `ItemFormViewModelTests.startsWithBoughtNotRecordedAndSavesWithoutIt`; the
+   UI test `testBoughtIsSetClearedAndShownOnTheItemsPage`, which finds neither
+   chip selected on a new form; and a source check that each form shows the
+   Bought field once, under its label
+   (`eachFormComposesTheBoughtFieldOnceWithItsLabelAndIdentifier`).
+2. [x] Picking New or Used and saving stores it; reopening the item's form
    shows it selected.
-3. [ ] Tapping the selected Bought chip clears it; saving then stores the
+   *Verified by* `ItemFormViewModelTests.savesBoughtAndReopensWithItSelected`,
+   which reads the saved item back from the store through a second connection;
+   the same UI test reopens the form and finds Used selected.
+3. [x] Tapping the selected Bought chip clears it; saving then stores the
    item as not recorded.
-4. [ ] An item saves with Bought unset, with no prompt, warning or
+   *Verified by* `NewOrUsedCopyTests.tappingTheSelectedChipClearsIt`,
+   `ItemFormViewModelTests.clearingBoughtSavesNotRecorded`, and the same UI
+   test's clear step. Shown able to fail: with the field made to keep whatever
+   was tapped, it went red.
+4. [x] An item saves with Bought unset, with no prompt, warning or
    validation message.
-5. [ ] Every item that existed before the update opens as not recorded,
+   *Verified by*
+   `ItemFormViewModelTests.startsWithBoughtNotRecordedAndSavesWithoutIt` — the
+   save succeeds and raises no validation message. Shown able to fail: a
+   validation rule added for an unset Bought turned it red.
+5. [x] Every item that existed before the update opens as not recorded,
    whatever its condition — including items graded New.
-6. [ ] The item's page labels its purchase-date row **Bought new** or
+   *Verified on a device, by upgrading in place* (the device pass, 2026-10-06):
+   `main`'s build with one item graded Good and one graded New, then this build
+   installed over it on the same stored data — both pages read plain "Bought"
+   and both forms opened with neither Bought chip selected, the item graded New
+   included. A model-level test agrees
+   (`ProvenanceFieldsTests.aRowWithOnlyOlderFieldsReadsNotRecordedAndItsOldGrade`)
+   but is not the evidence: a row built in a test starts unset whatever the app
+   does.
+6. [x] The item's page labels its purchase-date row **Bought new** or
    **Bought used**, and plain **Bought** when not recorded.
-7. [ ] The Mark as bought sheet shows the same Bought field, unselected
+   *Verified by* `NewOrUsedCopyTests`, which pins the three labels word for
+   word; the UI test, which reads "Bought used", "Bought" and "Bought new" on
+   the date row in turn; and a source check that the page's date row takes its
+   label from the item's Bought value
+   (`theItemPagesDateRowIsLabelledFromTheItemsBoughtField`).
+7. [x] The Mark as bought sheet shows the same Bought field, unselected
    unless the entry has a Looking for preference (criterion 23); the item
    it creates carries what was picked, or not recorded. *(Wording amended
    2026-10-03, Decision 12.)*
-8. [ ] Copying an item carries its Bought value to the copy.
-9. [ ] Selling an item and returning it to the collection leaves its Bought
+   *Verified by* `PurchaseFormViewModelTests.seedsBoughtFromThePreference` and
+   `.recordsTheBoughtChosenWhenTheSheetIsConfirmed`;
+   `WishlistPurchaseStoreTests.theBoughtItemCarriesThePurchasesBoughtValueNotTheEntrysPreference`;
+   the UI test `testLookingForPrefillsThePurchaseSheet`.
+8. [x] Copying an item carries its Bought value to the copy.
+   *Verified by* `ItemDuplicationTests.theCopyCarriesBought`.
+9. [x] Selling an item and returning it to the collection leaves its Bought
    value unchanged.
-10. [ ] The condition scale offers **New, Excellent, Very Good, Good, Fair,
+   *Verified by* `ItemSaleStoreTests.markThenReturnLeavesBoughtUnchanged`.
+10. [x] The condition scale offers **New, Excellent, Very Good, Good, Fair,
     Broken** in that order on the item form and the purchase sheet; Very
     Good saves, reopens selected, and reads **Very Good** on the item's
     page.
-11. [ ] No existing item's condition changes on update.
-12. [ ] An item graded Very Good gets a market figure from Reverb's
+    *Verified by*
+    `ModelTests.theScaleReadsInOrderWithVeryGoodBetweenExcellentAndGood`;
+    `ItemFormViewModelTests.veryGoodSavesAsGoodPlusARefinementAndReopensSelected`;
+    a source check that both screens draw the one shared condition row over the
+    whole scale; the UI tests, which read the six titles in order; and the
+    device pass, which saw the six chips in order on both forms. Very Good on
+    an item's page was part of the person's Phase 1 walkthrough (2026-10-01:
+    the sixth grade is there).
+11. [x] No existing item's condition changes on update.
+    *Verified on a device, by upgrading in place* (the device pass,
+    2026-10-06): across the upgrade on stored data, Good stayed Good and New
+    stayed New. The model-level test named under criterion 5 agrees on the
+    grades.
+12. [x] An item graded Very Good gets a market figure from Reverb's
     "very good" listings only; an item graded Good gets one from "very
     good" and "good", exactly as before this spec.
-13. [ ] The items CSV export ends in a **Bought** column with `new`, `used`
+    *Verified by*
+    `MarketFigureComputationTests.theConditionBucketsOverlapOnlyWhereVeryGoodMeetsGood`
+    and `.aVeryGoodItemCountsOnlyVeryGoodListingsAndAGoodItemCountsBoth`, and
+    `aGoodOwnedItemSpansVeryGoodAndGood`, which predates this spec and passes
+    unedited.
+13. [x] The items CSV export ends in a **Bought** column with `new`, `used`
     or empty, and writes Very Good as `very good`.
-14. [ ] Importing that export restores every item's Bought value and every
+    *Verified by* `ExportSchemaTests.headerListsMatchThePinnedSchema`,
+    `.theBoughtCellIsTheLastAndCarriesNewUsedOrNothing` and
+    `.veryGoodIsWrittenAsVeryGood`.
+14. [x] Importing that export restores every item's Bought value and every
     Very Good grade; `NEW`, `Used`, `Very Good` and `VERY GOOD` all import.
-15. [ ] An items CSV in the previous layout, without the Bought column,
+    *Verified by*
+    `ItemListViewModelCommitTests.commitRestoresBoughtAndVeryGoodThroughTheCSV`
+    (export, import, then read back from the store through a second
+    connection); `ImportSchemaTests.newOrUsedReadsInAnyLetterCase` and
+    `.veryGoodReadsInAnyCase`.
+15. [x] An items CSV in the previous layout, without the Bought column,
     still imports, every row not recorded.
-16. [ ] The downloadable items template includes the Bought column.
-17. [ ] The PDF labels an item's purchase date **Bought new** or **Bought
+    *Verified by*
+    `ImportSchemaTests.anEighteenColumnItemsFileImportsWithNothingRecorded`;
+    the tests for the two older layouts (12 and 14 columns) pass unedited.
+16. [x] The downloadable items template includes the Bought column.
+    *Verified by* `ImportSchemaTests.theTemplatesEndInBoughtAndLookingFor`;
+    `SettingsViewModelTests` pins that the template Settings hands out is built
+    from that same list of columns.
+17. [x] The PDF labels an item's purchase date **Bought new** or **Bought
     used** where recorded and plain **Bought** where not, with no second
     "Bought" field, and prints Very Good as **Very Good**.
-18. [ ] The six condition chips sit on a single row that scrolls
+    *Verified by*
+    `ExportSchemaTests.itemEntryDateFieldIsLabelledBoughtNewOrUsed`, which
+    compares an entry's whole list of labels word for word — so a second
+    "Bought" would fail it — and prints Very Good.
+18. [x] The six condition chips sit on a single row that scrolls
     sideways, on both the item form and the purchase sheet: the row never
     wraps, no chip is squeezed, every grade can be reached by scrolling at
     the narrowest supported width, and the row opens with the selected
     grade in view. *(Amended 2026-10-01, Decision 11.)*
-19. [ ] The wishlist add/edit form shows a **Looking for** field with
+    *Verified by*, as amended by Decision 11: the UI tests
+    `testTheConditionRowIsOneScrollingRowAndOpensOnTheSelectedGrade` and
+    `testThePurchaseSheetsConditionRowIsOneScrollingRow` (one row, wider than
+    the screen, it scrolls, and it opens on the selected grade);
+    `ConditionFieldLayoutTests` (no chip is squeezed); and the device pass on
+    an iPhone SE — 375 pt wide, the narrowest iPhone this app supports — in
+    light and dark: one line, it slides to Broken, and an item graded Broken
+    reopens with Broken in view. **Not covered by any test**: how the cut-off
+    chip at the edge looks. On the SE the chip cut by the edge is Fair, with
+    about 85 % of it showing — a thin hint that the row scrolls, put to the
+    person as an observation.
+19. [x] The wishlist add/edit form shows a **Looking for** field with
     **New** and **Used**, neither selected for a new entry; it saves,
     reopens selected, clears by tapping the selected chip, and saves
     unset without a prompt.
-20. [ ] Every wishlist entry that existed before the update opens as not
+    *Verified by* `WishlistFormViewModelTests`
+    (`startsWithLookingForNotRecordedAndSavesWithoutIt`,
+    `savesLookingForAndReopensWithItSelected`,
+    `clearingLookingForSavesNotRecorded`); source checks for where the field
+    sits; and the UI test `testLookingForPrefillsThePurchaseSheet`, which
+    selects a value on the form and saves. Reopening, clearing and saving unset
+    on the wishlist form itself are tested beneath the screen and were part of
+    the person's Phase 3 walkthrough (2026-10-03: "Everything looks good"); no
+    UI test repeats them.
+20. [x] Every wishlist entry that existed before the update opens as not
     recorded.
-21. [ ] The wanted item's page shows a **Looking for** row reading **New** or
+    *Verified on a device, by upgrading in place* (the device pass,
+    2026-10-06): the wishlist entry made before the update shows no Looking for
+    row, and its form opens with neither chip selected. The model-level test is
+    as under criterion 5 — it agrees, and is not the evidence.
+21. [x] The wanted item's page shows a **Looking for** row reading **New** or
     **Used**, and no row when not recorded.
-22. [ ] A wanted item looking for new gets its market figure from Reverb's
+    *Verified by* a source check that the page's row reads the entry's
+    preference (`theWantedPagesLookingForRowReadsTheItemsLookingForField`) and
+    the UI test, which reads "Looking for, Used" on the page. "No row when not
+    recorded" was seen on the device pass (after the upgrade and again after a
+    relaunch) and in the person's Phase 3 walkthrough; **no automated test
+    asserts it**, which is noted for the pre-merge review.
+22. [x] A wanted item looking for new gets its market figure from Reverb's
     brand-new and B-stock listings only, and its market line says "new
     listings"; one looking for used, or not recorded, gets exactly the
     figure and wording it gets today.
-23. [ ] Marking a wanted item bought preselects the purchase sheet's
+    *Verified by* `MarketFigureComputationTests` (looking for new counts
+    brand-new and B-stock listings only; used and not recorded give exactly the
+    figure they gave before this spec, over the recorded Reverb responses);
+    `MarketRefresherTests`;
+    `MarketCopyTests.aFigureReadFromNewStockSaysNewListings` and
+    `.theTwoWantedStringsFromBefore020AreUnchanged`;
+    `MarketIndexTests.theListingBasisIsReadOffTheFigure`; and one source check,
+    `theSectionsListingWordsFollowTheFigureShown`, which is all that covers the
+    wording on the screen itself. **Checked live against Reverb** on the device
+    pass (2026-10-06), one product read both ways: looking for new, 58 listed,
+    $439–$670; looking for used, 35 listed, $168–$440; the counts on screen
+    matched. The sentence shown when there are too few new listings did not
+    come up in the live check; it rests on the tests.
+23. [x] Marking a wanted item bought preselects the purchase sheet's
     Bought chip from its preference (nothing when not recorded), and the
     person can change or clear it before saving.
-24. [ ] Copying a wishlist entry carries its preference.
-25. [ ] The wishlist CSV export ends in a **Looking For** column; importing
+    *Verified by* `PurchaseFormViewModelTests.seedsBoughtFromThePreference`;
+    `WishlistDetailViewModelTests.everyHostSeedsThePurchaseSheetIdentically`
+    (all four places the sheet opens from); and the UI test
+    `testLookingForPrefillsThePurchaseSheet` — Used is preselected, the test
+    changes it to New, and the new item reads "Bought new". Clearing it on the
+    sheet is tested beneath the screen, not in a UI test.
+24. [x] Copying a wishlist entry carries its preference.
+    *Verified by* `WishlistDuplicationTests.theCopyCarriesLookingFor`.
+25. [x] The wishlist CSV export ends in a **Looking For** column; importing
     it restores every preference; an older wishlist file without it still
     imports, every row not recorded; the wishlist template includes it.
-26. [ ] The wishlist PDF shows **Looking for** where recorded and omits it
+    *Verified by*
+    `ExportSchemaTests.theLookingForCellIsTheLastAndCarriesNewUsedOrNothing`;
+    `WishlistViewModelCommitTests.commitRestoresLookingForThroughTheCSV`;
+    `ImportSchemaTests.aNineColumnWishlistFileImportsWithNothingRecorded` and
+    `.theTemplatesEndInBoughtAndLookingFor`.
+26. [x] The wishlist PDF shows **Looking for** where recorded and omits it
     where not.
+    *Verified by*
+    `ExportSchemaTests.wishlistEntryCarriesLookingForOnlyWhenRecorded`, and the
+    earlier four-field test, which passes unedited.
 27. [ ] The Bought value, the Looking for preference and Very Good sync to a second signed-in device.
     *(A two-device check; gathered in `specs/SYNC-CHECKS.md` if it cannot
     be run at the close-out.)*
-28. [ ] The CloudKit schema test still validates with both new fields.
+    **Unticked — sync untested, gathered in `specs/SYNC-CHECKS.md` (steps 3.11
+    and 3.12) for one later pass.** No second signed-in device was available at
+    the close-out, so none of the three has been seen to arrive on another
+    device. *What has been checked*: the three new fields are accepted by
+    CloudKit's own validator (criterion 28), and all three, once set, survive
+    the app being closed and reopened on one device (the device pass,
+    2026-10-06). **What has not been done**: the Bought value, the Looking for
+    preference and Very Good set on one device and read on another (step
+    3.12); and an older copy of the app on the second device editing those
+    rows without wiping them (step 3.11 — see P4 below).
+28. [x] The CloudKit schema test still validates with both new fields.
+    *Verified by* `CloudKitSchemaTests.schemaMeetsCloudKitRequirements`, which
+    now validates three new synced fields, not two — Bought, Looking for, and
+    the one that marks a Good item as Very Good. Shown able to fail: a
+    uniqueness rule put on the Bought field turned it red, along with
+    `TwoStoreContainerTests`.
 
 ## Decisions record
 
@@ -365,17 +513,43 @@ from, and prefills the purchase sheet when it is bought.
     10's kept sentence. And criterion 7 gains "unless the entry has a
     Looking for preference", so it agrees with criterion 23 and P6.
 
-### Proposals (P-items, decided at plan approval)
+### The P-items, now decisions
 
-- **P1** — tapping the selected Bought chip clears it.
-- **P2** — Copy carries the Bought value.
-- **P3** — the item's page is silent when not recorded, rather than
-  showing a dash.
-- **P4** — an older app version on another device must neither crash on
-  nor erase the new data; the plan says how, and whether it can be tested.
-- **P5** — Very Good is written `very good` in the CSV.
-- **P6** — marking a wanted item bought prefills the sheet's Bought chip
-  from its preference, still changeable.
+Claude Code's proposals. Each became a decision when the plan was approved
+(2026-09-30), and each is recorded here as it shipped.
+
+- **P1 — decided: tapping the selected chip clears it.** The same rule
+  serves Bought on the item form and the purchase sheet and Looking for on
+  the wishlist form — one rule, written once (criteria 3, 19 and 23).
+- **P2 — decided: Copy carries the value.** A copied item keeps its Bought
+  value and a copied wishlist entry keeps its Looking for preference
+  (criteria 8 and 24).
+- **P3 — decided: the page is silent when not recorded.** The item's page
+  reads plain "Bought" on its date row, exactly as before this spec, and
+  the wanted item's page shows no Looking for row — never a dash (criteria
+  6 and 21).
+- **P4 — decided: an older copy of the app on another device must neither
+  crash on nor erase the new data. Half of this is tested and half is not.**
+  - **Very Good — tested.** It is stored so that an older copy of the app
+    reads the item as **Good**, its nearest known grade, and saving there
+    does not reset it: the item is still Very Good on an updated device. A
+    test replays what the older app does on reading and on saving
+    ("Very Good and an app older than 020"), and it fails if Very Good is
+    stored the simple way. One edge is known and accepted: if the older
+    device moves the item to another grade and back to Good, it reads Very
+    Good again on an updated device.
+  - **Bought and Looking for — untested until the two-device pass.** An
+    older copy of the app does not know these two fields. Whether editing a
+    row there leaves them alone depends on how iCloud sync treats fields an
+    app has never heard of, and no test in this project can reach that.
+    Nothing has been seen to go wrong, and nothing has been seen to go
+    right: it waits on step 3.11 in `specs/SYNC-CHECKS.md`, with an older
+    build on a second device.
+- **P5 — decided: Very Good is written `very good` in the CSV**, with its
+  space, and is read back in any letter case (criteria 13 and 14).
+- **P6 — decided: marking a wanted item bought prefills the sheet's Bought
+  chip from its preference**, and it can still be changed or cleared before
+  saving (criteria 7 and 23; criterion 7's wording by Decision 12).
 
 ## Non-goals (explicit)
 
@@ -400,4 +574,5 @@ from, and prefills the purchase sheet when it is bought.
 - Every font is fixed-size (`017-dynamic-type`); the new field inherits
   that.
 - Two-device sync checks are gathered in `specs/SYNC-CHECKS.md`; nobody
-  has run that pass yet.
+  has run that pass yet. This spec adds steps 3.11 and 3.12 to it
+  (criterion 27 and P4).
