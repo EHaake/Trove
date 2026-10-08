@@ -186,6 +186,29 @@ struct MarketWiringTests {
         }
     }
 
+    /// 020, Q4: the two lines that name which listings a figure was read
+    /// from take **the figure's** basis, not the item's — so a wanted item
+    /// switched to New keeps saying "used listings" over the used-listings
+    /// figure it is still showing, until the next refresh. Scanned inside
+    /// each call's own argument list, so the phrase elsewhere in the file
+    /// can't stand in for it. Reading `isWanted` alone at either site turns
+    /// that site red.
+    ///
+    /// A view-body fact, and the **whole** of the view-layer coverage: the
+    /// strings are `MarketCopyTests`' and the mapping is `MarketIndexTests`',
+    /// but nothing automated observes the "new listings" wording on screen.
+    @Test func theSectionsListingWordsFollowTheFigureShown() throws {
+        let code = try SourceScan.production(Self.section)
+        for callee in ["MarketCopy.allYearsFallback", "MarketCopy.withheld"] {
+            let lists = SourceScan.argumentLists(of: callee, in: code)
+            try #require(lists.count == 1, "the section calls \(callee) \(lists.count) times — one site each is what this scan follows")
+            #expect(
+                lists[0].contains("basis: figure.listingBasis(isWanted: isWanted)"),
+                "\(callee) isn't given the figure's own basis: \(lists[0])"
+            )
+        }
+    }
+
     // MARK: - The match sheet (T011, plan §6, Q9)
 
     /// One sheet, two phases (Q9). Four halves, and each is needed: the

@@ -665,7 +665,8 @@ final class ItemListViewModel {
             notes: original.notes,
             photos: (original.photos ?? []).map {
                 Photo(imageData: $0.imageData, source: $0.source, sortOrder: $0.sortOrder)
-            }
+            },
+            bought: original.bought
         )
         modelContext.insert(copy)
 
@@ -1230,7 +1231,9 @@ final class ItemListViewModel {
                     // Reverb match and the year, so a re-imported item asks
                     // the same question of the market as before it left.
                     reverbProductID: record.reverbProductID,
-                    year: record.year
+                    year: record.year,
+                    // 020: the `Bought` column comes back with the row.
+                    bought: record.bought
                 )
                 modelContext.insert(item)
                 // 006 (plan §7, Q6): a row carrying both halves of the pair

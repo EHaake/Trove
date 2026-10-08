@@ -490,9 +490,12 @@ final class SellPlanViewModel {
     /// estimated cost when it has one and blank when it doesn't — never a
     /// pre-filled $0, the 006 P1 rule — and today's date from this screen's
     /// injected clock. No argument: the subject is this plan's own
-    /// `wishlistItem`. G12 pins the three hosts equal.
+    /// `wishlistItem`. `everyHostSeedsThePurchaseSheetIdentically` pins the
+    /// four hosts equal.
     func makePurchaseFormViewModel() -> PurchaseFormViewModel {
-        PurchaseFormViewModel(estimatedCostCents: estimatedCostCents, now: now)
+        PurchaseFormViewModel(
+            estimatedCostCents: estimatedCostCents, lookingFor: wishlistItem?.lookingFor, now: now
+        )
     }
 
     /// Mark as bought… from the plan: the entry becomes an owned item, its

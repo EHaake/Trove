@@ -196,8 +196,160 @@ struct MarketRefresherTests {
         #expect(targets[0].subject == .owned(condition: .new))
         #expect(targets[1].subject == .owned(condition: .good))
         #expect(targets[1].year == 1975)
-        #expect(targets[2].subject == .wanted)
+        #expect(targets[2].subject == .wanted(lookingFor: nil))
         #expect(targets[2].year == 1999)
+    }
+
+    // MARK: - Looking for (020, plan §3, G9)
+
+    /// New stock and everything else, priced apart and sized apart, so the
+    /// count and the low each say which side a figure was read from. No
+    /// `mint` on purpose: what New counts is `MarketFigureComputationTests`'
+    /// to pin, and these tests are about which preference reached it.
+    private var newStockAndUsed: MarketListings {
+        let listings = [
+            MarketListing(priceCents: 200_000, currency: "USD", conditionSlug: "brand-new", year: nil),
+            MarketListing(priceCents: 210_000, currency: "USD", conditionSlug: "brand-new", year: nil),
+            MarketListing(priceCents: 220_000, currency: "USD", conditionSlug: "brand-new", year: nil),
+            MarketListing(priceCents: 190_000, currency: "USD", conditionSlug: "b-stock", year: nil),
+            MarketListing(priceCents: 100_000, currency: "USD", conditionSlug: "good", year: nil),
+            MarketListing(priceCents: 110_000, currency: "USD", conditionSlug: "good", year: nil),
+            MarketListing(priceCents: 120_000, currency: "USD", conditionSlug: "good", year: nil),
+            MarketListing(priceCents: 130_000, currency: "USD", conditionSlug: "excellent", year: nil),
+            MarketListing(priceCents: 90_000, currency: "USD", conditionSlug: "fair", year: nil),
+        ]
+        return MarketListings(listings: listings, reportedTotal: listings.count, isTruncated: false)
+    }
+
+    private struct WantedWorld {
+        let container: ModelContainer
+        let context: ModelContext
+        let item: WishlistItem
+        let key: MarketSubjectKey
+    }
+
+    private func wantedWorld(lookingFor: NewOrUsed?) throws -> WantedWorld {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let item = WishlistItem(name: "Telecaster", reverbProductID: 126_161, lookingFor: lookingFor)
+        context.insert(item)
+        try context.save()
+        return WantedWorld(container: container, context: context, item: item, key: MarketSubjectKey(subjectID: item.id, kind: .wanted))
+    }
+
+    @Test func targetsCarryWhatEachWantedItemIsLookingFor() throws {
+        let context = try makeInMemoryContext()
+        let new = WishlistItem(name: "N", sortOrder: 0, reverbProductID: 1, lookingFor: .new)
+        let used = WishlistItem(name: "U", sortOrder: 1, reverbProductID: 2, lookingFor: .used)
+        let notRecorded = WishlistItem(name: "X", sortOrder: 2, reverbProductID: 3)
+        for model in [new, used, notRecorded] { context.insert(model) }
+        try context.save()
+
+        let targets = try MarketRefresher.targets(in: context)
+
+        #expect(targets.map(\.productID) == [1, 2, 3])
+        #expect(targets.map(\.subject) == [.wanted(lookingFor: .new), .wanted(lookingFor: .used), .wanted(lookingFor: nil)])
+    }
+
+    /// Criterion 22, end to end at the refresher: a wanted item looking for
+    /// new is computed over new stock, and the saved record says so — read
+    /// on a second context.
+    @Test func aWantedItemLookingForNewIsReadFromNewStockAndRecordedSo() async throws {
+        let w = try wantedWorld(lookingFor: .new)
+        let target = try #require(try MarketRefresher.targets(in: w.context).first)
+        let refresher = MarketRefresher(modelContext: w.context, service: try spy(listings: [.success(newStockAndUsed)]), now: { self.t0 })
+
+        let outcome = await refresher.refresh(target)
+
+        guard case .refreshed(.figure(let figure)) = outcome else { throw TestFailure("\(outcome)") }
+        #expect(figure.count == 4)
+        #expect(figure.lowCents == 190_000)
+        #expect(figure.highCents == 220_000)
+        let row = try #require(try MarketLocalStore.figure(for: w.item.id, in: ModelContext(w.container)))
+        #expect(row.isNewStockOnly)
+    }
+
+    /// Criterion 22's other state, too few new listings to say: two new-stock
+    /// listings among five used is under `minimumCount`, so the reading is
+    /// withheld — and the saved record still says it was read from new stock,
+    /// which is what lets the section say "Too few new listings to say."
+    /// Read on a second context.
+    ///
+    /// Five used on purpose: a refresher that ignored the preference would
+    /// count them and return a figure, so the withheld count of 2 says which
+    /// side was read.
+    ///
+    /// Mutation: `row.isNewStockOnly = newStockOnly` moved into `record`'s
+    /// `.figure` branch → red.
+    @Test func aWantedItemLookingForNewWithTooFewNewListingsIsWithheldAndRecordedSo() async throws {
+        let w = try wantedWorld(lookingFor: .new)
+        let target = try #require(try MarketRefresher.targets(in: w.context).first)
+        let listings = [
+            MarketListing(priceCents: 200_000, currency: "USD", conditionSlug: "brand-new", year: nil),
+            MarketListing(priceCents: 190_000, currency: "USD", conditionSlug: "b-stock", year: nil),
+            MarketListing(priceCents: 100_000, currency: "USD", conditionSlug: "good", year: nil),
+            MarketListing(priceCents: 110_000, currency: "USD", conditionSlug: "good", year: nil),
+            MarketListing(priceCents: 120_000, currency: "USD", conditionSlug: "good", year: nil),
+            MarketListing(priceCents: 130_000, currency: "USD", conditionSlug: "excellent", year: nil),
+            MarketListing(priceCents: 90_000, currency: "USD", conditionSlug: "fair", year: nil),
+        ]
+        let twoNewAmongUsed = MarketListings(listings: listings, reportedTotal: listings.count, isTruncated: false)
+        let refresher = MarketRefresher(modelContext: w.context, service: try spy(listings: [.success(twoNewAmongUsed)]), now: { self.t0 })
+
+        let outcome = await refresher.refresh(target)
+
+        #expect(outcome == .refreshed(.withheld(count: 2, usedLowCents: 100_000, fetchedAt: t0, yearScope: .any)))
+        let row = try #require(try MarketLocalStore.figure(for: w.item.id, in: ModelContext(w.container)))
+        #expect(row.count == 2)
+        #expect(row.medianCents == nil)
+        #expect(row.isNewStockOnly, "a withheld reading still records which listings it was read from")
+    }
+
+    /// The re-read decides (plan §3): the caller's target says "not
+    /// recorded", the person switches to New while the fetch is in flight,
+    /// and the figure is the New one — computed and recorded.
+    @Test func aPreferenceChangedDuringTheFetchIsTheOneComputed() async throws {
+        let w = try wantedWorld(lookingFor: nil)
+        let target = MarketRefreshTarget(key: w.key, productID: 126_161, subject: .wanted(lookingFor: nil), year: nil)
+        let gated = GatedMarketServiceSpy(product: .success(try product()), listings: .success(newStockAndUsed))
+        let refresher = MarketRefresher(modelContext: w.context, service: gated, now: { self.t0 })
+
+        let task = Task { await refresher.refresh(target) }
+        while gated.listingsCalls == 0 { await Task.yield() }
+        w.item.lookingFor = .new
+        try w.context.save()
+        gated.release()
+
+        let outcome = await task.value
+        guard case .refreshed(.figure(let figure)) = outcome else { throw TestFailure("\(outcome)") }
+        #expect(figure.count == 4, "the figure was computed over the caller's subject, not the re-read")
+        #expect(figure.lowCents == 190_000)
+        let row = try #require(try MarketLocalStore.figure(for: w.item.id, in: ModelContext(w.container)))
+        #expect(row.isNewStockOnly, "the record names the caller's subject, not the re-read")
+    }
+
+    /// Used and not recorded record `false` — asserted over a row a New
+    /// refresh left `true`, so the flag has to be *written* false, not merely
+    /// left at its default. The figure is the everything-but-new-stock one.
+    @Test(arguments: [NewOrUsed.used, nil] as [NewOrUsed?])
+    func aRefreshAsUsedOrNotRecordedClearsTheFlagANewRefreshLeft(lookingFor: NewOrUsed?) async throws {
+        let w = try wantedWorld(lookingFor: .new)
+        let target = MarketRefreshTarget(key: w.key, productID: 126_161, subject: .wanted(lookingFor: .new), year: nil)
+        _ = await MarketRefresher(modelContext: w.context, service: try spy(listings: [.success(newStockAndUsed)]), now: { self.t0 }).refresh(target)
+        try #require(try MarketLocalStore.figure(for: w.item.id, in: ModelContext(w.container))?.isNewStockOnly == true)
+
+        w.item.lookingFor = lookingFor
+        try w.context.save()
+        let later = t0.addingTimeInterval(61 * minute)
+        let outcome = await MarketRefresher(modelContext: w.context, service: try spy(listings: [.success(newStockAndUsed)]), now: { later }).refresh(target)
+
+        guard case .refreshed(.figure(let figure)) = outcome else { throw TestFailure("\(outcome)") }
+        #expect(figure.count == 5)
+        #expect(figure.lowCents == 90_000)
+        #expect(figure.highCents == 130_000)
+        let row = try #require(try MarketLocalStore.figure(for: w.item.id, in: ModelContext(w.container)))
+        #expect(row.fetchedAt == later)
+        #expect(!row.isNewStockOnly)
     }
 
     /// G8 (006, criterion 5, Decision 7). A sold item has no market value to

@@ -40,6 +40,7 @@ struct WishlistFormView: View {
                         )
                         costField
                         desireField
+                        lookingForField
                         // After the required trio, before notes — the same
                         // order the item form uses among its optional fields,
                         // since the two sit one tab apart.
@@ -227,6 +228,18 @@ struct WishlistFormView: View {
             .background(fieldBackground)
             .overlay(fieldBorder(isInvalid: false))
         }
+    }
+
+    /// 020: new or used, as a preference — optional, neither chip selected
+    /// until the person picks one, and the selected one clears on a second
+    /// tap. Directly under the desire gauge (plan §6): the two say how the
+    /// thing is wanted, before the fields that describe it.
+    private var lookingForField: some View {
+        NewOrUsedField(
+            label: NewOrUsedCopy.lookingForLabel,
+            identifier: "lookingFor",
+            selection: $viewModel.lookingFor
+        )
     }
 
     /// 002 Amendment A: optional, four digits, no prompt — the spec gives this

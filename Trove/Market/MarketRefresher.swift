@@ -81,7 +81,7 @@ final class MarketRefresher {
             now: fetchedAt
         )
         do {
-            try MarketLocalStore.record(reading, product: product, for: current.key, in: modelContext)
+            try MarketLocalStore.record(reading, product: product, for: current.key, newStockOnly: current.subject.readsNewStockOnly, in: modelContext)
             try modelContext.save()
         } catch {
             modelContext.rollback()
@@ -90,8 +90,10 @@ final class MarketRefresher {
         return .refreshed(reading)
     }
 
-    /// The item as it is right now — its match, condition and year re-read
-    /// after the network hop.
+    /// The item as it is right now — its match, condition, year and (for a
+    /// wanted item, 020) what it is looking for, re-read after the network
+    /// hop. This is the subject the figure is computed over, never the
+    /// caller's.
     ///
     /// Deliberately unchanged by 015 (plan §4), the sixth of the unchanged
     /// read sites and the one §4 itself missed the first time: this re-read
@@ -112,7 +114,7 @@ final class MarketRefresher {
             var descriptor = FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.id == id })
             descriptor.fetchLimit = 1
             guard let item = try? modelContext.fetch(descriptor).first, let productID = item.reverbProductID else { return nil }
-            return MarketRefreshTarget(key: key, productID: productID, subject: .wanted, year: item.year)
+            return MarketRefreshTarget(key: key, productID: productID, subject: .wanted(lookingFor: item.lookingFor), year: item.year)
         }
     }
 
@@ -140,7 +142,7 @@ final class MarketRefresher {
             }
         } + wanted.compactMap { item in
             item.reverbProductID.map {
-                MarketRefreshTarget(key: MarketSubjectKey(subjectID: item.id, kind: .wanted), productID: $0, subject: .wanted, year: item.year)
+                MarketRefreshTarget(key: MarketSubjectKey(subjectID: item.id, kind: .wanted), productID: $0, subject: .wanted(lookingFor: item.lookingFor), year: item.year)
             }
         }
     }

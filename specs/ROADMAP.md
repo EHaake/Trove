@@ -740,6 +740,23 @@ actually useful once the app is in daily use.
     written `$3,179.95`, dates `5/1/2025`, a condition (Very Good) the
     scale lacks until `020`, blank separator rows between groups, and a
     totals row at the bottom.
+    **Restated by the person, 2026-10-06** (during `020`, on being told
+    the sheet still would not import): "I want to make it so that the
+    file as is would import. That would allow a human readable csv file
+    to be maintained in something like google sheets and could be
+    imported into the app seamlessly." **Read directly that day**
+    (`My-Gear.csv`, 107 rows) against the importer as `020` leaves it:
+    the header is rejected before any row is read — ten columns in the
+    template's names but with `Serial Number` straight after `Condition`
+    (no `Condition Notes`), so it is no prefix of any accepted layout
+    and columns want matching **by name, not position**; prices carry
+    `$` and thousands commas (one cell is a bare `500`); dates are
+    `M/D/YYYY`; about fifteen serial numbers are the text `N/A`, which
+    would import as a serial number; the last row is totals with no
+    name, after three blank rows. Already fine: blank separator rows
+    (dropped silently since `012`), Very Good (eleven rows, from `020`),
+    the category paths, `USD`, desire 1–5. No Bought column, so every
+    row imports not recorded until the sheet gains one.
   - **A round trip.** Their example: to change many items at once,
     **export the full collection, edit it in Google Sheets, and
     re-import it — updating the items that already exist and adding

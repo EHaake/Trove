@@ -77,6 +77,23 @@ struct DocsSampleTests {
                     && $0.record.saleNote == nil
             }
         )
+        // 020 (G19): "every field filled" now includes Bought — every row
+        // states new or used, six of each, as the README says. A blank cell
+        // imports as not recorded, silently (the count above can't see it),
+        // so this loop and the split are what catch one.
+        #expect(preview.validated.allSatisfy { $0.record.bought != nil })
+        let boughtNew = preview.validated.filter { $0.record.bought == .new }
+        #expect(boughtNew.map(\.record.name) == [
+            "Fujifilm X100V", "Fender AV II '61 Stratocaster", "Fender Blues Junior IV",
+            "Shure SM7B", "UA Apollo Twin X", "Sennheiser HD 650",
+        ])
+        #expect(preview.validated.filter { $0.record.bought == .used }.count == 6)
+        // And one row is graded Very Good, written with its space — the
+        // sixth grade reads back from a hand-built file as the README says.
+        let veryGood = preview.validated.filter {
+            $0.record.conditionRawValue == Condition.veryGood.rawValue
+        }
+        #expect(veryGood.map(\.record.name) == ["Summicron-M 35mm f/2 v4"])
     }
 
     @Test func itemsPartialSkipsAndDefaultsExactlyAsDocumented() async throws {
@@ -145,6 +162,21 @@ struct DocsSampleTests {
         #expect(matched.record.name == "Fender Deluxe Reverb '65 RI")
         #expect(matched.record.reverbProductID == 232)
         #expect(matched.record.year == 2019)
+        // 020 (G19): all three Looking For states, as the README counts
+        // them — one new, two used, one with nothing recorded. The blank
+        // cell imports silently (the defaulted count above stays zero).
+        #expect(
+            preview.validated.filter { $0.record.lookingFor == .new }.map(\.record.name)
+                == ["Fender Deluxe Reverb '65 RI"]
+        )
+        #expect(
+            preview.validated.filter { $0.record.lookingFor == .used }.map(\.record.name)
+                == ["Fujifilm GFX 50R", "Roland RE-201 Space Echo"]
+        )
+        #expect(
+            preview.validated.filter { $0.record.lookingFor == nil }.map(\.record.name)
+                == ["Ortofon 2M Black"]
+        )
         // The Added dates are the point of the wishlist schema's round trip.
         #expect(
             preview.validated.first?.record.createdAt

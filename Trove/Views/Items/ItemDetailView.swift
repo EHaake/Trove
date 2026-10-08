@@ -467,7 +467,11 @@ struct ItemDetailView: View {
         let rows: [(label: String, value: String, isMono: Bool)] = [
             ("Condition", item.condition.rawValue.capitalized, false),
             ("Condition notes", item.conditionNotes ?? "", false),
-            ("Bought", item.purchaseDate.formatted(date: .abbreviated, time: .omitted), true),
+            (
+                NewOrUsedCopy.detailDateRowLabel(bought: item.bought),
+                item.purchaseDate.formatted(date: .abbreviated, time: .omitted),
+                true
+            ),
             ("Bought from", item.purchaseLocation ?? "", false),
             ("Serial number", item.serialNumber ?? "", true),
         ].filter { !$0.value.isEmpty }

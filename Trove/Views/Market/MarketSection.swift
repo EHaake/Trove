@@ -42,8 +42,10 @@ struct MarketSection: View {
     /// The item's own year (spec Decision 29) — the source line's third
     /// part, and the year the all-years line names when it has no other.
     var year: Int?
-    /// A wanted item adopts an *estimated cost* and reads the "used"
-    /// wording; an owned one adopts its value (spec P6, plan Q7).
+    /// A wanted item adopts an *estimated cost* and reads the "used" wording
+    /// — or "new", when the figure shown was read from new stock (020, Q4:
+    /// the figure says which, not the item); an owned one adopts its value
+    /// (spec P6, plan Q7).
     let isWanted: Bool
     let canRefresh: Bool
     let canAdopt: Bool
@@ -112,7 +114,7 @@ struct MarketSection: View {
             if case .current(let figure) = display.reading,
                figure.isAllYearsFallback,
                let narrowedYear = figure.yearFilter ?? year {
-                MarketQuietLine(text: MarketCopy.allYearsFallback(year: narrowedYear, wanted: isWanted))
+                MarketQuietLine(text: MarketCopy.allYearsFallback(year: narrowedYear, basis: figure.listingBasis(isWanted: isWanted)))
             }
         }
     }
@@ -136,7 +138,7 @@ struct MarketSection: View {
             }
 
         case .withheld(let figure):
-            sentence(MarketCopy.withheld(usedLowCents: figure.usedLowCents, wanted: isWanted))
+            sentence(MarketCopy.withheld(usedLowCents: figure.usedLowCents, basis: figure.listingBasis(isWanted: isWanted)))
             // The age keeps its place at the right edge even with no
             // spread to sit beside, so a withheld reading still says when
             // it was taken (the artboard's empty left cell).

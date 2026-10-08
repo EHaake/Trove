@@ -1,21 +1,35 @@
 import Foundation
 
 /// Whose figure is being computed: an owned item brings its condition, a
-/// wanted item has none and reads all used listings (spec P2, P16).
+/// wanted item has none and reads all used listings (spec P2, P16) — unless
+/// it is looking for new.
 nonisolated enum MarketSubject: Sendable, Equatable {
     case owned(condition: Condition)
-    case wanted
+    /// 020 (Decision 9): new → new stock only; used or not recorded → everything
+    /// that is not new stock, exactly the figure before 020.
+    case wanted(lookingFor: NewOrUsed?)
+
+    /// "New means new stock only", the one rule: `MarketConditionMap.counts`
+    /// counts by it and the refresher records it on the figure (plan §3, Q4).
+    var readsNewStockOnly: Bool { self == .wanted(lookingFor: .new) }
 }
 
-/// Trove's five conditions against Reverb's condition slugs (spec P2,
+/// Trove's conditions against Reverb's condition slugs (spec P2,
 /// plan Q1), verified against the recorded fixtures — every slug seen on
 /// the Telecaster's 337 listings is in `knownSlugs`, and
 /// `MarketFigureComputationTests` keeps it that way.
 ///
+/// 020, Decision 6: Very Good reads `very-good` alone, and Good keeps
+/// reading `very-good` and `good` as it has since 002 — the one overlap
+/// between two buckets, on purpose, so nothing already graded Good sees its
+/// figure move.
+///
 /// `b-stock` sits with new stock: unused dealer inventory with cosmetic
 /// flaws, priced with mint on the oracle product. "Used", for a wanted
 /// item, is everything that is *not* new stock — failure-open, so a slug
-/// Reverb adds later never silently shrinks a wanted item's count.
+/// Reverb adds later never silently shrinks a wanted item's count. A wanted
+/// item looking for new (020, Decision 9) reads the other side of the same
+/// line: new stock and nothing else.
 nonisolated enum MarketConditionMap {
     static let newStockSlugs: Set<String> = ["brand-new", "b-stock"]
 
@@ -28,6 +42,7 @@ nonisolated enum MarketConditionMap {
         switch condition {
         case .new: ["brand-new", "b-stock", "mint", "mint-inventory"]
         case .excellent: ["excellent"]
+        case .veryGood: ["very-good"]
         case .good: ["very-good", "good"]
         case .fair: ["fair"]
         case .broken: ["poor", "non-functioning"]
@@ -37,7 +52,7 @@ nonisolated enum MarketConditionMap {
     static func counts(_ slug: String, for subject: MarketSubject) -> Bool {
         switch subject {
         case .owned(let condition): reverbSlugs(for: condition).contains(slug)
-        case .wanted: !newStockSlugs.contains(slug)
+        case .wanted: subject.readsNewStockOnly ? newStockSlugs.contains(slug) : !newStockSlugs.contains(slug)
         }
     }
 }

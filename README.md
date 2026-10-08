@@ -10,16 +10,26 @@ purchases.
 ## Features
 
 - **Owned gear tracking** — name, category, purchase price and date,
-  current estimated value, condition, photos, and a "desire to keep"
-  rating that doubles as a quiet signal for what might be worth selling.
+  whether you bought it new or used, current estimated value, condition,
+  photos, and a "desire to keep" rating that doubles as a quiet signal
+  for what might be worth selling. New or used is optional and never
+  guessed: an item you haven't said it for just reads "Bought", and
+  nothing is inferred from its condition. Condition is a six-grade scale
+  — New, Excellent, Very Good, Good, Fair, Broken — on one row you slide
+  sideways.
 - **A wishlist** with its own "desire to own" rating, separate from
   desire-to-keep — three levels (Someday / Soon / Next), shown as a
   three-segment gauge rather than a recolored version of the owned-item
-  dial, since the two ratings mean structurally different things.
+  dial, since the two ratings mean structurally different things. An
+  entry can also say whether you're looking for the thing new or used —
+  optional, like its owned twin — which decides which Reverb listings its
+  market figure is read from and is already chosen for you when you mark
+  it bought.
 - **Marking something bought** — when you finally buy the thing you were
   saving for, swipe its row on the wishlist and tap Buy (or use the same
   action from the item's "…" menu or from its Sell Plan). One sheet asks
-  what you paid, when, where and what condition it's in, and says in
+  what you paid, when, where, whether you bought it new or used and
+  what condition it's in, and says in
   passing how the price compared to what you'd estimated. The wanted item
   becomes an item in your collection, keeping its name, category, photos
   and their credits, its Reverb match, its year and your notes — nothing
@@ -98,7 +108,10 @@ purchases.
   choice follows what you have narrowed on screen, and a choice with
   nothing in it is greyed out — so a collection you have sold entirely
   still exports, in either format. The CSV carries an item's
-  Reverb match and the year it was made, so a round trip restores them;
+  Reverb match, the year it was made and whether it was bought new or
+  used — and the wishlist's CSV whether you're looking for new or used —
+  so a round trip restores them, and a file saved before those columns
+  existed still imports;
   it never carries the fetched figures, which belong to the device that
   fetched them.
 - **Import** — CSV import of an externally-tracked collection on both
@@ -116,7 +129,8 @@ purchases.
   price, resting on the median, so you set your own value with a drag
   and a tap — or step back and keep what you had. The detail then
   shows the median asking price of the current listings in your item's
-  condition (all used listings, for something on the wishlist),
+  condition (for something on the wishlist, all used listings — or new
+  stock only, once you've said you're looking for it new),
   narrowed to the year it was made when you've given one, with the
   spread, how many listings it came from, and how long ago it was
   taken; a refresh is one tap, at most once an hour. The figures and

@@ -18,7 +18,7 @@ struct PurchaseFormPrefillTests {
     private let t0 = Date(timeIntervalSince1970: 1_780_000_000)
 
     @Test func seedsThePriceFromTheEstimateAndTheDateFromTheClock() {
-        let form = PurchaseFormViewModel(estimatedCostCents: 240_000, now: { self.t0 })
+        let form = PurchaseFormViewModel(estimatedCostCents: 240_000, lookingFor: nil, now: { self.t0 })
 
         #expect(form.price == Decimal(string: "2400"))
         #expect(form.date == t0)
@@ -44,11 +44,26 @@ struct PurchaseFormPrefillTests {
     /// unconditionally (a `?? 0` seed) → `price` is `0`, the sheet validates,
     /// and this fails on all three counts.
     @Test func leavesThePriceBlankWithoutAnEstimate() {
-        let form = PurchaseFormViewModel(estimatedCostCents: 0, now: { self.t0 })
+        let form = PurchaseFormViewModel(estimatedCostCents: 0, lookingFor: nil, now: { self.t0 })
 
         #expect(form.price == nil)
         #expect(form.purchase() == nil)
         #expect(form.validationErrors.contains(.priceMissing))
+    }
+
+    /// 020 G11 (P6, criterion 23): the Bought field starts at the wanted
+    /// entry's preference — nothing when none is recorded. All three, so a
+    /// seed that ignores the preference (nil throughout) fails on New and
+    /// Used, and one that hardcodes either fails on the other two.
+    ///
+    /// Mutation: drop `bought = lookingFor` from the init → the New and Used
+    /// legs fail.
+    @Test func seedsBoughtFromThePreference() {
+        for lookingFor in [nil, .new, .used] as [NewOrUsed?] {
+            let form = PurchaseFormViewModel(estimatedCostCents: 240_000, lookingFor: lookingFor, now: { self.t0 })
+
+            #expect(form.bought == lookingFor, "looking for \(String(describing: lookingFor))")
+        }
     }
 
     // T006a's `namesTheSheetFromTheCopyTable` is gone, deleted at T012a along
@@ -73,8 +88,10 @@ struct PurchaseFormPrefillTests {
 struct PurchaseFormValidationTests {
     private let t0 = Date(timeIntervalSince1970: 1_780_000_000)
 
-    private func viewModel(estimatedCostCents: Int = 240_000) -> PurchaseFormViewModel {
-        PurchaseFormViewModel(estimatedCostCents: estimatedCostCents, now: { self.t0 })
+    private func viewModel(
+        estimatedCostCents: Int = 240_000, lookingFor: NewOrUsed? = nil
+    ) -> PurchaseFormViewModel {
+        PurchaseFormViewModel(estimatedCostCents: estimatedCostCents, lookingFor: lookingFor, now: { self.t0 })
     }
 
     /// Blank is not zero: the price is required, so a sheet whose seeded
@@ -141,6 +158,26 @@ struct PurchaseFormValidationTests {
         #expect(purchase.condition == .fair)
     }
 
+    /// 020 G11 (criteria 7, 23): the purchase carries what is chosen when the
+    /// sheet is confirmed — the seed left alone, the seed changed, and the
+    /// seed cleared. Seeded `.used` throughout, so the changed leg's `.new`
+    /// and the cleared leg's nil are each a value the seed is not.
+    ///
+    /// Mutation: drop `bought:` from `purchase()` → the untouched and changed
+    /// legs fail.
+    @Test func recordsTheBoughtChosenWhenTheSheetIsConfirmed() throws {
+        let untouched = viewModel(lookingFor: .used)
+        #expect(try #require(untouched.purchase()).bought == .used)
+
+        let changed = viewModel(lookingFor: .used)
+        changed.bought = .new
+        #expect(try #require(changed.purchase()).bought == .new)
+
+        let cleared = viewModel(lookingFor: .used)
+        cleared.bought = nil
+        #expect(try #require(cleared.purchase()).bought == nil)
+    }
+
     /// A blank place means "not provided", trimmed the way every other form
     /// field is (`FieldNormalization`).
     @Test func trimsAndNilsTheBlankPlace() throws {
@@ -167,7 +204,7 @@ struct PurchaseFormComparisonLineTests {
     /// exactly at it. The direction word is the falsifiable part — swap the
     /// two arguments at the call site and "less" and "more" trade places.
     @Test func readsTheTypedPriceAgainstTheEstimate() {
-        let form = PurchaseFormViewModel(estimatedCostCents: 240_000, now: { self.t0 })
+        let form = PurchaseFormViewModel(estimatedCostCents: 240_000, lookingFor: nil, now: { self.t0 })
 
         form.price = Decimal(string: "2280")
         #expect(form.comparisonLine == "$120 less than you estimated")
@@ -184,7 +221,7 @@ struct PurchaseFormComparisonLineTests {
     /// describes (plan §5). Mutation: pass the estimate instead of 0 for a nil
     /// price and the line goes silent, failing here.
     @Test func readsABlankPriceAsZero() {
-        let form = PurchaseFormViewModel(estimatedCostCents: 240_000, now: { self.t0 })
+        let form = PurchaseFormViewModel(estimatedCostCents: 240_000, lookingFor: nil, now: { self.t0 })
 
         #expect(form.price != nil)
         form.price = nil

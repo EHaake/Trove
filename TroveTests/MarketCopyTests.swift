@@ -45,16 +45,37 @@ struct MarketCopyTests {
     }
 
     @Test func theWithheldCopyOffersTheCatalogsLowestUsedPriceWhenThereIsOne() {
-        #expect(MarketCopy.withheld(usedLowCents: 110_000, wanted: false)
+        #expect(MarketCopy.withheld(usedLowCents: 110_000, basis: .inCondition)
             == "Too few listings in this condition to say. The lowest used asking price on Reverb is $1,100.")
-        #expect(MarketCopy.withheld(usedLowCents: nil, wanted: false) == "Too few listings in this condition to say.")
-        #expect(MarketCopy.withheld(usedLowCents: 110_000, wanted: true)
+        #expect(MarketCopy.withheld(usedLowCents: nil, basis: .inCondition) == "Too few listings in this condition to say.")
+        #expect(MarketCopy.withheld(usedLowCents: 110_000, basis: .used)
             == "Too few used listings to say. The lowest used asking price on Reverb is $1,100.")
     }
 
     @Test func theAllYearsFallbackNamesTheYear() {
-        #expect(MarketCopy.allYearsFallback(year: 1975, wanted: false) == "Too few 1975 listings in this condition — all years shown.")
-        #expect(MarketCopy.allYearsFallback(year: 1975, wanted: true) == "Too few 1975 used listings — all years shown.")
+        #expect(MarketCopy.allYearsFallback(year: 1975, basis: .inCondition) == "Too few 1975 listings in this condition — all years shown.")
+        #expect(MarketCopy.allYearsFallback(year: 1975, basis: .used) == "Too few 1975 used listings — all years shown.")
+    }
+
+    /// 020, R3 and criterion 22: a figure read from new stock says "new
+    /// listings" where a wanted item's line said "used listings" — and
+    /// nowhere else. The withheld reading's second sentence keeps "used": it
+    /// is Reverb's catalog-wide used low, true whatever the preference
+    /// (Decision 10).
+    @Test func aFigureReadFromNewStockSaysNewListings() {
+        #expect(MarketCopy.withheldWantedNew == "Too few new listings to say.")
+        #expect(MarketCopy.withheld(usedLowCents: nil, basis: .new) == "Too few new listings to say.")
+        #expect(MarketCopy.withheld(usedLowCents: 110_000, basis: .new)
+            == "Too few new listings to say. The lowest used asking price on Reverb is $1,100.")
+        #expect(MarketCopy.allYearsFallback(year: 1975, basis: .new) == "Too few 1975 new listings — all years shown.")
+    }
+
+    /// The other half of criterion 22: used, or not recorded, reads the
+    /// wording it read before 020.
+    @Test func theTwoWantedStringsFromBefore020AreUnchanged() {
+        #expect(MarketCopy.withheldWanted == "Too few used listings to say.")
+        #expect(MarketCopy.withheld(usedLowCents: nil, basis: .used) == "Too few used listings to say.")
+        #expect(MarketCopy.allYearsFallback(year: 1975, basis: .used) == "Too few 1975 used listings — all years shown.")
     }
 
     // MARK: - Actions, notice, failure

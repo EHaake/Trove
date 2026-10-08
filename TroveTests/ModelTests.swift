@@ -85,16 +85,63 @@ struct ModelDefaultsTests {
 
 @Suite("Enum-backed properties")
 struct EnumBackedPropertyTests {
+    /// 020/G2: what each grade stores, typed out here as literals — never
+    /// taken from `Item.storage(for:)`, which is the rule under test. Very
+    /// Good is the one grade whose stored raw value is not its own (plan Q2):
+    /// `"good"` with `"very good"` beside it, so an app older than 020 reads
+    /// and writes back Good.
+    ///
+    /// The setter leg starts from a Very Good item, so a setter that wrote the
+    /// raw value and left the old refinement behind would read Good back as
+    /// Very Good here.
     @Test(arguments: Condition.allCases)
-    func conditionRoundTripsThroughItsRawValue(condition: Condition) throws {
+    func conditionRoundTripsThroughItsStoredPair(condition: Condition) throws {
+        let expected: (raw: String, refinement: String?) = switch condition {
+        case .new: ("new", nil)
+        case .excellent: ("excellent", nil)
+        case .veryGood: ("good", "very good")
+        case .good: ("good", nil)
+        case .fair: ("fair", nil)
+        case .broken: ("broken", nil)
+        }
+        let context = try makeInMemoryContext()
+
+        let built = Item(condition: condition)
+        context.insert(built)
+        #expect(built.conditionRawValue == expected.raw)
+        #expect(built.conditionRefinement == expected.refinement)
+        #expect(built.condition == condition)
+
+        let edited = Item(condition: .veryGood)
+        context.insert(edited)
+        try #require(edited.conditionRefinement == "very good")
+        edited.condition = condition
+        #expect(edited.conditionRawValue == expected.raw)
+        #expect(edited.conditionRefinement == expected.refinement)
+        #expect(edited.condition == condition)
+    }
+
+    /// 020/G2: only the exact refinement refines. Anything else beside Good —
+    /// a grade a later version invents, say — reads Good.
+    @Test func anUnknownRefinementOverGoodReadsGood() throws {
         let context = try makeInMemoryContext()
         let item = Item()
         context.insert(item)
 
-        item.condition = condition
+        item.conditionRawValue = "good"
+        item.conditionRefinement = "mint"
 
-        #expect(item.conditionRawValue == condition.rawValue)
-        #expect(item.condition == condition)
+        #expect(item.condition == .good)
+    }
+
+    /// 020/G2 (plan Q3): every display site spells a grade
+    /// `rawValue.capitalized`, and declaration order is the order the chip
+    /// rows draw (criterion 10) — so this one expression's output is the
+    /// scale as the person reads it.
+    @Test func theScaleReadsInOrderWithVeryGoodBetweenExcellentAndGood() {
+        #expect(Condition.allCases.map { $0.rawValue.capitalized } == [
+            "New", "Excellent", "Very Good", "Good", "Fair", "Broken",
+        ])
     }
 
     @Test(arguments: PhotoSource.allCases)
@@ -484,5 +531,156 @@ struct WishlistSellPlanFieldTests {
 
         #expect(wanted.sellPlanCreatedAt == createdOn)
         #expect(wanted.hasSellPlan)
+    }
+}
+
+/// 020/T001 (G3, spec P4): what an app older than 020 does to a Very Good
+/// item. That app knows `conditionRawValue` and nothing beside it; it reads an
+/// unknown grade as Excellent and its form writes the grade it read back on
+/// every save. The replica below is that app's path, frozen — it must never be
+/// updated to follow `Condition`, because the builds it stands for never will.
+@Suite("Very Good and an app older than 020")
+struct VeryGoodOlderAppTests {
+    /// The five grades as they shipped before 020. Frozen.
+    private enum OlderCondition: String {
+        case new
+        case excellent
+        case good
+        case fair
+        case broken
+    }
+
+    /// `Item.condition`'s getter as it was before 020.
+    private func olderRead(_ item: Item) -> OlderCondition {
+        OlderCondition(rawValue: item.conditionRawValue) ?? .excellent
+    }
+
+    /// What `ItemFormViewModel.save` did on that build: the form's grade,
+    /// written straight to the one field it knows.
+    private func olderSave(_ item: Item, as condition: OlderCondition) {
+        item.conditionRawValue = condition.rawValue
+    }
+
+    /// Stored under its own raw value, Very Good would read Excellent on the
+    /// older app and its next save would write Excellent back.
+    @Test func theOlderAppReadsGoodAndItsSaveKeepsTheGrade() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Telecaster", condition: .veryGood)
+        context.insert(item)
+
+        let read = olderRead(item)
+        #expect(read == .good)
+
+        olderSave(item, as: read)
+        #expect(item.condition == .veryGood)
+    }
+
+    /// The older app changing the grade wins: the refinement it could not see
+    /// is still there, and it refines nothing over a base other than Good.
+    @Test func theOlderAppMovingItToFairReadsFair() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Telecaster", condition: .veryGood)
+        context.insert(item)
+
+        olderSave(item, as: .fair)
+
+        try #require(item.conditionRefinement == "very good", "the older app cannot clear a field it does not know")
+        #expect(item.condition == .fair)
+    }
+}
+
+/// 020/T001 (G4): bought on `Item`, looking for on `WishlistItem`, and Very
+/// Good's refinement — three optional strings, nil until the person says
+/// otherwise (spec Decisions 2–4, criteria 5, 11, 20 at the model level). The
+/// CloudKit side (G1) is `CloudKitSchemaTests`' — its red run for this task:
+/// declare `@Attribute(.unique) var boughtRawValue: String?`.
+@Suite("Bought, looking for and Very Good on the models")
+struct ProvenanceFieldsTests {
+    @Test func aFreshItemAndAFreshEntryAreNotRecorded() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Telecaster")
+        let wanted = WishlistItem(name: "D-18")
+        context.insert(item)
+        context.insert(wanted)
+
+        #expect(item.bought == nil)
+        #expect(item.boughtRawValue == nil)
+        #expect(item.conditionRefinement == nil)
+        #expect(wanted.lookingFor == nil)
+        #expect(wanted.lookingForRawValue == nil)
+    }
+
+    @Test func theInitParametersSetBoth() {
+        let item = Item(name: "Telecaster", bought: .used)
+        let wanted = WishlistItem(name: "D-18", lookingFor: .new)
+
+        #expect(item.bought == .used)
+        #expect(item.boughtRawValue == "used")
+        #expect(wanted.lookingFor == .new)
+        #expect(wanted.lookingForRawValue == "new")
+    }
+
+    /// A row as an app older than 020 left it: a grade in the one field that
+    /// app knew, nothing in the new ones. Good stays Good, and New does not
+    /// become "bought new" — nothing is inferred from the grade (criteria 5,
+    /// 11).
+    @Test func aRowWithOnlyOlderFieldsReadsNotRecordedAndItsOldGrade() throws {
+        let context = try makeInMemoryContext()
+        let good = Item(name: "Telecaster")
+        let new = Item(name: "Jazzmaster")
+        context.insert(good)
+        context.insert(new)
+
+        good.conditionRawValue = "good"
+        new.conditionRawValue = "new"
+
+        #expect(good.condition == .good)
+        #expect(good.bought == nil)
+        #expect(new.condition == .new)
+        #expect(new.bought == nil)
+    }
+
+    @Test func anUnknownRawValueReadsNotRecorded() throws {
+        let context = try makeInMemoryContext()
+        let item = Item(name: "Telecaster", bought: .used)
+        let wanted = WishlistItem(name: "D-18", lookingFor: .new)
+        context.insert(item)
+        context.insert(wanted)
+
+        item.boughtRawValue = "refurbished"
+        wanted.lookingForRawValue = "either"
+
+        #expect(item.bought == nil)
+        #expect(wanted.lookingFor == nil)
+    }
+
+    /// A second context, so the assertions are about what reached the store.
+    /// The rows are saved first as an older row would be — Good, nothing
+    /// recorded — and edited afterwards, so dropping the second `save()`
+    /// leaves the store holding values every assertion below rejects.
+    @Test func boughtLookingForAndVeryGoodSurviveASaveAndRefetch() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let item = Item(name: "Telecaster", condition: .good)
+        let wanted = WishlistItem(name: "D-18")
+        context.insert(item)
+        context.insert(wanted)
+        try context.save()
+
+        item.bought = .used
+        item.condition = .veryGood
+        wanted.lookingFor = .new
+        try context.save()
+
+        let elsewhere = ModelContext(container)
+        let fetchedItem = try #require(try elsewhere.fetch(FetchDescriptor<Item>()).first)
+        let fetchedWanted = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(fetchedItem.bought == .used)
+        #expect(fetchedItem.boughtRawValue == "used")
+        #expect(fetchedItem.condition == .veryGood)
+        #expect(fetchedItem.conditionRawValue == "good")
+        #expect(fetchedItem.conditionRefinement == "very good")
+        #expect(fetchedWanted.lookingFor == .new)
+        #expect(fetchedWanted.lookingForRawValue == "new")
     }
 }

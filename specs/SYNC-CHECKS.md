@@ -144,6 +144,30 @@ A is on the new build. **B is still on the old build.**
   the matching sentence in `DECISIONS.md` ("whether an app older than `009`
   editing a row keeps fields it doesn't know").
 
+- [ ] **3.11 — An older app editing a row keeps Bought, Looking for and Very
+  Good.** `020` P4 (plan R4). **Run this here, straight after 3.1, while B is
+  still on the old build.** It is numbered 3.11 only so the steps above and
+  below keep their numbers. The old build is from before `020` too, so it
+  knows none of the three.
+  **Do**: on A (new build), open any owned item that is still on Items →
+  Owned, set **Bought** to Used and **Condition** to Very Good, and save. Open
+  W4, set **Looking for** to New, and save. Wait for both to reach B. On B
+  (old build), edit that item's notes and save, then edit W4's notes and save.
+  Wait for both edits to reach A.
+  **You should see**: on B, the item reading **Good** — the old app's nearest
+  grade — with no Bought or Looking for field anywhere. On A, afterwards, B's
+  notes on both, and all three still set: the item's page reading **Bought
+  used** on its date row and **Very Good**, and W4's page with a **Looking
+  for** row reading **New**. The old app's edits didn't wipe them.
+  **Known edge, not a failure**: if the old build moves a Very Good item to
+  another grade and then back to Good, it reads Very Good again on the new
+  build (`020` plan R4). Leave the condition alone on B for this step.
+  **Record**: `specs/020-purchase-provenance/spec.md`, P4: replace "**Bought
+  and Looking for — untested until the two-device pass.**" with the result,
+  and say what Very Good did. Also `020` plan.md *As built → What is
+  untested*, and the matching sentence in `DECISIONS.md` ("whether an app
+  older than `020` editing a row keeps Bought and Looking for").
+
 - [ ] **3.2 — Plans carried over on one device, seen on the other.** `009`
   criterion 17 (sync half, part 1).
   **Do**: install the **new build** on B over the old one and open it
@@ -236,6 +260,19 @@ A is on the new build. **B is still on the old build.**
   4.1 also passes, and replace "**Unticked — sync untested…**" with the
   result.
 
+- [ ] **3.12 — Bought, Looking for and Very Good reach the other device.**
+  `020` criterion 27.
+  **Do**: both devices on the new build (B has been since 3.2). On A, open a
+  different owned item, set **Bought** to New and **Condition** to Very Good,
+  and save. Open W2, set **Looking for** to Used, and save.
+  **You should see** on B: that item's page reading **Bought new** on its date
+  row and **Very Good**, and its form opening with New and Very Good selected;
+  W2's page with a **Looking for** row reading **Used**. The two rows from
+  3.11 read the same on B as on A.
+  **Record**: `specs/020-purchase-provenance/spec.md`, criterion 27. Tick it,
+  and replace "**Unticked — sync untested…**" with the result. Also update
+  `specs/ROADMAP.md`'s `020` status row ("one honest partial named").
+
 ## Part 4 — long absence and conflicts
 
 - [ ] **4.1 — A plan made on one device while the other deletes all.**
@@ -295,7 +332,8 @@ A is on the new build. **B is still on the old build.**
 
 `009` — 11 (1.1, 1.2, 2.1, 3.1, 3.2, 3.3, 3.5, 3.10, 4.1, 4.2, 4.3) ·
 `002` — 3 (1.3, 3.7 covering criteria 3 and 12, 3.8) · `013` — 2 (2.2,
-3.9) · `015` — 2 (1.4, 3.4) · `005` — 1 (3.6) · `001` — 2 bugs to observe
+3.9) · `015` — 2 (1.4, 3.4) · `005` — 1 (3.6) · `020` — 2 (3.11,
+3.12) · `001` — 2 bugs to observe
 (1.1's second reading, 5.1).
 
 ## Already done — nothing to run

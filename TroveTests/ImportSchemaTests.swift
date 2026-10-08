@@ -372,6 +372,19 @@ struct ImportSchemaTests {
         #expect(ImportSchema.condition(from: "") == nil)
     }
 
+    /// 020/P5 (criterion 14): Very Good reads back in any letter case,
+    /// through the parser and through the items preview.
+    @Test func veryGoodReadsInAnyCase() throws {
+        for field in ["Very Good", "VERY GOOD", "very good"] {
+            #expect(ImportSchema.condition(from: field) == .veryGood, "\(field)")
+            let preview = try ImportSchema.itemsPreview(
+                from: itemsFile([cells(["Condition": field])]), timeZone: utc()
+            )
+            #expect(preview.defaultedFieldCount == 0, "\(field)")
+            #expect(preview.validated.first?.record.conditionRawValue == "very good", "\(field)")
+        }
+    }
+
     @Test func currencyIsThreeLettersUppercased() {
         #expect(ImportSchema.currencyCode(from: "USD") == "USD")
         #expect(ImportSchema.currencyCode(from: "eur") == "EUR")
@@ -417,6 +430,120 @@ struct ImportSchemaTests {
             )
             #expect(wishlist.defaultedFieldCount == 1, "\(field)")
             #expect(wishlist.validated.first?.record.reverbProductID == nil, "\(field)")
+        }
+    }
+
+    // MARK: - Bought and Looking For (020/G17)
+
+    @Test func newOrUsedReadsInAnyLetterCase() {
+        #expect(ImportSchema.newOrUsed(from: "NEW") == .new)
+        #expect(ImportSchema.newOrUsed(from: "new") == .new)
+        #expect(ImportSchema.newOrUsed(from: "Used") == .used)
+        #expect(ImportSchema.newOrUsed(from: "used") == .used)
+        #expect(ImportSchema.newOrUsed(from: "maybe") == nil)
+        #expect(ImportSchema.newOrUsed(from: "") == nil)
+    }
+
+    /// Q6, the house policy: `new`/`used` in any case are the value, blank
+    /// is "not recorded" and silent, anything else is not recorded and
+    /// **counted**. Mutation: drop the `defaulted += 1` from either
+    /// column's unreadable branch → that list's `maybe` reads 0 → red.
+    @Test func boughtAndLookingForBlankIsSilentAndUnreadableCounts() throws {
+        let cases: [(String, NewOrUsed?, Int)] = [
+            ("NEW", .new, 0),
+            ("Used", .used, 0),
+            ("new", .new, 0),
+            (" used ", .used, 0),
+            ("", nil, 0),
+            ("maybe", nil, 1),
+        ]
+        for (field, expected, defaults) in cases {
+            let items = try ImportSchema.itemsPreview(
+                from: itemsFile([cells(["Bought": field])]), timeZone: utc()
+            )
+            #expect(items.defaultedFieldCount == defaults, "Bought \(field)")
+            #expect(items.validated.first?.record.bought == expected, "Bought \(field)")
+
+            let wishlist = try ImportSchema.wishlistPreview(
+                from: wishlistFile([wishlistCells(["Looking For": field])]), timeZone: utc()
+            )
+            #expect(wishlist.defaultedFieldCount == defaults, "Looking For \(field)")
+            #expect(wishlist.validated.first?.record.lookingFor == expected, "Looking For \(field)")
+        }
+    }
+
+    /// Criterion 15: an 18-column items file — everything 006 through 018
+    /// wrote — imports, its sale intact and nothing counted, and the column
+    /// it never had arrives as not recorded. The 18 boundary also bounds a
+    /// row: a stray 19th cell is extra columns, never read as `Bought`.
+    /// Mutation: drop 18 from `itemSchemaBoundaries` → the file is rejected
+    /// as a mismatch → red.
+    @Test func anEighteenColumnItemsFileImportsWithNothingRecorded() throws {
+        let row = Array(cells(["Sold Date": "2026-07-04", "Sale Price": "1200.00"]).prefix(18))
+        let header = Array(ExportSchema.itemHeaders.prefix(18))
+        #expect(try ImportSchema.requireItemsHeader(CSVRow(number: 1, cells: header)) == 18)
+
+        let preview = try ImportSchema.itemsPreview(
+            from: [
+                CSVRow(number: 1, cells: header),
+                CSVRow(number: 2, cells: row),
+                CSVRow(number: 3, cells: row + ["used"]),
+            ],
+            timeZone: utc()
+        )
+        let imported = try #require(preview.validated.first)
+        #expect(preview.validated.count == 1)
+        #expect(preview.defaultedFieldCount == 0)
+        #expect(imported.record.salePriceCents == 120_000)
+        #expect(imported.record.bought == nil)
+        #expect(preview.skipped == [
+            SkippedRow(rowNumber: 3, reason: "more columns than the template"),
+        ])
+    }
+
+    /// Criterion 25's older-file half: a 9-column wishlist file — what 002
+    /// through 018 wrote — imports with every row not recorded, and its
+    /// 9 boundary bounds a row the same way. Mutation: drop 9 from
+    /// `wishlistSchemaBoundaries` → rejected → red.
+    @Test func aNineColumnWishlistFileImportsWithNothingRecorded() throws {
+        let row = Array(wishlistCells().prefix(9))
+        let header = Array(ExportSchema.wishlistHeaders.prefix(9))
+        #expect(try ImportSchema.requireWishlistHeader(CSVRow(number: 1, cells: header)) == 9)
+
+        let preview = try ImportSchema.wishlistPreview(
+            from: [
+                CSVRow(number: 1, cells: header),
+                CSVRow(number: 2, cells: row),
+                CSVRow(number: 3, cells: row + ["new"]),
+            ],
+            timeZone: utc()
+        )
+        let imported = try #require(preview.validated.first)
+        #expect(preview.validated.count == 1)
+        #expect(preview.defaultedFieldCount == 0)
+        #expect(imported.record.year == 1975)
+        #expect(imported.record.lookingFor == nil)
+        #expect(preview.skipped == [
+            SkippedRow(rowNumber: 3, reason: "more columns than the template"),
+        ])
+    }
+
+    /// The new boundaries keep criterion 4: each list's 020-era and
+    /// pre-020 layouts offered to the other list are "wrong list".
+    @Test func theNewBoundariesAreWrongListOnTheOtherList() {
+        for width in [9, ExportSchema.wishlistHeaders.count] {
+            #expect(throws: ImportSchema.HeaderError.wrongList) {
+                try ImportSchema.requireItemsHeader(
+                    CSVRow(number: 1, cells: Array(ExportSchema.wishlistHeaders.prefix(width)))
+                )
+            }
+        }
+        for width in [18, ExportSchema.itemHeaders.count] {
+            #expect(throws: ImportSchema.HeaderError.wrongList) {
+                try ImportSchema.requireWishlistHeader(
+                    CSVRow(number: 1, cells: Array(ExportSchema.itemHeaders.prefix(width)))
+                )
+            }
         }
     }
 
@@ -684,18 +811,36 @@ struct ImportSchemaTests {
         #expect(row.record.year == 2023)
     }
 
+    /// 020/G17 (criteria 16 and 25): the downloadable templates — header-
+    /// only bytes built from the pinned arrays, as Settings stages them —
+    /// end in the new columns, by literal.
+    @Test func theTemplatesEndInBoughtAndLookingFor() throws {
+        let items = CSVWriter.write(CSVTable(headers: ExportSchema.itemHeaders, rows: []))
+        let itemsHeader = try #require(try CSVParser.parse(items).first)
+        #expect(itemsHeader.cells.last == "Bought")
+
+        let wishlist = CSVWriter.write(CSVTable(headers: ExportSchema.wishlistHeaders, rows: []))
+        let wishlistHeader = try #require(try CSVParser.parse(wishlist).first)
+        #expect(wishlistHeader.cells.last == "Looking For")
+    }
+
     // MARK: - The sale columns and the pair rule (006/T006)
 
-    /// G26: the widths the gate accepts are exactly the shipped ones — 18
-    /// (006's layout), 14 (002–005's) and 12 (011/012's) — and the two
-    /// widths *between* them are not. 13 and 17 are each one column short of
-    /// a shipped boundary, which is what a truncated file looks like;
-    /// accepting them would silently blank whatever the file lost.
+    /// G26: the widths the gate accepts are exactly the shipped ones — 19
+    /// (020's layout), 18 (006–018's), 14 (002–005's) and 12 (011/012's) —
+    /// and the widths *between* them are not. 13 and 17 are each one column
+    /// short of a shipped boundary, which is what a truncated file looks
+    /// like; accepting them would silently blank whatever the file lost.
     /// Mutation: widen the gate to any prefix and the second half goes red.
     @Test func theTwoLegacyItemWidthsPassAndTheWidthsBetweenThemDoNot() throws {
         #expect(
             try ImportSchema.requireItemsHeader(CSVRow(number: 1, cells: ExportSchema.itemHeaders))
-                == 18
+                == 19
+        )
+        #expect(
+            try ImportSchema.requireItemsHeader(
+                CSVRow(number: 1, cells: Array(ExportSchema.itemHeaders.prefix(18)))
+            ) == 18
         )
         #expect(
             try ImportSchema.requireItemsHeader(
@@ -1027,6 +1172,8 @@ struct ImportSchemaTests {
             "Notes": "meter working",
             "Reverb Product ID": "232",
             "Year": "1975",
+            // 020: not recorded unless a test says otherwise.
+            "Looking For": "",
         ]
         for (header, value) in changes { byHeader[header] = value }
         return ExportSchema.wishlistHeaders.map { byHeader[$0]! }
@@ -1064,6 +1211,8 @@ struct ImportSchemaTests {
             "Sale Price": "",
             "Sold At": "",
             "Sale Note": "",
+            // 020: not recorded unless a test says otherwise.
+            "Bought": "",
         ]
         for (header, value) in changes { byHeader[header] = value }
         return ExportSchema.itemHeaders.map { byHeader[$0]! }

@@ -58,6 +58,11 @@ final class MarketFigureRecord {
     var yearFilter: Int?
     /// Narrowing left fewer than three, so every year counted (P20).
     var isAllYearsFallback: Bool = false
+    /// The figure was read from new stock only — a wanted item looking for
+    /// new (020, Q4). Recorded for the reason `yearFilter` is: so the section
+    /// names the listings *this* figure was read from, even after the
+    /// preference changes and before the next refresh.
+    var isNewStockOnly: Bool = false
 
     init(subjectID: UUID, subjectKind: MarketSubjectKind, productID: Int, fetchedAt: Date) {
         self.subjectID = subjectID

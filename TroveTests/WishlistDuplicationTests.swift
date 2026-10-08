@@ -63,6 +63,30 @@ struct WishlistDuplicationTests {
         }
     }
 
+    /// 020 G13 (criterion 24): the copy wants the same thing the original
+    /// does. The original is set to Used — never left unrecorded — so a copy
+    /// that drops the field reads nil and fails, and both rows are read on a
+    /// second context.
+    ///
+    /// Mutation: `duplicate(id:)` without `lookingFor: original.lookingFor` →
+    /// the copy reads nil.
+    @Test func theCopyCarriesLookingFor() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let original = makeOriginal(in: context)
+        original.lookingFor = .used
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.load()
+        viewModel.duplicate(id: original.id)
+
+        let wanted = try ModelContext(container).fetch(FetchDescriptor<WishlistItem>())
+        let copy = try #require(wanted.first { $0.id != original.id })
+        #expect(copy.lookingFor == .used)
+        #expect(try #require(wanted.first { $0.id == original.id }).lookingFor == .used, "The original keeps its own")
+    }
+
     /// The copy's own Sell Plan selection starts empty — duplicating a
     /// wishlist item must not double-count the gear its original planned to
     /// sell — and the original's selection survives untouched.

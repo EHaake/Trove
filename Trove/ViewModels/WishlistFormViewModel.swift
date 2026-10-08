@@ -42,6 +42,10 @@ final class WishlistFormViewModel {
     /// half-typed year is a state the field can be in. Parsed at save time
     /// into `WishlistItem.year`.
     var yearText: String = ""
+    /// 020: looking for new or used. nil is "not recorded" — where a new
+    /// form starts, and a state it may be saved in: as with the item form's
+    /// `bought`, there is deliberately no validation case for it.
+    var lookingFor: NewOrUsed?
     var notes: String = ""
 
     /// Same `PhotoPickerField` binding the item form uses. A wanted item's
@@ -120,6 +124,7 @@ final class WishlistFormViewModel {
         item.year = parsedYear
         item.notes = FieldNormalization.nilIfBlank(notes)
         item.desireToOwn = desireToOwn
+        item.lookingFor = lookingFor
         // Assigning the whole set, not appending: SwiftData sets each photo's
         // `wishlistItem` inverse from this side, and anything the user removed
         // in the picker drops out of the relationship here.
@@ -255,5 +260,6 @@ final class WishlistFormViewModel {
         notes = item.notes ?? ""
         photos = item.photos ?? []
         desireToOwn = item.desireToOwn
+        lookingFor = item.lookingFor
     }
 }
