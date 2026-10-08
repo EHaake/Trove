@@ -42,6 +42,7 @@ about sync is listed there.
 | `015-mark-as-bought` | **Shipped** — merged to `main` 2026-09-21 via [PR #29](https://github.com/EHaake/Trove/pull/29); all tasks through T013's close-out done (2026-09-21); thirteen tasks with eight sub-lettered additions (T006a from the Phase 1 review, T011a from the Phase 2 review, T011b and T012a–c from the person's two pauses, T012d–e from the review that followed), **1622 unit tests in 224 suites** and **25 UI tests** green, the UI suite twice back to back. Fourteen of fifteen criteria verified with per-criterion records in `spec.md` and **one honest partial named** (the two-device sync check — nobody has run it and no agent can). The buying half of the core loop, which the app had never had: **Mark as bought…** from the wishlist swipe, the wanted item's menu and its Sell Plan, one sheet for price, date, place and condition, and an item that carries the entry's photos, credits, category, Reverb match, year and notes across. The wanted entry is **marked, not deleted**, so the sell plan built around it survives as the record that it was carried out — which finally gives `009-sell-plan-list` a definition of "active". No undo, by the person's decision. The Phase 1 review caught that a purchase could happen **twice** (a second `Item`, and the first purchase's marker overwritten) — visible only at phase level, fixed in the one writer. The person's two pauses added four changes mid-spec: sentence case on the comparison line, at the Phase 2 pause; then at the walkthrough, a word instead of a bag glyph on the Sell Plan, an alert when a purchase is refused, and a saved sell plan leaving a trace on the wanted item's page. |
 | `009-sell-plan-list` | **Shipped** — merged to `main` 2026-09-24 via [PR #30](https://github.com/EHaake/Trove/pull/30); every task through T016's close-out and the pre-merge sweep done (2026-09-23); twenty-one tasks (T001–T021, Amendment A's T017–T021 among them) with seven sub-lettered additions (T009a–T009d from the Phase 3 walkthrough, T014a from the Phase 4 walkthrough, T021a from the Phase 4A walkthrough, T021b for the Plans tab icon the person chose after the device pass), **1746 unit tests in 234 suites** and **36 UI tests** green at the close-out, both suites twice back to back (the final counts are in `tasks.md`). Twenty of twenty-three criteria verified with per-criterion records in `spec.md`; **criteria 17, 20 and 22 stay unticked** because their sync halves are untested — the person cannot run a two-device pass yet, and every sync step is gathered in `specs/SYNC-CHECKS.md` for one later pass. The person's Accessibility Inspector and VoiceOver pass is done. **A sell plan becomes a thing you create**, stored on the wanted item, active until the thing is bought and completed after, rather than inferred from whichever candidates are ticked — which is what let a plan survive every item on it selling. Existing plans carry over **once, recorded on each row**, so a plan deleted on one device cannot be resurrected by another. A **fourth tab**, Plans, lists Active and Completed with a sort each, a Buy swipe, a delete swipe and a read-only record for a completed plan, and a Dashboard card counts the active ones. The person's walkthroughs added **Amendment A** mid-spec: Delete as its own rust button on the Sell Plan, two app-wide standards (a destructive action is always rust — a `CLAUDE.md` amendment; a card responds anywhere in its box), completed rows showing the bought item's picture through a new purchase record, Settings from every tab, and Delete All Sell Plans. |
 | `018-system-design-language` | **Shipped** — merged to `main` 2026-10-01 via [PR #32](https://github.com/EHaake/Trove/pull/32); every task through T014's close-out and the pre-merge sweep done (2026-09-30); fourteen tasks (T001–T014) with nine sub-lettered additions, every one from the person's walkthroughs (T004a–T004b at the Phase 1 pause, T006a at Phase 2, T009a–T009f at Phase 3), **1740 unit tests in 231 suites** and **38 UI tests** green at the close-out, both suites twice back to back (the counts are in `tasks.md`). Thirteen of sixteen criteria verified with per-criterion records in `spec.md`; **criteria 8, 11 and 15 wait on the person** — the Dark add button's plus at 2.6:1, the Accessibility Inspector pass, and the one-language attestation *(update this sentence at the merge if the person has answered)*. **The rule `013` wrote is reversed, in the open: system controls, Trove content.** Every menu in the app is now the system's, the header's buttons wear Liquid Glass like the tab bar, and `MenuPolicyTests` guards the new line after `CLAUDE.md`'s example of it was reworded in its own commit. The spec measured T029c's tear before converting anything (gone on iOS 27.0; a self-correcting transient on 26.5 that the person accepted to keep the system's morph). The system segmented control proved unstyleable, so the Owned/Sold and Active/Completed switches became a glass side toggle, brass on the primary side. Six bespoke files and four test suites retired. The system navigation bar and toolbar on the tab roots are the next spec, `020`, before `019`. |
+| `020-purchase-provenance` | **Shipped** — merged to `main` 2026-10-07 via [PR #33](https://github.com/EHaake/Trove/pull/33); every task through T015's close-out and the pre-merge sweep done (2026-10-06); fifteen tasks (T001–T015) and one sub-lettered addition (T015a, the pre-merge sweep's fix round) — the two phase-pause findings became spec Decisions 11 and 12 rather than fix tasks, and the device pass found no failure — **1805 unit tests in 236 suites** and **42 UI tests** green after the pre-merge sweep's fix round (1804 at the close-out), and both suites twice back to back after the device pass (the counts are in `tasks.md`). Twenty-seven of twenty-eight criteria verified with per-criterion records in `spec.md`; **one honest partial named**: criterion 27 (Bought, Looking for and Very Good reaching a second signed-in device) stays unticked until `specs/SYNC-CHECKS.md` steps 3.11 and 3.12 are run, and with it the half of P4 no test here can reach — whether an older copy of the app editing a row keeps Bought and Looking for. **Bought new or used** on every owned item and **Looking for new or used** on every wishlist entry, both optional, never defaulted and never inferred from condition; **Very Good** joins the condition scale between Excellent and Good, and the six grades sit on **one row that scrolls sideways** (the person's call at the Phase 1 pause, on seeing them wrap). A wanted item looking for new reads its market figure from Reverb's new stock and says "new listings"; used or unstated keeps exactly the figure it had. Marking a wanted item bought prefills the sheet from the preference. One appended CSV column on each list, files from before it still importing; the PDF and the item's page carry new/used in the purchase-date row's label. No figure and no grade moved on update — checked by upgrading in place on a device. |
 
 ## Future specs
 
@@ -715,20 +716,46 @@ actually useful once the app is in daily use.
   conversation**, not settled here; the list and Dashboard ones in
   particular are expected to be **serious redesigns and design
   additions**, so each wants a design pass before its spec.
-- **`020-purchase-provenance`** (**spec drafted 2026-09-29**, on branch
-  `020-purchase-provenance`) — whether an item was **bought new or
-  used**, which the app has never recorded: the only signal is
-  `Condition.new`, which conflates how it was acquired with the state it
-  is in now. Same spec: **Very Good** joins the condition scale between
-  Excellent and Good, as the person sees it. **Gifts**: the person's
-  four $0.00 rows are gifts; they were unsure a gift needs recording at
-  all, and declined it as a third value beside New and Used because a
-  gift can itself be new or used. A gift stays a zero purchase price.
-  How the charts treat zero-price items is `023`'s question.
-  **Widened at the person's reading of the Draft** to a **new/used
-  preference on wishlist entries** ("Looking for new / used"), which
-  also chooses which Reverb listings a wanted item's market figure reads
-  — new stock for New, today's used listings for Used or unstated.
+- **`020-purchase-provenance`** (**Shipped 2026-10-07** via
+  [PR #33](https://github.com/EHaake/Trove/pull/33) — see
+  `specs/020-purchase-provenance/` for the full record) — whether an item
+  was **bought new or used**, which the app had never recorded: the only
+  signal was the New condition, which says what state a thing is in, not
+  how it arrived. **What shipped.** An optional **Bought** fact on every
+  owned item — New, Used or not recorded, never defaulted and never
+  guessed from condition — set on the item form and on the Mark as bought
+  sheet, cleared by tapping the selected chip, carried by Copy, and shown
+  by folding it into the purchase-date row's label on the item's page and
+  in the PDF ("Bought used · Mar 3, 2024"; plain "Bought" when not
+  recorded). Its twin on every wishlist entry, **Looking for**, added at
+  the person's reading of the first Draft, which does real work: a wanted
+  item looking for new reads its market figure from Reverb's brand-new
+  and B-stock listings and says "new listings", where used or unstated
+  keeps exactly the used-listings figure it always had; and it prefills
+  the purchase sheet. **Very Good** joins the condition scale between
+  Excellent and Good, reading Reverb's "very good" listings alone while
+  Good keeps "very good" and "good", so no existing figure moved. Six
+  grades wrapped onto two lines on an iPhone 17 Pro; at the Phase 1 pause
+  the person said that "isn't good" and chose six grades on **one row
+  that scrolls sideways**, everywhere it appears. Each list's CSV gains
+  one last column (`Bought`, `Looking For`), with files from before it
+  still importing and the templates carrying it. **Gifts** stay what they
+  were: the person declined a gift value because a gift can itself be new
+  or used, so a gift is a zero purchase price, and how charts treat
+  zero-price items is `023`'s question. **For the specs that follow**:
+  Very Good is stored as Good plus a refinement so that an older copy of
+  the app cannot reset it, which means anything that filters, sorts or
+  groups by condition must read `condition`, never `conditionRawValue`
+  alone — `022-grouped-browsing` is the likely first to need it
+  (`DECISIONS.md`). Filtering or grouping by Bought is `022`'s, any
+  Dashboard figure using it `023`'s, and setting it on many items at once
+  is `021`'s round-trip import. **Left open**: criterion 27 and half of
+  P4 wait on the two-device pass (`specs/SYNC-CHECKS.md` 3.11 and 3.12);
+  and a handful of things the device pass saw, for the person's eye — on
+  an iPhone SE the chip cut off at the row's edge is Fair with about 85 %
+  showing, a thin hint that the row scrolls; the Mark as bought sheet on
+  an SE opens with Condition below the fold; unselected chip outlines are
+  faint in light appearance.
 - **`021-import-expansion`** — **the person's requirement**: they keep
   their collection in **Google Sheets as well as in the app**, so they
   can update it there on their own, and want **interoperability between
