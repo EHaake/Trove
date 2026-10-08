@@ -1,9 +1,10 @@
 # 021 — Import Expansion
 
-**Status**: **Draft** (2026-10-07) — written with the person in this spec
-session. The Decisions record below holds every product decision they made
-in the conversation; the **P-items** are Claude Code's proposals and become
-decisions on approval, as in earlier specs.
+**Status**: **Approved** (2026-10-07) — written with the person in this spec
+session and approved at their reading of the first Draft. The Decisions
+record below holds every product decision they made in the conversation;
+the **P-items** were Claude Code's proposals and are decisions now, approved
+with the Draft, as in earlier specs.
 
 Authored in a Claude Code spec session of its own, per `CLAUDE.md`'s model
 policy (Opus profile, the session raised to high effort for the spec
