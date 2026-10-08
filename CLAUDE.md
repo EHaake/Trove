@@ -648,6 +648,14 @@ orchestrator re-runs the command itself before committing.
   PR descriptions — don't strip it. It's accurate and worth keeping for
   a project meant to demonstrate an AI-assisted workflow.
 - Never force-push.
+- **Never delete a remote branch** (added 2026-10-07, at the person's
+  instruction, at `020`'s merge). A spec's branch stays on the remote
+  after its pull request merges — no `git push origin --delete`, no
+  `gh pr merge --delete-branch`, no "delete branch" on the pull request,
+  and no pruning of merged remote branches as tidying. The remote
+  branches are the record of how each spec was built. Deleting a merged
+  *local* branch is a separate matter and is not forbidden by this rule;
+  if in doubt, leave it and ask.
 - **A bug found in already-merged code gets its own small branch**
   (`fix/<short-description>`), never a reopened spec branch — that
   branch's job ended at merge. Not a new spec either, unless the fix
