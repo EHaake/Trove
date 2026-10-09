@@ -4,7 +4,10 @@
 session and approved at their reading of the first Draft. The Decisions
 record below holds every product decision they made in the conversation;
 the **P-items** were Claude Code's proposals and are decisions now, approved
-with the Draft, as in earlier specs.
+with the Draft, as in earlier specs. **Amended 2026-10-08 during planning**
+(Decisions 17–23): six things planning and its sign-off review surfaced,
+each put to the person and answered by them; the amended passages are
+marked inline.
 
 Authored in a Claude Code spec session of its own, per `CLAUDE.md`'s model
 policy (Opus profile, the session raised to high effort for the spec
@@ -83,7 +86,12 @@ one thing a person has to know, and the reference doc says it first.
   same column.
 - Columns may come in **any order**, and any column that is not required
   may be **left out**. A column that isn't there behaves exactly like a
-  column whose every cell is empty.
+  column whose every cell is empty — with one difference in how it is
+  reported *(amended 2026-10-08, Decision 17)*: where a new item would
+  take a counted default (`Desire to Keep`, `Condition`), a wholly missing
+  column is said **once**, in a line of its own, and is not added to the
+  count of cells using a default. That count stays for cells that were
+  actually blank or unreadable.
 - **Required columns.** A file for the Items screen must have `Name`,
   `Purchase Price` and `Purchase Date`. A file for the Wishlist must have
   `Name` and `Estimated Cost`. A file missing any of them is refused —
@@ -102,8 +110,9 @@ one thing a person has to know, and the reference doc says it first.
 ### Prices
 
 A price is read as its number. A leading currency symbol (`$`, `€`, `£`,
-`¥`) and thousands commas are dropped: `$3,179.95` is 3179.95, `500` is
-500. The symbol **never sets the currency** — the `Currency` column does,
+`¥`), any spaces after it, and thousands commas are dropped: `$3,179.95`
+and `$ 3,179.95` are 3179.95 *(the space: amended 2026-10-08, Decision
+22)*, `500` is 500. The symbol **never sets the currency** — the `Currency` column does,
 and without one the item is `USD`, as today. A European-style `1.250,00`
 is still not read, because it can't be told from `1,250.00` safely; nor is
 a negative amount, an amount in brackets, or a number followed by text.
@@ -132,7 +141,9 @@ Year is no year.
 
 A row is a **totals row** when it has no name (or its name is `Total`,
 `Totals`, `Subtotal` or `Sum`), no Trove ID, and every other filled cell
-is an amount in a money column. It is left out wherever it sits in the
+is an amount in a money column — cells under a column the app doesn't
+know are not looked at, here as everywhere *(clarified 2026-10-08,
+Decision 23)*. It is left out wherever it sits in the
 file, and the confirmation says so in one plain line — it is not listed
 among the skipped rows, because nothing is wrong with it. Blank rows
 between groups are ignored silently, as they are today.
@@ -169,6 +180,16 @@ For each row, the app looks at its `Trove ID` cell:
   doesn't guess which row is the original.
 - **Something in the Trove ID cell that isn't a code**: the row is a new
   item with a fresh ID, and it is counted like any other unreadable cell.
+- **A code that belongs to something on the other list** — an Items row
+  carrying a wishlist entry's ID, or the reverse, usually a row pasted
+  across sheets: the row is **left out and listed** with that reason
+  *(amended 2026-10-08, Decision 20)*.
+- **A wishlist row whose code belongs to an entry already marked as
+  bought**: the row is **left out and listed** as already bought, and the
+  bought entry is untouched *(amended 2026-10-08, Decision 21)*.
+- **A code that more than one item in the app carries** (see Sync, below):
+  the row is **left out and listed** with that reason; the app does not
+  guess which copy is meant *(amended 2026-10-08, Decision 18)*.
 
 **Nothing is ever deleted.** An item that is in the app and not in the
 file is left exactly as it is. Exports can be partial — owned only, a
@@ -227,6 +248,11 @@ everything untouched. It now says:
 - a line for a totals row left out;
 - a line for sale cells left unused on items still owned;
 - the date order, when the phone's region had to decide it;
+- a line for each optional column that is missing and would give new
+  items a default *(amended 2026-10-08, Decision 17)*;
+- when the file carries Trove IDs and iCloud has not finished syncing,
+  a warning that importing now may add items you already have *(amended
+  2026-10-08, Decision 19)*;
 - when any item will be updated, that **an update can't be undone**.
 
 If nothing would be added or updated, it is informational only.
@@ -252,6 +278,17 @@ different codes. Importing on a device that hasn't finished syncing can
 add an item the other device already has; that is true of import today
 and is stated, not solved.
 
+*(Amended 2026-10-08, Decisions 18 and 19.)* Because a row that matches
+nothing keeps its code, that old caveat has a new consequence, and it
+takes only one device: a freshly installed phone looks empty until iCloud
+finishes, and a backup imported then leaves every item present **twice
+with the same Trove ID** once sync catches up. Three things follow. The
+app must work normally with two items sharing a code — every screen
+loads, and deleting one copy removes exactly that one. A later import
+never updates a row whose code two items carry; it lists the row and says
+why, and deleting one copy in the app clears it. And the confirmation
+warns beforehand when iCloud is still syncing and the file carries codes.
+
 ## Copy
 
 Proposed wording; the plan may adjust it for fit, not for meaning.
@@ -269,6 +306,12 @@ Proposed wording; the plan may adjust it for fit, not for meaning.
   them sold in the app."
 - Date order: "Dates read as month/day/year, from this iPhone's region."
 - Updates: "Updates can't be undone."
+- Missing column: "No Condition column — new items will be Excellent."
+- Still syncing: "iCloud is still syncing. Importing now may add items
+  you already have."
+- Other list: "row 9 — its Trove ID belongs to the other list."
+- Already bought: "row 9 — already bought."
+- Shared code: "row 9 — its Trove ID matches more than one item."
 
 ## Design requirements
 
@@ -325,8 +368,8 @@ Proposed wording; the plan may adjust it for fit, not for meaning.
     row, the same default and count as a blank one; in Name, the row is
     skipped as nameless.
 15. [ ] A totals row — no name or a name of `Total`, `Totals`, `Subtotal`
-    or `Sum`, no Trove ID, every other filled cell an amount in a money
-    column — is left out anywhere in the file, with one line in the
+    or `Sum`, no Trove ID, every other filled cell (under a column the
+    app knows) an amount in a money column — is left out anywhere in the file, with one line in the
     confirmation and no entry in the skipped list. A nameless row with
     anything else filled is still skipped as nameless.
 16. [ ] The wishlist reads by all of the rules in 3–15 against its own
@@ -414,6 +457,28 @@ Proposed wording; the plan may adjust it for fit, not for meaning.
     `specs/SYNC-CHECKS.md`; expected to stay unticked until the
     two-device pass, like the sync criteria before it.)
 
+**Added 2026-10-08 during planning (Decisions 17–23)**
+
+41. [ ] A file with no `Desire to Keep` or no `Condition` column adds its
+    rows with the usual default, the confirmation says so in one line per
+    missing column, and those are not in the count of cells using a
+    default. (This is how criterion 6's file is reported.)
+42. [ ] With two items in the store sharing one Trove ID, every screen
+    that lists or summarises items loads — Items, Wishlist, Dashboard,
+    Sell Plan, Plans — and deleting one copy removes exactly one. A file
+    row carrying that ID is not applied and is listed with the reason;
+    neither copy changes.
+43. [ ] When the file carries at least one Trove ID and iCloud has not
+    finished syncing, the confirmation carries the still-syncing warning;
+    it is absent when sync is settled, when iCloud is off, and for a file
+    with no Trove IDs.
+44. [ ] A row whose Trove ID belongs to something on the other list is
+    left out and listed with that reason; nothing on either list changes.
+45. [ ] A wishlist row whose Trove ID belongs to an entry already marked
+    as bought is left out and listed as already bought; the entry is
+    unchanged.
+46. [ ] `$ 3,179.95` and `€ 1,250` read to the exact cent.
+
 ## Decisions record
 
 All made by the person, 2026-10-07, in the spec conversation.
@@ -447,6 +512,26 @@ All made by the person, 2026-10-07, in the spec conversation.
 15. **The same Trove ID on two rows**: neither is applied.
 16. **Prices**: any leading currency symbol and thousands commas are
     dropped; the symbol never sets the currency; `1.250,00` is not read.
+
+Added 2026-10-08, during planning — each surfaced by the planner or the
+sign-off review, put to the person, and decided by them:
+
+17. **A wholly missing optional column is reported once**, in its own
+    line, not counted per row.
+18. **Two items sharing one Trove ID**: a row carrying that ID is refused
+    and explained; the app stays fully usable in that state. (Asked
+    twice: the first wording said it took two devices. It takes one.)
+19. **The confirmation warns when iCloud is still syncing** and the file
+    carries Trove IDs. Importing is still allowed.
+20. **A Trove ID belonging to the other list**: the row is left out, with
+    the reason.
+21. **A wishlist row for an entry already bought**: left out, "already
+    bought". The hidden entry is not updated.
+22. **A space after the currency symbol reads**: `$ 3,179.95`.
+23. **A totals row is judged on the columns the app knows** — a sum under
+    an unknown column doesn't stop it being a totals row. (Read from
+    criterion 7, "its cells affect nothing"; recorded so it is not
+    re-argued.)
 
 ### The P-items
 
