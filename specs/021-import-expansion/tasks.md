@@ -1,20 +1,19 @@
 # 021 — Import Expansion: Tasks
 
-**Status**: Draft — pending sign-off
+**Status**: **Final** (2026-10-09) — signed off by the `skeptical-reviewer` after fixes (three blocking findings, B1–B3, fixed and re-reviewed); the re-review's two further findings (N1, N2) were fixed by the orchestrator directly under `CLAUDE.md`'s review-loop cap and are logged in `tasks.md`'s tier log, not re-reviewed
 
 Drafted against the approved `spec.md` and the draft `plan.md` in this
 directory, for branch `021-import-expansion` off `main` (`028747f`). **Revised
 2026-10-08** after the sign-off review and the spec's amendment of the same day
-(commit `38883a8`, Decisions 17–23, criteria 41–46); task IDs are unchanged,
-with **T001a** and **T001b** added. No new technical decisions are made here —
+(commit `38883a8`, Decisions 17–23, criteria 41–46), and **again 2026-10-09**
+for the person's two answers (Decision 19 reworded, Decision 24; criteria 43
+and 47). Task IDs are unchanged, with **T001a** and **T001b** added; criteria
+43 and 47 are folded into the tasks that already build what they need — the
+words in T006, the count and the re-confirm in T010, mirrored in T011 — rather
+than given a task of their own. No new technical decisions are made here —
 every call traces to a plan section, and where a task says "per plan", that
 section is the authority. Line numbers in `plan.md` are as read at `028747f`;
 every implementer re-reads the file it edits.
-
-**Criterion 43 (the still-syncing warning, spec Decision 19) has no owner task.**
-The plan could not design it honestly and returned the question to the person
-(plan, "Open — returned to the person"). When it is answered, the work is a
-sub-lettered task after T010; until then no task builds, words or tests it.
 
 **Foundational phase**: **Phase 1** (T001–T003) — the claims the Trove ID rests
 on, the app made safe for two rows sharing one, the reader's grammar for a
@@ -106,7 +105,7 @@ is plain language.
   **Verify:** `scripts/verify.sh` green, the new suite in the count; each
   mutation recorded verbatim.
 
-- [ ] **T001a — Two rows sharing one `id` no longer trap; every list loads and one copy deletes.**
+- [ ] **T001a — Two rows sharing one `id` no longer trap; every list loads and the copy acted on deletes.**
   *(Added 2026-10-08 — sign-off B1, spec Decision 18, criterion 42.)* Per plan
   §1's audit and R2. `MarketSummary.summaries(forSubjects:in:now:)` in
   `Trove/Market/MarketIndex.swift` builds its dictionary with
@@ -124,14 +123,26 @@ is plain language.
   `Item`s sharing an `id` and one figure row under it: `ItemListViewModel.load()`
   returns and `items` holds both; `DashboardViewModel.load()` returns with both
   in its count; `SellPlanViewModel`'s load returns with both among its
-  candidates; `delete(id:)` on the list leaves **exactly one** row with that
-  `id` on a second context. With two `WishlistItem`s sharing an `id`, one
-  figure row and a sell plan on each: `WishlistViewModel.load()` and
-  `PlansViewModel`'s load return and list both; `delete(id:)` leaves exactly
-  one (mutations: `uniqueKeysWithValues` restored → the run **crashes**; record
-  the crash output as the red, then restore; `delete` deleting every row with
-  the id → the exactly-one legs red).
-  Files: `Trove/Market/MarketIndex.swift`, `TroveTests/MarketIndexTests.swift`,
+  candidates. **Delete removes the copy acted on** *(re-review N1,
+  2026-10-09, plan §1 "Deletes the wrong copy — fixed")*:
+  `ItemListViewModel.delete` and `WishlistViewModel.delete` gain
+  `row: PersistentIdentifier? = nil` and resolve by `persistentModelID` when it
+  is given; `ItemListView.swift:252` and `WishlistView.swift:194` pass
+  `item.persistentModelID`. The twins have different names; deleting the twin
+  loaded **second** leaves, on a second context, one row with that `id` and it
+  is the first twin's name; deleting the first leaves the second's. With two
+  `WishlistItem`s sharing an `id`, one figure row and a sell plan on each:
+  `WishlistViewModel.load()` and `PlansViewModel`'s load return and list both;
+  the same two delete legs (mutations: `uniqueKeysWithValues` restored → the
+  run **crashes**; record the crash output as the red, then restore; `delete`
+  resolving by `id` as today → the delete-the-second leg red; `delete`
+  deleting every row with the id → both delete legs red). `DeletionGuardTests`
+  is re-read before it is touched if it goes red.
+  Files: `Trove/Market/MarketIndex.swift`,
+  `Trove/ViewModels/ItemListViewModel.swift`,
+  `Trove/ViewModels/WishlistViewModel.swift` (`delete` only),
+  `Trove/Views/Items/ItemListView.swift`, `Trove/Views/Wishlist/WishlistView.swift`
+  (the one delete call each), `TroveTests/MarketIndexTests.swift`,
   `TroveTests/ItemListViewModelTests.swift`, `TroveTests/WishlistViewModelTests.swift`,
   `TroveTests/DashboardViewModelTests.swift`, `TroveTests/SellPlanViewModelTests.swift`,
   `TroveTests/PlansViewModelTests.swift`.
@@ -149,7 +160,8 @@ is plain language.
   launching with `-uiTesting -seedSharedID`: the Items tab shows both owned
   names; the Dashboard opens; the Wishlist shows both wanted names; the Plans
   tab opens and lists the plan; the sell plan lists both twins; back on Items,
-  deleting one twin leaves exactly one of the two names on screen.
+  deleting the twin listed second removes that name and leaves the first
+  twin's on screen.
   **If both twins do not draw, or a screen misbehaves**, the routine fix — no
   new decision — is `id: \.persistentModelID` at the `ForEach` sites plan §1
   names (`ItemListView.swift:336`, `:470`, `WishlistView.swift:336`,
@@ -335,8 +347,9 @@ is plain language.
 
 - [ ] **T006 — The summary, the words, and the two stores' add path.**
   Per plan §5, §8, Q11, R7. New `Trove/Import/ImportStore.swift`:
-  `ImportSummary` (every field plan §5 lists, `missingDefaultColumns`
-  included), and `ItemImportStore` / `WishlistImportStore` with
+  `ImportSummary` (every field plan §5 lists, `missingDefaultColumns` and
+  `keptCodeAdds` included — the latter stays 0 until T010 and T011 count it),
+  and `ItemImportStore` / `WishlistImportStore` with
   `plan(for:in:timeZone:now:)` and `apply(_:in:now:)` — **adds only in this
   task**: every row goes through `asNew` with the sheet's
   `missingDefaultColumns`, the Trove ID cell is ignored, and `Plan` has no
@@ -349,21 +362,27 @@ is plain language.
   `ImportCopy` gains `confirmationTitle(summary:)`,
   `confirmationLines(summary:target:recounted:)` and the three failure
   sentences, every string as plan §5 gives it; `ImportSchema.SkipReason` gains
-  the reasons plan §5 lists, `alreadyBought` among them. The view models are
-  **not** touched. Additive. **Nothing for spec Decision 19 is built or worded
-  here.**
+  the reasons plan §5 lists, `alreadyBought` among them. The lines include the
+  unknown-codes warning (plan R10, spec Decision 19) — worded here, and placed
+  second to last, just above "Updates can't be undone." The view models are
+  **not** touched. Additive.
   Pattern: `ItemSaleStore` / `WishlistPurchaseStore` (one writer, callers
   save); `ImportCopy.confirmationMessage(preview:)` and `ImportCopyTests`.
   Tests: **G8** (`ImportCopyTests`) — the title both ways; each line by literal
   with its singular; the order of lines for a summary with everything set; the
   shared-code hint only when a skip carries that reason, including when that
   skip falls past the first five; the four missing-column sentences, shown only
-  when `added > 0` (**G21**); the recounted line only when `recounted`; "Updates
-  can't be undone." only when `updated > 0`; "No problems found." only when
-  nothing else is said; the three failure sentences for one, two and three
-  names; every skip reason's string (mutations: the undo line shown for adds →
-  red; the hint shown always → red; a missing-column line shown for a summary
-  that only updates → red). **G9** — new `TroveTests/ItemImportStoreTests.swift`
+  when `added > 0` (**G21**); the recounted line only when `recounted`, and
+  first when it is; the unknown-codes warning by literal for `keptCodeAdds` of
+  90 and of 1 — "90 rows have a Trove ID this iPhone doesn't have yet. If
+  iCloud is still bringing your collection down, wait — importing now adds them
+  a second time." / "1 row has … adds it a second time." — and absent at 0
+  (**G22**'s words); "Updates can't be undone." only when `updated > 0`; "No
+  problems found." only when nothing else is said; the three failure sentences
+  for one, two and three names; every skip reason's string (mutations: the undo
+  line shown for adds → red; the hint shown always → red; a missing-column line
+  shown for a summary that only updates → red; the unknown-codes line shown at
+  0 → red). **G9** — new `TroveTests/ItemImportStoreTests.swift`
   and `WishlistImportStoreTests.swift`, every assertion on a second context
   after the caller's `save()`: rows land after an existing collection in file
   order; a sale pair arrives sold with all four fields and no plan; a casing
@@ -465,7 +484,7 @@ is plain language.
   what the person saw for criterion 2 — their own file — in their words, for
   the close-out.
 
-## Phase 3 — The Trove ID, and updating by re-import · walkthrough: yes — Settings › Templates and every CSV export: the header reads `Name *`, `Purchase Price *`, `Purchase Date *` (on the wishlist `Name *`, `Estimated Cost *`) and the last column is `Trove ID`, with a code on every row and none in the templates; export the collection, open it in Google Sheets, change a price and a category, fill in Bought down the column, add one row of your own with no Trove ID, download it as CSV and import it: the confirmation counts what will be updated, added and left unchanged and says updates can't be undone, and after Import exactly those items changed — photos, sell plans and your custom order as they were, the new row at the end; import an untouched export and it says nothing to import, every row unchanged; empty a cell in the sheet and import: that value stays; fill the sale columns for something you still own: it stays owned and the confirmation says so; a sold item's sale price can be corrected from the sheet; paste a wishlist row, Trove ID and all, into the items sheet: that row is left out and the confirmation says its Trove ID belongs to the other list; export the wishlist, mark one entry bought, import the old file: that row is left out as already bought; `docs/samples/items-full.csv` then `docs/samples/items-edited.csv` shows every line the confirmation can carry at once — is that readable as an alert?; the PDF is as it was; the Wishlist does the same with its own columns; and `docs/csv-reference.md` now opens with this loop. **One thing only you can do**: open `docs/samples/items-full.csv` in Google Sheets, change nothing, File › Download › Comma-separated values, and hand that file back — it becomes the recorded proof that the codes survive a spreadsheet
+## Phase 3 — The Trove ID, and updating by re-import · walkthrough: yes — Settings › Templates and every CSV export: the header reads `Name *`, `Purchase Price *`, `Purchase Date *` (on the wishlist `Name *`, `Estimated Cost *`) and the last column is `Trove ID`, with a code on every row and none in the templates; export the collection, open it in Google Sheets, change a price and a category, fill in Bought down the column, add one row of your own with no Trove ID, download it as CSV and import it: the confirmation counts what will be updated, added and left unchanged and says updates can't be undone, and after Import exactly those items changed — photos, sell plans and your custom order as they were, the new row at the end; import an untouched export and it says nothing to import, every row unchanged; empty a cell in the sheet and import: that value stays; fill the sale columns for something you still own: it stays owned and the confirmation says so; a sold item's sale price can be corrected from the sheet; paste a wishlist row, Trove ID and all, into the items sheet: that row is left out and the confirmation says its Trove ID belongs to the other list; export the wishlist, mark one entry bought, import the old file: that row is left out as already bought; import `docs/samples/items-full.csv`: the confirmation warns "12 rows have a Trove ID this iPhone doesn't have yet. If iCloud is still bringing your collection down, wait — importing now adds them a second time." (go ahead — they are the sample's rows), and importing it a second time carries no such warning, nor does your own untouched export; then `docs/samples/items-edited.csv` shows every line the confirmation can carry at once, the warning now counting 1 row — is that readable as an alert?; the PDF is as it was; the Wishlist does the same with its own columns; and `docs/csv-reference.md` now opens with this loop. **One thing only you can do**: open `docs/samples/items-full.csv` in Google Sheets, change nothing, File › Download › Comma-separated values, and hand that file back — it becomes the recorded proof that the codes survive a spreadsheet
 
 - [ ] **T008 — Export writes the star and the Trove ID; the templates follow.**
   Per plan §6, Q10, P2, P10. `ExportSchema.itemHeaders` and `wishlistHeaders`
@@ -561,8 +580,10 @@ is plain language.
   recorded verbatim; the new suite in the count.
 
 - [ ] **T010 — Items: matching and updates through the store and the view model. `review: per-task`.**
-  *(Marked per-task 2026-10-08 — sign-off B2.)* Per plan §8, Q3, Q5, P11, R2,
-  R9, spec Decisions 18 and 20. `ItemExportRecord.init(item:includingPhoto:)`
+  *(Marked per-task 2026-10-08 — sign-off B2.)* **Owns criteria 43 and 47 for
+  the collection** (T011 mirrors both for the wishlist). Per plan §8, Q3, Q5,
+  P11, R2, R9, R10, spec Decisions 18, 19, 20 and 24.
+  `ItemExportRecord.init(item:includingPhoto:)`
   gains its defaulted parameter (`true`; `false` reads no photo).
   `ItemImportStore.plan` fetches every `Item` and every `WishlistItem.id`
   (`refused`, "its Trove ID belongs to the other list"), runs `ImportMatching`,
@@ -570,15 +591,22 @@ is plain language.
   (canonicalised category, the photo-less snapshot, `changes`), an unchanged
   count, or a skip with its reason; `Plan` gains `updates`; the summary gains
   `updated`, `unchanged`, `unreadableOnUpdates` (matched rows, updated **or**
-  unchanged), `unusedSaleRows` and the new skips, kept in row order. `apply`:
+  unchanged), `unusedSaleRows`, the new skips, kept in row order, and
+  **`keptCodeAdds`** — one for each add built from a `new(keeping:)` outcome
+  whose code is non-nil, so never a matched row, a row with no code, or a
+  kept-code row that was skipped (Decision 19; T006's line then shows itself).
+  `apply`:
   for a kept code, `MarketLocalStore.clear(subjectID:)` for that code and then
   `item.id` set **before** insert; each change written **inside its own
   `if let`** (condition through `item.condition`, the sale through
   `item.sale`); the item's market rows cleared first when its Reverb product
   changes; `updatedAt` stamped on updated items only; nothing touched on an
   unchanged row. `ItemListViewModel.confirmImport()`: after the second `plan`,
-  **if its summary differs from the staged one, write nothing and present the
-  confirmation again with `recounted: true`** (R9); otherwise apply and save.
+  **if its summary differs from the staged one — compared whole, `==` on
+  `ImportSummary`, not on its counts — write nothing and present the
+  confirmation again over the new summary with `recounted: true`** (Decision
+  24); otherwise apply and save. Confirming the re-presented one runs the same
+  method, so it applies if nothing moved again.
   Pattern: T006's add path; `ItemDetailViewModel.setMatch` for the market
   clear; `ItemListViewModelCommitTests.commitRestoresBoughtAndVeryGoodThroughTheCSV`
   for an export → CSV → parse → commit → second-context test.
@@ -614,11 +642,30 @@ is plain language.
   rows append after everything in file order, and a changed Reverb product
   clears that item's market rows and nobody else's (32); Bought filled on every
   row of an export sets each item (33); the sold rules end to end, including a
-  new row with a readable pair arriving sold (34); R9 — an item carrying a
-  staged row's code inserted after the confirmation is staged: `confirmImport()`
-  writes nothing, the presentation is a confirmation again with `recounted`
-  true and `updated == 1`, and a second confirm applies it; with the store
-  untouched, one confirm applies; and `rollbackClearsUnsavedInsertsFromTheContext`'s
+  new row with a readable pair arriving sold (34). **G22 (criterion 43)**: a
+  five-row file over a two-item store — two rows whose codes match, two whose
+  codes match nothing, one with no code — stages a summary with `added == 3`
+  and `keptCodeAdds == 2`, and the staged confirmation's lines include the
+  warning's literal for 2; the same file with every code matching gives 0 and
+  no such line; an ID-less file gives 0 and no such line though every row is
+  added; a nameless row with an unknown code is skipped and not counted.
+  **G23 (criterion 47)**: a one-row file whose code matches nothing is staged
+  (`added == 1`); an item carrying that code is then inserted and saved through
+  a second context, as iCloud would deliver it; `confirmImport()` returns
+  without writing — a third context shows one item with that code, its fields
+  as the insert left them — and the presentation is a confirmation again with
+  `recounted` true, "Your collection changed while this was open. Check the
+  numbers again." as its first line, `updated == 1` and `added == 0`; a second
+  `confirmImport()` applies that update, the re-presented confirmation having
+  offered Import (`importOffersConfirmation` true); and with the store
+  untouched between stage and confirm, the first confirm applies. One more leg
+  for the whole-summary comparison, a change that moves no count: a two-row
+  file — one row with no code, one whose code a wishlist entry holds (skipped,
+  "its Trove ID belongs to the other list") — is staged; the entry is then
+  deleted and two items sharing that code inserted, so the same row is skipped
+  for Decision 18's reason instead and every count holds; `confirmImport()`
+  still writes nothing and re-presents. And
+  `rollbackClearsUnsavedInsertsFromTheContext`'s
   shape extended to updates — changes written by `apply` and then rolled back
   leave the stored values on a second context and on a refetch of the same one
   (a failing `save()` cannot be forced in memory, so *that* `confirmImport`
@@ -628,14 +675,22 @@ is plain language.
   changes.serialNumber` → guard (i) red; run this one first**; two assignments
   crossed (`purchaseLocation` ↔ `saleLocation`) → red; `updatedAt` stamped on
   unchanged rows → the round trip red; `id` assigned after insert, or not at
-  all → 28 red; the kept-code clear skipped → red; the summaries not compared
-  at confirm → the R9 leg red; the product clear run on every update → 32 red,
-  and skipped → red; `sortOrder` rewritten on update → red).
+  all → 28 red; the kept-code clear skipped → red; **G22**: `keptCodeAdds`
+  counting every code-carrying row → 4, red; counting every add → 3, and the
+  ID-less leg red; counting a skipped kept-code row → red; **G23**: the
+  summaries not compared at confirm → the write happens, red; `recounted` left
+  false → the first-line assertion red; the re-presented confirmation built
+  over the staged summary rather than the new one → `updated == 1` red; the
+  re-presented confirmation not offering Import → red; the comparison on counts
+  alone → the no-count-moves leg red; the product clear run on every update →
+  32 red, and skipped → red;
+  `sortOrder` rewritten on update → red).
   Files: `Trove/Import/ImportStore.swift`, `Trove/Export/ExportSchema.swift`
   (`includingPhoto:`), `Trove/ViewModels/ItemListViewModel.swift`,
   `TroveTests/ItemImportStoreTests.swift`, `TroveTests/ItemListViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every mutation
-  recorded verbatim; the Done note gives the criterion each new test carries.
+  recorded verbatim; the Done note gives the criterion each new test carries,
+  **43 and 47 by test name**.
 
 - [ ] **T011 — Wishlist: matching and updates through the store and the view model.**
   Per plan §8, spec Decisions 20 and 21 (R4 as first drafted is overturned).
@@ -644,8 +699,10 @@ is plain language.
   matchable set is the entries **still wanted**; `refused` holds every
   `Item.id` ("its Trove ID belongs to the other list") and every **bought**
   entry's `id` ("already bought"); `Added` written to `createdAt`; the kept-code
-  market clear; the market clear on a changed Reverb product; no sale rules.
-  `WishlistViewModel.confirmImport()` takes R9's compare-and-re-present.
+  market clear; the market clear on a changed Reverb product; no sale rules;
+  `keptCodeAdds` counted as T010 counts it (criterion 43).
+  `WishlistViewModel.confirmImport()` takes T010's compare-and-re-present
+  (Decision 24, criterion 47).
   Pattern: T010; `WishlistViewModelCommitTests.commitRestoresLookingForThroughTheCSV`.
   Tests (**G15**; `WishlistImportStoreTests`, `WishlistViewModelCommitTests`,
   second context). **T010's four store-level guards, mirrored**: one field
@@ -662,28 +719,42 @@ is plain language.
   a wishlist file is listed and nothing on either list changes (44); **a row
   whose code belongs to a bought entry is listed "already bought", no entry is
   added, and the bought entry's every field — a changed cost in the row
-  included — is what it was** (45); R9 once (mutations: **one optional assigned
-  unconditionally in `apply` → the one-field leg red**; `createdAt` compared by
-  instant → the round trip red; bought ids left out of `refused` → the row is
-  added as a second entry with that code → the 45 leg red; a bought entry
-  matched and updated → red).
+  included — is what it was** (45); **G22 mirrored (43)** — a file with one
+  matching code, one unknown code and one row with no code stages
+  `keptCodeAdds == 1` with the warning's singular literal among the lines, and
+  a row whose code belongs to a bought entry is **not** counted (it is skipped,
+  not added); **G23 mirrored (47)** — an entry carrying a staged row's code
+  inserted and saved through a second context after staging: `confirmImport()`
+  writes nothing, the confirmation is presented again with `recounted` true and
+  `updated == 1`, and a second confirm applies it (mutations: **one optional
+  assigned unconditionally in `apply` → the one-field leg red**; `createdAt`
+  compared by instant → the round trip red; bought ids left out of `refused` →
+  the row is added as a second entry with that code → the 45 leg red; a bought
+  entry matched and updated → red; `keptCodeAdds` counting skipped rows → the
+  bought-entry leg red; the summaries not compared at confirm → the write
+  happens, red).
   Files: `Trove/Import/ImportStore.swift`, `Trove/Export/ExportSchema.swift`
   (`includingPhoto:`), `Trove/ViewModels/WishlistViewModel.swift`,
   `TroveTests/WishlistImportStoreTests.swift`, `TroveTests/WishlistViewModelTests.swift`.
-  **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Verify:** `scripts/verify.sh` green; mutations recorded; the Done note
+  names the wishlist tests carrying 43 and 47.
 
 - [ ] **T012 — The CSV reference, the samples, and their tests.**
   Per plan §10, P13, R2. `docs/csv-reference.md` rewritten as plan §10 lays it
   out, **opening with the hand-kept-sheet loop**, and carrying the rows that
   are left out and why, the missing-column line, and the one-device caveat (a
-  backup imported onto a phone still filling from iCloud). **It says nothing
-  about a still-syncing warning** unless the open question has been answered
-  and built. `docs/samples/items-full.csv` and `wishlist.csv` rewritten in the
-  layout the app now writes — the starred header row, 20 and 11 columns, BOM,
+  backup imported onto a phone still filling from iCloud) **with the
+  confirmation's unknown-codes warning explained beside it**: what "a Trove ID
+  this iPhone doesn't have yet" means, that it also appears on an ordinary
+  restore where you simply go ahead, and that the app cannot tell you when
+  iCloud has finished (plan R10). `docs/samples/items-full.csv` and
+  `wishlist.csv` rewritten in the layout the app now writes — the starred header row, 20 and 11 columns, BOM,
   CRLF, a fixed invented Trove ID on every row, every other value as it is
   today, at least one note with a line break kept. New
-  `docs/samples/items-edited.csv` exactly as plan §10 specifies, to be imported
-  after `items-full.csv`. `docs/samples/README.md`: a row for each new file,
+  `docs/samples/items-edited.csv` exactly as plan §10 specifies — **one new row
+  carrying an invented code `items-full.csv` does not have among them**, so the
+  warning has a sample that counts 1 — to be imported after `items-full.csv`.
+  `docs/samples/README.md`: a row for each new file,
   the two rewritten rows, and "import it twice" replaced by what now happens.
   `items-partial.csv`, `items-resaved.csv` and the three `bad-*` files are
   **not** edited.
@@ -691,20 +762,24 @@ is plain language.
   `DocsSampleTests.itemsFullImportsCleanly`.
   Tests (**G17**, **G19**; `DocsSampleTests`): `items-full.csv`'s header is
   `ExportSchema.itemHeaderRow` and `wishlist.csv`'s the wishlist row; each
-  imported into an empty store adds every row carrying its code, and imported
-  **again** reports every row unchanged; `items-full.csv` then
-  `items-edited.csv` gives a summary **equal to a literal** — its updated,
-  added and unchanged counts, each skip with its reason, both unreadable
-  counts, the unused column, the totals row, the unused-sale count, the missing
-  `Condition` column and the region's date order; `items-hand-kept.csv` as the
-  README says; every existing sample claim still green. Criterion 38: the
+  imported into an empty store adds every row carrying its code **with the
+  unknown-codes warning counting every row (12 for `items-full.csv`)**, and
+  imported **again** reports every row unchanged **with no warning** (G22's
+  sample leg); `items-full.csv` then `items-edited.csv` gives a summary **equal
+  to a literal** — its updated, added and unchanged counts, each skip with its
+  reason, both unreadable counts, the unused column, the totals row, the
+  unused-sale count, the missing `Condition` column, the region's date order
+  and `keptCodeAdds == 1` for its one row with an unknown code;
+  `items-hand-kept.csv` as the README says **and with no warning — it has no
+  codes**; every existing sample claim still green. Criterion 38: the
   existing off-main probe, and one test that plans and applies a generated
   450-row file over a 300-item in-memory collection — 150 rows editing an item,
   150 identical to one, 150 new — **asserting 150 updated, 150 unchanged and
   150 added**, and recording the elapsed time in the Done note without
   asserting on it (mutations: one cell of `items-edited.csv` changed → the
   literal red; a Trove ID blanked in `items-full.csv` → the second-import leg
-  red; the generator's edit dropped → the 150-updated count red).
+  and the count of 12 red; the generator's edit dropped → the 150-updated count
+  red).
   Files: `docs/csv-reference.md`, `docs/samples/README.md`,
   `docs/samples/items-full.csv`, `docs/samples/wishlist.csv`,
   `docs/samples/items-edited.csv` (new), `TroveTests/DocsSampleTests.swift`,
@@ -714,16 +789,21 @@ is plain language.
   `scripts/verify.sh ui` once at the phase end, count recorded.
 
   **Phase 3 closes here — pause for the person** (walkthrough above; the phase
-  review first). The report says, as statements the person can overturn, in
-  plain words: if the collection changes between the confirmation and the tap
-  on Import — iCloud delivering something, say — nothing is written and the
-  confirmation comes back with new numbers (plan R9); and the confirmation is
-  still an alert — it asks whether the everything-at-once one was readable
-  (R6). It restates, as already decided by them and now built: two items
-  sharing one code both show and neither is updated by an import (Decision 18).
+  review first). The report says, as a statement the person can overturn, in
+  plain words: the confirmation is still an alert — and asks whether the
+  everything-at-once one was readable (R6). It restates, as already decided by
+  them and now built: two items sharing one code both show and neither is
+  updated by an import (Decision 18); the warning about Trove IDs this iPhone
+  doesn't have appears whenever such rows would be added, a restore included
+  (Decision 19); and if the collection changes while the confirmation is open,
+  nothing is written and it comes back with new numbers (Decision 24) — which
+  cannot be tried by hand, since it needs iCloud to deliver something in those
+  seconds, so the report says it is tested, and the device pass will force it
+  once to see it on screen. It also says plainly, as overturnable, plan §1's
+  remaining limits while two items share a code (the page and Copy act on
+  whichever copy the app finds first).
   **It asks for the re-saved file.** If the person would rather not record one,
   that is a question about criterion 20 for them to answer, not a task to skip.
-  **If the still-syncing warning's question is still open, it asks that too.**
 
 ## Phase 4 — Verification and close-out · walkthrough: none — a recorded file pinned by a test, the device pass and the documents; nothing new is built. The two-device steps wait in `specs/SYNC-CHECKS.md`
 
@@ -787,10 +867,22 @@ is plain language.
   while the import runs, and the confirmation reads 150 updated, 150 added, 150
   unchanged (criterion 38).
   **(d) Relaunch** — terminate and relaunch: what (b) and (c) wrote is still
-  there. The sections run **one after another** on the simulator, never
+  there.
+  **(e) The confirmation coming back (criterion 47, on screen)** *(re-review
+  N2, 2026-10-09)* — in the separate worktree, at this branch's head, with one
+  **uncommitted** line changed so the first confirm takes the re-present path
+  (in `confirmImport()`, the summaries treated as unequal once). Import
+  `docs/samples/items-full.csv`, tap Import: the alert returns with "Your
+  collection changed while this was open. Check the numbers again." first;
+  Import on the returned alert writes the twelve rows; repeat and Cancel writes
+  nothing. Once on Items, once on the Wishlist. The report shows the worktree's
+  `git status` before and after; nothing is committed. If the alert does not
+  return, that is a failure: diagnosis bundle, sub-lettered task. If the
+  section cannot drive the file picker, it returns "could not perform".
+  The sections run **one after another** on the simulator, never
   together, and the orchestrator passes (a)–(c)'s returned lists into (d)'s
   bundle. **Then the orchestrator — not a section — runs `scripts/verify.sh
-  all` twice back to back**, after (d) has returned and released the simulator.
+  all` twice back to back**, after (e) has returned and released the simulator.
   Not in this pass, because they are deterministic and automated: the screens
   with two items sharing a code (T001b's UI test).
   **[person]** the two new `SYNC-CHECKS.md` steps if two devices are to hand —
@@ -810,13 +902,12 @@ is plain language.
   touches, `020`'s `DECISIONS.md` section as the shape to copy, plan §11's two
   drafted `SYNC-CHECKS.md` steps, and the exact lines to be pointed at (below),
   cut with `sed`. **The dispatch forbids full reads of `spec.md`, `plan.md` and
-  `tasks.md`.** The close-out: ticks criteria 1–39, 41, 42 and 44–46 in
+  `tasks.md`.** The close-out: ticks criteria 1–39 and 41–47 in
   `spec.md` with per-criterion citations — **2 from the person's words at the
   Phase 2 pause; 20 only on T013's Done note, with "Google Sheets only — Excel
   and Numbers untested" in its record; 40 an honest partial and unticked** until
-  the two-device pass; **43 ticked only if the open question was answered and
-  its sub-lettered task is done — otherwise unticked, with the reason** — and
-  says plainly what is untested (plan §9's list; anything T014 returned as
+  the two-device pass; **43 on T010's and T011's Done notes; 47 is ticked only if T014(e) passed —
+  otherwise it is an honest partial and unticked, like 40** — and says plainly what is untested (plan §9's list; anything T014 returned as
   "could not perform"); appends a "Superseded in part by `021`" pointer
   **beside**, never in place of, `specs/011-data-export/plan.md:113`
   (byte-for-byte header), `:132` (no `id` column) and `:150` (boundaries);
@@ -835,8 +926,9 @@ is plain language.
   entry and status row and the `DECISIONS.md` section (the Trove ID is `id`,
   and why; two rows with one code — the trap fixed, the limits left, R2; dates
   compared by day; resolve at stage and again at confirm, and re-confirm on a
-  difference, R9; the boundaries retired; the alert kept or replaced, as the
-  person said; Decision 19 as it was settled) into a file on the branch, to be
+  difference, R9 and Decision 24; the boundaries retired; the alert kept or
+  replaced, as the person said; R10 — why the unknown-codes warning reads the
+  import and not `SyncMonitor`) into a file on the branch, to be
   applied to `main` after the merge; and runs `scripts/verify.sh all`.
   `plan.md` gains **As built** from the same bundle. Only then the pre-merge
   `skeptical-reviewer` sweep over `git diff main...HEAD` (bundle cut after
@@ -865,7 +957,7 @@ is plain language.
 |---|---|---|
 | Phase 1 | no — `walkthrough: none` | nothing observable; tests over the existing identifier, a crash removed from a state no phone is in yet, and pure functions nothing calls yet |
 | Phase 2 | yes | the person's own sheet imports as it is (criterion 2); columns in any order, an extra column named, a missing optional column said once, a missing required column refused; older exports still import; both lists |
-| Phase 3 | yes | the starred header and the Trove ID in every export and template; export → edit in Google Sheets → import updates, adds and leaves unchanged; an empty cell changes nothing; sold status stays in the app; other-list and already-bought rows left out; the everything-at-once confirmation as an alert; the reference doc; **the person records the re-saved file** |
+| Phase 3 | yes | the starred header and the Trove ID in every export and template; export → edit in Google Sheets → import updates, adds and leaves unchanged; an empty cell changes nothing; sold status stays in the app; other-list and already-bought rows left out; the warning that 12 rows have a Trove ID this iPhone doesn't have yet on `items-full.csv`'s first import, and none on its second; the everything-at-once confirmation as an alert; the reference doc; **the person records the re-saved file** |
 | Phase 4 | no — `walkthrough: none` | the recorded file's test, the device pass, the documents; the two-device steps wait in `SYNC-CHECKS.md` |
 
 ## Handoff note
@@ -880,8 +972,8 @@ review is signed off; Phases 1 and 4 run on after their review, their reasons
 added to the walkthrough list. Pause also whenever something unexpected bears on
 spec adherence — and **T001 and T013 each name a stop of their own**: a failed
 claim about the identifier, and a code that does not survive the spreadsheet.
-**Criterion 43 is open with the person and has no task**; do not build toward it
-until they answer.
+No product question is open: criteria 43 and 47 are owned by T006 (the words),
+T010 and T011.
 
 > Read `CLAUDE.md` and `specs/021-import-expansion/{spec,plan,tasks}.md`.
 > Confirm the branch is `021-import-expansion` and run `scripts/verify.sh`.
@@ -892,8 +984,7 @@ until they answer.
 > bundle, and T004, T009 and T010 get their own reviews as well. Pause for me
 > after Phases 2 and 3; run straight on after Phases 1 and 4's reviews. At the
 > Phase 3 pause, ask me for the re-saved sample file — T013 cannot start without
-> it. The still-syncing warning (criterion 43) is waiting on my answer and has
-> no task yet.
+> it.
 
 Every pause report is plain language, in this order: why this pause; what can
 now be tried; where execution deviated from the spec and why; what needs a
@@ -911,4 +1002,33 @@ the spec runs, with escape-hatch misses recorded here too.
 
 | Task / invocation | Tier | Tokens | Outcome / miss reason |
 |---|---|---|---|
-| Plan and tasks draft (`sdd-planner`) | `opus` | — | Plan-and-tasks draft at the implementation tier, no override (trial continuing from `018`). 15 tasks, 4 phases, 19 guards |
+| Plan and tasks draft (`sdd-planner`) | `opus` | 335,316 (64 tool uses, 20.9 min) | Plan-and-tasks draft at the implementation tier, no override (trial continuing from `018`). 15 tasks, 4 phases, 19 guards |
+| Sign-off (`skeptical-reviewer`) | `opus` | 196,844 (43 tool uses, 9.1 min) | Sign off after fixes: 3 blocking (B1 two items sharing an `id` trap `MarketSummary.summaries`; B2 the store-level update writer under-guarded; B3 the criterion-1 fixture header specified nowhere), 16 second-look notes, 7 product questions |
+| Sign-off fixes (`sdd-planner`, resumed) | `opus` | 439,317 as returned (26 tool uses, 10.8 min) | All three blocking and the second-look notes applied; the person's answers transcribed by the orchestrator into `spec.md` (Decisions 17–23). **Stopped on a product question**: Decision 19 as first worded cannot be built — `SyncMonitor` reads caught-up after the first import pass |
+| Sign-off fixes, second pass (`sdd-planner`, resumed) | `opus` | 65,322 as returned (68 tool uses, 5.8 min) | Decision 19 reworded by the person (warn on kept-code adds; R10, G22) and Decision 24 (re-confirm; R9, G23) applied. 17 tasks, 4 phases, 23 guards |
+| Sign-off re-review (`skeptical-reviewer`) | `opus` | 167,777 (19 tool uses, 6.2 min) | B1–B3 fixed; criteria 41–47 all owned. **2 new blocking, both from the fix round**: N1 delete removed "the first" twin, not the one acted on (contradicts spec, Sync); N2 criterion 47's on-screen half declared untriggerable and then ticked. Review-loop cap reached |
+| N1 and N2 (orchestrator, direct) | session | — | Fixed by the orchestrator in `plan.md` and `tasks.md` per the cap, with the reviewer's literal edits: delete resolves the row acted on (T001a, T001b, G20, plan §1); T014 gains section (e) forcing the re-present path once on the device, and 47 is ticked only if it passes (plan §9, §11, T015). Not re-reviewed — for T001a's phase review and the sweep |
+
+**Open after the re-review — non-blocking, for the phase reviews and the
+pre-merge sweep** (the reviewer's notes, not applied at sign-off):
+
+- T010 guards (ii) and (iii) may never reach `apply`: a matched row with only
+  an empty price, an unreadable date and an `N/A` serial is "unchanged". Give
+  each row one real change (notes) and assert `updated == 1`; same in T011.
+  **The T010 dispatch carries this.**
+- T011 has no leg for two wanted entries sharing a code (criterion 42's import
+  half is tested for items only). **The T011 dispatch carries this.**
+- G22's last "Red when" entry ("read from `SyncMonitor`") is not a mutation;
+  it is prose.
+- R6's worst-case alert has grown: the unknown-codes warning alone is three
+  lines, and `items-edited.csv` cannot produce the recounted line, so T014(b)
+  shows one line short of the worst case; (e) shows the other.
+- The three wishlist missing-column sentences say "new items" — check the
+  wording at the Phase 2 pause.
+- `includingPhoto: false` "reads no photo" is untested; one leg pins it.
+- G23's no-count-moves leg leans on a cross-context delete; if flaky,
+  restructure the leg, don't weaken it.
+- T001b runs the UI suite mid-phase: nothing else may hold the simulator.
+- `ImportMatching` precedence: with `refused` before `ambiguousInStore`, a
+  wanted-plus-bought twin pair reads "already bought" — worth one sentence in
+  plan §7.

@@ -1,20 +1,16 @@
 # 021 — Import Expansion — Technical Plan
 
-**Status**: Draft — pending sign-off
+**Status**: **Final** (2026-10-09) — signed off by the `skeptical-reviewer` after fixes (three blocking findings, B1–B3, fixed and re-reviewed); the re-review's two further findings (N1, N2) were fixed by the orchestrator directly under `CLAUDE.md`'s review-loop cap and are logged in `tasks.md`'s tier log, not re-reviewed
 
 Drafted by the `sdd-planner` (per `CLAUDE.md`'s model policy: the
 plan-and-tasks draft row at the implementation tier with no override, the trial
 continuing from `018`) against the approved `spec.md` and `main` at `028747f`.
 **Revised 2026-10-08** after the sign-off review and the spec's amendment of the
-same day (commit `38883a8`, Decisions 17–23, criteria 41–46). The spec's P-items
-are already decisions; the planning choices below (Q1–Q11) become decisions on
-plan approval. Line numbers are as read at `028747f`; every task re-reads the
-file it edits.
-
-**One spec decision has no design here and no owner task: Decision 19,
-criterion 43 (the still-syncing warning).** The app cannot tell "iCloud is still
-syncing" from "settled" reliably; the facts and the fork are under **Open —
-returned to the person**, below. Everything else in the amendment is planned.
+same day (commit `38883a8`, Decisions 17–23, criteria 41–46), and **again
+2026-10-09** for the person's two answers (Decision 19 reworded, Decision 24
+added; criteria 43 and 47). The spec's P-items are already decisions; the
+planning choices below (Q1–Q11) become decisions on plan approval. Line numbers
+are as read at `028747f`; every task re-reads the file it edits.
 
 ## Context
 
@@ -52,54 +48,6 @@ money and dates, and "Import never modifies or deletes" (`spec.md:45`, `:60`,
 guard those rules are **rewritten to pin the new rule** (named in §13 and in
 each task) and each superseded sentence gains a "Superseded in part by `021`"
 pointer beside it at the close-out. Nothing is deleted to get to green.
-
-## Open — returned to the person: the still-syncing warning (Decision 19, criterion 43)
-
-**Not planned.** Decision 19 asks for a warning "when the file carries at least
-one Trove ID and iCloud has not finished syncing", absent "when sync is
-settled, when iCloud is off". What the app knows comes from one place,
-`SyncMonitor` (`Trove/App/SyncMonitor.swift`), which reduces CloudKit's
-mirroring events to four phases; the Settings row (`SyncStatusCopy`) and the
-empty states read the same phases. Read against the decision:
-
-- **"Not finished" is knowable only until the first pass lands.** `.unknown`
-  and `.working` (`mayStillBeImporting`) mean no import has finished this
-  launch. `.caughtUp` is entered on the **first** successful import event and is
-  absorbing — but "a long first import arrives in several passes"
-  (`specs/001-core-inventory/tasks.md:909`), and `009`'s plan records the same
-  window as an unverified residual ("the hook fires after the first successful
-  pass", `specs/009-sell-plan-list/plan.md:152`). So on a fresh install with a
-  large collection the phase reads settled while most of the collection has yet
-  to arrive — **the exact case Decision 19 exists for**. CloudKit publishes no
-  "everything has arrived" signal.
-- **"iCloud is off" is not knowable.** `.unavailable` is entered on a failed
-  setup *or* a failed import; `SyncStatusCopy` already says so ("No iCloud
-  account is signed in, or iCloud can't be reached" — "indistinguishable from
-  here"). A signed-in phone launched offline looks off and will sync when the
-  network returns. `.localOnly` is the synced store opened without its mirror
-  for one launch, and syncs on the next.
-
-A warning keyed on `mayStillBeImporting` would therefore be silent in the two
-situations it was asked for (mid-way through a long first sync; offline at
-launch) while reading as an assurance. The plan does not approximate it. The
-fork, for the person:
-
-1. **Warn on what the import is about to do, not on sync state**: whenever the
-   store syncs with iCloud and at least one row would be *added keeping a code
-   this phone doesn't have* — the only rows that can become twins. It is always
-   true when shown, and it also shows on a genuine restore, where it is the
-   right question to be asked. Wording would change ("N rows have a Trove ID
-   this phone doesn't know yet. If iCloud is still bringing your collection to
-   this phone, importing now adds them twice.").
-2. **Warn only until the first pass lands** (`mayStillBeImporting`), with the
-   limit stated in the reference doc: it covers the first seconds to minutes
-   after launch and nothing after.
-3. **Both**: option 1 always, with stronger words while option 2's condition
-   holds.
-4. **No warning**; the reference doc and R2's handling carry it.
-
-Either way the view models already hold an injected `SyncMonitor` that tests
-drive with `record(_:)`, so no new seam is needed for whichever is chosen.
 
 ## Readings for sign-off (not open questions — the plan builds to each)
 
@@ -155,16 +103,27 @@ drive with `record(_:)`, so no new seam is needed for whichever is chosen.
   their own file, which is not committed (P12) and is tried by them at the
   Phase 2 pause (criterion 2).
 - **R9 — If the collection changes between the confirmation and the tap on
-  Import, nothing is written and the confirmation is shown again.** *New
-  2026-10-08, from the sign-off's question on Q3.* The plan is recomputed at
-  confirm (Q3). If its summary differs in any way from the one the person was
-  shown — a sync arrival turning an add into an update is the case that matters,
-  since they were never shown "Updates can't be undone" — the app writes
-  nothing and re-presents the confirmation with the current numbers and one
-  line first: "Your collection changed while this was open. Check the numbers
-  again." Read from criterion 36 (the confirmation states the counts before any
-  write); **for the person at the Phase 3 pause**, since the alert coming back
-  is something they would see.
+  Import, nothing is written and the confirmation is shown again.** *Decided by
+  the person, 2026-10-09 — spec Decision 24, criterion 47.* The plan is
+  recomputed at confirm (Q3). If its summary differs in any way from the one
+  the person was shown — a sync arrival turning an add into an update is the
+  case that matters, since they were never shown "Updates can't be undone" —
+  the app writes nothing and re-presents the confirmation with the current
+  numbers and one line first: "Your collection changed while this was open.
+  Check the numbers again." Confirming that one applies it. G23.
+- **R10 — The warning is about the import, never about sync state.** *Decided
+  by the person, 2026-10-09 — spec Decision 19 as reworded, criterion 43.* As
+  first decided it was to show "when iCloud has not finished syncing". The app
+  cannot know that: `SyncMonitor` reads caught-up once the **first** import
+  pass lands, and a long first import arrives in several
+  (`specs/001-core-inventory/tasks.md:909`,
+  `specs/009-sell-plan-list/plan.md:152`); and a phone that is offline is
+  indistinguishable from one that is signed out (`SyncStatusCopy`). So the
+  confirmation says how many rows would be **added keeping a code this iPhone
+  doesn't have** — the only rows that can become twins — whenever there is at
+  least one, restore or not. **Nothing reads `SyncMonitor` for it**, and nobody
+  should add that back as a refinement: it would silence the warning in exactly
+  the window it is for. G22.
 
 ## Proposed at planning — approved on plan approval unless overturned
 
@@ -275,8 +234,11 @@ header rows), `Models/Item.swift`, `Models/WishlistItem.swift` (doc comments on
 
 Unchanged and must stay so: `CSVParser.swift`, `CSVWriter.swift`,
 `PDFComposer.swift`, `ExportService.swift`, and both list views — the alert is
-fed the same three accessors — **unless T001b's UI test shows twins do not both
-draw**, in which case the named routine fix touches the `ForEach` identity in
+fed the same three accessors — **except one line each** (`ItemListView.swift:252`,
+`WishlistView.swift:194`: the delete call passes the row's
+`persistentModelID`, re-review N1, §1; with `ItemListViewModel.swift` and
+`WishlistViewModel.swift`'s `delete` gaining the parameter), and **unless
+T001b's UI test shows twins do not both draw**, in which case the named routine fix touches the `ForEach` identity in
 `ItemListView`, `WishlistView` and `SellPlanView` (§1).
 
 New test files: `TroveIDTests`, `ImportGrammarTests`, `ImportColumnsTests`,
@@ -330,18 +292,34 @@ every `ForEach` identified by it), with two rows sharing an `id`:
   `ItemListViewModel.load()`, `WishlistViewModel.load()`,
   `DashboardViewModel.load()`, `SellPlanViewModel`'s load.
   `PlansViewModel.swift:226` already uses `uniquingKeysWith` and says why.
+- **Deletes the wrong copy — fixed** *(re-review N1, 2026-10-09; applied by
+  the orchestrator under the review-loop cap)*. A list's delete removes the
+  copy the person acted on (spec, Sync: "deleting one copy removes exactly that
+  one"). Twins are **not** identical — the copy an import made has no photos,
+  plan links or market rows, the synced original has all of them — so removing
+  the other one loses photos on every device, and the reference doc tells the
+  person to clear twins by deleting one. Today `ItemListViewModel.delete`
+  (`:570`) and `WishlistViewModel.delete` (`:263`) resolve
+  `items.first(where: { $0.id == id })`, which is "the first", not "the one
+  swiped". Both gain `row: PersistentIdentifier? = nil` and, when it is given,
+  resolve the row by `persistentModelID` instead of by `id`;
+  `ItemListView.swift:252` and `WishlistView.swift:194` pass
+  `item.persistentModelID`. (An equivalent shape is fine; the requirement is
+  that the row deleted is the row acted on.) The market rows under the shared
+  code are still cleared, so the survivor has no figure until its next
+  refresh.
 - **Safe as written.** `MarketIndex.load` (`uniquingKeysWith`); the fetches by
   `id` with `fetchLimit = 1` (`ItemDetailViewModel:58`,
   `WishlistDetailViewModel:81`, `SellPlanViewModel:281`,
   `MarketRefresher:109`/`:114`) return one of the two; the view models'
   `first(where:)` sites act on the first in the loaded array.
 - **Works, with a stated limit while twins exist** — each clears when one copy
-  is deleted, none corrupts data, none is fixed here: the page opened from
-  either row is whichever copy the fetch returns; `delete(id:)` from a list
-  removes **exactly one** copy, the first (criterion 42 asks for one, and the
-  twins this state produces are identical), and clears the market rows both
-  shared, so the survivor has no figure until its next refresh; the reorder
-  buttons, Copy and the Plans row's entry lookup act on the first copy.
+  is deleted, none is fixed here, and each is this plan's reading of the
+  spec's "work normally", said plainly at the Phase 3 pause as overturnable:
+  the page opened from either row is whichever copy the fetch returns, so an
+  edit made there lands on that copy, which may not be the row tapped; the
+  reorder buttons, Copy and the Plans row's entry lookup act on the first
+  copy.
 - **Not settled by a unit test: the five `ForEach(…, id: \.id)` over items**
   (`ItemListView.swift:336`, `:470`, `WishlistView.swift:336`,
   `SellPlanView.swift:450`, `:520`) and `PlansView`'s rows. SwiftUI's behaviour
@@ -352,8 +330,9 @@ every `ForEach` identified by it), with two rows sharing an `id`:
 
 **Testable claims** (G20): with two stored rows sharing an `id` and one figure
 row filed under it, each of the four `load()`s — and `PlansViewModel`'s —
-returns and lists both; `delete(id:)` leaves exactly one row with that `id` on
-a second context; the same for two `WishlistItem`s; the UI test above. The
+returns and lists both; deleting the twin loaded **second** leaves, on a
+second context, one row with that `id` and it is the first twin's — and the
+reverse; the same for two `WishlistItem`s; the UI test above. The
 named mutation, `uniqueKeysWithValues` restored, crashes the run — recorded as
 the red it is.
 
@@ -562,6 +541,10 @@ nonisolated struct ImportSummary: Sendable, Equatable {
     var unusedSaleRows = 0
     var regionDateOrder: SlashDateOrder? = nil
     var missingDefaultColumns: [String] = []
+    /// Decision 19: rows that will be added **keeping a code from the file** —
+    /// a subset of `added`. Never includes a matched row, a row with no code,
+    /// or a kept-code row that was skipped.
+    var keptCodeAdds = 0
     var writesAnything: Bool { added + updated > 0 }
 }
 nonisolated enum ImportPresentation<Row: Sendable>: Sendable {
@@ -590,10 +573,15 @@ nonisolated enum ImportPresentation<Row: Sendable>: Sendable {
   totals row and was left out." (several: "3 rows look like totals rows and
   were left out."); "3 rows have sale details for items you still own. Mark
   them sold in the app."; "Dates read as month/day/year, from this iPhone's
-  region."; and last, whenever `updated > 0`, "Updates can't be undone." With no
-  line at all, the one line is today's "No problems found." Singulars are
-  spelled out in the tests. (Decision 19's warning has no place in this list
-  until the open question is answered.)
+  region."; whenever `keptCodeAdds > 0`, the unknown-codes warning with that
+  count (R10) — "90 rows have a Trove ID this iPhone doesn't have yet. If
+  iCloud is still bringing your collection down, wait — importing now adds them
+  a second time." (one: "1 row has a Trove ID this iPhone doesn't have yet. If
+  iCloud is still bringing your collection down, wait — importing now adds it a
+  second time."); and last, whenever `updated > 0`, "Updates can't be undone."
+  The two warnings sit together at the foot, nearest the buttons. With no line
+  at all, the one line is today's "No problems found." Singulars are spelled
+  out in the tests.
 - Skip reasons (`ImportSchema.SkipReason`): `noName`, `extraColumns` ("more
   columns than the header"), `sameTroveID(asRows:)` ("same Trove ID as row 15" /
   "…as rows 15 and 16"), `ambiguousTroveID` ("its Trove ID matches more than one
@@ -724,7 +712,8 @@ table, which is what lets a row correct a sold item) and the other list's ids
 for `refused`; on the wishlist, entries still wanted are the matchable set and
 **bought entries' ids go into `refused` as "already bought"** (Decision 21). It
 runs `ImportMatching`, then per row: `new` → `asNew` with the sheet's
-`missingDefaultColumns` (nil → skipped, "no name"); `update` → canonicalise the
+`missingDefaultColumns` (nil → skipped, "no name"; otherwise an add, and one
+more in `keptCodeAdds` when the outcome keeps a code); `update` → canonicalise the
 category, snapshot the item without its photo (Q5), `changes`; an empty change
 set counts as unchanged; every other outcome → a skip with its reason. It
 writes nothing.
@@ -770,15 +759,20 @@ And: criterion 22 over an export of awkward values (a mid-afternoon purchase
 date, a sold item, Very Good, a nil value, padded notes, **a note with line
 breaks**) — zero added, zero updated, every row unchanged, every `updatedAt` as
 it was; criteria 27–33; 34 end to end; 42's import half and 44; the kept-code
-market clear; R9 both ways. Wishlist: criterion 35, `Added` and `Looking For`
-included, and criterion 45.
+market clear. Wishlist: criterion 35, `Added` and `Looking For` included, and
+criterion 45. On both lists: criterion 43 (G22) — `keptCodeAdds` is the number
+of rows added keeping a code, zero when every code-carrying row matches and
+zero for a file with no codes; and criterion 47 (G23) — a store changed between
+staging and confirm writes nothing and re-presents, and confirming that one
+applies it.
 
 ## 9. What is deliberately not built, and what is untested
 
 - No mapping screen, no synonyms, no per-item preview, no undo (spec non-goals).
 - No repair of two rows sharing a code (R2), and no fix for the limits §1 lists
   while they exist.
-- **No still-syncing warning** (Decision 19) — open, above.
+- **No sync-state check behind the unknown-codes warning** (R10): it shows on a
+  genuine restore too, by the person's decision.
 - No test-only launch argument that stages an import. The system file picker
   has kept the import flow out of the UI suite since `012`; a seed that *stages
   a write* is a wider branch than the existing ones. (`-seedSharedID`, §11, is
@@ -790,11 +784,21 @@ included, and criterion 45.
   on an in-memory store. What exists is `ImportWiringTests`' scan that the call
   is there — which pins a spelling — and G14's test that `rollback()` after
   `apply` restores the stored values. The failure path itself has never run.
-- **The confirmation coming back (R9) is untested on screen.** The view model's
-  behaviour is G14's; whether SwiftUI re-presents an alert whose binding went
-  false and true inside one dismissal is a mechanism nobody can trigger on
-  demand (it needs a sync arrival between the alert and the tap). The failure
-  direction is the safe one — nothing is written.
+- **The confirmation coming back (R9) is seen once on a forced trigger
+  (T014(e)), never under a real sync arrival, and by no automated test**
+  *(re-review N2, 2026-10-09)*. The view model's behaviour is G23's. Whether
+  SwiftUI re-presents an alert whose binding went false and true inside one
+  dismissal is the mechanism at risk: `confirmImport()` nils
+  `importPresentation` in the button's synchronous window, the alert's
+  binding setter (`ItemListView.swift:298`–`301`) writes nil on dismissal, and
+  R9 sets a new `.confirmation` from inside the task milliseconds later. This
+  seam has broken before — the comment at `ItemListViewModel.swift:1172`–`1180`
+  records `012`'s T017 finding, where the same ordering made Import silently
+  do nothing and "the unit tests couldn't see it". If it fails, the person
+  taps Import, the alert vanishes, and nothing is imported and nothing is
+  said. So it is instrumented once on the device before the tests are trusted
+  to speak for it (`CLAUDE.md`): one uncommitted line forcing the comparison
+  unequal exercises the real path with no sync arrival needed.
 - No `ImportPreview` compatibility shim: the type is deleted, and the existing
   field-policy tests are re-pointed through one test-side helper (§13, G10).
 
@@ -811,19 +815,25 @@ touches; rows that are left out and why (shared, other list, already bought,
 more than one item); sold status; what fails the whole file; the caveats —
 leading zeros (P13), files move forward not back, and **importing a backup onto
 a phone that is still filling from iCloud leaves everything twice with one
-code, and how to clear it** (R2).
+code, what the confirmation's warning about Trove IDs "this iPhone doesn't have
+yet" is telling you, why it also appears on an ordinary restore, and how to
+clear twins** (R2, R10).
 
 Samples (`docs/samples/`, each pinned by `DocsSampleTests`):
 
 - `items-full.csv`, `wishlist.csv` — rewritten in the layout the app now writes
   (starred header, 20 / 11 columns, BOM, CRLF) with fixed invented Trove IDs;
-  imported twice, the second import reports every row unchanged.
+  imported twice, the second import reports every row unchanged. **The first
+  import of `items-full.csv` into an empty collection is the unknown-codes
+  warning's sample**: all twelve rows are added keeping a code, so the
+  confirmation carries the warning with 12; the second import carries none.
   `items-full.csv` keeps at least one note with a line break in it — T013's
   recording must show what a spreadsheet does to it.
 - `items-edited.csv` — **new**, to import after `items-full.csv`: three rows
   edited, two rows sharing one code, one owned row with sale cells filled, one
-  unreadable cell, one new row with no code, an unknown column, a totals row,
-  slash dates that do not settle their order, and no `Condition` column. Its
+  unreadable cell, one new row with no code, **one new row carrying a code
+  `items-full.csv` does not have**, an unknown column, a totals row, slash
+  dates that do not settle their order, and no `Condition` column. Its
   confirmation shows every line §5 can produce, which is what R6 needs in front
   of eyes.
 - `items-hand-kept.csv` — §4's fixture.
@@ -846,8 +856,8 @@ items sharing one `id` with different names and one figure row filed under it,
 two wanted entries sharing another, one of them with a sell plan holding both
 twins. `testTwoRowsSharingOneIDListAndOneDeletes` (criterion 42): the Items tab
 shows both names; the Dashboard, the Wishlist (both wanted names) and the Plans
-tab open; the seeded sell plan lists both twins; deleting one twin leaves
-exactly one of the two names. Every existing UI test keeps its starting state.
+tab open; the seeded sell plan lists both twins; deleting the twin listed second removes that name and leaves the
+first twin's. Every existing UI test keeps its starting state.
 The import flow itself stays out of the UI suite (§9).
 
 `scripts/verify.sh ui` runs at each phase end as regression, and twice back to
@@ -872,7 +882,14 @@ line readable, both buttons reachable, and the `bad-headers.csv` failure alert
 half the rows edited and 150 new rows appended: the busy badge draws, the list
 answers a scroll while it runs, the counts read 150 updated / 150 unchanged /
 150 added (criterion 38's feel); (d) **relaunch** — what (b) and (c) wrote is
-still there.
+still there; (e) **the confirmation coming back** (criterion 47, on screen) —
+in the separate worktree, at this branch's head, with one **uncommitted** line
+changed so the first confirm takes the re-present path: import
+`items-full.csv`, tap Import, and the alert returns with "Your collection
+changed while this was open. Check the numbers again." first; Import on the
+returned alert writes the twelve rows; repeat and Cancel writes nothing; once
+on Items, once on the Wishlist; `git status` shown before and after, nothing
+committed (§9).
 
 **`specs/SYNC-CHECKS.md` gains two steps** under Part 3 (both devices on the new
 build), drafted here so the close-out copies them: *"3.13 — An item's Trove ID
@@ -883,16 +900,15 @@ by importing reaches the other device. Do: on A, change three items' notes in
 the exported sheet and import it. You should see: on B, the three notes, and
 nothing else changed. Known edge, not a failure: a backup imported onto a phone
 that has not finished filling from iCloud leaves each item twice with one code
-(`021` Decision 18) — both show, a later import leaves them out and says why,
-and deleting one copy clears it."* Criterion 40 stays unticked until then.
+(`021` Decision 18) — the confirmation warned of it beforehand, both show, a
+later import leaves them out and says why, and deleting one copy clears it."* Criterion 40 stays unticked until then.
 
 ## 12. Close-out
 
 T015, on an evidence bundle: criteria ticked with citations — **40 an honest
 partial**, **20 ticked only if T013's recorded file exists** and with "Excel
-and Numbers untested" beside it, **43 not ticked and not attempted unless the
-open question was answered and a task added**, 2 from what the person said at
-the Phase 2 pause; "Superseded in part by `021`" pointers beside
+and Numbers untested" beside it, 43 and 47 on T010's and T011's Done notes, 2
+from what the person said at the Phase 2 pause; "Superseded in part by `021`" pointers beside
 `specs/011-data-export/plan.md:113`, `:132` and `:150`,
 `specs/012-data-import/spec.md:45`, `:60` and `:94`, the header-gate and
 money-and-dates paragraphs of `specs/012-data-import/plan.md` (§"Row pipeline",
@@ -902,7 +918,8 @@ widths, and `020`'s plan Q7 — never an edit to a shipped line; the two
 SYNC-CHECKS steps; `README.md`'s import and export bullets; the drafted
 `ROADMAP.md` and `DECISIONS.md` text (Q1 and R1; two rows with one code, what
 was fixed and what is left, R2; the by-day comparison of §7; Q3 and R9; Q6's
-retired boundaries; Decision 19 as it was settled) in a file on the branch for
+retired boundaries; R10 — why the warning reads the import and not
+`SyncMonitor`) in a file on the branch for
 `main` after the merge; `plan.md` gains **As built**.
 
 ## 13. Guards that can fail (each with the mutation that turns it red)
@@ -916,20 +933,22 @@ retired boundaries; Decision 19 as it was settled) in a file on the branch for
 | G5 | `ImportColumnsTests`: case, spaces, star; any order; every missing required name reported; duplicate; unknown names listed once in file order; wrong list both ways and for each shipped layout | only the first missing name reported · the star not dropped · an unknown column refusing the file · wrong-list tested by column count |
 | G6 | `ImportSheetTests`, items: the hand-kept fixture (criterion 1), shuffled columns equal, `N/A` per column, totals rows labelled and unlabelled anywhere, a totals row with a sum under an unknown column, a nameless dated row still skipped, extra cells against the header's width; **a `€` price beside a blank `Currency` is `USD`, and beside `GBP` is `GBP`** | `N/A` blanked only in Serial Number · a totals row with a filled non-money recognised cell left out · an unknown column's cell stopping a totals row · a totals row listed among the skips · the slash order taken from the first date · the row reader setting the currency from the symbol |
 | G7 | the same for the wishlist (criterion 16) | the wishlist money column missing from its totals rule · `Added` not offered to the date-order scan |
-| G8 | `ImportCopyTests`: title; every line and its singular by literal; the order; "can't be undone" iff `updated > 0`; the recounted line iff `recounted`; the three failure sentences | any word drifts · the hint shown without a shared-code skip · the undo line shown for adds only |
+| G8 | `ImportCopyTests`: title; every line and its singular by literal; the order; "can't be undone" iff `updated > 0`; the recounted line iff `recounted`; the unknown-codes warning and its singular iff `keptCodeAdds > 0`; the three failure sentences | any word drifts · the hint shown without a shared-code skip · the undo line shown for adds only · the unknown-codes line shown at zero |
 | G9 | `ItemImportStoreTests` / `WishlistImportStoreTests`, add path: appended in file order after every stored position, a sale pair arrives sold, category casing, `Added` restored | placement from a stale base · the pair half-written · `createdAt` left at now |
 | G10 | the switch: every shipped layout (items 12, 14, 18, 19; wishlist 7, 9, 10) imports with zero skips and zero defaults; each whole-file failure writes nothing; the re-pointed field-policy tests with their assertions unedited; `ImportConcurrencyTests`' probe still off the main thread | a layout's column unread (a default appears) · `locale` not reaching the schema · a `@concurrent` dropped |
 | G11 | `ExportSchemaTests`: both header rows by literal (stars, `Trove ID` last); each row's last cell is its record's code; `ItemListViewModelTests` / `WishlistViewModelTests` / `SettingsViewModelTests`: owned, sold, both, wishlist and Export All each write a non-empty, distinct code per row and the starred header; both templates are the header row and no rows; no PDF field holds a code | `init(item:)` dropping `troveID` · a table built from `itemHeaders` instead of the header row · a template left on the unstarred names · a PDF field added |
 | G12 | `ImportUpdateTests`: each of the fifteen item fields changes alone; empty and `N/A` change nothing (serial, purchase date, current value); unreadable changes nothing and counts; empty name keeps the name; a mid-afternoon date equal by day is no change; padded text and CRLF-for-LF text are no change; the sale's four legs | a default written for an unreadable or empty cell (`changes` falling back to `asNew`) · dates compared by instant · sale cells written onto an owned item · an empty cell clearing a field |
 | G13 | `ImportMatching`: every outcome; a code shared in the file is never applied even when it matches; the other list's code and a bought entry's code refused with their reasons | the first of two sharing rows applied · an unmatched code dropped instead of kept · a refused code kept or updated |
-| G14 | items store and view model, second context: **one field changed on a fully-filled item leaves every other stored field as it was; empty / unreadable / `N/A` cells and missing columns leave stored values; an empty Name updates the rest**; the round trip (criterion 22) with `updatedAt` untouched; updates persisted, Very Good as the literal pair `("good", "very good")`; an ID-less file imported twice makes two copies; an unmatched code is kept, its orphaned market rows cleared, and the second import updates; shared, ambiguous and other-list codes leave everything untouched; an absent item is untouched; photos, plan links, `sortOrder` and market rows survive an update, and market rows are cleared when the product changes; Bought set on many; the sold rules; a store changed between staging and confirm writes nothing and re-presents (R9), and an unchanged store commits; `rollback()` after `apply` restores | **one optional assigned unconditionally in `apply` (`item.serialNumber = changes.serialNumber`) → the one-field leg red** · two assignments crossed · `updatedAt` stamped on unchanged rows · `id` assigned after insert or not at all · the kept-code clear skipped · the summaries not compared at confirm · the product clear skipped, or run on every update · `sortOrder` rewritten on update |
+| G14 | items store and view model, second context: **one field changed on a fully-filled item leaves every other stored field as it was; empty / unreadable / `N/A` cells and missing columns leave stored values; an empty Name updates the rest**; the round trip (criterion 22) with `updatedAt` untouched; updates persisted, Very Good as the literal pair `("good", "very good")`; an ID-less file imported twice makes two copies; an unmatched code is kept, its orphaned market rows cleared, and the second import updates; shared, ambiguous and other-list codes leave everything untouched; an absent item is untouched; photos, plan links, `sortOrder` and market rows survive an update, and market rows are cleared when the product changes; Bought set on many; the sold rules; `rollback()` after `apply` restores (the re-confirm rule is G23's, the warning's count G22's) | **one optional assigned unconditionally in `apply` (`item.serialNumber = changes.serialNumber`) → the one-field leg red** · two assignments crossed · `updatedAt` stamped on unchanged rows · `id` assigned after insert or not at all · the kept-code clear skipped · the product clear skipped, or run on every update · `sortOrder` rewritten on update |
 | G15 | the wishlist twin (criterion 35), with `Added`, `Looking For`, the same four store-level legs, and a bought entry's row left out and the entry unchanged (criterion 45) | **one optional assigned unconditionally in the wishlist `apply`** · `createdAt` compared by instant · a bought entry updated, or its row added as new |
 | G16 | view models: the confirmation is staged before any write; Cancel leaves a second context's fetch unchanged; a summary that writes nothing offers no import action | `importOffersConfirmation` on `rows.isEmpty` rather than `writesAnything` |
 | G17 | `DocsSampleTests`: every README claim; `items-full` twice → all unchanged; `items-full` then `items-edited` → the summary equal to a literal | a sample and its README disagreeing |
 | G18 | the re-saved file (criterion 20, Google Sheets): every code parses and matches its row in `items-full.csv`; imported over a store built from `items-full.csv`, the summary equals what the README says Sheets changed | Sheets damaging a code — **this is the guard that can fail on a fact the plan does not control**. Excel and Numbers: untested |
 | G19 | criterion 38: the parse probe; a generated 450-row file planned and applied over a 300-item store **asserting 150 updated, 150 unchanged, 150 added**, its elapsed time recorded and not asserted | the probe red if parsing moves to the main actor · the counts red if matching or comparison breaks at size; the timing is evidence, not a gate |
-| G20 | two rows sharing one `id` (criterion 42): `MarketIndexTests` — `summaries` over a repeated id returns; the four `load()`s and `PlansViewModel`'s list both twins; `delete(id:)` leaves exactly one, on a second context, on both lists; `UITestSeedTests` — the seed refuses a persistent store; the UI test | `uniqueKeysWithValues` restored (the run crashes — recorded) · `delete` removing both · the seed ungated |
+| G20 | two rows sharing one `id` (criterion 42): `MarketIndexTests` — `summaries` over a repeated id returns; the four `load()`s and `PlansViewModel`'s list both twins; `delete` removes the copy acted on (delete the second twin → the first's name remains, and the reverse), on a second context, on both lists; `UITestSeedTests` — the seed refuses a persistent store; the UI test | `uniqueKeysWithValues` restored (the run crashes — recorded) · `delete` resolving by `id` (the delete-the-second leg red) · `delete` removing both · the seed ungated |
 | G21 | the missing-column line (criterion 41): a file with no `Desire to Keep` / `Condition` counts zero defaults for them and names both; with the columns present and cells blank it counts them; the line is absent when nothing is added; the wishlist's two | the missing column counted per row · the line shown for a file that only updates · a blank cell in a present column going uncounted |
+| G22 | the unknown-codes warning (criterion 43), store and view model, both lists: a file of five rows — two whose codes match, two whose codes match nothing, one with no code — gives `keptCodeAdds == 2` and the staged message carries the warning with 2; a file whose every code matches gives 0 and no warning; a file with no codes gives 0 and no warning though it adds every row; a nameless row with an unknown code is skipped and not counted; `DocsSampleTests` — `items-full.csv` into an empty store carries the warning with 12, and again carries none | every row with a code counted (matched ones too) → the mixed leg reads 4 · every add counted → the no-code leg red · a skipped kept-code row counted · the count read from `SyncMonitor` or gated on it in any way — there is no such parameter to pass, which is the point |
+| G23 | re-confirm (criterion 47), both view models: with a confirmation staged for a row whose code matches nothing, an item carrying that code is inserted and saved (as a sync arrival would); `confirmImport()` then writes nothing — a second context shows the store exactly as the insert left it — and the presentation is a confirmation again with `recounted` true, the "collection changed" line first, `updated == 1` and `added == 0`; a second `confirmImport()` applies that update; and with the store untouched, the first confirm applies | the summaries not compared at confirm (the first confirm updates an item the person was shown as an add) · the comparison on counts alone when only the listed rows differ · the re-presented confirmation not offering Import · `recounted` left false |
 
 Every guard is mutation-verified before it lands and the Done note records what
 was broken and what went red; persisted assertions refetch on a second
@@ -937,5 +956,4 @@ was broken and what went red; persisted assertions refetch on a second
 a pure-function, store, view-model or UI test. What the suites cannot reach is
 in §9, plus: the on-disk read and the alert's look (T014), the person's own
 file (the Phase 2 pause), a real spreadsheet's re-save (T013 — Google Sheets
-only), and a second device (`SYNC-CHECKS.md`). **Criterion 43 has no guard
-because it has no design.**
+only), and a second device (`SYNC-CHECKS.md`).
