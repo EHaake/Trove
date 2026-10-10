@@ -7,7 +7,10 @@ the **P-items** were Claude Code's proposals and are decisions now, approved
 with the Draft, as in earlier specs. **Amended 2026-10-08 during planning**
 (Decisions 17–23): six things planning and its sign-off review surfaced,
 each put to the person and answered by them; the amended passages are
-marked inline.
+marked inline. **Amended again 2026-10-09** (Decision 19 reworded, Decision
+24 added): the still-syncing warning as first decided could not be built —
+the app cannot tell that iCloud has finished — so the person chose a
+warning about what the import is about to do instead.
 
 Authored in a Claude Code spec session of its own, per `CLAUDE.md`'s model
 policy (Opus profile, the session raised to high effort for the spec
@@ -250,12 +253,20 @@ everything untouched. It now says:
 - the date order, when the phone's region had to decide it;
 - a line for each optional column that is missing and would give new
   items a default *(amended 2026-10-08, Decision 17)*;
-- when the file carries Trove IDs and iCloud has not finished syncing,
-  a warning that importing now may add items you already have *(amended
-  2026-10-08, Decision 19)*;
+- when at least one row would be **added keeping a Trove ID from the
+  file** — a code this iPhone doesn't have — a warning saying how many,
+  and that if iCloud is still bringing the collection down, importing now
+  adds them a second time *(amended 2026-10-09, Decision 19)*. It is shown
+  on a genuine restore too, where the person simply goes ahead;
 - when any item will be updated, that **an update can't be undone**.
 
 If nothing would be added or updated, it is informational only.
+
+*(Added 2026-10-09, Decision 24.)* If the collection changes between the
+confirmation appearing and Import being tapped — iCloud delivering items
+meanwhile — so that the numbers shown are no longer true, **nothing is
+written**: the confirmation is shown again with the current numbers and a
+line saying the collection changed.
 
 ### Export and templates
 
@@ -287,7 +298,11 @@ app must work normally with two items sharing a code — every screen
 loads, and deleting one copy removes exactly that one. A later import
 never updates a row whose code two items carry; it lists the row and says
 why, and deleting one copy in the app clears it. And the confirmation
-warns beforehand when iCloud is still syncing and the file carries codes.
+warns beforehand. The app **cannot know** that iCloud has finished — it
+reads as caught up once the first batch lands, however much is still on
+its way — so the warning is not about sync state; it is about the import:
+it appears whenever rows would be added keeping a code this iPhone
+doesn't have *(reworded 2026-10-09, Decision 19)*.
 
 ## Copy
 
@@ -307,8 +322,11 @@ Proposed wording; the plan may adjust it for fit, not for meaning.
 - Date order: "Dates read as month/day/year, from this iPhone's region."
 - Updates: "Updates can't be undone."
 - Missing column: "No Condition column — new items will be Excellent."
-- Still syncing: "iCloud is still syncing. Importing now may add items
-  you already have."
+- Unknown codes: "90 rows have a Trove ID this iPhone doesn't have yet.
+  If iCloud is still bringing your collection down, wait — importing now
+  adds them a second time."
+- Changed meanwhile: "Your collection changed while this was open. Check
+  the numbers again."
 - Other list: "row 9 — its Trove ID belongs to the other list."
 - Already bought: "row 9 — already bought."
 - Shared code: "row 9 — its Trove ID matches more than one item."
@@ -468,16 +486,21 @@ Proposed wording; the plan may adjust it for fit, not for meaning.
     Sell Plan, Plans — and deleting one copy removes exactly one. A file
     row carrying that ID is not applied and is listed with the reason;
     neither copy changes.
-43. [ ] When the file carries at least one Trove ID and iCloud has not
-    finished syncing, the confirmation carries the still-syncing warning;
-    it is absent when sync is settled, when iCloud is off, and for a file
-    with no Trove IDs.
+43. [ ] *(Reworded 2026-10-09.)* When at least one row would be added
+    keeping a Trove ID from the file, the confirmation carries the
+    unknown-codes warning with that count. It is absent when every
+    ID-carrying row matches an item, and for a file with no Trove IDs.
 44. [ ] A row whose Trove ID belongs to something on the other list is
     left out and listed with that reason; nothing on either list changes.
 45. [ ] A wishlist row whose Trove ID belongs to an entry already marked
     as bought is left out and listed as already bought; the entry is
     unchanged.
 46. [ ] `$ 3,179.95` and `€ 1,250` read to the exact cent.
+47. [ ] *(Added 2026-10-09.)* If the store changes after the confirmation
+    is shown so that the added, updated or unchanged counts or the listed
+    rows would differ, tapping Import writes nothing and shows the
+    confirmation again with the current numbers and the "collection
+    changed" line; confirming that one applies it.
 
 ## Decisions record
 
@@ -521,8 +544,13 @@ sign-off review, put to the person, and decided by them:
 18. **Two items sharing one Trove ID**: a row carrying that ID is refused
     and explained; the app stays fully usable in that state. (Asked
     twice: the first wording said it took two devices. It takes one.)
-19. **The confirmation warns when iCloud is still syncing** and the file
-    carries Trove IDs. Importing is still allowed.
+19. **The confirmation warns about what the import will do**: whenever
+    rows would be added keeping a Trove ID this iPhone doesn't have, it
+    says how many and that importing during a first sync adds them twice.
+    Importing is still allowed. (Reworded 2026-10-09. First decided as a
+    warning "when iCloud is still syncing"; planning found the app cannot
+    know that — it reads as caught up after the first batch — so that
+    warning would have been silent exactly when it mattered.)
 20. **A Trove ID belonging to the other list**: the row is left out, with
     the reason.
 21. **A wishlist row for an entry already bought**: left out, "already
@@ -532,6 +560,9 @@ sign-off review, put to the person, and decided by them:
     an unknown column doesn't stop it being a totals row. (Read from
     criterion 7, "its cells affect nothing"; recorded so it is not
     re-argued.)
+24. **If the collection changes while the confirmation is open, it is
+    shown again** with the current numbers; nothing is written on numbers
+    the person didn't see. (2026-10-09.)
 
 ### The P-items
 
