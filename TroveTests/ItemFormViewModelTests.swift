@@ -542,6 +542,29 @@ struct ItemFormViewModelEditTests {
         #expect(reopened.condition == .veryGood)
     }
 
+    /// 021 G1 (criterion 17): an edit saved through the form leaves the Trove
+    /// ID as it was. Read on a second context, with the new name asserted
+    /// beside it so the edit is known to have reached the store.
+    ///
+    /// Mutation: `item.id = UUID()` in `save()` → the stored code differs.
+    @Test func anEditLeavesTheTroveIDAsItWas() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let code = UUID(uuidString: "6F1C2A4E-0B7D-4E21-9C3A-5D8E7F102A11")!
+        let item = Item(name: "Martin D-18", categoryPath: "Music/Guitars")
+        item.id = code
+        context.insert(item)
+        try context.save()
+
+        let viewModel = ItemFormViewModel(modelContext: context, editing: item)
+        viewModel.name = "Martin D-18 (1975)"
+        #expect(viewModel.save())
+
+        let stored = try ModelContext(container).fetch(FetchDescriptor<Item>())
+        #expect(stored.map(\.name) == ["Martin D-18 (1975)"])
+        #expect(stored.map(\.id) == [code])
+    }
+
     @Test func canClearAnOptionalFieldByBlankingIt() throws {
         let context = try makeInMemoryContext()
         let item = try existingItem(in: context)

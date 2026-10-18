@@ -7,6 +7,11 @@ import SwiftData
 /// every relationship optional, no `@Attribute(.unique)`.
 @Model
 final class WishlistItem {
+    /// The Trove ID, exactly as on `Item.id`: `021` exports it as the entry's
+    /// code and a kept code is assigned here before insert. Stored; never
+    /// reassigned by an edit; new on a Copy, and the item Mark as bought
+    /// makes gets its own rather than this one. **Not guaranteed unique** —
+    /// no `@Attribute(.unique)` under CloudKit.
     var id: UUID = UUID()
     var name: String = ""
     var categoryPath: String = ""

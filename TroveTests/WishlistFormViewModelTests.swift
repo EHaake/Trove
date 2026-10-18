@@ -165,6 +165,29 @@ struct WishlistFormSaveTests {
         #expect(all.first?.estimatedCostCents == 95_000)
     }
 
+    /// 021 G1 (criterion 17): an edit saved through the form leaves the Trove
+    /// ID as it was. Read on a second context, with the new cost asserted
+    /// beside it so the edit is known to have reached the store.
+    ///
+    /// Mutation: `item.id = UUID()` in `save()` → the stored code differs.
+    @Test func anEditLeavesTheTroveIDAsItWas() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let code = UUID(uuidString: "A2D94B70-3E15-4C8F-B6A1-0F9E8D7C6B22")!
+        let existing = WishlistItem(name: "Vox AC15", categoryPath: "Music/Amps", estimatedCostCents: 105_000)
+        existing.id = code
+        context.insert(existing)
+        try context.save()
+
+        let viewModel = WishlistFormViewModel(modelContext: context, editing: existing)
+        viewModel.estimatedCost = 950
+        #expect(viewModel.save())
+
+        let stored = try fetchAll(ModelContext(container))
+        #expect(stored.map(\.estimatedCostCents) == [95_000])
+        #expect(stored.map(\.id) == [code])
+    }
+
     /// Same rule as the item form: reuse the casing already in use rather than
     /// letting the taxonomy sprout near-duplicates.
     /// The year survives the store, not just the object graph: read back on a

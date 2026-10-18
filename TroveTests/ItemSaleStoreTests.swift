@@ -316,6 +316,32 @@ struct ItemSaleStoreTests {
         #expect(returned.bought == .new, "selling and returning never touch Bought")
     }
 
+    /// 021 G1 (criterion 17): selling and returning never reassign the Trove
+    /// ID. Read on a second context after each save.
+    ///
+    /// Mutation: `item.id = UUID()` in `markSold` → the sold leg fails.
+    @Test func markThenReturnLeavesTheTroveIDUnchanged() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let code = UUID(uuidString: "6F1C2A4E-0B7D-4E21-9C3A-5D8E7F102A11")!
+        let item = Item(name: "Telecaster", purchasePriceCents: 100_000)
+        item.id = code
+        context.insert(item)
+        try context.save()
+
+        try ItemSaleStore.markSold(item, sale: sale(), toward: nil, at: now, in: context)
+        try context.save()
+        let sold = try #require(try ModelContext(container).fetch(FetchDescriptor<Item>()).first)
+        #expect(sold.isSold)
+        #expect(sold.id == code, "a sale keeps the code")
+
+        ItemSaleStore.returnToCollection(item, at: now.addingTimeInterval(120))
+        try context.save()
+        let returned = try #require(try ModelContext(container).fetch(FetchDescriptor<Item>()).first)
+        #expect(!returned.isSold)
+        #expect(returned.id == code, "a return keeps the code")
+    }
+
     /// Plan Q13: each of the three is a change to the item row, so each bumps
     /// `updatedAt`.
     @Test func allThreeWritersBumpUpdatedAt() throws {

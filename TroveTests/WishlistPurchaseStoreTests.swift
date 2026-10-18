@@ -315,6 +315,36 @@ struct WishlistPurchaseStoreTests {
         #expect((entry.itemsSoldToward ?? []).isEmpty, "nothing was sold toward the entry")
     }
 
+    /// 021 G1 (criterion 19): the item a purchase makes has a Trove ID of its
+    /// own — not the entry's, and not one an item already holds. The new item
+    /// is picked out by name (the bystander has another), never by id, and
+    /// read on a second context.
+    ///
+    /// Mutation: `item.id = wanted.id` in `markBought` → the item carries the
+    /// entry's code.
+    @Test func theBoughtItemHasATroveIDOfItsOwn() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let bystander = Item(name: "Telecaster", purchasePriceCents: 100_000)
+        context.insert(bystander)
+        let wanted = WishlistItem(name: "Rickenbacker 330")
+        context.insert(wanted)
+        try context.save()
+        let entryCode = wanted.id
+        let bystanderCode = bystander.id
+
+        try WishlistPurchaseStore.markBought(wanted, purchase: purchase(), at: now, in: context)
+        try context.save()
+
+        let elsewhere = ModelContext(container)
+        let items = try elsewhere.fetch(FetchDescriptor<Item>())
+        let bought = try #require(items.first { $0.name == "Rickenbacker 330" })
+        #expect(bought.id != entryCode, "the item is not the entry under another kind")
+        #expect(bought.id != bystanderCode, "and does not reuse an item's code")
+        let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
+        #expect(entry.id == entryCode, "the entry keeps its own")
+    }
+
     /// G25. A refused second purchase moves nothing: the record stays on the
     /// first purchase's item and no second item is created.
     @Test func aRefusedSecondPurchaseLeavesTheRecordOnTheFirstItem() throws {

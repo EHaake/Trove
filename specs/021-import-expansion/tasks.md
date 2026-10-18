@@ -73,7 +73,7 @@ is plain language.
 
 ## Phase 1 — Foundations: the code, the grammar, the columns (**foundational**) · walkthrough: none — tests over fields that already exist, a crash removed from a state no phone is in yet (two items with one identifier — only this spec's later phases can make one), a seed only the UI tests launch with, and pure functions nothing calls yet. One reading does move: a price written `$1,250.00` in a file that already matches the template now reads instead of falling back to a default; nobody would go looking for it, and Phase 2's pause covers it
 
-- [ ] **T001 — The Trove ID is `id`: every claim it rests on, tested.**
+- [x] **T001 — The Trove ID is `id`: every claim it rests on, tested.**
   Per plan §1, R1 and Q1. No behaviour changes. `Item.id` and `WishlistItem.id`
   gain doc comments saying `021` exports them as the Trove ID and what that
   relies on (stored, never reassigned by an edit, new on a Copy and on a
@@ -104,6 +104,7 @@ is plain language.
   `TroveTests/WishlistPurchaseStoreTests.swift`.
   **Verify:** `scripts/verify.sh` green, the new suite in the count; each
   mutation recorded verbatim.
+  **Done (2026-10-18):** every G1 leg passed as written — the store keeps two rows with one `id` (R2 holds). New `TroveIDTests` (kept code read on a second context; two rows sharing a code both persist); legs added to `ItemFormViewModelEditTests`, `WishlistFormSaveTests`, `ItemSaleStoreTests`, `ItemDuplicationTests`, `WishlistDuplicationTests`, `WishlistPurchaseStoreTests`. Mutations, each red: `save()` dropped → both read-back expectations; `@Attribute(.unique)` on `Item.id` (extra) → the shared-id leg; `item.id = UUID()` in each form's save → that leg; `item.id = UUID()` in `markSold` (extra) → both sale legs; `copy.id = original.id` in each `duplicate` → the new leg plus four existing duplication tests; `item.id = wanted.id` in `markBought` → the bought leg. Unit suite 1,813 tests in 237 suites, green.
 
 - [ ] **T001a — Two rows sharing one `id` no longer trap; every list loads and the copy acted on deletes.**
   *(Added 2026-10-08 — sign-off B1, spec Decision 18, criterion 42.)* Per plan
@@ -1008,6 +1009,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | Sign-off fixes, second pass (`sdd-planner`, resumed) | `opus` | 65,322 as returned (68 tool uses, 5.8 min) | Decision 19 reworded by the person (warn on kept-code adds; R10, G22) and Decision 24 (re-confirm; R9, G23) applied. 17 tasks, 4 phases, 23 guards |
 | Sign-off re-review (`skeptical-reviewer`) | `opus` | 167,777 (19 tool uses, 6.2 min) | B1–B3 fixed; criteria 41–47 all owned. **2 new blocking, both from the fix round**: N1 delete removed "the first" twin, not the one acted on (contradicts spec, Sync); N2 criterion 47's on-screen half declared untriggerable and then ticked. Review-loop cap reached |
 | N1 and N2 (orchestrator, direct) | session | — | Fixed by the orchestrator in `plan.md` and `tasks.md` per the cap, with the reviewer's literal edits: delete resolves the row acted on (T001a, T001b, G20, plan §1); T014 gains section (e) forcing the re-present path once on the device, and 47 is ticked only if it passes (plan §9, §11, T015). Not re-reviewed — for T001a's phase review and the sweep |
+| T001 (`sdd-implementer`) | `opus` | 86,026 (32 tool uses, 33.8 min) | Done first pass; all G1 legs held; two extra mutations added |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):
