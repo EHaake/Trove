@@ -318,8 +318,25 @@ every `ForEach` identified by it), with two rows sharing an `id`:
   spec's "work normally", said plainly at the Phase 3 pause as overturnable:
   the page opened from either row is whichever copy the fetch returns, so an
   edit made there lands on that copy, which may not be the row tapped; the
-  reorder buttons, Copy and the Plans row's entry lookup act on the first
-  copy.
+  reorder buttons and Copy act on the first copy; the Sell Plan's toggle and
+  selection work by `id`, so selecting or deselecting one twin moves both
+  (found by T001a's audit).
+- **Plans rows — fixed** *(decision review after T001b, 2026-10-18)*. T001b's
+  UI test showed SwiftUI drawing the first twin's content in every row that
+  shares an id. `PlanRow` gains `rowID: PersistentIdentifier`, set from
+  `wanted.persistentModelID`; `PlanRow.id` stays the wanted entry's `UUID`, so
+  the router push and the `.sheet(item:)` / alert state are unchanged.
+  `PlansView` keys `ForEach(viewModel.rows, id: \.rowID)`. `entries` is keyed
+  by `PersistentIdentifier` (the `uniquingKeysWith` and its comment go — the
+  key cannot repeat); `makePurchaseFormViewModel(for:)` and
+  `markBought(_:purchase:)` look up `entries[row.rowID]`; `deletePlan` takes the
+  row or its `rowID` instead of the `UUID`. Fixing the drawing alone would turn
+  a visible bug into a wrong-target delete or purchase. Opening the page from a
+  Plans row (push by `UUID`, `fetchLimit = 1`) stays a stated limit, as on every
+  screen. The two sold-row sites (`ItemListView.swift:470`,
+  `SellPlanView.swift:520`) take the routine fix too, each shown needed by a UI
+  leg first — sold twins are reachable by a restore of sold items, and by
+  marking both owned twins sold from one plan. T001c.
 - **Not settled by a unit test: the five `ForEach(…, id: \.id)` over items**
   (`ItemListView.swift:336`, `:470`, `WishlistView.swift:336`,
   `SellPlanView.swift:450`, `:520`) and `PlansView`'s rows. SwiftUI's behaviour
