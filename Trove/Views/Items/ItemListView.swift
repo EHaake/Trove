@@ -333,7 +333,7 @@ struct ItemListView: View {
     /// screens are one pattern, not two (T012).
     private var ownedRows: some View {
         List {
-            ForEach(viewModel.items, id: \.id) { item in
+            ForEach(viewModel.items, id: \.persistentModelID) { item in
                 ItemRow(item: item, trend: viewModel.trend(for: item.id))
                     // The screen's own background, not `.clear`, and not
                     // decoration: at rest they're pixel-identical (the screen

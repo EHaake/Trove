@@ -151,7 +151,7 @@ is plain language.
   recorded; the audit's grep output summarised in the Done note.
   **Done (2026-10-18):** `MarketSummary.summaries` keeps the first via `uniquingKeysWith`; both list deletes take `row: PersistentIdentifier? = nil` and resolve by it, and both views pass `item.persistentModelID`. G20 legs in `MarketIndexTests`, `ItemListViewModelSharedIDTests`, `WishlistViewModelSharedIDTests`, `DashboardSharedIDTests`, `SellPlanSharedIDTests`, `PlansViewModelTests.twoEntriesSharingOneIDBothList`. Mutations: `uniqueKeysWithValues` restored → the run crashed (`Fatal error: Duplicate values for key`, raw log only; the summary shows a relaunch count and exit 65); delete by `id` → the delete-the-second leg red on both lists; delete every twin → both delete legs red on both lists. **Audit**: no trapping site beyond `MarketIndex.swift:92`. Not in plan §1, reported not changed: `SellPlanViewModel` toggle (`:418`) and `selectedIDs` work by `id`, so selecting or deselecting one twin moves both — a further "works, with a stated limit" for the Phase 3 pause; `risesForRisingCandidates` subscript-assigns (last wins, same value); `PlansView.swift:235` rows repeat ids (T001b's case). **Rewritten to the new rule**: `ItemListViewModelRefusalTests.aRefusedSaveReportsItselfAfterTheReload`, a source scan pinning the old `delete` signature — its two signature strings updated, its rule unchanged. Unit suite 1,823 tests in 241 suites, green.
 
-- [ ] **T001b — The screens with twins present: a seed and a UI test.**
+- [x] **T001b — The screens with twins present: a seed and a UI test.**
   *(Added 2026-10-08 — sign-off B1.3.)* Per plan §1 (the `ForEach` sites) and
   §11. `UITestSeed` gains `sharedIDArgument = "-seedSharedID"`,
   `shouldSeedSharedID(mode:arguments:)` and `sharedID(into:now:)`: two owned
@@ -186,6 +186,7 @@ is plain language.
   back to back**, both counts recorded (a new seed must not leak into any other
   test's starting state); mutations recorded; the Done note says what SwiftUI
   did with the repeated ids and whether the fix was needed.
+  **Done (2026-10-18):** `-seedSharedID` seed (owned twins "Rickenbacker 330" / "Rick 330 Jetglo" with one figure row; wanted twins "Mamiya 7 II" / "Mamiya Seven", only the first planned, its plan holding both owned twins), gated like `-seedSold`; `UITestSeedTests` legs (refuses CloudKit and local-only stores with every flag set; `-uiTesting` alone seeds nothing; the twins share their ids, read on a second context); `testTwoRowsSharingOneIDListAndOneDeletes`. **What SwiftUI did with repeated ids**: no crash, the right number of rows, but every row sharing an id drew the first twin's content, so the other name never appeared. **Routine fix applied** at `ItemListView.swift:336`, `WishlistView.swift:336`, `SellPlanView.swift:450` (each shown failing first). Not exercised by the seed (no sold twins): `ItemListView:470`, `SellPlanView:520`. `PlansView.swift:235` shows the same bug when both wanted twins have plans (seen on a variant seed), but `PlanRow` carries no `persistentModelID`, so the routine fix cannot be written there — sent to a decision review (below). Mutations: mode gate removed → the two refuse-a-persistent-store expectations red; one twin dropped from the seed → the both-names legs red (4 failures); delete by `id` again (extra) → the deleted/kept legs red. Unit 1,825 tests in 241 suites green; `scripts/verify.sh ui` twice back to back, 43 tests each, 0 failures.
 
 - [ ] **T002 — The reader's grammar: prices, slash dates, `N/A`, the code.**
   Per plan §2, Q7, Q8, P4, P6, spec Decision 22. New
@@ -1012,6 +1013,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | N1 and N2 (orchestrator, direct) | session | — | Fixed by the orchestrator in `plan.md` and `tasks.md` per the cap, with the reviewer's literal edits: delete resolves the row acted on (T001a, T001b, G20, plan §1); T014 gains section (e) forcing the re-present path once on the device, and 47 is ticked only if it passes (plan §9, §11, T015). Not re-reviewed — for T001a's phase review and the sweep |
 | T001 (`sdd-implementer`) | `opus` | 86,026 (32 tool uses, 33.8 min) | Done first pass; all G1 legs held; two extra mutations added |
 | T001a (`sdd-implementer`) | `opus` | 86,739 (26 tool uses, 42.0 min) | Done first pass; one existing scan re-pointed to the new signature; one non-trapping limit found (Sell Plan toggle moves both twins) |
+| T001b (`sdd-implementer`) | `opus` | 124,722 (48 tool uses, 66.5 min) | Done; routine `ForEach` fix needed at three sites; Plans rows question returned for a decision review |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):

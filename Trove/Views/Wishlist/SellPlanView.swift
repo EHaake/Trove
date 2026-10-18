@@ -447,7 +447,7 @@ struct SellPlanView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 LazyVStack(spacing: theme.metrics.listRowGap) {
-                    ForEach(viewModel.candidates, id: \.id) { item in
+                    ForEach(viewModel.candidates, id: \.persistentModelID) { item in
                         SellPlanRow(
                             item: item,
                             isSelected: viewModel.isSelected(item),
