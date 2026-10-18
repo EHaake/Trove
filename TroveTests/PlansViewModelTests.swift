@@ -625,4 +625,37 @@ struct PlansViewModelTests {
         #expect(viewModel.settledCount == 1, "a successful import settles")
         #expect(viewModel.completedImports == 1, "and moves the import count")
     }
+
+    /// 021 G20 (criterion 42): two stored entries sharing one `id`, one
+    /// figure row filed under it and a sell plan on each — the tab loads and
+    /// lists both rather than trapping on the repeated id.
+    @Test func twoEntriesSharingOneIDBothList() throws {
+        let context = try makeInMemoryContext()
+        let shared = UUID()
+        wanted("Summicron (synced)", planned: day(1), into: context).id = shared
+        wanted("Summicron (imported)", planned: day(2), into: context).id = shared
+        try MarketLocalStore.record(
+            .figure(MarketFigure(
+                medianCents: 230_000, lowCents: 220_000, highCents: 240_000,
+                count: 12, fetchedAt: now, isTruncated: false, yearScope: .any
+            )),
+            product: MarketProduct(
+                id: 182_769,
+                slug: "leica-summicron-35mm-f2",
+                title: "Leica Summicron 35mm f/2",
+                usedLowCents: 100_000,
+                usedTotal: 108,
+                listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
+            ),
+            for: MarketSubjectKey(subjectID: shared, kind: .wanted),
+            in: context
+        )
+        try context.save()
+
+        let viewModel = PlansViewModel(modelContext: context, now: { self.now })
+        viewModel.load()
+
+        #expect(viewModel.activeRows.count == 2)
+        #expect(Set(viewModel.activeRows.map(\.name)) == ["Summicron (synced)", "Summicron (imported)"])
+    }
 }

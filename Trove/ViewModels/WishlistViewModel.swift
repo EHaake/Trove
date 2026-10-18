@@ -259,8 +259,15 @@ final class WishlistViewModel {
     ///
     /// Photos cascade with it; sell-plan items are unlinked, not deleted —
     /// the same asymmetry `WishlistDeleteCopy.message` states to the user.
-    func delete(id: UUID) {
-        guard let item = items.first(where: { $0.id == id }) else { return }
+    ///
+    /// `row`, when given, names the stored row the person acted on — the same
+    /// rule as `ItemListViewModel.delete(id:row:)`: two rows can share one
+    /// `id` (021 criterion 42), and the copy deleted must be the copy swiped.
+    func delete(id: UUID, row: PersistentIdentifier? = nil) {
+        let matches: (WishlistItem) -> Bool = { item in
+            if let row { item.persistentModelID == row } else { item.id == id }
+        }
+        guard let item = items.first(where: matches) else { return }
 
         modelContext.delete(item)
         do {

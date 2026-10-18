@@ -106,7 +106,7 @@ is plain language.
   mutation recorded verbatim.
   **Done (2026-10-18):** every G1 leg passed as written — the store keeps two rows with one `id` (R2 holds). New `TroveIDTests` (kept code read on a second context; two rows sharing a code both persist); legs added to `ItemFormViewModelEditTests`, `WishlistFormSaveTests`, `ItemSaleStoreTests`, `ItemDuplicationTests`, `WishlistDuplicationTests`, `WishlistPurchaseStoreTests`. Mutations, each red: `save()` dropped → both read-back expectations; `@Attribute(.unique)` on `Item.id` (extra) → the shared-id leg; `item.id = UUID()` in each form's save → that leg; `item.id = UUID()` in `markSold` (extra) → both sale legs; `copy.id = original.id` in each `duplicate` → the new leg plus four existing duplication tests; `item.id = wanted.id` in `markBought` → the bought leg. Unit suite 1,813 tests in 237 suites, green.
 
-- [ ] **T001a — Two rows sharing one `id` no longer trap; every list loads and the copy acted on deletes.**
+- [x] **T001a — Two rows sharing one `id` no longer trap; every list loads and the copy acted on deletes.**
   *(Added 2026-10-08 — sign-off B1, spec Decision 18, criterion 42.)* Per plan
   §1's audit and R2. `MarketSummary.summaries(forSubjects:in:now:)` in
   `Trove/Market/MarketIndex.swift` builds its dictionary with
@@ -149,6 +149,7 @@ is plain language.
   `TroveTests/PlansViewModelTests.swift`.
   **Verify:** `scripts/verify.sh` green; the crash and the second mutation
   recorded; the audit's grep output summarised in the Done note.
+  **Done (2026-10-18):** `MarketSummary.summaries` keeps the first via `uniquingKeysWith`; both list deletes take `row: PersistentIdentifier? = nil` and resolve by it, and both views pass `item.persistentModelID`. G20 legs in `MarketIndexTests`, `ItemListViewModelSharedIDTests`, `WishlistViewModelSharedIDTests`, `DashboardSharedIDTests`, `SellPlanSharedIDTests`, `PlansViewModelTests.twoEntriesSharingOneIDBothList`. Mutations: `uniqueKeysWithValues` restored → the run crashed (`Fatal error: Duplicate values for key`, raw log only; the summary shows a relaunch count and exit 65); delete by `id` → the delete-the-second leg red on both lists; delete every twin → both delete legs red on both lists. **Audit**: no trapping site beyond `MarketIndex.swift:92`. Not in plan §1, reported not changed: `SellPlanViewModel` toggle (`:418`) and `selectedIDs` work by `id`, so selecting or deselecting one twin moves both — a further "works, with a stated limit" for the Phase 3 pause; `risesForRisingCandidates` subscript-assigns (last wins, same value); `PlansView.swift:235` rows repeat ids (T001b's case). **Rewritten to the new rule**: `ItemListViewModelRefusalTests.aRefusedSaveReportsItselfAfterTheReload`, a source scan pinning the old `delete` signature — its two signature strings updated, its rule unchanged. Unit suite 1,823 tests in 241 suites, green.
 
 - [ ] **T001b — The screens with twins present: a seed and a UI test.**
   *(Added 2026-10-08 — sign-off B1.3.)* Per plan §1 (the `ForEach` sites) and
@@ -1010,6 +1011,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | Sign-off re-review (`skeptical-reviewer`) | `opus` | 167,777 (19 tool uses, 6.2 min) | B1–B3 fixed; criteria 41–47 all owned. **2 new blocking, both from the fix round**: N1 delete removed "the first" twin, not the one acted on (contradicts spec, Sync); N2 criterion 47's on-screen half declared untriggerable and then ticked. Review-loop cap reached |
 | N1 and N2 (orchestrator, direct) | session | — | Fixed by the orchestrator in `plan.md` and `tasks.md` per the cap, with the reviewer's literal edits: delete resolves the row acted on (T001a, T001b, G20, plan §1); T014 gains section (e) forcing the re-present path once on the device, and 47 is ticked only if it passes (plan §9, §11, T015). Not re-reviewed — for T001a's phase review and the sweep |
 | T001 (`sdd-implementer`) | `opus` | 86,026 (32 tool uses, 33.8 min) | Done first pass; all G1 legs held; two extra mutations added |
+| T001a (`sdd-implementer`) | `opus` | 86,739 (26 tool uses, 42.0 min) | Done first pass; one existing scan re-pointed to the new signature; one non-trapping limit found (Sell Plan toggle moves both twins) |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):

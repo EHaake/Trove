@@ -564,11 +564,19 @@ final class ItemListViewModel {
     /// Photos cascade with it; any sell plan that selected it drops it, the
     /// wishlist entries themselves untouched — the same consequences
     /// `ItemDeleteCopy.message` promises before this runs.
-    func delete(id: UUID) {
+    ///
+    /// `row`, when given, names the stored row the person acted on: two rows
+    /// can share one `id` (021 criterion 42 — nothing in a CloudKit schema
+    /// enforces a unique one), and the copy deleted must be the copy swiped,
+    /// not whichever comes first. The market rows under the shared `id` are
+    /// still cleared.
+    func delete(id: UUID, row: PersistentIdentifier? = nil) {
         // Both arrays: the Sold side has the same trailing swipe the Owned
         // side does (P16), and it deletes through this one path.
-        guard let item = items.first(where: { $0.id == id })
-            ?? soldItems.first(where: { $0.id == id })
+        let matches: (Item) -> Bool = { item in
+            if let row { item.persistentModelID == row } else { item.id == id }
+        }
+        guard let item = items.first(where: matches) ?? soldItems.first(where: matches)
         else { return }
 
         modelContext.delete(item)

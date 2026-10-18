@@ -191,7 +191,7 @@ struct WishlistView: View {
             presenting: pendingDeletion
         ) { item in
             Button(WishlistDeleteCopy.confirm, role: .destructive) {
-                viewModel.delete(id: item.id)
+                viewModel.delete(id: item.id, row: item.persistentModelID)
             }
             Button(WishlistDeleteCopy.cancel, role: .cancel) {}
         } message: { _ in

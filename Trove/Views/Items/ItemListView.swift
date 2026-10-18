@@ -249,7 +249,7 @@ struct ItemListView: View {
             presenting: pendingDeletion
         ) { item in
             Button(ItemDeleteCopy.confirm, role: .destructive) {
-                viewModel.delete(id: item.id)
+                viewModel.delete(id: item.id, row: item.persistentModelID)
             }
             Button(ItemDeleteCopy.cancel, role: .cancel) {}
         } message: { item in

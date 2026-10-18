@@ -1458,3 +1458,91 @@ struct WishlistRowPurchaseTests {
         #expect(entries.first { $0.name == "Vox AC15" }?.boughtDate == nil)
     }
 }
+
+/// 021 G20 (criterion 42): two stored wishlist entries sharing one `id`,
+/// one figure row filed under it and a sell plan on each. The list loads
+/// both, and a delete removes the copy the person acted on.
+@Suite("WishlistViewModel — two entries sharing one id")
+struct WishlistViewModelSharedIDTests {
+    private let clock = Date(timeIntervalSince1970: 1_800_000_000)
+    private let shared = UUID()
+
+    /// Different names and wishlist positions, so the load order is fixed and
+    /// each survivor is identifiable.
+    private func twins() throws -> (ModelContainer, ModelContext) {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        for (name, order) in [("Martin D-18 (synced)", 0), ("Martin D-18 (imported)", 1)] {
+            let wanted = WishlistItem(
+                name: name,
+                categoryPath: "Music/Guitars",
+                estimatedCostCents: 240_000,
+                sortOrder: order
+            )
+            wanted.id = shared
+            context.insert(wanted)
+            SellPlanStore.create(for: wanted, at: clock.addingTimeInterval(-86_400))
+        }
+        try MarketLocalStore.record(
+            .figure(MarketFigure(
+                medianCents: 230_000, lowCents: 220_000, highCents: 240_000,
+                count: 12, fetchedAt: clock, isTruncated: false, yearScope: .any
+            )),
+            product: MarketProduct(
+                id: 182_769,
+                slug: "martin-d-18",
+                title: "Martin D-18",
+                usedLowCents: 100_000,
+                usedTotal: 108,
+                listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
+            ),
+            for: MarketSubjectKey(subjectID: shared, kind: .wanted),
+            in: context
+        )
+        try context.save()
+        return (container, context)
+    }
+
+    private func remainingNames(in container: ModelContainer) throws -> [String] {
+        let id = shared
+        return try ModelContext(container)
+            .fetch(FetchDescriptor<WishlistItem>(predicate: #Predicate { $0.id == id }))
+            .map(\.name)
+    }
+
+    @Test func loadReturnsAndListsBothTwins() throws {
+        let (_, context) = try twins()
+        let viewModel = WishlistViewModel(modelContext: context, now: { self.clock })
+
+        viewModel.load()
+
+        #expect(viewModel.items.count == 2)
+        #expect(Set(viewModel.items.map(\.name)) == ["Martin D-18 (synced)", "Martin D-18 (imported)"])
+    }
+
+    @Test func deletingTheTwinLoadedSecondLeavesTheFirst() throws {
+        let (container, context) = try twins()
+        let viewModel = WishlistViewModel(modelContext: context, now: { self.clock })
+        viewModel.load()
+        let first = try #require(viewModel.items.first)
+        let second = try #require(viewModel.items.last)
+        let keptName = first.name
+
+        viewModel.delete(id: second.id, row: second.persistentModelID)
+
+        #expect(try remainingNames(in: container) == [keptName])
+    }
+
+    @Test func deletingTheTwinLoadedFirstLeavesTheSecond() throws {
+        let (container, context) = try twins()
+        let viewModel = WishlistViewModel(modelContext: context, now: { self.clock })
+        viewModel.load()
+        let first = try #require(viewModel.items.first)
+        let second = try #require(viewModel.items.last)
+        let keptName = second.name
+
+        viewModel.delete(id: first.id, row: first.persistentModelID)
+
+        #expect(try remainingNames(in: container) == [keptName])
+    }
+}

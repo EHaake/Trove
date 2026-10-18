@@ -3071,9 +3071,9 @@ struct ItemListViewModelRefusalTests {
     @Test func aRefusedSaveReportsItselfAfterTheReload() throws {
         let intents: [(String, String)] = [
             ("Trove/ViewModels/ItemListViewModel.swift", "func duplicate(id: UUID)"),
-            ("Trove/ViewModels/ItemListViewModel.swift", "func delete(id: UUID)"),
+            ("Trove/ViewModels/ItemListViewModel.swift", "func delete(id: UUID, row: PersistentIdentifier? = nil)"),
             ("Trove/ViewModels/WishlistViewModel.swift", "func duplicate(id: UUID)"),
-            ("Trove/ViewModels/WishlistViewModel.swift", "func delete(id: UUID)"),
+            ("Trove/ViewModels/WishlistViewModel.swift", "func delete(id: UUID, row: PersistentIdentifier? = nil)"),
         ]
         var sources: [String: String] = [:]
         for path in Set(intents.map(\.0)) {
@@ -3096,5 +3096,94 @@ struct ItemListViewModelRefusalTests {
             let outsideCatch = bodies[0].replacingOccurrences(of: body, with: "")
             #expect(!outsideCatch.contains("rollback()"), "\(path) \(signature): rollback belongs to the failure path only")
         }
+    }
+}
+
+/// 021 G20 (criterion 42): two stored items sharing one `id`, with one
+/// figure row filed under it. Nothing in a CloudKit schema enforces a unique
+/// `id`, so the list must load both, and a delete must remove the copy the
+/// person acted on — the twins differ (an imported copy has no photos or
+/// plan links), so removing the other one would lose data.
+@Suite("ItemListViewModel — two items sharing one id")
+struct ItemListViewModelSharedIDTests {
+    private let clock = Date(timeIntervalSince1970: 1_800_000_000)
+    private let shared = UUID()
+
+    /// The twins have different names and purchase dates, so the order the
+    /// list loads them in is fixed and each survivor is identifiable.
+    private func twins() throws -> (ModelContainer, ModelContext) {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        for (name, seconds) in [("Telecaster (synced)", 1_000.0), ("Telecaster (imported)", 2_000.0)] {
+            let item = Item(
+                name: name,
+                categoryPath: "Music/Guitars",
+                purchasePriceCents: 150_000,
+                purchaseDate: Date(timeIntervalSince1970: seconds)
+            )
+            item.id = shared
+            context.insert(item)
+        }
+        try MarketLocalStore.record(
+            .figure(MarketFigure(
+                medianCents: 140_000, lowCents: 130_000, highCents: 150_000,
+                count: 12, fetchedAt: clock, isTruncated: false, yearScope: .any
+            )),
+            product: MarketProduct(
+                id: 126_161,
+                slug: "fender-american-professional-ii-telecaster",
+                title: "Fender American Professional II Telecaster",
+                usedLowCents: 100_000,
+                usedTotal: 108,
+                listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
+            ),
+            for: MarketSubjectKey(subjectID: shared, kind: .owned),
+            in: context
+        )
+        try context.save()
+        return (container, context)
+    }
+
+    private func remainingNames(in container: ModelContainer) throws -> [String] {
+        let id = shared
+        return try ModelContext(container)
+            .fetch(FetchDescriptor<Item>(predicate: #Predicate { $0.id == id }))
+            .map(\.name)
+    }
+
+    @Test func loadReturnsAndListsBothTwins() throws {
+        let (_, context) = try twins()
+        let viewModel = ItemListViewModel(modelContext: context, now: { self.clock })
+
+        viewModel.load()
+
+        #expect(viewModel.items.count == 2)
+        #expect(Set(viewModel.items.map(\.name)) == ["Telecaster (synced)", "Telecaster (imported)"])
+    }
+
+    @Test func deletingTheTwinLoadedSecondLeavesTheFirst() throws {
+        let (container, context) = try twins()
+        let viewModel = ItemListViewModel(modelContext: context, now: { self.clock })
+        viewModel.load()
+        let first = try #require(viewModel.items.first)
+        let second = try #require(viewModel.items.last)
+        let keptName = first.name
+
+        viewModel.delete(id: second.id, row: second.persistentModelID)
+
+        #expect(try remainingNames(in: container) == [keptName])
+    }
+
+    @Test func deletingTheTwinLoadedFirstLeavesTheSecond() throws {
+        let (container, context) = try twins()
+        let viewModel = ItemListViewModel(modelContext: context, now: { self.clock })
+        viewModel.load()
+        let first = try #require(viewModel.items.first)
+        let second = try #require(viewModel.items.last)
+        let keptName = second.name
+
+        viewModel.delete(id: first.id, row: first.persistentModelID)
+
+        #expect(try remainingNames(in: container) == [keptName])
     }
 }

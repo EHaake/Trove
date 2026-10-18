@@ -146,6 +146,24 @@ struct MarketIndexTests {
         let summary = MarketSummary(snapshot: value(median: 140_000, at: t0, trend: .up), now: t0.addingTimeInterval(day))
         #expect(summary.currentTrend == .up)
     }
+
+    // MARK: - Two rows sharing one id (021 G20, criterion 42)
+
+    /// Two stored rows can share an `id` — nothing in a CloudKit schema
+    /// enforces a unique one — so the subjects handed in can repeat. The
+    /// figure filed under that id is returned once, rather than trapping.
+    @Test func summariesHandedTheSameIDTwiceReturnTheOneEntryFiledUnderIt() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let shared = UUID()
+        try MarketLocalStore.record(reading(median: 140_000, at: t0), product: product, for: MarketSubjectKey(subjectID: shared, kind: .owned), in: context)
+        try context.save()
+
+        let summaries = MarketSummary.summaries(forSubjects: [shared, shared], in: ModelContext(container), now: t0)
+
+        #expect(Array(summaries.keys) == [shared])
+        #expect(summaries[shared]?.medianCents == 140_000)
+    }
 }
 
 private struct TestFailure: Error, CustomStringConvertible {
