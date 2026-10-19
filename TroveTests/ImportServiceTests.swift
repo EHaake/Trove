@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Synchronization
 import Testing
 @testable import Trove
@@ -26,7 +27,7 @@ struct ImportServiceTests {
         let url = try write(CSVWriter.write(table))
         defer { try? FileManager.default.removeItem(at: url) }
 
-        let preview = try await service().parseItems(at: url, timeZone: zone)
+        let preview = try await service().parseItems(at: url, timeZone: zone, locale: .current).asAllNew()
         #expect(preview.validated.count == 1)
         #expect(preview.skipped.isEmpty)
         #expect(preview.defaultedFieldCount == 0)
@@ -66,7 +67,7 @@ struct ImportServiceTests {
         let url = try write(CSVWriter.write(table))
         defer { try? FileManager.default.removeItem(at: url) }
 
-        let preview = try await service().parseItems(at: url, timeZone: zone)
+        let preview = try await service().parseItems(at: url, timeZone: zone, locale: .current).asAllNew()
         #expect(preview.validated.count == 2)
         #expect(preview.defaultedFieldCount == 0)
         #expect(preview.validated[0].record.soldDate == soldOn)
@@ -91,7 +92,7 @@ struct ImportServiceTests {
         let url = try write(CSVWriter.write(table))
         defer { try? FileManager.default.removeItem(at: url) }
 
-        let preview = try await service().parseWishlist(at: url, timeZone: zone)
+        let preview = try await service().parseWishlist(at: url, timeZone: zone, locale: .current).asAllNew()
         #expect(preview.validated.count == 1)
         #expect(preview.validated.first?.record.name == "OM-1")
     }
@@ -103,7 +104,7 @@ struct ImportServiceTests {
         let url = try write(Data([0xFF, 0xFE, 0xFD, 0x00]))
         defer { try? FileManager.default.removeItem(at: url) }
         await expectImportError(.undecodable) {
-            try await self.service().parseItems(at: url, timeZone: .current)
+            try await self.service().parseItems(at: url, timeZone: .current, locale: .current)
         }
     }
 
@@ -111,7 +112,7 @@ struct ImportServiceTests {
         let url = try write(Data(count: FileImportService.maximumFileSize + 1))
         defer { try? FileManager.default.removeItem(at: url) }
         await expectImportError(.tooLarge) {
-            try await self.service().parseItems(at: url, timeZone: .current)
+            try await self.service().parseItems(at: url, timeZone: .current, locale: .current)
         }
     }
 
@@ -119,7 +120,7 @@ struct ImportServiceTests {
         let url = FileManager.default.temporaryDirectory
             .appending(path: "does-not-exist-\(UUID().uuidString).csv")
         await expectImportError(.unreadable) {
-            try await self.service().parseItems(at: url, timeZone: .current)
+            try await self.service().parseItems(at: url, timeZone: .current, locale: .current)
         }
     }
 
@@ -128,23 +129,61 @@ struct ImportServiceTests {
         let url = try write(header + "\r\n\"runaway,quote\r\nmore,rows\r\n")
         defer { try? FileManager.default.removeItem(at: url) }
         await expectImportError(.malformedQuoting) {
-            try await self.service().parseItems(at: url, timeZone: .current)
+            try await self.service().parseItems(at: url, timeZone: .current, locale: .current)
         }
     }
 
+    /// Rewritten for 021 (plan §5, T007): the header errors map onto the
+    /// three new cases — the other list's file is `.wrongList`, a stranger's
+    /// header is missing every required column, and a repeated column is
+    /// named.
     @Test func theOtherListsFileMapsToTheFlaggedMismatch() async throws {
         let wishlistURL = try write(ExportSchema.wishlistHeaders.joined(separator: ",") + "\r\n")
         let strangerURL = try write("What,Ever\r\n")
+        let doubledURL = try write("Name,Purchase Price,Purchase Date,Purchase Price\r\n")
         defer {
             try? FileManager.default.removeItem(at: wishlistURL)
             try? FileManager.default.removeItem(at: strangerURL)
+            try? FileManager.default.removeItem(at: doubledURL)
         }
-        await expectImportError(.headerMismatch(wrongList: true)) {
-            try await self.service().parseItems(at: wishlistURL, timeZone: .current)
+        await expectImportError(.wrongList) {
+            try await self.service().parseItems(at: wishlistURL, timeZone: .current, locale: .current)
         }
-        await expectImportError(.headerMismatch(wrongList: false)) {
-            try await self.service().parseItems(at: strangerURL, timeZone: .current)
+        await expectImportError(.missingColumns(["Name", "Purchase Price", "Purchase Date"])) {
+            try await self.service().parseItems(at: strangerURL, timeZone: .current, locale: .current)
         }
+        await expectImportError(.duplicateColumn("Purchase Price")) {
+            try await self.service().parseItems(at: doubledURL, timeZone: .current, locale: .current)
+        }
+        await expectImportError(.missingColumns(["Name", "Estimated Cost"])) {
+            try await self.service().parseWishlist(at: strangerURL, timeZone: .current, locale: .current)
+        }
+    }
+
+    /// G10: `locale` reaches the schema. An ambiguous slash date, through
+    /// the live service: under `en_GB` it reads day-first, under `en_US`
+    /// month-first, and the sheet says the region decided. Both, so no
+    /// fixed locale substituted for the parameter can pass.
+    @Test func theLocaleReachesTheSchema() async throws {
+        let url = try write("Name,Purchase Price,Purchase Date\r\nNikon F3,300.00,3/4/2024\r\n")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let zone = TimeZone(identifier: "UTC")!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+
+        let british = try await service()
+            .parseItems(at: url, timeZone: zone, locale: Locale(identifier: "en_GB"))
+        #expect(british.regionDateOrder == .dayFirst)
+        #expect(british.rows.map(\.purchaseDate) == [
+            .value(try #require(calendar.date(from: DateComponents(year: 2024, month: 4, day: 3)))),
+        ])
+
+        let american = try await service()
+            .parseItems(at: url, timeZone: zone, locale: Locale(identifier: "en_US"))
+        #expect(american.regionDateOrder == .monthFirst)
+        #expect(american.rows.map(\.purchaseDate) == [
+            .value(try #require(calendar.date(from: DateComponents(year: 2024, month: 3, day: 4)))),
+        ])
     }
 
     // MARK: - Helpers
@@ -218,8 +257,8 @@ struct ImportConcurrencyTests {
         // call it — so a pass means the nonisolated-async hop genuinely
         // happened, not that the test started somewhere convenient.
         #expect(sampledOnMainThread())
-        _ = try await service.parseItems(at: itemsURL, timeZone: .current)
-        _ = try await service.parseWishlist(at: wishlistURL, timeZone: .current)
+        _ = try await service.parseItems(at: itemsURL, timeZone: .current, locale: .current)
+        _ = try await service.parseWishlist(at: wishlistURL, timeZone: .current, locale: .current)
 
         #expect(probe.sawMainThread == [false, false])
     }
@@ -245,49 +284,18 @@ struct ImportConcurrencyTests {
 /// T007's copy guards: the strings the alerts will pin, tested pure —
 /// the `ItemDeleteCopy`/`ExportCopy` precedent.
 struct ImportCopyTests {
-    @Test func confirmationTitleCarriesTheCount() {
-        #expect(ImportCopy.confirmationTitle(importCount: 0, target: .items) == "Nothing to import")
-        #expect(ImportCopy.confirmationTitle(importCount: 1, target: .items) == "Import 1 item?")
-        #expect(ImportCopy.confirmationTitle(importCount: 42, target: .items) == "Import 42 items?")
-        #expect(
-            ImportCopy.confirmationTitle(importCount: 2, target: .wishlist)
-                == "Import 2 wishlist items?"
-        )
-    }
-
-    @Test func aCleanPreviewSaysNoProblems() {
-        #expect(ImportCopy.confirmationMessage(preview: preview()) == "No problems found.")
-    }
-
-    /// The amended criterion-5 cap, pinned at its boundary: five skips
-    /// list fully with no "more" line; six trigger "…and 1 more row."
+    /// Rewritten for 021 (plan §5, T007): the cap moved to
+    /// `confirmationLines`, pinned at its boundary — five skips list fully
+    /// with no "more" line; six trigger "…and 1 more row."
     @Test func theSkipListingCapsAtFive() {
-        let five = ImportCopy.confirmationMessage(
-            preview: preview(skipped: (1...5).map { SkippedRow(rowNumber: $0 + 1, reason: "no name") })
-        )
-        #expect(five.ranges(of: "Row ").count == 5)
-        #expect(!five.contains("more"))
+        let five = lines(summary(skipped: (1...5).map { SkippedRow(rowNumber: $0 + 1, reason: "no name") }))
+        #expect(five.filter { $0.hasPrefix("Row ") }.count == 5)
+        #expect(!five.contains { $0.contains("more") })
 
-        let six = ImportCopy.confirmationMessage(
-            preview: preview(skipped: (1...6).map { SkippedRow(rowNumber: $0 + 1, reason: "no name") })
-        )
-        #expect(six.ranges(of: "Row ").count == 5)
+        let six = lines(summary(skipped: (1...6).map { SkippedRow(rowNumber: $0 + 1, reason: "no name") }))
+        #expect(six.filter { $0.hasPrefix("Row ") }.count == 5)
         #expect(six.contains("\u{2026}and 1 more row."))
-        #expect(six.hasPrefix("Skipping 6 rows:"))
-    }
-
-    @Test func skippedRowsListNumberAndReason() {
-        let message = ImportCopy.confirmationMessage(
-            preview: preview(skipped: [SkippedRow(rowNumber: 7, reason: "no name")])
-        )
-        #expect(message.contains("Row 7 \u{2014} no name"))
-    }
-
-    @Test func theDefaultedCountGetsItsOwnLine() {
-        let message = ImportCopy.confirmationMessage(preview: preview(defaulted: 3))
-        #expect(message == "3 missing or unreadable fields will use defaults.")
-        let one = ImportCopy.confirmationMessage(preview: preview(defaulted: 1))
-        #expect(one == "1 missing or unreadable field will use defaults.")
+        #expect(six.first == "Skipping 6 rows:")
     }
 
     @Test func failureMessagesAreActionableAndAllEndWithTheGuarantee() {
@@ -299,7 +307,6 @@ struct ImportCopyTests {
 
         let errors: [ImportError] = [
             .unreadable, .undecodable, .malformedQuoting, .tooLarge,
-            .headerMismatch(wrongList: true), .headerMismatch(wrongList: false),
             .wrongList, .missingColumns(["Purchase Price"]), .duplicateColumn("Purchase Price"),
         ]
         for error in errors {
@@ -314,29 +321,12 @@ struct ImportCopyTests {
     }
 
     @Test func theWrongListMessageNamesTheOtherList() {
-        let onItems = ImportCopy.failureMessage(for: .headerMismatch(wrongList: true), target: .items)
+        let onItems = ImportCopy.failureMessage(for: .wrongList, target: .items)
         #expect(onItems.contains("Wishlist export"))
         let onWishlist = ImportCopy.failureMessage(
-            for: .headerMismatch(wrongList: true), target: .wishlist
+            for: .wrongList, target: .wishlist
         )
         #expect(onWishlist.contains("Items export"))
-    }
-
-    /// 013/T007: the template moved to Settings, and this sentence with
-    /// it. A **whole-string** pin, deliberately: the guarantee sentence is
-    /// appended by the function, so a body that carried its own copy would
-    /// read "…imported. Nothing was imported." and still pass the suffix
-    /// check above — the review's B6, and the reason `contains` isn't
-    /// enough here.
-    @Test func theWrongLayoutMessagePointsAtSettingsTemplatesExactlyOnce() {
-        for target in [ImportTarget.items, .wishlist] {
-            #expect(
-                ImportCopy.failureMessage(for: .headerMismatch(wrongList: false), target: target)
-                    == "The columns don't match the \(target.noun) template. "
-                    + "A blank template with the expected layout is in Settings \u{203A} Templates. "
-                    + "Nothing was imported."
-            )
-        }
     }
 
     // MARK: - 021 (plan §5; G8, G21, G22's words)
@@ -615,11 +605,170 @@ struct ImportCopyTests {
         summary.keptCodeAdds = keptCodeAdds
         return summary
     }
+}
 
-    private func preview(
-        skipped: [SkippedRow] = [],
-        defaulted: Int = 0
-    ) -> ImportPreview<ItemExportRecord> {
-        ImportPreview(validated: [], skipped: skipped, defaultedFieldCount: defaulted)
+/// 021 T007, G10 (criterion 9): every layout an earlier Trove exported
+/// imports through the live `FileImportService` with nothing skipped and
+/// nothing defaulted — items at 12, 14, 18 and 19 columns, the wishlist at
+/// 7, 9 and 10. The 020 layouts are byte copies under
+/// `TroveTests/Fixtures/Import/`, never edited; the older widths are the
+/// same rows cut at the width that release ended at (the layouts were
+/// append-only), except 12, which is `items-partial.csv`'s own header, and
+/// 14, which is `items-resaved.csv` as committed.
+struct ImportLayoutTests {
+    @Test func everyShippedItemsLayoutImportsWithNothingSkippedOrDefaulted() async throws {
+        let layout = try CSVParser.parse(try text(fixture("items-020-layout.csv")))
+        let header = try #require(layout.first)
+        #expect(header.cells == Array(ExportSchema.itemHeaders.prefix(19)))
+        let rows = layout.dropFirst().map(\.cells)
+        try #require(rows.count == 12)
+
+        let partialHeader = try #require(CSVParser.parse(try text(sample("items-partial.csv"))).first)
+        try #require(partialHeader.cells.count == 12)
+        let twelve = try write(CSVTable(headers: partialHeader.cells, rows: rows.map { Array($0.prefix(12)) }))
+        let eighteen = try write(CSVTable(
+            headers: Array(header.cells.prefix(18)), rows: rows.map { Array($0.prefix(18)) }
+        ))
+        defer {
+            try? FileManager.default.removeItem(at: twelve)
+            try? FileManager.default.removeItem(at: eighteen)
+        }
+
+        for (width, url, count) in [
+            (12, twelve, 12), (14, sample("items-resaved.csv"), 5), (18, eighteen, 12),
+            (19, fixture("items-020-layout.csv"), 12),
+        ] {
+            let sheet = try await FileImportService().parseItems(at: url, timeZone: .current, locale: .current)
+            let new = sheet.asAllNew()
+            #expect(new.validated.count == count, "items at \(width)")
+            #expect(new.skipped.isEmpty, "items at \(width)")
+            #expect(new.defaultedFieldCount == 0, "items at \(width)")
+            #expect(sheet.unusedColumns.isEmpty, "items at \(width)")
+            #expect(sheet.missingDefaultColumns.isEmpty, "items at \(width)")
+        }
+    }
+
+    @Test func everyShippedWishlistLayoutImportsWithNothingSkippedOrDefaulted() async throws {
+        let layout = try CSVParser.parse(try text(fixture("wishlist-020-layout.csv")))
+        let header = try #require(layout.first)
+        #expect(header.cells == Array(ExportSchema.wishlistHeaders.prefix(10)))
+        let rows = layout.dropFirst().map(\.cells)
+        try #require(rows.count == 4)
+
+        let seven = try write(CSVTable(headers: Array(header.cells.prefix(7)), rows: rows.map { Array($0.prefix(7)) }))
+        let nine = try write(CSVTable(headers: Array(header.cells.prefix(9)), rows: rows.map { Array($0.prefix(9)) }))
+        defer {
+            try? FileManager.default.removeItem(at: seven)
+            try? FileManager.default.removeItem(at: nine)
+        }
+
+        for (width, url) in [(7, seven), (9, nine), (10, fixture("wishlist-020-layout.csv"))] {
+            let sheet = try await FileImportService().parseWishlist(at: url, timeZone: .current, locale: .current)
+            let new = sheet.asAllNew()
+            #expect(new.validated.count == 4, "wishlist at \(width)")
+            #expect(new.skipped.isEmpty, "wishlist at \(width)")
+            #expect(new.defaultedFieldCount == 0, "wishlist at \(width)")
+            #expect(sheet.unusedColumns.isEmpty, "wishlist at \(width)")
+            #expect(sheet.missingDefaultColumns.isEmpty, "wishlist at \(width)")
+        }
+    }
+
+    private func text(_ url: URL) throws -> String {
+        try String(contentsOf: url, encoding: .utf8)
+    }
+
+    private func write(_ table: CSVTable) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "ImportLayoutTests-\(UUID().uuidString).csv")
+        try Data(CSVWriter.write(table).utf8).write(to: url)
+        return url
+    }
+
+    private func fixture(_ name: String, file: StaticString = #filePath) -> URL {
+        URL(filePath: "\(file)")
+            .deletingLastPathComponent()
+            .appending(path: "Fixtures/Import")
+            .appending(path: name)
+    }
+
+    private func sample(_ name: String, file: StaticString = #filePath) -> URL {
+        URL(filePath: "\(file)")
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "docs/samples")
+            .appending(path: name)
+    }
+}
+
+/// 021 T007, G10 (criterion 37): every whole-file failure — unreadable, not
+/// UTF-8, an unclosed quote, too large, a missing required column, a
+/// duplicated column — imports nothing, never a partial batch. Driven
+/// through each view model over the live service and real temp files (the
+/// disk-I/O exception `ImportServiceTests` records), and checked on a
+/// SECOND context over the same store, so an unsaved write can't hide.
+struct ImportWholeFileFailureTests {
+    @Test func everyWholeFileFailureLeavesTheItemsStoreEmpty() async throws {
+        let files: [(String, URL)] = [
+            ("unreadable", missingFile()),
+            ("undecodable", try write(Data([0xFF, 0xFE, 0xFD, 0x00]))),
+            ("unclosed quote", try write("Name,Purchase Price,Purchase Date\r\n\"Strat,100.00,2024-01-01\r\n")),
+            ("too large", try write(Data(count: FileImportService.maximumFileSize + 1))),
+            ("missing column", try write("Name,Purchase Price\r\nStrat,100.00\r\n")),
+            ("duplicate column", try write(
+                "Name,Purchase Price,Purchase Date,Name\r\nStrat,100.00,2024-01-01,Tele\r\n"
+            )),
+        ]
+        defer { for (_, url) in files { try? FileManager.default.removeItem(at: url) } }
+
+        for (label, url) in files {
+            let container = try makeInMemoryContainer()
+            let viewModel = ItemListViewModel(modelContext: ModelContext(container), importService: FileImportService())
+            await viewModel.importCSV(from: url)
+            guard case .failure = viewModel.importPresentation else {
+                Issue.record("\(label): expected a failure presentation")
+                continue
+            }
+            #expect(viewModel.confirmImport() == nil, "\(label)")
+            #expect(try ModelContext(container).fetch(FetchDescriptor<Item>()).isEmpty, "\(label)")
+        }
+    }
+
+    @Test func everyWholeFileFailureLeavesTheWishlistStoreEmpty() async throws {
+        let files: [(String, URL)] = [
+            ("unreadable", missingFile()),
+            ("undecodable", try write(Data([0xFF, 0xFE, 0xFD, 0x00]))),
+            ("unclosed quote", try write("Name,Estimated Cost\r\n\"OM-1,450.00\r\n")),
+            ("too large", try write(Data(count: FileImportService.maximumFileSize + 1))),
+            ("missing column", try write("Name,Notes\r\nOM-1,meter working\r\n")),
+            ("duplicate column", try write("Name,Estimated Cost,Estimated Cost\r\nOM-1,450.00,500.00\r\n")),
+        ]
+        defer { for (_, url) in files { try? FileManager.default.removeItem(at: url) } }
+
+        for (label, url) in files {
+            let container = try makeInMemoryContainer()
+            let viewModel = WishlistViewModel(modelContext: ModelContext(container), importService: FileImportService())
+            await viewModel.importCSV(from: url)
+            guard case .failure = viewModel.importPresentation else {
+                Issue.record("\(label): expected a failure presentation")
+                continue
+            }
+            #expect(viewModel.confirmImport() == nil, "\(label)")
+            #expect(try ModelContext(container).fetch(FetchDescriptor<WishlistItem>()).isEmpty, "\(label)")
+        }
+    }
+
+    private func missingFile() -> URL {
+        FileManager.default.temporaryDirectory.appending(path: "does-not-exist-\(UUID().uuidString).csv")
+    }
+
+    private func write(_ text: String) throws -> URL {
+        try write(Data(text.utf8))
+    }
+
+    private func write(_ data: Data) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "ImportWholeFileFailureTests-\(UUID().uuidString).csv")
+        try data.write(to: url)
+        return url
     }
 }

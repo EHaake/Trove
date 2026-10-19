@@ -130,10 +130,10 @@ struct ImportColumnsTests {
     // MARK: - Criterion 10: the other list's file, both ways, every shipped layout
 
     @Test func theOtherListsHeaderIsWrongListAtEveryShippedLayout() {
-        let wishlistWidths = ExportSchema.wishlistSchemaBoundaries + [ExportSchema.wishlistHeaders.count]
-        let itemWidths = ExportSchema.itemSchemaBoundaries + [ExportSchema.itemHeaders.count]
-        #expect(wishlistWidths == [7, 9, 10])
-        #expect(itemWidths == [12, 14, 18, 19])
+        // The shipped layouts by literal width — the boundary arrays they were
+        // read from went with the width gate (021 T007, Q6).
+        let wishlistWidths = [7, 9, 10]
+        let itemWidths = [12, 14, 18, 19]
 
         for width in wishlistWidths {
             #expect(throws: ImportColumns.HeaderError.wrongList, "wishlist \(width)") {

@@ -1013,7 +1013,7 @@ struct WishlistViewModelImportTests {
 
     @Test func aFailureMapsToTheSharedCopyWithTheWishlistTarget() async throws {
         let context = try makeInMemoryContext()
-        let spy = ImportServiceSpy(wishlist: .failure(.headerMismatch(wrongList: true)))
+        let spy = ImportServiceSpy(wishlist: .failure(.wrongList))
         let viewModel = WishlistViewModel(modelContext: context, importService: spy)
 
         await viewModel.importCSV(from: dummyURL)
@@ -1025,14 +1025,14 @@ struct WishlistViewModelImportTests {
         #expect(title == ImportCopy.failureTitle)
         #expect(
             message
-                == ImportCopy.failureMessage(for: .headerMismatch(wrongList: true), target: .wishlist)
+                == ImportCopy.failureMessage(for: .wrongList, target: .wishlist)
         )
         #expect(message.contains("Items export"))
     }
 
     @Test func cancelClearsThePresentationWithoutStoreWrites() async throws {
         let context = try makeInMemoryContext()
-        let spy = ImportServiceSpy(wishlist: .success(wishlistPreview(names: ["OM-1"])))
+        let spy = ImportServiceSpy(wishlist: .success(stagedWishlistSheet(names: ["OM-1"])))
         let viewModel = WishlistViewModel(modelContext: context, importService: spy)
 
         await viewModel.importCSV(from: dummyURL)
@@ -1043,41 +1043,128 @@ struct WishlistViewModelImportTests {
         #expect(try context.fetch(FetchDescriptor<WishlistItem>()).isEmpty)
     }
 
+    /// Rewritten for 021 (plan §5, T007): the title asks about the file;
+    /// the wishlist's nouns are in the counts line.
     @Test func alertAccessorsUseTheWishlistNouns() async throws {
         let context = try makeInMemoryContext()
         let viewModel = WishlistViewModel(
             modelContext: context,
-            importService: ImportServiceSpy(wishlist: .success(wishlistPreview(names: ["OM-1"])))
+            importService: ImportServiceSpy(wishlist: .success(stagedWishlistSheet(names: ["OM-1"])))
         )
         await viewModel.importCSV(from: dummyURL)
 
-        #expect(viewModel.importAlertTitle == "Import 1 wishlist item?")
+        #expect(viewModel.importAlertTitle == "Import this file?")
+        #expect(viewModel.importAlertMessage == "1 wishlist item will be added.")
         #expect(viewModel.importOffersConfirmation)
+    }
+
+    /// G16 (criterion 36), the items twin's: staged before any write, and
+    /// Cancel leaves a SECOND context's fetch as it was.
+    @Test func theConfirmationIsStagedBeforeAnyWriteAndCancelWritesNothing() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        context.insert(WishlistItem(name: "Existing"))
+        try context.save()
+        let viewModel = WishlistViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(wishlist: .success(stagedWishlistSheet(names: ["OM-1", "GFX"])))
+        )
+
+        await viewModel.importCSV(from: dummyURL)
+        guard case .confirmation(_, let summary, false) = viewModel.importPresentation else {
+            Issue.record("expected a staged confirmation")
+            return
+        }
+        #expect(summary.added == 2)
+        #expect(try ModelContext(container).fetch(FetchDescriptor<WishlistItem>()).map(\.name) == ["Existing"])
+
+        viewModel.cancelImport()
+        #expect(viewModel.confirmImport() == nil)
+        #expect(try ModelContext(container).fetch(FetchDescriptor<WishlistItem>()).map(\.name) == ["Existing"])
+    }
+
+    /// G16, the items twin's: a sheet whose only row is nameless writes
+    /// nothing — no Import offered, `confirmImport()` nil. Mutation:
+    /// `importOffersConfirmation` on `!sheet.rows.isEmpty` → red.
+    @Test func aSummaryThatWritesNothingOffersNoImportAndConfirmReturnsNil() async throws {
+        let container = try makeInMemoryContainer()
+        let sheet = try ImportSchema.wishlistSheet(from: [
+            CSVRow(number: 1, cells: ["Name", "Estimated Cost", "Trove ID"]),
+            CSVRow(number: 2, cells: ["", "450.00", UUID().uuidString]),
+        ])
+        try #require(sheet.rows.count == 1)
+        let viewModel = WishlistViewModel(
+            modelContext: ModelContext(container), importService: ImportServiceSpy(wishlist: .success(sheet))
+        )
+
+        await viewModel.importCSV(from: dummyURL)
+        guard case .confirmation = viewModel.importPresentation else {
+            Issue.record("expected a staged confirmation")
+            return
+        }
+        #expect(viewModel.importOffersConfirmation == false)
+        #expect(viewModel.importAlertTitle == "Nothing to import")
+        #expect(viewModel.confirmImport() == nil)
+        #expect(try ModelContext(container).fetch(FetchDescriptor<WishlistItem>()).isEmpty)
+    }
+
+    /// G21 through the view model (criterion 41), wishlist side.
+    @Test func aRequiredColumnsOnlyFileShowsTheTwoMissingColumnLinesAndNoDefaultsLine() async throws {
+        let sheet = try ImportSchema.wishlistSheet(from: [
+            CSVRow(number: 1, cells: ["Name", "Estimated Cost"]),
+            CSVRow(number: 2, cells: ["OM-1", "450.00"]),
+        ])
+        let viewModel = WishlistViewModel(
+            modelContext: try makeInMemoryContext(), importService: ImportServiceSpy(wishlist: .success(sheet))
+        )
+
+        await viewModel.importCSV(from: dummyURL)
+        #expect(viewModel.importAlertMessage == [
+            "1 wishlist item will be added.",
+            "No Desire to Own column \u{2014} new items will be 2 of 3.",
+            "No Added column \u{2014} new items will be dated today.",
+        ].joined(separator: "\n"))
+        #expect(!viewModel.importAlertMessage.contains("use defaults"))
     }
 }
 
-/// A validated wishlist preview for staging tests.
-func wishlistPreview(
+/// A sheet of plain wishlist rows for staging tests — no store, no file.
+func stagedWishlistSheet(
     names: [String],
     categoryPath: String = "Photography/Cameras"
-) -> WishlistImportPreview {
-    ImportPreview(
-        validated: names.enumerated().map { offset, name in
-            ValidatedRow(
-                record: WishlistExportRecord(
-                    name: name, categoryPath: categoryPath,
-                    estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 2,
-                    createdAt: Date(timeIntervalSince1970: 1_500_000_000),
-                    notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil,
-                    firstPhotoAttribution: nil
-                ),
-                rowNumber: offset + 2,
-                defaultedFieldCount: 0
+) -> WishlistImportSheet {
+    stagedWishlistSheet(names.map { name in
+        WishlistExportRecord(
+            name: name, categoryPath: categoryPath,
+            estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 2,
+            createdAt: Date(timeIntervalSince1970: 1_500_000_000),
+            notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil,
+            firstPhotoAttribution: nil
+        )
+    })
+}
+
+/// Rows whose every cell reads, so the store's `asNew` gives each record
+/// back as written — `Added` included, to the instant.
+func stagedWishlistSheet(_ records: [WishlistExportRecord]) -> WishlistImportSheet {
+    ImportSheet(
+        rows: records.enumerated().map { offset, record in
+            WishlistImportRow(
+                rowNumber: offset + 2, troveID: .empty,
+                name: .value(record.name),
+                category: cell(record.categoryPath.isEmpty ? nil : record.categoryPath),
+                notes: cell(record.notes),
+                estimatedCost: .value(record.estimatedCostCents), currency: .value(record.currencyCode),
+                desireToOwn: .value(record.desireToOwn), reverbProductID: cell(record.reverbProductID),
+                year: cell(record.year), added: .value(record.createdAt), lookingFor: cell(record.lookingFor)
             )
         },
-        skipped: [],
-        defaultedFieldCount: 0
+        skipped: [], unusedColumns: [], totalsRowNumbers: [], regionDateOrder: nil, missingDefaultColumns: []
     )
+}
+
+private func cell<Value>(_ value: Value?) -> Cell<Value> {
+    value.map { .value($0) } ?? .empty
 }
 
 /// T011's wishlist twin: the commit path with the wishlist's one extra
@@ -1091,34 +1178,22 @@ struct WishlistViewModelCommitTests {
     @Test func commitRestoresTheReverbMatchAndTheYear() async throws {
         let container = try makeInMemoryContainer()
         let context = ModelContext(container)
-        let preview = ImportPreview(
-            validated: [
-                ValidatedRow(
-                    record: WishlistExportRecord(
-                        name: "Deluxe Reverb", categoryPath: "Music/Amps",
-                        estimatedCostCents: 124_999, currencyCode: "USD", desireToOwn: 3,
-                        createdAt: Date(timeIntervalSince1970: 1_500_000_000),
-                        notes: nil, reverbProductID: 232, year: 1966, firstPhotoID: nil,
-                        firstPhotoAttribution: nil
-                    ),
-                    rowNumber: 2,
-                    defaultedFieldCount: 0
-                ),
-                ValidatedRow(
-                    record: WishlistExportRecord(
-                        name: "Unmatched", categoryPath: "Music/Amps",
-                        estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 2,
-                        createdAt: Date(timeIntervalSince1970: 1_500_000_000),
-                        notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil,
-                        firstPhotoAttribution: nil
-                    ),
-                    rowNumber: 3,
-                    defaultedFieldCount: 0
-                ),
-            ],
-            skipped: [],
-            defaultedFieldCount: 0
-        )
+        let preview = stagedWishlistSheet([
+            WishlistExportRecord(
+                name: "Deluxe Reverb", categoryPath: "Music/Amps",
+                estimatedCostCents: 124_999, currencyCode: "USD", desireToOwn: 3,
+                createdAt: Date(timeIntervalSince1970: 1_500_000_000),
+                notes: nil, reverbProductID: 232, year: 1966, firstPhotoID: nil,
+                firstPhotoAttribution: nil
+            ),
+            WishlistExportRecord(
+                name: "Unmatched", categoryPath: "Music/Amps",
+                estimatedCostCents: 45_000, currencyCode: "USD", desireToOwn: 2,
+                createdAt: Date(timeIntervalSince1970: 1_500_000_000),
+                notes: nil, reverbProductID: nil, year: nil, firstPhotoID: nil,
+                firstPhotoAttribution: nil
+            ),
+        ])
 
         let viewModel = WishlistViewModel(
             modelContext: context,
@@ -1154,10 +1229,10 @@ struct WishlistViewModelCommitTests {
         let table = ExportSchema.wishlistTable(
             [used, new, unrecorded].map { WishlistExportRecord(item: $0) }, timeZone: zone
         )
-        let preview = try ImportSchema.wishlistPreview(
+        let preview = try ImportSchema.wishlistSheet(
             from: try CSVParser.parse(CSVWriter.write(table)), timeZone: zone
         )
-        try #require(preview.defaultedFieldCount == 0)
+        try #require(preview.asAllNew().defaultedFieldCount == 0)
 
         let container = try makeInMemoryContainer()
         let viewModel = WishlistViewModel(
@@ -1185,7 +1260,7 @@ struct WishlistViewModelCommitTests {
         let added = Date(timeIntervalSince1970: 1_500_000_000)
         let viewModel = WishlistViewModel(
             modelContext: context,
-            importService: ImportServiceSpy(wishlist: .success(wishlistPreview(names: ["OM-1"])))
+            importService: ImportServiceSpy(wishlist: .success(stagedWishlistSheet(names: ["OM-1"])))
         )
         await viewModel.importCSV(from: dummyURL)
         await viewModel.confirmImport()?.value
@@ -1210,7 +1285,7 @@ struct WishlistViewModelCommitTests {
         // casing rule across both entities.
         let viewModel = WishlistViewModel(
             modelContext: context,
-            importService: ImportServiceSpy(wishlist: .success(wishlistPreview(
+            importService: ImportServiceSpy(wishlist: .success(stagedWishlistSheet(
                 names: ["Old Wish"], categoryPath: "photography/cameras"
             )))
         )

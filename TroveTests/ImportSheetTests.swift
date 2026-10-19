@@ -308,10 +308,12 @@ struct ImportSheetTests {
 
     // MARK: - asNew: today's field policy, exactly
 
+    /// Rewritten at 021 T007: the preview this compared against is gone.
+    /// What it showed — that a new row is read as `012` read it — now rests
+    /// on the re-pointed field-policy suites (`ImportSchemaTests`,
+    /// `DocsSampleTests`, the view-model import suites), whose assertions
+    /// stand unedited; the counts stay pinned here by literal.
     @Test func asNewCountsAndDefaultsExactlyAsTodaysPreview() throws {
-        // Rows without N/A and without a defaulted purchase date — the two
-        // places the sheet means to differ from `itemsPreview` — read the
-        // same through both paths, cell for cell and count for count.
         let rows = [
             fullCells(),
             fullCells(["Purchase Price": "", "Desire to Keep": "9", "Condition": "mint",
@@ -322,18 +324,12 @@ struct ImportSheetTests {
             fullCells(["Sold Date": "2025-06-01", "Sold At": "Reverb", "Sale Note": "half"]),
             fullCells(["Currency": "", "Purchase Location": " ", "Bought": "Used", "Desire to Keep": ""]),
         ]
-        let preview = try ImportSchema.itemsPreview(from: itemsFile(rows), timeZone: utc())
         let sheet = try ImportSchema.itemsSheet(from: itemsFile(rows), timeZone: utc(), locale: usLocale())
         let new = sheet.rows.compactMap { $0.asNew(now: instant(), missingColumns: sheet.missingDefaultColumns) }
 
-        #expect(new.count == preview.validated.count)
-        #expect(new.map(\.defaultedFieldCount) == preview.validated.map(\.defaultedFieldCount))
+        #expect(new.count == rows.count)
         #expect(new.map(\.defaultedFieldCount) == [0, 5, 3, 0, 1, 1])
-        #expect(new.map(\.rowNumber) == preview.validated.map(\.rowNumber))
-        #expect(
-            new.map { ExportSchema.row(from: $0.record, timeZone: utc()) }
-                == preview.validated.map { ExportSchema.row(from: $0.record, timeZone: utc()) }
-        )
+        #expect(new.map(\.rowNumber) == [2, 3, 4, 5, 6, 7])
     }
 
     @Test func anUnreadablePriceAndDateDefaultAndCountAsToday() throws {
@@ -346,9 +342,6 @@ struct ImportSheetTests {
         #expect(new.record.purchasePriceCents == 0)
         #expect(new.record.purchaseDate == instant())
         #expect(new.defaultedFieldCount == 2)
-        // Counts only: today's preview defaults the date to `.now`.
-        let preview = try ImportSchema.itemsPreview(from: itemsFile(rows), timeZone: utc())
-        #expect(preview.validated.map(\.defaultedFieldCount) == [new.defaultedFieldCount])
     }
 
     @Test func anUnreadableTroveIDCountsOnce() throws {
@@ -467,27 +460,21 @@ struct ImportSheetTests {
             .defaultedFieldCount == 1)
     }
 
+    /// Rewritten at 021 T007, as the items twin above: the preview it
+    /// compared against is gone; the counts stay pinned by literal.
     @Test func wishAsNewCountsAndDefaultsExactlyAsTodaysPreview() throws {
-        // ISO `Added` dates only, and no N/A — today's preview reads neither
-        // a slash date nor an N/A as the sheet does.
         let rows = [
             wishCells(),
             wishCells(["Estimated Cost": "abc", "Desire to Own": "9", "Currency": "dollars"]),
             wishCells(["Estimated Cost": "", "Reverb Product ID": "abc", "Year": "75", "Looking For": "maybe"]),
             wishCells(["Currency": "", "Notes": " ", "Looking For": "Used", "Desire to Own": ""]),
         ]
-        let preview = try ImportSchema.wishlistPreview(from: wishFile(rows), timeZone: utc())
         let sheet = try ImportSchema.wishlistSheet(from: wishFile(rows), timeZone: utc(), locale: usLocale())
         let new = sheet.rows.compactMap { $0.asNew(now: instant(), missingColumns: sheet.missingDefaultColumns) }
 
-        #expect(new.count == preview.validated.count)
-        #expect(new.map(\.defaultedFieldCount) == preview.validated.map(\.defaultedFieldCount))
+        #expect(new.count == rows.count)
         #expect(new.map(\.defaultedFieldCount) == [0, 3, 4, 1])
-        #expect(new.map(\.rowNumber) == preview.validated.map(\.rowNumber))
-        #expect(
-            new.map { ExportSchema.row(from: $0.record, timeZone: utc()) }
-                == preview.validated.map { ExportSchema.row(from: $0.record, timeZone: utc()) }
-        )
+        #expect(new.map(\.rowNumber) == [2, 3, 4, 5])
     }
 
     @Test func anUnreadableOrBlankAddedDefaultsAndCountsAsToday() throws {
@@ -497,9 +484,6 @@ struct ImportSheetTests {
         let new = sheet.rows.compactMap { $0.asNew(now: instant(), missingColumns: sheet.missingDefaultColumns) }
         #expect(new.map(\.record.createdAt) == [instant(), instant()])
         #expect(new.map(\.defaultedFieldCount) == [1, 1])
-        // Counts only: today's preview defaults the date to `.now`.
-        let preview = try ImportSchema.wishlistPreview(from: wishFile(rows), timeZone: utc())
-        #expect(preview.validated.map(\.defaultedFieldCount) == new.map(\.defaultedFieldCount))
     }
 
     // MARK: - Helpers

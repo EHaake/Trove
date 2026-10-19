@@ -12,7 +12,7 @@ import Testing
 struct DocsSampleTests {
     @Test func itemsFullImportsCleanly() async throws {
         let preview = try await FileImportService()
-            .parseItems(at: sample("items-full.csv"), timeZone: .current)
+            .parseItems(at: sample("items-full.csv"), timeZone: .current, locale: .current).asAllNew()
         #expect(preview.validated.count == 12)
         #expect(preview.skipped.isEmpty)
         #expect(preview.defaultedFieldCount == 0)
@@ -96,13 +96,16 @@ struct DocsSampleTests {
         #expect(veryGood.map(\.record.name) == ["Summicron-M 35mm f/2 v4"])
     }
 
+    /// Rewritten for 021 (R7, T007): row 7's reason is now judged against
+    /// the file's own header — "more columns than the header". The numbers
+    /// the README states are unchanged.
     @Test func itemsPartialSkipsAndDefaultsExactlyAsDocumented() async throws {
         let preview = try await FileImportService()
-            .parseItems(at: sample("items-partial.csv"), timeZone: .current)
+            .parseItems(at: sample("items-partial.csv"), timeZone: .current, locale: .current).asAllNew()
         #expect(preview.validated.count == 5)
         #expect(preview.skipped == [
             SkippedRow(rowNumber: 5, reason: "no name"),
-            SkippedRow(rowNumber: 7, reason: "more columns than the template"),
+            SkippedRow(rowNumber: 7, reason: "more columns than the header"),
         ])
         #expect(preview.defaultedFieldCount == 6)
         // The backward-compatibility fixture: written at the 12-column
@@ -122,7 +125,7 @@ struct DocsSampleTests {
 
     @Test func itemsResavedToleratesTransportDamage() async throws {
         let preview = try await FileImportService()
-            .parseItems(at: sample("items-resaved.csv"), timeZone: .current)
+            .parseItems(at: sample("items-resaved.csv"), timeZone: .current, locale: .current).asAllNew()
         #expect(preview.validated.count == 5)
         #expect(preview.skipped.isEmpty)
         #expect(preview.defaultedFieldCount == 0)
@@ -149,7 +152,8 @@ struct DocsSampleTests {
 
     @Test func wishlistImportsThereAndIsCaughtOnTheItemsScreen() async throws {
         let url = sample("wishlist.csv")
-        let preview = try await FileImportService().parseWishlist(at: url, timeZone: .current)
+        let preview = try await FileImportService()
+            .parseWishlist(at: url, timeZone: .current, locale: .current).asAllNew()
         #expect(preview.validated.count == 4)
         #expect(preview.skipped.isEmpty)
         #expect(preview.defaultedFieldCount == 0)
@@ -183,20 +187,25 @@ struct DocsSampleTests {
                 == ImportSchema.day(from: "2024-05-10")
         )
 
-        await expectImportError(.headerMismatch(wrongList: true)) {
-            try await FileImportService().parseItems(at: url, timeZone: .current)
+        await expectImportError(.wrongList) {
+            try await FileImportService().parseItems(at: url, timeZone: .current, locale: .current)
         }
     }
 
+    /// Rewritten for 021 (T007): `bad-headers.csv` renames `Name`, and
+    /// columns are found by name, so it now fails as missing `Name`.
     @Test func theBadFilesFailWholeFileForTheirDocumentedReasons() async {
-        await expectImportError(.headerMismatch(wrongList: false)) {
-            try await FileImportService().parseItems(at: self.sample("bad-headers.csv"), timeZone: .current)
+        await expectImportError(.missingColumns(["Name"])) {
+            try await FileImportService()
+                .parseItems(at: self.sample("bad-headers.csv"), timeZone: .current, locale: .current)
         }
         await expectImportError(.malformedQuoting) {
-            try await FileImportService().parseItems(at: self.sample("bad-unclosed-quote.csv"), timeZone: .current)
+            try await FileImportService()
+                .parseItems(at: self.sample("bad-unclosed-quote.csv"), timeZone: .current, locale: .current)
         }
         await expectImportError(.undecodable) {
-            try await FileImportService().parseItems(at: self.sample("bad-encoding.csv"), timeZone: .current)
+            try await FileImportService()
+                .parseItems(at: self.sample("bad-encoding.csv"), timeZone: .current, locale: .current)
         }
     }
 

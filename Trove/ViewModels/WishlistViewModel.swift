@@ -475,7 +475,7 @@ final class WishlistViewModel {
     // MARK: - Import (012)
 
     /// See `ItemListViewModel`'s import section — one pattern, both lists.
-    var importPresentation: ImportPresentation<WishlistExportRecord>?
+    var importPresentation: ImportPresentation<WishlistImportRow>?
 
     /// Named against the CloudKit-sync collision, same as the item list's.
     private(set) var isImportingFile = false
@@ -484,8 +484,8 @@ final class WishlistViewModel {
 
     var importAlertTitle: String {
         switch importPresentation {
-        case .confirmation(let preview):
-            ImportCopy.confirmationTitle(importCount: preview.validated.count, target: .wishlist)
+        case .confirmation(_, let summary, _):
+            ImportCopy.confirmationTitle(summary: summary)
         case .failure(let title, _):
             title
         case nil:
@@ -495,8 +495,9 @@ final class WishlistViewModel {
 
     var importAlertMessage: String {
         switch importPresentation {
-        case .confirmation(let preview):
-            ImportCopy.confirmationMessage(preview: preview)
+        case .confirmation(_, let summary, let recounted):
+            ImportCopy.confirmationLines(summary: summary, target: .wishlist, recounted: recounted)
+                .joined(separator: "\n")
         case .failure(_, let message):
             message
         case nil:
@@ -505,8 +506,8 @@ final class WishlistViewModel {
     }
 
     var importOffersConfirmation: Bool {
-        guard case .confirmation(let preview) = importPresentation else { return false }
-        return !preview.validated.isEmpty
+        guard case .confirmation(_, let summary, _) = importPresentation else { return false }
+        return summary.writesAnything
     }
 
     func importCSV(from url: URL) async {
@@ -515,8 +516,9 @@ final class WishlistViewModel {
         defer { isImportingFile = false }
 
         do {
-            let preview = try await importService.parseWishlist(at: url, timeZone: .current)
-            importPresentation = .confirmation(preview)
+            let sheet = try await importService.parseWishlist(at: url, timeZone: .current, locale: .current)
+            let plan = try WishlistImportStore.plan(for: sheet, in: modelContext, timeZone: .current, now: now())
+            importPresentation = .confirmation(sheet: sheet, summary: plan.summary, recounted: false)
         } catch let error as ImportError {
             importPresentation = .failure(
                 title: ImportCopy.failureTitle,
@@ -538,63 +540,30 @@ final class WishlistViewModel {
     // alongside the items one.
 
     /// See `ItemListViewModel.confirmImport` — one commit path, both lists,
-    /// with the wishlist's one extra move: `Added` restores `createdAt`.
+    /// through `WishlistImportStore`, which carries the wishlist's one extra
+    /// move: `Added` restores `createdAt`.
     /// **Synchronous capture, async commit** — reshaped by a T017 device
     /// finding: an alert button's dismissal writes nil through the
     /// presentation binding, and the original `Task`-wrapped async intent
     /// read `importPresentation` only after that write — the guard failed
     /// and Import silently did nothing. The unit tests couldn't see it
     /// (they call with the presentation still staged); only the manual
-    /// pass could. The preview is now captured in the button action's
-    /// synchronous window, so dismissal ordering can't matter; the
+    /// pass could. The sheet and its summary are now captured in the button
+    /// action's synchronous window, so dismissal ordering can't matter; the
     /// returned task is the commit itself, for tests to await.
     @discardableResult
     func confirmImport() -> Task<Void, Never>? {
-        guard !isBusy, case .confirmation(let preview) = importPresentation else { return nil }
+        guard !isBusy, case .confirmation(let sheet, let summary, _) = importPresentation else { return nil }
         importPresentation = nil
-        guard !preview.validated.isEmpty else { return nil }
+        guard summary.writesAnything else { return nil }
         isImportingFile = true
         return Task {
             defer { isImportingFile = false }
             await Task.yield()
 
-            // Bought entries included, deliberately (015 plan §4): the import
-            // appends past every stored position, not past the visible ones.
-            let existing = (try? modelContext.fetch(FetchDescriptor<WishlistItem>())) ?? []
-            let base = ManualOrderHelper.nextPosition(after: existing)
-            var knownPaths = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []
-
-            for (offset, validated) in preview.validated.enumerated() {
-                let record = validated.record
-                let path = CategoryPathHelper.canonicalize(record.categoryPath, against: knownPaths)
-                if !path.isEmpty,
-                   !knownPaths.contains(where: { $0.caseInsensitiveCompare(path) == .orderedSame }) {
-                    knownPaths.append(path)
-                }
-                let wish = WishlistItem(
-                    name: record.name,
-                    categoryPath: path,
-                    estimatedCostCents: record.estimatedCostCents,
-                    currencyCode: record.currencyCode,
-                    notes: record.notes,
-                    desireToOwn: record.desireToOwn,
-                    sortOrder: base + offset,
-                    // As on the items side (002/T016a): the match and the
-                    // year come back with the row.
-                    reverbProductID: record.reverbProductID,
-                    year: record.year,
-                    // 020: and so does `Looking For`.
-                    lookingFor: record.lookingFor
-                )
-                // Assigned after construction deliberately: the init hard-sets
-                // `.now` and has no parameter — `Added` restores when the want
-                // was actually recorded (plan §The commit path; don't "fix"
-                // the init).
-                wish.createdAt = record.createdAt
-                modelContext.insert(wish)
-            }
-
             do {
+                let plan = try WishlistImportStore.plan(for: sheet, in: modelContext, timeZone: .current, now: now())
+                try WishlistImportStore.apply(plan, in: modelContext, now: now())
                 try modelContext.save()
             } catch {
                 modelContext.rollback()

@@ -49,8 +49,8 @@ nonisolated struct ItemExportRecord: Sendable {
     /// 020: bought new or used — the appended `Bought` column (plan §8).
     /// `var … = nil`, not `let`, so the record fixtures that predate the
     /// column compile unchanged (Q8); both production builders — `init(item:)`
-    /// and `ImportSchema.itemsPreview` — pass it explicitly, and the round
-    /// trip through the commit catches either one dropping it.
+    /// and `ItemImportRow.asNew` — pass it explicitly, and the round trip
+    /// through the commit catches either one dropping it.
     var bought: NewOrUsed? = nil
 
     /// The display-order first photo, chosen at snapshot time on the main
@@ -396,22 +396,6 @@ nonisolated enum ExportSchema {
     /// reader's known names are each array plus this constant. T008 moves it
     /// into the arrays and removes the addition.
     static let troveIDHeader = "Trove ID"
-
-    /// Every column count at which a shipped layout ended, oldest first —
-    /// the widths `ImportSchema`'s gate accepts as a prefix of the current
-    /// headers (002, plan §7). 12 is the layout `011`/`012` shipped, before
-    /// `Reverb Product ID` and `Year` were appended. A width is added here
-    /// only when a *released* layout ends, never speculatively: an entry
-    /// that never shipped would accept a file Trove never wrote. 14 is the
-    /// layout 002 through 005 shipped, before 006 appended the four sale
-    /// columns. 18 is the layout 006 through 018 shipped, before 020
-    /// appended `Bought`.
-    static let itemSchemaBoundaries = [12, 14, 18]
-
-    /// See `itemSchemaBoundaries` — 7 is the wishlist layout 011/012
-    /// shipped, before 002 appended `Reverb Product ID` and `Year`; 9 is the
-    /// layout 002 through 018 shipped, before 020 appended `Looking For`.
-    static let wishlistSchemaBoundaries = [7, 9]
 
     /// Money as the schema writes it: plain decimal, always two places, dot
     /// separator, no symbol, no grouping. Pure integer arithmetic — no locale

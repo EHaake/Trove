@@ -135,7 +135,7 @@ nonisolated struct ItemImportRow: Sendable, Equatable {
     let bought: Cell<NewOrUsed>
 
     /// The row as a new item — nil only when the name is empty. Exactly
-    /// `ImportSchema.itemsPreview`'s field policy and counts (the spec's "the
+    /// `012`'s field policy and counts, as its import shipped (the spec's "the
     /// defaults of `012` are for new rows only"): price, date, desire and
     /// condition default and count when empty or unreadable; currency,
     /// current value, Reverb product, year and Bought count only when
@@ -293,7 +293,7 @@ nonisolated struct WishlistImportRow: Sendable, Equatable {
     let lookingFor: Cell<NewOrUsed>
 
     /// The row as a new wish — nil only when the name is empty. Exactly
-    /// `ImportSchema.wishlistPreview`'s field policy and counts: cost, desire
+    /// `012`'s field policy and counts, as its import shipped: cost, desire
     /// and `Added` default and count when empty or unreadable; currency,
     /// Reverb product, year and `Looking For` count only when unreadable; an
     /// unreadable Trove ID counts once (P7). **One difference (spec Decision

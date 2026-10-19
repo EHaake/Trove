@@ -1256,7 +1256,7 @@ struct ItemListViewModelImportTests {
 
     @Test func cancelClearsThePresentationWithoutStoreWrites() async throws {
         let context = try makeInMemoryContext()
-        let spy = ImportServiceSpy(items: .success(itemsPreview(names: ["Strat"])))
+        let spy = ImportServiceSpy(items: .success(stagedItemsSheet(names: ["Strat"])))
         let viewModel = ItemListViewModel(modelContext: context, importService: spy)
 
         await viewModel.importCSV(from: dummyURL)
@@ -1267,54 +1267,159 @@ struct ItemListViewModelImportTests {
         #expect(try context.fetch(FetchDescriptor<Item>()).isEmpty)
     }
 
+    /// Rewritten for 021 (plan §5, T007): the accessors read the staged
+    /// summary through `ImportCopy` — the title asks about the file, the
+    /// message is the confirmation's lines joined by newlines.
     @Test func alertAccessorsComposeThroughImportCopy() async throws {
         let context = try makeInMemoryContext()
-        let staged = ImportPreview<ItemExportRecord>(
-            validated: itemsPreview(names: ["Strat"]).validated,
-            skipped: [SkippedRow(rowNumber: 7, reason: "no name")],
-            defaultedFieldCount: 2
-        )
+        let staged = try ImportSchema.itemsSheet(from: [
+            CSVRow(number: 1, cells: ["Name", "Purchase Price", "Purchase Date", "Desire to Keep", "Condition"]),
+            CSVRow(number: 2, cells: ["Strat", "abc", "2024-01-01", "4", "mint"]),
+            CSVRow(number: 7, cells: ["", "100.00", "2024-01-01", "3", "good"]),
+        ], timeZone: TimeZone(identifier: "UTC")!, locale: Locale(identifier: "en_US"))
         let viewModel = ItemListViewModel(
             modelContext: context, importService: ImportServiceSpy(items: .success(staged))
         )
         await viewModel.importCSV(from: dummyURL)
 
-        #expect(viewModel.importAlertTitle == "Import 1 item?")
-        #expect(viewModel.importAlertMessage.contains("Row 7 \u{2014} no name"))
-        #expect(viewModel.importAlertMessage.contains("2 missing or unreadable fields"))
+        #expect(viewModel.importAlertTitle == "Import this file?")
+        #expect(viewModel.importAlertMessage == [
+            "1 item will be added.",
+            "Skipping 1 row:",
+            "Row 7 \u{2014} no name",
+            "2 missing or unreadable cells on new rows will use defaults.",
+        ].joined(separator: "\n"))
         #expect(viewModel.importOffersConfirmation)
 
-        // The zero-importable case is informational only (criterion 5).
-        viewModel.importPresentation = .confirmation(
-            ImportPreview(validated: [], skipped: staged.skipped, defaultedFieldCount: 0)
-        )
+        // A summary that writes nothing is informational only (criterion 36).
+        var nothing = ImportSummary()
+        nothing.skipped = [SkippedRow(rowNumber: 7, reason: "no name")]
+        viewModel.importPresentation = .confirmation(sheet: .empty, summary: nothing, recounted: false)
         #expect(viewModel.importAlertTitle == "Nothing to import")
         #expect(viewModel.importOffersConfirmation == false)
     }
+
+    /// G16 (criterion 36): the confirmation is staged before any write, and
+    /// Cancel leaves the store as it was — both read on a SECOND context, so
+    /// an unsaved insert can't pass for "nothing written".
+    @Test func theConfirmationIsStagedBeforeAnyWriteAndCancelWritesNothing() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        context.insert(Item(name: "Existing"))
+        try context.save()
+        let viewModel = ItemListViewModel(
+            modelContext: context,
+            importService: ImportServiceSpy(items: .success(stagedItemsSheet(names: ["Strat", "Tele"])))
+        )
+
+        await viewModel.importCSV(from: dummyURL)
+        guard case .confirmation(_, let summary, false) = viewModel.importPresentation else {
+            Issue.record("expected a staged confirmation")
+            return
+        }
+        #expect(summary.added == 2)
+        #expect(try ModelContext(container).fetch(FetchDescriptor<Item>()).map(\.name) == ["Existing"])
+
+        viewModel.cancelImport()
+        #expect(viewModel.confirmImport() == nil)
+        #expect(try ModelContext(container).fetch(FetchDescriptor<Item>()).map(\.name) == ["Existing"])
+    }
+
+    /// G16 (criterion 36): a sheet whose only row is nameless — kept by the
+    /// sheet for its code, refused by the store as a new row — writes
+    /// nothing, so the alert offers no Import and `confirmImport()` returns
+    /// nil. Mutation: `importOffersConfirmation` on `!sheet.rows.isEmpty` →
+    /// red.
+    @Test func aSummaryThatWritesNothingOffersNoImportAndConfirmReturnsNil() async throws {
+        let container = try makeInMemoryContainer()
+        let sheet = try ImportSchema.itemsSheet(from: [
+            CSVRow(number: 1, cells: ["Name", "Purchase Price", "Purchase Date", "Trove ID"]),
+            CSVRow(number: 2, cells: ["", "100.00", "2024-01-01", UUID().uuidString]),
+        ])
+        try #require(sheet.rows.count == 1)
+        let viewModel = ItemListViewModel(
+            modelContext: ModelContext(container), importService: ImportServiceSpy(items: .success(sheet))
+        )
+
+        await viewModel.importCSV(from: dummyURL)
+        guard case .confirmation = viewModel.importPresentation else {
+            Issue.record("expected a staged confirmation")
+            return
+        }
+        #expect(viewModel.importOffersConfirmation == false)
+        #expect(viewModel.importAlertTitle == "Nothing to import")
+        #expect(viewModel.confirmImport() == nil)
+        #expect(try ModelContext(container).fetch(FetchDescriptor<Item>()).isEmpty)
+    }
+
+    /// G21 through the view model (criterion 41): a file with only the
+    /// required columns says so in one line per missing default column, and
+    /// those defaults are not counted.
+    @Test func aRequiredColumnsOnlyFileShowsTheTwoMissingColumnLinesAndNoDefaultsLine() async throws {
+        let sheet = try ImportSchema.itemsSheet(from: [
+            CSVRow(number: 1, cells: ["Name", "Purchase Price", "Purchase Date"]),
+            CSVRow(number: 2, cells: ["Strat", "100.00", "2024-01-01"]),
+        ])
+        let viewModel = ItemListViewModel(
+            modelContext: try makeInMemoryContext(), importService: ImportServiceSpy(items: .success(sheet))
+        )
+
+        await viewModel.importCSV(from: dummyURL)
+        #expect(viewModel.importAlertMessage == [
+            "1 item will be added.",
+            "No Desire to Keep column \u{2014} new items will be 3 of 5.",
+            "No Condition column \u{2014} new items will be Excellent.",
+        ].joined(separator: "\n"))
+        #expect(!viewModel.importAlertMessage.contains("use defaults"))
+    }
 }
 
-/// A validated items preview for staging tests — plain records, no store.
-func itemsPreview(names: [String]) -> ItemsImportPreview {
-    ImportPreview(
-        validated: names.enumerated().map { offset, name in
-            ValidatedRow(
-                record: ItemExportRecord(
-                    name: name, categoryPath: "Music/Guitars", purchasePriceCents: 100_000,
-                    currencyCode: "USD", purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
-                    purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
-                    conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
-                    notes: nil, reverbProductID: nil, year: nil,
-                    soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
-                    firstPhotoID: nil,
-                    firstPhotoAttribution: nil
-                ),
-                rowNumber: offset + 2,
-                defaultedFieldCount: 0
-            )
-        },
-        skipped: [],
-        defaultedFieldCount: 0
+/// A sheet of plain rows for staging tests — no store, no file.
+func stagedItemsSheet(names: [String]) -> ItemsImportSheet {
+    stagedItemsSheet(names.map { stagedItemRecord(name: $0) })
+}
+
+/// Rows whose every cell reads, so the store's `asNew` gives each record
+/// back as written; `skipped` stands for the sheet's own skips.
+func stagedItemsSheet(_ records: [ItemExportRecord], skipped: [SkippedRow] = []) -> ItemsImportSheet {
+    ImportSheet(
+        rows: records.enumerated().map { stagedRow($0.element, rowNumber: $0.offset + 2) },
+        skipped: skipped, unusedColumns: [], totalsRowNumbers: [], regionDateOrder: nil,
+        missingDefaultColumns: []
     )
+}
+
+func stagedItemRecord(name: String, categoryPath: String = "Music/Guitars") -> ItemExportRecord {
+    ItemExportRecord(
+        name: name, categoryPath: categoryPath, purchasePriceCents: 100_000,
+        currencyCode: "USD", purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+        purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
+        conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
+        notes: nil, reverbProductID: nil, year: nil,
+        soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
+        firstPhotoID: nil,
+        firstPhotoAttribution: nil
+    )
+}
+
+private func stagedRow(_ record: ItemExportRecord, rowNumber: Int) -> ItemImportRow {
+    ItemImportRow(
+        rowNumber: rowNumber, troveID: .empty,
+        name: .value(record.name), category: cell(record.categoryPath.isEmpty ? nil : record.categoryPath),
+        purchaseLocation: cell(record.purchaseLocation), conditionNotes: cell(record.conditionNotes),
+        serialNumber: cell(record.serialNumber), notes: cell(record.notes),
+        saleLocation: cell(record.saleLocation), saleNote: cell(record.saleNote),
+        purchasePrice: .value(record.purchasePriceCents), currentValue: cell(record.currentValueCents),
+        salePrice: cell(record.salePriceCents), currency: .value(record.currencyCode),
+        purchaseDate: .value(record.purchaseDate), soldDate: cell(record.soldDate),
+        desireToKeep: .value(record.desireToKeep), reverbProductID: cell(record.reverbProductID),
+        year: cell(record.year), condition: cell(Condition(rawValue: record.conditionRawValue)),
+        bought: cell(record.bought)
+    )
+}
+
+private func cell<Value>(_ value: Value?) -> Cell<Value> {
+    value.map { .value($0) } ?? .empty
 }
 
 /// T011's guards: the commit path — placement, canonicalization, rollback,
@@ -1337,7 +1442,7 @@ struct ItemListViewModelCommitTests {
 
         let viewModel = ItemListViewModel(
             modelContext: context,
-            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["One", "Two", "Three"])))
+            importService: ImportServiceSpy(items: .success(stagedItemsSheet(names: ["One", "Two", "Three"])))
         )
         await viewModel.importCSV(from: dummyURL)
         await viewModel.confirmImport()?.value
@@ -1358,29 +1463,20 @@ struct ItemListViewModelCommitTests {
     @Test func commitRestoresTheReverbMatchAndTheYear() async throws {
         let container = try makeInMemoryContainer()
         let context = ModelContext(container)
-        var preview = itemsPreview(names: ["Matched", "Unmatched"])
-        preview = ImportPreview(
-            validated: [
-                ValidatedRow(
-                    record: ItemExportRecord(
-                        name: "Matched", categoryPath: "Music/Guitars",
-                        purchasePriceCents: 100_000, currencyCode: "USD",
-                        purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
-                        purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
-                        conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
-                        notes: nil, reverbProductID: 182_769, year: 1984,
-                        soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
-                        firstPhotoID: nil,
-                        firstPhotoAttribution: nil
-                    ),
-                    rowNumber: 2,
-                    defaultedFieldCount: 0
-                ),
-                preview.validated[1],
-            ],
-            skipped: [],
-            defaultedFieldCount: 0
-        )
+        let preview = stagedItemsSheet([
+            ItemExportRecord(
+                name: "Matched", categoryPath: "Music/Guitars",
+                purchasePriceCents: 100_000, currencyCode: "USD",
+                purchaseDate: Date(timeIntervalSince1970: 1_700_000_000),
+                purchaseLocation: nil, currentValueCents: nil, desireToKeep: 3,
+                conditionRawValue: "good", conditionNotes: nil, serialNumber: nil,
+                notes: nil, reverbProductID: 182_769, year: 1984,
+                soldDate: nil, salePriceCents: nil, saleLocation: nil, saleNote: nil,
+                firstPhotoID: nil,
+                firstPhotoAttribution: nil
+            ),
+            stagedItemRecord(name: "Unmatched"),
+        ])
 
         let viewModel = ItemListViewModel(
             modelContext: context,
@@ -1430,10 +1526,10 @@ struct ItemListViewModelCommitTests {
         let table = ExportSchema.itemsTable(
             [sold, owned].map { ItemExportRecord(item: $0) }, timeZone: zone
         )
-        let preview = try ImportSchema.itemsPreview(
+        let preview = try ImportSchema.itemsSheet(
             from: try CSVParser.parse(CSVWriter.write(table)), timeZone: zone
         )
-        try #require(preview.defaultedFieldCount == 0)
+        try #require(preview.asAllNew().defaultedFieldCount == 0)
 
         let container = try makeInMemoryContainer()
         let viewModel = ItemListViewModel(
@@ -1479,10 +1575,10 @@ struct ItemListViewModelCommitTests {
         let table = ExportSchema.itemsTable(
             [used, new, unrecorded].map { ItemExportRecord(item: $0) }, timeZone: zone
         )
-        let preview = try ImportSchema.itemsPreview(
+        let preview = try ImportSchema.itemsSheet(
             from: try CSVParser.parse(CSVWriter.write(table)), timeZone: zone
         )
-        try #require(preview.defaultedFieldCount == 0)
+        try #require(preview.asAllNew().defaultedFieldCount == 0)
 
         let container = try makeInMemoryContainer()
         let viewModel = ItemListViewModel(
@@ -1509,7 +1605,7 @@ struct ItemListViewModelCommitTests {
         let context = try makeInMemoryContext()
         let viewModel = ItemListViewModel(
             modelContext: context,
-            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["Imported"])))
+            importService: ImportServiceSpy(items: .success(stagedItemsSheet(names: ["Imported"])))
         )
         await viewModel.importCSV(from: dummyURL)
 
@@ -1536,7 +1632,7 @@ struct ItemListViewModelCommitTests {
 
         let viewModel = ItemListViewModel(
             modelContext: context,
-            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["New One", "New Two"])))
+            importService: ImportServiceSpy(items: .success(stagedItemsSheet(names: ["New One", "New Two"])))
         )
         viewModel.sortOrder = .custom
         await viewModel.importCSV(from: dummyURL)
@@ -1553,7 +1649,7 @@ struct ItemListViewModelCommitTests {
 
         let viewModel = ItemListViewModel(
             modelContext: context,
-            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["Strat", "Tele"])))
+            importService: ImportServiceSpy(items: .success(stagedItemsSheet(names: ["Strat", "Tele"])))
         )
         viewModel.categoryFilter = "Audio/Desks"
         viewModel.load()
@@ -1570,14 +1666,14 @@ struct ItemListViewModelCommitTests {
 
     @Test func committingTheSameFileTwiceDuplicatesEveryRow() async throws {
         let context = try makeInMemoryContext()
-        let preview = itemsPreview(names: ["Strat"])
+        let preview = stagedItemsSheet(names: ["Strat"])
         let viewModel = ItemListViewModel(
             modelContext: context,
             importService: ImportServiceSpy(items: .success(preview))
         )
         await viewModel.importCSV(from: dummyURL)
         await viewModel.confirmImport()?.value
-        viewModel.importPresentation = .confirmation(preview)
+        await viewModel.importCSV(from: dummyURL)
         await viewModel.confirmImport()?.value
 
         // Stated no-dedupe behavior (criterion 11) — two copies, each with
@@ -1592,27 +1688,9 @@ struct ItemListViewModelCommitTests {
         context.insert(Item(name: "M6", categoryPath: "Photography/Cameras"))
         try context.save()
 
-        var preview = itemsPreview(names: ["A", "B", "C"])
-        preview = ImportPreview(
-            validated: zip(preview.validated, ["photography/cameras", "guitars", "Guitars"])
-                .map { row, path in
-                    ValidatedRow(
-                        record: ItemExportRecord(
-                            name: row.record.name, categoryPath: path,
-                            purchasePriceCents: 0, currencyCode: "USD",
-                            purchaseDate: row.record.purchaseDate, purchaseLocation: nil,
-                            currentValueCents: nil, desireToKeep: 3,
-                            conditionRawValue: "good", conditionNotes: nil,
-                            serialNumber: nil, notes: nil, reverbProductID: nil, year: nil,
-                            soldDate: nil, salePriceCents: nil, saleLocation: nil,
-                            saleNote: nil, firstPhotoID: nil,
-                            firstPhotoAttribution: nil
-                        ),
-                        rowNumber: row.rowNumber,
-                        defaultedFieldCount: 0
-                    )
-                },
-            skipped: [], defaultedFieldCount: 0
+        let preview = stagedItemsSheet(
+            zip(["A", "B", "C"], ["photography/cameras", "guitars", "Guitars"])
+                .map { stagedItemRecord(name: $0, categoryPath: $1) }
         )
         let viewModel = ItemListViewModel(
             modelContext: context, importService: ImportServiceSpy(items: .success(preview))
@@ -1633,11 +1711,7 @@ struct ItemListViewModelCommitTests {
         let viewModel = ItemListViewModel(
             modelContext: context,
             importService: ImportServiceSpy(
-                items: .success(ImportPreview(
-                    validated: [],
-                    skipped: [SkippedRow(rowNumber: 2, reason: "no name")],
-                    defaultedFieldCount: 0
-                ))
+                items: .success(stagedItemsSheet([], skipped: [SkippedRow(rowNumber: 2, reason: "no name")]))
             )
         )
         await viewModel.importCSV(from: dummyURL)
@@ -1656,7 +1730,7 @@ struct ItemListViewModelCommitTests {
         let context = try makeInMemoryContext()
         let viewModel = ItemListViewModel(
             modelContext: context,
-            importService: ImportServiceSpy(items: .success(itemsPreview(names: ["Strat"])))
+            importService: ImportServiceSpy(items: .success(stagedItemsSheet(names: ["Strat"])))
         )
         await viewModel.importCSV(from: dummyURL)
 

@@ -12,12 +12,12 @@ import Foundation
 /// main actor (criterion 15). `ImportConcurrencyTests`' probe keeps this
 /// true.
 nonisolated protocol ImportService: Sendable {
-    @concurrent func parseItems(at url: URL, timeZone: TimeZone) async throws -> ItemsImportPreview
-    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone) async throws -> WishlistImportPreview
+    @concurrent func parseItems(at url: URL, timeZone: TimeZone, locale: Locale) async throws -> ItemsImportSheet
+    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone, locale: Locale) async throws -> WishlistImportSheet
 }
 
 /// Whole-file failures — the only errors import produces; everything
-/// row-level is a skip or a counted default inside the preview (the
+/// row-level is a skip or a counted default inside the sheet (the
 /// amended skip-and-report decision, criterion 14's list).
 nonisolated enum ImportError: Error, Equatable {
     /// The bytes couldn't be read at all (missing, permission, an iCloud
@@ -33,11 +33,8 @@ nonisolated enum ImportError: Error, Equatable {
     case malformedQuoting
     /// Beyond the defensive size cap.
     case tooLarge
-    /// The header row isn't this list's template. `wrongList` means it is
-    /// exactly the *other* list's — the most likely wrong-file mistake,
-    /// and criterion 4 wants the alert to say so.
-    case headerMismatch(wrongList: Bool)
-    /// 021 (plan §5): the file is the other list's export.
+    /// 021 (plan §5): the file is the other list's export — the most likely
+    /// wrong-file mistake, and the alert says so.
     case wrongList
     /// 021: the required columns the header lacks, in schema order.
     case missingColumns([String])
@@ -57,10 +54,12 @@ nonisolated enum ImportTarget {
 /// three presentations, and independent booleans that can go true together
 /// are how SwiftUI silently drops one (plan §View-model surface). Dumb
 /// data: the view models compose its strings through `ImportCopy`.
-nonisolated enum ImportPresentation<Record: Sendable>: Sendable {
-    /// The pre-commit gate (criterion 5). A preview with nothing validated
-    /// still presents — informationally, with no import action.
-    case confirmation(ImportPreview<Record>)
+nonisolated enum ImportPresentation<Row: Sendable>: Sendable {
+    /// The pre-commit gate (021, plan §5): the sheet the commit plans again,
+    /// and the summary the alert words. A summary that writes nothing still
+    /// presents — informationally, with no import action. `recounted`: shown
+    /// again because the store changed under it (R9).
+    case confirmation(sheet: ImportSheet<Row>, summary: ImportSummary, recounted: Bool)
     case failure(title: String, message: String)
 }
 
@@ -94,16 +93,6 @@ nonisolated enum ImportCopy {
                 + "told apart. Fix the file and try again."
         case .tooLarge:
             body = "The file is too large to be a \(target.noun) export."
-        case .headerMismatch(wrongList: true):
-            body = "This looks like a \(target.other.noun) export. "
-                + "Import it from the \(target.other.screenName) screen instead."
-        case .headerMismatch(wrongList: false):
-            // 013 moved the blank template out of the "…" menu; the
-            // sentence moved with it. Body only — the guarantee below is
-            // appended once, and `ImportCopyTests` pins the whole string so
-            // a second copy of it can't slip past the suffix check.
-            body = "The columns don't match the \(target.noun) template. "
-                + "A blank template with the expected layout is in Settings \u{203A} Templates."
         case .wrongList:
             body = "This looks like a \(target.other.noun) export. "
                 + "Import it from the \(target.other.screenName) screen instead."
@@ -116,47 +105,9 @@ nonisolated enum ImportCopy {
         return body + " Nothing was imported."
     }
 
-    /// The confirmation alert's title carries the import count
-    /// (criterion 5); zero importable rows is informational only.
-    static func confirmationTitle(importCount: Int, target: ImportTarget) -> String {
-        switch importCount {
-        case 0: "Nothing to import"
-        case 1: "Import 1 \(target.singular)?"
-        default: "Import \(importCount) \(target.plural)?"
-        }
-    }
-
     /// How many skipped rows the confirmation lists before "and N more" —
     /// the amended criterion-5 cap, decided 2026-08-31.
     static let maxListedSkips = 5
-
-    /// The confirmation body: skipped rows by spreadsheet number with
-    /// reasons (capped), then the defaulted-field count. Pure over the
-    /// preview so it's testable without any UI.
-    static func confirmationMessage<Record>(preview: ImportPreview<Record>) -> String {
-        var lines: [String] = []
-        if !preview.skipped.isEmpty {
-            let count = preview.skipped.count
-            lines.append("Skipping \(count) \(count == 1 ? "row" : "rows"):")
-            for skip in preview.skipped.prefix(maxListedSkips) {
-                lines.append("Row \(skip.rowNumber) \u{2014} \(skip.reason)")
-            }
-            if count > maxListedSkips {
-                let more = count - maxListedSkips
-                lines.append("\u{2026}and \(more) more \(more == 1 ? "row" : "rows").")
-            }
-        }
-        if preview.defaultedFieldCount > 0 {
-            let count = preview.defaultedFieldCount
-            lines.append(
-                "\(count) missing or unreadable \(count == 1 ? "field" : "fields") will use defaults."
-            )
-        }
-        if lines.isEmpty {
-            lines.append("No problems found.")
-        }
-        return lines.joined(separator: "\n")
-    }
 
     // MARK: - 021 (plan §5, R7, R10)
 
@@ -331,10 +282,10 @@ nonisolated extension ImportTarget {
 /// The live implementation: reads the picked file inside the one
 /// `@concurrent` call — security scope opened, read, and closed within a
 /// single function, so no scope crosses an actor hop (plan §Service and
-/// concurrency) — then decodes, parses, and validates, mapping the
+/// concurrency) — then decodes, parses, and reads the sheet, mapping the
 /// pipeline's errors onto `ImportError`. Holds no `ModelContainer`:
-/// parsing touches no store; committing is the view model's job, on the
-/// main actor.
+/// parsing touches no store; matching and committing run on the main
+/// actor, through the import stores (021, Q3).
 nonisolated final class FileImportService: ImportService {
     /// The defensive cap (amended criterion 14): ~10 MB is orders of
     /// magnitude beyond a personal inventory's CSV; this exists so a
@@ -351,16 +302,20 @@ nonisolated final class FileImportService: ImportService {
         self.generationProbe = generationProbe
     }
 
-    @concurrent func parseItems(at url: URL, timeZone: TimeZone) async throws -> ItemsImportPreview {
+    @concurrent func parseItems(at url: URL, timeZone: TimeZone, locale: Locale) async throws -> ItemsImportSheet {
         generationProbe?(Self.onMainThread())
         let text = try readText(at: url)
-        return try Self.mapped { try ImportSchema.itemsPreview(from: CSVParser.parse(text), timeZone: timeZone) }
+        return try Self.mapped {
+            try ImportSchema.itemsSheet(from: CSVParser.parse(text), timeZone: timeZone, locale: locale)
+        }
     }
 
-    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone) async throws -> WishlistImportPreview {
+    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone, locale: Locale) async throws -> WishlistImportSheet {
         generationProbe?(Self.onMainThread())
         let text = try readText(at: url)
-        return try Self.mapped { try ImportSchema.wishlistPreview(from: CSVParser.parse(text), timeZone: timeZone) }
+        return try Self.mapped {
+            try ImportSchema.wishlistSheet(from: CSVParser.parse(text), timeZone: timeZone, locale: locale)
+        }
     }
 
     /// `Thread.isMainThread` is `noasync`; sampling through a synchronous
@@ -393,10 +348,12 @@ nonisolated final class FileImportService: ImportService {
             return try body()
         } catch CSVParseError.unclosedQuote {
             throw ImportError.malformedQuoting
-        } catch ImportSchema.HeaderError.wrongList {
-            throw ImportError.headerMismatch(wrongList: true)
-        } catch ImportSchema.HeaderError.mismatch {
-            throw ImportError.headerMismatch(wrongList: false)
+        } catch ImportColumns.HeaderError.wrongList {
+            throw ImportError.wrongList
+        } catch ImportColumns.HeaderError.missing(let names) {
+            throw ImportError.missingColumns(names)
+        } catch ImportColumns.HeaderError.duplicate(let name) {
+            throw ImportError.duplicateColumn(name)
         }
     }
 }
