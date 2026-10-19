@@ -428,6 +428,176 @@ nonisolated enum ImportSchema {
     nonisolated enum SkipReason {
         static let noName = "no name"
         static let extraColumns = "more columns than the template"
+        /// 021 (R7): the sheet readers judge a row against the file's own
+        /// header, not a template. `extraColumns` goes with `itemsPreview`.
+        static let extraHeaderColumns = "more columns than the header"
+    }
+
+    // MARK: - Sheets (021, plan §4)
+
+    /// The items file read to cells (021, plan §4, Q2): shape, match the
+    /// columns by name, record which of `Desire to Keep` and `Condition` the
+    /// file lacks, settle the slash order over `Purchase Date` and `Sold
+    /// Date`, then per data row, in this order:
+    ///
+    /// 1. More cells than the header → skipped (R7). Fewer → padded.
+    /// 2. Every recognised cell blank by `isBlank` → dropped silently.
+    /// 3. A totals row → its number joins `totalsRowNumbers`; neither a row
+    ///    nor a skip.
+    /// 4. No name and no readable Trove ID → skipped, "no name" (P8).
+    /// 5. Otherwise a row.
+    ///
+    /// **Cells under a column the app does not know are never looked at**
+    /// (spec Decision 23) — not by the blank test, not by the totals test.
+    static func itemsSheet(
+        from rows: [CSVRow],
+        timeZone: TimeZone = .current,
+        locale: Locale = .current
+    ) throws(ImportColumns.HeaderError) -> ImportSheet<ItemImportRow> {
+        let shaped = shaped(rows)
+        // Plan §6's temporary seam: the known names are the array plus
+        // `troveIDHeader` until T008 appends it to `itemHeaders`.
+        let known = ExportSchema.itemHeaders + [ExportSchema.troveIDHeader]
+        // An empty file is a header of no cells — missing every required name.
+        let columns = try ImportColumns.match(
+            header: shaped.first?.cells ?? [],
+            known: known,
+            required: ExportSchema.itemRequiredHeaders,
+            otherRequired: ExportSchema.wishlistRequiredHeaders
+        )
+        let dataRows = shaped.dropFirst()
+
+        let missing = ["Desire to Keep", "Condition"].filter { columns.position(of: $0) == nil }
+
+        // One order per file, from every cell in its date columns.
+        let datePositions = ["Purchase Date", "Sold Date"].compactMap { columns.position(of: $0) }
+        let dateCells = dataRows.flatMap { row in
+            datePositions.compactMap { $0 < row.cells.count ? row.cells[$0] : nil }
+        }
+        let (order, regionDecided) = slashDateOrder(in: dateCells, region: locale)
+
+        let recognised = known.compactMap { columns.position(of: $0) }
+        let namePosition = columns.position(of: "Name")
+        let troveIDPosition = columns.position(of: ExportSchema.troveIDHeader)
+        let moneyPositions = Set(
+            ["Purchase Price", "Current Value", "Sale Price"].compactMap { columns.position(of: $0) }
+        )
+
+        var sheetRows: [ItemImportRow] = []
+        var skipped: [SkippedRow] = []
+        var totals: [Int] = []
+
+        for row in dataRows {
+            guard row.cells.count <= columns.width else {
+                skipped.append(SkippedRow(rowNumber: row.number, reason: SkipReason.extraHeaderColumns))
+                continue
+            }
+            var cells = row.cells
+            cells.append(contentsOf: Array(repeating: "", count: columns.width - cells.count))
+
+            guard recognised.contains(where: { !isBlank(cells[$0]) }) else { continue }
+
+            if isTotalsRow(
+                cells,
+                recognised: recognised,
+                name: namePosition,
+                troveID: troveIDPosition,
+                money: moneyPositions
+            ) {
+                totals.append(row.number)
+                continue
+            }
+
+            /// The cell under `name`, or nil when the file has no such column.
+            func field(_ name: String) -> String? {
+                columns.position(of: name).map { cells[$0] }
+            }
+
+            let troveID = field(ExportSchema.troveIDHeader).map(Self.troveID(from:)) ?? .empty
+            let name = text(field("Name"))
+            // A nameless row with a readable code is kept: only the store
+            // knows whether it matches (P8).
+            var readableID = false
+            if case .value = troveID { readableID = true }
+            if name == .empty, !readableID {
+                skipped.append(SkippedRow(rowNumber: row.number, reason: SkipReason.noName))
+                continue
+            }
+
+            sheetRows.append(ItemImportRow(
+                rowNumber: row.number,
+                troveID: troveID,
+                name: name,
+                category: text(field("Category")),
+                purchaseLocation: text(field("Purchase Location")),
+                conditionNotes: text(field("Condition Notes")),
+                serialNumber: text(field("Serial Number")),
+                notes: text(field("Notes")),
+                saleLocation: text(field("Sold At")),
+                saleNote: text(field("Sale Note")),
+                purchasePrice: read(field("Purchase Price"), cents(from:)),
+                currentValue: read(field("Current Value"), cents(from:)),
+                salePrice: read(field("Sale Price"), cents(from:)),
+                currency: read(field("Currency"), currencyCode(from:)),
+                purchaseDate: read(field("Purchase Date")) { day(from: $0, timeZone: timeZone, order: order) },
+                soldDate: read(field("Sold Date")) { day(from: $0, timeZone: timeZone, order: order) },
+                desireToKeep: read(field("Desire to Keep")) { desire(from: $0, in: 1...5) },
+                reverbProductID: read(field("Reverb Product ID"), reverbProductID(from:)),
+                year: read(field("Year")) { year(from: $0, timeZone: timeZone) },
+                condition: read(field("Condition"), condition(from:)),
+                bought: read(field("Bought"), newOrUsed(from:))
+            ))
+        }
+
+        return ImportSheet(
+            rows: sheetRows,
+            skipped: skipped,
+            unusedColumns: columns.unused,
+            totalsRowNumbers: totals,
+            regionDateOrder: regionDecided ? order : nil,
+            missingDefaultColumns: missing
+        )
+    }
+
+    /// Plan §4, step 3: the name blank or, lowercased, one of `total`,
+    /// `totals`, `subtotal`, `sum`; the Trove ID blank; at least one other
+    /// recognised cell filled; and every other filled recognised cell in a
+    /// money column and reading as an amount.
+    private static func isTotalsRow(
+        _ cells: [String],
+        recognised: [Int],
+        name: Int?,
+        troveID: Int?,
+        money: Set<Int>
+    ) -> Bool {
+        if let name, !isBlank(cells[name]),
+           !totalsLabels.contains(FieldNormalization.trimmed(cells[name]).lowercased()) {
+            return false
+        }
+        if let troveID, !isBlank(cells[troveID]) { return false }
+        let filled = recognised.filter { $0 != name && $0 != troveID && !isBlank(cells[$0]) }
+        return !filled.isEmpty && filled.allSatisfy {
+            money.contains($0) && cents(from: FieldNormalization.trimmed(cells[$0])) != nil
+        }
+    }
+
+    private static let totalsLabels: Set<String> = ["total", "totals", "subtotal", "sum"]
+
+    /// A text cell: blank (by `isBlank`) or absent is `empty`; otherwise the
+    /// trimmed text. Text is never unreadable.
+    private static func text(_ field: String?) -> Cell<String> {
+        guard let field, !isBlank(field) else { return .empty }
+        return .value(FieldNormalization.trimmed(field))
+    }
+
+    /// A typed cell: blank or absent is `empty`; the trimmed text `parse`
+    /// reads is the value; anything else is `unreadable`.
+    private static func read<Value: Sendable & Equatable>(
+        _ field: String?, _ parse: (String) -> Value?
+    ) -> Cell<Value> {
+        guard let field, !isBlank(field) else { return .empty }
+        guard let value = parse(FieldNormalization.trimmed(field)) else { return .unreadable }
+        return .value(value)
     }
 
     /// The items pipeline end-to-end: shape (T002), gate (T003), then the

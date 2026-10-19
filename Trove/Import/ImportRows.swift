@@ -114,3 +114,191 @@ nonisolated struct ImportColumns: Sendable {
         return FieldNormalization.trimmed(name).lowercased()
     }
 }
+
+
+/// One items row, read once into cells and decided later (021, plan §4, Q2):
+/// `asNew(now:missingColumns:)` applies `012`'s defaults to it; an update
+/// reads the same cells and applies none. A column the file does not have
+/// reads `empty`, like a blank cell.
+nonisolated struct ItemImportRow: Sendable, Equatable {
+    let rowNumber: Int
+    let troveID: Cell<UUID>
+    // Text is never unreadable: blank (by `ImportSchema.isBlank`) or the
+    // trimmed text.
+    let name, category, purchaseLocation, conditionNotes, serialNumber, notes,
+        saleLocation, saleNote: Cell<String>
+    let purchasePrice, currentValue, salePrice: Cell<Int>
+    let currency: Cell<String>
+    let purchaseDate, soldDate: Cell<Date>
+    let desireToKeep, reverbProductID, year: Cell<Int>
+    let condition: Cell<Condition>
+    let bought: Cell<NewOrUsed>
+
+    /// The row as a new item — nil only when the name is empty. Exactly
+    /// `ImportSchema.itemsPreview`'s field policy and counts (the spec's "the
+    /// defaults of `012` are for new rows only"): price, date, desire and
+    /// condition default and count when empty or unreadable; currency,
+    /// current value, Reverb product, year and Bought count only when
+    /// unreadable; the sale is the pair rule, counted once; an unreadable
+    /// Trove ID counts once (P7). **One difference (spec Decision 17)**: a
+    /// default taken because its column is in `missingColumns` is still
+    /// taken and is not counted — only `Desire to Keep` and `Condition` can
+    /// be missing, the required columns having gated the file. The currency
+    /// comes from the `Currency` cell and nowhere else.
+    func asNew(now: Date, missingColumns: [String]) -> ValidatedRow<ItemExportRecord>? {
+        guard case .value(let name) = name else { return nil }
+
+        var defaulted = 0
+        if troveID == .unreadable { defaulted += 1 }
+
+        let price: Int
+        if case .value(let parsed) = purchasePrice {
+            price = parsed
+        } else {
+            price = 0
+            defaulted += 1
+        }
+
+        // Blank currency is the app's own single-currency reality, not a
+        // defect worth reporting; a malformed code is.
+        let currencyCode: String
+        switch currency {
+        case .empty: currencyCode = "USD"
+        case .value(let code): currencyCode = code
+        case .unreadable:
+            currencyCode = "USD"
+            defaulted += 1
+        }
+
+        let date: Date
+        if case .value(let parsed) = purchaseDate {
+            date = parsed
+        } else {
+            date = now
+            defaulted += 1
+        }
+
+        // The empty-cell-≠-zero rule in reverse: blank is "unvalued", a
+        // legitimate value, silent. Only an unreadable cell counts.
+        let value: Int?
+        switch currentValue {
+        case .empty: value = nil
+        case .value(let parsed): value = parsed
+        case .unreadable:
+            value = nil
+            defaulted += 1
+        }
+
+        let desire: Int
+        if case .value(let parsed) = desireToKeep {
+            desire = parsed
+        } else {
+            desire = 3
+            if !missingColumns.contains("Desire to Keep") { defaulted += 1 }
+        }
+
+        let grade: Condition
+        if case .value(let parsed) = condition {
+            grade = parsed
+        } else {
+            grade = .excellent
+            if !missingColumns.contains("Condition") { defaulted += 1 }
+        }
+
+        // The match and the year: blank is the ordinary "no match" / "no
+        // year" answer and stays silent; unreadable is a counted default.
+        let productID: Int?
+        switch reverbProductID {
+        case .empty: productID = nil
+        case .value(let parsed): productID = parsed
+        case .unreadable:
+            productID = nil
+            defaulted += 1
+        }
+
+        let itemYear: Int?
+        switch year {
+        case .empty: itemYear = nil
+        case .value(let parsed): itemYear = parsed
+        case .unreadable:
+            itemYear = nil
+            defaulted += 1
+        }
+
+        // 006, the pair rule (Q6/R3): a sold item iff **both** `Sold Date`
+        // and `Sale Price` read. Otherwise the item imports unsold and the
+        // whole sale is dropped — counted **once** if any of the four sale
+        // cells carried anything, because one dropped sale is one thing lost.
+        let sold: (date: Date, cents: Int)?
+        if case .value(let parsedDate) = soldDate, case .value(let parsedPrice) = salePrice {
+            sold = (parsedDate, parsedPrice)
+        } else {
+            sold = nil
+            let saleEmpty = soldDate == .empty && salePrice == .empty
+                && saleLocation == .empty && saleNote == .empty
+            if !saleEmpty { defaulted += 1 }
+        }
+
+        // 020 (Q6): blank is "not recorded" and silent; unreadable counts.
+        let newOrUsed: NewOrUsed?
+        switch bought {
+        case .empty: newOrUsed = nil
+        case .value(let parsed): newOrUsed = parsed
+        case .unreadable:
+            newOrUsed = nil
+            defaulted += 1
+        }
+
+        let record = ItemExportRecord(
+            name: name,
+            categoryPath: category.text ?? "",
+            purchasePriceCents: price,
+            currencyCode: currencyCode,
+            purchaseDate: date,
+            purchaseLocation: purchaseLocation.text,
+            currentValueCents: value,
+            desireToKeep: desire,
+            conditionRawValue: grade.rawValue,
+            conditionNotes: conditionNotes.text,
+            serialNumber: serialNumber.text,
+            notes: notes.text,
+            reverbProductID: productID,
+            year: itemYear,
+            soldDate: sold?.date,
+            salePriceCents: sold?.cents,
+            saleLocation: sold == nil ? nil : saleLocation.text,
+            saleNote: sold == nil ? nil : saleNote.text,
+            bought: newOrUsed,
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
+        )
+        return ValidatedRow(record: record, rowNumber: rowNumber, defaultedFieldCount: defaulted)
+    }
+}
+
+private extension Cell<String> {
+    /// A text cell as the model's optional field: the text, or nil.
+    nonisolated var text: String? {
+        if case .value(let text) = self { return text }
+        return nil
+    }
+}
+
+/// What reading a file produces (021, plan §4) — rows in file order, the
+/// skips, and what the confirmation reports beside them.
+nonisolated struct ImportSheet<Row: Sendable>: Sendable {
+    let rows: [Row]
+    let skipped: [SkippedRow]
+    /// Unrecognised header names as written, in file order.
+    let unusedColumns: [String]
+    /// The spreadsheet numbers of the rows left out as totals rows — neither
+    /// rows nor skips.
+    let totalsRowNumbers: [Int]
+    /// The slash order the phone's region decided, when the file's own
+    /// dates could not; nil when they did, or when it holds no slash date.
+    let regionDateOrder: SlashDateOrder?
+    /// Decision 17: optional columns the file does not have at all whose blank
+    /// is a counted default for a new row — `Desire to Keep`, `Condition`; on
+    /// the wishlist `Desire to Own`, `Added`. Schema names, schema order.
+    let missingDefaultColumns: [String]
+}

@@ -314,7 +314,7 @@ is plain language.
 
 ## Phase 2 — Reading a sheet as it is · walkthrough: yes — Items › ⋯ › Import from CSV: your own `My-Gear.csv` imports as it is — the confirmation says 90 items will be added and that row 108 looks like a totals row and was left out, with nothing skipped and no defaults; after Import the 13 items whose serial number said N/A have none, the one written 0185654 keeps its zero, and the Alienware monitor is worth $500 (do this on a simulator, or anywhere you are happy to add 90 items — Settings › Delete All clears them); `docs/samples/items-hand-kept.csv` does the same with invented rows; move the columns around in a sheet, or add a column of your own, and it still imports, with the confirmation naming the column it did not use; delete the Condition column and it still imports, the confirmation saying once that new items will be Excellent rather than counting every row; delete the Purchase Date column and the file is refused, the alert naming what is missing; a price written `$ 3,179.95`, with a space, reads; a file an older Trove exported still imports; the Wishlist does all of this with its own columns. Not yet, by design: exports are unchanged and importing a file twice still adds copies — that is Phase 3
 
-- [ ] **T004 — The items rows and the items sheet. `review: per-task`.**
+- [x] **T004 — The items rows and the items sheet. `review: per-task`.**
   Per plan §4, Q2, P5, P7, P8, R8, spec Decisions 17 and 23. In
   `ImportRows.swift`: `ItemImportRow`, `ImportSheet<Row>` (with
   `missingDefaultColumns`), and `ItemImportRow.asNew(now:missingColumns:)`
@@ -377,6 +377,22 @@ is plain language.
   **Verify:** `scripts/verify.sh` green (orchestrator re-runs); every mutation
   recorded verbatim; the fixture's row count, totals row number and the two
   sums stated in the Done note.
+  **Done (2026-10-18):** `ItemImportRow`, `ImportSheet` (with `missingDefaultColumns`) and `asNew` in `ImportRows.swift`; `ImportSchema.itemsSheet(from:timeZone:locale:)` beside the untouched `itemsPreview`. `ImportSheetTests`, 17 tests (G6, G21), including `asNewCountsAndDefaultsExactlyAsTodaysPreview` — six rows through both paths, counts and every exported cell equal. Fixture `items-hand-kept.csv`: 24 rows (2–7, 9–14, 16–21, 23–28), separators 8/15/22, blanks 29–31, **totals row 32**, sums **$27,088.86** purchase and **$26,605.00** current value, checked in the test; read under `en_GB` so the file's own dates must decide. Mutations M1–M8 (the task's eight), each red. New `SkipReason.extraHeaderColumns` (R7's wording; the old `extraColumns` goes at T007). `troveID` not on the record until T008, as T008's line says. An `N/A` sale cell is now empty and no longer counts a dropped sale (criterion 14). Unit 1,871 / 244 green, re-run by the orchestrator. Per-task review: signed off, no blocking; four notes → T004a.
+
+- [ ] **T004a — T004 review notes: two unpinned counts, file-byte assertions, the date vote, a doc sentence.**
+  *(Added 2026-10-18 — T004's per-task review, second-look notes 1, 2, 4, 5.)*
+  (1) No test sends an **unreadable** Purchase Price or Purchase Date through
+  `asNew` — add one (`abc`, `someday`): price 0, date `now`, two defaults, and
+  equal to `itemsPreview`'s count for the same row (counts only); mutation:
+  `.unreadable` defaulted silently → red. (2) The no-BOM / LF / no-trailing-newline
+  assertions read through `String(contentsOf:)`, which may strip a BOM — assert
+  on the file's `Data` instead and plant a BOM once to see it red. (4) Rows
+  skipped for extra cells no longer vote on the slash order (filter to
+  `cells.count <= columns.width` first), with a leg. (5) `asNew`'s doc comment:
+  "only `Desire to Keep` and `Condition` can appear in `missingColumns`".
+  Files: `Trove/Import/ImportRows.swift`, `Trove/Import/ImportSchema.swift`,
+  `TroveTests/ImportSheetTests.swift`.
+  **Verify:** `scripts/verify.sh` green; mutations recorded.
 
 - [ ] **T005 — The wishlist rows and the wishlist sheet.**
   Per plan §4, Q4. `WishlistImportRow`, its `asNew(now:missingColumns:)`
@@ -1074,6 +1090,8 @@ the spec runs, with escape-hatch misses recorded here too.
 | Phase 1 review (`skeptical-reviewer`) | `opus` | 114,725 (14 tool uses, 3.2 min) | Signed off, no blocking; N1 fix confirmed both directions on both lists and through Plans. Second look: (1) Wishlist delete wiring untested on screen → T003a; (2) `delete`'s id-only fallback has no production caller (doc comment, T003a); (3) stale pointers → T003a, plan §1 sentence fixed by the orchestrator; (4) the widened `cents` also turns a `$1,250` Sale Price from dropped into sold in the shipped importer — named at the Phase 2 pause; (5) a source scan re-spelled (disclosed, for a future sweep); (6) `deletePlan`'s unknown-key leg now a planless row |
 | Phase 1 UI run at `d50507b` (orchestrator) | — | — | 43 tests, 0 failures — the review's condition met |
 | T003a (`sdd-implementer`) | `opus` | 51,481 (21 tool uses, 25.9 min) | Done first pass |
+| T004 (`sdd-implementer`) | `opus` | 126,632 (36 tool uses, 51.9 min) | Done first pass; a mutation revert slipped (a reverse edit matched 11 sites), caught by its count check and restored by hand, `cmp`-verified |
+| T004 per-task review (`skeptical-reviewer`) | `opus` | 76,254 (9 tool uses, 2.8 min) | Signed off, no blocking. Notes 1, 2, 4, 5 → T004a; note 3 (the two optional names spelled in two places) left — the criterion-41 leg guards it |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):
