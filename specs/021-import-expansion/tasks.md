@@ -553,6 +553,31 @@ is plain language.
   judges a rule being re-pinned, not a test disappearing.
   **Done (2026-10-18):** the service returns sheets and takes `locale:`; both view models stage `plan(…).summary` and commit through the stores, `confirmImport()` keeping its synchronous capture; list views unchanged. Deleted: the header gate, both previews, `ImportPreview`, `headerMismatch`, the old title and message, `extraColumns`, both boundary arrays — grep including comments over `Trove/` and `TroveTests/` finds none. Fixtures byte-copied (`cmp`); the note is `import-fixtures.md`, not `README.md` (a second `README.md` collides in the flat test bundle with `Fixtures/Reverb/README.md`). **Re-pointed, assertions unedited**: the field-policy, wrong-list and header tests in `ImportSchemaTests`; three `DocsSampleTests`; `ImportServiceTests`' canonical and mapping tests; `ImportConcurrencyTests`; the four view-model import/commit suites (through `asAllNew` / staged-sheet helpers). **Rewritten to the new rule**: `missingExtraRenamedAndReorderedColumnsFollowTheNameRule` (was `…AllMismatch`); `everyItemsWidthFromTwelveToNineteenImports` (was `theTwoLegacyItemWidthsPass…`); `anEmptyFileFailsTheGateNotTheRowPolicy`; `extraContentCellsSkipTheRow`; `aLegacyFilesOverlongRowIsStillExtraColumns`; `theLegacyLayoutStillPasses`; `anEighteenColumnItemsFileImportsWithNothingRecorded`; `aNineColumnWishlistFileImportsWithNothingRecorded`; `wishlistRowFatalsMatchTheItemsRules`; `requiredBlanksAndUnparseablesDefaultAndCount` (`n/a` → `abc`, still 6); `theSalePairRuleCountsOneDefaultPerDroppedSale` (`07/04/2026` → `someday`); `ExportSchemaTests.theLegacyLayoutsArePinnedByLiteralName`; `ImportCopyTests.theSkipListingCapsAtFive`, and five retired with the functions they pinned, each superseded by a `021` test; `theOtherListsFileMapsToTheFlaggedMismatch`; both alert-accessor tests; two `DocsSampleTests`; the four preview-equivalence tests in `ImportSheetTests` (comparison against the deleted preview removed, literal pins kept); `ImportColumnsTests`' widths as literals; the spies. **New**: `ImportLayoutTests` (items 12/14/18/19, wishlist 7/9/10, through the live service, zero skips and defaults); `ImportWholeFileFailureTests` (six failures × both lists, second context empty); `theLocaleReachesTheSchema`; per view model — staged before any write and Cancel writes nothing, a summary writing nothing offers no import and confirm returns nil, required-only shows the two missing-column lines. `items-partial.csv` confirmed: 5 import, rows 5 and 7 skipped, 6 defaults. Mutations, each red: a layout's lookup pointed at the wrong column (a literal typo traps at `position(of:)` instead); `locale` dropped; `importOffersConfirmation` on rows, each list; `@concurrent` dropped. `ImportWiringTests` never went red. Unit 1,909 / 248 green.
 
+- [ ] **T007a — Phase 2 review notes: one list of default columns, honest names, a width check, literal expectations, the article.**
+  *(Added 2026-10-19 — Phase 2 review, second-look notes 1–6.)* (1) The
+  default-column names (`Desire to Keep`, `Condition`; `Desire to Own`, `Added`)
+  are typed in the sheet readers, both `asNew` and `ImportCopy.missingColumnLine`
+  — declare them once on `ExportSchema` beside the required lists, read them in
+  all three, and make `missingColumnLine` exhaustive over them instead of
+  `default: nil`. (2) Rename the two preview-equivalence tests in
+  `ImportSheetTests` for what they now pin, and the stale names and comment the
+  review lists (`theOtherListsFileMapsToTheFlaggedMismatch`,
+  `aWishlistFileFailsTheItemsPreviewAsWrongList`,
+  `anItemsFileFailsTheWishlistPreviewAsWrongList`, "The previews take no
+  instant"). (3) `ImportLayoutTests`' 14-column leg requires its shaped header to
+  be 14 cells. (4) `ImportWholeFileFailureTests`' doc comment says its
+  store-empty half holds by construction and the failing half is the
+  failure-not-confirmation check. (5) The empty-file expectations in
+  `ImportSchemaTests` and `ImportColumnsTests` use literal names, not
+  `ExportSchema.itemRequiredHeaders`. (6) The `.wrongList` sentence reads "an
+  Items export" (the article only — plan R7, fit not meaning), its pin updated.
+  Files: `Trove/Export/ExportSchema.swift`, `Trove/Import/ImportSchema.swift`,
+  `Trove/Import/ImportRows.swift`, `Trove/Import/ImportService.swift`,
+  `TroveTests/ImportSheetTests.swift`, `TroveTests/ImportServiceTests.swift`,
+  `TroveTests/ImportSchemaTests.swift`, `TroveTests/ImportColumnsTests.swift`.
+  **Verify:** `scripts/verify.sh` green; one mutation — a misspelled name in the
+  shared list → red.
+
   **Phase 2 closes here — pause for the person** (walkthrough above; the phase
   review first). The report says, as a statement the person can overturn: the
   alert's wording was fitted to an alert, which draws no bold, and three
@@ -1100,6 +1125,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | T005 (`sdd-implementer`) | `opus` | 87,629 (27 tool uses, 39.8 min) | Done first pass; one scripted revert failed on a repeated line and was redone by hand before the last mutation |
 | T006 (`sdd-implementer`) | `opus` | 133,510 (35 tool uses, 52.4 min) | Done first pass |
 | T007 (`sdd-implementer`) | `opus` | 250,241 (73 tool uses, 43.4 min) | Done first pass; fixture note renamed to avoid a bundle-resource collision |
+| Phase 2 review (`skeptical-reviewer`) | `opus` | 198,926 (30 tool uses, 4.0 min) | Signed off, no blocking; every rewritten shipped test re-pins a changed rule; `confirmImport()` keeps its capture. Notes 1–6 → T007a; note 7 (a blank date now defaults at the tap, not at staging) recorded, no change |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):
