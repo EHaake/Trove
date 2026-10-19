@@ -264,7 +264,7 @@ is plain language.
   recorded; the Done note names every existing test that changed.
   **Done (2026-10-18):** `Cell`, `SlashDateOrder` (`regional(for:)` from the locale's `yMd` pattern) open `ImportRows.swift`; `ImportSchema` gains `isBlank`, widened `cents`, `day(…order:)` (nil keeps ISO-only for every existing caller), `slashDateOrder(in:region:)`, `troveID(from:)`. `ImportGrammarTests`, 17 functions over G2–G4. Mutations, each red: grouping loosened (`1,25`, `12,34,567`, `1,2345` read); commas stripped first (5 shapes read); the space-skip removed (criterion 46's two and `$  5`); spaces skipped with no symbol (`1 250`; extra: leading space skip → `" 5.00"` in `ImportSchemaTests`); order decided per cell (8 issues); region reported for an ISO-only file; `NA` blank. **Existing test changed**: `ImportSchemaTests.nonCanonicalMoneyIsRejected` — `"$5"` and `"1,250.00"` moved to the new `aLeadingSymbolAndThousandsGroupsNowRead`, the other 11 still rejected. Noted: only U+0020 is skipped after a symbol (no NBSP); the widened `cents` already reaches today's preview (Phase 1's stated movement). Unit 1,845 tests in 242 suites green.
 
-- [ ] **T003 — Finding columns by name.**
+- [x] **T003 — Finding columns by name.**
   Per plan §3, P1–P3. `ImportColumns` (in `ImportRows.swift`) with
   `match(header:known:required:otherRequired:)`, `position(of:)`, `width`,
   `unused`, and `HeaderError` (`wrongList`, `missing`, `duplicate`).
@@ -289,6 +289,7 @@ is plain language.
   `TroveTests/ImportColumnsTests.swift` (new).
   **Verify:** `scripts/verify.sh` green, the new suite in the count; mutations
   recorded.
+  **Done (2026-10-18):** `ImportColumns` (`match`, `position(of:)` with a precondition on an unknown name, `width`, `unused`, `HeaderError`) and `ExportSchema`'s `itemRequiredHeaders`, `wishlistRequiredHeaders`, `troveIDHeader` (plan §6's seam until T008). `ImportColumnsTests`, 9 tests, headers built from `ExportSchema`'s arrays; one added beyond the list, `aHeaderAtTheOtherListsWidthIsNotWrongListByCount`, which is what makes the count mutation red. Mutations, each red: only the first missing name (4 issues); the star not dropped (4); an unknown column refusing (9); wrong list by cell count (2). Defaults chosen: `unused` keeps the first spelling, de-duplicated by canonical form; `.duplicate` carries the schema's spelling; `otherRequired` is checked against every header cell. Unit 1,854 tests in 243 suites green (re-run by the orchestrator after the reverts).
 
   **Phase 1 closes here — `walkthrough: none`; after its review, run on.**
 
@@ -1050,6 +1051,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | Decision review after T001b (`skeptical-reviewer`) | `opus` | ~39,951 (3 tool uses, 1.2 min) | Plans rows: fix drawing **and** the entry lookup (else a wrong-target delete/purchase) — plan change, T001c; sold-row sites: routine fix with a UI leg each; no product question |
 | T001c (`sdd-implementer`) | `opus` | 122,667 (54 tool uses, 88.1 min) | Done first pass; two sold pairs instead of one (fetch order between twins unstable) |
 | T002 (`sdd-implementer`) | `opus` | 78,673 (25 tool uses, 62.3 min) | Done first pass |
+| T003 (`sdd-implementer`) | `opus` | 69,462 (18 tool uses, 36.9 min) | Done first pass; one test added so the count mutation can fail |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):

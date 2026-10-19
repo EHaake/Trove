@@ -382,6 +382,21 @@ nonisolated enum ExportSchema {
         "Added", "Notes", "Reverb Product ID", "Year", "Looking For",
     ]
 
+    /// 021: the columns an import cannot do without (plan §3, §6) — declared
+    /// once, here, because the reader's "missing" check and the starred
+    /// template header are both read from these lists.
+    static let itemRequiredHeaders = ["Name", "Purchase Price", "Purchase Date"]
+
+    /// See `itemRequiredHeaders` — the wishlist's two.
+    static let wishlistRequiredHeaders = ["Name", "Estimated Cost"]
+
+    /// 021: the column that carries a row's identity. **A temporary seam**
+    /// (plan §6): the reader is built before export writes this column, so
+    /// until T008 appends it to `itemHeaders` and `wishlistHeaders` the
+    /// reader's known names are each array plus this constant. T008 moves it
+    /// into the arrays and removes the addition.
+    static let troveIDHeader = "Trove ID"
+
     /// Every column count at which a shipped layout ended, oldest first —
     /// the widths `ImportSchema`'s gate accepts as a prefix of the current
     /// headers (002, plan §7). 12 is the layout `011`/`012` shipped, before
