@@ -249,7 +249,7 @@ struct ItemListView: View {
             presenting: pendingDeletion
         ) { item in
             Button(ItemDeleteCopy.confirm, role: .destructive) {
-                viewModel.delete(id: item.id)
+                viewModel.delete(id: item.id, row: item.persistentModelID)
             }
             Button(ItemDeleteCopy.cancel, role: .cancel) {}
         } message: { item in
@@ -333,7 +333,7 @@ struct ItemListView: View {
     /// screens are one pattern, not two (T012).
     private var ownedRows: some View {
         List {
-            ForEach(viewModel.items, id: \.id) { item in
+            ForEach(viewModel.items, id: \.persistentModelID) { item in
                 ItemRow(item: item, trend: viewModel.trend(for: item.id))
                     // The screen's own background, not `.clear`, and not
                     // decoration: at rest they're pixel-identical (the screen
@@ -467,7 +467,10 @@ struct ItemListView: View {
     /// dates', not the person's.
     private var soldRows: some View {
         List {
-            ForEach(viewModel.soldItems, id: \.id) { item in
+            // Keyed on the store row, not the Trove ID: two sold items can
+            // share an id, and SwiftUI draws the first one's content in every
+            // row that repeats it (`021` plan §1).
+            ForEach(viewModel.soldItems, id: \.persistentModelID) { item in
                 SoldItemRow(item: item)
                     .listRowBackground(theme.colors.background)
                     .listRowSeparator(.hidden)

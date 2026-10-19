@@ -447,7 +447,7 @@ struct SellPlanView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 LazyVStack(spacing: theme.metrics.listRowGap) {
-                    ForEach(viewModel.candidates, id: \.id) { item in
+                    ForEach(viewModel.candidates, id: \.persistentModelID) { item in
                         SellPlanRow(
                             item: item,
                             isSelected: viewModel.isSelected(item),
@@ -517,7 +517,9 @@ struct SellPlanView: View {
             Text(SaleCopy.sellPlanSectionTitle).monoLabel()
 
             VStack(spacing: 0) {
-                ForEach(viewModel.soldItems, id: \.id) { item in
+                // Keyed on the store row, not the Trove ID — the Items Sold
+                // list's reason (`021` plan §1).
+                ForEach(viewModel.soldItems, id: \.persistentModelID) { item in
                     soldRow(item)
                 }
             }

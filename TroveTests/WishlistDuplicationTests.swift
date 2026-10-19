@@ -87,6 +87,31 @@ struct WishlistDuplicationTests {
         #expect(try #require(wanted.first { $0.id == original.id }).lookingFor == .used, "The original keeps its own")
     }
 
+    /// 021 G1 (criterion 19): the copy gets a Trove ID of its own. Both rows
+    /// are picked out by position (the copy lands right after the original),
+    /// never by comparing ids, and read on a second context.
+    ///
+    /// Mutation: `copy.id = original.id` in `duplicate(id:)` → the two rows
+    /// share a code.
+    @Test func theCopyHasANewTroveID() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let original = makeOriginal(in: context)
+        let code = original.id
+        try context.save()
+
+        let viewModel = WishlistViewModel(modelContext: context)
+        viewModel.load()
+        viewModel.duplicate(id: code)
+
+        let ordered = try ModelContext(container).fetch(
+            FetchDescriptor<WishlistItem>(sortBy: [SortDescriptor(\.sortOrder)])
+        )
+        try #require(ordered.count == 2)
+        #expect(ordered[0].id == code, "The original keeps its own")
+        #expect(ordered[1].id != code, "The copy needs a code of its own")
+    }
+
     /// The copy's own Sell Plan selection starts empty — duplicating a
     /// wishlist item must not double-count the gear its original planned to
     /// sell — and the original's selection survives untouched.

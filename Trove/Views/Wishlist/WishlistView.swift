@@ -191,7 +191,7 @@ struct WishlistView: View {
             presenting: pendingDeletion
         ) { item in
             Button(WishlistDeleteCopy.confirm, role: .destructive) {
-                viewModel.delete(id: item.id)
+                viewModel.delete(id: item.id, row: item.persistentModelID)
             }
             Button(WishlistDeleteCopy.cancel, role: .cancel) {}
         } message: { _ in
@@ -333,7 +333,7 @@ struct WishlistView: View {
     /// reads as the same card stack the item list draws with a `LazyVStack`.
     private var rows: some View {
         List {
-            ForEach(viewModel.items, id: \.id) { item in
+            ForEach(viewModel.items, id: \.persistentModelID) { item in
                 WishlistRow(item: item, trend: viewModel.trend(for: item.id))
                     // The screen's own background, not `.clear`, and not
                     // decoration: at rest they're pixel-identical (the screen

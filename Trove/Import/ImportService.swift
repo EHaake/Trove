@@ -12,12 +12,12 @@ import Foundation
 /// main actor (criterion 15). `ImportConcurrencyTests`' probe keeps this
 /// true.
 nonisolated protocol ImportService: Sendable {
-    @concurrent func parseItems(at url: URL, timeZone: TimeZone) async throws -> ItemsImportPreview
-    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone) async throws -> WishlistImportPreview
+    @concurrent func parseItems(at url: URL, timeZone: TimeZone, locale: Locale) async throws -> ItemsImportSheet
+    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone, locale: Locale) async throws -> WishlistImportSheet
 }
 
 /// Whole-file failures — the only errors import produces; everything
-/// row-level is a skip or a counted default inside the preview (the
+/// row-level is a skip or a counted default inside the sheet (the
 /// amended skip-and-report decision, criterion 14's list).
 nonisolated enum ImportError: Error, Equatable {
     /// The bytes couldn't be read at all (missing, permission, an iCloud
@@ -33,10 +33,13 @@ nonisolated enum ImportError: Error, Equatable {
     case malformedQuoting
     /// Beyond the defensive size cap.
     case tooLarge
-    /// The header row isn't this list's template. `wrongList` means it is
-    /// exactly the *other* list's — the most likely wrong-file mistake,
-    /// and criterion 4 wants the alert to say so.
-    case headerMismatch(wrongList: Bool)
+    /// 021 (plan §5): the file is the other list's export — the most likely
+    /// wrong-file mistake, and the alert says so.
+    case wrongList
+    /// 021: the required columns the header lacks, in schema order.
+    case missingColumns([String])
+    /// 021: a recognised column appears twice; carries the schema's spelling.
+    case duplicateColumn(String)
 }
 
 /// Which list an import ran against — picks the copy's nouns, and which
@@ -51,10 +54,12 @@ nonisolated enum ImportTarget {
 /// three presentations, and independent booleans that can go true together
 /// are how SwiftUI silently drops one (plan §View-model surface). Dumb
 /// data: the view models compose its strings through `ImportCopy`.
-nonisolated enum ImportPresentation<Record: Sendable>: Sendable {
-    /// The pre-commit gate (criterion 5). A preview with nothing validated
-    /// still presents — informationally, with no import action.
-    case confirmation(ImportPreview<Record>)
+nonisolated enum ImportPresentation<Row: Sendable>: Sendable {
+    /// The pre-commit gate (021, plan §5): the sheet the commit plans again,
+    /// and the summary the alert words. A summary that writes nothing still
+    /// presents — informationally, with no import action. `recounted`: shown
+    /// again because the store changed under it (R9).
+    case confirmation(sheet: ImportSheet<Row>, summary: ImportSummary, recounted: Bool)
     case failure(title: String, message: String)
 }
 
@@ -88,60 +93,158 @@ nonisolated enum ImportCopy {
                 + "told apart. Fix the file and try again."
         case .tooLarge:
             body = "The file is too large to be a \(target.noun) export."
-        case .headerMismatch(wrongList: true):
-            body = "This looks like a \(target.other.noun) export. "
+        case .wrongList:
+            body = "This looks like \(target.other == .items ? "an" : "a") \(target.other.noun) export. "
                 + "Import it from the \(target.other.screenName) screen instead."
-        case .headerMismatch(wrongList: false):
-            // 013 moved the blank template out of the "…" menu; the
-            // sentence moved with it. Body only — the guarantee below is
-            // appended once, and `ImportCopyTests` pins the whole string so
-            // a second copy of it can't slip past the suffix check.
-            body = "The columns don't match the \(target.noun) template. "
-                + "A blank template with the expected layout is in Settings \u{203A} Templates."
+        case .missingColumns(let names):
+            body = "This file is missing \(listed(names)). "
+                + "Trove needs the columns marked * in the template."
+        case .duplicateColumn(let name):
+            body = "This file has more than one \(name) column. Remove one and try again."
         }
         return body + " Nothing was imported."
-    }
-
-    /// The confirmation alert's title carries the import count
-    /// (criterion 5); zero importable rows is informational only.
-    static func confirmationTitle(importCount: Int, target: ImportTarget) -> String {
-        switch importCount {
-        case 0: "Nothing to import"
-        case 1: "Import 1 \(target.singular)?"
-        default: "Import \(importCount) \(target.plural)?"
-        }
     }
 
     /// How many skipped rows the confirmation lists before "and N more" —
     /// the amended criterion-5 cap, decided 2026-08-31.
     static let maxListedSkips = 5
 
-    /// The confirmation body: skipped rows by spreadsheet number with
-    /// reasons (capped), then the defaulted-field count. Pure over the
-    /// preview so it's testable without any UI.
-    static func confirmationMessage<Record>(preview: ImportPreview<Record>) -> String {
+    // MARK: - 021 (plan §5, R7, R10)
+
+    /// "Import this file?", or "Nothing to import" when the file would
+    /// neither add nor update anything.
+    static func confirmationTitle(summary: ImportSummary) -> String {
+        summary.writesAnything ? "Import this file?" : "Nothing to import"
+    }
+
+    /// The confirmation's lines, in plan §5's order, each only when it has
+    /// something to say; "No problems found." when none does. The two
+    /// warnings — unknown codes, then "can't be undone" — sit last, nearest
+    /// the buttons. Nothing here reads sync state (R10).
+    static func confirmationLines(summary: ImportSummary, target: ImportTarget, recounted: Bool) -> [String] {
         var lines: [String] = []
-        if !preview.skipped.isEmpty {
-            let count = preview.skipped.count
+        if recounted {
+            lines.append("Your collection changed while this was open. Check the numbers again.")
+        }
+
+        func things(_ count: Int) -> String {
+            "\(count) \(count == 1 ? target.singular : target.plural)"
+        }
+        switch (summary.updated, summary.added) {
+        case (0, 0): break
+        case (0, let added): lines.append("\(things(added)) will be added.")
+        case (let updated, 0): lines.append("\(things(updated)) will be updated.")
+        case let (updated, added): lines.append("\(things(updated)) will be updated and \(added) added.")
+        }
+
+        if summary.unchanged > 0 {
+            let count = summary.unchanged
+            lines.append(count == 1 ? "1 row is unchanged." : "\(count) rows are unchanged.")
+        }
+
+        if !summary.skipped.isEmpty {
+            let count = summary.skipped.count
             lines.append("Skipping \(count) \(count == 1 ? "row" : "rows"):")
-            for skip in preview.skipped.prefix(maxListedSkips) {
+            for skip in summary.skipped.prefix(maxListedSkips) {
                 lines.append("Row \(skip.rowNumber) \u{2014} \(skip.reason)")
             }
             if count > maxListedSkips {
                 let more = count - maxListedSkips
                 lines.append("\u{2026}and \(more) more \(more == 1 ? "row" : "rows").")
             }
+            if summary.skipped.contains(where: { ImportSchema.SkipReason.isSameTroveID($0.reason) }) {
+                lines.append("Clear the Trove ID on the row that's a new item.")
+            }
         }
-        if preview.defaultedFieldCount > 0 {
-            let count = preview.defaultedFieldCount
+
+        if summary.defaultedOnNew > 0 {
+            let count = summary.defaultedOnNew
             lines.append(
-                "\(count) missing or unreadable \(count == 1 ? "field" : "fields") will use defaults."
+                "\(count) missing or unreadable \(count == 1 ? "cell" : "cells") on new rows will use defaults."
             )
         }
+
+        if summary.unreadableOnUpdates > 0 {
+            let count = summary.unreadableOnUpdates
+            lines.append(
+                count == 1
+                    ? "1 unreadable cell on rows for items you already have will be left as it is."
+                    : "\(count) unreadable cells on rows for items you already have will be left as they are."
+            )
+        }
+
+        // R7's four sentences — a missing column only matters to a row
+        // being added.
+        if summary.added > 0 {
+            lines.append(contentsOf: summary.missingDefaultColumns
+                .compactMap(ExportSchema.DefaultedColumn.init(rawValue:))
+                .map(missingColumnLine))
+        }
+
+        if !summary.unusedColumns.isEmpty {
+            lines.append("Not used: \(summary.unusedColumns.joined(separator: ", ")).")
+        }
+
+        switch summary.totalsRows.count {
+        case 0: break
+        case 1: lines.append("Row \(summary.totalsRows[0]) looks like a totals row and was left out.")
+        case let count: lines.append("\(count) rows look like totals rows and were left out.")
+        }
+
+        if summary.unusedSaleRows > 0 {
+            let count = summary.unusedSaleRows
+            lines.append(
+                count == 1
+                    ? "1 row has sale details for an item you still own. Mark it sold in the app."
+                    : "\(count) rows have sale details for items you still own. Mark them sold in the app."
+            )
+        }
+
+        switch summary.regionDateOrder {
+        case nil: break
+        case .monthFirst?: lines.append("Dates read as month/day/year, from this iPhone's region.")
+        case .dayFirst?: lines.append("Dates read as day/month/year, from this iPhone's region.")
+        }
+
+        // R10 / Decision 19: about the import, never about sync state.
+        if summary.keptCodeAdds > 0 {
+            let count = summary.keptCodeAdds
+            lines.append(
+                count == 1
+                    ? "1 row has a Trove ID this iPhone doesn't have yet. If iCloud is still bringing "
+                        + "your collection down, wait \u{2014} importing now adds it a second time."
+                    : "\(count) rows have a Trove ID this iPhone doesn't have yet. If iCloud is still bringing "
+                        + "your collection down, wait \u{2014} importing now adds them a second time."
+            )
+        }
+
+        if summary.updated > 0 {
+            lines.append("Updates can't be undone.")
+        }
+
         if lines.isEmpty {
             lines.append("No problems found.")
         }
-        return lines.joined(separator: "\n")
+        return lines
+    }
+
+    /// R7: the spec words Condition's; the other three are worded after it.
+    /// Exhaustive over `ExportSchema.DefaultedColumn`: a column added there
+    /// without a line here does not compile.
+    private static func missingColumnLine(_ column: ExportSchema.DefaultedColumn) -> String {
+        switch column {
+        case .condition: "No Condition column \u{2014} new items will be Excellent."
+        case .desireToKeep: "No Desire to Keep column \u{2014} new items will be 3 of 5."
+        case .desireToOwn: "No Desire to Own column \u{2014} new items will be 2 of 3."
+        case .added: "No Added column \u{2014} new items will be dated today."
+        }
+    }
+
+    /// "A", "A and B", "A, B and C".
+    private static func listed(_ names: [String]) -> String {
+        guard let last = names.last else { return "" }
+        guard names.count > 1 else { return last }
+        return names.dropLast().joined(separator: ", ") + " and " + last
     }
 }
 
@@ -182,10 +285,10 @@ nonisolated extension ImportTarget {
 /// The live implementation: reads the picked file inside the one
 /// `@concurrent` call — security scope opened, read, and closed within a
 /// single function, so no scope crosses an actor hop (plan §Service and
-/// concurrency) — then decodes, parses, and validates, mapping the
+/// concurrency) — then decodes, parses, and reads the sheet, mapping the
 /// pipeline's errors onto `ImportError`. Holds no `ModelContainer`:
-/// parsing touches no store; committing is the view model's job, on the
-/// main actor.
+/// parsing touches no store; matching and committing run on the main
+/// actor, through the import stores (021, Q3).
 nonisolated final class FileImportService: ImportService {
     /// The defensive cap (amended criterion 14): ~10 MB is orders of
     /// magnitude beyond a personal inventory's CSV; this exists so a
@@ -202,16 +305,20 @@ nonisolated final class FileImportService: ImportService {
         self.generationProbe = generationProbe
     }
 
-    @concurrent func parseItems(at url: URL, timeZone: TimeZone) async throws -> ItemsImportPreview {
+    @concurrent func parseItems(at url: URL, timeZone: TimeZone, locale: Locale) async throws -> ItemsImportSheet {
         generationProbe?(Self.onMainThread())
         let text = try readText(at: url)
-        return try Self.mapped { try ImportSchema.itemsPreview(from: CSVParser.parse(text), timeZone: timeZone) }
+        return try Self.mapped {
+            try ImportSchema.itemsSheet(from: CSVParser.parse(text), timeZone: timeZone, locale: locale)
+        }
     }
 
-    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone) async throws -> WishlistImportPreview {
+    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone, locale: Locale) async throws -> WishlistImportSheet {
         generationProbe?(Self.onMainThread())
         let text = try readText(at: url)
-        return try Self.mapped { try ImportSchema.wishlistPreview(from: CSVParser.parse(text), timeZone: timeZone) }
+        return try Self.mapped {
+            try ImportSchema.wishlistSheet(from: CSVParser.parse(text), timeZone: timeZone, locale: locale)
+        }
     }
 
     /// `Thread.isMainThread` is `noasync`; sampling through a synchronous
@@ -244,10 +351,12 @@ nonisolated final class FileImportService: ImportService {
             return try body()
         } catch CSVParseError.unclosedQuote {
             throw ImportError.malformedQuoting
-        } catch ImportSchema.HeaderError.wrongList {
-            throw ImportError.headerMismatch(wrongList: true)
-        } catch ImportSchema.HeaderError.mismatch {
-            throw ImportError.headerMismatch(wrongList: false)
+        } catch ImportColumns.HeaderError.wrongList {
+            throw ImportError.wrongList
+        } catch ImportColumns.HeaderError.missing(let names) {
+            throw ImportError.missingColumns(names)
+        } catch ImportColumns.HeaderError.duplicate(let name) {
+            throw ImportError.duplicateColumn(name)
         }
     }
 }

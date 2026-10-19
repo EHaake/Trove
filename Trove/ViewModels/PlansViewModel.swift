@@ -90,7 +90,14 @@ final class PlansViewModel {
     /// `PlansWiringTests.theScreenDrawsNoMoneyAndReachesNoStore` is what keeps
     /// money off the row.
     struct PlanRow: Identifiable {
+        /// The wanted entry's Trove ID — what the row pushes and what the
+        /// sheet and alert state are keyed on.
         let id: UUID
+        /// The entry's own row in the store (`021` plan §1): two entries can
+        /// share one `id`, so the list is keyed on this, and so are both
+        /// intents — keyed on `id`, a delete or purchase from one twin's row
+        /// would land on whichever twin the lookup kept.
+        let rowID: PersistentIdentifier
         let name: String
         let categoryPath: String
         /// The picture every row draws (Amendment A, criterion 20): an active
@@ -166,8 +173,9 @@ final class PlansViewModel {
     /// Whether any entry is an older row the carry-over will make a plan of.
     private var anyAwaitsCarryOver = false
 
-    /// The planned entries behind the rows, by id, for the two intents.
-    private var entries: [UUID: WishlistItem] = [:]
+    /// The planned entries behind the rows, by their store row, for the
+    /// intents.
+    private var entries: [PersistentIdentifier: WishlistItem] = [:]
 
     /// - Parameters:
     ///   - syncMonitor: defaults to a store with no mirror, so tests and
@@ -221,9 +229,9 @@ final class PlansViewModel {
 
         unboughtCount = all.count(where: { !$0.isBought })
         anyAwaitsCarryOver = all.contains(where: \.awaitsCarryOver)
-        // Not `uniqueKeysWithValues`, which traps: nothing in a CloudKit
-        // schema can enforce a unique id, so a duplicate keeps the first.
-        entries = Dictionary(planned.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        // Cannot trap: the keys are store rows from one fetch, each distinct
+        // even when two rows share an `id` (021 criterion 42).
+        entries = Dictionary(uniqueKeysWithValues: planned.map { ($0.persistentModelID, $0) })
 
         activeRows = active
             .sorted { Self.areInActiveOrder($0, $1, under: activeSortOrder) }
@@ -236,6 +244,7 @@ final class PlansViewModel {
     private static func row(for wanted: WishlistItem) -> PlanRow {
         PlanRow(
             id: wanted.id,
+            rowID: wanted.persistentModelID,
             name: wanted.name,
             categoryPath: wanted.categoryPath,
             // RA1: a completed row has one source — the item the purchase
@@ -256,8 +265,8 @@ final class PlansViewModel {
     /// blank when it doesn't, today's date from this screen's clock.
     func makePurchaseFormViewModel(for row: PlanRow) -> PurchaseFormViewModel {
         PurchaseFormViewModel(
-            estimatedCostCents: entries[row.id]?.estimatedCostCents ?? 0,
-            lookingFor: entries[row.id]?.lookingFor,
+            estimatedCostCents: entries[row.rowID]?.estimatedCostCents ?? 0,
+            lookingFor: entries[row.rowID]?.lookingFor,
             now: now
         )
     }
@@ -271,7 +280,7 @@ final class PlansViewModel {
     @discardableResult
     func markBought(_ row: PlanRow, purchase: Purchase) -> Bool {
         purchaseFailureMessage = nil
-        guard let wanted = entries[row.id] else {
+        guard let wanted = entries[row.rowID] else {
             // Not silent (`015` T012e): the row's entry is gone, and "Nothing
             // was changed" is true — this returns ahead of every write.
             purchaseFailureMessage = PurchaseCopy.failureMessage
@@ -299,9 +308,12 @@ final class PlansViewModel {
     /// Decision 9: the plan goes, through the one writer; the entry, every
     /// item and the sold-toward record stay. Silent on refusal, as every
     /// delete in the app is — roll back and re-read what is stored.
+    ///
+    /// By the row's `rowID`, not its `id`, so deleting one twin's plan never
+    /// deletes the other's (`021` plan §1).
     @discardableResult
-    func deletePlan(id: UUID) -> Bool {
-        guard let wanted = entries[id] else { return false }
+    func deletePlan(rowID: PersistentIdentifier) -> Bool {
+        guard let wanted = entries[rowID] else { return false }
         SellPlanStore.delete(planOf: wanted, at: now())
         do {
             try modelContext.save()

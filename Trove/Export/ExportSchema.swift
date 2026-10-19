@@ -49,8 +49,8 @@ nonisolated struct ItemExportRecord: Sendable {
     /// 020: bought new or used — the appended `Bought` column (plan §8).
     /// `var … = nil`, not `let`, so the record fixtures that predate the
     /// column compile unchanged (Q8); both production builders — `init(item:)`
-    /// and `ImportSchema.itemsPreview` — pass it explicitly, and the round
-    /// trip through the commit catches either one dropping it.
+    /// and `ItemImportRow.asNew` — pass it explicitly, and the round trip
+    /// through the commit catches either one dropping it.
     var bought: NewOrUsed? = nil
 
     /// The display-order first photo, chosen at snapshot time on the main
@@ -382,21 +382,39 @@ nonisolated enum ExportSchema {
         "Added", "Notes", "Reverb Product ID", "Year", "Looking For",
     ]
 
-    /// Every column count at which a shipped layout ended, oldest first —
-    /// the widths `ImportSchema`'s gate accepts as a prefix of the current
-    /// headers (002, plan §7). 12 is the layout `011`/`012` shipped, before
-    /// `Reverb Product ID` and `Year` were appended. A width is added here
-    /// only when a *released* layout ends, never speculatively: an entry
-    /// that never shipped would accept a file Trove never wrote. 14 is the
-    /// layout 002 through 005 shipped, before 006 appended the four sale
-    /// columns. 18 is the layout 006 through 018 shipped, before 020
-    /// appended `Bought`.
-    static let itemSchemaBoundaries = [12, 14, 18]
+    /// 021: the columns an import cannot do without (plan §3, §6) — declared
+    /// once, here, because the reader's "missing" check and the starred
+    /// template header are both read from these lists.
+    static let itemRequiredHeaders = ["Name", "Purchase Price", "Purchase Date"]
 
-    /// See `itemSchemaBoundaries` — 7 is the wishlist layout 011/012
-    /// shipped, before 002 appended `Reverb Product ID` and `Year`; 9 is the
-    /// layout 002 through 018 shipped, before 020 appended `Looking For`.
-    static let wishlistSchemaBoundaries = [7, 9]
+    /// See `itemRequiredHeaders` — the wishlist's two.
+    static let wishlistRequiredHeaders = ["Name", "Estimated Cost"]
+
+    /// 021 (spec Decision 17, plan R7): the optional columns whose absence
+    /// the confirmation names in a line of its own, rather than counting
+    /// the default each new row takes. Declared once, here, beside the
+    /// required lists, because the sheet readers' missing check, a new
+    /// row's count and the confirmation's line are all read from it — and
+    /// an enum, so the line's `switch` is exhaustive over it.
+    nonisolated enum DefaultedColumn: String, Sendable {
+        case desireToKeep = "Desire to Keep"
+        case condition = "Condition"
+        case desireToOwn = "Desire to Own"
+        case added = "Added"
+    }
+
+    /// The items file's two, in schema order.
+    static let itemDefaultedColumns: [DefaultedColumn] = [.desireToKeep, .condition]
+
+    /// See `itemDefaultedColumns` — the wishlist's two.
+    static let wishlistDefaultedColumns: [DefaultedColumn] = [.desireToOwn, .added]
+
+    /// 021: the column that carries a row's identity. **A temporary seam**
+    /// (plan §6): the reader is built before export writes this column, so
+    /// until T008 appends it to `itemHeaders` and `wishlistHeaders` the
+    /// reader's known names are each array plus this constant. T008 moves it
+    /// into the arrays and removes the addition.
+    static let troveIDHeader = "Trove ID"
 
     /// Money as the schema writes it: plain decimal, always two places, dot
     /// separator, no symbol, no grouping. Pure integer arithmetic — no locale

@@ -77,6 +77,17 @@ struct TroveApp: App {
                     fatalError("Could not seed the UI test's plans collection: \(error)")
                 }
             }
+            // 021: the twins collection — rows sharing one Trove ID — for the
+            // one UI test that lists and deletes them. Its own argument and
+            // its own guard, gated on the store that was actually built, like
+            // the three above (plan §11).
+            if UITestSeed.shouldSeedSharedID(mode: store.mode, arguments: ProcessInfo.processInfo.arguments) {
+                do {
+                    try UITestSeed.sharedID(into: store.container.mainContext, now: .now)
+                } catch {
+                    fatalError("Could not seed the UI test's shared-ID collection: \(error)")
+                }
+            }
             // Built from the mode rather than independently: a store with no
             // CloudKit mirror has nothing to wait for, and the monitor is
             // what keeps every empty state from having to know that.

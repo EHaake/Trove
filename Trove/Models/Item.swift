@@ -8,6 +8,14 @@ import SwiftData
 /// this schema is built to accept later (see plan.md).
 @Model
 final class Item {
+    /// The Trove ID: `021` exports this as the row's code and an import that
+    /// keeps a code assigns it here. That relies on four things, each tested
+    /// in `TroveIDTests` and the suites it names: it is stored, so a value
+    /// assigned **before insert** is what a later read finds; an edit, a sale
+    /// and a return to the collection never reassign it; a Copy and an item
+    /// made by Mark as bought get a new one of their own. It is **not
+    /// guaranteed unique** — CloudKit forbids `@Attribute(.unique)`, so two
+    /// rows can share one and the app has to cope when they do.
     var id: UUID = UUID()
     var name: String = ""
 

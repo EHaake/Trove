@@ -3259,4 +3259,125 @@ final class TroveUITests: XCTestCase {
     private func bringTheConditionRowOnScreen(in app: XCUIApplication) {
         scrollUntilHittable(app.textFields["Condition notes"], in: app)
     }
+
+    // MARK: - 021 Two rows sharing one Trove ID
+
+    /// `021` criterion 42 on the seeded twins (`-seedSharedID`, plan §11):
+    /// with two owned items sharing one id, two planned wanted entries
+    /// sharing another, and two pairs of sold twins, every screen that lists
+    /// them loads and draws each twin under its own name — Items on both
+    /// sides, the Wishlist, the Plans tab, and the Sell Plan's candidates and
+    /// Sold section — and deleting the twin listed second removes exactly
+    /// that one.
+    ///
+    /// SwiftUI's behaviour with repeated `ForEach` ids is unspecified, which
+    /// is why this is a UI test and not a view-model one: the view models
+    /// return both twins (`021` T001a), and only the screen can show whether
+    /// both are drawn, or one drawn twice. Every name is distinct, so a row
+    /// drawn twice reads as the other name missing.
+    ///
+    /// **The only test in this target that launches with `-seedSharedID`.**
+    ///
+    /// Its mutations: one twin dropped from the seed turns the both-names legs
+    /// red; and each of the three lists `021` T001c re-keyed — the Plans
+    /// rows, the Items Sold rows, the Sell Plan's Sold rows — keyed on `\.id`
+    /// again turns that list's both-names leg red.
+    @MainActor
+    func testTwoRowsSharingOneIDListAndOneDeletes() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-seedSharedID"]
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        // Items: both owned twins, each under its own name.
+        app.buttons["Items"].tap()
+        let original = app.staticTexts["Rickenbacker 330"]
+        let copy = app.staticTexts["Rick 330 Jetglo"]
+        XCTAssertTrue(original.waitForExistence(timeout: 5), "the Items tab must draw the first owned twin")
+        XCTAssertTrue(copy.exists, "the Items tab must draw the second owned twin under its own name")
+
+        // Items, Sold side: both pairs of sold twins, each under its own name.
+        let itemsSwitch = element(in: app, identifiedBy: "items.sideSwitch")
+        showSide("Sold", on: itemsSwitch)
+        XCTAssertTrue(soldRow(in: app, named: "Leica M6").waitForExistence(timeout: 5), "the Items Sold list must draw the first sold twin")
+        XCTAssertTrue(soldRow(in: app, named: "M6 Classic").exists, "the Items Sold list must draw its twin under its own name")
+        XCTAssertTrue(soldRow(in: app, named: "Gibson ES-335").exists, "the Items Sold list must draw the other pair's first twin")
+        XCTAssertTrue(soldRow(in: app, named: "ES-335 Dot").exists, "the Items Sold list must draw the other pair's second twin under its own name")
+        showSide("Owned", on: itemsSwitch)
+
+        // The Dashboard opens over the twins and draws its plans card.
+        app.buttons["Overview"].tap()
+        let plansCard = app.buttons["dashboard.plansCard"]
+        XCTAssertTrue(plansCard.waitForExistence(timeout: 5), "the Dashboard must load over the twins")
+        XCTAssertTrue(plansCard.label.contains("2 active sell plans"), "the Plans card reads \"\(plansCard.label)\"")
+
+        // Wishlist: both wanted twins.
+        app.buttons["Wishlist"].tap()
+        XCTAssertTrue(app.staticTexts["Mamiya 7 II"].waitForExistence(timeout: 5), "the Wishlist must draw the first wanted twin")
+        XCTAssertTrue(app.staticTexts["Mamiya Seven"].exists, "the Wishlist must draw the second wanted twin under its own name")
+
+        // Plans: both wanted twins' plans, each under its own name.
+        app.buttons["Plans"].tap()
+        XCTAssertTrue(planRow(in: app, named: "Mamiya 7 II").waitForExistence(timeout: 5), "the Plans tab must list the first wanted twin's plan")
+        XCTAssertTrue(planRow(in: app, named: "Mamiya Seven").exists, "the Plans tab must list the second wanted twin's plan under its own name")
+
+        // The Sell Plan lists both owned twins. Opened by `id`, the page shows
+        // whichever wanted twin the fetch returns (plan §1), so the row is
+        // matched by `firstMatch` and either plan is the right one.
+        planRow(in: app, named: "Mamiya 7 II").tap()
+        XCTAssertTrue(app.navigationBars["Sell plan"].waitForExistence(timeout: 5), "the plan row must open the Sell Plan")
+        let candidate = { (name: String) in
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
+        }
+        XCTAssertTrue(candidate("Rickenbacker 330").waitForExistence(timeout: 5), "the Sell Plan must list the first owned twin")
+        XCTAssertTrue(candidate("Rick 330 Jetglo").exists, "the Sell Plan must list the second owned twin under its own name")
+
+        // And its Sold section draws both of that plan's sold twins — one
+        // pair per plan in the seed, so whichever plan opened has a pair.
+        let soldPairs = [("Leica M6", "M6 Classic"), ("Gibson ES-335", "ES-335 Dot")]
+        let drawn = soldPairs.filter { first, second in
+            soldRow(in: app, named: first, precededBy: "Sold").exists
+                && soldRow(in: app, named: second, precededBy: "Sold").exists
+        }
+        XCTAssertEqual(drawn.count, 1, "the plan's Sold section must draw both of its sold twins, each under its own name")
+        app.buttons["Back"].tap()
+
+        // Back on Items: delete the twin listed second, and only it goes.
+        app.buttons["Items"].tap()
+        XCTAssertTrue(original.waitForExistence(timeout: 5))
+        XCTAssertTrue(copy.exists)
+        let (first, second) = original.frame.minY < copy.frame.minY ? (original, copy) : (copy, original)
+        let secondName = second.label
+        openTrailingSwipe(on: second, in: app)
+        let delete = app.buttons["Delete"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 5), "the trailing swipe must offer Delete")
+        delete.tap()
+        let alert = app.alerts["Delete \(secondName)?"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "Delete must ask first, naming the twin swiped")
+        alert.buttons["Delete"].tap()
+
+        XCTAssertTrue(second.waitForNonExistence(timeout: 5), "the twin listed second must leave the list")
+        XCTAssertTrue(first.exists, "the twin listed first must stay — deleting one copy removes exactly that one")
+
+        // Wishlist: the same, for the wanted twins — the swipe's alert must
+        // pass the row swiped, not the shared `id`.
+        app.buttons["Wishlist"].tap()
+        let wantedOriginal = app.staticTexts["Mamiya 7 II"]
+        let wantedCopy = app.staticTexts["Mamiya Seven"]
+        XCTAssertTrue(wantedOriginal.waitForExistence(timeout: 5))
+        XCTAssertTrue(wantedCopy.exists)
+        let (wantedFirst, wantedSecond) = wantedOriginal.frame.minY < wantedCopy.frame.minY
+            ? (wantedOriginal, wantedCopy) : (wantedCopy, wantedOriginal)
+        let wantedSecondName = wantedSecond.label
+        openTrailingSwipe(on: wantedSecond, in: app)
+        let wantedDelete = app.buttons["Delete"]
+        XCTAssertTrue(wantedDelete.waitForExistence(timeout: 5), "the Wishlist's trailing swipe must offer Delete")
+        wantedDelete.tap()
+        let wantedAlert = app.alerts["Delete \(wantedSecondName)?"]
+        XCTAssertTrue(wantedAlert.waitForExistence(timeout: 5), "Delete must ask first, naming the wanted twin swiped")
+        wantedAlert.buttons["Delete"].tap()
+
+        XCTAssertTrue(wantedSecond.waitForNonExistence(timeout: 5), "the wanted twin listed second must leave the Wishlist")
+        XCTAssertTrue(wantedFirst.exists, "the wanted twin listed first must stay — deleting one copy removes exactly that one")
+    }
 }

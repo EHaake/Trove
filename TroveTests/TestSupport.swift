@@ -166,7 +166,7 @@ nonisolated final class GatedExportServiceSpy: ExportService {
 }
 
 /// Records the URLs the view models hand to `ImportService` and answers
-/// with a configured preview — or throws a configured `ImportError` — so
+/// with a configured sheet — or throws a configured `ImportError` — so
 /// intent tests assert staging and failure mapping without file I/O.
 nonisolated final class ImportServiceSpy: ImportService {
     private struct Captured {
@@ -175,14 +175,12 @@ nonisolated final class ImportServiceSpy: ImportService {
     }
 
     private let captured = Mutex(Captured())
-    private let itemsResult: Result<ItemsImportPreview, ImportError>
-    private let wishlistResult: Result<WishlistImportPreview, ImportError>
+    private let itemsResult: Result<ItemsImportSheet, ImportError>
+    private let wishlistResult: Result<WishlistImportSheet, ImportError>
 
     init(
-        items: Result<ItemsImportPreview, ImportError> =
-            .success(ImportPreview(validated: [], skipped: [], defaultedFieldCount: 0)),
-        wishlist: Result<WishlistImportPreview, ImportError> =
-            .success(ImportPreview(validated: [], skipped: [], defaultedFieldCount: 0))
+        items: Result<ItemsImportSheet, ImportError> = .success(.empty),
+        wishlist: Result<WishlistImportSheet, ImportError> = .success(.empty)
     ) {
         itemsResult = items
         wishlistResult = wishlist
@@ -191,12 +189,14 @@ nonisolated final class ImportServiceSpy: ImportService {
     var itemURLs: [URL] { captured.withLock { $0.itemURLs } }
     var wishlistURLs: [URL] { captured.withLock { $0.wishlistURLs } }
 
-    @concurrent func parseItems(at url: URL, timeZone: TimeZone) async throws -> ItemsImportPreview {
+    @concurrent func parseItems(at url: URL, timeZone: TimeZone, locale: Locale) async throws -> ItemsImportSheet {
         captured.withLock { $0.itemURLs.append(url) }
         return try itemsResult.get()
     }
 
-    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone) async throws -> WishlistImportPreview {
+    @concurrent func parseWishlist(
+        at url: URL, timeZone: TimeZone, locale: Locale
+    ) async throws -> WishlistImportSheet {
         captured.withLock { $0.wishlistURLs.append(url) }
         return try wishlistResult.get()
     }
@@ -229,22 +229,24 @@ nonisolated final class GatedImportServiceSpy: ImportService {
         waiter?.resume()
     }
 
-    @concurrent func parseItems(at url: URL, timeZone: TimeZone) async throws -> ItemsImportPreview {
+    @concurrent func parseItems(at url: URL, timeZone: TimeZone, locale: Locale) async throws -> ItemsImportSheet {
         let isFirstCall = state.withLock { state -> Bool in
             state.itemCalls += 1
             return state.itemCalls == 1
         }
         if isFirstCall { await gate() }
-        return ImportPreview(validated: [], skipped: [], defaultedFieldCount: 0)
+        return .empty
     }
 
-    @concurrent func parseWishlist(at url: URL, timeZone: TimeZone) async throws -> WishlistImportPreview {
+    @concurrent func parseWishlist(
+        at url: URL, timeZone: TimeZone, locale: Locale
+    ) async throws -> WishlistImportSheet {
         let isFirstCall = state.withLock { state -> Bool in
             state.wishlistCalls += 1
             return state.wishlistCalls == 1
         }
         if isFirstCall { await gate() }
-        return ImportPreview(validated: [], skipped: [], defaultedFieldCount: 0)
+        return .empty
     }
 
     private func gate() async {
@@ -256,6 +258,52 @@ nonisolated final class GatedImportServiceSpy: ImportService {
             }
             if resumeNow { continuation.resume() }
         }
+    }
+}
+
+/// The production `asNew` over every row of a sheet, as `012`'s import read
+/// a file: `validated` the rows as new records, `skipped` the sheet's skips
+/// plus every row `asNew` refuses ("no name"), in row order, and
+/// `defaultedFieldCount` the sum across `validated`. The one bridge the
+/// re-pointed field-policy tests read through (021 T007) — their assertions
+/// stand unedited, which is the evidence a row is read as it was.
+nonisolated extension ImportSheet where Row == ItemImportRow {
+    func asAllNew(now: Date = .now) -> (
+        validated: [ValidatedRow<ItemExportRecord>], skipped: [SkippedRow], defaultedFieldCount: Int
+    ) {
+        allNew(rows.map { ($0.rowNumber, $0.asNew(now: now, missingColumns: missingDefaultColumns)) })
+    }
+}
+
+/// See the items twin.
+nonisolated extension ImportSheet where Row == WishlistImportRow {
+    func asAllNew(now: Date = .now) -> (
+        validated: [ValidatedRow<WishlistExportRecord>], skipped: [SkippedRow], defaultedFieldCount: Int
+    ) {
+        allNew(rows.map { ($0.rowNumber, $0.asNew(now: now, missingColumns: missingDefaultColumns)) })
+    }
+}
+
+nonisolated extension ImportSheet {
+    /// A sheet with nothing in it — the spies' default answer.
+    static var empty: ImportSheet {
+        ImportSheet(
+            rows: [], skipped: [], unusedColumns: [], totalsRowNumbers: [],
+            regionDateOrder: nil, missingDefaultColumns: []
+        )
+    }
+
+    fileprivate func allNew<Record>(_ rows: [(Int, ValidatedRow<Record>?)]) -> (
+        validated: [ValidatedRow<Record>], skipped: [SkippedRow], defaultedFieldCount: Int
+    ) {
+        let validated = rows.compactMap(\.1)
+        let refused = rows.filter { $0.1 == nil }
+            .map { SkippedRow(rowNumber: $0.0, reason: ImportSchema.SkipReason.noName) }
+        return (
+            validated,
+            (skipped + refused).sorted { $0.rowNumber < $1.rowNumber },
+            validated.reduce(0) { $0 + $1.defaultedFieldCount }
+        )
     }
 }
 

@@ -1179,3 +1179,44 @@ struct DashboardPurchasedItemTests {
         // asserting its own setup.
     }
 }
+
+/// 021 G20 (criterion 42): two stored items sharing one `id`, with one
+/// figure row filed under it — the dashboard loads and counts both.
+@Suite("DashboardViewModel — two items sharing one id")
+struct DashboardSharedIDTests {
+    private let clock = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @Test func loadReturnsWithBothTwinsInItsCount() throws {
+        let context = try makeInMemoryContext()
+        let shared = UUID()
+        for name in ["Telecaster (synced)", "Telecaster (imported)"] {
+            let item = Item(name: name, categoryPath: "Music/Guitars", purchasePriceCents: 150_000, currentValueCents: 160_000)
+            item.id = shared
+            context.insert(item)
+        }
+        try MarketLocalStore.record(
+            .figure(MarketFigure(
+                medianCents: 140_000, lowCents: 130_000, highCents: 150_000,
+                count: 12, fetchedAt: clock, isTruncated: false, yearScope: .any
+            )),
+            product: MarketProduct(
+                id: 126_161,
+                slug: "fender-american-professional-ii-telecaster",
+                title: "Fender American Professional II Telecaster",
+                usedLowCents: 100_000,
+                usedTotal: 108,
+                listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
+            ),
+            for: MarketSubjectKey(subjectID: shared, kind: .owned),
+            in: context
+        )
+        try context.save()
+
+        let viewModel = DashboardViewModel(modelContext: context, now: { self.clock })
+        viewModel.load()
+
+        #expect(viewModel.loadFailureMessage == nil)
+        #expect(viewModel.totalItemCount == 2)
+        #expect(viewModel.totalCurrentValueCents == 320_000)
+    }
+}

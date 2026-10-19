@@ -564,11 +564,20 @@ final class ItemListViewModel {
     /// Photos cascade with it; any sell plan that selected it drops it, the
     /// wishlist entries themselves untouched — the same consequences
     /// `ItemDeleteCopy.message` promises before this runs.
-    func delete(id: UUID) {
+    ///
+    /// `row`, when given, names the stored row the person acted on: two rows
+    /// can share one `id` (021 criterion 42 — nothing in a CloudKit schema
+    /// enforces a unique one), and the copy deleted must be the copy swiped,
+    /// not whichever comes first. The market rows under the shared `id` are
+    /// still cleared. Every UI path must pass `row`; `id` alone resolves to
+    /// the first match, which may be the other copy.
+    func delete(id: UUID, row: PersistentIdentifier? = nil) {
         // Both arrays: the Sold side has the same trailing swipe the Owned
         // side does (P16), and it deletes through this one path.
-        guard let item = items.first(where: { $0.id == id })
-            ?? soldItems.first(where: { $0.id == id })
+        let matches: (Item) -> Bool = { item in
+            if let row { item.persistentModelID == row } else { item.id == id }
+        }
+        guard let item = items.first(where: matches) ?? soldItems.first(where: matches)
         else { return }
 
         modelContext.delete(item)
@@ -1086,7 +1095,7 @@ final class ItemListViewModel {
     /// three presentations, and independent booleans that can go true
     /// together are how SwiftUI silently drops one). View-settable so
     /// dismissal writes nil back, the `stagedExport` convention.
-    var importPresentation: ImportPresentation<ItemExportRecord>?
+    var importPresentation: ImportPresentation<ItemImportRow>?
 
     /// True while a picked file parses or a confirmed batch commits. Not
     /// `isImporting`, deliberately: "import" already means *CloudKit sync*
@@ -1103,8 +1112,8 @@ final class ItemListViewModel {
     /// copy path stays testable without UI (the `ImportCopy` pattern).
     var importAlertTitle: String {
         switch importPresentation {
-        case .confirmation(let preview):
-            ImportCopy.confirmationTitle(importCount: preview.validated.count, target: .items)
+        case .confirmation(_, let summary, _):
+            ImportCopy.confirmationTitle(summary: summary)
         case .failure(let title, _):
             title
         case nil:
@@ -1114,8 +1123,9 @@ final class ItemListViewModel {
 
     var importAlertMessage: String {
         switch importPresentation {
-        case .confirmation(let preview):
-            ImportCopy.confirmationMessage(preview: preview)
+        case .confirmation(_, let summary, let recounted):
+            ImportCopy.confirmationLines(summary: summary, target: .items, recounted: recounted)
+                .joined(separator: "\n")
         case .failure(_, let message):
             message
         case nil:
@@ -1123,24 +1133,26 @@ final class ItemListViewModel {
         }
     }
 
-    /// Whether the alert offers an Import action: a confirmation with
-    /// something to import. Zero importable rows is informational only
-    /// (criterion 5).
+    /// Whether the alert offers an Import action: a confirmation that would
+    /// add or update something. Anything else is informational only (021,
+    /// criterion 36).
     var importOffersConfirmation: Bool {
-        guard case .confirmation(let preview) = importPresentation else { return false }
-        return !preview.validated.isEmpty
+        guard case .confirmation(_, let summary, _) = importPresentation else { return false }
+        return summary.writesAnything
     }
 
-    /// Parses the picked file into a staged preview — nothing is written
-    /// until `confirmImport()` (criterion 5's parse-first gate).
+    /// Reads the picked file into a sheet off the main actor, then plans it
+    /// against the store for the summary — nothing is written until
+    /// `confirmImport()` (criterion 36's confirm-first gate).
     func importCSV(from url: URL) async {
         guard !isBusy else { return }
         isImportingFile = true
         defer { isImportingFile = false }
 
         do {
-            let preview = try await importService.parseItems(at: url, timeZone: .current)
-            importPresentation = .confirmation(preview)
+            let sheet = try await importService.parseItems(at: url, timeZone: .current, locale: .current)
+            let plan = try ItemImportStore.plan(for: sheet, in: modelContext, timeZone: .current, now: now())
+            importPresentation = .confirmation(sheet: sheet, summary: plan.summary, recounted: false)
         } catch let error as ImportError {
             importPresentation = .failure(
                 title: ImportCopy.failureTitle,
@@ -1164,25 +1176,26 @@ final class ItemListViewModel {
     // into Settings (`SettingsViewModel.exportItemsTemplate`); its tests
     // moved with it.
 
-    /// Commits the staged preview: real items built from the validated
-    /// records, appended to the end of custom order. On the main actor, on
-    /// this context, deliberately (plan §The commit path): parsing was the
-    /// expensive part and ran off-main; a bulk insert `load()` can see for
-    /// free beats background-context refetch plumbing.
+    /// Commits the staged sheet through `ItemImportStore`, on the main actor,
+    /// on this context, deliberately (plan §The commit path): parsing was the
+    /// expensive part and ran off-main; a bulk write `load()` can see for
+    /// free beats background-context refetch plumbing. The store is planned
+    /// again here, never trusted from staging — placement is computed at
+    /// commit time (021, Q3).
     /// **Synchronous capture, async commit** — reshaped by a T017 device
     /// finding: an alert button's dismissal writes nil through the
     /// presentation binding, and the original `Task`-wrapped async intent
     /// read `importPresentation` only after that write — the guard failed
     /// and Import silently did nothing. The unit tests couldn't see it
     /// (they call with the presentation still staged); only the manual
-    /// pass could. The preview is now captured in the button action's
-    /// synchronous window, so dismissal ordering can't matter; the
+    /// pass could. The sheet and its summary are now captured in the button
+    /// action's synchronous window, so dismissal ordering can't matter; the
     /// returned task is the commit itself, for tests to await.
     @discardableResult
     func confirmImport() -> Task<Void, Never>? {
-        guard !isBusy, case .confirmation(let preview) = importPresentation else { return nil }
+        guard !isBusy, case .confirmation(let sheet, let summary, _) = importPresentation else { return nil }
         importPresentation = nil
-        guard !preview.validated.isEmpty else { return nil }
+        guard summary.writesAnything else { return nil }
         isImportingFile = true
         return Task {
             defer { isImportingFile = false }
@@ -1191,72 +1204,14 @@ final class ItemListViewModel {
             // T056 lesson in reverse).
             await Task.yield()
 
-            // Placement is computed HERE, never at parse time: a CloudKit
-            // arrival — or a hand-add — between the alert and the confirm must
-            // not stale the base.
-            let existing = (try? modelContext.fetch(FetchDescriptor<Item>())) ?? []
-            let base = ManualOrderHelper.nextPosition(after: existing)
-
-            // The canonical path set is fetched once; the per-row instance
-            // method is a full two-entity fetch per call (T009's reason for
-            // the static). Batch-internal casing resolves by file row order,
-            // first occurrence wins, each resolved path joining the set.
-            // Load-bearing beyond tidiness: chip casing follows the earliest
-            // `createdAt` across both entities, so an import restoring old
-            // dates could otherwise steal an existing path's casing.
-            var knownPaths = (try? CategoryPathHelper(modelContext: modelContext).allCategoryPaths()) ?? []
-
-            for (offset, validated) in preview.validated.enumerated() {
-                let record = validated.record
-                let path = CategoryPathHelper.canonicalize(record.categoryPath, against: knownPaths)
-                if !path.isEmpty,
-                   !knownPaths.contains(where: { $0.caseInsensitiveCompare(path) == .orderedSame }) {
-                    knownPaths.append(path)
-                }
-                let item = Item(
-                    name: record.name,
-                    categoryPath: path,
-                    purchasePriceCents: record.purchasePriceCents,
-                    purchaseDate: record.purchaseDate,
-                    currencyCode: record.currencyCode,
-                    serialNumber: record.serialNumber,
-                    purchaseLocation: record.purchaseLocation,
-                    currentValueCents: record.currentValueCents,
-                    desireToKeep: record.desireToKeep,
-                    condition: Condition(rawValue: record.conditionRawValue) ?? .excellent,
-                    conditionNotes: record.conditionNotes,
-                    notes: record.notes,
-                    sortOrder: base + offset,
-                    // 002/T016a: the CSV's two appended columns restore the
-                    // Reverb match and the year, so a re-imported item asks
-                    // the same question of the market as before it left.
-                    reverbProductID: record.reverbProductID,
-                    year: record.year,
-                    // 020: the `Bought` column comes back with the row.
-                    bought: record.bought
-                )
-                modelContext.insert(item)
-                // 006 (plan §7, Q6): a row carrying both halves of the pair
-                // arrives sold. It points at no plan — an imported sale has
-                // no wishlist item on this device it could have funded
-                // (P11) — and `Item.sale` writes the four fields, so the
-                // date-without-price shape never reaches the store.
-                if let soldDate = record.soldDate, let salePriceCents = record.salePriceCents {
-                    item.sale = Sale(
-                        date: soldDate,
-                        priceCents: salePriceCents,
-                        location: record.saleLocation,
-                        note: record.saleNote
-                    )
-                }
-            }
-
             do {
+                let plan = try ItemImportStore.plan(for: sheet, in: modelContext, timeZone: .current, now: now())
+                try ItemImportStore.apply(plan, in: modelContext, now: now())
                 try modelContext.save()
             } catch {
                 // Without the rollback, `load()` on this same context would
                 // show the phantom batch — unsaved objects the context happily
-                // returns — which would vanish on relaunch (criterion 14's
+                // returns — which would vanish on relaunch (criterion 37's
                 // "never a partial batch").
                 modelContext.rollback()
                 importPresentation = .failure(

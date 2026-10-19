@@ -125,7 +125,7 @@ struct PlansView: View {
             presenting: pendingDeletion
         ) { row in
             Button(SellPlanCopy.deleteConfirm, role: .destructive) {
-                viewModel.deletePlan(id: row.id)
+                viewModel.deletePlan(rowID: row.rowID)
             }
             Button(SellPlanCopy.deleteCancel, role: .cancel) {}
         } message: { row in
@@ -232,7 +232,10 @@ struct PlansView: View {
     /// line for line.
     private var rows: some View {
         List {
-            ForEach(viewModel.rows) { row in
+            // Keyed on the store row, not the Trove ID: two entries can share
+            // an id, and SwiftUI draws the first one's content in every row
+            // that repeats it (`021` plan §1).
+            ForEach(viewModel.rows, id: \.rowID) { row in
                 PlanRowView(row: row)
                     // The screen's own background, as on the list screens.
                     .listRowBackground(theme.colors.background)

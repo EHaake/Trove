@@ -89,9 +89,13 @@ struct MarketSummary: Equatable, Sendable {
     /// collection, so a local-store problem must not empty the screen.
     static func summaries(forSubjects ids: [UUID], in context: ModelContext, now: Date) -> [UUID: MarketSummary] {
         let figures = ((try? MarketIndex.load(from: context)) ?? .empty).figures
-        return Dictionary(uniqueKeysWithValues: ids.compactMap { id in
+        // Not `uniqueKeysWithValues`, which traps: nothing in a CloudKit
+        // schema can enforce a unique id, so two items sharing one may both
+        // be asked for, and a duplicate keeps the first. Both twins read the
+        // one figure filed under their shared code (021 criterion 42).
+        return Dictionary(ids.compactMap { id in
             figures[id].map { (id, MarketSummary(snapshot: $0, now: now)) }
-        })
+        }, uniquingKeysWith: { first, _ in first })
     }
 }
 

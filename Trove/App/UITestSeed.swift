@@ -330,6 +330,143 @@ enum UITestSeed {
         try context.save()
     }
 
+    /// `021`'s own launch argument, spelled exactly once in the project for
+    /// the same reason the others are — the app asks `shouldSeedSharedID`, it
+    /// never names the flag.
+    static let sharedIDArgument = "-seedSharedID"
+
+    /// Whether this launch should be seeded with the twins collection: the
+    /// store that was actually built is the in-memory one, **and** this
+    /// seed's own argument is present. Gated on the built store rather than
+    /// on a second read of `-uiTesting`, and keyed to its own argument so
+    /// every UI test before this one keeps the starting state it was written
+    /// against (plan §11).
+    static func shouldSeedSharedID(mode: StorageMode, arguments: [String]) -> Bool {
+        mode == .ephemeral && arguments.contains(sharedIDArgument)
+    }
+
+    /// The collection `021`'s twins UI test needs (plan §11, criterion 42):
+    /// rows that share a Trove ID, the shape a synced original and an
+    /// import's copy of it leave behind.
+    ///
+    /// - **Rickenbacker 330** and **Rick 330 Jetglo**: two owned items with
+    ///   one `id`. The first is the "synced original" — matched, with the one
+    ///   figure row filed under the shared id; the second is the copy, with
+    ///   no match of its own. Both sit at desire 2, inside the Sell Plan's
+    ///   candidate pool, and their purchase dates differ so the Items list
+    ///   has an order to put them in.
+    /// - **Mamiya 7 II** and **Mamiya Seven**: two wanted entries with
+    ///   another shared `id`, each with a sell plan, so the Plans tab lists
+    ///   two rows under one id. The first's plan sets both owned twins aside;
+    ///   the second's sets aside a candidate of its own, the **Hasselblad
+    ///   500C/M**, and leaves the twins to the first.
+    /// - **Leica M6** and **M6 Classic**, sold toward the first wanted twin,
+    ///   and **Gibson ES-335** and **ES-335 Dot**, sold toward the second:
+    ///   two sold pairs, each sharing an `id` of its own, so the Items Sold
+    ///   list holds twins and so does a plan's Sold section. One pair per
+    ///   plan because a plan's page is opened by `id` and shows whichever
+    ///   wanted twin the fetch returns (`021` plan §1) — either way, the page
+    ///   opened has a pair of sold twins to draw.
+    ///
+    /// Every name differs from every other, so a screen that drew one twin's
+    /// row twice — rather than each twin once — reads as a missing name.
+    static func sharedID(into context: ModelContext, now: Date) throws {
+        let day: TimeInterval = 24 * 60 * 60
+        let ownedID = UUID()
+        let wantedID = UUID()
+
+        let original = Item(
+            name: "Rickenbacker 330",
+            categoryPath: "Music/Guitars",
+            purchasePriceCents: 180_000,
+            purchaseDate: now - 30 * day,
+            currentValueCents: 210_000,
+            desireToKeep: 2,
+            sortOrder: 0,
+            reverbProductID: rickenbacker.id
+        )
+        original.id = ownedID
+        let copy = Item(
+            name: "Rick 330 Jetglo",
+            categoryPath: "Music/Guitars",
+            purchasePriceCents: 180_000,
+            purchaseDate: now - 10 * day,
+            currentValueCents: 205_000,
+            desireToKeep: 2,
+            sortOrder: 1
+        )
+        copy.id = ownedID
+        context.insert(original)
+        context.insert(copy)
+
+        // One figure row, filed under the shared id — the market rows are
+        // keyed by the Trove ID, so both twins read it.
+        try seed(original, product: rickenbacker, medians: [(200_000, now)], in: context)
+
+        let planned = WishlistItem(name: "Mamiya 7 II", categoryPath: "Photography/Cameras", estimatedCostCents: 320_000, sortOrder: 0)
+        planned.id = wantedID
+        let other = WishlistItem(name: "Mamiya Seven", categoryPath: "Photography/Cameras", estimatedCostCents: 310_000, sortOrder: 1)
+        other.id = wantedID
+        context.insert(planned)
+        context.insert(other)
+
+        SellPlanStore.create(for: planned, at: now - 2 * day)
+        planned.plannedSaleItems = [original, copy]
+
+        let hasselblad = Item(
+            name: "Hasselblad 500C/M",
+            categoryPath: "Photography/Cameras",
+            purchasePriceCents: 150_000,
+            purchaseDate: now - 60 * day,
+            currentValueCents: 170_000,
+            desireToKeep: 2,
+            sortOrder: 2
+        )
+        context.insert(hasselblad)
+        SellPlanStore.create(for: other, at: now - 3 * day)
+        other.plannedSaleItems = [hasselblad]
+
+        try soldTwins(("Leica M6", 210_000), ("M6 Classic", 195_000), toward: planned, soldDaysAgo: 5, now: now, into: context)
+        try soldTwins(("Gibson ES-335", 280_000), ("ES-335 Dot", 265_000), toward: other, soldDaysAgo: 8, now: now, into: context)
+
+        try context.save()
+    }
+
+    /// Two sold items sharing one fresh `id`, both sold toward `plan` through
+    /// the app's own writer, a day apart.
+    private static func soldTwins(
+        _ first: (name: String, priceCents: Int),
+        _ second: (name: String, priceCents: Int),
+        toward plan: WishlistItem,
+        soldDaysAgo: Int,
+        now: Date,
+        into context: ModelContext
+    ) throws {
+        let day: TimeInterval = 24 * 60 * 60
+        let shared = UUID()
+        for (offset, twin) in [first, second].enumerated() {
+            let item = Item(
+                name: twin.name,
+                categoryPath: "Photography/Cameras",
+                purchasePriceCents: twin.priceCents - 40_000,
+                purchaseDate: now - 200 * day,
+                currentValueCents: twin.priceCents,
+                desireToKeep: 2,
+                sortOrder: 3 + offset
+            )
+            item.id = shared
+            context.insert(item)
+            let soldOn = now - Double(soldDaysAgo + offset) * day
+            try ItemSaleStore.markSold(
+                item,
+                sale: Sale(date: soldOn, priceCents: twin.priceCents, location: "Reverb", note: nil),
+                toward: plan,
+                at: soldOn,
+                in: context
+            )
+        }
+    }
+
     // MARK: - Private
 
     private static func owned(
@@ -396,6 +533,13 @@ enum UITestSeed {
         slug: "rode-nt1-a",
         title: "Rode NT1-A",
         usedLowCents: 12_000
+    )
+
+    private static let rickenbacker = product(
+        id: 77_412,
+        slug: "rickenbacker-330-jetglo",
+        title: "Rickenbacker 330 Jetglo",
+        usedLowCents: 160_000
     )
 
     private static func product(id: Int, slug: String, title: String, usedLowCents: Int) -> MarketProduct {

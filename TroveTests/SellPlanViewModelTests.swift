@@ -1401,3 +1401,43 @@ struct SellPlanRecordTests {
         #expect(entry.sellPlanCreatedAt == planMadeOn)
     }
 }
+
+/// 021 G20 (criterion 42): two stored items sharing one `id`, with one
+/// figure row filed under it — the Sell Plan loads and offers both.
+@Suite("SellPlanViewModel — two items sharing one id")
+struct SellPlanSharedIDTests {
+    private let clock = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @Test func loadReturnsWithBothTwinsAmongItsCandidates() throws {
+        let context = try makeInMemoryContext()
+        let plan = wanted(into: context)
+        let shared = UUID()
+        for name in ["Telecaster (synced)", "Telecaster (imported)"] {
+            owned(name, desire: 1, valueCents: 160_000, into: context).id = shared
+        }
+        try MarketLocalStore.record(
+            .figure(MarketFigure(
+                medianCents: 140_000, lowCents: 130_000, highCents: 150_000,
+                count: 12, fetchedAt: clock, isTruncated: false, yearScope: .any
+            )),
+            product: MarketProduct(
+                id: 126_161,
+                slug: "fender-american-professional-ii-telecaster",
+                title: "Fender American Professional II Telecaster",
+                usedLowCents: 100_000,
+                usedTotal: 108,
+                listingsURL: URL(string: "https://api.reverb.com/api/listings/all?cp_ids%5B%5D=320855")!
+            ),
+            for: MarketSubjectKey(subjectID: shared, kind: .owned),
+            in: context
+        )
+        try context.save()
+
+        let viewModel = SellPlanViewModel(modelContext: context, wishlistItemID: plan.id, now: { self.clock })
+        viewModel.load()
+
+        #expect(viewModel.loadFailureMessage == nil)
+        #expect(viewModel.candidates.count == 2)
+        #expect(Set(viewModel.candidates.map(\.name)) == ["Telecaster (synced)", "Telecaster (imported)"])
+    }
+}

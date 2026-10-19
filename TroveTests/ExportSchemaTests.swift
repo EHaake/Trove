@@ -66,16 +66,10 @@ struct ExportSchemaTests {
             "Name", "Category", "Estimated Cost", "Currency", "Desire to Own",
             "Added", "Notes", "Reverb Product ID", "Year",
         ])
-        // The boundaries name those widths, oldest first — and only widths a
-        // release actually ended at, so a speculative entry turns this red.
-        #expect(ExportSchema.itemSchemaBoundaries == [12, 14, 18])
-        #expect(ExportSchema.wishlistSchemaBoundaries == [7, 9])
-        // Append-only: a boundary is always shorter than the live layout.
-        #expect(ExportSchema.itemSchemaBoundaries.allSatisfy { $0 < ExportSchema.itemHeaders.count })
-        #expect(
-            ExportSchema.wishlistSchemaBoundaries
-                .allSatisfy { $0 < ExportSchema.wishlistHeaders.count }
-        )
+        // 021 (T007, Q6): the width boundaries these widths were once read
+        // from are gone — columns are found by name. That every shipped
+        // layout still imports is pinned by the layout fixtures instead
+        // (`ImportLayoutTests`, over `TroveTests/Fixtures/Import/`).
     }
 
     // MARK: - Money
