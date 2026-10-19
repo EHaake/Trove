@@ -220,7 +220,7 @@ is plain language.
   to back, both counts recorded; mutations recorded.
   **Done (2026-10-18):** `PlanRow.rowID` (the store row) keys `PlansView`'s `ForEach`, `entries`, both purchase intents and `deletePlan(rowID:)`; the Items Sold and Sell Plan Sold `ForEach`s key on `persistentModelID`. Seed: the second wanted twin planned (Hasselblad candidate); **two** sold twin pairs, one toward each plan — deviation from "a sold twin pair": the plan page opens whichever twin a `fetchLimit = 1` fetch returns, and that order is not stable across fresh containers, so one pair per plan keeps the Sold-section leg deterministic. The UI test was red at all three sites before the fix (4 failures); each site put back to `\.id` in turn → only its own leg red (`:3322`; `:3303`/`:3305`; `:3342`); `entries` resolving by `id` → the new delete and mark-bought legs red (12 issues); a sold twin with a fresh id → the seed test red. Sold rows share the Owned side's delete alert, which already passes `persistentModelID`. **Rewritten to the new rule**: `anOrphanIsOnCompletedAndDeletingItsPlanTakesItOff` and `deletingAnActivePlanLeavesTheEntryAndItsSales` (now `deletePlan(rowID:)`; "an id with no row deletes nothing" became "a row with no plan left deletes nothing"); `theSharedIDSeedWritesTwoPairsOfTwins` (both wanted twins planned); the UI test's Dashboard line ("2 active sell plans"). Unit 1,827 tests in 241 suites green; UI 43 tests, 0 failures, twice back to back.
 
-- [ ] **T002 — The reader's grammar: prices, slash dates, `N/A`, the code.**
+- [x] **T002 — The reader's grammar: prices, slash dates, `N/A`, the code.**
   Per plan §2, Q7, Q8, P4, P6, spec Decision 22. New
   `Trove/Import/ImportRows.swift` opening with `Cell<Value>` and
   `SlashDateOrder` (with `regional(for:)`). In `ImportSchema`: `isBlank(_:)`;
@@ -262,6 +262,7 @@ is plain language.
   `TroveTests/ImportGrammarTests.swift` (new), `TroveTests/ImportSchemaTests.swift`.
   **Verify:** `scripts/verify.sh` green, the new suite in the count; mutations
   recorded; the Done note names every existing test that changed.
+  **Done (2026-10-18):** `Cell`, `SlashDateOrder` (`regional(for:)` from the locale's `yMd` pattern) open `ImportRows.swift`; `ImportSchema` gains `isBlank`, widened `cents`, `day(…order:)` (nil keeps ISO-only for every existing caller), `slashDateOrder(in:region:)`, `troveID(from:)`. `ImportGrammarTests`, 17 functions over G2–G4. Mutations, each red: grouping loosened (`1,25`, `12,34,567`, `1,2345` read); commas stripped first (5 shapes read); the space-skip removed (criterion 46's two and `$  5`); spaces skipped with no symbol (`1 250`; extra: leading space skip → `" 5.00"` in `ImportSchemaTests`); order decided per cell (8 issues); region reported for an ISO-only file; `NA` blank. **Existing test changed**: `ImportSchemaTests.nonCanonicalMoneyIsRejected` — `"$5"` and `"1,250.00"` moved to the new `aLeadingSymbolAndThousandsGroupsNowRead`, the other 11 still rejected. Noted: only U+0020 is skipped after a symbol (no NBSP); the widened `cents` already reaches today's preview (Phase 1's stated movement). Unit 1,845 tests in 242 suites green.
 
 - [ ] **T003 — Finding columns by name.**
   Per plan §3, P1–P3. `ImportColumns` (in `ImportRows.swift`) with
@@ -1048,6 +1049,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | T001b (`sdd-implementer`) | `opus` | 124,722 (48 tool uses, 66.5 min) | Done; routine `ForEach` fix needed at three sites; Plans rows question returned for a decision review |
 | Decision review after T001b (`skeptical-reviewer`) | `opus` | ~39,951 (3 tool uses, 1.2 min) | Plans rows: fix drawing **and** the entry lookup (else a wrong-target delete/purchase) — plan change, T001c; sold-row sites: routine fix with a UI leg each; no product question |
 | T001c (`sdd-implementer`) | `opus` | 122,667 (54 tool uses, 88.1 min) | Done first pass; two sold pairs instead of one (fetch order between twins unstable) |
+| T002 (`sdd-implementer`) | `opus` | 78,673 (25 tool uses, 62.3 min) | Done first pass |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):

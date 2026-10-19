@@ -113,30 +113,66 @@ nonisolated enum ImportSchema {
 
     // MARK: - Field parsers (plan §Money and date parsing)
 
-    /// Money as the schema reads it: one or more digits, optionally a dot
-    /// and one or two fraction digits — nothing else. Pure overflow-checked
-    /// integer arithmetic; no `Locale`, no `Decimal`, deliberately.
+    /// The one test of a cell that says nothing (021, P6; spec Decision 7):
+    /// after trimming, empty, or `N/A` / `#N/A` in any letter case — the
+    /// spreadsheet's own "not applicable" and its lookup-failure error.
+    /// `NA`, `none` and `-` are not blank: they are text, and a column that
+    /// can't read them counts them.
+    static func isBlank(_ field: String) -> Bool {
+        let folded = FieldNormalization.trimmed(field).lowercased()
+        return folded.isEmpty || folded == "n/a" || folded == "#n/a"
+    }
+
+    /// Money as the schema reads it. Pure overflow-checked integer
+    /// arithmetic; no `Locale`, no `Decimal`, deliberately.
     /// `Decimal(string:)` stops parsing silently at the first character it
     /// doesn't understand — `"1,250.00"` comes back as 1 — which is exactly
     /// the locale-shaped leniency the spec forbids (011's plan.md carries
-    /// the correction note). Signs, symbols, grouping, a trailing dot, a
-    /// missing integer digit, and sub-cent precision all return nil; the
-    /// field policy turns nil into a counted default.
+    /// the correction note).
+    ///
+    /// **Widened in place by `021`** (plan §2, Q7; spec Decisions 16 and
+    /// 22): an optional single leading `$`, `€`, `£` or `¥`, then any
+    /// number of spaces (`$ 3,179.95`); then either digits with no commas,
+    /// or thousands groups — one to three digits, then one or more `,ddd`;
+    /// then optionally a dot and one or two fraction digits. Nothing else:
+    /// a sign, brackets, trailing text, a space with no symbol before it,
+    /// a trailing dot, a missing integer digit, sub-cent precision, and any
+    /// other grouping (`1,25`, `12,34,567`, `1.250,00`) all return nil; the
+    /// field policy turns nil into a counted default. The function returns
+    /// cents and nothing else, so the symbol has no way to set the currency.
     static func cents(from field: String) -> Int? {
         let scalars = Array(field.unicodeScalars)
         var index = 0
-        var whole = 0
-        var wholeDigits = 0
-        while index < scalars.count, let digit = digit(scalars[index]) {
-            let (shifted, overflow1) = whole.multipliedReportingOverflow(by: 10)
-            guard !overflow1 else { return nil }
-            let (added, overflow2) = shifted.addingReportingOverflow(digit)
-            guard !overflow2 else { return nil }
-            whole = added
-            wholeDigits += 1
+        if index < scalars.count, moneySymbols.contains(scalars[index]) {
             index += 1
+            while index < scalars.count, scalars[index] == " " { index += 1 }
         }
-        guard wholeDigits > 0 else { return nil }
+
+        // `run` counts the digits since the start or the last comma; once a
+        // comma has been seen, every run after it must be exactly three.
+        var whole = 0
+        var run = 0
+        var grouped = false
+        while index < scalars.count {
+            if let digit = digit(scalars[index]) {
+                if grouped, run == 3 { return nil }
+                let (shifted, overflow1) = whole.multipliedReportingOverflow(by: 10)
+                guard !overflow1 else { return nil }
+                let (added, overflow2) = shifted.addingReportingOverflow(digit)
+                guard !overflow2 else { return nil }
+                whole = added
+                run += 1
+                index += 1
+            } else if scalars[index] == "," {
+                guard grouped ? run == 3 : (1...3).contains(run) else { return nil }
+                grouped = true
+                run = 0
+                index += 1
+            } else {
+                break
+            }
+        }
+        guard run > 0, !grouped || run == 3 else { return nil }
 
         var fraction = 0
         if index < scalars.count, scalars[index] == "." {
@@ -159,27 +195,52 @@ nonisolated enum ImportSchema {
         return total
     }
 
-    /// A date as the schema reads it: exactly `yyyy-MM-dd` (4-2-2 digits —
+    /// The four symbols a price may open with (021, Q7). Dropped, never read.
+    private static let moneySymbols: Set<Unicode.Scalar> = ["$", "€", "£", "¥"]
+
+    /// A date as the schema reads it: `yyyy-MM-dd` (4-2-2 digits —
     /// `2026-1-5` is rejected, matching the writer's zero-padded output),
     /// resolved in a **Gregorian calendar built here over the injected
     /// `TimeZone`** — the same T019/B1 doctrine as `ExportSchema.day`: the
     /// API takes only a `TimeZone`, so the user's preferred-calendar
     /// setting has no way in from this direction either.
     ///
+    /// **Widened by `021`** (plan §2, P4; spec Decision 6): given an
+    /// `order`, `d{1,2}/d{1,2}/d{4}` also reads, month or day first as the
+    /// order says — the file's order, from `slashDateOrder(in:region:)`. A
+    /// two-digit year, another separator, or a slash date with no order
+    /// given is nil, so every caller that passes no order reads exactly
+    /// what it read before.
+    ///
     /// Gregorian `date(from:)` *normalizes* impossible dates (Feb 30 →
     /// Mar 2) rather than failing, so the resolved date is round-tripped
-    /// back to components and compared — that's the impossible-date check.
-    /// On a day whose local midnight doesn't exist (a spring-forward
-    /// transition), `date(from:)` answers the first valid instant instead
-    /// and the components still round-trip — pinned by the DST fixture.
-    static func day(from field: String, timeZone: TimeZone = .current) -> Date? {
+    /// back to components and compared — that's the impossible-date check,
+    /// for both shapes. On a day whose local midnight doesn't exist (a
+    /// spring-forward transition), `date(from:)` answers the first valid
+    /// instant instead and the components still round-trip — pinned by the
+    /// DST fixture.
+    static func day(
+        from field: String, timeZone: TimeZone = .current, order: SlashDateOrder? = nil
+    ) -> Date? {
         let scalars = Array(field.unicodeScalars)
-        guard scalars.count == 10, scalars[4] == "-", scalars[7] == "-" else { return nil }
-        guard
-            let year = number(scalars[0...3]),
-            let month = number(scalars[5...6]),
-            let dayOfMonth = number(scalars[8...9])
-        else { return nil }
+        let year: Int
+        let month: Int
+        let dayOfMonth: Int
+        if scalars.count == 10, scalars[4] == "-", scalars[7] == "-" {
+            guard
+                let isoYear = number(scalars[0...3]),
+                let isoMonth = number(scalars[5...6]),
+                let isoDay = number(scalars[8...9])
+            else { return nil }
+            (year, month, dayOfMonth) = (isoYear, isoMonth, isoDay)
+        } else if let order, let parts = slashParts(scalars) {
+            year = parts.year
+            (month, dayOfMonth) = order == .monthFirst
+                ? (parts.first, parts.second)
+                : (parts.second, parts.first)
+        } else {
+            return nil
+        }
 
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
@@ -191,6 +252,64 @@ nonisolated enum ImportSchema {
             return nil
         }
         return date
+    }
+
+    /// The file's slash-date order (021, plan §2, P4; spec Decision 6),
+    /// over every cell in its date columns. A slash date whose first number
+    /// is above 12 and second is not is evidence for day-first; the other
+    /// way round, for month-first; anything else, for nothing. One kind of
+    /// evidence decides. None, or both, and the region decides — and
+    /// `regionDecided` is true only when the file holds at least one
+    /// slash-shaped date, so a file of ISO dates says nothing about order.
+    /// Under a contradiction, the dates that don't fit the region's order
+    /// are unreadable by `day(from:timeZone:order:)`'s own check.
+    static func slashDateOrder(
+        in cells: [String], region: Locale
+    ) -> (order: SlashDateOrder, regionDecided: Bool) {
+        var monthFirstEvidence = false
+        var dayFirstEvidence = false
+        var anySlashDate = false
+        for cell in cells {
+            guard let parts = slashParts(Array(FieldNormalization.trimmed(cell).unicodeScalars)) else {
+                continue
+            }
+            anySlashDate = true
+            if parts.first > 12, parts.second <= 12 { dayFirstEvidence = true }
+            if parts.second > 12, parts.first <= 12 { monthFirstEvidence = true }
+        }
+        switch (monthFirstEvidence, dayFirstEvidence) {
+        case (true, false): return (.monthFirst, false)
+        case (false, true): return (.dayFirst, false)
+        default: return (.regional(for: region), anySlashDate)
+        }
+    }
+
+    /// `d{1,2}/d{1,2}/d{4}`, as its three numbers in the order written, or
+    /// nil for any other shape.
+    private static func slashParts(
+        _ scalars: [Unicode.Scalar]
+    ) -> (first: Int, second: Int, year: Int)? {
+        let parts = scalars.split(separator: "/", omittingEmptySubsequences: false)
+        guard
+            parts.count == 3,
+            (1...2).contains(parts[0].count),
+            (1...2).contains(parts[1].count),
+            parts[2].count == 4,
+            let first = number(parts[0]),
+            let second = number(parts[1]),
+            let year = number(parts[2])
+        else { return nil }
+        return (first, second, year)
+    }
+
+    /// The Trove ID as the schema reads it (021, plan §2): blank (by
+    /// `isBlank`) is `empty`; the trimmed text that `UUID(uuidString:)`
+    /// parses — in any letter case — is the value; anything else is
+    /// `unreadable`. Parsed, never compared as text.
+    static func troveID(from field: String) -> Cell<UUID> {
+        if isBlank(field) { return .empty }
+        guard let id = UUID(uuidString: FieldNormalization.trimmed(field)) else { return .unreadable }
+        return .value(id)
     }
 
     /// Desire as the schema reads it: an integer inside the given scale —

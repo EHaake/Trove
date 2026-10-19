@@ -286,11 +286,20 @@ struct ImportSchemaTests {
 
     /// The reader is deliberately stricter than `Decimal(string:)`, which
     /// stops silently at a thousands separator — the exact leniency the
-    /// spec forbids.
-    @Test(arguments: ["1250.", ".50", "1250.000", "+5.00", "-5.00", "$5",
-                      "1,250.00", "1 250,00", "5..0", "", " 5.00", "5.00 ", "5.0a"])
+    /// spec forbids. Rewritten by 021 (plan §2, Q7): `"$5"` and
+    /// `"1,250.00"` moved to `aLeadingSymbolAndThousandsGroupsNowRead`;
+    /// the other eleven stay rejected.
+    @Test(arguments: ["1250.", ".50", "1250.000", "+5.00", "-5.00",
+                      "1 250,00", "5..0", "", " 5.00", "5.00 ", "5.0a"])
     func nonCanonicalMoneyIsRejected(field: String) {
         #expect(ImportSchema.cents(from: field) == nil)
+    }
+
+    /// The two forms 021 widened the grammar to read (spec Decision 16);
+    /// the full grammar is `ImportGrammarTests`'.
+    @Test func aLeadingSymbolAndThousandsGroupsNowRead() {
+        #expect(ImportSchema.cents(from: "$5") == 500)
+        #expect(ImportSchema.cents(from: "1,250.00") == 125_000)
     }
 
     @Test func moneyOverflowRejectsWithoutTrapping() {
