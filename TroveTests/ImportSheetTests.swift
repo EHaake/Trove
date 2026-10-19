@@ -16,9 +16,12 @@ struct ImportSheetTests {
     @Test func theHandKeptFixtureReadsWholeWithNoSkipsAndNoDefaults() throws {
         let text = try fixtureText()
         #expect(text.split(separator: "\n", omittingEmptySubsequences: false).first.map(String.init) == handKeptHeader)
-        #expect(!text.hasSuffix("\n"))
-        #expect(!text.contains("\r"))
-        #expect(!text.hasPrefix("\u{FEFF}"))
+        // The bytes, not the decoded text: decoding may drop a leading BOM,
+        // and a String sees "\r\n" as one Character.
+        let data = try Data(contentsOf: fixtureURL())
+        #expect(!data.starts(with: [0xEF, 0xBB, 0xBF]))
+        #expect(!data.contains(0x0D))
+        #expect(data.last != 0x0A)
 
         // A day-first region: the file's own dates must decide month-first.
         let sheet = try ImportSchema.itemsSheet(
@@ -283,6 +286,18 @@ struct ImportSheetTests {
         #expect(sheet.rows.last?.soldDate == .value(day(2024, 12, 25)))
     }
 
+    @Test func anOverWideRowsDateDoesNotVoteOnTheOrder() throws {
+        // Row 3 is skipped for its extra cell; its 25/12 would otherwise
+        // decide day-first.
+        let sheet = try sheet(header: ["Name", "Purchase Price", "Purchase Date"], [
+            ["Nikon F3", "$300.00", "3/4/2024"],
+            ["Leica M3", "$300.00", "25/12/2024", "stray"],
+        ])
+        #expect(sheet.skipped == [SkippedRow(rowNumber: 3, reason: "more columns than the header")])
+        #expect(sheet.regionDateOrder == .monthFirst)
+        #expect(sheet.rows.map(\.purchaseDate) == [.value(day(2024, 3, 4))])
+    }
+
     @Test func theRegionDecidesOnlyWhenTheFileCannot() throws {
         let sheet = try sheet(header: ["Name", "Purchase Price", "Purchase Date"], [
             ["Nikon F3", "$300.00", "3/4/2024"],
@@ -319,6 +334,21 @@ struct ImportSheetTests {
             new.map { ExportSchema.row(from: $0.record, timeZone: utc()) }
                 == preview.validated.map { ExportSchema.row(from: $0.record, timeZone: utc()) }
         )
+    }
+
+    @Test func anUnreadablePriceAndDateDefaultAndCountAsToday() throws {
+        let rows = [fullCells(["Purchase Price": "abc", "Purchase Date": "someday"])]
+        let sheet = try ImportSchema.itemsSheet(from: itemsFile(rows), timeZone: utc(), locale: usLocale())
+        let row = try #require(sheet.rows.first)
+        #expect(row.purchasePrice == .unreadable)
+        #expect(row.purchaseDate == .unreadable)
+        let new = try #require(row.asNew(now: instant(), missingColumns: sheet.missingDefaultColumns))
+        #expect(new.record.purchasePriceCents == 0)
+        #expect(new.record.purchaseDate == instant())
+        #expect(new.defaultedFieldCount == 2)
+        // Counts only: today's preview defaults the date to `.now`.
+        let preview = try ImportSchema.itemsPreview(from: itemsFile(rows), timeZone: utc())
+        #expect(preview.validated.map(\.defaultedFieldCount) == [new.defaultedFieldCount])
     }
 
     @Test func anUnreadableTroveIDCountsOnce() throws {
@@ -401,11 +431,14 @@ struct ImportSheetTests {
         try ImportSchema.itemsSheet(from: try CSVParser.parse(fixtureText()), timeZone: utc(), locale: usLocale())
     }
 
-    private func fixtureText(file: StaticString = #filePath) throws -> String {
-        let url = URL(filePath: "\(file)")
+    private func fixtureText() throws -> String {
+        try String(contentsOf: fixtureURL(), encoding: .utf8)
+    }
+
+    private func fixtureURL(file: StaticString = #filePath) -> URL {
+        URL(filePath: "\(file)")
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appending(path: "docs/samples/items-hand-kept.csv")
-        return try String(contentsOf: url, encoding: .utf8)
     }
 }

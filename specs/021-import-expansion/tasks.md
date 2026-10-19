@@ -379,7 +379,7 @@ is plain language.
   sums stated in the Done note.
   **Done (2026-10-18):** `ItemImportRow`, `ImportSheet` (with `missingDefaultColumns`) and `asNew` in `ImportRows.swift`; `ImportSchema.itemsSheet(from:timeZone:locale:)` beside the untouched `itemsPreview`. `ImportSheetTests`, 17 tests (G6, G21), including `asNewCountsAndDefaultsExactlyAsTodaysPreview` — six rows through both paths, counts and every exported cell equal. Fixture `items-hand-kept.csv`: 24 rows (2–7, 9–14, 16–21, 23–28), separators 8/15/22, blanks 29–31, **totals row 32**, sums **$27,088.86** purchase and **$26,605.00** current value, checked in the test; read under `en_GB` so the file's own dates must decide. Mutations M1–M8 (the task's eight), each red. New `SkipReason.extraHeaderColumns` (R7's wording; the old `extraColumns` goes at T007). `troveID` not on the record until T008, as T008's line says. An `N/A` sale cell is now empty and no longer counts a dropped sale (criterion 14). Unit 1,871 / 244 green, re-run by the orchestrator. Per-task review: signed off, no blocking; four notes → T004a.
 
-- [ ] **T004a — T004 review notes: two unpinned counts, file-byte assertions, the date vote, a doc sentence.**
+- [x] **T004a — T004 review notes: two unpinned counts, file-byte assertions, the date vote, a doc sentence.**
   *(Added 2026-10-18 — T004's per-task review, second-look notes 1, 2, 4, 5.)*
   (1) No test sends an **unreadable** Purchase Price or Purchase Date through
   `asNew` — add one (`abc`, `someday`): price 0, date `now`, two defaults, and
@@ -393,6 +393,7 @@ is plain language.
   Files: `Trove/Import/ImportRows.swift`, `Trove/Import/ImportSchema.swift`,
   `TroveTests/ImportSheetTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-10-18):** `anUnreadablePriceAndDateDefaultAndCountAsToday` (0, `now`, two defaults, equal to `itemsPreview`'s count); the fixture's BOM / CR / trailing-newline checks read the file's `Data`; over-wide skipped rows no longer vote on the slash order (`anOverWideRowsDateDoesNotVoteOnTheOrder`); the doc sentence fixed. Mutations, each red: unreadable price uncounted; unreadable date uncounted; a BOM planted in the check's input; the over-wide filter removed. Unit 1,873 / 244 green.
 
 - [ ] **T005 — The wishlist rows and the wishlist sheet.**
   Per plan §4, Q4. `WishlistImportRow`, its `asNew(now:missingColumns:)`
@@ -1092,6 +1093,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | T003a (`sdd-implementer`) | `opus` | 51,481 (21 tool uses, 25.9 min) | Done first pass |
 | T004 (`sdd-implementer`) | `opus` | 126,632 (36 tool uses, 51.9 min) | Done first pass; a mutation revert slipped (a reverse edit matched 11 sites), caught by its count check and restored by hand, `cmp`-verified |
 | T004 per-task review (`skeptical-reviewer`) | `opus` | 76,254 (9 tool uses, 2.8 min) | Signed off, no blocking. Notes 1, 2, 4, 5 → T004a; note 3 (the two optional names spelled in two places) left — the criterion-41 leg guards it |
+| T004a (`sdd-implementer`, resumed) | `opus` | — (resumed; usage not returned) | Done first pass |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):

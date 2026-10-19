@@ -143,8 +143,8 @@ nonisolated struct ItemImportRow: Sendable, Equatable {
     /// Trove ID counts once (P7). **One difference (spec Decision 17)**: a
     /// default taken because its column is in `missingColumns` is still
     /// taken and is not counted — only `Desire to Keep` and `Condition` can
-    /// be missing, the required columns having gated the file. The currency
-    /// comes from the `Currency` cell and nowhere else.
+    /// appear in `missingColumns`, the required columns having gated the
+    /// file. The currency comes from the `Currency` cell and nowhere else.
     func asNew(now: Date, missingColumns: [String]) -> ValidatedRow<ItemExportRecord>? {
         guard case .value(let name) = name else { return nil }
 

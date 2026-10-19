@@ -469,9 +469,11 @@ nonisolated enum ImportSchema {
 
         let missing = ["Desire to Keep", "Condition"].filter { columns.position(of: $0) == nil }
 
-        // One order per file, from every cell in its date columns.
+        // One order per file, from every cell in its date columns — of the
+        // rows step 1 keeps: an over-wide row is skipped, and its shifted
+        // cells don't vote.
         let datePositions = ["Purchase Date", "Sold Date"].compactMap { columns.position(of: $0) }
-        let dateCells = dataRows.flatMap { row in
+        let dateCells = dataRows.filter { $0.cells.count <= columns.width }.flatMap { row in
             datePositions.compactMap { $0 < row.cells.count ? row.cells[$0] : nil }
         }
         let (order, regionDecided) = slashDateOrder(in: dateCells, region: locale)
