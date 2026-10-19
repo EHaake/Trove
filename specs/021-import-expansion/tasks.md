@@ -291,7 +291,7 @@ is plain language.
   recorded.
   **Done (2026-10-18):** `ImportColumns` (`match`, `position(of:)` with a precondition on an unknown name, `width`, `unused`, `HeaderError`) and `ExportSchema`'s `itemRequiredHeaders`, `wishlistRequiredHeaders`, `troveIDHeader` (plan §6's seam until T008). `ImportColumnsTests`, 9 tests, headers built from `ExportSchema`'s arrays; one added beyond the list, `aHeaderAtTheOtherListsWidthIsNotWrongListByCount`, which is what makes the count mutation red. Mutations, each red: only the first missing name (4 issues); the star not dropped (4); an unknown column refusing (9); wrong list by cell count (2). Defaults chosen: `unused` keeps the first spelling, de-duplicated by canonical form; `.duplicate` carries the schema's spelling; `otherRequired` is checked against every header cell. Unit 1,854 tests in 243 suites green (re-run by the orchestrator after the reverts).
 
-- [ ] **T003a — Phase 1 review notes: the Wishlist delete on screen, and two stale pointers.**
+- [x] **T003a — Phase 1 review notes: the Wishlist delete on screen, and two stale pointers.**
   *(Added 2026-10-18 — Phase 1 review, second-look notes 1 and 3.)* Per plan §1.
   (1) `WishlistView.swift:194`'s `row: item.persistentModelID` has no test: the
   view-model legs pass `row` themselves and the UI test deletes only on Items.
@@ -308,6 +308,7 @@ is plain language.
   `Trove/ViewModels/PlansViewModel.swift` (comments).
   **Verify:** `scripts/verify.sh` green; the UI test alone green and red under
   the mutation; `scripts/verify.sh ui` green.
+  **Done (2026-10-18):** the UI test gains a Wishlist leg (swipe the lower wanted twin, confirm, only it goes); mutation `WishlistView:194` → `delete(id: item.id)` → both legs red (`:3380`, `:3381`: the swiped twin stayed, the other went). Both `delete` doc comments say every UI path must pass `row`; `MarketIndex`'s comment stands alone; `PlansViewModel`'s `uniqueKeysWithValues` says why it cannot trap. Unit 1,854 / 243 green; UI 43 green. **Phase 1 closed** — review signed off; phase-end UI run at `d50507b` 43/43 green.
 
   **Phase 1 closes here — `walkthrough: none`; after its review, run on.**
 
@@ -1071,6 +1072,8 @@ the spec runs, with escape-hatch misses recorded here too.
 | T002 (`sdd-implementer`) | `opus` | 78,673 (25 tool uses, 62.3 min) | Done first pass |
 | T003 (`sdd-implementer`) | `opus` | 69,462 (18 tool uses, 36.9 min) | Done first pass; one test added so the count mutation can fail |
 | Phase 1 review (`skeptical-reviewer`) | `opus` | 114,725 (14 tool uses, 3.2 min) | Signed off, no blocking; N1 fix confirmed both directions on both lists and through Plans. Second look: (1) Wishlist delete wiring untested on screen → T003a; (2) `delete`'s id-only fallback has no production caller (doc comment, T003a); (3) stale pointers → T003a, plan §1 sentence fixed by the orchestrator; (4) the widened `cents` also turns a `$1,250` Sale Price from dropped into sold in the shipped importer — named at the Phase 2 pause; (5) a source scan re-spelled (disclosed, for a future sweep); (6) `deletePlan`'s unknown-key leg now a planless row |
+| Phase 1 UI run at `d50507b` (orchestrator) | — | — | 43 tests, 0 failures — the review's condition met |
+| T003a (`sdd-implementer`) | `opus` | 51,481 (21 tool uses, 25.9 min) | Done first pass |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):

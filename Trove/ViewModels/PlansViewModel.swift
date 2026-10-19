@@ -229,6 +229,8 @@ final class PlansViewModel {
 
         unboughtCount = all.count(where: { !$0.isBought })
         anyAwaitsCarryOver = all.contains(where: \.awaitsCarryOver)
+        // Cannot trap: the keys are store rows from one fetch, each distinct
+        // even when two rows share an `id` (021 criterion 42).
         entries = Dictionary(uniqueKeysWithValues: planned.map { ($0.persistentModelID, $0) })
 
         activeRows = active

@@ -569,7 +569,8 @@ final class ItemListViewModel {
     /// can share one `id` (021 criterion 42 — nothing in a CloudKit schema
     /// enforces a unique one), and the copy deleted must be the copy swiped,
     /// not whichever comes first. The market rows under the shared `id` are
-    /// still cleared.
+    /// still cleared. Every UI path must pass `row`; `id` alone resolves to
+    /// the first match, which may be the other copy.
     func delete(id: UUID, row: PersistentIdentifier? = nil) {
         // Both arrays: the Sold side has the same trailing swipe the Owned
         // side does (P16), and it deletes through this one path.

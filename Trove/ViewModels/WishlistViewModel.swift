@@ -263,6 +263,8 @@ final class WishlistViewModel {
     /// `row`, when given, names the stored row the person acted on — the same
     /// rule as `ItemListViewModel.delete(id:row:)`: two rows can share one
     /// `id` (021 criterion 42), and the copy deleted must be the copy swiped.
+    /// Every UI path must pass `row`; `id` alone resolves to the first match,
+    /// which may be the other copy.
     func delete(id: UUID, row: PersistentIdentifier? = nil) {
         let matches: (WishlistItem) -> Bool = { item in
             if let row { item.persistentModelID == row } else { item.id == id }

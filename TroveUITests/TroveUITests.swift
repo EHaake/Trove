@@ -3358,5 +3358,26 @@ final class TroveUITests: XCTestCase {
 
         XCTAssertTrue(second.waitForNonExistence(timeout: 5), "the twin listed second must leave the list")
         XCTAssertTrue(first.exists, "the twin listed first must stay — deleting one copy removes exactly that one")
+
+        // Wishlist: the same, for the wanted twins — the swipe's alert must
+        // pass the row swiped, not the shared `id`.
+        app.buttons["Wishlist"].tap()
+        let wantedOriginal = app.staticTexts["Mamiya 7 II"]
+        let wantedCopy = app.staticTexts["Mamiya Seven"]
+        XCTAssertTrue(wantedOriginal.waitForExistence(timeout: 5))
+        XCTAssertTrue(wantedCopy.exists)
+        let (wantedFirst, wantedSecond) = wantedOriginal.frame.minY < wantedCopy.frame.minY
+            ? (wantedOriginal, wantedCopy) : (wantedCopy, wantedOriginal)
+        let wantedSecondName = wantedSecond.label
+        openTrailingSwipe(on: wantedSecond, in: app)
+        let wantedDelete = app.buttons["Delete"]
+        XCTAssertTrue(wantedDelete.waitForExistence(timeout: 5), "the Wishlist's trailing swipe must offer Delete")
+        wantedDelete.tap()
+        let wantedAlert = app.alerts["Delete \(wantedSecondName)?"]
+        XCTAssertTrue(wantedAlert.waitForExistence(timeout: 5), "Delete must ask first, naming the wanted twin swiped")
+        wantedAlert.buttons["Delete"].tap()
+
+        XCTAssertTrue(wantedSecond.waitForNonExistence(timeout: 5), "the wanted twin listed second must leave the Wishlist")
+        XCTAssertTrue(wantedFirst.exists, "the wanted twin listed first must stay — deleting one copy removes exactly that one")
     }
 }
