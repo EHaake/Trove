@@ -300,6 +300,7 @@ struct ImportCopyTests {
         let errors: [ImportError] = [
             .unreadable, .undecodable, .malformedQuoting, .tooLarge,
             .headerMismatch(wrongList: true), .headerMismatch(wrongList: false),
+            .wrongList, .missingColumns(["Purchase Price"]), .duplicateColumn("Purchase Price"),
         ]
         for error in errors {
             for target in [ImportTarget.items, .wishlist] {
@@ -336,6 +337,283 @@ struct ImportCopyTests {
                     + "Nothing was imported."
             )
         }
+    }
+
+    // MARK: - 021 (plan §5; G8, G21, G22's words)
+
+    @Test func theTitleAsksWhenTheFileWritesAndSaysNothingWhenItDoesNot() {
+        #expect(ImportCopy.confirmationTitle(summary: summary(added: 1)) == "Import this file?")
+        #expect(ImportCopy.confirmationTitle(summary: summary(updated: 1)) == "Import this file?")
+        #expect(ImportCopy.confirmationTitle(summary: summary(unchanged: 75)) == "Nothing to import")
+        #expect(ImportCopy.confirmationTitle(summary: ImportSummary()) == "Nothing to import")
+    }
+
+    @Test func theCountsLineInItsThreeShapesAndItsSingulars() {
+        #expect(lines(summary(added: 90)) == ["90 items will be added."])
+        #expect(lines(summary(added: 1)) == ["1 item will be added."])
+        #expect(lines(summary(updated: 12)) == ["12 items will be updated.", "Updates can't be undone."])
+        #expect(lines(summary(updated: 1)) == ["1 item will be updated.", "Updates can't be undone."])
+        #expect(
+            lines(summary(added: 3, updated: 12))
+                == ["12 items will be updated and 3 added.", "Updates can't be undone."]
+        )
+        #expect(
+            lines(summary(added: 1, updated: 1))
+                == ["1 item will be updated and 1 added.", "Updates can't be undone."]
+        )
+        #expect(lines(summary(added: 2), target: .wishlist) == ["2 wishlist items will be added."])
+        #expect(lines(summary(added: 1), target: .wishlist) == ["1 wishlist item will be added."])
+    }
+
+    @Test func theUnchangedLineAndItsSingular() {
+        #expect(lines(summary(unchanged: 75)) == ["75 rows are unchanged."])
+        #expect(lines(summary(unchanged: 1)) == ["1 row is unchanged."])
+    }
+
+    @Test func theSkippedBlockListsFiveThenCounts() {
+        let seven = (1...7).map { SkippedRow(rowNumber: $0 + 1, reason: "no name") }
+        #expect(lines(summary(skipped: seven)) == [
+            "Skipping 7 rows:",
+            "Row 2 \u{2014} no name", "Row 3 \u{2014} no name", "Row 4 \u{2014} no name",
+            "Row 5 \u{2014} no name", "Row 6 \u{2014} no name",
+            "\u{2026}and 2 more rows.",
+        ])
+        let six = (1...6).map { SkippedRow(rowNumber: $0 + 1, reason: "no name") }
+        #expect(lines(summary(skipped: six)).last == "\u{2026}and 1 more row.")
+        #expect(
+            lines(summary(skipped: [SkippedRow(rowNumber: 7, reason: "no name")]))
+                == ["Skipping 1 row:", "Row 7 \u{2014} no name"]
+        )
+    }
+
+    /// The hint follows a shared-code skip wherever it falls — past the five
+    /// listed rows too — and never follows any other reason.
+    @Test func theSharedCodeHintOnlyWhenASkipCarriesThatReason() {
+        let hint = "Clear the Trove ID on the row that's a new item."
+        let shared = SkippedRow(rowNumber: 15, reason: ImportSchema.SkipReason.sameTroveID(asRows: [14]))
+        #expect(lines(summary(skipped: [shared])) == ["Skipping 1 row:", "Row 15 \u{2014} same Trove ID as row 14", hint])
+
+        let others = (2...7).map { SkippedRow(rowNumber: $0, reason: ImportSchema.SkipReason.noName) }
+        let pastTheFifth = lines(summary(skipped: others + [shared]))
+        #expect(!pastTheFifth.contains("Row 15 \u{2014} same Trove ID as row 14"))
+        #expect(pastTheFifth.last == hint)
+
+        let reasons = [
+            ImportSchema.SkipReason.noName, ImportSchema.SkipReason.extraHeaderColumns,
+            ImportSchema.SkipReason.ambiguousTroveID, ImportSchema.SkipReason.otherListTroveID,
+            ImportSchema.SkipReason.alreadyBought,
+        ]
+        let noShared = lines(summary(skipped: reasons.enumerated().map { SkippedRow(rowNumber: $0.offset + 2, reason: $0.element) }))
+        #expect(!noShared.contains(hint))
+    }
+
+    @Test func theTwoUnreadableLinesAndTheirSingulars() {
+        #expect(
+            lines(summary(added: 1, defaultedOnNew: 4))
+                == ["1 item will be added.", "4 missing or unreadable cells on new rows will use defaults."]
+        )
+        #expect(
+            lines(summary(added: 1, defaultedOnNew: 1))
+                == ["1 item will be added.", "1 missing or unreadable cell on new rows will use defaults."]
+        )
+        // An unchanged row's unreadable cell is reported by the same line.
+        #expect(
+            lines(summary(unchanged: 3, unreadableOnUpdates: 2)) == [
+                "3 rows are unchanged.",
+                "2 unreadable cells on rows for items you already have will be left as they are.",
+            ]
+        )
+        #expect(
+            lines(summary(unchanged: 3, unreadableOnUpdates: 1)) == [
+                "3 rows are unchanged.",
+                "1 unreadable cell on rows for items you already have will be left as it is.",
+            ]
+        )
+    }
+
+    /// G21's words: R7's four sentences, one per missing column, in the
+    /// sheet's order — and only when something is being added.
+    @Test func theMissingColumnLinesOnlyWhenRowsAreAdded() {
+        let items = summary(added: 2, missingDefaultColumns: ["Desire to Keep", "Condition"])
+        #expect(lines(items) == [
+            "2 items will be added.",
+            "No Desire to Keep column \u{2014} new items will be 3 of 5.",
+            "No Condition column \u{2014} new items will be Excellent.",
+        ])
+        let wishes = summary(added: 2, missingDefaultColumns: ["Desire to Own", "Added"])
+        #expect(lines(wishes, target: .wishlist) == [
+            "2 wishlist items will be added.",
+            "No Desire to Own column \u{2014} new items will be 2 of 3.",
+            "No Added column \u{2014} new items will be dated today.",
+        ])
+        let onlyUpdates = summary(updated: 2, missingDefaultColumns: ["Desire to Keep", "Condition"])
+        #expect(lines(onlyUpdates) == ["2 items will be updated.", "Updates can't be undone."])
+        let nothing = summary(unchanged: 2, missingDefaultColumns: ["Desire to Own", "Added"])
+        #expect(lines(nothing, target: .wishlist) == ["2 rows are unchanged."])
+    }
+
+    @Test func theFileLevelLinesAndTheirSingulars() {
+        #expect(lines(summary(unusedColumns: ["Mount", "Insured"])) == ["Not used: Mount, Insured."])
+        #expect(lines(summary(totalsRows: [108])) == ["Row 108 looks like a totals row and was left out."])
+        #expect(lines(summary(totalsRows: [40, 41, 42])) == ["3 rows look like totals rows and were left out."])
+        #expect(
+            lines(summary(unusedSaleRows: 3))
+                == ["3 rows have sale details for items you still own. Mark them sold in the app."]
+        )
+        #expect(
+            lines(summary(unusedSaleRows: 1))
+                == ["1 row has sale details for an item you still own. Mark it sold in the app."]
+        )
+        #expect(lines(summary(regionDateOrder: .monthFirst)) == ["Dates read as month/day/year, from this iPhone's region."])
+        #expect(lines(summary(regionDateOrder: .dayFirst)) == ["Dates read as day/month/year, from this iPhone's region."])
+    }
+
+    /// G22's words (R10, Decision 19), by literal at 90 and at 1, and absent
+    /// at 0.
+    @Test func theUnknownCodesWarningCarriesItsCountAndIsAbsentAtZero() {
+        #expect(lines(summary(added: 90, keptCodeAdds: 90)) == [
+            "90 items will be added.",
+            "90 rows have a Trove ID this iPhone doesn't have yet. If iCloud is still bringing your "
+                + "collection down, wait \u{2014} importing now adds them a second time.",
+        ])
+        #expect(lines(summary(added: 1, keptCodeAdds: 1)) == [
+            "1 item will be added.",
+            "1 row has a Trove ID this iPhone doesn't have yet. If iCloud is still bringing your "
+                + "collection down, wait \u{2014} importing now adds it a second time.",
+        ])
+        #expect(lines(summary(added: 90, keptCodeAdds: 0)) == ["90 items will be added."])
+    }
+
+    @Test func theUndoLineOnlyWhenSomethingIsUpdated() {
+        let undo = "Updates can't be undone."
+        #expect(lines(summary(updated: 1)).contains(undo))
+        #expect(lines(summary(added: 5, updated: 1)).contains(undo))
+        #expect(!lines(summary(added: 5)).contains(undo))
+        #expect(!lines(summary(unchanged: 5)).contains(undo))
+    }
+
+    @Test func theRecountedLineOnlyWhenRecountedAndFirst() {
+        let recount = "Your collection changed while this was open. Check the numbers again."
+        #expect(lines(summary(added: 2), recounted: true) == [recount, "2 items will be added."])
+        #expect(lines(ImportSummary(), recounted: true) == [recount])
+        #expect(!lines(summary(added: 2)).contains(recount))
+    }
+
+    @Test func noProblemsOnlyWhenNothingElseIsSaid() {
+        #expect(lines(ImportSummary()) == ["No problems found."])
+        #expect(!lines(summary(added: 1)).contains("No problems found."))
+        #expect(!lines(summary(unusedColumns: ["Mount"])).contains("No problems found."))
+    }
+
+    /// Plan §5's order for a summary with everything set: the recount first,
+    /// the two warnings last.
+    @Test func everyLineInOrder() {
+        var full = ImportSummary()
+        full.added = 3
+        full.updated = 12
+        full.unchanged = 75
+        full.skipped = [
+            SkippedRow(rowNumber: 7, reason: ImportSchema.SkipReason.noName),
+            SkippedRow(rowNumber: 15, reason: ImportSchema.SkipReason.sameTroveID(asRows: [14])),
+        ]
+        full.defaultedOnNew = 4
+        full.unreadableOnUpdates = 2
+        full.unusedColumns = ["Mount", "Insured"]
+        full.totalsRows = [108]
+        full.unusedSaleRows = 3
+        full.regionDateOrder = .monthFirst
+        full.missingDefaultColumns = ["Desire to Keep", "Condition"]
+        full.keptCodeAdds = 2
+
+        #expect(lines(full, recounted: true) == [
+            "Your collection changed while this was open. Check the numbers again.",
+            "12 items will be updated and 3 added.",
+            "75 rows are unchanged.",
+            "Skipping 2 rows:",
+            "Row 7 \u{2014} no name",
+            "Row 15 \u{2014} same Trove ID as row 14",
+            "Clear the Trove ID on the row that's a new item.",
+            "4 missing or unreadable cells on new rows will use defaults.",
+            "2 unreadable cells on rows for items you already have will be left as they are.",
+            "No Desire to Keep column \u{2014} new items will be 3 of 5.",
+            "No Condition column \u{2014} new items will be Excellent.",
+            "Not used: Mount, Insured.",
+            "Row 108 looks like a totals row and was left out.",
+            "3 rows have sale details for items you still own. Mark them sold in the app.",
+            "Dates read as month/day/year, from this iPhone's region.",
+            "2 rows have a Trove ID this iPhone doesn't have yet. If iCloud is still bringing your "
+                + "collection down, wait \u{2014} importing now adds them a second time.",
+            "Updates can't be undone.",
+        ])
+    }
+
+    @Test func theThreeFailureSentences() {
+        #expect(
+            ImportCopy.failureMessage(for: .missingColumns(["Name"]), target: .items)
+                == "This file is missing Name. Trove needs the columns marked * in the template. Nothing was imported."
+        )
+        #expect(
+            ImportCopy.failureMessage(for: .missingColumns(["Purchase Price", "Purchase Date"]), target: .items)
+                == "This file is missing Purchase Price and Purchase Date. Trove needs the columns marked * "
+                + "in the template. Nothing was imported."
+        )
+        #expect(
+            ImportCopy.failureMessage(for: .missingColumns(["Name", "Purchase Price", "Purchase Date"]), target: .items)
+                == "This file is missing Name, Purchase Price and Purchase Date. Trove needs the columns "
+                + "marked * in the template. Nothing was imported."
+        )
+        #expect(
+            ImportCopy.failureMessage(for: .duplicateColumn("Purchase Price"), target: .items)
+                == "This file has more than one Purchase Price column. Remove one and try again. Nothing was imported."
+        )
+        #expect(
+            ImportCopy.failureMessage(for: .wrongList, target: .items)
+                == "This looks like a Wishlist export. Import it from the Wishlist screen instead. Nothing was imported."
+        )
+        #expect(
+            ImportCopy.failureMessage(for: .wrongList, target: .wishlist)
+                == "This looks like a Items export. Import it from the Items screen instead. Nothing was imported."
+        )
+    }
+
+    @Test func everySkipReasonsString() {
+        #expect(ImportSchema.SkipReason.noName == "no name")
+        #expect(ImportSchema.SkipReason.extraHeaderColumns == "more columns than the header")
+        #expect(ImportSchema.SkipReason.sameTroveID(asRows: [15]) == "same Trove ID as row 15")
+        #expect(ImportSchema.SkipReason.sameTroveID(asRows: [15, 16]) == "same Trove ID as rows 15 and 16")
+        #expect(ImportSchema.SkipReason.sameTroveID(asRows: [15, 16, 17]) == "same Trove ID as rows 15, 16 and 17")
+        #expect(ImportSchema.SkipReason.ambiguousTroveID == "its Trove ID matches more than one item")
+        #expect(ImportSchema.SkipReason.otherListTroveID == "its Trove ID belongs to the other list")
+        #expect(ImportSchema.SkipReason.alreadyBought == "already bought")
+    }
+
+    private func lines(
+        _ summary: ImportSummary, target: ImportTarget = .items, recounted: Bool = false
+    ) -> [String] {
+        ImportCopy.confirmationLines(summary: summary, target: target, recounted: recounted)
+    }
+
+    private func summary(
+        added: Int = 0, updated: Int = 0, unchanged: Int = 0,
+        skipped: [SkippedRow] = [], defaultedOnNew: Int = 0, unreadableOnUpdates: Int = 0,
+        unusedColumns: [String] = [], totalsRows: [Int] = [], unusedSaleRows: Int = 0,
+        regionDateOrder: SlashDateOrder? = nil, missingDefaultColumns: [String] = [],
+        keptCodeAdds: Int = 0
+    ) -> ImportSummary {
+        var summary = ImportSummary()
+        summary.added = added
+        summary.updated = updated
+        summary.unchanged = unchanged
+        summary.skipped = skipped
+        summary.defaultedOnNew = defaultedOnNew
+        summary.unreadableOnUpdates = unreadableOnUpdates
+        summary.unusedColumns = unusedColumns
+        summary.totalsRows = totalsRows
+        summary.unusedSaleRows = unusedSaleRows
+        summary.regionDateOrder = regionDateOrder
+        summary.missingDefaultColumns = missingDefaultColumns
+        summary.keptCodeAdds = keptCodeAdds
+        return summary
     }
 
     private func preview(

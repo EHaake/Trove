@@ -431,6 +431,34 @@ nonisolated enum ImportSchema {
         /// 021 (R7): the sheet readers judge a row against the file's own
         /// header, not a template. `extraColumns` goes with `itemsPreview`.
         static let extraHeaderColumns = "more columns than the header"
+
+        // 021 (plan §5): the reasons the stores give a row the sheet kept.
+
+        /// "same Trove ID as row 15" / "same Trove ID as rows 15 and 16".
+        static func sameTroveID(asRows rows: [Int]) -> String {
+            let numbers = rows.map(String.init)
+            let list: String
+            if numbers.count <= 1 {
+                list = numbers.first ?? ""
+            } else {
+                list = numbers.dropLast().joined(separator: ", ") + " and " + numbers.last!
+            }
+            return sameTroveIDPrefix + (rows.count == 1 ? "row " : "rows ") + list
+        }
+
+        /// Whether `reason` is a `sameTroveID(asRows:)` skip — the one the
+        /// confirmation follows with "Clear the Trove ID on the row that's a
+        /// new item."
+        static func isSameTroveID(_ reason: String) -> Bool {
+            reason.hasPrefix(sameTroveIDPrefix)
+        }
+
+        private static let sameTroveIDPrefix = "same Trove ID as "
+
+        static let ambiguousTroveID = "its Trove ID matches more than one item"
+        static let otherListTroveID = "its Trove ID belongs to the other list"
+        /// Decision 21: a wishlist row whose code is an entry already bought.
+        static let alreadyBought = "already bought"
     }
 
     // MARK: - Sheets (021, plan §4)

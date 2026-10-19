@@ -37,6 +37,12 @@ nonisolated enum ImportError: Error, Equatable {
     /// exactly the *other* list's — the most likely wrong-file mistake,
     /// and criterion 4 wants the alert to say so.
     case headerMismatch(wrongList: Bool)
+    /// 021 (plan §5): the file is the other list's export.
+    case wrongList
+    /// 021: the required columns the header lacks, in schema order.
+    case missingColumns([String])
+    /// 021: a recognised column appears twice; carries the schema's spelling.
+    case duplicateColumn(String)
 }
 
 /// Which list an import ran against — picks the copy's nouns, and which
@@ -98,6 +104,14 @@ nonisolated enum ImportCopy {
             // a second copy of it can't slip past the suffix check.
             body = "The columns don't match the \(target.noun) template. "
                 + "A blank template with the expected layout is in Settings \u{203A} Templates."
+        case .wrongList:
+            body = "This looks like a \(target.other.noun) export. "
+                + "Import it from the \(target.other.screenName) screen instead."
+        case .missingColumns(let names):
+            body = "This file is missing \(listed(names)). "
+                + "Trove needs the columns marked * in the template."
+        case .duplicateColumn(let name):
+            body = "This file has more than one \(name) column. Remove one and try again."
         }
         return body + " Nothing was imported."
     }
@@ -142,6 +156,141 @@ nonisolated enum ImportCopy {
             lines.append("No problems found.")
         }
         return lines.joined(separator: "\n")
+    }
+
+    // MARK: - 021 (plan §5, R7, R10)
+
+    /// "Import this file?", or "Nothing to import" when the file would
+    /// neither add nor update anything.
+    static func confirmationTitle(summary: ImportSummary) -> String {
+        summary.writesAnything ? "Import this file?" : "Nothing to import"
+    }
+
+    /// The confirmation's lines, in plan §5's order, each only when it has
+    /// something to say; "No problems found." when none does. The two
+    /// warnings — unknown codes, then "can't be undone" — sit last, nearest
+    /// the buttons. Nothing here reads sync state (R10).
+    static func confirmationLines(summary: ImportSummary, target: ImportTarget, recounted: Bool) -> [String] {
+        var lines: [String] = []
+        if recounted {
+            lines.append("Your collection changed while this was open. Check the numbers again.")
+        }
+
+        func things(_ count: Int) -> String {
+            "\(count) \(count == 1 ? target.singular : target.plural)"
+        }
+        switch (summary.updated, summary.added) {
+        case (0, 0): break
+        case (0, let added): lines.append("\(things(added)) will be added.")
+        case (let updated, 0): lines.append("\(things(updated)) will be updated.")
+        case let (updated, added): lines.append("\(things(updated)) will be updated and \(added) added.")
+        }
+
+        if summary.unchanged > 0 {
+            let count = summary.unchanged
+            lines.append(count == 1 ? "1 row is unchanged." : "\(count) rows are unchanged.")
+        }
+
+        if !summary.skipped.isEmpty {
+            let count = summary.skipped.count
+            lines.append("Skipping \(count) \(count == 1 ? "row" : "rows"):")
+            for skip in summary.skipped.prefix(maxListedSkips) {
+                lines.append("Row \(skip.rowNumber) \u{2014} \(skip.reason)")
+            }
+            if count > maxListedSkips {
+                let more = count - maxListedSkips
+                lines.append("\u{2026}and \(more) more \(more == 1 ? "row" : "rows").")
+            }
+            if summary.skipped.contains(where: { ImportSchema.SkipReason.isSameTroveID($0.reason) }) {
+                lines.append("Clear the Trove ID on the row that's a new item.")
+            }
+        }
+
+        if summary.defaultedOnNew > 0 {
+            let count = summary.defaultedOnNew
+            lines.append(
+                "\(count) missing or unreadable \(count == 1 ? "cell" : "cells") on new rows will use defaults."
+            )
+        }
+
+        if summary.unreadableOnUpdates > 0 {
+            let count = summary.unreadableOnUpdates
+            lines.append(
+                count == 1
+                    ? "1 unreadable cell on rows for items you already have will be left as it is."
+                    : "\(count) unreadable cells on rows for items you already have will be left as they are."
+            )
+        }
+
+        // R7's four sentences — a missing column only matters to a row
+        // being added.
+        if summary.added > 0 {
+            lines.append(contentsOf: summary.missingDefaultColumns.compactMap(missingColumnLine))
+        }
+
+        if !summary.unusedColumns.isEmpty {
+            lines.append("Not used: \(summary.unusedColumns.joined(separator: ", ")).")
+        }
+
+        switch summary.totalsRows.count {
+        case 0: break
+        case 1: lines.append("Row \(summary.totalsRows[0]) looks like a totals row and was left out.")
+        case let count: lines.append("\(count) rows look like totals rows and were left out.")
+        }
+
+        if summary.unusedSaleRows > 0 {
+            let count = summary.unusedSaleRows
+            lines.append(
+                count == 1
+                    ? "1 row has sale details for an item you still own. Mark it sold in the app."
+                    : "\(count) rows have sale details for items you still own. Mark them sold in the app."
+            )
+        }
+
+        switch summary.regionDateOrder {
+        case nil: break
+        case .monthFirst?: lines.append("Dates read as month/day/year, from this iPhone's region.")
+        case .dayFirst?: lines.append("Dates read as day/month/year, from this iPhone's region.")
+        }
+
+        // R10 / Decision 19: about the import, never about sync state.
+        if summary.keptCodeAdds > 0 {
+            let count = summary.keptCodeAdds
+            lines.append(
+                count == 1
+                    ? "1 row has a Trove ID this iPhone doesn't have yet. If iCloud is still bringing "
+                        + "your collection down, wait \u{2014} importing now adds it a second time."
+                    : "\(count) rows have a Trove ID this iPhone doesn't have yet. If iCloud is still bringing "
+                        + "your collection down, wait \u{2014} importing now adds them a second time."
+            )
+        }
+
+        if summary.updated > 0 {
+            lines.append("Updates can't be undone.")
+        }
+
+        if lines.isEmpty {
+            lines.append("No problems found.")
+        }
+        return lines
+    }
+
+    /// R7: the spec words Condition's; the other three are worded after it.
+    private static func missingColumnLine(_ column: String) -> String? {
+        switch column {
+        case "Condition": "No Condition column \u{2014} new items will be Excellent."
+        case "Desire to Keep": "No Desire to Keep column \u{2014} new items will be 3 of 5."
+        case "Desire to Own": "No Desire to Own column \u{2014} new items will be 2 of 3."
+        case "Added": "No Added column \u{2014} new items will be dated today."
+        default: nil
+        }
+    }
+
+    /// "A", "A and B", "A, B and C".
+    private static func listed(_ names: [String]) -> String {
+        guard let last = names.last else { return "" }
+        guard names.count > 1 else { return last }
+        return names.dropLast().joined(separator: ", ") + " and " + last
     }
 }
 

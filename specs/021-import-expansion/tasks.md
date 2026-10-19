@@ -419,7 +419,7 @@ is plain language.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
   **Done (2026-10-18):** `WishlistImportRow`, its `asNew` (copied from `wishlistPreview`), and `wishlistSheet` beside the untouched preview. Seven tests in `ImportSheetTests` (26 there): criterion 16's hand-written sheet; required-only; a present column's blank still counted; totals and nameless legs; a nameless wish with a code kept; preview equivalence cell for cell (ISO dates and no `N/A`, where the sheet differs on purpose); unreadable/blank `Added`. Mutations, each red: `Estimated Cost` out of the totals rule; `Added` not offered to the order scan; a missing `Added` counted per row; (extra) a blank `Desire to Own` uncounted. Unit 1,880 / 244 green.
 
-- [ ] **T006 — The summary, the words, and the two stores' add path.**
+- [x] **T006 — The summary, the words, and the two stores' add path.**
   Per plan §5, §8, Q11, R7. New `Trove/Import/ImportStore.swift`:
   `ImportSummary` (every field plan §5 lists, `missingDefaultColumns` and
   `keptCodeAdds` included — the latter stays 0 until T010 and T011 count it),
@@ -470,6 +470,7 @@ is plain language.
   `TroveTests/ImportServiceTests.swift`.
   **Verify:** `scripts/verify.sh` green, both new suites in the count; mutations
   recorded.
+  **Done (2026-10-18):** `ImportStore.swift` — `ImportSummary`, the `ItemsImportSheet` / `WishlistImportSheet` typealiases, both stores (adds only; `apply` is the two commit loops moved verbatim; the view models keep their copies until T007). `ImportError` gains the three cases; `ImportCopy` gains the title, the lines and the three failure sentences; `SkipReason` gains plan §5's reasons. `ImportCopyTests` +14 (G8, G21's and G22's wording); `ItemImportStoreTests`, `WishlistImportStoreTests` (G9, second context). Mutations, each red: the undo line for adds; the hint always; a missing-column line for an update-only summary; the unknown-codes line at 0; placement from 0 on each list; `createdAt` left at now. Singulars chosen where the plan gave none (e.g. "1 row has sale details for an item you still own. Mark it sold in the app."; "Dates read as day/month/year, from this iPhone's region."). `skipped` merges the sheet's and the store's, sorted by row. No existing test rewritten; the "ends with Nothing was imported." test now loops the new cases. Noted for the sweep: the shipped `.wrongList` sentence reads "a Items export" (`ImportService.swift:98`, since `012`), now pinned by `theThreeFailureSentences`. Unit 1,903 / 246 green, re-run by the orchestrator after the mutations.
 
 - [ ] **T007 — The switch: the service, the view models, and the old gate retired.**
   Per plan §3, §5, §8, Q3, Q6. `ImportService`'s two requirements take
@@ -1096,6 +1097,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | T004 per-task review (`skeptical-reviewer`) | `opus` | 76,254 (9 tool uses, 2.8 min) | Signed off, no blocking. Notes 1, 2, 4, 5 → T004a; note 3 (the two optional names spelled in two places) left — the criterion-41 leg guards it |
 | T004a (`sdd-implementer`, resumed) | `opus` | 142,096 cumulative with T004 (13 tool uses, 36.4 min) | Done first pass |
 | T005 (`sdd-implementer`) | `opus` | 87,629 (27 tool uses, 39.8 min) | Done first pass; one scripted revert failed on a repeated line and was redone by hand before the last mutation |
+| T006 (`sdd-implementer`) | `opus` | 133,510 (35 tool uses, 52.4 min) | Done first pass |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):
