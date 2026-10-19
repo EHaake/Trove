@@ -1093,7 +1093,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | T003a (`sdd-implementer`) | `opus` | 51,481 (21 tool uses, 25.9 min) | Done first pass |
 | T004 (`sdd-implementer`) | `opus` | 126,632 (36 tool uses, 51.9 min) | Done first pass; a mutation revert slipped (a reverse edit matched 11 sites), caught by its count check and restored by hand, `cmp`-verified |
 | T004 per-task review (`skeptical-reviewer`) | `opus` | 76,254 (9 tool uses, 2.8 min) | Signed off, no blocking. Notes 1, 2, 4, 5 → T004a; note 3 (the two optional names spelled in two places) left — the criterion-41 leg guards it |
-| T004a (`sdd-implementer`, resumed) | `opus` | — (resumed; usage not returned) | Done first pass |
+| T004a (`sdd-implementer`, resumed) | `opus` | 142,096 cumulative with T004 (13 tool uses, 36.4 min) | Done first pass |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):
