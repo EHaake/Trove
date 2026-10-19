@@ -142,8 +142,8 @@ nonisolated struct ItemImportRow: Sendable, Equatable {
     /// unreadable; the sale is the pair rule, counted once; an unreadable
     /// Trove ID counts once (P7). **One difference (spec Decision 17)**: a
     /// default taken because its column is in `missingColumns` is still
-    /// taken and is not counted — only `Desire to Keep` and `Condition` can
-    /// appear in `missingColumns`, the required columns having gated the
+    /// taken and is not counted — only `ExportSchema.itemDefaultedColumns`
+    /// can appear in `missingColumns`, the required columns having gated the
     /// file. The currency comes from the `Currency` cell and nowhere else.
     func asNew(now: Date, missingColumns: [String]) -> ValidatedRow<ItemExportRecord>? {
         guard case .value(let name) = name else { return nil }
@@ -194,7 +194,7 @@ nonisolated struct ItemImportRow: Sendable, Equatable {
             desire = parsed
         } else {
             desire = 3
-            if !missingColumns.contains("Desire to Keep") { defaulted += 1 }
+            if !missingColumns.contains(ExportSchema.DefaultedColumn.desireToKeep.rawValue) { defaulted += 1 }
         }
 
         let grade: Condition
@@ -202,7 +202,7 @@ nonisolated struct ItemImportRow: Sendable, Equatable {
             grade = parsed
         } else {
             grade = .excellent
-            if !missingColumns.contains("Condition") { defaulted += 1 }
+            if !missingColumns.contains(ExportSchema.DefaultedColumn.condition.rawValue) { defaulted += 1 }
         }
 
         // The match and the year: blank is the ordinary "no match" / "no
@@ -298,9 +298,9 @@ nonisolated struct WishlistImportRow: Sendable, Equatable {
     /// Reverb product, year and `Looking For` count only when unreadable; an
     /// unreadable Trove ID counts once (P7). **One difference (spec Decision
     /// 17)**: a default taken because its column is in `missingColumns` is
-    /// still taken and is not counted — only `Desire to Own` and `Added` can
-    /// appear in `missingColumns`, the required columns having gated the
-    /// file. The currency comes from the `Currency` cell and nowhere else.
+    /// still taken and is not counted — only
+    /// `ExportSchema.wishlistDefaultedColumns` can appear in
+    /// `missingColumns`, the required columns having gated the file. The currency comes from the `Currency` cell and nowhere else.
     func asNew(now: Date, missingColumns: [String]) -> ValidatedRow<WishlistExportRecord>? {
         guard case .value(let name) = name else { return nil }
 
@@ -331,7 +331,7 @@ nonisolated struct WishlistImportRow: Sendable, Equatable {
             desire = parsed
         } else {
             desire = 2
-            if !missingColumns.contains("Desire to Own") { defaulted += 1 }
+            if !missingColumns.contains(ExportSchema.DefaultedColumn.desireToOwn.rawValue) { defaulted += 1 }
         }
 
         // `Added` restores the wish's creation date (the spec's field table);
@@ -341,7 +341,7 @@ nonisolated struct WishlistImportRow: Sendable, Equatable {
             createdAt = parsed
         } else {
             createdAt = now
-            if !missingColumns.contains("Added") { defaulted += 1 }
+            if !missingColumns.contains(ExportSchema.DefaultedColumn.added.rawValue) { defaulted += 1 }
         }
 
         // Blank silent, unreadable counted — as on the items row.
@@ -413,7 +413,7 @@ nonisolated struct ImportSheet<Row: Sendable>: Sendable {
     /// dates could not; nil when they did, or when it holds no slash date.
     let regionDateOrder: SlashDateOrder?
     /// Decision 17: optional columns the file does not have at all whose blank
-    /// is a counted default for a new row — `Desire to Keep`, `Condition`; on
-    /// the wishlist `Desire to Own`, `Added`. Schema names, schema order.
+    /// is a counted default for a new row — `ExportSchema.itemDefaultedColumns`
+    /// or `wishlistDefaultedColumns`. Schema names, schema order.
     let missingDefaultColumns: [String]
 }

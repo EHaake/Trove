@@ -94,7 +94,7 @@ nonisolated enum ImportCopy {
         case .tooLarge:
             body = "The file is too large to be a \(target.noun) export."
         case .wrongList:
-            body = "This looks like a \(target.other.noun) export. "
+            body = "This looks like \(target.other == .items ? "an" : "a") \(target.other.noun) export. "
                 + "Import it from the \(target.other.screenName) screen instead."
         case .missingColumns(let names):
             body = "This file is missing \(listed(names)). "
@@ -176,7 +176,9 @@ nonisolated enum ImportCopy {
         // R7's four sentences — a missing column only matters to a row
         // being added.
         if summary.added > 0 {
-            lines.append(contentsOf: summary.missingDefaultColumns.compactMap(missingColumnLine))
+            lines.append(contentsOf: summary.missingDefaultColumns
+                .compactMap(ExportSchema.DefaultedColumn.init(rawValue:))
+                .map(missingColumnLine))
         }
 
         if !summary.unusedColumns.isEmpty {
@@ -227,13 +229,14 @@ nonisolated enum ImportCopy {
     }
 
     /// R7: the spec words Condition's; the other three are worded after it.
-    private static func missingColumnLine(_ column: String) -> String? {
+    /// Exhaustive over `ExportSchema.DefaultedColumn`: a column added there
+    /// without a line here does not compile.
+    private static func missingColumnLine(_ column: ExportSchema.DefaultedColumn) -> String {
         switch column {
-        case "Condition": "No Condition column \u{2014} new items will be Excellent."
-        case "Desire to Keep": "No Desire to Keep column \u{2014} new items will be 3 of 5."
-        case "Desire to Own": "No Desire to Own column \u{2014} new items will be 2 of 3."
-        case "Added": "No Added column \u{2014} new items will be dated today."
-        default: nil
+        case .condition: "No Condition column \u{2014} new items will be Excellent."
+        case .desireToKeep: "No Desire to Keep column \u{2014} new items will be 3 of 5."
+        case .desireToOwn: "No Desire to Own column \u{2014} new items will be 2 of 3."
+        case .added: "No Added column \u{2014} new items will be dated today."
         }
     }
 

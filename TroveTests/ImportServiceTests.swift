@@ -137,7 +137,7 @@ struct ImportServiceTests {
     /// three new cases — the other list's file is `.wrongList`, a stranger's
     /// header is missing every required column, and a repeated column is
     /// named.
-    @Test func theOtherListsFileMapsToTheFlaggedMismatch() async throws {
+    @Test func headerErrorsMapToWrongListMissingColumnsAndDuplicateColumn() async throws {
         let wishlistURL = try write(ExportSchema.wishlistHeaders.joined(separator: ",") + "\r\n")
         let strangerURL = try write("What,Ever\r\n")
         let doubledURL = try write("Name,Purchase Price,Purchase Date,Purchase Price\r\n")
@@ -562,7 +562,7 @@ struct ImportCopyTests {
         )
         #expect(
             ImportCopy.failureMessage(for: .wrongList, target: .wishlist)
-                == "This looks like a Items export. Import it from the Items screen instead. Nothing was imported."
+                == "This looks like an Items export. Import it from the Items screen instead. Nothing was imported."
         )
     }
 
@@ -622,6 +622,12 @@ struct ImportLayoutTests {
         #expect(header.cells == Array(ExportSchema.itemHeaders.prefix(19)))
         let rows = layout.dropFirst().map(\.cells)
         try #require(rows.count == 12)
+
+        // The 14-column leg is only that if the resaved file's header, once
+        // shaped (its trailing empty cells dropped), is 14 cells.
+        let resaved = try CSVParser.parse(try text(sample("items-resaved.csv")))
+        let resavedHeader = try #require(ImportSchema.shaped(resaved).first)
+        try #require(resavedHeader.cells.count == 14)
 
         let partialHeader = try #require(CSVParser.parse(try text(sample("items-partial.csv"))).first)
         try #require(partialHeader.cells.count == 12)
@@ -706,6 +712,12 @@ struct ImportLayoutTests {
 /// through each view model over the live service and real temp files (the
 /// disk-I/O exception `ImportServiceTests` records), and checked on a
 /// SECOND context over the same store, so an unsaved write can't hide.
+///
+/// What each half can catch: the store-empty half holds by construction —
+/// every container starts empty and a failure presentation carries no
+/// sheet to commit, so it cannot go red on its own. The half that can fail
+/// is the failure-not-confirmation check: a whole-file failure that
+/// reached the confirmation instead of `.failure` is recorded as an issue.
 struct ImportWholeFileFailureTests {
     @Test func everyWholeFileFailureLeavesTheItemsStoreEmpty() async throws {
         let files: [(String, URL)] = [

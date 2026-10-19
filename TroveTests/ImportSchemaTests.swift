@@ -632,8 +632,8 @@ struct ImportSchemaTests {
         #expect(blank.defaultedFieldCount == 0)
         #expect(blank.validated.first?.record.year == nil)
 
-        // The previews take no instant — they read the real clock, as the
-        // app does — so the above-range row is one no clock accepts.
+        // The sheet readers take no instant — they read the real clock, as
+        // the app does — so the above-range row is one no clock accepts.
         for field in ["75", "01975", "abc", "1899", "2999"] {
             let preview = try ImportSchema.itemsSheet(
                 from: itemsFile([cells(["Year": field])]), timeZone: utc()
@@ -775,15 +775,15 @@ struct ImportSchemaTests {
     /// Rewritten for 021 (plan §3, T007): an empty file is a header of no
     /// cells, so it is missing every required column — on both lists.
     @Test func anEmptyFileFailsTheGateNotTheRowPolicy() {
-        #expect(throws: ImportColumns.HeaderError.missing(ExportSchema.itemRequiredHeaders)) {
+        #expect(throws: ImportColumns.HeaderError.missing(["Name", "Purchase Price", "Purchase Date"])) {
             try ImportSchema.itemsSheet(from: [], timeZone: utc()).asAllNew()
         }
-        #expect(throws: ImportColumns.HeaderError.missing(ExportSchema.wishlistRequiredHeaders)) {
+        #expect(throws: ImportColumns.HeaderError.missing(["Name", "Estimated Cost"])) {
             try ImportSchema.wishlistSheet(from: [], timeZone: utc()).asAllNew()
         }
     }
 
-    @Test func aWishlistFileFailsTheItemsPreviewAsWrongList() {
+    @Test func aWishlistFileFailsTheItemsSheetAsWrongList() {
         #expect(throws: ImportColumns.HeaderError.wrongList) {
             try ImportSchema.itemsSheet(
                 from: [CSVRow(number: 1, cells: ExportSchema.wishlistHeaders)],
@@ -1103,7 +1103,7 @@ struct ImportSchemaTests {
         #expect(abs(row.record.createdAt.timeIntervalSinceNow) < 60)
     }
 
-    @Test func anItemsFileFailsTheWishlistPreviewAsWrongList() {
+    @Test func anItemsFileFailsTheWishlistSheetAsWrongList() {
         #expect(throws: ImportColumns.HeaderError.wrongList) {
             try ImportSchema.wishlistSheet(
                 from: [CSVRow(number: 1, cells: ExportSchema.itemHeaders)],

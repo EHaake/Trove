@@ -390,6 +390,25 @@ nonisolated enum ExportSchema {
     /// See `itemRequiredHeaders` — the wishlist's two.
     static let wishlistRequiredHeaders = ["Name", "Estimated Cost"]
 
+    /// 021 (spec Decision 17, plan R7): the optional columns whose absence
+    /// the confirmation names in a line of its own, rather than counting
+    /// the default each new row takes. Declared once, here, beside the
+    /// required lists, because the sheet readers' missing check, a new
+    /// row's count and the confirmation's line are all read from it — and
+    /// an enum, so the line's `switch` is exhaustive over it.
+    nonisolated enum DefaultedColumn: String, Sendable {
+        case desireToKeep = "Desire to Keep"
+        case condition = "Condition"
+        case desireToOwn = "Desire to Own"
+        case added = "Added"
+    }
+
+    /// The items file's two, in schema order.
+    static let itemDefaultedColumns: [DefaultedColumn] = [.desireToKeep, .condition]
+
+    /// See `itemDefaultedColumns` — the wishlist's two.
+    static let wishlistDefaultedColumns: [DefaultedColumn] = [.desireToOwn, .added]
+
     /// 021: the column that carries a row's identity. **A temporary seam**
     /// (plan §6): the reader is built before export writes this column, so
     /// until T008 appends it to `itemHeaders` and `wishlistHeaders` the

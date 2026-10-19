@@ -423,7 +423,7 @@ nonisolated enum ImportSchema {
         )
         let dataRows = shaped.dropFirst()
 
-        let missing = ["Desire to Keep", "Condition"].filter { columns.position(of: $0) == nil }
+        let missing = ExportSchema.itemDefaultedColumns.map(\.rawValue).filter { columns.position(of: $0) == nil }
 
         // One order per file, from every cell in its date columns — of the
         // rows step 1 keeps: an over-wide row is skipped, and its shifted
@@ -538,7 +538,7 @@ nonisolated enum ImportSchema {
         )
         let dataRows = shaped.dropFirst()
 
-        let missing = ["Desire to Own", "Added"].filter { columns.position(of: $0) == nil }
+        let missing = ExportSchema.wishlistDefaultedColumns.map(\.rawValue).filter { columns.position(of: $0) == nil }
 
         // As in `itemsSheet`: one order per file, from the rows step 1 keeps.
         let datePositions = ["Added"].compactMap { columns.position(of: $0) }

@@ -313,7 +313,7 @@ struct ImportSheetTests {
     /// on the re-pointed field-policy suites (`ImportSchemaTests`,
     /// `DocsSampleTests`, the view-model import suites), whose assertions
     /// stand unedited; the counts stay pinned here by literal.
-    @Test func asNewCountsAndDefaultsExactlyAsTodaysPreview() throws {
+    @Test func asNewCountsEachRowsDefaultsAsTheLiteralsPin() throws {
         let rows = [
             fullCells(),
             fullCells(["Purchase Price": "", "Desire to Keep": "9", "Condition": "mint",
@@ -462,7 +462,7 @@ struct ImportSheetTests {
 
     /// Rewritten at 021 T007, as the items twin above: the preview it
     /// compared against is gone; the counts stay pinned by literal.
-    @Test func wishAsNewCountsAndDefaultsExactlyAsTodaysPreview() throws {
+    @Test func wishAsNewCountsEachRowsDefaultsAsTheLiteralsPin() throws {
         let rows = [
             wishCells(),
             wishCells(["Estimated Cost": "abc", "Desire to Own": "9", "Currency": "dollars"]),

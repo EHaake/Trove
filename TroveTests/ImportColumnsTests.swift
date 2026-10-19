@@ -95,10 +95,10 @@ struct ImportColumnsTests {
     /// An empty file is a header of no cells — missing every required name,
     /// not a case of its own and not "wrong list".
     @Test func anEmptyHeaderIsMissingEveryRequiredName() {
-        #expect(throws: ImportColumns.HeaderError.missing(ExportSchema.itemRequiredHeaders)) {
+        #expect(throws: ImportColumns.HeaderError.missing(["Name", "Purchase Price", "Purchase Date"])) {
             try items([])
         }
-        #expect(throws: ImportColumns.HeaderError.missing(ExportSchema.wishlistRequiredHeaders)) {
+        #expect(throws: ImportColumns.HeaderError.missing(["Name", "Estimated Cost"])) {
             try wishlist([])
         }
     }
