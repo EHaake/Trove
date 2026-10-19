@@ -395,7 +395,7 @@ is plain language.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
   **Done (2026-10-18):** `anUnreadablePriceAndDateDefaultAndCountAsToday` (0, `now`, two defaults, equal to `itemsPreview`'s count); the fixture's BOM / CR / trailing-newline checks read the file's `Data`; over-wide skipped rows no longer vote on the slash order (`anOverWideRowsDateDoesNotVoteOnTheOrder`); the doc sentence fixed. Mutations, each red: unreadable price uncounted; unreadable date uncounted; a BOM planted in the check's input; the over-wide filter removed. Unit 1,873 / 244 green.
 
-- [ ] **T005 — The wishlist rows and the wishlist sheet.**
+- [x] **T005 — The wishlist rows and the wishlist sheet.**
   Per plan §4, Q4. `WishlistImportRow`, its `asNew(now:missingColumns:)`
   (today's wishlist policy: cost and desire and `Added` default and count;
   currency, product, year and `Looking For` count only when unreadable; a
@@ -417,6 +417,7 @@ is plain language.
   Files: `Trove/Import/ImportRows.swift`, `Trove/Import/ImportSchema.swift`,
   `TroveTests/ImportSheetTests.swift`.
   **Verify:** `scripts/verify.sh` green; mutations recorded.
+  **Done (2026-10-18):** `WishlistImportRow`, its `asNew` (copied from `wishlistPreview`), and `wishlistSheet` beside the untouched preview. Seven tests in `ImportSheetTests` (26 there): criterion 16's hand-written sheet; required-only; a present column's blank still counted; totals and nameless legs; a nameless wish with a code kept; preview equivalence cell for cell (ISO dates and no `N/A`, where the sheet differs on purpose); unreadable/blank `Added`. Mutations, each red: `Estimated Cost` out of the totals rule; `Added` not offered to the order scan; a missing `Added` counted per row; (extra) a blank `Desire to Own` uncounted. Unit 1,880 / 244 green.
 
 - [ ] **T006 — The summary, the words, and the two stores' add path.**
   Per plan §5, §8, Q11, R7. New `Trove/Import/ImportStore.swift`:
@@ -1094,6 +1095,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | T004 (`sdd-implementer`) | `opus` | 126,632 (36 tool uses, 51.9 min) | Done first pass; a mutation revert slipped (a reverse edit matched 11 sites), caught by its count check and restored by hand, `cmp`-verified |
 | T004 per-task review (`skeptical-reviewer`) | `opus` | 76,254 (9 tool uses, 2.8 min) | Signed off, no blocking. Notes 1, 2, 4, 5 → T004a; note 3 (the two optional names spelled in two places) left — the criterion-41 leg guards it |
 | T004a (`sdd-implementer`, resumed) | `opus` | 142,096 cumulative with T004 (13 tool uses, 36.4 min) | Done first pass |
+| T005 (`sdd-implementer`) | `opus` | 87,629 (27 tool uses, 39.8 min) | Done first pass; one scripted revert failed on a repeated line and was redone by hand before the last mutation |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):

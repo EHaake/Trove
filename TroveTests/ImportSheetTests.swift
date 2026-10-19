@@ -2,10 +2,10 @@ import Foundation
 import Testing
 @testable import Trove
 
-/// 021 T004, guards G6 and G21: the items file read to cells and made into
-/// new rows (plan §4; spec criteria 1, 3, 6, 11, 14, 15 and 41; Decisions 17
-/// and 23). Every row here, and in `docs/samples/items-hand-kept.csv`, is
-/// invented.
+/// 021 T004 and T005, guards G6, G7 and G21: the items and wishlist files
+/// read to cells and made into new rows (plan §4; spec criteria 1, 3, 6, 11,
+/// 14, 15, 16 and 41; Decisions 17 and 23). Every row here, and in
+/// `docs/samples/items-hand-kept.csv`, is invented.
 struct ImportSheetTests {
     /// The person's header, exact names and order (plan §4).
     private let handKeptHeader =
@@ -361,6 +361,147 @@ struct ImportSheetTests {
         #expect(new.map(\.defaultedFieldCount) == [0, 1])
     }
 
+    // MARK: - Criterion 16: the wishlist by the same rules (T005, G7, G21)
+
+    @Test func aHandWrittenWishlistSheetImportsEveryRowWithNoDefaults() throws {
+        // Read as text, so the quoted `$` costs with commas go through the parser.
+        let text = """
+            Added,Looking For,Name,Remarks,Estimated Cost,Desire to Own,Category,Currency,Notes
+            3/14/2024,Used,Leica Q2,ask Sam,"$4,250.00",3,Cameras,USD,black
+            4/3/2024,,Rega Planar 6,,$1195.50,2,Turntables,,N/A
+            ,,,,,,,,
+            11/23/2023,new,Fender Princeton,,"$1,099",1,,,
+            ,,,,"$6,544.50",,,,
+            """
+        // A day-first region: the file's own `Added` dates must decide month-first.
+        let sheet = try ImportSchema.wishlistSheet(
+            from: try CSVParser.parse(text), timeZone: utc(), locale: Locale(identifier: "en_GB")
+        )
+        #expect(sheet.rows.map(\.rowNumber) == [2, 3, 5])
+        #expect(sheet.skipped.isEmpty)
+        #expect(sheet.totalsRowNumbers == [6])
+        #expect(sheet.regionDateOrder == nil)
+        #expect(sheet.missingDefaultColumns.isEmpty)
+        #expect(sheet.unusedColumns == ["Remarks"])
+
+        let new = sheet.rows.compactMap { $0.asNew(now: instant(), missingColumns: sheet.missingDefaultColumns) }
+        #expect(new.count == 3)
+        #expect(new.map(\.defaultedFieldCount) == [0, 0, 0])
+        #expect(new.map(\.record.estimatedCostCents) == [425_000, 119_550, 109_900])
+        // 4/3 is April 3: the file's 3/14 settled the order against the region.
+        #expect(new.map(\.record.createdAt) == [day(2024, 3, 14), day(2024, 4, 3), day(2023, 11, 23)])
+        #expect(new.map(\.record.desireToOwn) == [3, 2, 1])
+        #expect(new.map(\.record.lookingFor) == [.used, nil, .new])
+        #expect(new.map(\.record.notes) == ["black", nil, nil])
+        #expect(new.map(\.record.categoryPath) == ["Cameras", "Turntables", ""])
+        #expect(new.map(\.record.currencyCode) == ["USD", "USD", "USD"])
+    }
+
+    @Test func aRequiredOnlyWishlistNamesBothMissingColumnsAndCountsNoDefaults() throws {
+        let sheet = try wishSheet(header: ["Name", "Estimated Cost"], [
+            ["Leica Q2", "$4,250.00"],
+            ["Rega Planar 6", "1195.50"],
+        ])
+        #expect(sheet.missingDefaultColumns == ["Desire to Own", "Added"])
+        #expect(sheet.skipped.isEmpty)
+
+        let new = sheet.rows.compactMap { $0.asNew(now: instant(), missingColumns: sheet.missingDefaultColumns) }
+        #expect(new.count == 2)
+        for row in new {
+            #expect(row.defaultedFieldCount == 0)
+            #expect(row.record.desireToOwn == 2)
+            #expect(row.record.createdAt == instant())
+            #expect(row.record.currencyCode == "USD")
+            #expect(row.record.categoryPath == "")
+            #expect(row.record.notes == nil)
+            #expect(row.record.reverbProductID == nil)
+            #expect(row.record.year == nil)
+            #expect(row.record.lookingFor == nil)
+        }
+        #expect(new.map(\.record.estimatedCostCents) == [425_000, 119_550])
+    }
+
+    @Test func aPresentWishlistColumnWithBlankCellsStillCountsItsDefault() throws {
+        let sheet = try wishSheet(header: ["Name", "Estimated Cost", "Desire to Own", "Added"], [
+            ["Leica Q2", "$4,250.00", "", "N/A"],
+            ["Rega Planar 6", "1195.50", "N/A", "2024-01-02"],
+        ])
+        #expect(sheet.missingDefaultColumns.isEmpty)
+        let new = sheet.rows.compactMap { $0.asNew(now: instant(), missingColumns: sheet.missingDefaultColumns) }
+        #expect(new.map(\.defaultedFieldCount) == [2, 1])
+        #expect(new.map(\.record.desireToOwn) == [2, 2])
+        #expect(new.map(\.record.createdAt) == [instant(), day(2024, 1, 2)])
+    }
+
+    @Test func wishlistTotalsRowsAreLeftOutAndNamelessRowsSkipped() throws {
+        let sheet = try wishSheet(header: ["Name", "Category", "Estimated Cost", "Added", "Running Total"], [
+            ["Leica Q2", "Cameras", "$4,250.00", "2024-01-02", "$4,250.00"],  // 2
+            ["", "", "$4,250.00", "", "$4,250.00"],                           // 3: a sum under an unknown column too
+            ["Total", "", "$4,250.00"],                                       // 4
+            [" Subtotal ", "", "4250"],                                       // 5
+            ["", "Cameras", "$300.00", "", ""],                               // 6: a filled Category
+            ["", "", "$300.00", "2024-01-02", ""],                            // 7: a nameless row with a date
+            ["", "", "lots", "", ""],                                         // 8: no amount
+            ["Total", "", "$5.00", "2024-01-02", ""],                         // 9: named Total, with a date
+        ])
+        #expect(sheet.totalsRowNumbers == [3, 4, 5])
+        #expect(sheet.skipped == [6, 7, 8].map { SkippedRow(rowNumber: $0, reason: "no name") })
+        #expect(sheet.rows.map(\.rowNumber) == [2, 9])
+        #expect(sheet.rows.last?.name == .value("Total"))
+    }
+
+    @Test func aNamelessWishWithATroveIDIsKept() throws {
+        let id = UUID()
+        let sheet = try wishSheet(header: ["Name", "Estimated Cost", "Trove ID"], [
+            ["", "$300.00", id.uuidString.lowercased()],
+            ["", "$300.00", "not-a-code"],
+            ["Leica Q2", "$4,250.00", "not-a-code"],
+        ])
+        #expect(sheet.totalsRowNumbers.isEmpty)
+        #expect(sheet.rows.map(\.rowNumber) == [2, 4])
+        #expect(sheet.rows.first?.troveID == .value(id))
+        #expect(sheet.rows.first?.asNew(now: instant(), missingColumns: []) == nil)
+        #expect(sheet.skipped == [SkippedRow(rowNumber: 3, reason: "no name")])
+        // An unreadable code counts once (P7).
+        #expect(sheet.rows.last?.asNew(now: instant(), missingColumns: sheet.missingDefaultColumns)?
+            .defaultedFieldCount == 1)
+    }
+
+    @Test func wishAsNewCountsAndDefaultsExactlyAsTodaysPreview() throws {
+        // ISO `Added` dates only, and no N/A — today's preview reads neither
+        // a slash date nor an N/A as the sheet does.
+        let rows = [
+            wishCells(),
+            wishCells(["Estimated Cost": "abc", "Desire to Own": "9", "Currency": "dollars"]),
+            wishCells(["Estimated Cost": "", "Reverb Product ID": "abc", "Year": "75", "Looking For": "maybe"]),
+            wishCells(["Currency": "", "Notes": " ", "Looking For": "Used", "Desire to Own": ""]),
+        ]
+        let preview = try ImportSchema.wishlistPreview(from: wishFile(rows), timeZone: utc())
+        let sheet = try ImportSchema.wishlistSheet(from: wishFile(rows), timeZone: utc(), locale: usLocale())
+        let new = sheet.rows.compactMap { $0.asNew(now: instant(), missingColumns: sheet.missingDefaultColumns) }
+
+        #expect(new.count == preview.validated.count)
+        #expect(new.map(\.defaultedFieldCount) == preview.validated.map(\.defaultedFieldCount))
+        #expect(new.map(\.defaultedFieldCount) == [0, 3, 4, 1])
+        #expect(new.map(\.rowNumber) == preview.validated.map(\.rowNumber))
+        #expect(
+            new.map { ExportSchema.row(from: $0.record, timeZone: utc()) }
+                == preview.validated.map { ExportSchema.row(from: $0.record, timeZone: utc()) }
+        )
+    }
+
+    @Test func anUnreadableOrBlankAddedDefaultsAndCountsAsToday() throws {
+        let rows = [wishCells(["Added": "someday"]), wishCells(["Added": ""])]
+        let sheet = try ImportSchema.wishlistSheet(from: wishFile(rows), timeZone: utc(), locale: usLocale())
+        #expect(sheet.rows.map(\.added) == [.unreadable, .empty])
+        let new = sheet.rows.compactMap { $0.asNew(now: instant(), missingColumns: sheet.missingDefaultColumns) }
+        #expect(new.map(\.record.createdAt) == [instant(), instant()])
+        #expect(new.map(\.defaultedFieldCount) == [1, 1])
+        // Counts only: today's preview defaults the date to `.now`.
+        let preview = try ImportSchema.wishlistPreview(from: wishFile(rows), timeZone: utc())
+        #expect(preview.validated.map(\.defaultedFieldCount) == new.map(\.defaultedFieldCount))
+    }
+
     // MARK: - Helpers
 
     private func utc() -> TimeZone { TimeZone(identifier: "UTC")! }
@@ -425,6 +566,38 @@ struct ImportSheetTests {
         ]
         byHeader.merge(changes) { _, new in new }
         return ExportSchema.itemHeaders.map { byHeader[$0]! }
+    }
+
+    private func wishSheet(
+        header: [String], _ dataRows: [[String]], locale: Locale? = nil
+    ) throws -> ImportSheet<WishlistImportRow> {
+        let rows = [CSVRow(number: 1, cells: header)]
+            + dataRows.enumerated().map { CSVRow(number: $0.offset + 2, cells: $0.element) }
+        return try ImportSchema.wishlistSheet(from: rows, timeZone: utc(), locale: locale ?? usLocale())
+    }
+
+    private func wishFile(_ dataRows: [[String]]) -> [CSVRow] {
+        [CSVRow(number: 1, cells: ExportSchema.wishlistHeaders)]
+            + dataRows.enumerated().map { CSVRow(number: $0.offset + 2, cells: $0.element) }
+    }
+
+    /// One fully valid row in `ExportSchema.wishlistHeaders` order, keyed by
+    /// header.
+    private func wishCells(_ changes: [String: String] = [:]) -> [String] {
+        var byHeader = [
+            "Name": "Leica Q2",
+            "Category": "Photography/Cameras",
+            "Estimated Cost": "4250.00",
+            "Currency": "USD",
+            "Desire to Own": "3",
+            "Added": "2025-11-04",
+            "Notes": "black, with the grip",
+            "Reverb Product ID": "160322",
+            "Year": "2019",
+            "Looking For": "new",
+        ]
+        byHeader.merge(changes) { _, new in new }
+        return ExportSchema.wishlistHeaders.map { byHeader[$0]! }
     }
 
     private func fixtureSheet() throws -> ImportSheet<ItemImportRow> {

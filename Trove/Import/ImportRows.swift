@@ -276,6 +276,121 @@ nonisolated struct ItemImportRow: Sendable, Equatable {
     }
 }
 
+/// One wishlist row, read once into cells and decided later (021, plan §4,
+/// Q4) — `ItemImportRow`'s twin over the wishlist's columns. A column the
+/// file does not have reads `empty`, like a blank cell.
+nonisolated struct WishlistImportRow: Sendable, Equatable {
+    let rowNumber: Int
+    let troveID: Cell<UUID>
+    // Text is never unreadable: blank (by `ImportSchema.isBlank`) or the
+    // trimmed text.
+    let name, category, notes: Cell<String>
+    let estimatedCost: Cell<Int>
+    let currency: Cell<String>
+    /// 1...3, the `DesireToOwnLevel` range.
+    let desireToOwn, reverbProductID, year: Cell<Int>
+    let added: Cell<Date>
+    let lookingFor: Cell<NewOrUsed>
+
+    /// The row as a new wish — nil only when the name is empty. Exactly
+    /// `ImportSchema.wishlistPreview`'s field policy and counts: cost, desire
+    /// and `Added` default and count when empty or unreadable; currency,
+    /// Reverb product, year and `Looking For` count only when unreadable; an
+    /// unreadable Trove ID counts once (P7). **One difference (spec Decision
+    /// 17)**: a default taken because its column is in `missingColumns` is
+    /// still taken and is not counted — only `Desire to Own` and `Added` can
+    /// appear in `missingColumns`, the required columns having gated the
+    /// file. The currency comes from the `Currency` cell and nowhere else.
+    func asNew(now: Date, missingColumns: [String]) -> ValidatedRow<WishlistExportRecord>? {
+        guard case .value(let name) = name else { return nil }
+
+        var defaulted = 0
+        if troveID == .unreadable { defaulted += 1 }
+
+        let cost: Int
+        if case .value(let parsed) = estimatedCost {
+            cost = parsed
+        } else {
+            cost = 0
+            defaulted += 1
+        }
+
+        // As on the items row: blank currency is silent, a malformed code
+        // counts.
+        let currencyCode: String
+        switch currency {
+        case .empty: currencyCode = "USD"
+        case .value(let code): currencyCode = code
+        case .unreadable:
+            currencyCode = "USD"
+            defaulted += 1
+        }
+
+        let desire: Int
+        if case .value(let parsed) = desireToOwn {
+            desire = parsed
+        } else {
+            desire = 2
+            if !missingColumns.contains("Desire to Own") { defaulted += 1 }
+        }
+
+        // `Added` restores the wish's creation date (the spec's field table);
+        // the commit assigns it onto `createdAt` after construction.
+        let createdAt: Date
+        if case .value(let parsed) = added {
+            createdAt = parsed
+        } else {
+            createdAt = now
+            if !missingColumns.contains("Added") { defaulted += 1 }
+        }
+
+        // Blank silent, unreadable counted — as on the items row.
+        let productID: Int?
+        switch reverbProductID {
+        case .empty: productID = nil
+        case .value(let parsed): productID = parsed
+        case .unreadable:
+            productID = nil
+            defaulted += 1
+        }
+
+        let wantedYear: Int?
+        switch year {
+        case .empty: wantedYear = nil
+        case .value(let parsed): wantedYear = parsed
+        case .unreadable:
+            wantedYear = nil
+            defaulted += 1
+        }
+
+        // 020 (Q6): as `Bought` on the items row.
+        let newOrUsed: NewOrUsed?
+        switch lookingFor {
+        case .empty: newOrUsed = nil
+        case .value(let parsed): newOrUsed = parsed
+        case .unreadable:
+            newOrUsed = nil
+            defaulted += 1
+        }
+
+        let record = WishlistExportRecord(
+            name: name,
+            categoryPath: category.text ?? "",
+            estimatedCostCents: cost,
+            currencyCode: currencyCode,
+            desireToOwn: desire,
+            createdAt: createdAt,
+            notes: notes.text,
+            reverbProductID: productID,
+            year: wantedYear,
+            lookingFor: newOrUsed,
+            firstPhotoID: nil,
+            firstPhotoAttribution: nil
+        )
+        return ValidatedRow(record: record, rowNumber: rowNumber, defaultedFieldCount: defaulted)
+    }
+}
+
 private extension Cell<String> {
     /// A text cell as the model's optional field: the text, or nil.
     nonisolated var text: String? {

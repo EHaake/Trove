@@ -561,6 +561,107 @@ nonisolated enum ImportSchema {
         )
     }
 
+    /// The wishlist file read to cells (021, plan §4, Q4) — `itemsSheet`'s
+    /// twin over the wishlist's columns, by the same five row steps: the
+    /// money column for the totals rule is `Estimated Cost`, the date column
+    /// for the slash order is `Added`, and the optional columns whose blank
+    /// counts are `Desire to Own` and `Added`.
+    static func wishlistSheet(
+        from rows: [CSVRow],
+        timeZone: TimeZone = .current,
+        locale: Locale = .current
+    ) throws(ImportColumns.HeaderError) -> ImportSheet<WishlistImportRow> {
+        let shaped = shaped(rows)
+        // Plan §6's temporary seam, as in `itemsSheet`.
+        let known = ExportSchema.wishlistHeaders + [ExportSchema.troveIDHeader]
+        let columns = try ImportColumns.match(
+            header: shaped.first?.cells ?? [],
+            known: known,
+            required: ExportSchema.wishlistRequiredHeaders,
+            otherRequired: ExportSchema.itemRequiredHeaders
+        )
+        let dataRows = shaped.dropFirst()
+
+        let missing = ["Desire to Own", "Added"].filter { columns.position(of: $0) == nil }
+
+        // As in `itemsSheet`: one order per file, from the rows step 1 keeps.
+        let datePositions = ["Added"].compactMap { columns.position(of: $0) }
+        let dateCells = dataRows.filter { $0.cells.count <= columns.width }.flatMap { row in
+            datePositions.compactMap { $0 < row.cells.count ? row.cells[$0] : nil }
+        }
+        let (order, regionDecided) = slashDateOrder(in: dateCells, region: locale)
+
+        let recognised = known.compactMap { columns.position(of: $0) }
+        let namePosition = columns.position(of: "Name")
+        let troveIDPosition = columns.position(of: ExportSchema.troveIDHeader)
+        let moneyPositions = Set(["Estimated Cost"].compactMap { columns.position(of: $0) })
+
+        var sheetRows: [WishlistImportRow] = []
+        var skipped: [SkippedRow] = []
+        var totals: [Int] = []
+
+        for row in dataRows {
+            guard row.cells.count <= columns.width else {
+                skipped.append(SkippedRow(rowNumber: row.number, reason: SkipReason.extraHeaderColumns))
+                continue
+            }
+            var cells = row.cells
+            cells.append(contentsOf: Array(repeating: "", count: columns.width - cells.count))
+
+            guard recognised.contains(where: { !isBlank(cells[$0]) }) else { continue }
+
+            if isTotalsRow(
+                cells,
+                recognised: recognised,
+                name: namePosition,
+                troveID: troveIDPosition,
+                money: moneyPositions
+            ) {
+                totals.append(row.number)
+                continue
+            }
+
+            /// The cell under `name`, or nil when the file has no such column.
+            func field(_ name: String) -> String? {
+                columns.position(of: name).map { cells[$0] }
+            }
+
+            let troveID = field(ExportSchema.troveIDHeader).map(Self.troveID(from:)) ?? .empty
+            let name = text(field("Name"))
+            // A nameless row with a readable code is kept (P8).
+            var readableID = false
+            if case .value = troveID { readableID = true }
+            if name == .empty, !readableID {
+                skipped.append(SkippedRow(rowNumber: row.number, reason: SkipReason.noName))
+                continue
+            }
+
+            sheetRows.append(WishlistImportRow(
+                rowNumber: row.number,
+                troveID: troveID,
+                name: name,
+                category: text(field("Category")),
+                notes: text(field("Notes")),
+                estimatedCost: read(field("Estimated Cost"), cents(from:)),
+                currency: read(field("Currency"), currencyCode(from:)),
+                desireToOwn: read(field("Desire to Own")) { desire(from: $0, in: 1...3) },
+                reverbProductID: read(field("Reverb Product ID"), reverbProductID(from:)),
+                year: read(field("Year")) { year(from: $0, timeZone: timeZone) },
+                added: read(field("Added")) { day(from: $0, timeZone: timeZone, order: order) },
+                lookingFor: read(field("Looking For"), newOrUsed(from:))
+            ))
+        }
+
+        return ImportSheet(
+            rows: sheetRows,
+            skipped: skipped,
+            unusedColumns: columns.unused,
+            totalsRowNumbers: totals,
+            regionDateOrder: regionDecided ? order : nil,
+            missingDefaultColumns: missing
+        )
+    }
+
     /// Plan §4, step 3: the name blank or, lowercased, one of `total`,
     /// `totals`, `subtotal`, `sum`; the Trove ID blank; at least one other
     /// recognised cell filled; and every other filled recognised cell in a
