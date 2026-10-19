@@ -287,11 +287,13 @@ every `ForEach` identified by it), with two rows sharing an `id`:
 
 - **Traps — fixed.** `MarketSummary.summaries(forSubjects:)`
   (`MarketIndex.swift:92`) becomes `Dictionary(_:uniquingKeysWith:)`, keeping
-  the first; both twins then read the one figure filed under their code. It is
-  the only `uniqueKeysWithValues` in production. Callers:
+  the first; both twins then read the one figure filed under their code. It was
+  the only `uniqueKeysWithValues` in production that could trap; since T001c
+  `PlansViewModel.swift:232` builds `entries` with one keyed by
+  `persistentModelID` over a single fetch, which cannot repeat. Callers:
   `ItemListViewModel.load()`, `WishlistViewModel.load()`,
   `DashboardViewModel.load()`, `SellPlanViewModel`'s load.
-  `PlansViewModel.swift:226` already uses `uniquingKeysWith` and says why.
+  (`PlansViewModel.swift:226` used `uniquingKeysWith` until T001c re-keyed it.)
 - **Deletes the wrong copy — fixed** *(re-review N1, 2026-10-09; applied by
   the orchestrator under the review-loop cap)*. A list's delete removes the
   copy the person acted on (spec, Sync: "deleting one copy removes exactly that

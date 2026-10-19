@@ -291,6 +291,24 @@ is plain language.
   recorded.
   **Done (2026-10-18):** `ImportColumns` (`match`, `position(of:)` with a precondition on an unknown name, `width`, `unused`, `HeaderError`) and `ExportSchema`'s `itemRequiredHeaders`, `wishlistRequiredHeaders`, `troveIDHeader` (plan §6's seam until T008). `ImportColumnsTests`, 9 tests, headers built from `ExportSchema`'s arrays; one added beyond the list, `aHeaderAtTheOtherListsWidthIsNotWrongListByCount`, which is what makes the count mutation red. Mutations, each red: only the first missing name (4 issues); the star not dropped (4); an unknown column refusing (9); wrong list by cell count (2). Defaults chosen: `unused` keeps the first spelling, de-duplicated by canonical form; `.duplicate` carries the schema's spelling; `otherRequired` is checked against every header cell. Unit 1,854 tests in 243 suites green (re-run by the orchestrator after the reverts).
 
+- [ ] **T003a — Phase 1 review notes: the Wishlist delete on screen, and two stale pointers.**
+  *(Added 2026-10-18 — Phase 1 review, second-look notes 1 and 3.)* Per plan §1.
+  (1) `WishlistView.swift:194`'s `row: item.persistentModelID` has no test: the
+  view-model legs pass `row` themselves and the UI test deletes only on Items.
+  `testTwoRowsSharingOneIDListAndOneDeletes` gains a Wishlist leg — swipe the
+  lower of "Mamiya 7 II" / "Mamiya Seven", confirm, and only that name goes
+  (mutation: `WishlistView:194` back to `delete(id: item.id)` → red). Both list
+  view models' `delete` doc comments say every UI path must pass `row`.
+  (2) `MarketIndex.swift:93`–`95`'s comment points at a `PlansViewModel` comment
+  T001c removed — make it stand on its own; `PlansViewModel.swift:232`'s
+  `uniqueKeysWithValues` gains a one-line reason it cannot trap (keys are store
+  rows from one fetch).
+  Files: `TroveUITests/TroveUITests.swift`, `Trove/ViewModels/ItemListViewModel.swift`,
+  `Trove/ViewModels/WishlistViewModel.swift` (doc comments), `Trove/Market/MarketIndex.swift`,
+  `Trove/ViewModels/PlansViewModel.swift` (comments).
+  **Verify:** `scripts/verify.sh` green; the UI test alone green and red under
+  the mutation; `scripts/verify.sh ui` green.
+
   **Phase 1 closes here — `walkthrough: none`; after its review, run on.**
 
 ## Phase 2 — Reading a sheet as it is · walkthrough: yes — Items › ⋯ › Import from CSV: your own `My-Gear.csv` imports as it is — the confirmation says 90 items will be added and that row 108 looks like a totals row and was left out, with nothing skipped and no defaults; after Import the 13 items whose serial number said N/A have none, the one written 0185654 keeps its zero, and the Alienware monitor is worth $500 (do this on a simulator, or anywhere you are happy to add 90 items — Settings › Delete All clears them); `docs/samples/items-hand-kept.csv` does the same with invented rows; move the columns around in a sheet, or add a column of your own, and it still imports, with the confirmation naming the column it did not use; delete the Condition column and it still imports, the confirmation saying once that new items will be Excellent rather than counting every row; delete the Purchase Date column and the file is refused, the alert naming what is missing; a price written `$ 3,179.95`, with a space, reads; a file an older Trove exported still imports; the Wishlist does all of this with its own columns. Not yet, by design: exports are unchanged and importing a file twice still adds copies — that is Phase 3
@@ -1052,6 +1070,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | T001c (`sdd-implementer`) | `opus` | 122,667 (54 tool uses, 88.1 min) | Done first pass; two sold pairs instead of one (fetch order between twins unstable) |
 | T002 (`sdd-implementer`) | `opus` | 78,673 (25 tool uses, 62.3 min) | Done first pass |
 | T003 (`sdd-implementer`) | `opus` | 69,462 (18 tool uses, 36.9 min) | Done first pass; one test added so the count mutation can fail |
+| Phase 1 review (`skeptical-reviewer`) | `opus` | 114,725 (14 tool uses, 3.2 min) | Signed off, no blocking; N1 fix confirmed both directions on both lists and through Plans. Second look: (1) Wishlist delete wiring untested on screen → T003a; (2) `delete`'s id-only fallback has no production caller (doc comment, T003a); (3) stale pointers → T003a, plan §1 sentence fixed by the orchestrator; (4) the widened `cents` also turns a `$1,250` Sale Price from dropped into sold in the shipped importer — named at the Phase 2 pause; (5) a source scan re-spelled (disclosed, for a future sweep); (6) `deletePlan`'s unknown-key leg now a planless row |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):
