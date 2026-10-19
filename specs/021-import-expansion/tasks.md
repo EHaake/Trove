@@ -188,7 +188,7 @@ is plain language.
   did with the repeated ids and whether the fix was needed.
   **Done (2026-10-18):** `-seedSharedID` seed (owned twins "Rickenbacker 330" / "Rick 330 Jetglo" with one figure row; wanted twins "Mamiya 7 II" / "Mamiya Seven", only the first planned, its plan holding both owned twins), gated like `-seedSold`; `UITestSeedTests` legs (refuses CloudKit and local-only stores with every flag set; `-uiTesting` alone seeds nothing; the twins share their ids, read on a second context); `testTwoRowsSharingOneIDListAndOneDeletes`. **What SwiftUI did with repeated ids**: no crash, the right number of rows, but every row sharing an id drew the first twin's content, so the other name never appeared. **Routine fix applied** at `ItemListView.swift:336`, `WishlistView.swift:336`, `SellPlanView.swift:450` (each shown failing first). Not exercised by the seed (no sold twins): `ItemListView:470`, `SellPlanView:520`. `PlansView.swift:235` shows the same bug when both wanted twins have plans (seen on a variant seed), but `PlanRow` carries no `persistentModelID`, so the routine fix cannot be written there — sent to a decision review (below). Mutations: mode gate removed → the two refuse-a-persistent-store expectations red; one twin dropped from the seed → the both-names legs red (4 failures); delete by `id` again (extra) → the deleted/kept legs red. Unit 1,825 tests in 241 suites green; `scripts/verify.sh ui` twice back to back, 43 tests each, 0 failures.
 
-- [ ] **T001c — Plans rows and the Sold lists with twins: each draws its own row and acts on it.**
+- [x] **T001c — Plans rows and the Sold lists with twins: each draws its own row and acts on it.**
   *(Added 2026-10-18 — decision review after T001b.)* Per plan §1 "Plans rows —
   fixed". `PlansViewModel.PlanRow` gains `rowID: PersistentIdentifier` (from
   `wanted.persistentModelID`), `PlanRow.id` unchanged; `PlansView` keys its
@@ -218,6 +218,7 @@ is plain language.
   `TroveUITests/TroveUITests.swift`.
   **Verify:** `scripts/verify.sh` green; `scripts/verify.sh ui` green twice back
   to back, both counts recorded; mutations recorded.
+  **Done (2026-10-18):** `PlanRow.rowID` (the store row) keys `PlansView`'s `ForEach`, `entries`, both purchase intents and `deletePlan(rowID:)`; the Items Sold and Sell Plan Sold `ForEach`s key on `persistentModelID`. Seed: the second wanted twin planned (Hasselblad candidate); **two** sold twin pairs, one toward each plan — deviation from "a sold twin pair": the plan page opens whichever twin a `fetchLimit = 1` fetch returns, and that order is not stable across fresh containers, so one pair per plan keeps the Sold-section leg deterministic. The UI test was red at all three sites before the fix (4 failures); each site put back to `\.id` in turn → only its own leg red (`:3322`; `:3303`/`:3305`; `:3342`); `entries` resolving by `id` → the new delete and mark-bought legs red (12 issues); a sold twin with a fresh id → the seed test red. Sold rows share the Owned side's delete alert, which already passes `persistentModelID`. **Rewritten to the new rule**: `anOrphanIsOnCompletedAndDeletingItsPlanTakesItOff` and `deletingAnActivePlanLeavesTheEntryAndItsSales` (now `deletePlan(rowID:)`; "an id with no row deletes nothing" became "a row with no plan left deletes nothing"); `theSharedIDSeedWritesTwoPairsOfTwins` (both wanted twins planned); the UI test's Dashboard line ("2 active sell plans"). Unit 1,827 tests in 241 suites green; UI 43 tests, 0 failures, twice back to back.
 
 - [ ] **T002 — The reader's grammar: prices, slash dates, `N/A`, the code.**
   Per plan §2, Q7, Q8, P4, P6, spec Decision 22. New
@@ -1046,6 +1047,7 @@ the spec runs, with escape-hatch misses recorded here too.
 | T001a (`sdd-implementer`) | `opus` | 86,739 (26 tool uses, 42.0 min) | Done first pass; one existing scan re-pointed to the new signature; one non-trapping limit found (Sell Plan toggle moves both twins) |
 | T001b (`sdd-implementer`) | `opus` | 124,722 (48 tool uses, 66.5 min) | Done; routine `ForEach` fix needed at three sites; Plans rows question returned for a decision review |
 | Decision review after T001b (`skeptical-reviewer`) | `opus` | ~39,951 (3 tool uses, 1.2 min) | Plans rows: fix drawing **and** the entry lookup (else a wrong-target delete/purchase) — plan change, T001c; sold-row sites: routine fix with a UI leg each; no product question |
+| T001c (`sdd-implementer`) | `opus` | 122,667 (54 tool uses, 88.1 min) | Done first pass; two sold pairs instead of one (fetch order between twins unstable) |
 
 **Open after the re-review — non-blocking, for the phase reviews and the
 pre-merge sweep** (the reviewer's notes, not applied at sign-off):

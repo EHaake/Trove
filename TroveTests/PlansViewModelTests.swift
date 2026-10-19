@@ -158,7 +158,7 @@ struct PlansViewModelTests {
         viewModel.show(.completed)
         #expect(viewModel.completedRows.map(\.id) == [plan.id], "the orphan is visible")
 
-        #expect(viewModel.deletePlan(id: plan.id))
+        #expect(viewModel.deletePlan(rowID: plan.persistentModelID))
         #expect(viewModel.completedRows.isEmpty)
         #expect(viewModel.emptyReason == .nothingCompleted)
 
@@ -180,9 +180,9 @@ struct PlansViewModelTests {
 
         let viewModel = PlansViewModel(modelContext: context, now: { self.now })
         viewModel.load()
-        #expect(viewModel.deletePlan(id: plan.id))
+        #expect(viewModel.deletePlan(rowID: plan.persistentModelID))
         #expect(viewModel.activeRows.isEmpty)
-        #expect(viewModel.deletePlan(id: UUID()) == false, "an id with no row deletes nothing")
+        #expect(viewModel.deletePlan(rowID: plan.persistentModelID) == false, "a row with no plan left deletes nothing")
 
         let elsewhere = ModelContext(container)
         let entry = try #require(try elsewhere.fetch(FetchDescriptor<WishlistItem>()).first)
@@ -657,5 +657,68 @@ struct PlansViewModelTests {
 
         #expect(viewModel.activeRows.count == 2)
         #expect(Set(viewModel.activeRows.map(\.name)) == ["Summicron (synced)", "Summicron (imported)"])
+        #expect(Set(viewModel.activeRows.map(\.rowID)).count == 2, "each twin's row carries its own store row")
+    }
+
+    /// Two planned entries sharing one `id`, saved, for the intents below.
+    /// Their plan dates differ, so the Active side's Newest order is fixed:
+    /// the second-planned twin's row comes first.
+    private func plannedTwins() throws -> (container: ModelContainer, viewModel: PlansViewModel) {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let shared = UUID()
+        wanted("Summicron (synced)", planned: day(1), into: context).id = shared
+        wanted("Summicron (imported)", position: 1, planned: day(2), into: context).id = shared
+        try context.save()
+        let viewModel = PlansViewModel(modelContext: context, now: { self.now })
+        viewModel.load()
+        return (container, viewModel)
+    }
+
+    /// 021 G20 (criterion 42): deleting the plan from one twin's row deletes
+    /// that twin's plan and leaves the other's — tried from each row in turn,
+    /// read back on a second context. Mutation: `entries` keyed by `id`
+    /// again — one direction deletes the twin the lookup kept, and goes red.
+    @Test func deletingOneTwinsPlanLeavesTheOthers() throws {
+        for target in [0, 1] {
+            let (container, viewModel) = try plannedTwins()
+            try #require(viewModel.activeRows.count == 2)
+            let row = viewModel.activeRows[target]
+            let kept = viewModel.activeRows[1 - target]
+
+            #expect(viewModel.deletePlan(rowID: row.rowID))
+            #expect(viewModel.activeRows.map(\.name) == [kept.name], "row \(target): the other twin's plan is still listed")
+
+            let elsewhere = ModelContext(container)
+            let entries = try elsewhere.fetch(FetchDescriptor<WishlistItem>())
+            let deleted = try #require(entries.first { $0.name == row.name })
+            let other = try #require(entries.first { $0.name == kept.name })
+            #expect(deleted.sellPlanCreatedAt == nil, "row \(target): \(row.name)'s plan reached the store as deleted")
+            #expect(other.sellPlanCreatedAt != nil, "row \(target): \(kept.name)'s plan must stay")
+        }
+    }
+
+    /// 021 G20 (criterion 42): Buy from one twin's row marks that twin bought
+    /// and leaves the other wanted — tried from each row in turn, read back
+    /// on a second context. Mutation: `entries` keyed by `id` again — one
+    /// direction buys the twin the lookup kept, and goes red.
+    @Test func buyingFromOneTwinsRowMarksThatTwin() throws {
+        let purchase = Purchase(date: day(30), priceCents: 205_000, location: "Kerrisdale Cameras", condition: .good)
+        for target in [0, 1] {
+            let (container, viewModel) = try plannedTwins()
+            try #require(viewModel.activeRows.count == 2)
+            let row = viewModel.activeRows[target]
+            let kept = viewModel.activeRows[1 - target]
+
+            #expect(viewModel.markBought(row, purchase: purchase))
+            #expect(viewModel.activeRows.map(\.name) == [kept.name], "row \(target): the other twin is still active")
+
+            let elsewhere = ModelContext(container)
+            let entries = try elsewhere.fetch(FetchDescriptor<WishlistItem>())
+            let bought = try #require(entries.first { $0.name == row.name })
+            let other = try #require(entries.first { $0.name == kept.name })
+            #expect(bought.boughtDate == now, "row \(target): \(row.name) reached the store bought, at the view model's clock")
+            #expect(other.boughtDate == nil, "row \(target): \(kept.name) must stay wanted")
+        }
     }
 }

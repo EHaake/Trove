@@ -431,16 +431,19 @@ struct UITestSeedTests {
     /// What the twins seed leaves in the store, read back on a second
     /// context: two owned items with different names and one `id`, one
     /// figure row under it; two wanted entries with different names sharing
-    /// another `id`, one of them planned, its plan holding both owned twins.
-    /// Mutation: drop either twin, or let one keep its own fresh `id`, and
-    /// this goes red.
+    /// another `id`, both planned — the first's plan holding both owned
+    /// twins, the second's a candidate of its own; and two pairs of sold
+    /// twins, each pair under an `id` of its own and sold toward one wanted
+    /// twin. Mutation: drop either twin, or let one keep its own fresh `id`,
+    /// and this goes red.
     @Test func theSharedIDSeedWritesTwoPairsOfTwins() throws {
         let store = try TroveStore.make(isUITesting: true)
         try #require(store.mode == .ephemeral)
         try UITestSeed.sharedID(into: ModelContext(store.container), now: now)
         let context = ModelContext(store.container)
 
-        let owned = try context.fetch(FetchDescriptor<Item>())
+        let items = try context.fetch(FetchDescriptor<Item>())
+        let owned = items.filter { !$0.isSold && $0.name != "Hasselblad 500C/M" }
         #expect(Set(owned.map(\.name)) == ["Rickenbacker 330", "Rick 330 Jetglo"])
         try #require(owned.count == 2)
         #expect(owned[0].id == owned[1].id, "the owned twins must share one id")
@@ -455,10 +458,23 @@ struct UITestSeedTests {
         try #require(wanted.count == 2)
         #expect(wanted[0].id == wanted[1].id, "the wanted twins must share one id")
         #expect(wanted[0].id != owned[0].id, "the two pairs share different ids")
-        #expect(wanted.filter { $0.hasSellPlan }.map(\.name) == ["Mamiya 7 II"], "one wanted twin is planned")
+        #expect(wanted.allSatisfy { $0.hasSellPlan }, "both wanted twins are planned")
 
         let holding = try #require(wanted.first { $0.name == "Mamiya 7 II" })
-        #expect(Set((holding.plannedSaleItems ?? []).map(\.name)) == ["Rickenbacker 330", "Rick 330 Jetglo"], "the plan holds both owned twins")
+        #expect(Set((holding.plannedSaleItems ?? []).map(\.name)) == ["Rickenbacker 330", "Rick 330 Jetglo"], "the first plan holds both owned twins")
+        let second = try #require(wanted.first { $0.name == "Mamiya Seven" })
+        #expect((second.plannedSaleItems ?? []).map(\.name) == ["Hasselblad 500C/M"], "the second plan holds a candidate of its own")
+
+        let sold = items.filter(\.isSold)
+        #expect(Set(sold.map(\.name)) == ["Leica M6", "M6 Classic", "Gibson ES-335", "ES-335 Dot"])
+        for (plan, pair) in [(holding, ["Leica M6", "M6 Classic"]), (second, ["Gibson ES-335", "ES-335 Dot"])] {
+            let towardIt = sold.filter { $0.soldTowardWishlistItem?.persistentModelID == plan.persistentModelID }
+            #expect(Set(towardIt.map(\.name)) == Set(pair), "\(plan.name)'s Sold section holds \(pair)")
+            try #require(towardIt.count == 2)
+            #expect(towardIt[0].id == towardIt[1].id, "the sold pair toward \(plan.name) must share one id")
+            #expect(towardIt[0].id != owned[0].id && towardIt[0].id != wanted[0].id, "each pair has an id of its own")
+        }
+        #expect(Set(sold.map(\.id)).count == 2, "the two sold pairs share different ids")
     }
 
     // MARK: - Private

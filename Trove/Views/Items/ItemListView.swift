@@ -467,7 +467,10 @@ struct ItemListView: View {
     /// dates', not the person's.
     private var soldRows: some View {
         List {
-            ForEach(viewModel.soldItems, id: \.id) { item in
+            // Keyed on the store row, not the Trove ID: two sold items can
+            // share an id, and SwiftUI draws the first one's content in every
+            // row that repeats it (`021` plan §1).
+            ForEach(viewModel.soldItems, id: \.persistentModelID) { item in
                 SoldItemRow(item: item)
                     .listRowBackground(theme.colors.background)
                     .listRowSeparator(.hidden)

@@ -1942,6 +1942,7 @@ struct WishlistPurchaseHostTests {
         #expect(plans.activeRows.isEmpty, "a planless entry is no Plans row")
         let stray = PlansViewModel.PlanRow(
             id: viaPlans.wanted.id,
+            rowID: viaPlans.wanted.persistentModelID,
             name: viaPlans.wanted.name,
             categoryPath: viaPlans.wanted.categoryPath,
             photos: [],
